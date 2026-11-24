@@ -425,8 +425,11 @@ public static class SimModels
         foreach (var spec in Read?.Invoke() ?? Enumerable.Empty<ModelSpec>())
         {
             if (byName.ContainsKey(spec.Name)) continue;
-            if (spec.Unread != null) UnreadClasses[spec.Name] = spec.Unread;
-            else byName.Add(spec.Name, new ReadModel(spec));
+            if (spec.Unread != null) { UnreadClasses[spec.Name] = spec.Unread; continue; }
+            // A program the simulator can't compile (a command on a creature its engine functions don't name) is the class unread, never a
+            // failure of every model (decision #92).
+            try { byName.Add(spec.Name, new ReadModel(spec)); }
+            catch (InvalidOperationException exception) { UnreadClasses[spec.Name] = $"{spec.Name}'s hooks couldn't be compiled ({exception.Message}): what it does isn't simulated"; }
         }
         return byName;
     }

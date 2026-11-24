@@ -36,11 +36,16 @@ public static partial class ReadModels
             {
                 reading = new ModelReading(new ModelSpec(type.Name, ModelKind.Power, Array.Empty<HookProgram>()), new[] { new HookReading("(the class)", $"gap: not read ({exception.GetType().Name}: {exception.Message})") });
             }
+            if (reading.Whole && reading.Spec.Hooks.Count == 0) continue;
+            // Read whole, and the simulator can compile it (a command on a creature its engine functions name): modelled from its code.
             if (reading.Whole)
             {
-                if (reading.Spec.Hooks.Count == 0) continue;
-                specs.Add(reading.Spec with { Tab = HasTabRow(type.Name) ? reading.Spec.Tab : null });
-                continue;
+                if (Compiles(reading.Spec) is not { } notCompiled)
+                {
+                    specs.Add(reading.Spec with { Tab = HasTabRow(type.Name) ? reading.Spec.Tab : null });
+                    continue;
+                }
+                reading = reading with { Hooks = reading.Hooks.Append(new HookReading("(compiled)", "gap: " + notCompiled)).ToList() };
             }
             if (!ReadWholeAtReview.Contains(type.Name)) continue;
             var why = $"{type.Name}'s hooks couldn't be read from the game's code (a game update?): what it does isn't simulated ({string.Join("; ", reading.Gaps)})";
@@ -48,6 +53,13 @@ public static partial class ReadModels
             unread?.Invoke(type.Name, why);
         }
         return specs;
+    }
+
+    /// <summary>Why the simulator can't compile a spec read whole (ReadModel's constructor refuses it), or null when it can.</summary>
+    private static string? Compiles(ModelSpec spec)
+    {
+        try { _ = new ReadModel(spec); return null; }
+        catch (InvalidOperationException exception) { return exception.Message; }
     }
 
     /// <summary>A Proc Tags row exists for the class (SettingsCatalog.Sources): a read model gets its commands' tab only then.</summary>

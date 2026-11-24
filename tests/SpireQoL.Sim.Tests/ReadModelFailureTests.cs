@@ -29,6 +29,14 @@ public class ReadModelFailureTests
         Assert.Null(SimModels.UnreadReason(PowerId.Strength.Name));
     }
 
+    [Fact]
+    public void AProgramTheSimulatorCantCompileIsUnreadNotAFailure()
+    {
+        Assert.Null(SimModels.Get(ReadModelsFile.Uncompilable.Name));
+        Assert.StartsWith("UncompilableForTestsPower's hooks couldn't be compiled", SimModels.UnreadReason(ReadModelsFile.Uncompilable.Name));
+        Assert.NotNull(SimModels.Get(PowerId.Strength.Name));
+    }
+
     [Theory]
     [InlineData(Who.You)]
     [InlineData(1)]
