@@ -29,6 +29,12 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
     private bool _onMenu;
     private Task<GitHubReleases.Status?>? _check;
     private GitHubReleases.Status? _status; // null: GitHub hasn't answered (nothing shown)
+    /// <summary>The notice's text for <see cref="_status"/>, built once when GitHub answers (decision #177: a steady frame builds no string).</summary>
+    private string? _statusText;
+    /// <summary>What the label was last given: it's set again only when that changes, so a frame on the menu allocates nothing.</summary>
+    private string? _shownText;
+    private Color? _shownColor;
+    private const string CheckingText = "Checking for Spire QoL updates…";
     private Label? _label;
     private Control? _warning;
     private int _searchCooldown;
@@ -69,7 +75,8 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
             if (status != null)
             {
                 _status = status;
-                ModEntry.Log.Detail($"update notice: {Text(status)}");
+                _statusText = Text(status);
+                ModEntry.Log.Detail($"update notice: {_statusText}");
             }
         }
         Show(menu!);
@@ -91,15 +98,17 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
 
         // While GitHub hasn't answered (the first visit to the menu), say so, so the notice doesn't seem to be missing.
         label.Visible = _status != null || _check != null;
-        if (_status is { } status)
+        var (text, color) = _status is { } status ? (_statusText, IsTestBuild(status) ? TestBuild : status.Newer > 0 ? Behind : UpToDate)
+            : _check != null ? (CheckingText, Checking) : ((string?)null, default(Color));
+        if (text != null && !ReferenceEquals(text, _shownText))
         {
-            label.Text = Text(status);
-            label.AddThemeColorOverride(GodotNames.Name("font_color"), IsTestBuild(status) ? TestBuild : status.Newer > 0 ? Behind : UpToDate);
+            label.Text = text;
+            _shownText = text;
         }
-        else if (_check != null)
+        if (text != null && color != _shownColor)
         {
-            label.Text = "Checking for Spire QoL updates…";
-            label.AddThemeColorOverride(GodotNames.Name("font_color"), Checking);
+            label.AddThemeColorOverride(GodotNames.Name("font_color"), color);
+            _shownColor = color;
         }
         gear.Visible = OpenSettings != null && Cards.GameIcons.Valid(gear.Texture);
         gear.Modulate = gear.GetGlobalRect().HasPoint(gear.GetGlobalMousePosition()) ? Colors.White : new Color(0.85f, 0.85f, 0.85f, 0.85f);
@@ -144,6 +153,8 @@ public sealed class UpdateNoticeFeature : IFeature, IFrameFeature
         var size = _warning.GetThemeFontSize(GodotNames.Name("font_size"));
         _fontSize = size > 0 ? size : 18;
         _label = UiKit.Label("", _fontSize, Behind);
+        _shownText = null; // a new label: it's given its text and colour on this frame
+        _shownColor = null;
         _label.HorizontalAlignment = HorizontalAlignment.Right;
         _label.MouseFilter = Control.MouseFilterEnum.Stop;
         _label.MouseDefaultCursorShape = Control.CursorShape.PointingHand;

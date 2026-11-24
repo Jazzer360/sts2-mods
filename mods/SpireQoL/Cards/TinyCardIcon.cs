@@ -18,6 +18,13 @@ internal sealed class TinyCardIcon
     private readonly float _size;
     private static bool _logged;
 
+    /// <summary>Fits in a row that found the same drawn area before it counts as settled.</summary>
+    internal const int FitsToSettle = 10;
+    /// <summary>The tiny card's size its fit settled at: fitted again only when that changes (decision #177: a steady frame allocates nothing).</summary>
+    private Vector2 _settledAt = new(-1, -1);
+    private Rect2? _lastBox;
+    private int _sameBoxFits;
+
     public TinyCardIcon(CardModel card, float size)
     {
         _size = size;
@@ -39,9 +46,12 @@ internal sealed class TinyCardIcon
     public void Fit()
     {
         if (_entry == null || !GodotObject.IsInstanceValid(_entry)) return;
+        if (_entry.GetNodeOrNull<Control>(GodotNames.Path("%Card")) is not { } tiny || tiny.Size.X < 1 || tiny.Size.Y < 1) return;
+        // Settled: the walk below makes garbage (each node's children and name), so it runs only until the fit stops moving, and again
+        // when the tiny card's size changes.
+        if (tiny.Size == _settledAt) return;
         if (_entry.GetNodeOrNull<Control>(GodotNames.Path("%Label")) is { } label && label.GetParent() is Control labelBox) labelBox.Visible = false;
         if (_entry.GetNodeOrNull<Control>(GodotNames.Path("%Enchantment")) is { } ench) ench.Visible = false;
-        if (_entry.GetNodeOrNull<Control>(GodotNames.Path("%Card")) is not { } tiny || tiny.Size.X < 1 || tiny.Size.Y < 1) return;
         // Centre what the tiny card draws, not its layout box: its art needn't fill the box or sit in its middle.
         // In the entry's own unscaled units (the tiny card can be nested).
         var toEntry = _entry.GetGlobalTransform().AffineInverse();
@@ -55,11 +65,27 @@ internal sealed class TinyCardIcon
             ModEntry.Log.Detail($"tiny card: layout box {layout}, drawn {box}");
         }
         if (box.Size.X < 1 || box.Size.Y < 1) return;
+        if (Settles(ref _lastBox, ref _sameBoxFits, box)) _settledAt = tiny.Size;
         var scale = _size / Math.Max(box.Size.X, box.Size.Y);
         _entry.Scale = new Vector2(scale, scale);
         var shown = box.Size * scale;
         _entry.Position = new Vector2((_size - shown.X) / 2f, (_size - shown.Y) / 2f) - box.Position * scale;
         Quiet(_entry);
+    }
+
+    /// <summary>
+    /// Whether this fit's drawn area makes <see cref="FitsToSettle"/> in a row the same as the last (the layout has settled): counts the
+    /// run in <paramref name="sameFits"/>, restarting it when the area moves.
+    /// </summary>
+    internal static bool Settles(ref Rect2? last, ref int sameFits, Rect2 box)
+    {
+        if (last == box) sameFits++;
+        else
+        {
+            last = box;
+            sameFits = 1;
+        }
+        return sameFits >= FitsToSettle;
     }
 
     /// <summary>The area the visible textures under <paramref name="node"/> draw, in the entry's units.</summary>
