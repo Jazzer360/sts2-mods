@@ -252,7 +252,6 @@ public sealed class SimEnemy
         Powers.Hash(add); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         Fields.Hash(add);
         add(Hits.Count); foreach (var hit in Hits) add(hit);
-        add(-1); // where an enemy's hits after an ally died were (none): the keys stay as they were
     }
 }
 
@@ -1004,17 +1003,9 @@ public sealed class SimState
     /// </summary>
     public long Key()
     {
-        // FNV-1a over every number that can differ between branches of one run (64-bit: collisions
-        // among a few hundred branches are vanishingly unlikely).
-        var hash = unchecked((long)14695981039346656037UL);
-        void Add(long value)
-        {
-            unchecked
-            {
-                hash ^= value;
-                hash *= 1099511628211L;
-            }
-        }
+        // Every number that can differ between branches of one run, mixed into one key (BranchKey).
+        var key = new BranchKey();
+        void Add(long value) => key.Add(value);
 
         Add(ParryingShieldFired ? 1 : 0); Add(BlockDemand); Add(SkippedPoisoned); Add(SkippedEndOfTurn); Add(CancelledHits);
         if (DrawRecord != null)
@@ -1036,7 +1027,45 @@ public sealed class SimState
         You.Hash(Add);
         // Teammates (shared between branches until one changes them): a branch that differs only in a teammate stays apart.
         foreach (var player in Teammates) player.Hash(Add);
-        return hash;
+        return key.Value;
+    }
+}
+
+/// <summary>
+/// A branch key being made (SimState.Key, decision #197): the numbers that can differ between branches of one run, combined in
+/// order. Each number is mixed first (MurmurHash3's 64-bit finalizer, on the number plus an odd constant so 0 mixes too), so a
+/// difference anywhere in it reaches every bit of what's combined: combined plainly (FNV-1a over whole numbers), a difference only
+/// in high bits stays in high bits, and two of them in a row cancel (an HP past 0 is a negative number: every high bit set).
+/// </summary>
+public struct BranchKey
+{
+    private const ulong Start = 14695981039346656037UL;
+    private const ulong Prime = 1099511628211UL;
+    private const ulong Odd = 0x9E3779B97F4A7C15UL;
+
+    private ulong _hash;
+    private bool _started;
+
+    public void Add(long value)
+    {
+        if (!_started) { _hash = Start; _started = true; }
+        unchecked { _hash = (_hash ^ Mix((ulong)value + Odd)) * Prime; }
+    }
+
+    public readonly long Value => unchecked((long)(_started ? _hash : Start));
+
+    /// <summary>MurmurHash3's fmix64: every input bit changes about half the output bits.</summary>
+    private static ulong Mix(ulong number)
+    {
+        unchecked
+        {
+            number ^= number >> 33;
+            number *= 0xFF51AFD7ED558CCDUL;
+            number ^= number >> 33;
+            number *= 0xC4CEB9FE1A85EC53UL;
+            number ^= number >> 33;
+            return number;
+        }
     }
 }
 
