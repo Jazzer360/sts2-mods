@@ -33,12 +33,11 @@ public sealed class CardPredictions
     private ICombatState _cs = null!;
     private bool _indirect;
 
-    /// <summary>The card being finished: for each proc tab, which of its targets (simulations) give it (the aim marker).</summary>
-    private readonly Dictionary<string, bool[]> _firesAt = new();
-    /// <summary>Per tabbed source this frame's card: whether each aim sets it off in every outcome and in some (CardPrediction.FiresEveryByAim).</summary>
-    private readonly Dictionary<string, (Type T, bool[] Every, bool[] Any)> _firesBy = new();
-    /// <summary>The sources this frame's card reaches an unknown flash of (CardPrediction.FlashUnknown).</summary>
-    private readonly HashSet<string> _flashUnknown = new(StringComparer.Ordinal);
+    /// <summary>The card being finished: its proc tabs and what the play check holds it to, from its simulations (CardTabs).</summary>
+    private readonly CardTabs _cardTabs = new();
+    /// <summary>The card being finished: the sources its tabs are worked out from, and each source class's game model (its icon, its type).</summary>
+    private readonly List<TabSource> _tabSources = new();
+    private readonly Dictionary<string, AbstractModel> _tabSourceModels = new(StringComparer.Ordinal);
 
     /// <summary>Each card's prediction from the last frame it was in hand (kept after it leaves; ProcAudit).</summary>
     public IReadOnlyDictionary<CardModel, CardPrediction> LastPredictions => _lastPredictions;
@@ -577,9 +576,12 @@ public sealed class CardPredictions
         }
         if (task.Fault is { } fault) throw fault;
         var outcomes = task.Latest;
-        _firesAt.Clear();
-        _firesBy.Clear();
-        _flashUnknown.Clear();
+        _cardTabs.Clear();
+        _cardTabs.Indirect = _indirect;
+        _cardTabs.Chances = _ctx.Settings.Chances;
+        _cardTabs.ProcNumbers = _ctx.Settings.ProcNumbers;
+        _tabSources.Clear();
+        _tabSourceModels.Clear();
         var baseline = forecast.Outcome;
         if (outcomes.Any(outcome => outcome.Truncated || outcome.Branches.Count > 1)) prediction.RandomOutcome = true;
         prediction.SimIncomplete = outcomes.Any(outcome => outcome.Truncated);
@@ -598,59 +600,43 @@ public sealed class CardPredictions
             owner = eid;
             return true;
         }
+        // The sources (CardTabs: the play log's tabs in this order, then the rules judged on how the turn ends, enemies' powers first, then
+        // relics, then players' powers), each with its owner in the simulation.
         foreach (var src in sources)
-            if (SimOwner(src, out var ownerId)) LogTab(src, ownerId, outcomes, tabs);
+        {
+            if (!SimOwner(src, out var ownerId)) continue;
+            var pass = src is PowerModel power && OwnerOf(power) is { IsEnemy: true } ? 0 : src is RelicModel ? 1 : 2;
+            _tabSources.Add(new TabSource(src.GetType().Name, SimReaders.ModelName(src), ownerId, pass, Logs: !(src is PowerModel && SimAdapter.IsTemporaryThorns(src.GetType()))));
+            _tabSourceModels.TryAdd(src.GetType().Name, src);
+        }
         // Effects the engine logs itself (Juggernaut on every block gain; Thunder is read from its code: decision #214): logged under their power's
         // name, yours and every teammate's.
         foreach (var src in sources.OfType<PowerModel>().Where(power => OwnerOf(power) is { IsPlayer: true } && power.GetType().Name is nameof(JuggernautPower)))
-            LogTab(src, TeammateOf(src, _me, _cs), outcomes, tabs, TabKind.Damage);
-
-        // ---- end-of-turn comparisons: what the play changes by the time the enemies act
-        // Each rule is a test per target (one simulation each): the tab shows when some target passes it, with the aim marker
-        // when not every target does (several enemies with the same power: when no target passes any of them).
-        void Add(AbstractModel src, bool harmful, Func<SimOutcome, bool> at, Func<SimState, bool>? inBranch, Func<SimOutcome, bool>? inSome, bool inPlay = true)
+            _tabSources.Add(new TabSource(src.GetType().Name, SimReaders.ModelName(src), TeammateOf(src, _me, _cs), OutcomePass: 2, LogKind: TabKind.Damage));
+        _cardTabs.Add(_tabSources, prediction.Sim!.Start, baseline, outcomes);
+        foreach (var (key, tab) in _cardTabs.Tabs)
         {
-            var key = "proc:" + src.GetType().Name;
-            var firesAt = outcomes.Select(at).ToArray();
-            // For the audits, per aim, as the play-log tabs are (LogTab): a bonus in every outcome where it's set off, in some where some
-            // outcome sets it off; a warning (set off in some outcome) in some only.
-            var every = harmful ? new bool[firesAt.Length] : firesAt.ToArray();
-            var any = outcomes.Select((outcome, index) => firesAt[index] || inSome?.Invoke(outcome) == true).ToArray();
-            var srcName = src.GetType().Name;
-            // Set off after the play (OutcomeRule.InPlay false): nothing for the play check to see flash.
-            if (inPlay)
+            var src = _tabSourceModels[key["proc:".Length..]];
+            TabAmount? counts = tab.Counted switch
             {
-                if (_firesBy.TryGetValue(srcName, out var had) && had.Every.Length == every.Length)
-                    for (var i = 0; i < every.Length; i++) { every[i] |= had.Every[i]; any[i] |= had.Any[i]; }
-                _firesBy[srcName] = (src.GetType(), every, any);
-            }
-            if (!firesAt.Any(fires => fires)) return;
-            if (_firesAt.TryGetValue(key, out var prev) && prev.Length == firesAt.Length)
-                for (var i = 0; i < firesAt.Length; i++) firesAt[i] |= prev[i];
-            _firesAt[key] = firesAt;
-            // A warning only some outcomes set off: its chance (decision #159), the likeliest aim's.
-            string? chance = null;
-            if (harmful && inBranch != null && _ctx.Settings.Chances)
-                chance = WarningChance(outcomes.Where(at).Select(outcome => outcome.Chance(inBranch)));
-            tabs[key] = new TabSpec(key, IconOf(src), harmful, NumberText: chance, Aimed: firesAt.Length > 1 && !firesAt.All(fires => fires));
-        }
-        // The sources' own rules (SimModel.OutcomeTab), enemies' powers first, then relics, then players' powers.
-        var start = prediction.Sim!.Start;
-        foreach (var src in sources.OrderBy(model => model is PowerModel power && OwnerOf(power) is { IsEnemy: true } ? 0 : model is RelicModel ? 1 : 2))
-        {
-            if (SimModels.Get(SimReaders.ModelName(src)) is not { JudgedOnOutcome: true } model || !SimOwner(src, out var owner)) continue;
-            if (model.OutcomeTab(start, baseline, owner ?? Who.You) is { } rule) Add(src, rule.Harmful, rule.SetOff, rule.InBranch, rule.InSome, rule.InPlay);
+                TabKind.Block => TabAmount.Block, TabKind.Damage => TabAmount.Damage, TabKind.Summon => TabAmount.Summon,
+                TabKind.Draw => TabAmount.CardsDrawn, TabKind.Energy => TabAmount.EnergyGained, // decision #132
+                TabKind.CardsMade => TabAmount.CardsMade, // decision #161
+                _ => null,
+            };
+            tabs[key] = new TabSpec(key, IconOf(src), tab.Crossed, tab.Number, counts, tab.Amount, tab.AuditMin, tab.AuditMax, NumberText: tab.Chance, Aimed: tab.Aimed);
         }
 
         // What the audits hold the play to, per aim (decisions #87, #95): the tabbed sources it sets off in every outcome and in
         // some, and each enemy's chance of dying before it acts.
         if (prediction.Sim?.PlayByTarget.Keys.ToList() is { } aims && aims.Count == outcomes.Length)
         {
-            IReadOnlyDictionary<int, IReadOnlyCollection<Type>> By(Func<(Type T, bool[] Every, bool[] Any), bool[]> at) =>
-                aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim, aimed => (IReadOnlyCollection<Type>)_firesBy.Values.Where(value => at(value)[aimed.index]).Select(value => value.T).Distinct().ToList());
+            IReadOnlyDictionary<int, IReadOnlyCollection<Type>> By(Func<(bool[] Every, bool[] Any), bool[]> at) =>
+                aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim, aimed => (IReadOnlyCollection<Type>)_cardTabs.FiresBy
+                    .Where(fired => at(fired.Value)[aimed.index]).Select(fired => _tabSourceModels[fired.Key].GetType()).Distinct().ToList());
             prediction.FiresEveryByAim = By(fired => fired.Every);
             prediction.FiresAnyByAim = By(fired => fired.Any);
-            prediction.FlashUnknown = _flashUnknown.Count == 0 ? Array.Empty<string>() : _flashUnknown.ToList();
+            prediction.FlashUnknown = _cardTabs.FlashUnknown.Count == 0 ? Array.Empty<string>() : _cardTabs.FlashUnknown.ToList();
             var enemies = forecast.Ids.Values.Distinct().ToList();
             prediction.DeathByAim = aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim,
                 aimed => (IReadOnlyDictionary<int, SimChance>)enemies.ToDictionary(id => id, id => outcomes[aimed.index].DeadChanceRange(id)));
@@ -682,100 +668,12 @@ public sealed class CardPredictions
         return true;
     }
 
-    /// <summary>
-    /// A warning's chance on its tab (decision #159): the likeliest aim's chance that the play sets it off, as the tab's corner text
-    /// ("40%", "40%?" while not every outcome is settled); null when it's certain, so the tab alone says it.
-    /// </summary>
-    private static string? WarningChance(IEnumerable<SimChance> perAim)
-    {
-        var chances = perAim.ToList();
-        if (chances.Count == 0) return null;
-        var likeliest = chances.MaxBy(chance => chance.High);
-        return likeliest.Certain ? null : likeliest.ShortText();
-    }
-
     private static Godot.Texture2D? IconOf(AbstractModel src) => src switch
     {
         RelicModel relic => GameIcons.Relic(relic),
         PowerModel power => GameIcons.Power(power),
         _ => null,
     };
-
-    /// <summary>
-    /// A source's tab from the play log (docs/SIMULATOR.md "Tabs from the log"): its model fired during the play, in every
-    /// branch of some aim (good) or in some branch of any aim (harmful). Indirect firings (from draws, exhausts, discards, created
-    /// cards, shuffles) count only with the Indirect procs setting. Block, damage and summon tabs carry the amount the model logged
-    /// (the most any aim guarantees) and the audit's range (the least any aim guarantees to the most any branch gives). Several
-    /// enemies with the same power share one tab, their amounts added.
-    /// </summary>
-    private void LogTab(AbstractModel src, int? ownerId, SimOutcome[] outcomes, Dictionary<string, TabSpec> tabs, TabKind? kindOverride = null)
-    {
-        if (src is PowerModel && SimAdapter.IsTemporaryThorns(src.GetType())) return; // its Thorns has the ThornsPower tab
-        var name = SimReaders.ModelName(src);
-        var model = SimModels.Get(name);
-        // An enemy's or a teammate's source reads its own key (SimState.LogFired: a teammate's firings are only there); yours, the
-        // plain name.
-        var key = SimKeys.Logged(name, ownerId);
-        // A read model's flash on a condition the reader doesn't read (an unknown flash), tab or not: the play check counts why it can't tell.
-        if (model is ReadModel && outcomes.Any(outcome => outcome.PlayFlashedAny.Has(SimKeys.UnknownFlash(key)))) _flashUnknown.Add(src.GetType().Name);
-        if ((kindOverride ?? model?.Tab) is not { } kind) return;
-        var harmful = model?.HarmfulFor(ownerId ?? Who.You) ?? false; // by whose side it helps (decision #198)
-        static int Data(NamedCounts log, string logKey) => log.DataOf(logKey);
-        bool Fired(NamedCounts log) => log.Has(key) && (_indirect || log[key] > log[SimKeys.Indirect(key)]);
-        {
-            // For the audits, direct or not (the game flashes either way), whether or not a tab shows. A read model by where its code flashes
-            // (the flash log, decision #199); a hand-written one by its acting log.
-            var flashLog = model is ReadModel;
-            var srcName = src.GetType().Name;
-            var every = outcomes.Select(outcome => (flashLog ? outcome.PlayFlashedEvery : outcome.PlayFiredEvery).Has(key)).ToArray();
-            var any = outcomes.Select(outcome => (flashLog ? outcome.PlayFlashedAny : outcome.PlayFiredAny).Has(key)).ToArray();
-            // A flash on a condition the reader doesn't read (an unknown flash): it may flash there.
-            if (flashLog)
-                for (var i = 0; i < any.Length; i++)
-                    if (outcomes[i].PlayFlashedAny.Has(SimKeys.UnknownFlash(key))) any[i] = true;
-            if (_firesBy.TryGetValue(srcName, out var had) && had.Every.Length == every.Length)
-                for (var i = 0; i < every.Length; i++) { every[i] |= had.Every[i]; any[i] |= had.Any[i]; }
-            _firesBy[srcName] = (src.GetType(), every, any);
-        }
-        Func<SimOutcome, bool> at = harmful ? outcome => Fired(outcome.PlayFiredAny) : outcome => Fired(outcome.PlayFiredEvery);
-        var shown = outcomes.Any(at);
-        if (!shown) return;
-        // Which targets give the tab, across every source sharing it (several enemies with the same power).
-        var tabKeyAt = "proc:" + src.GetType().Name;
-        var firesAt = outcomes.Select(at).ToArray();
-        if (_firesAt.TryGetValue(tabKeyAt, out var prevAt) && prevAt.Length == firesAt.Length)
-            for (var i = 0; i < firesAt.Length; i++) firesAt[i] |= prevAt[i];
-        _firesAt[tabKeyAt] = firesAt;
-        var aimed = firesAt.Length > 1 && !firesAt.All(fires => fires);
-        var amount = harmful
-            ? outcomes.Max(outcome => Data(outcome.PlayFiredAny, key))
-            : outcomes.Where(outcome => Fired(outcome.PlayFiredEvery)).Max(outcome => Data(outcome.PlayFiredEvery, key));
-        var min = outcomes.Min(outcome => Data(outcome.PlayFiredEvery, key));
-        var max = outcomes.Max(outcome => Data(outcome.PlayFiredAny, key));
-        if (kind != TabKind.Trigger && max <= 0) return;
-        var tabKey = "proc:" + src.GetType().Name;
-        if (tabs.TryGetValue(tabKey, out var prev))
-        {
-            amount += prev.Amount;
-            min += prev.AuditMin;
-            max += prev.AuditMax;
-        }
-        int? number = kind != TabKind.Trigger && _ctx.Settings.ProcNumbers ? amount : null;
-        // A warning only some outcomes set off (a random hit on a Thorns enemy): its chance in the corner instead of its amount
-        // (decision #159), from each branch's own log: fired in every branch merged into it (Fired) up to in some (FiredAny).
-        string? chance = null;
-        if (harmful && _ctx.Settings.Chances)
-            chance = WarningChance(outcomes.Where(at).Select(outcome => outcome.LoggedChance(Fired)));
-        if (chance != null) number = null;
-        TabAmount? counts = kind switch
-        {
-            TabKind.Block => TabAmount.Block, TabKind.Damage => TabAmount.Damage, TabKind.Summon => TabAmount.Summon,
-            TabKind.Draw => TabAmount.CardsDrawn, TabKind.Energy => TabAmount.EnergyGained, // decision #132
-            TabKind.CardsMade => TabAmount.CardsMade, // decision #161
-            _ => null,
-        };
-        tabs[tabKey] = new TabSpec(tabKey, IconOf(src), harmful, number, counts, amount, min, max, NumberText: chance, Aimed: aimed);
-    }
 
     /// <summary>
     /// A tab shown because of some targets but not all of them (decision #55): the card is aimed at several enemies or teammates
