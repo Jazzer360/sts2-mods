@@ -852,6 +852,8 @@ public sealed class SimState
     }
     /// <summary>The enemy a shot's arrow is flying at (spent before the attack, impaling after it); -1 none.</summary>
     internal int ArrowAwayAt = Who.None;
+    /// <summary>The shot's arrow is destroyed once it impales (AfterArrowShot's arrow.DestroyAfterImpaled: Quietus'), until it impales.</summary>
+    internal bool ArrowDestroyedOnImpale;
     /// <summary>The card a card event is about, when known (the played card exhausting itself: Burning Sticks).</summary>
     internal SimCard? EventCard;
     /// <summary>

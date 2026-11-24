@@ -294,33 +294,7 @@ public sealed class LostLutePower : ProcModel
             : One(state);
 }
 
-/// <summary>ExplosiveArrowsPower.AfterArrowImpaled: its owner's arrow impales an enemy: its amount to every hittable enemy (unpowered).</summary>
-public sealed class ExplosiveArrowsPower : ProcModel
-{
-    public override TabKind? Tab => TabKind.Damage;
-    public override IEnumerable<SimState> AfterArrowImpaled(SimState state, int owner, int target, int shooter) =>
-        shooter == owner ? DamageAll(state, owner, Amount(state, owner)) : One(state);
-}
-
-/// <summary>CoveringFirePower.AfterArrowShot: each shot its owner tries from a card (arrow or not) gives every other living player its amount of block (unpowered). No tab.</summary>
-public sealed class CoveringFirePower : ProcModel
-{
-    public override TabKind? Tab => null; // no tab: the block is your teammates' (decision #25)
-    public override IEnumerable<SimState> AfterArrowShot(SimState state, int owner, int shooter)
-    {
-        if (shooter != owner || state.CurrentPlay == null) return One(state);
-        IEnumerable<SimState> states = One(state);
-        var amount = Amount(state, owner);
-        for (var teammateIndex = 0; teammateIndex < state.Teammates.Count; teammateIndex++)
-        {
-            var mate = Who.Teammate(teammateIndex);
-            if (mate == owner) continue;
-            states = states.SelectMany(branch => SimEngine.ProcBlockFor(branch, owner, Name, mate, amount, Unpowered)).ToList();
-        }
-        if (owner != Who.You) states = states.SelectMany(branch => SimEngine.ProcBlockFor(branch, owner, Name, Who.You, amount, Unpowered)).ToList();
-        return states;
-    }
-}
+// Explosive Arrows and Covering Fire are read from their code (ReadModel, decision #241).
 
 /// <summary>
 /// ImpaledPower (yours, on an enemy: Amount = your arrows in it, Data = its HitCounter): every third powered hit of yours knocks an

@@ -91,11 +91,6 @@ public static class SimReaders
             // Feral: its zeroCostAttacksPlayed (its own count: the model compares it with its amount, which more Feral raises).
             case nameof(FeralPower): data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } feral ? Sts2State.Private(feral, "zeroCostAttacksPlayed", fallback: 0) : Math.Max(0, power.Amount - power.DisplayAmount); break;
             case nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)); break;
-            // Bound to the attack under way (BeforeAttack set commandToModify): every other card's damage gets nothing from it.
-            case nameof(QuietusPower):
-                data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } bound && Sts2State.Private<object?>(bound, "commandToModify", fallback: null) != null
-                    ? Models.AttackBoundPower.BoundOutside : 0;
-                break;
             case nameof(JugglingPower): data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } juggled ? Sts2State.Private(juggled, "attacksPlayedThisTurn", fallback: 0) : 0; break;
             // Whose plays it acts on (DataCreature: 0 is no one).
             // Gone with their applier (AfterDeath), Magic Bomb only while it lives: the applier.

@@ -38,7 +38,7 @@ public class SimKeyCoverageTests
         // Inside one step only.
         ["SimState.IndirectNow"] = Scratch, ["SimState.EtherealNow"] = Scratch, ["SimState.CurrentPlay"] = Scratch, ["SimState.AttackSerial"] = Scratch,
         ["SimState.CurrentAttack"] = Scratch, ["SimState.EnemyTurnNow"] = Scratch,
-        ["SimState.EndOfTurnNow"] = Scratch, ["SimState.Bound"] = Scratch, ["SimState.Pending"] = Scratch, ["SimState.PendingIntoDraw"] = Scratch, ["SimState.PendingSpawns"] = Scratch, ["SimState.PendingPowers"] = Scratch, ["SimState.AttackDealt"] = Scratch, ["SimState.ArrowAwayAt"] = Scratch,
+        ["SimState.EndOfTurnNow"] = Scratch, ["SimState.Bound"] = Scratch, ["SimState.Pending"] = Scratch, ["SimState.PendingIntoDraw"] = Scratch, ["SimState.PendingSpawns"] = Scratch, ["SimState.PendingPowers"] = Scratch, ["SimState.AttackDealt"] = Scratch, ["SimState.ArrowAwayAt"] = Scratch, ["SimState.ArrowDestroyedOnImpale"] = Scratch,
         ["SimState.EventCard"] = Scratch, ["SimState.PlayEvents"] = Scratch, ["SimState.PlayCardBlockGains"] = Scratch,
         ["SimState.DrawRecord"] = "in the key while it's set (as a set: decision #120); null between steps",
         ["SimState.OrbTargets"] = "in the key while it's set (an evoke's targets until AfterOrbEvoked); null between steps",

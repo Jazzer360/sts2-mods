@@ -453,6 +453,8 @@ public sealed class ReadModel : SimModel
         HookName.ModifyDamageCap => nameof(ModifyDamageCap),
         HookName.AfterModifyingDamageAmount => nameof(AfterModifyingDamageAmount),
         HookName.BeforeDamageReceived => nameof(BeforeDamageReceived),
+        HookName.AfterArrowShot => nameof(AfterArrowShot),
+        HookName.AfterArrowImpaled => nameof(AfterArrowImpaled),
         // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook; an enchantment's OnPlay
         // where its card plays (RunEnchantment).
         HookName.Passive or HookName.Evoke or HookName.OnPlay => "",
@@ -585,6 +587,14 @@ public sealed class ReadModel : SimModel
     /// <summary>A hit it dealt or took (inside the damage: SimEngine.Damage): deterministic, on the state given, as the hand-written models' are.</summary>
     public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit) => InDamage(HookName.AfterDamageGiven, state, owner, hit);
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit) => InDamage(HookName.AfterDamageReceived, state, owner, hit);
+
+    /// <summary>A player tried a shot (Hook.AfterArrowShot, SimEngine.RunShoot): its shooter the hook's player, the shot's arrow SimState.ArrowAwayAt.</summary>
+    public override IEnumerable<SimState> AfterArrowShot(SimState state, int owner, int shooter) =>
+        Run(HookName.AfterArrowShot, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Player = shooter });
+
+    /// <summary>A player's arrow impaled <paramref name="target"/> (Hook.AfterArrowImpaled, SimEngine.RunImpale): its shooter the hook's player.</summary>
+    public override IEnumerable<SimState> AfterArrowImpaled(SimState state, int owner, int target, int shooter) =>
+        Run(HookName.AfterArrowImpaled, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Player = shooter, Target = target });
 
     /// <summary>
     /// A damage worked out, about to meet its target's block (Hook.BeforeDamageReceived: Thorns hits the dealer back), on any creature, inside the
@@ -995,17 +1005,28 @@ public sealed class ReadModel : SimModel
             }
             case ForEachStep each:
             {
-                // foreach over the items as the loop starts (the players in their order, the hittable enemies): its body once for each, the item Each.
+                // foreach over the items as the loop starts (the players in their order, the hittable enemies, its owner's side): its body once for
+                // each the loop's filter lets through (asked of each item as the loop reaches it, on each branch), the item Each.
                 var body = CompileSteps(each.Steps, new List<HookStep>(), firstRound: true);
                 var over = each.Over;
+                var where = each.Where == null ? null : Compile(each.Where);
                 return args =>
                 {
-                    var items = over == HookItems.Players ? args.State.PlayerIds.ToList() : args.State.Targetable.Select(enemy => enemy.Id).ToList();
+                    var items = over switch
+                    {
+                        HookItems.Players => args.State.PlayerIds.ToList(),
+                        HookItems.Teammates => Teammates(args.State, args.Owner),
+                        _ => args.State.Targetable.Select(enemy => enemy.Id).ToList(),
+                    };
                     IEnumerable<SimState> states = One(args.State);
                     foreach (var item in items)
                     {
                         var current = args with { Each = item };
-                        states = SimEngine.Then(states, branch => RunSteps(body, current.On(branch)));
+                        states = SimEngine.Then(states, branch =>
+                        {
+                            var branchArgs = current.On(branch);
+                            return where != null && where(in branchArgs) == 0m ? One(branch) : RunSteps(body, branchArgs);
+                        });
                     }
                     return states;
                 };
@@ -1116,7 +1137,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep
+            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or DestroyArrowStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1351,6 +1372,13 @@ public sealed class ReadModel : SimModel
                     return SimEngine.ProcCardEvent(args.State, CardEvent.Generated, count: 1, args.Owner, onEach: SimEngine.TallyFor(Name, Tab, CardEvent.Generated, args.Owner), card: made);
                 };
             }
+            // The shot's arrow destroyed once it impales (Quietus'): the engine takes it out as it impales (SimEngine.RunImpale).
+            case DestroyArrowStep:
+                return args =>
+                {
+                    args.State.ArrowDestroyedOnImpale = true;
+                    return One(args.State);
+                };
             case FreeInHandStep:
                 return args =>
                 {
@@ -1371,6 +1399,18 @@ public sealed class ReadModel : SimModel
             default:
                 throw new InvalidOperationException($"{Name}: no command for {step.GetType().Name}");
         }
+    }
+
+    /// <summary>
+    /// Its owner's side (CombatState.GetTeammatesOf(base.Owner): Allies or Enemies, itself included): for a player's model every player in their
+    /// order and your Osty while he lives (the one pet the simulator keeps), for an enemy's the living enemies.
+    /// </summary>
+    private static List<int> Teammates(SimState state, int owner)
+    {
+        if (Who.IsEnemy(owner)) return state.Enemies.Where(enemy => enemy.Alive).Select(enemy => enemy.Id).ToList();
+        var side = state.PlayerIds.ToList();
+        if (state.You.OstyHp > 0) side.Add(Who.YourOsty);
+        return side;
     }
 
     /// <summary>
@@ -1715,6 +1755,18 @@ public sealed class ReadModel : SimModel
             case HookFact.BoundHeld: return (in HookArgs args) => args.State.Bound.Has(BoundKey(in args)) ? 1m : 0m;
             case HookFact.HitUnblocked: return (in HookArgs args) => args.Hit?.Unblocked ?? 0;
             case HookFact.HitBlocked: return (in HookArgs args) => args.Hit?.Blocked ?? 0;
+            case HookFact.ShotHadArrow: return (in HookArgs args) => args.State.ArrowAwayAt != Who.None ? 1m : 0m;
+            case HookFact.HookCardThere: return (in HookArgs args) => args.Play != null ? 1m : 0m;
+            case HookFact.CreatureAlive:
+            {
+                var creature = CreatureNamed(fact);
+                return (in HookArgs args) => CreatureOf(in args, creature) switch
+                {
+                    Who.YourOsty => args.State.You.OstyHp > 0 ? 1m : 0m,
+                    var id when Who.IsPlayer(id) => args.State.Player(id) is { Hp: > 0, Died: false } ? 1m : 0m,
+                    var id => args.State.Enemy(id) is { Alive: true } ? 1m : 0m,
+                };
+            }
             case HookFact.HitTotal: return (in HookArgs args) => args.Hit?.Total ?? 0;
             case HookFact.PlayCountSoFar: return (in HookArgs args) => args.PlayCount;
             case HookFact.OwnerBlock: return (in HookArgs args) => args.State.Player(args.Owner)?.Block ?? args.State.Enemy(args.Owner)?.Block ?? 0;

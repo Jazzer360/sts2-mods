@@ -1,5 +1,4 @@
-using SpireQoL.Sim.Models;
-using Xunit;
+﻿using Xunit;
 using static SpireQoL.Sim.Tests.ScriptBuilder;
 
 namespace SpireQoL.Sim.Tests;
@@ -33,9 +32,9 @@ public class StatModelTests
         state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Vulnerable, amount: 2);
         Assert.Equal(85, After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 10))).Single().Enemy(id: 0)!.Hp); // 15
         state.You.Relics = RelicSet.Empty.With(RelicId.PaperPhrog, amount: 0);
-        Assert.Equal(83, After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 10))).Single().Enemy(id: 0)!.Hp); // 1.75 → 17
+        Assert.Equal(83, After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 10))).Single().Enemy(id: 0)!.Hp); // 1.75 â†’ 17
         state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.Debilitate, amount: 1);
-        Assert.Equal(75, After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 10))).Single().Enemy(id: 0)!.Hp); // 1.75 + 0.75 → 25
+        Assert.Equal(75, After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 10))).Single().Enemy(id: 0)!.Hp); // 1.75 + 0.75 â†’ 25
     }
 
     [Fact]
@@ -133,9 +132,9 @@ public class StatModelTests
         foreach (var name in new[] { PowerId.Aim, PowerId.Quietus, PowerId.Gigantification })
         {
             var state = WithPowers();
-            // A read model keeps the attack in its own data (decision #228); a hand-written one in its Data.
-            state.You.Powers = state.You.Powers.With(name, amount: 3, SimModels.Get(name.Name) is ReadModel ? 0 : AttackBoundPower.BoundOutside);
-            if (SimModels.Get(name.Name) is ReadModel) KeptOutside(state, name);
+            // A read model keeps the attack in its own data (decision #228).
+            state.You.Powers = state.You.Powers.With(name, amount: 3);
+            KeptOutside(state, name);
             var after = After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 10, props: arrow))).Single();
             Assert.Equal(90, after.Enemy(id: 0)!.Hp);
             Assert.True(after.You.Powers.Has(name), name.Name);
@@ -145,7 +144,7 @@ public class StatModelTests
     [Fact]
     public void FlutterHalvesHitsOnlyUntilItsLastStackGoes()
     {
-        // Wah Ki (2 × 2) on a Thieving Hopper with Flutter 1: the first hit is halved to 1 and takes the last stack
+        // Wah Ki (2 Ã— 2) on a Thieving Hopper with Flutter 1: the first hit is halved to 1 and takes the last stack
         // (FlutterPower.AfterDamageReceived stuns it), so the second hit deals its full 2.
         var state = WithPowers();
         state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Flutter, amount: 1);
@@ -187,7 +186,7 @@ public class StatModelTests
     public void DexterityAndFrailOnBlock()
     {
         var state = WithPowers((PowerId.Dexterity, 2), (PowerId.Frail, 1));
-        Assert.Equal(5, After(state, Play(Card("Defend", SimCardType.Skill), target: Who.None, plays: 1, Block(baseBlock: 5))).Single().You.Block); // (5 + 2) × 0.75
+        Assert.Equal(5, After(state, Play(Card("Defend", SimCardType.Skill), target: Who.None, plays: 1, Block(baseBlock: 5))).Single().You.Block); // (5 + 2) Ã— 0.75
     }
 
     [Fact]
@@ -199,7 +198,7 @@ public class StatModelTests
         Assert.Equal(93, after.Enemy(id: 0)!.Hp);
         Assert.Equal(8, after.You.Block);
         state.You.Powers = state.You.Powers.With(PowerId.Frail, amount: 1);
-        Assert.Equal(6, After(state, Play(Card("Fisticuffs"), target: 0, plays: 1, Attack(baseDamage: 7), Block(baseBlock: 7))).Single().You.Block); // (7 + 1) × 0.75
+        Assert.Equal(6, After(state, Play(Card("Fisticuffs"), target: 0, plays: 1, Attack(baseDamage: 7), Block(baseBlock: 7))).Single().You.Block); // (7 + 1) Ã— 0.75
     }
 
     [Fact]
@@ -209,7 +208,7 @@ public class StatModelTests
         state.Enemies[0].Intent = new List<IntentHit> { new(Base: 12m) };
         var script = Play(Card("Neutralize"), target: 0, plays: 1, Attack(baseDamage: 3), new ApplyPowerAction(PowerId.Weak, Amount: 1) { Debuff = true });
         var outcome = SimEngine.Run(state, script);
-        Assert.Equal(9, outcome.TakenMax); // 12 × 0.75
+        Assert.Equal(9, outcome.TakenMax); // 12 Ã— 0.75
     }
 }
 

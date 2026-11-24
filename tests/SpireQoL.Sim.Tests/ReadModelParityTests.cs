@@ -67,6 +67,10 @@ public class ReadModelParityTests
         ["ArtOfWar.AfterCardPlayed"] = "AnyAttacksPlayedThisTurn = true on its owner's Attack while !AnyAttacksPlayedLastTurn: the store that gives its payout up logs the crossed tab's firing (decision #239), as ArtOfWar.BeforeCardPlayed's review says",
         ["RippleBasin.BeforeCardPlayed"] = "its code has no BeforeCardPlayed: the hand-written model logged its crossed tab's firing on the turn's first Attack there; the read model's is logged where the fight's log counts the play that turns its payout off (BeforeSideTurnEnd's block on no Attack of its owner's this turn: SimEngine.Count, decision #239). The play's log is the same over the play (BonusTabParityTests)",
         ["ThornsPower.BeforeDamageReceived"] = "target == base.Owner && dealer != null && props.IsPoweredAttack(): CreatureCmd.Damage(dealer, base.Amount, Unpowered | SkipHurtAnim, base.Owner), whoever owns it. On a player (your Thorns, a teammate's) it hits back the enemy whose attack is landing: the engine's enemy turn did that by hand (TakesHit), and the hand-written model left players' Thorns to it, so the two differ there by design (the enemy turn's tests and the single-player golden hold the read model to it). On an enemy, the only difference is a powered attack of its own on itself (dealer == target == its owner), which it now hits back as its code says: no card or move makes one",
+        ["QuietusPower.BeforeAttack"] = "the second attack's hit asked of the model after the first attack spent the power (AfterAttack's PowerCmd.Remove): the hand-written model answered x0 for a power that's gone, the read model x1; the engine never asks it there (a power that's gone is no listener), so no damage changes",
+        ["QuietusPower.AfterAttack"] = "the same two attacks as QuietusPower.BeforeAttack's review (the scenario runs both hooks): the second attack's hit asked of a power that's gone, which the engine never asks",
+        ["QuietusPower.AfterSideTurnEnd"] = "participants.Contains(base.Owner): PowerCmd.Remove(this), it goes as your turn ends. No card of yours plays after it (the auto-plays come before): no prediction changes",
+        ["QuietusPower.AfterArrowShot"] = "arrow != null && source != null && owner.Creature == base.Owner: arrow.DestroyAfterImpaled = true, so ArrowCmd.ImpaleTarget destroys the shot's arrow once it impales (DestroyArrow: ForceRemoveArrow from a living target, never retrieved), where the hand-written model let it come back as any arrow does (a fix: it no longer knocks loose later to set off Yah, Twine or Epic Retrieval, nor comes back to be shot again)",
         ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
     };
 
@@ -152,7 +156,7 @@ public class ReadModelParityTests
     /// The powers whose hand-written model kept the attack bound to it in its Data (the attack's id and the amount it started with) where the read
     /// model keeps them in its own data's fields (decision #228): two ways of keeping one thing, left out of the key; the hits compare what each does with it.
     /// </summary>
-    private static readonly HashSet<string> KeptAttackData = new(StringComparer.Ordinal) { PowerId.Vigor.Name, PowerId.Gigantification.Name, PowerId.Aim.Name };
+    private static readonly HashSet<string> KeptAttackData = new(StringComparer.Ordinal) { PowerId.Vigor.Name, PowerId.Gigantification.Name, PowerId.Aim.Name, PowerId.Quietus.Name };
 
     /// <summary>
     /// The powers whose hand-written model kept a once-a-turn flag in its Data (PowerUse.UsedThisTurn) where the read model keeps its own data's
@@ -248,7 +252,7 @@ public class ReadModelParityTests
         nameof(SimModel.AfterModifyingHpLost),
         nameof(SimModel.ModifyOrbValue), nameof(SimModel.ModifyOrbPassiveTriggerCounts), nameof(SimModel.AfterModifyingOrbPassiveTriggerCount), nameof(SimModel.AfterOrbEvoked),
         nameof(SimModel.BeforeAttack), nameof(SimModel.AfterAttack), nameof(SimModel.ModifyDamageCap), nameof(SimModel.AfterModifyingDamageAmount),
-        nameof(SimModel.BeforeDamageReceived),
+        nameof(SimModel.BeforeDamageReceived), nameof(SimModel.AfterArrowShot), nameof(SimModel.AfterArrowImpaled),
     };
 
     [Fact]
@@ -361,6 +365,25 @@ public class ReadModelParityTests
                         nameof(SimModel.ModifyDamageMultiplicative) => model.ModifyDamageMultiplicative(state, owner, damage),
                         _ => model.ModifyDamageMultiplicativeLate(state, owner, damage),
                     }));
+                break;
+            case nameof(SimModel.AfterArrowShot):
+                // A shot each player tries, with an arrow or with none, from a card's play or not: what it does (block for the others, the arrow
+                // marked to be destroyed as it impales).
+                foreach (var shooter in others.Where(Who.IsPlayer))
+                    foreach (var withArrow in new[] { true, false })
+                        foreach (var fromCard in new[] { true, false })
+                            yield return ($"a shot by {shooter}, {(withArrow ? "with an arrow" : "with none")}{(fromCard ? ", from a card" : "")}", (model, state) =>
+                            {
+                                state.ArrowAwayAt = withArrow ? 0 : Who.None;
+                                state.CurrentPlay = fromCard ? new SimCardPlay(new SimCard("Shot", SimCardType.Attack), shooter, Target: 0, PlayIndex: 0, PlayCount: 1, AutoPlay: false) : null;
+                                return Branches(model.AfterArrowShot(state, owner, shooter)) + $" // destroyed on impale {state.ArrowDestroyedOnImpale}";
+                            });
+                break;
+            case nameof(SimModel.AfterArrowImpaled):
+                // Each player's arrow impaling each enemy.
+                foreach (var shooter in others.Where(Who.IsPlayer))
+                    foreach (var target in new[] { 0, 1 })
+                        yield return ($"{shooter}'s arrow impales {target}", (model, state) => Branches(model.AfterArrowImpaled(state, owner, target, shooter)));
                 break;
             case nameof(SimModel.BeforeDamageReceived):
                 // A damage of every dealer, target, kind and card about to land (none, some), inside the damage: the state it's given changes

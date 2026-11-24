@@ -400,6 +400,9 @@ public static class ProgramReader
     /// <summary>The prefix of a store to one of the model's own values ("DynamicVars.Damage", "DynamicVars.\"CardsLeft\"").</summary>
     public const string OwnVarPrefix = "DynamicVars.";
 
+    /// <summary>The prefix of a property set on an object a hook is given ("Given.arrow.DestroyAfterImpaled": AfterArrowShot's arrow), never the model's own state.</summary>
+    public const string GivenPrefix = "Given.";
+
     /// <summary>
     /// One of the model's own values a value names (base.DynamicVars.Damage, base.DynamicVars["CardsLeft"], kept in a local or not): the
     /// property, or the key as the code writes it ("\"CardsLeft\""); null for anything else.
@@ -638,6 +641,14 @@ public static class ProgramReader
                     && flow.ReceiverValue(i, arguments: 1) is NamedValue { Name: "this" })
                 {
                     into.Add(new StoreStep(instruction.Offset, property, flow.ArgumentValues(i, member)[0]) { Condition = condition });
+                    continue;
+                }
+                // A property set on an object the hook is given (AfterArrowShot's arrow.DestroyAfterImpaled = true): a store, "Given.arrow.DestroyAfterImpaled",
+                // which the hook reader translates or names as a gap.
+                if (member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1 } && member.Name.StartsWith("set_", StringComparison.Ordinal) && IsPowerOrRelic
+                    && flow.ReceiverValue(i, arguments: 1) switch { ParameterValue givenParameter => givenParameter.Name, NamedValue givenNamed => givenNamed.Name, _ => null } is { } given && given != "this")
+                {
+                    into.Add(new StoreStep(instruction.Offset, GivenPrefix + given + "." + member.Name[4..], flow.ArgumentValues(i, member)[0]) { Condition = condition });
                     continue;
                 }
                 // One of the model's own values set (base.DynamicVars["CardsLeft"].BaseValue = 5m, base.DynamicVars.Damage.BaseValue--): a store to

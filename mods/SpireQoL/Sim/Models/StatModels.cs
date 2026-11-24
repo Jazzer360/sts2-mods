@@ -5,61 +5,11 @@ namespace SpireQoL.Sim.Models;
 
 // Strength, Dexterity, Frail and Double Damage are read from their code (ReadModel, decision #195).
 
-/// <summary>
-/// Powers bound to one attack (BeforeAttack binds the first attack that qualifies, AfterAttack spends them). Data is the bound
-/// attack's id and the amount when it started: (id &lt;&lt; 16) | amount.
-/// </summary>
-public abstract class AttackBoundPower : SimModel
-{
-    /// <summary>
-    /// Bound to an attack outside the simulation: one under way when the state was read (the game's commandToModify is set), so
-    /// it adds nothing to any simulated attack, and no simulated attack spends it.
-    /// </summary>
-    public const int BoundOutside = 0x7FFF << 16;
-
-    protected static int BoundAttack(int data) => data >> 16;
-    protected static int AmountAtStart(int data) => data & 0xFFFF;
-
-    /// <summary>The attack qualifies: its dealer, props and card (the game's BeforeAttack checks).</summary>
-    protected abstract bool Qualifies(SimState state, int owner, AttackInfo attack);
-
-    public override IEnumerable<SimState> BeforeAttack(SimState state, int owner, AttackInfo attack)
-    {
-        var powers = SimEngine.PowersOf(state, owner);
-        if (!powers.Has(ThisPower) || powers.DataOf(ThisPower) != 0 || !Qualifies(state, owner, attack)) return One(state);
-        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], (attack.Id << 16) | Math.Clamp(powers[ThisPower], 0, 0xFFFF)));
-        return One(state);
-    }
-
-    /// <summary>It applies to this damage: not bound, or bound to the attack in progress.</summary>
-    protected static bool AppliesNow(SimState state, int owner, PowerId name)
-    {
-        var bound = BoundAttack(SimEngine.PowersOf(state, owner).DataOf(name));
-        return bound == 0 || bound == state.CurrentAttack;
-    }
-}
-
 // Vigor and Gigantification are read from their code (ReadModel, decision #228).
 
 // Aim is read from its code (ReadModel, decision #232).
 
-/// <summary>QuietusPower: multiplies the owner's powered arrow attack by its amount; the attack bound to it removes it.</summary>
-public sealed class QuietusPower : AttackBoundPower
-{
-    protected override bool Qualifies(SimState state, int owner, AttackInfo attack) =>
-        attack.Dealer == owner && attack.Props.IsPoweredAttack() && attack.Props.HasFlag(SimProps.FromArrow);
-    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
-        damage.Dealer == owner && damage.Props.IsPoweredAttack() && damage.Props.HasFlag(SimProps.FromArrow) && AppliesNow(state, owner, ThisPower)
-            ? SimEngine.PowerOn(state, owner, ThisPower) : 1m;
-    public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack)
-    {
-        var powers = SimEngine.PowersOf(state, owner);
-        if (!powers.Has(ThisPower) || BoundAttack(powers.DataOf(ThisPower)) != attack.Id) return One(state);
-        SimEngine.SetPowers(state, owner, powers.Without(ThisPower));
-        state.LogFired(Name, amount: 0, owner);
-        return One(state);
-    }
-}
+// Quietus is read from its code (ReadModel, decision #241).
 
 // Slow is read from its code (ReadModel, decision #229).
 

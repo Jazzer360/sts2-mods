@@ -85,6 +85,10 @@ public enum HookName
     /// its dealer, target, props and card (Thorns hits the dealer back).
     /// </summary>
     BeforeDamageReceived,
+    /// <summary>Hook.AfterArrowShot: a player tried a shot (ArrowCmd.TryShootArrow: with an arrow or with none), from a card or not: its shooter the hook's player.</summary>
+    AfterArrowShot,
+    /// <summary>Hook.AfterArrowImpaled: a player's arrow impaled a creature (ArrowCmd.ImpaleTarget), after the shot's attack: its shooter the hook's player.</summary>
+    AfterArrowImpaled,
 }
 
 /// <summary>When an orb's passive goes off: the OrbModel trigger hook its class overrides with a call of TriggerPassive (OrbQueue calls them).</summary>
@@ -103,6 +107,11 @@ public enum HookItems
     Players,
     /// <summary>Every enemy that can be hit (CombatState.HittableEnemies), as the loop starts.</summary>
     HittableEnemies,
+    /// <summary>
+    /// The owner's side's creatures (CombatState.GetTeammatesOf(base.Owner), itself included): for a player's model every player in their order and
+    /// your Osty while he lives (the pets the simulator keeps), for an enemy's the living enemies.
+    /// </summary>
+    Teammates,
 }
 
 /// <summary>A command of a model's own (a public method of its class that returns a Task and takes nothing: PoisonPower.Trigger), read as a program.</summary>
@@ -192,6 +201,12 @@ public enum HookFact
     HitUnblocked,
     /// <summary>What a hit's block took (AfterDamageGiven's and AfterDamageReceived's result.BlockedDamage: Reflect's damage back).</summary>
     HitBlocked,
+    /// <summary>The shot had an arrow (AfterArrowShot's arrow isn't null: its player had one to shoot).</summary>
+    ShotHadArrow,
+    /// <summary>The hook's card is there (AfterArrowShot's source: a shot a card makes).</summary>
+    HookCardThere,
+    /// <summary>The creature named in Creature is alive (creature.IsAlive).</summary>
+    CreatureAlive,
     /// <summary>The owner's block (base.Owner.Creature.Block).</summary>
     OwnerBlock,
     /// <summary>The cards in the owner's hand (PileType.Hand.GetPile(base.Owner).Cards.Count; IsEmpty is this at 0).</summary>
@@ -567,7 +582,21 @@ public sealed record RepeatStep(HookValue Times, IReadOnlyList<HookStep> Steps) 
 public sealed record LetStep(string Name, HookValue Value) : HookStep;
 
 /// <summary>A loop over items (foreach): its steps once for each item, in order, the item HookWho.Each (HookTarget.Each) inside it.</summary>
-public sealed record ForEachStep(HookItems Over, IReadOnlyList<HookStep> Steps) : HookStep;
+public sealed record ForEachStep(HookItems Over, IReadOnlyList<HookStep> Steps) : HookStep
+{
+    /// <summary>
+    /// The loop's filter (Where(items, c => ...): Covering Fire's living players other than its owner), asked of each item as the loop reaches it, the
+    /// item HookWho.Each; null: every item.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public HookValue? Where { get; init; }
+}
+
+/// <summary>
+/// The shot's arrow is destroyed once it impales (AfterArrowShot's arrow.DestroyAfterImpaled = true: Quietus'): ArrowCmd.ImpaleTarget takes it out of
+/// the creature it impaled (ImpaledPower.ForceRemoveArrow, while that creature lives) and it never comes back to its player.
+/// </summary>
+public sealed record DestroyArrowStep : HookStep;
 
 /// <summary>OrbCmd.Channel&lt;T&gt; for the owner: one orb of the kind named (SimEngine.ChannelKind).</summary>
 public sealed record ChannelStep(OrbKind Orb) : HookStep;
@@ -788,7 +817,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             StoreFieldStep store => Inside(store.Value),
             BindStep bind => Inside(bind.Value),
             RepeatStep repeat => Inside(repeat.Times).Concat(repeat.Steps.SelectMany(OfStep)),
-            ForEachStep each => each.Steps.SelectMany(OfStep),
+            ForEachStep each => Inside(each.Where).Concat(each.Steps.SelectMany(OfStep)),
             LetStep let => Inside(let.Value),
             _ => Array.Empty<HookValue>(),
         });

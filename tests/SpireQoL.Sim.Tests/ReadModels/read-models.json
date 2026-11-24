@@ -4761,6 +4761,146 @@
     "HelpsOwner": false
   },
   {
+    "Name": "CoveringFirePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterArrowShot",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterArrowShot\u003Ed__6.MoveNext:0022",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterArrowShot\u003Ed__6.MoveNext:002F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "HookCardThere"
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ForEachStep",
+            "Over": "Teammates",
+            "Steps": [
+              {
+                "$kind": "GainBlockStep",
+                "Amount": {
+                  "$kind": "HookFactValue",
+                  "Fact": "Amount"
+                },
+                "Props": {
+                  "$kind": "HookConstant",
+                  "Value": 4
+                },
+                "To": "Each"
+              }
+            ],
+            "Where": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "CoveringFirePower.\u003CAfterArrowShot\u003Eb__6_0:0001",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureThere",
+                      "Creature": {
+                        "Who": "Each",
+                        "PetOwner": false
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "CoveringFirePower.\u003CAfterArrowShot\u003Eb__6_0:0009",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureAlive",
+                      "Creature": {
+                        "Who": "Each",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "CoveringFirePower.\u003CAfterArrowShot\u003Eb__6_0:0011",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CreatureIsPlayer",
+                    "Creature": {
+                      "Who": "Each",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "CoveringFirePower.\u003CAfterArrowShot\u003Eb__6_0:0029",
+                "Test": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookFactValue",
+                    "Fact": "SameCreature",
+                    "Creature": {
+                      "Who": "Each",
+                      "PetOwner": false
+                    },
+                    "Other": {
+                      "Who": "Owner",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterArrowShot\u003Ed__6.MoveNext:0022",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterArrowShot\u003Ed__6.MoveNext:002F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "HookCardThere"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "CrabRagePower",
     "Kind": "Power",
     "Hooks": [
@@ -6669,6 +6809,93 @@
         ]
       }
     ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "ExplosiveArrowsPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterArrowImpaled",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterArrowImpaled\u003Ed__6.MoveNext:003B",
+              "Test": {
+                "$kind": "HookWays",
+                "Ways": [
+                  {
+                    "When": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    },
+                    "Value": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  },
+                  {
+                    "When": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    },
+                    "Value": {
+                      "$kind": "HookFactValue",
+                      "Fact": "EventIsOwners"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterArrowImpaled\u003Ed__6.MoveNext:003B",
+              "Test": {
+                "$kind": "HookWays",
+                "Ways": [
+                  {
+                    "When": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    },
+                    "Value": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  },
+                  {
+                    "When": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    },
+                    "Value": {
+                      "$kind": "HookFactValue",
+                      "Fact": "EventIsOwners"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage",
     "HelpsOwner": false
   },
   {
@@ -18665,6 +18892,754 @@
             }
           }
         ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "QuietusPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterArrowShot",
+        "Steps": [
+          {
+            "$kind": "DestroyArrowStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "QuietusPower.AfterArrowShot:0001",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "ShotHadArrow"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "QuietusPower.AfterArrowShot:000B",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HookCardThere"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "QuietusPower.AfterArrowShot:001F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterAttack",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterAttack\u003Ed__9.MoveNext:0024",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "Data.commandToModify"
+                },
+                "Right": {
+                  "$kind": "HookFactValue",
+                  "Fact": "AttackId"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__10.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeAttack",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.commandToModify",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "AttackId"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "Or",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "QuietusPower.BeforeAttack:000C",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SameCreature",
+                            "Creature": {
+                              "Who": "Attacker",
+                              "PetOwner": false
+                            },
+                            "Other": {
+                              "Who": "Owner",
+                              "PetOwner": false
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "QuietusPower.BeforeAttack:001F",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PoweredAttack"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "QuietusPower.BeforeAttack:003E",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PropsHave",
+                          "Of": "FromArrow"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "QuietusPower.BeforeAttack:0053",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "QuietusPower.BeforeAttack:0061",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "AttackFromCard"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "QuietusPower.BeforeAttack:0081",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "QuietusPower.BeforeAttack:000C",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SameCreature",
+                            "Creature": {
+                              "Who": "Attacker",
+                              "PetOwner": false
+                            },
+                            "Other": {
+                              "Who": "Owner",
+                              "PetOwner": false
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "QuietusPower.BeforeAttack:001F",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PoweredAttack"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "QuietusPower.BeforeAttack:003E",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PropsHave",
+                          "Of": "FromArrow"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "QuietusPower.BeforeAttack:0053",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "QuietusPower.BeforeAttack:006E",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "AttackFromCard"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "QuietusPower.BeforeAttack:0081",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.commandToModify.ModelSource",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "AttackCardId"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "Or",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "QuietusPower.BeforeAttack:000C",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SameCreature",
+                            "Creature": {
+                              "Who": "Attacker",
+                              "PetOwner": false
+                            },
+                            "Other": {
+                              "Who": "Owner",
+                              "PetOwner": false
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "QuietusPower.BeforeAttack:001F",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PoweredAttack"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "QuietusPower.BeforeAttack:003E",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PropsHave",
+                          "Of": "FromArrow"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "QuietusPower.BeforeAttack:0053",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "QuietusPower.BeforeAttack:0061",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "AttackFromCard"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "QuietusPower.BeforeAttack:0081",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "QuietusPower.BeforeAttack:000C",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SameCreature",
+                            "Creature": {
+                              "Who": "Attacker",
+                              "PetOwner": false
+                            },
+                            "Other": {
+                              "Who": "Owner",
+                              "PetOwner": false
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "QuietusPower.BeforeAttack:001F",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PoweredAttack"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "QuietusPower.BeforeAttack:003E",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PropsHave",
+                          "Of": "FromArrow"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "QuietusPower.BeforeAttack:0053",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "QuietusPower.BeforeAttack:006E",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "AttackFromCard"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "QuietusPower.BeforeAttack:0081",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "QuietusPower.ModifyDamageMultiplicative:0008",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "DealerIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "QuietusPower.ModifyDamageMultiplicative:0016",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "QuietusPower.ModifyDamageMultiplicative:0030",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PropsHave",
+                    "Of": "FromArrow"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "QuietusPower.ModifyDamageMultiplicative:0045",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.commandToModify"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "QuietusPower.ModifyDamageMultiplicative:0049",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "FromCard"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "QuietusPower.ModifyDamageMultiplicative:0058",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CurrentAttack"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify.ModelSource"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify.ModelSource"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SourceCardId"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "QuietusPower.ModifyDamageMultiplicative:0045",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.commandToModify"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "QuietusPower.ModifyDamageMultiplicative:0049",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "FromCard"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "QuietusPower.ModifyDamageMultiplicative:0058",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.commandToModify"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.commandToModify"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CurrentAttack"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.commandToModify.ModelSource"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.commandToModify.ModelSource"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SourceCardId"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            }
+          ]
+        }
       }
     ],
     "HelpsOwner": false

@@ -1193,6 +1193,32 @@ public static class HookReader
             return holds == null ? null : compare.Op == Comparison.Equal ? holds : Not(holds);
         }
 
+        /// <summary>
+        /// A shot's arrow and card against null (AfterArrowShot's arrow: the shot had one, HookFact.ShotHadArrow; its source: a card made the shot,
+        /// HookFact.HookCardThere). Null for anything else.
+        /// </summary>
+        private HookValue? ArrowCompare(CompareValue compare)
+        {
+            if (compare.Op is not (Comparison.Equal or Comparison.NotEqual) || _hook != "AfterArrowShot") return null;
+            HookValue? there = null;
+            foreach (var (one, other) in new[] { (compare.Left, compare.Right), (compare.Right, compare.Left) })
+            {
+                if (other is not NullValue) continue;
+                if (Unstored(one) is ParameterValue { Name: "arrow" } or NamedValue { Name: "arrow" }) there = new HookFactValue(HookFact.ShotHadArrow);
+                else if (Unstored(one) is ParameterValue { Name: "source" } or NamedValue { Name: "source" }) there = new HookFactValue(HookFact.HookCardThere);
+                if (there != null) break;
+            }
+            return there == null ? null : compare.Op == Comparison.NotEqual ? there : Not(there);
+        }
+
+        /// <summary>
+        /// The first arrow of the Impaled AfterArrowImpaled is given (power.Arrows.FirstOrDefault()): ArrowCmd.ImpaleTarget adds the shot's arrow to it
+        /// before the hook, and every arrow of an instance is its applier's, the shooter (ImpaleTarget finds or applies the instance whose Applier
+        /// is the arrow's owner: ImpaledPower is InstancedPerApplier, ArrowFactsTests holds it to the code).
+        /// </summary>
+        private bool IsImpaledsFirstArrow(ProgramValue value) =>
+            _hook == "AfterArrowImpaled" && Unstored(value) is QueryValue { Name: "FirstOrDefault", Arguments: [QueryValue { Name: "Arrows", Of: ParameterValue { Name: "power" } or NamedValue { Name: "power" } }] };
+
         /// <summary>While a hand pick's step is read: its condition's tests of the pick hold (Test).</summary>
         private bool _handPickHolds;
 
@@ -1373,6 +1399,12 @@ public static class HookReader
                     if (attackStore.Value is NullValue) return Kept(new HookConstant(0m), new HookConstant(0m), new HookConstant(0m));
                     throw new Gap(ReaderCapability.AttackHooks, $"gap: keeps {attackStore.Value} in {attackStore.Field}");
                 }
+                // A property set on an object the hook is given: the shot's arrow destroyed once it impales (AfterArrowShot's arrow.DestroyAfterImpaled =
+                // true: Quietus'); any other is a gap.
+                case StoreStep given when given.Field.StartsWith(ProgramReader.GivenPrefix, StringComparison.Ordinal):
+                    if (_hook == "AfterArrowShot" && given.Field == ProgramReader.GivenPrefix + "arrow.DestroyAfterImpaled" && Value(given.Value) is HookConstant { Value: not 0m })
+                        return new HookStep[] { new DestroyArrowStep { When = Condition(step.Condition) } };
+                    throw new Gap(ReaderCapability.OtherModelValueSet, $"gap: sets {given.Field[ProgramReader.GivenPrefix.Length..]}");
                 case StoreStep store:
                     // A store to its own state (a field or property of its class, a plain field of its data): simulator state its programs read (HookField).
                     // One of its own values set (DynamicVars["CardsLeft"].BaseValue = ...): its state too, under the value's key.
@@ -1389,6 +1421,14 @@ public static class HookReader
                     {
                         var each = loop.Body.SelectMany(Step).ToList();
                         return each.Count == 0 ? Array.Empty<HookStep>() : new[] { new ForEachStep(over, each) { When = Condition(step.Condition) } };
+                    }
+                    // A loop over the owner's side filtered by a lambda (Where(GetTeammatesOf(base.Owner), c => ...): Covering Fire's other living
+                    // players): the filter asked of each item, its parameter the item.
+                    if (loop.Items is { } filteredItems && TeammatesWhere(filteredItems) is { } filter)
+                    {
+                        var each = loop.Body.SelectMany(Step).ToList();
+                        var where = Condition(filter.Body.Map(part => part is ParameterValue { Name: var name } && name == filter.Parameter ? new NamedValue("each") : null));
+                        return each.Count == 0 ? Array.Empty<HookStep>() : new[] { new ForEachStep(HookItems.Teammates, each) { When = Condition(step.Condition), Where = where } };
                     }
                     // A counter loop (for i < n): its body n times, n worked out as the loop starts (the card programs read it the same way:
                     // ProgramEvaluator.Rounds). Any other loop is a gap.
@@ -1995,6 +2035,14 @@ public static class HookReader
                 case ArithmeticValue:
                     // An int tested as true or false (not (count rem Cards): its remainder is 0).
                     return new HookMath(HookOperation.NotEqual, Value(test), new HookConstant(0m));
+                // The Impaled AfterArrowImpaled is given has an arrow: the shot's, added before the hook (ArrowCmd.ImpaleTarget).
+                // A shot's arrow and card tested as there (AfterArrowShot's arrow: the shot had one; its source: a card made the shot).
+                case ParameterValue { Name: "arrow" } or NamedValue { Name: "arrow" } when _hook == "AfterArrowShot":
+                    return new HookFactValue(HookFact.ShotHadArrow);
+                case ParameterValue { Name: "source" } or NamedValue { Name: "source" } when _hook == "AfterArrowShot":
+                    return new HookFactValue(HookFact.HookCardThere);
+                case var firstArrow when IsImpaledsFirstArrow(firstArrow):
+                    return new HookConstant(1m);
                 case var creatureTest when CreatureTest(creatureTest) is { } creatureFact:
                     return creatureFact;
                 // An orb's Passive's target: TriggerPassive passes none (its trigger hook's code: CallsTriggerPassive).
@@ -2026,6 +2074,8 @@ public static class HookReader
             {
                 case "IsPlayer": return CreatureFact(HookFact.CreatureIsPlayer, creature);
                 case "IsMonster": return CreatureFact(HookFact.CreatureIsMonster, creature);
+                case "IsAlive": return CreatureFact(HookFact.CreatureAlive, creature);
+                case "IsDead": return Not(CreatureFact(HookFact.CreatureAlive, creature));
                 case "IsEnemy": return Not(CreatureFact(HookFact.CreatureOnPlayersSide, creature));
                 case "HasPower" or "GetPower" when query.GenericArguments is [var power]:
                     return CreatureFact(HookFact.CreatureHasPower, creature) with { Of = PowerClass(power) };
@@ -2116,6 +2166,7 @@ public static class HookReader
         {
             if (AttackCompare(compare) is { } attacks) return attacks;
             if (SourceCompare(compare) is { } sources) return sources;
+            if (ArrowCompare(compare) is { } arrows) return arrows;
             if (compare.Op is Comparison.Equal or Comparison.NotEqual)
             {
                 // Its kept card is there (CardBeingPlayed != null), or is the card played (cardPlay.Card == CardBeingPlayed): a play is bound to it,
@@ -2238,7 +2289,10 @@ public static class HookReader
             if (IsCreator(other)) return new HookFactValue(HookFact.EventIsOwners);
             // The owner of the arrow knocked loose (AfterArrowDislodged's arrow.owner, a player, or its Creature): the event's player, the one the
             // engine raises it for (the arrow comes back to its owner: ArrowCmd.DislodgeArrow).
-            if (_hook == "AfterArrowDislodged" && IsArrowOwner(other)) return new HookFactValue(HookFact.EventIsOwners);
+            if (_hook is "AfterArrowDislodged" or "AfterArrowImpaled" && IsArrowOwner(other)) return new HookFactValue(HookFact.EventIsOwners);
+            // The player who tried a shot (AfterArrowShot's owner, or its Creature): the event's player, the shooter the engine raises it for.
+            if (_hook == "AfterArrowShot" && Unstored(other) is ParameterValue { Name: "owner" } or NamedValue { Name: "owner" } or QueryValue { Name: "Creature", Of: ParameterValue { Name: "owner" } or NamedValue { Name: "owner" } })
+                return new HookFactValue(HookFact.EventIsOwners);
             if (IsDealer(other)) return new HookFactValue(HookFact.DealerIsOwner);
             if (other is ParameterValue { Name: "target" } or NamedValue { Name: "target" }) return new HookFactValue(HookFact.TargetIsOwner);
             if (other is NamedValue { Name: "applier" } or ParameterValue { Name: "applier" }) return new HookFactValue(HookFact.ApplierIsOwner);
@@ -2795,6 +2849,18 @@ public static class HookReader
             Unstored(items) is QueryValue { Name: "Players", Of: QueryValue { Name: "CombatState" } } ? HookItems.Players
             : IsHittableEnemies(items) ? HookItems.HittableEnemies : null;
 
+        /// <summary>
+        /// The owner's side filtered by a lambda (Where(CombatState.GetTeammatesOf(base.Owner), c => ...), a ToList of it or not, kept in a local or
+        /// not): the lambda, else null.
+        /// </summary>
+        private static LambdaValue? TeammatesWhere(ProgramValue items)
+        {
+            var unstored = Unstored(items);
+            if (unstored is QueryValue { Type: "Enumerable", Name: "ToList", Arguments: [var listed] }) unstored = Unstored(listed);
+            return unstored is QueryValue { Type: "Enumerable", Name: "Where", Arguments: [QueryValue { Name: "GetTeammatesOf", Arguments: [var whose] }, LambdaValue filter] } && IsOwner(whose)
+                ? filter : null;
+        }
+
         /// <summary>A value as kept in a local or not (a StoredValue's value).</summary>
         private static ProgramValue Unstored(ProgramValue value) => value is StoredValue stored ? Unstored(stored.Value) : value;
 
@@ -2882,7 +2948,8 @@ public static class HookReader
         private static bool IsSourceCard(ProgramValue value) => value is ParameterValue { Name: "cardSource" } or NamedValue { Name: "cardSource" };
 
         /// <summary>An arrow's owner (arrow.owner: its player), or that player's creature (arrow.owner.Creature).</summary>
-        private static bool IsArrowOwner(ProgramValue value) =>
+        private bool IsArrowOwner(ProgramValue value) =>
+            value is QueryValue { Name: "owner", Of: { } first } && IsImpaledsFirstArrow(first) ||
             value is QueryValue { Name: "owner", Of: ParameterValue { Name: "arrow" } or NamedValue { Name: "arrow" } }
             || value is QueryValue { Type: "Player", Name: "Creature", Of: { } player } && IsArrowOwner(player);
 

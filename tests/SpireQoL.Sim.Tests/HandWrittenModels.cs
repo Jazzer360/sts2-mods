@@ -1851,3 +1851,51 @@ public sealed class ThornsPower : SimModel
         else if (Who.IsPlayer(dealer) && hit > 0) SimEngine.Lands(state, name, dealer, hit, SimProps.Unpowered, dealer: null, card: null);
     }
 }
+
+// ---- arrows (round sixteen: Sim/Models/ProcPowerModels.cs and StatModels.cs, deleted 2026-11-24)
+
+/// <summary>ExplosiveArrowsPower.AfterArrowImpaled: its owner's arrow impales an enemy: its amount to every hittable enemy (unpowered).</summary>
+public sealed class ExplosiveArrowsPower : ProcModel
+{
+    public override TabKind? Tab => TabKind.Damage;
+    public override IEnumerable<SimState> AfterArrowImpaled(SimState state, int owner, int target, int shooter) =>
+        shooter == owner ? DamageAll(state, owner, Amount(state, owner)) : One(state);
+}
+
+/// <summary>CoveringFirePower.AfterArrowShot: each shot its owner tries from a card (arrow or not) gives every other living player its amount of block (unpowered). No tab.</summary>
+public sealed class CoveringFirePower : ProcModel
+{
+    public override TabKind? Tab => null; // no tab: the block is your teammates' (decision #25)
+    public override IEnumerable<SimState> AfterArrowShot(SimState state, int owner, int shooter)
+    {
+        if (shooter != owner || state.CurrentPlay == null) return One(state);
+        IEnumerable<SimState> states = One(state);
+        var amount = Amount(state, owner);
+        for (var teammateIndex = 0; teammateIndex < state.Teammates.Count; teammateIndex++)
+        {
+            var mate = Who.Teammate(teammateIndex);
+            if (mate == owner) continue;
+            states = states.SelectMany(branch => SimEngine.ProcBlockFor(branch, owner, Name, mate, amount, Unpowered)).ToList();
+        }
+        if (owner != Who.You) states = states.SelectMany(branch => SimEngine.ProcBlockFor(branch, owner, Name, Who.You, amount, Unpowered)).ToList();
+        return states;
+    }
+}
+
+/// <summary>QuietusPower: multiplies the owner's powered arrow attack by its amount; the attack bound to it removes it.</summary>
+public sealed class QuietusPower : AttackBoundPower
+{
+    protected override bool Qualifies(SimState state, int owner, AttackInfo attack) =>
+        attack.Dealer == owner && attack.Props.IsPoweredAttack() && attack.Props.HasFlag(SimProps.FromArrow);
+    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
+        damage.Dealer == owner && damage.Props.IsPoweredAttack() && damage.Props.HasFlag(SimProps.FromArrow) && AppliesNow(state, owner, ThisPower)
+            ? SimEngine.PowerOn(state, owner, ThisPower) : 1m;
+    public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack)
+    {
+        var powers = SimEngine.PowersOf(state, owner);
+        if (!powers.Has(ThisPower) || BoundAttack(powers.DataOf(ThisPower)) != attack.Id) return One(state);
+        SimEngine.SetPowers(state, owner, powers.Without(ThisPower));
+        state.LogFired(Name, amount: 0, owner);
+        return One(state);
+    }
+}

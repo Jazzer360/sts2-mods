@@ -405,6 +405,28 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void QuietusDestroysTheShotsArrowOnceItImpales()
+    {
+        // QuietusPower.AfterArrowShot: arrow.DestroyAfterImpaled = true, so ArrowCmd.ImpaleTarget destroys it (DestroyArrow): out of a living target
+        // for good (ImpaledPower.ForceRemoveArrow, the power gone with its last arrow), and never back to you, so nothing hears it come loose.
+        var living = Power(State(hp: 100), PowerId.Quietus, amount: 2);
+        Relic(living, RelicId.Twine, vars: ("Block", 2));
+        living.You.Arrows = 1;
+        var shot = Play(Card("QuickShot"), target: 0, plays: 1, new ShootAction(), Attack(baseDamage: 5, props: SimProps.Move | SimProps.FromArrow), new ImpaleAction());
+        var after = One(living, shot);
+        Assert.Equal(90, after.Enemy(id: 0)!.Hp);
+        Assert.False(after.Enemy(id: 0)!.Powers.Has(PowerId.Impaled));
+        Assert.Equal(0, after.You.Arrows);
+        // A shot that kills: the arrow is gone with it, where any other comes straight back (Twine's block).
+        var dying = Power(State(hp: 5), PowerId.Quietus, amount: 2);
+        Relic(dying, RelicId.Twine, vars: ("Block", 2));
+        dying.You.Arrows = 1;
+        var killed = One(dying, shot);
+        Assert.Equal(0, killed.You.Arrows);
+        Assert.Equal(0, killed.You.Block);
+    }
+
+    [Fact]
     public void EveryThirdPoweredHitKnocksAnArrowOutAndADeathLetsThemAllGo()
     {
         var state = Relic(State(hp: 100), RelicId.Twine, vars: ("Block", 2));

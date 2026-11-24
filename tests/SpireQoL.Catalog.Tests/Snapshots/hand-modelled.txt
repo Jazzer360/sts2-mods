@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 135 game methods; 3 adapter rules; 75 hand-written models.
+# 20 engine rules naming 137 game methods; 3 adapter rules; 72 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -37,9 +37,9 @@ Auto-plays: from the top of the draw pile, from the hand at the turn's end, the 
 Orbs: the slots, a channel into them (the front one evoked when they're full), an evoke out of them, the passives' order at the turn's end, TriggerPassive's count and its loop, a random orb, and the orb hooks' pipelines; an orb's damage and block as its code's commands run them (each orb's own Passive, Evoke and values are read from its code, and Focus, Infused Core, Thunder and Gold-Plated Cables from theirs: decision #214)
   game: OrbCmd.Channel, OrbCmd.Evoke, OrbCmd.EvokeLast, OrbCmd.EvokeNext, OrbCmd.Passive, OrbCmd.AddSlots, OrbCmd.RemoveSlots, OrbQueue.BeforeTurnEnd, OrbModel.GetRandomOrb, OrbModel.TriggerPassive, OrbModel.ModifyOrbValue, Hook.ModifyOrbValue, Hook.AfterOrbChanneled, Hook.AfterOrbEvoked, Hook.ModifyOrbPassiveTriggerCount, Hook.AfterModifyingOrbPassiveTriggerCount
   simulator: SimEngine.FreshOrb, SimEngine.ChannelOrb, SimEngine.ChannelKind, SimEngine.RunOrb, SimEngine.Evoke, SimEngine.EvokeLast, SimEngine.OrbPassives, SimEngine.ChangeFocus, SimEngine.OrbValue, SimEngine.OrbValuesAgain, SimEngine.OrbDamage, SimEngine.OrbBlock
-Arrows: shot, impaled, knocked loose
-  game: ArrowCmd.ShootArrowAtTarget (beta only), ArrowCmd.ImpaleTarget (beta only), ArrowCmd.DislodgeArrow (beta only), ArrowCmd.RetrieveArrow (beta only), Hook.AfterArrowShot (beta only), Hook.AfterArrowImpaled (beta only), Hook.AfterArrowDislodged (beta only)
-  simulator: SimEngine.IsImpaled, SimEngine.RunShoot, SimEngine.RunImpale, SimEngine.RunDislodgeAll, SimEngine.Dislodge, SimEngine.PlaysStartingImpaled, SimEngine.TakeArrows
+Arrows: shot, impaled, knocked loose, destroyed once impaled (the arrow's DestroyAfterImpaled, set by a read model: Quietus')
+  game: ArrowCmd.ShootArrowAtTarget (beta only), ArrowCmd.ImpaleTarget (beta only), ArrowCmd.DislodgeArrow (beta only), ArrowCmd.RetrieveArrow (beta only), ArrowCmd.DestroyArrow (beta only), ImpaledPower.ForceRemoveArrow (beta only), Hook.AfterArrowShot (beta only), Hook.AfterArrowImpaled (beta only), Hook.AfterArrowDislodged (beta only)
+  simulator: SimEngine.IsImpaled, SimEngine.RunShoot, SimEngine.RunImpale, SimEngine.RunDislodgeAll, SimEngine.Dislodge, SimEngine.PlaysStartingImpaled, SimEngine.TakeArrows, SimEngine.LoseArrow
 Osty: the HP he loses for his player
   game: Hook.AfterCurrentHpChanged, Hook.ModifyUnblockedDamageTarget
   simulator: SimEngine.OstyLoses
@@ -103,14 +103,10 @@ CorruptionPower: CorruptionPower.AfterModifyingCardPlayResultLocation, Corruptio
   model: ModifyCardPlayResultLocation
 CoveredPower: CoveredPower.AfterApplied, CoveredPower.AfterDeath, CoveredPower.AfterRemoved, CoveredPower.AfterSideTurnEnd, CoveredPower.ModifyDamageMultiplicative
   model: AfterApplied, ModifyDamageMultiplicative
-CoveringFirePower: CoveringFirePower.AfterArrowShot (beta only)
-  model: AfterArrowShot
 CurlUpPower: CurlUpPower.AfterCardPlayed, CurlUpPower.AfterDamageReceived, CurlUpPower.InitInternalData
   model: AfterCardPlayed, AfterDamageReceived
 DevourLifePower: DevourLifePower.AfterCardPlayed
   model: AfterCardPlayed
-ExplosiveArrowsPower: ExplosiveArrowsPower.AfterArrowImpaled (beta only)
-  model: AfterArrowImpaled
 FeralPower: FeralPower.AfterApplied, FeralPower.AfterModifyingCardPlayResultLocation, FeralPower.AfterSideTurnStart, FeralPower.InitInternalData, FeralPower.ModifyCardPlayResultLocation
   model: AfterApplied, AfterModifyingCardPlayResultLocation, ModifyCardPlayResultLocation
 FlutterPower: FlutterPower.AfterDamageReceived, FlutterPower.ModifyDamageMultiplicative
@@ -163,8 +159,6 @@ PlowPower: PlowPower.AfterDamageReceived
   model: AfterDamageReceived, OutcomeTab
 Pocketwatch: Pocketwatch.AfterCardPlayed, Pocketwatch.AfterCombatEnd, Pocketwatch.AfterModifyingHandDraw, Pocketwatch.AfterSideTurnStart, Pocketwatch.BeforeSideTurnStart, Pocketwatch.ModifyHandDraw
   model: AfterCardPlayed
-QuietusPower: QuietusPower.AfterArrowShot (beta only), QuietusPower.AfterAttack (beta only), QuietusPower.AfterSideTurnEnd (beta only), QuietusPower.BeforeAttack (beta only), QuietusPower.InitInternalData (beta only), QuietusPower.ModifyDamageMultiplicative (beta only)
-  model: AfterAttack, ModifyDamageMultiplicative, Qualifies
 RavenousPower: RavenousPower.AfterDeath
   model: AfterDeath, OutcomeTab
 ReboundPower: ReboundPower.AfterModifyingCardPlayResultLocation, ReboundPower.AfterSideTurnEnd, ReboundPower.ModifyCardPlayResultLocation

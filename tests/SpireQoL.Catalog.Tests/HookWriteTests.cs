@@ -75,7 +75,7 @@ public class HookWriteTests
                 var made = steps.OfType<CommandStep>().Where(step => step.Command.FullName == "CardPileCmd.AddGeneratedCardToCombat" && step.Values.Count > 0).Select(step => step.Values[0].ToString()).ToHashSet(StringComparer.Ordinal);
                 var folded = steps.OfType<CommandStep>().Count(step => step.Command.FullName == "CardCmd.ApplyKeyword" && step.Values.Count > 0 && made.Contains(step.Values[0].ToString()));
                 var commands = steps.OfType<CommandStep>().Count(step => step.Condition is not { IsNever: true }) + steps.OfType<CardActionStep>().Count(step => step.Condition is not { IsNever: true }) - folded;
-                var commandSteps = flat.Count(step => step is not (StoreFieldStep or BindStep or UnbindStep or RepeatStep or ForEachStep or LetStep or FlashStep));
+                var commandSteps = flat.Count(step => step is not (StoreFieldStep or BindStep or UnbindStep or RepeatStep or ForEachStep or LetStep or FlashStep or DestroyArrowStep));
                 if (commands != commandSteps) dropped.Add($"{type.Name}.{hook.Name}: {commands} commands, {commandSteps} translated");
                 foreach (var store in steps.OfType<StoreStep>())
                     if (!flat.OfType<StoreFieldStep>().Any(step => step.Field == store.Field) && spec.Fields().Contains(store.Field))
@@ -116,7 +116,9 @@ public class HookWriteTests
     {
         // A store to a field or property of its own, a plain field of its data, or the BaseValue of one of its own values (DynamicVars["CardsLeft"]).
         "store" => steps.OfType<StoreStep>().Any(step => step.Field == write.Name || step.Field == ProgramReader.OwnDataPrefix + write.Name
-            || write.Name == "BaseValue" && step.Field.StartsWith(ProgramReader.OwnVarPrefix, StringComparison.Ordinal)),
+            || write.Name == "BaseValue" && step.Field.StartsWith(ProgramReader.OwnVarPrefix, StringComparison.Ordinal)
+            // A property set on an object the hook is given (AfterArrowShot's arrow.DestroyAfterImpaled: "Given.arrow.DestroyAfterImpaled").
+            || step.Field.StartsWith(ProgramReader.GivenPrefix, StringComparison.Ordinal) && step.Field.EndsWith("." + write.Name, StringComparison.Ordinal)),
         "data" => steps.OfType<DataStep>().Any(step => step.Operation == write.Name),
         _ => steps.OfType<CommandStep>().Any(step => step.Command.FullName == write.Name) || steps.OfType<ChoiceStep>().Any(step => step.Command.FullName == write.Name)
             || steps.OfType<CardActionStep>().Any(step => step.Action.FullName == write.Name),

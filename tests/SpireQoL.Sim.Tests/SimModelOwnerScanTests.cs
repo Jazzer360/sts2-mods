@@ -15,7 +15,6 @@ public class SimModelOwnerScanTests
     private static readonly Dictionary<string, string> Reviewed = new()
     {
         ["private static int SlotOf(int applier) => applier == Who.You ? 0"] = "Tag Team's Data names each applier's slot (one copy per applier, instanced): you and each teammate by id, not the owner",
-        ["ProcBlockFor(branch, owner, Name, Who.You, amount, Unpowered)"] = "a teammate's power giving you block (Covering Fire gives every other player its block)",
         ["hit.Dealer != Who.You || !hit.Props.IsPoweredAttack()"] = "ImpaledPower is your arrows in an enemy (a teammate's are TeammatesImpaledPower)",
         ["CardEvent.ArrowDislodged, Who.You"] = "ImpaledPower is your arrows: they come back to you",
         ["play.Owner != Who.You"] = "Withering Presence counts its Target's cards; the adapter loads only the one aimed at you (SimReaders.Powers)",
