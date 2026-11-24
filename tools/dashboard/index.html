@@ -305,7 +305,7 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
   </section>
 
   <section class="page" id="p-perf">
-    <div class="row" style="margin-bottom:10px"><span class="dim" title="Each window draws its points averaged over a stretch that suits it: 1.25 s over a minute, 3 s over five, 10 s over fifteen, and over the whole launch about a three-hundredth of it. Spikes still count in the tiles and the log.">Window</span><span class="seg" id="perfWindow"><button data-v="60">1 minute</button><button data-v="300">5 minutes</button><button data-v="900">15 minutes</button><button data-v="0">whole launch</button></span><label><input type="checkbox" id="logTimesBox"> log scale for times</label><span class="dim" title="While the game's window is in the background (another window in front) it runs at 30 fps and nobody is playing: the game writes no frame data then, and the charts leave a gap there, shaded.">Time away: shaded gaps</span><label title="Keep the launch's spikes off the charts' scales and out of the tiles: its first 20 s (loading) and its first fight's first 15 s (the mod's code compiling on first use). They still draw, running off the top, so nothing disappears."><input type="checkbox" id="skipLaunchBox"> skip the launch</label></div>
+    <div class="row" style="margin-bottom:10px"><span class="dim" title="Each window draws its points averaged over a stretch that suits it: 1.25 s over a minute, 3 s over five, 10 s over fifteen, and over the whole launch about a three-hundredth of it. Spikes still count in the tiles and the log.">Window</span><span class="seg" id="perfWindow"><button data-v="60">1 minute</button><button data-v="300">5 minutes</button><button data-v="900">15 minutes</button><button data-v="0">whole launch</button></span><label><input type="checkbox" id="logTimesBox"> log scale for times</label><span class="dim" title="While the game's window is in the background (another window in front) it runs at 30 fps and nobody is playing: the game writes no frame data then, and its first frame back is left out too. The timeline counts only time played, so the charts run on as if the game never left the front, and a window is the last minutes played.">Time away: left out</span><label title="Keep the launch's spikes off the charts' scales and out of the tiles: its first 20 s (loading) and its first fight's first 15 s (the mod's code compiling on first use). They still draw, running off the top, so nothing disappears."><input type="checkbox" id="skipLaunchBox"> skip the launch</label></div>
     <div class="grid" id="perfTiles"></div>
     <div class="grid2" style="margin-top:12px">
       <div class="card"><h3>Is the mod making frames slow?</h3>
@@ -316,7 +316,7 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
         <p class="hint">The mod's average time per frame, split by feature (stacked: the top of the pile is the mod's total). A feature growing over time, or one taking most of the pile, is where to look. The table below gives each feature's average and its single worst frame over the window.</p>
         <canvas id="pfFeatures" height="170"></canvas><div class="legend" id="pfFeaturesLegend"></div></div>
       <div class="card"><h3>Is the game keeping its frame rate?</h3>
-        <p class="hint">The game's frames per second over time, the mod included (each point a quarter of a second). This is what you see: a dip here with the mod's time flat above is the game's own; a dip that lines up with a jump in the mod's time, or in its share below, is the mod's. The game caps its rate (your settings, and 30 fps while its window is in the background), so a flat line is the cap, not a limit the mod sets.</p>
+        <p class="hint">The game's frames per second over time, the mod included (each point a quarter of a second). This is what you see: a dip here with the mod's time flat above is the game's own; a dip that lines up with a jump in the mod's time, or in its share below, is the mod's. The game caps its rate at your settings, so a flat line is the cap, not a limit the mod sets. Time with the game's window in the background isn't on the timeline.</p>
         <canvas id="pfFps" height="150"></canvas>
         <div class="legend"><span><i style="background:var(--teal)"></i>frames per second</span></div></div>
       <div class="card"><h3>How much of each frame is the mod?</h3>
@@ -502,7 +502,7 @@ const isHitch = (r) => r.gapMax > 50 && r.modMax < 30;
 const warmupWarning = (l) => l.level === "WARN" && /^\[perf\] slow frame/.test(l.text) && warmingUp(l.t);
 const MAX = { rollups: 4 * 60 * 60, searches: 5000, logs: 3000, waits: 5000 };
 const M = {
-  rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], allocSamples: [], steadySamples: [], paused: [],
+  rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], allocSamples: [], steadySamples: [], away: 0, awayFrom: null,
   combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, state: null, stateAt: 0, file: null, launches: [0],
   searchTotals: newSearchTotals(), searchCards: new Map(), names: {},
 };
@@ -541,7 +541,7 @@ function countSearch(e) {
   M.searchCards.set(key, c);
 }
 function reset() {
-  Object.assign(M, { rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], allocSamples: [], steadySamples: [], paused: [], combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, launches: [0],
+  Object.assign(M, { rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], allocSamples: [], steadySamples: [], away: 0, awayFrom: null, combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, launches: [0],
     searchTotals: newSearchTotals(), searchCards: new Map(), names: {} });
   FS.base = 0;
 }
@@ -552,7 +552,16 @@ function turnRec(turn) {
   return M.turns.get(key);
 }
 function ingest(e) {
-  e.t = (e.t || 0) + (FS.base || 0); // this launch's place on the page's timeline
+  const wall = (e.t || 0) + (FS.base || 0); // this launch's place on the page's timeline
+  // Played time (decision #179, revised: #238): the timeline counts only time the game's window was in front, so time away takes no room on
+  // the charts and a window shows the last minutes played, as if the game never left the front. What happens while away sits at the moment
+  // the window went to the background.
+  if (e.kind === "stream-started" && M.awayFrom != null) { M.away += wall - M.awayFrom; M.awayFrom = null; }
+  if (e.kind === "focus-changed") {
+    if (!e.focused && M.awayFrom == null) M.awayFrom = wall;
+    else if (e.focused && M.awayFrom != null) { M.away += wall - M.awayFrom; M.awayFrom = null; }
+  }
+  e.t = (M.awayFrom ?? wall) - M.away;
   M.lastT = Math.max(M.lastT, e.t);
   switch (e.kind) {
     case "stream-started": M.started = e; break;
@@ -560,11 +569,8 @@ function ingest(e) {
     case "frame-rollup": push(M.rollups, e, MAX.rollups); break;
     case "allocation-sample": push(M.allocSamples, e, MAX.rollups); break;
     case "steady-sample": push(M.steadySamples, e, MAX.rollups); break;
-    // The game's window in the background (decision #179): no frame data until it's back; the charts break there and shade it.
-    case "focus-changed":
-      if (!e.focused) M.paused.push([e.t, null]);
-      else if (M.paused.length && M.paused.at(-1)[1] == null) M.paused.at(-1)[1] = e.t;
-      break;
+    // The game's window in the background (decision #179): left out of the timeline above.
+    case "focus-changed": break;
     case "search-done": {
       push(M.searches, e, MAX.searches);
       countSearch(e);
@@ -1050,17 +1056,6 @@ function smoothed(points, seconds) {
   }
   return out;
 }
-/** Whether the game's window went to the background between two times (decision #179): a line breaks there. */
-const pausedBetween = (a, b) => M.paused.some(([from]) => from >= a && from <= b);
-/** The time away, shaded faintly across a chart (decision #179): no frame data was written then. */
-function shadePaused(g, X, t0, t1, pad, h) {
-  g.fillStyle = css("--faint"); g.globalAlpha = 0.1;
-  for (const [from, to] of M.paused) {
-    const a = Math.max(from, t0), b = Math.min(to ?? t1, t1);
-    if (b > a) g.fillRect(X(a), pad.t, X(b) - X(a), h - pad.t - pad.b);
-  }
-  g.globalAlpha = 1;
-}
 function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = false, mini = false, rightUnit = "", logFloor = 0.1 } = {}) {
   if (!mini && smoothSeconds() > 0) series = series.map((s) => (s.dots ? s : { ...s, points: smoothed(s.points, smoothSeconds()) }));
   // mini: a trend in a small space (the Overview's checks): no axis labels, tight margins, the same hover readout.
@@ -1102,7 +1097,6 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
       g.fillText(label, w - g.measureText(label).width - 2, pad.t + (h - pad.t - pad.b) * (1 - i / 4) + 4);
     }
   }
-  if (!mini) shadePaused(g, X, t0, t1, pad, h);
   drawRefLines(g, refv, yMax, Y, pad, w);
   const refLabels = () => { if (!mini) drawRefLabels(g, refv, yMax, Y, pad, w); };
   // Clipped to the plot: a launch spike that doesn't set the scale runs off its top.
@@ -1114,7 +1108,7 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
     g.strokeStyle = g.fillStyle = s.color; g.lineWidth = 1.5;
     if (s.dots) { for (const [t, v] of s.points) { g.beginPath(); g.arc(X(t), SY(v), 2.5, 0, 7); g.fill(); } continue; }
     g.beginPath();
-    s.points.forEach(([t, v], i) => (i && !pausedBetween(s.points[i - 1][0], t) ? g.lineTo(X(t), SY(v)) : g.moveTo(X(t), SY(v))));
+    s.points.forEach(([t, v], i) => (i ? g.lineTo(X(t), SY(v)) : g.moveTo(X(t), SY(v))));
     g.stroke();
   }
   g.globalAlpha = 1;
@@ -1187,10 +1181,8 @@ function stacked(id, layers, { refs = [], unit = " ms", log = false } = {}) {
     Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - v / yMax);
   }
   const base = new Array(n).fill(0);
-  shadePaused(g, X, t0, t1, pad, h);
-  // Each stretch between times away its own area (decision #179), not one bridged across them.
-  const runs = [];
-  for (let i = 0; i < n; i++) (i && !pausedBetween(ts[i - 1], ts[i]) ? runs.at(-1).push(i) : runs.push([i]));
+  // One area over the played time (time away takes no room: decision #238).
+  const runs = [Array.from({ length: n }, (_, i) => i)];
   g.save(); g.beginPath(); g.rect(pad.l, pad.t - 2, w - pad.l - pad.r, h - pad.t - pad.b + 4); g.clip();
   for (const l of layers) {
     g.fillStyle = l.color; g.globalAlpha = faded(id, l.color) ? 0.12 : 0.75;

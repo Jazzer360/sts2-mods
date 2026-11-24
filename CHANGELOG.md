@@ -14,6 +14,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Changed
 - Every card's program is read from the game's code once a launch, on a background thread as the mod loads, so a fight no longer reads one on the game's thread (a small stutter on a launch's first fight). Dev mode logs how long the reads took.
+- Dev mode leaves out the first frame after the game's window comes back to the front, as it already did the time in the background (the switch's frame, not play's).
 - Twine and Yah are worked out from their own code (what each does when one of your arrows comes loose). What's shown is unchanged.
 - The Play audit tells a damage cap's flash and a power an attack spends from the game's code for them, where it kept their names (Buffer's flash as it stops HP is a cap's too now).
 - Vigor, Gigantification, Bone Flute and Calcify are worked out from their own code (the attack Vigor and Gigantification keep and spend, Bone Flute's block for each attack your Osty makes, Calcify on Osty's attacks). What's shown is unchanged but for the fix below.

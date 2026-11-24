@@ -161,7 +161,9 @@ public static class DevDashboard
             {
                 CountCompiles();
                 WatchSteady(host, gapMs);
-                if (_focused) Window.Add(modMs, gapMs, host.FeatureMs, host.FeatureKb);
+                if (!_focused) return;
+                if (_framesToSkip > 0) _framesToSkip--; // the first frame back in front is the switch's (decision #238)
+                else Window.Add(modMs, gapMs, host.FeatureMs, host.FeatureKb);
             };
             // What the garbage is made of: the runtime's allocation ticks, by type (dev mode only).
             try { _sampler = new AllocationSampler(AllocationSampler.CurrentOsThread()); }
@@ -198,21 +200,26 @@ public static class DevDashboard
     /// <summary>The game's window is in front (decision #179): while it isn't, nothing about frames is written.</summary>
     private static bool _focused = true;
 
+    /// <summary>Frames still to leave out after the window came back to the front (decision #238): the first one is the switch's, not play's.</summary>
+    private static int _framesToSkip;
+
     /// <summary>
     /// The game's window went to the background or came back (decision #179). In the background the game runs at 30 fps and nobody is
-    /// playing: its frames would only blur the charts, so no rollups or samples are written, and the sampler stops listening. Back in
-    /// front, every running count starts from now, so the first rollup isn't the whole time away in one.
+    /// playing: its frames would only blur the charts, so no rollups or samples are written, and the sampler stops listening. The frames on
+    /// either side of the switch are the switch's (decision #238): the ones since the last rollup are dropped as it goes, and the first one
+    /// back is left out. Back in front, every running count starts from now, so the first rollup isn't the whole time away in one.
     /// </summary>
     private static void FocusChanged(DevSink sink, bool focused, double now)
     {
         _focused = focused;
         sink.Post(new FocusChanged(focused));
+        Window.Clear();
         if (!focused)
         {
             _sampler?.Stop();
             return;
         }
-        Window.Clear();
+        _framesToSkip = 1;
         _lastRollup = now;
         _gc = (GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2), GC.GetTotalAllocatedBytes(), GC.GetTotalPauseDuration());
         _simAllocated = SimJob.AllocatedBytes;
