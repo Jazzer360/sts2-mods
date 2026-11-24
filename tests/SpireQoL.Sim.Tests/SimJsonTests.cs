@@ -32,6 +32,22 @@ public class SimJsonTests
     }
 
     [Fact]
+    public void EnumsAreWrittenByNameAndOldNumbersStillRead()
+    {
+        // A script names what it means ("Exhausted", not 9), so a report stays readable when an enum's numbers move; one written by number before
+        // reads the same.
+        var action = new CardEventAction(CardEvent.Exhausted, Count: 2) { Indirect = true };
+        var json = JsonSerializer.Serialize<SimAction>(action, SimJson.Options);
+        Assert.Contains("\"Event\":\"Exhausted\"", json, StringComparison.Ordinal);
+        var old = json.Replace("\"Event\":\"Exhausted\"", $"\"Event\":{(int)CardEvent.Exhausted}", StringComparison.Ordinal);
+        Assert.Equal(action, JsonSerializer.Deserialize<SimAction>(old, SimJson.Options));
+        // Flags too (a damage's props).
+        var props = JsonSerializer.Serialize(SimProps.Move | SimProps.Unpowered, SimJson.Options);
+        Assert.Equal(SimProps.Move | SimProps.Unpowered, JsonSerializer.Deserialize<SimProps>(props, SimJson.Options));
+        Assert.Equal(SimProps.Move | SimProps.Unpowered, JsonSerializer.Deserialize<SimProps>(((int)(SimProps.Move | SimProps.Unpowered)).ToString(System.Globalization.CultureInfo.InvariantCulture), SimJson.Options));
+    }
+
+    [Fact]
     public void EveryConditionRoundTripsWithEveryMember()
     {
         // A WhenAction's condition (decision #190) is written as what it is, like an action.

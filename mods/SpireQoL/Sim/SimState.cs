@@ -587,7 +587,7 @@ public sealed class SimHandCard
 
     private HandCardKey ContentKey()
     {
-        var content = JsonSerializer.SerializeToNode(this, SimJson.Options)!.AsObject();
+        var content = JsonSerializer.SerializeToNode(this, SimJson.KeyOptions)!.AsObject();
         content.Remove(nameof(Id));
         foreach (var play in content[nameof(Plays)]!.AsArray())
             if (Id != 0 && play![nameof(SimPlay.HandCard)]!.GetValue<int>() == Id) play[nameof(SimPlay.HandCard)] = "this card"; // played from your hand as itself (not 0: none)

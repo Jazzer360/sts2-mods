@@ -16,7 +16,23 @@ public static class SimJson
         .Where(type => !type.IsAbstract && typeof(SimAction).IsAssignableFrom(type))
         .OrderBy(type => type.Name, StringComparer.Ordinal).ToList();
 
+    /// <summary>
+    /// Reports' start states and replay cases: every enum by its name (a script says "Exhausted", not 9, so it stays readable when an enum's numbers
+    /// move); one written by number before reads the same.
+    /// </summary>
     public static readonly JsonSerializerOptions Options = new()
+    {
+        IncludeFields = true,
+        WriteIndented = false,
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { ActionsByKind } },
+        Converters = { new JsonStringEnumConverter() },
+    };
+
+    /// <summary>
+    /// What a hand card's key hashes (SimHandCard.Key): its enums as numbers, as the key always hashed them. A key is an identity, never read back,
+    /// so the names change nothing but the hash, which orders branches (a hand card's key is in the branch key).
+    /// </summary>
+    public static readonly JsonSerializerOptions KeyOptions = new()
     {
         IncludeFields = true,
         WriteIndented = false,
