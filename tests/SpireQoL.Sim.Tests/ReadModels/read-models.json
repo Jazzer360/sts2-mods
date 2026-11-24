@@ -260,6 +260,28 @@
     "Tab": "Block"
   },
   {
+    "Name": "DebilitatePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__8.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
     "Name": "DexterityPower",
     "Kind": "Power",
     "Hooks": [
@@ -1014,6 +1036,28 @@
     "Tab": "Draw"
   },
   {
+    "Name": "HatchPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__4.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
     "Name": "HelicalDart",
     "Kind": "Relic",
     "Hooks": [
@@ -1056,6 +1100,35 @@
       }
     ],
     "Tab": "Trigger"
+  },
+  {
+    "Name": "HighVoltagePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ]
   },
   {
     "Name": "IntimidatingHelmet",
@@ -3200,6 +3273,102 @@
     "Tab": "Damage"
   },
   {
+    "Name": "SoarPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "SoarPower.ModifyDamageMultiplicative:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "SoarPower.ModifyDamageMultiplicative:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "SoarPower.ModifyDamageMultiplicative:0015",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PoweredAttack"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "SoarPower.ModifyDamageMultiplicative:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "SoarPower.ModifyDamageMultiplicative:0015",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Divide",
+                "Left": {
+                  "$kind": "HookVar",
+                  "Key": "DamageDecrease",
+                  "Canonical": 50
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 100
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
     "Name": "SpeedsterPower",
     "Kind": "Power",
     "Hooks": [
@@ -3458,6 +3627,35 @@
             }
           ]
         }
+      }
+    ]
+  },
+  {
+    "Name": "TerritorialPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
       }
     ]
   },

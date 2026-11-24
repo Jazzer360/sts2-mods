@@ -507,9 +507,14 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 
 What isn't read is a named gap (a store to the model's own state, its internal data, a hook no read model runs yet, a query with no fact), and a
 hook the simulator never runs says why (outside fights: `OutOfCombatHooks.txt`; a relic's turn-start body that waits on its owner's next turn).
-`HookProgramTests` reads every power's and relic's hooks on both branches and pins the counts; the classes read (`ReadModels.Classes`) must be
-read whole. `ReadModelParityTests` holds each read model to the hand-written model it replaced (kept as it was in the test project) on every
-hook it answers.
+`HookProgramTests` reads every power's and relic's hooks on both branches and pins the counts. Which classes are read is a rule
+(`ReadModels.Specs`): every power and relic class with no hand-written model (`SimModels.IsHandWritten`: it keeps its model until a parity proof
+converts it) whose hooks read whole and that answers a hook the simulator runs. The classes the rule reads on both reviewed builds are a generated
+record (`ReadModels.ReadWholeAtReview`, `ReadModels.g.cs`, held to both decompiles by `HookProgramTests`); one of them whose hooks the running
+game's code no longer reads (a game update) is an unread spec (`ModelSpec.Unread`): reported once (`ReadModels.Report`), and every simulation
+it's on the board in, or lands in, is unknown with why (`SimState.Unmodelled`, decision #92). A read model's tab is its commands' only where a
+Proc Tags settings row for it exists (`ReadModels.HasTabRow`). `ReadModelParityTests` holds each read model to the hand-written model it replaced
+(kept as it was in the test project) on every hook it answers.
 ## Order of work (one session)
 
 1. Baseline: `scripts/check.ps1` green. Write the behaviour tests (A4) against today's code: the right cases pass and the

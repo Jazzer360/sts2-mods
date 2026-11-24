@@ -209,6 +209,7 @@ public static partial class SimEngine
         work ??= new SimWork();
         var first = start.Clone();
         first.Work = work;
+        MarkUnread(first);
         var branches = new BranchSet(first);
         var aliveAtStart = start.Enemies.Where(enemy => enemy.Alive).Select(enemy => enemy.Id).ToList();
         SimOutcome? outcome = null;
@@ -845,7 +846,25 @@ public static partial class SimEngine
     {
         var first = state.Clone();
         first.Work = work = new SimWork();
+        MarkUnread(first);
         return new BranchSet(first);
+    }
+
+    /// <summary>
+    /// A power or relic on the board whose hooks a game update made unreadable (SimModels.UnreadReason): the simulation can't follow what it
+    /// does, so it's unknown, with why (decision #92), never exact without it.
+    /// </summary>
+    private static void MarkUnread(SimState state)
+    {
+        if (state.Unmodelled != null) return;
+        foreach (var id in state.PlayerIds)
+        {
+            var player = state.Player(id)!;
+            foreach (var entry in player.Powers.Items) if (SimModels.UnreadReason(entry.Name.Name) is { } why) { state.Unmodelled = why; return; }
+            foreach (var entry in player.Relics.Items) if (SimModels.UnreadReason(entry.Name.Name) is { } why) { state.Unmodelled = why; return; }
+        }
+        foreach (var enemy in state.Enemies)
+            foreach (var entry in enemy.Powers.Items) if (SimModels.UnreadReason(entry.Name.Name) is { } why) { state.Unmodelled = why; return; }
     }
 
     /// <summary>Runs <paramref name="search"/> to the end or the memory cap (true), then frees what it held.</summary>

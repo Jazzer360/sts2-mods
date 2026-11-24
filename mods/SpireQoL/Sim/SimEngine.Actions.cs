@@ -602,6 +602,8 @@ public static partial class SimEngine
         var had = powers.Has(power);
         SetPowers(state, target, powers.Add(power, amount));
         var powerModel = SimModels.Get(power.Name);
+        // A power whose hooks a game update made unreadable lands where nothing follows what it does: unknown (decision #92).
+        if (powerModel == null && SimModels.UnreadReason(power.Name) is { } unread) state.Unmodelled ??= unread;
         // Each application of a counter power is a copy of its own, counting from the start (Orbit played twice: two Orbits).
         if (powerModel is Models.CounterPower counter) counter.NewCopy(state, target, amount, had);
         // Each copy of an instanced power is applied on its own (a second Intercept on a covered teammate: a Covered of its own).

@@ -403,7 +403,7 @@ public static class SimModels
 
     private static readonly Lazy<Dictionary<string, SimModel>> ByName = new(Load, LazyThreadSafetyMode.ExecutionAndPublication);
 
-    private static Dictionary<string, SimModel> Load()
+    private static readonly Lazy<Dictionary<string, SimModel>> HandWrittenByName = new(() =>
     {
         var byName = new Dictionary<string, SimModel>(StringComparer.Ordinal);
         foreach (var type in typeof(SimModel).Assembly.GetTypes())
@@ -412,10 +412,36 @@ public static class SimModels
             var model = (SimModel)Activator.CreateInstance(type)!;
             byName[model.Name] = model;
         }
-        // A read model never stands in for a hand-written one: a class is one or the other (ReadModelTests holds the two sets apart).
-        foreach (var spec in Read?.Invoke() ?? Enumerable.Empty<ModelSpec>())
-            byName.TryAdd(spec.Name, new ReadModel(spec));
         return byName;
+    }, LazyThreadSafetyMode.ExecutionAndPublication);
+
+    /// <summary>The classes whose hooks a game update made unreadable (ModelSpec.Unread), with why: filled once, with the models.</summary>
+    private static readonly Dictionary<string, string> UnreadClasses = new(StringComparer.Ordinal);
+
+    private static Dictionary<string, SimModel> Load()
+    {
+        var byName = new Dictionary<string, SimModel>(HandWrittenByName.Value, StringComparer.Ordinal);
+        // A read model never stands in for a hand-written one: a class is one or the other (the reader skips a hand-written class: ReadModels).
+        foreach (var spec in Read?.Invoke() ?? Enumerable.Empty<ModelSpec>())
+        {
+            if (byName.ContainsKey(spec.Name)) continue;
+            if (spec.Unread != null) UnreadClasses[spec.Name] = spec.Unread;
+            else byName.Add(spec.Name, new ReadModel(spec));
+        }
+        return byName;
+    }
+
+    /// <summary>The class has a hand-written model (Sim/Models): it keeps it until a parity proof converts it (decision #195), so it isn't read.</summary>
+    public static bool IsHandWritten(string name) => HandWrittenByName.Value.ContainsKey(name);
+
+    /// <summary>
+    /// Why a class's hooks couldn't be read, when they read whole at the reviewed builds and don't now (a game update): a simulation it's in
+    /// is unknown (SimState.Unmodelled), never exact without it (decision #92). Null: read, hand-written, or never modelled.
+    /// </summary>
+    public static string? UnreadReason(string name)
+    {
+        _ = ByName.Value;
+        return UnreadClasses.GetValueOrDefault(name);
     }
 
     public static SimModel? Get(string name) => ByName.Value.GetValueOrDefault(name);

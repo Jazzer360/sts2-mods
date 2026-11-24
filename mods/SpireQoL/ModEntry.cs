@@ -115,6 +115,8 @@ public static class ModEntry
                 ? $"{why}, and {mod}'s code is in the crash"
                 : null;
         AppDomain.CurrentDomain.ProcessExit += (_, _) => reporter.Flush();
+        // A model read at the reviewed builds whose hooks this game's code no longer reads (read above, before the reporter): reported once.
+        Sim.ReadModels.Report();
         Sts2State.Init(Log);
         // A private member a rule reads is gone (a game update renamed it): the rule silently uses its
         // fallback, so say so once, in the log and as a report.

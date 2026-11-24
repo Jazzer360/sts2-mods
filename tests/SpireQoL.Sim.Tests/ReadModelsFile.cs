@@ -13,6 +13,15 @@ internal static class ReadModelsFile
     /// <summary>The read models in the file, as the simulator registers them.</summary>
     public static List<ModelSpec> Specs() => File.Exists(PathOf) ? HookProgramJson.Read(File.ReadAllText(PathOf)) : new List<ModelSpec>();
 
+    /// <summary>
+    /// A class whose hooks a game update made unreadable, as the reader gives it (ModelSpec.Unread): the simulator's failure path is tested on
+    /// it (ReadModelFailureTests). No game class has its name.
+    /// </summary>
+    public static readonly ModelSpec Unreadable = new("UnreadableForTestsPower", ModelKind.Power, Array.Empty<HookProgram>())
+    {
+        Unread = "UnreadableForTestsPower's hooks couldn't be read from the game's code (a game update?): what it does isn't simulated",
+    };
+
     [ModuleInitializer]
-    internal static void Use() => SimModels.Read = Specs;
+    internal static void Use() => SimModels.Read = () => Specs().Append(Unreadable);
 }

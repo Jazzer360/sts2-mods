@@ -200,6 +200,12 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     /// <summary>Its tab, from its commands (block, damage, draws, energy; a trigger otherwise): the hand-written models' rule.</summary>
     public TabKind? Tab { get; init; }
 
+    /// <summary>
+    /// Why its hooks weren't read, for a class whose hooks read whole at the reviewed builds and no longer do (a game update): no program, and
+    /// every simulation it's in is unknown (SimState.Unmodelled, decision #92). Null: read.
+    /// </summary>
+    public string? Unread { get; init; }
+
     /// <summary>Every value its programs work out (each condition, amount and return, with the values inside them).</summary>
     public IEnumerable<HookValue> Values()
     {
