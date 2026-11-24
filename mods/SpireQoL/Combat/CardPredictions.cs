@@ -361,9 +361,10 @@ public sealed class CardPredictions
         }
         var list = tabs.Values.ToList();
         if (lethal) list.Add(new TabSpec("lethal", GameIcons.Skull(), Aimed: lethalAimed, NumberText: lethalChance));
-        // No Draw (Battle Trance) stops the draws this card would make: plain, with its icon (its art already shows the crossed card:
-        // decision #171).
-        if (prepared.F.DrawsStopped && _me.Creature.GetPower<NoDrawPower>() is { } noDraw)
+        // No Draw (Battle Trance) stops the draws this card would make, in every outcome of its simulation at some aim (its log: the engine's
+        // ShouldDraw, decision #171): plain, with its icon (its art already shows the crossed card).
+        if (prepared.F.OutcomeByAim is { Count: > 0 } byAim && byAim.Values.Any(outcome => outcome.PlayFiredEvery.Has(nameof(NoDrawPower)))
+            && _me.Creature.GetPower<NoDrawPower>() is { } noDraw)
             list.Add(new TabSpec("proc:" + nameof(NoDrawPower), GameIcons.Power(noDraw)));
         // Cards this play brings back to your hand (Make It So, Right Hand Hand, Whistling Arrows): plain, one per card name,
         // with the returning card as the icon.
@@ -462,7 +463,7 @@ public sealed class CardPredictions
         }
         // The card's own numbers too: upgrading it in hand (Blessing of the Forge, Armaments) or a value that grows (Claw)
         // changes its play without changing the board.
-        var cacheKey = $"{card.GetHashCode()}|{facts.Plays}|{facts.Energy}|{facts.AttackHits}|{facts.BlockGains}|{facts.Draws}|{facts.Generated}|{CardNumbers(card)}";
+        var cacheKey = $"{card.GetHashCode()}|{facts.Plays}|{facts.Energy}|{facts.AttackHits}|{facts.BlockGains}|{facts.OwnDraws}|{facts.Generated}|{CardNumbers(card)}";
         // The plays are built here (they read the game); only the simulation runs off the main thread.
         var inputs = new SimInputs
         {
@@ -557,8 +558,6 @@ public sealed class CardPredictions
         _firesAt.Clear();
         _firesBy.Clear();
         var baseline = forecast.Outcome;
-        // Centennial Puzzle set off by HP the play loses some other way than its own cost: the card's draw count with its draws.
-        if (outcomes.Any(outcome => outcome.PlayFiredAny.Has(RelicId.CentennialPuzzle.Name))) facts.CountSimulatedHpLoss();
         if (outcomes.Any(outcome => outcome.Truncated || outcome.Branches.Count > 1)) facts.RandomOutcome = true;
         facts.SimIncomplete = outcomes.Any(outcome => outcome.Truncated);
         facts.Unmodelled = outcomes.SelectMany(outcome => outcome.UnmodelledReasons).Distinct().ToList();

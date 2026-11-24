@@ -147,8 +147,8 @@ public static partial class SimAdapter
 
     /// <summary>
     /// The card events of the card play around its plays: the energy it spends and gives back (before the play), the stars it spends (the
-    /// first play's first action, so Mini Regent's Strength is on the card's own hits), its own exhaust and a shuffle (after the last play:
-    /// it goes to its result pile once).
+    /// first play's first action, so Mini Regent's Strength is on the card's own hits) and its own exhaust (after the last play: it goes to
+    /// its result pile once). A shuffle is its draws' or its own code's, in the simulation (decision #193).
     /// </summary>
     private static void AddCardEvents(SimPlay play, PlayFacts facts)
     {
@@ -162,7 +162,6 @@ public static partial class SimAdapter
         // Its own exhaust sets off its own AfterCardExhausted (Drum of Battle's energy).
         if (play.Card!.Card.ExhaustsSelf && play.Card.Card.ExhaustEnergy is > 0 and var ownExhaustEnergy)
             play.After.Add(new CardEventAction(CardEvent.EnergyGained, ownExhaustEnergy) { Player = play.Card!.Owner });
-        if (facts.Shuffles) play.After.Add(new CardEventAction(CardEvent.Shuffled, Count: 1) { Indirect = true });
     }
     /// <summary>
     /// The filtered takes from your hand of a card's play (TakesFromHand's keys, in its order), each with the test a card in your hand

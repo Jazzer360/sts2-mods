@@ -490,7 +490,8 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 - [ ] Replay: Reboot's later plays put the hand the board had into your draw pile (ShuffleDrawPileAction's cards are the board's).
 - [ ] Ki Chant: the cards it looks at and discards stay in the simulator's draw pile (only the one it takes leaves); and a made card into a full hand isn't put into the simulator's discard pile (its profile isn't built).
 - [ ] The play check's orbs channeled on a replay: the simulator's channels aren't in the play log yet (counted skip).
-- [ ] Hand room outside the engine's rule (reviewed in `PerPlayRuleTests`): PlayChain (the facts' draws: the play check, the Shuffle Tag, the No Draw tag) and HandDelta's cards returned by hooks after the play; read both from the simulation.
+- [x] 2.0.0 (decision #193, round four): PlayChain is gone. The Shuffle Tag, No Draw's tag and the play check's draw and shuffle checks read the play's simulation (its log at the target it was played at, every outcome; No Draw flashes as it stops a draw: SimEngine.DrawPrevented). The adapter's shuffle event from the facts went too: a play whose draws ran out counted its shuffle twice (Whittling Knife, Biiig Hug). A card's own shuffle (Reboot, Ki Chant) raises the shuffle event in the simulation.
+- [ ] Hand room outside the engine's rule (reviewed in `PerPlayRuleTests`): HandDelta's cards returned by hooks after the play; read them from the simulation.
 - [x] A Vigorous card's replay (the enchantment turns itself off after the first play): its bonus on the first play only, read from its code.
 - [ ] Test in game: Incoming Damage over a discovery mid-fight (it shouldn't cover the three cards).
 - [x] Personal Hive's crossed tab counts its Dazed: its amount per powered attack hit (decision #161), held to the cards created by the play check.

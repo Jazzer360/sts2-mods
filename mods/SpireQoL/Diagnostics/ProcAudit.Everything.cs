@@ -97,22 +97,26 @@ public sealed partial class ProcAudit
 
     // ------------------------------------------------------------------ shuffles
 
-    /// <summary>Shuffles during the play (CardPileCmd.Shuffle prefix) against PlayFacts.Shuffles (the Shuffle Warning and shuffle procs).</summary>
+    /// <summary>
+    /// Shuffles during the play (CardPileCmd.Shuffle prefix) against its simulation's (the Shuffle Tag and shuffle procs): at the target it
+    /// was played at, a shuffle in every outcome is predicted, one in none not (decision #193).
+    /// </summary>
     private static void ShuffleIssues(Window window, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, List<string> issues, ModelLines model)
     {
         var facts = window.Facts;
         if (facts == null) return;
+        if (facts.Sim?.AimFor(window.Target) is not { } aim || facts.OutcomeByAim is not { } outcomes || !outcomes.TryGetValue(aim, out var outcome) || outcome.Truncated)
+        {
+            model.Skip("shuffle", "its simulation has no finished outcome at the target it was played at");
+            return;
+        }
         var shuffled = window.Shuffles > 0;
-        if (shuffled == facts.Shuffles) return;
+        var key = SpireQoL.Sim.SimKeys.PlayEvent(SpireQoL.Sim.CardEvent.Shuffled);
+        if (shuffled ? outcome.PlayFiredAny[key] > 0 : outcome.PlayFiredEvery[key] == 0) return;
         var autoPlayed = UnpredictedAutoPlay(window, entries, me);
         var drawReactive = flashed.Any(otherModel => DrawReactive.Contains(otherModel.GetType().Name) || otherModel.GetType().Name is nameof(GremlinHorn) or nameof(UnceasingTop));
         var draws = entries.OfType<CardDrawnEntry>().Count(cardDrawnEntry => !cardDrawnEntry.FromHandDraw && cardDrawnEntry.Card.Owner == me);
-        var why = $"(draws: predicted {facts.Draws} = own {facts.OwnDraws} + set off {facts.ChainedDraws}{(facts.DrawsBlocked ? ", blocked" : "")}, actual {draws})";
-        if (window.TargetDraws is { } targetDraws && targetDraws != facts.OwnDraws - facts.EnchantmentDraws)
-        {
-            model.Skip("shuffle", "its draws depend on its target, counted for every target", $"{(shuffled ? "happened" : "didn't happen")} {why}");
-            return;
-        }
+        var why = $"(draws: predicted {outcome.PlayFiredEvery[SpireQoL.Sim.SimKeys.PlayEvent(SpireQoL.Sim.CardEvent.Drawn)]}-{outcome.PlayFiredAny[SpireQoL.Sim.SimKeys.PlayEvent(SpireQoL.Sim.CardEvent.Drawn)]}{(facts.DrawsBlocked ? ", blocked" : "")}, actual {draws})";
         if (!shuffled && window.FightEnded)
         {
             // The play's hit ended the fight (Compile Driver on the last enemy): its draws, and their shuffle, never came.

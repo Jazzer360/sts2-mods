@@ -69,18 +69,12 @@ public sealed class PlayFacts
     /// </summary>
     public bool MayDiscardSly { get; init; }
 
-    /// <summary>
-    /// Cards the play draws: its own draws plus the draws it sets off (ChainedDraws), limited by the
-    /// room in your hand (draws stop at a full hand), and 0 while No Draw or Fiddle blocks draws.
-    /// </summary>
-    public int Draws { get; private set; }
-
     /// <summary>Cards the card itself draws, across plays.</summary>
     public int OwnDraws { get; init; }
 
     /// <summary>
     /// The most it can draw, when that depends on what it draws (Pillage draws again while it draws an Attack: up to a full hand;
-    /// decision #118). Otherwise <see cref="Draws"/>: the play check's upper bound on draws.
+    /// decision #118). Otherwise 0: the play check's upper bound on draws is its simulation's.
     /// </summary>
     public int DrawsAtMost { get; init; }
 
@@ -90,72 +84,11 @@ public sealed class PlayFacts
     /// </summary>
     public SortedDictionary<int, double>? Drawn { get; set; }
 
-    private PlayChain.DrawInputs? _drawInputs;
-
-    /// <summary>
-    /// No Draw (or Fiddle) stops draws the play would make (its own, or ones it sets off): the No Draw tab (decision #171). Worked out
-    /// on the same count with nothing blocked.
-    /// </summary>
-    public bool DrawsStopped
-    {
-        get
-        {
-            if (!DrawsBlocked || _drawInputs is not { } drawInputs) return false;
-            drawInputs.Blocked = false;
-            try { return PlayChain.Resolve(drawInputs).Draws > 0; }
-            finally { drawInputs.Blocked = true; }
-        }
-    }
-
-    /// <summary>
-    /// The simulation found the play losing you HP in some outcome (an enemy's Galvanic on a Galvanized card, Thorns hitting back, a
-    /// Corrupted card), which sets off Centennial Puzzle while the card's own count (LosesHp: only its HP cost) doesn't have it: Draws,
-    /// ChainedDraws and Shuffles worked out again with its draws (the Shuffle Warning, the checks' draw budget). Once; nothing when
-    /// the count already has them or Centennial Puzzle is used up.
-    /// </summary>
-    internal void CountSimulatedHpLoss()
-    {
-        if (_drawInputs is not { LosesHp: false, CentennialPuzzle: > 0 } drawInputs) return;
-        drawInputs.LosesHp = true;
-        var result = PlayChain.Resolve(drawInputs);
-        ChainedDraws = result.Chained;
-        Draws = result.Draws;
-        Shuffles = Shuffles || result.Shuffles;
-    }
-
-    /// <summary>
-    /// The play's draws (Draws) had the card itself drawn <paramref name="own"/> instead, across plays: a card whose draws depend on
-    /// its target (Ki Hop, Wrest) at the target it was played at, still stopping at a full hand. Null when not worked out here.
-    /// </summary>
-    public int? DrawsWithOwn(int own)
-    {
-        if (_drawInputs is not { } drawInputs) return null;
-        return PlayChain.Resolve(drawInputs.WithOwnDraws(own)).Draws;
-    }
-
     /// <summary>Of those, the card's enchantment's (Swift): drawn after the card's own play.</summary>
     public int EnchantmentDraws { get; init; }
 
-    /// <summary>
-    /// Draws your powers and relics add because of this play (CardPileCmd.Draw in their hooks):
-    /// Dark Embrace per card exhausted, Joss Paper on reaching its exhaust count, Game Piece on a
-    /// Power, Iron Club on completing its count, Vicious per Vulnerable you apply, Centennial Puzzle
-    /// on first HP loss, Motif on your first Wah, Cho and Ki each turn. Draws that depend on which card is drawn (Pagestorm, Iteration) aren't
-    /// predictable (the draw order is hidden) and aren't counted.
-    /// </summary>
-    public int ChainedDraws { get; private set; }
-
     /// <summary>Every draw is blocked this turn (No Draw, Fiddle).</summary>
-    public bool DrawsBlocked { get; private set; }
-
-    /// <summary>
-    /// The play's draws run past the draw pile while the discard pile has cards, so the discard pile
-    /// is shuffled in mid-play (CardPileCmd.ShuffleIfNecessary before each draw).
-    /// </summary>
-    public bool Shuffles { get; private set; }
-
-    /// <summary>Its own play shuffles your discard pile in (Reboot): the card text says so, so no Shuffle Warning tab.</summary>
-    public bool ShufflesItself { get; private set; }
+    public bool DrawsBlocked { get; init; }
 
     /// <summary>
     /// The card's owner; null for the game's template card (ModelDb, read by the coverage scan), whose Owner
@@ -431,11 +364,7 @@ public sealed class PlayFacts
             OrbDamageMax = OrbDamageMax + next.OrbDamageMax,
             LightningEvokes = LightningEvokes + next.LightningEvokes,
             OrbBlock = OrbBlock + next.OrbBlock,
-            Draws = Draws + next.Draws,
-            ChainedDraws = ChainedDraws + next.ChainedDraws,
             DrawsBlocked = DrawsBlocked || next.DrawsBlocked,
-            Shuffles = Shuffles || next.Shuffles,
-            ShufflesItself = ShufflesItself || next.ShufflesItself,
             Generated = Generated + next.Generated,
             GeneratedInHand = GeneratedInHand + next.GeneratedInHand,
             GeneratedStatuses = GeneratedStatuses + next.GeneratedStatuses,
@@ -537,9 +466,9 @@ public sealed class PlayFacts
             OrbBlock = OrbBlockFor(evoked, me, combat),
             RandomOutcome = combat.HittableEnemies.Count(creature => creature.IsAlive) > 1
                             && (evoked.Any(orb => orb is LightningOrb) || card.TargetType == TargetType.RandomEnemy),
+            // Every draw is stopped this turn (NoDrawPower.ShouldDraw, Fiddle's): what the play check excuses.
+            DrawsBlocked = me.Creature.HasPower<NoDrawPower>() || me.Relics.Any(relic => relic is Fiddle),
         };
-        // Exhausts from your draw pile (Cleanse's pick, read from its program) leave your hand's room alone.
-        facts.ResolveDraws(hand.Count, drawPile, Programs.CardEffects.ExhaustsOfOthers(card.GetType()).Any(exhaust => exhaust.FromDrawPile));
         return facts;
     }
 
@@ -556,88 +485,6 @@ public sealed class PlayFacts
         return hand == piles.Count ? generated : generated * hand / piles.Count;
     }
 
-    /// <summary>
-    /// Total draws (own + chained), the hand limit, draw blockers, and whether they shuffle: the
-    /// game's numbers for PlayChain.Resolve (pure, tested offline). Sources read here: Dark Embrace,
-    /// Vicious, Joss Paper, Game Piece, Iron Club, Centennial Puzzle, Motif; No Draw and Fiddle block draws.
-    /// </summary>
-    private void ResolveDraws(int handCount, int drawPile, bool fromDrawPile)
-    {
-        var me = Me;
-        var drawInputs = new PlayChain.DrawInputs
-        {
-            OwnDraws = OwnDraws - EnchantmentDraws,
-            EnchantmentDraws = EnchantmentDraws,
-            // Cards the card itself puts into your hand, before its enchantment draws.
-            AddedToHandBeforeEnchantment = EnchantmentDraws > 0 ? GeneratedInHand : 0,
-
-            IsPower = Card.Type == CardType.Power,
-            Exhausts = TotalExhausts,
-            ExhaustedFromHand = fromDrawPile ? 0 : ExhaustsOthers,
-            ExhaustedFromDrawPile = fromDrawPile ? ExhaustsOthers : 0,
-            HandCount = handCount,
-            DrawPile = drawPile,
-            DiscardPile = Sts2State.DiscardPileCount(me),
-            // Discards before its draws, in its code's order (decision #182: its program; Acrobatics draws first). A pick whose card is
-            // either exhausted or discarded (The Hermit: a Curse is exhausted) discards what its exhausts (in ExhaustedFromHand already)
-            // leave of it.
-            DiscardedBeforeDraw = !Programs.CardPrograms.DiscardsBeforeDraws(Card.GetType()) ? 0
-                : SharedPickSize(Card, OtherHandCards) is { } shared ? Math.Max(0, shared - ExhaustsOthers) : Discards,
-            ShufflesFirst = ShufflesFirst(Card),
-            HandShuffledIn = Programs.CardEffects.ShufflesDiscardPileIn(Card.GetType()),
-            // Calamity adds random attacks to your hand after each attack you play, before your relics draw.
-            AddedToHandAfterPlay = Card.Type == CardType.Attack ? me.Creature.GetPower<CalamityPower>()?.Amount ?? 0 : 0,
-            // Motif draws its amount per melody (Wah, Cho, Ki) this card plays first this turn, once (a replay's
-            // later plays aren't first).
-            PowerDrawsAfterPlay = (me.Creature.Powers.FirstOrDefault(power => power.GetType().Name == nameof(MotifPower))?.Amount ?? 0)
-                                  * Fool.FirstMelodies(Card, me).Count(),
-            VulnerableLandings = DebuffsLandingTotal(type => type == typeof(VulnerablePower)),
-            LosesHp = HpLoss > 0,
-            Blocked = me.Creature.HasPower<NoDrawPower>() || me.Relics.Any(relic => relic is Fiddle),
-            DarkEmbrace = me.Creature.GetPower<DarkEmbracePower>()?.Amount ?? 0,
-            Vicious = me.Creature.GetPower<ViciousPower>()?.Amount ?? 0,
-        };
-        foreach (var relic in me.Relics)
-        {
-            switch (relic)
-            {
-                case JossPaper:
-                    drawInputs.JossPaperCount = Sts2State.Private(relic, "CardsExhausted", fallback: 0);
-                    drawInputs.JossPaperEvery = Sts2State.Var(relic, "ExhaustAmount", fallback: 5);
-                    break;
-                case GamePiece: drawInputs.GamePiece += Sts2State.Var(relic, "Cards", fallback: 1); break;
-                case IronClub:
-                    drawInputs.IronClubEvery = Sts2State.Var(relic, "Cards", fallback: 4);
-                    drawInputs.IronClubCount = relic.DisplayAmount; // CardsPlayed % Cards (reads Cards while it animates: % again)
-                    break;
-                case CentennialPuzzle when !Sts2State.Private(relic, "UsedThisCombat", fallback: true): drawInputs.CentennialPuzzle += Sts2State.Var(relic, "Cards", fallback: 3); break;
-            }
-        }
-        if (Programs.CardEffects.ShufflesWhenShort(Card.GetType()))
-        {
-            // Ki Chant takes the top cards it looks at off the draw pile: one to your hand, the rest discarded.
-            var looked = LooksAt(Card);
-            var available = drawPile + (drawInputs.ShufflesFirst ? drawInputs.DiscardPile : 0);
-            drawInputs.TakenFromDrawPile = Math.Min(looked, available);
-            drawInputs.AddedToHandDuringPlay = looked > 0 ? Math.Min(1, drawInputs.TakenFromDrawPile) : 0;
-        }
-        _drawInputs = drawInputs;
-        var result = PlayChain.Resolve(drawInputs);
-        DrawsBlocked = drawInputs.Blocked;
-        ChainedDraws = result.Chained;
-        Draws = result.Draws;
-        // Ki Chant replayed: a later play can find the draw pile short and shuffle (its own text, like its first play's).
-        var laterShuffle = Programs.CardEffects.ShufflesWhenShort(Card.GetType())
-                           && PlayChain.ShortPileShufflesOnLaterPlay(drawPile, drawInputs.DiscardPile, Sts2State.Var(Card, "Cards", fallback: 3), Math.Max(1, Plays));
-        Shuffles = result.Shuffles || laterShuffle;
-        ShufflesItself = drawInputs.ShufflesFirst || laterShuffle;
-        // Biiig Hug puts a Soot (a status) into your draw pile on the shuffle: a created status.
-        if (Shuffles && me.Relics.Any(relic => relic is BiiigHug))
-        {
-            Generated += 1;
-            GeneratedStatuses += 1;
-        }
-    }
 
     /// <summary>
     /// Existing orbs this play evokes, in order: evoke cards (Dualcast and Quadcast evoke the front

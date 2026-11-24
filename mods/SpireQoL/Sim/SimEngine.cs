@@ -891,11 +891,16 @@ public static partial class SimEngine
                 branches.Each(branch => AutoPlayFromDraw(branch, branch.CurrentPlay?.Owner ?? Who.You, CountOf(branch, autoPlayFromDrawAction.CountFrom, autoPlayFromDrawAction.Count), autoPlayFromDrawAction.ForceExhaust, autoPlayFromDrawAction.Upgrade));
                 break;
             case ShuffleDrawPileAction shuffleDrawPileAction:
-                branches.Do(branch =>
+                // CardPileCmd.Shuffle: the discard pile into the draw pile, then AfterShuffle (Whittling Knife, Biiig Hug); one only when it's
+                // needed (a draw pile shorter than it looks at, a discard pile to shuffle in: ShuffleIfNecessary, Ki Chant's) waits for that.
+                branches.Each(branch =>
                 {
                     var owner = branch.CurrentPlay?.Owner ?? Who.You;
-                    if (DrawsFromPile(branch, owner) && (shuffleDrawPileAction.WhenShorterThan == 0 || branch.Player(owner)!.Draw!.Count < shuffleDrawPileAction.WhenShorterThan))
-                        branch.MutablePlayer(owner).Draw = branch.Player(owner)!.Draw!.ShuffledWithDiscard(shuffleDrawPileAction.HandIn);
+                    if (!DrawsFromPile(branch, owner)) return new[] { branch };
+                    var pile = branch.Player(owner)!.Draw!;
+                    if (shuffleDrawPileAction.WhenShorterThan > 0 && (pile.Count >= shuffleDrawPileAction.WhenShorterThan || pile.DiscardCount == 0)) return new[] { branch };
+                    branch.MutablePlayer(owner).Draw = pile.ShuffledWithDiscard(shuffleDrawPileAction.HandIn);
+                    return ProcCardEvent(branch, CardEvent.Shuffled, count: 1, owner);
                 });
                 break;
             case TakeToHandAction takeToHandAction: branches.Each(branch => RunTakeToHand(branch, takeToHandAction)); break;

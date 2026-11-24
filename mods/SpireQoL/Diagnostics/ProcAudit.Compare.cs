@@ -299,10 +299,9 @@ public sealed partial class ProcAudit
             else if (actual < own) modelLines.Add($"expected {own} {what}, saw {actual}");
         }
         var draws = entries.OfType<CardDrawnEntry>().Count(cardDrawnEntry => !cardDrawnEntry.FromHandDraw && cardDrawnEntry.Card.Owner == me);
-        // A card whose draws depend on its target (Ki Hop, Wrest): what it draws at the target it was played at.
-        var expectedDraws = facts == null ? 0 : facts.Draws;
-        if (facts != null && window.TargetDraws is { } targetDraws)
-            expectedDraws = facts.DrawsWithOwn(targetDraws) ?? Math.Max(0, facts.Draws - (facts.OwnDraws - facts.EnchantmentDraws) + targetDraws);
+        // Its draws are its simulation's (the ones it sets off included, up to a full hand), at the target it was played at: its log's
+        // fewest and most over its outcomes (decision #193).
+        SimOutcome? simulated = facts?.Sim?.AimFor(window.Target) is { } simulatedAim && facts.OutcomeByAim?.TryGetValue(simulatedAim, out var aimOutcome) == true && !aimOutcome.Truncated ? aimOutcome : null;
         var exhausts = entries.OfType<CardExhaustedEntry>().Count(cardExhaustedEntry => cardExhaustedEntry.Card.Owner == me);
         var discards = entries.OfType<CardDiscardedEntry>().Count(cardDiscardedEntry => cardDiscardedEntry.Card.Owner == me);
         var generated = entries.OfType<CardGeneratedEntry>().Count(cardGeneratedEntry => cardGeneratedEntry.Creator == me || cardGeneratedEntry.Card.Owner == me);
@@ -353,13 +352,18 @@ public sealed partial class ProcAudit
         }
         if (facts != null)
         {
-            // Draws and channels aren't a choice: fewer than predicted is a model gap (FTL's play limit),
-            // unless the fight ended (nothing more runs), fewer cards were exhausted than the upper bound
-            // (Dark Embrace and Joss Paper draw per exhaust), or you have no orb slots left (the channel fails).
-            if (draws < expectedDraws && !window.FightEnded && exhausts >= facts.TotalExhausts) issues.Add($"draws: predicted {expectedDraws}, actual {draws}");
+            // Draws and channels aren't a choice: fewer than predicted is a model gap (FTL's play limit), unless the fight ended (nothing
+            // more runs), fewer cards were exhausted than the upper bound (Dark Embrace and Joss Paper draw per exhaust), or you have no orb
+            // slots left (the channel fails).
+            if (simulated != null)
+            {
+                var leastDraws = simulated.PlayFiredEvery[SimKeys.PlayEvent(CardEvent.Drawn)];
+                if (draws < leastDraws && !window.FightEnded && exhausts >= facts.TotalExhausts) issues.Add($"draws: predicted {leastDraws}, actual {draws}");
+                // A card whose draws depend on what it draws (Pillage) may draw up to its most (decision #118).
+                Budget(Effect.Draw, "draws", draws, Math.Max(simulated.PlayFiredAny[SimKeys.PlayEvent(CardEvent.Drawn)], facts.DrawsAtMost));
+            }
+            else modelLines.Skip("draws", "its simulation has no finished outcome at the target it was played at");
             if (orbs < facts.Channels && !window.FightEnded && window.After?.You.OrbCapacity != 0) issues.Add($"orbs channeled: predicted {facts.Channels}, actual {orbs}");
-            // A card whose draws depend on what it draws (Pillage) may draw up to its most (decision #118).
-            Budget(Effect.Draw, "draws", draws, Math.Max(expectedDraws, facts.DrawsAtMost));
             Budget(Effect.Exhaust, "exhausts", exhausts, facts.TotalExhausts);
             Budget(Effect.Discard, "discards", discards, facts.Discards);
             // Transformed cards are logged as created too (CardCmd.Transform), up to what the card can transform.

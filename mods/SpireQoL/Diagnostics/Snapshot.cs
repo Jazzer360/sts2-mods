@@ -87,7 +87,7 @@ public static class Snapshot
 
     /// <summary>What the mod expects one play of a card to do (PlayFacts), for reports.</summary>
     public static string FactsLine(SpireQoL.Procs.PlayFacts facts) =>
-        $"plays {facts.Plays}, energy {facts.Energy}, stars {facts.Stars}, exhausts {facts.TotalExhausts}, discards {facts.Discards}, draws {facts.Draws}, created {facts.Generated}, " +
+        $"plays {facts.Plays}, energy {facts.Energy}, stars {facts.Stars}, exhausts {facts.TotalExhausts}, discards {facts.Discards}, own draws {facts.OwnDraws}, created {facts.Generated}, " +
         $"orbs channeled {facts.Channels}, hits {facts.AttackHits}, block gains {facts.BlockGains}, debuffs {string.Join("/", facts.EnemyDebuffs.Select(type => type.Name))}, " +
         $"orb evoke damage {facts.OrbDamageMin}-{facts.OrbDamageMax}, orb evoke block {facts.OrbBlock}, random outcome {facts.RandomOutcome}";
 

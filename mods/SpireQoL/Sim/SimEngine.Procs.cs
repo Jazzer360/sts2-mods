@@ -132,7 +132,7 @@ public static partial class SimEngine
     public static IEnumerable<SimState> ProcCardEvent(SimState state, CardEvent cardEvent, int count, int player, bool indirect = true, Action<SimState>? onEach = null)
     {
         // Your draws come from your draw pile (decision #90): which card matters.
-        if (cardEvent == CardEvent.Drawn && DrawsStopped(state, player)) return new[] { state };
+        if (cardEvent == CardEvent.Drawn && DrawsStopped(state, player)) return DrawPrevented(state, player);
         if (cardEvent == CardEvent.Drawn && DrawsFromPile(state, player)) return DrawCards(state, player, count, indirect, onEach);
         IEnumerable<SimState> states = new[] { state };
         for (var i = 0; i < count; i++) states = Then(states, branch => { onEach?.Invoke(branch); return FireCardEvent(branch, cardEvent, player, indirect); });

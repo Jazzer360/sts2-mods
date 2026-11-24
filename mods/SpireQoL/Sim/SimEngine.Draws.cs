@@ -104,6 +104,16 @@ public static partial class SimEngine
         state.CurrentPlay != null && (PowersOf(state, player).Has(PowerId.NoDraw) || RelicsOf(state, player).Has(RelicId.Fiddle));
 
     /// <summary>
+    /// A draw ShouldDraw stopped: the model that stopped it flashes (NoDrawPower.ShouldDraw; Fiddle's), logged as it fires, so the No Draw
+    /// tag and the play check read it from the play's log (decision #171). Nothing is drawn, nothing shuffled.
+    /// </summary>
+    internal static IEnumerable<SimState> DrawPrevented(SimState state, int player)
+    {
+        state.LogFired(PowersOf(state, player).Has(PowerId.NoDraw) ? PowerId.NoDraw.Name : RelicId.Fiddle.Name, amount: 0, player);
+        return new[] { state };
+    }
+
+    /// <summary>
     /// One draw (CardPileCmd.Draw): none into a full hand (the card stays in the pile); the discard pile shuffled in when the
     /// draw pile is empty; then the top card when it's known, else a branch per profile in the rest, weighted by its count
     /// (each card equally likely: the order is hidden). The card joins your hand (what acts at end of turn, Ethereal, what
@@ -111,7 +121,7 @@ public static partial class SimEngine
     /// </summary>
     private static IEnumerable<SimState> DrawOne(SimState state, int player, bool indirect, bool record = false, Action<SimState>? onDrawn = null)
     {
-        if (DrawsStopped(state, player)) return new[] { state };
+        if (DrawsStopped(state, player)) return DrawPrevented(state, player);
         var simPlayer = state.Player(player)!;
         // A full hand draws nothing (RoomIn: the cards being played have left it already; HandCount drops each at CardResolved).
         if (RoomIn(simPlayer) == 0) return new[] { state };

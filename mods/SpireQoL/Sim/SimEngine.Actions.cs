@@ -684,7 +684,8 @@ public static partial class SimEngine
         {
             if (cardEvent == CardEvent.Drawn)
             {
-                if (DrawsStopped(state, player) || RoomIn(simPlayer) == 0) return new[] { state };
+                if (DrawsStopped(state, player)) return DrawPrevented(state, player);
+                if (RoomIn(simPlayer) == 0) return new[] { state };
                 // Drawing the whole pile shuffles the discard pile in: I Am Invincible's top isn't known any more.
                 var drawer = state.MutablePlayer(player);
                 if (drawer.InvincibleBlock > 0 && --drawer.InvincibleDrawPile <= 0) drawer.InvincibleBlock = 0;

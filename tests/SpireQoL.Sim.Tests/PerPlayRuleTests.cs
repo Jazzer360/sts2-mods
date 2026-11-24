@@ -38,9 +38,6 @@ public class PerPlayRuleTests
         ["mods/SpireQoL/Sim/SimEngine.Draws.cs: internal static int RoomIn(SimPlayer player) => Math.Max(0, MaxHand - (player.HandCount - player.PlayingFromHand));"] = "the one rule",
         ["mods/SpireQoL/Sim/SimEngine.Plays.cs: player.HandCount = Math.Clamp(player.HandCount + handDelta, 0, player.Draw != null ? MaxHand + player.PlayingFromHand : int.MaxValue);"] =
             "the card leaving and the cards its own hooks bring back after its plays (HandDelta: Make It So, Whistling Arrows): a tracker item to make them adds",
-        ["mods/SpireQoL/Sim/PlayChain.cs: public const int MaxHand = 10; // CardPile.MaxCardsInHand"] = "PlayChain: the facts' draw count for the play check, the Shuffle Tag and the No Draw tag, not the simulation: a tracker item to read them from the simulation",
-        ["mods/SpireQoL/Sim/PlayChain.cs: room = MaxHand;"] = "PlayChain (above)",
-        ["mods/SpireQoL/Sim/PlayChain.cs: room = Math.Max(0, MaxHand - (drawInputs.HandCount - 1 - drawInputs.ExhaustedFromHand - drawInputs.DiscardedBeforeDraw) - drawInputs.AddedToHandDuringPlay);"] = "PlayChain (above)",
         ["mods/SpireQoL/Procs/PlayFacts.cs: ? Math.Max(draws, CardPile.MaxCardsInHand - (hand.Count - 1)) + swiftDraws : 0,"] = "the play check's bound on Pillage's draws (DrawsAtMost), not the simulation",
         ["mods/SpireQoL/Procs/PlayFacts.cs: CardsBack = ReturnToHand.Returning(card, me, plays, Math.Min(CardPile.MaxCardsInHand, hand.Count - 1 + createdInHand) + draws + swiftDraws,"] =
             "cards' own hooks after the play (ReturnToHand, docs/CARD_PROGRAMS.md A5): a tracker item with HandDelta's",

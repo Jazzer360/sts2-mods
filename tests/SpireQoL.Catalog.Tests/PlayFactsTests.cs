@@ -76,41 +76,49 @@ public class PlayFactsTests
         Assert.Equal(0, PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).OwnDraws);
     }
 
-    [Fact]
-    public void CentennialPuzzlesDrawsFromHpTheSimulationLosesCount()
+    /// <summary>The card played in the fight as it is, through the adapter and the simulator: the branches it ends in.</summary>
+    private static List<SpireQoL.Sim.SimState> Simulated(GameFight gameFight, CardModel card)
     {
-        // A dev review: Tune+ was Galvanized and the enemy's Galvanic cost you HP, which set off Centennial Puzzle's 3 draws. The card's
-        // own count has them only for its own HP cost; the simulation's (CountSimulatedHpLoss) brings them in: with 2 cards in the draw
-        // pile, they shuffle the discard pile in, which the Shuffle Warning shows.
+        var start = SpireQoL.Sim.SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
+        var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
+        var play = SpireQoL.Sim.SimAdapter.Play(card, facts, gameFight.Me, gameFight.Combat, ids, SpireQoL.Sim.Who.None);
+        SpireQoL.Sim.SimEngine.ApplyPlayTo(start, play, out var branches, out _);
+        return branches;
+    }
+
+    [Fact]
+    public void CentennialPuzzlesDrawsShuffleInTheSimulation()
+    {
+        // A dev review: Tune+ was Galvanized and the enemy's Galvanic cost you HP, which set off Centennial Puzzle's 3 draws. The play's
+        // draws and its shuffle are its simulation's (decision #193): Bloodletting's HP cost sets off Centennial Puzzle's 3 draws, and with
+        // 2 cards in the draw pile they shuffle the discard pile in, which the Shuffle Tag shows.
         var gameFight = new GameFight();
-        var card = gameFight.Add<DefendIronclad>();
+        var card = gameFight.Add<Bloodletting>();
         gameFight.Add<StrikeIronclad>(PileType.Draw);
         gameFight.Add<StrikeIronclad>(PileType.Draw);
         gameFight.Add<StrikeIronclad>(PileType.Discard);
         gameFight.Me.AddRelicInternal(MegaCrit.Sts2.Core.Models.ModelDb.Relic<MegaCrit.Sts2.Core.Models.Relics.CentennialPuzzle>().ToMutable());
-        var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
-        Assert.Equal(0, facts.Draws);
-        Assert.False(facts.Shuffles);
-        facts.CountSimulatedHpLoss();
-        Assert.Equal(3, facts.Draws);
-        Assert.True(facts.Shuffles);
+        var after = Assert.Single(Simulated(gameFight, card));
+        Assert.Equal(3, after.PlayEvents[SpireQoL.Sim.CardEvent.Drawn]);
+        Assert.Equal(1, after.PlayEvents[SpireQoL.Sim.CardEvent.Shuffled]);
     }
 
     [Fact]
-    public void NoDrawStopsACardsDraws()
+    public void NoDrawStopsACardsDrawsInTheSimulation()
     {
-        // The owner's request: a card whose draws No Draw (Battle Trance) would stop gets No Draw's tab (decision #171).
+        // The owner's request: a card whose draws No Draw (Battle Trance) stops gets No Draw's tag (decision #171), from its simulation's
+        // log: NoDrawPower.ShouldDraw flashes as it stops the draw (SimEngine.DrawPrevented).
         var gameFight = new GameFight();
         var card = gameFight.Add<ShrugItOff>();
         gameFight.Add<StrikeIronclad>(PileType.Draw);
-        Assert.False(PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).DrawsStopped);
+        Assert.False(Assert.Single(Simulated(gameFight, card)).Fired.Has(nameof(MegaCrit.Sts2.Core.Models.Powers.NoDrawPower)));
         var noDraw = (MegaCrit.Sts2.Core.Models.PowerModel)MegaCrit.Sts2.Core.Models.ModelDb.Power<MegaCrit.Sts2.Core.Models.Powers.NoDrawPower>().ToMutable();
         noDraw.ApplyInternal(gameFight.Me.Creature, amount: 1);
-        var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
-        Assert.Equal(0, facts.Draws);
-        Assert.True(facts.DrawsStopped);
+        var stopped = Assert.Single(Simulated(gameFight, card));
+        Assert.Equal(0, stopped.PlayEvents[SpireQoL.Sim.CardEvent.Drawn]);
+        Assert.True(stopped.Fired.Has(nameof(MegaCrit.Sts2.Core.Models.Powers.NoDrawPower)));
         // A card that draws nothing has nothing to stop.
-        Assert.False(PlayFacts.For(gameFight.Add<DefendIronclad>(), gameFight.Me, gameFight.Combat, plays: 1).DrawsStopped);
+        Assert.False(Assert.Single(Simulated(gameFight, gameFight.Add<DefendIronclad>())).Fired.Has(nameof(MegaCrit.Sts2.Core.Models.Powers.NoDrawPower)));
     }
 
     [Fact]

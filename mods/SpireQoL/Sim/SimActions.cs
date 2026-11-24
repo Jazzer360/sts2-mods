@@ -269,7 +269,7 @@ public sealed record AutoPlayFromDrawAction(int Count) : SimAction
 /// </summary>
 public sealed record ShuffleDrawPileAction(IReadOnlyList<SimDrawGroup> HandIn) : SimAction
 {
-    /// <summary>Only when the draw pile holds fewer than this many cards (Ki Chant: CardPileCmd.ShuffleIfNecessary before it looks); 0: always.</summary>
+    /// <summary>Only when the draw pile holds fewer than this many cards and the discard pile has some (Ki Chant's, ShuffleIfNecessary's); 0: always.</summary>
     public int WhenShorterThan { get; init; }
 }
 

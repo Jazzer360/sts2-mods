@@ -39,7 +39,7 @@ namespace SpireQoL.Diagnostics;
 ///    tab that explains it = "unexplained" (a missing tag). Less than the card's own = a "[model]"
 ///    line (our model of the card is off; often fine, e.g. an empty draw pile).
 ///  - Shuffle: whether the play shuffled your discard pile into your draw pile (seen from the piles'
-///    events: the game keeps no history entry for it) against PlayFacts.Shuffles.
+///    events: the game keeps no history entry for it) against its simulation's.
 ///  - State after the play: once the play has fully resolved (the game's action queue is idle), the
 ///    simulator's state is rebuilt from the game and compared with the simulator's own prediction
 ///    of the play (the same start state and play behind the card's lethal, Imbalanced and wake
@@ -115,8 +115,6 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
         /// <summary>See PlayRecord.RanDuringPause.</summary>
         public string? RanDuringPause;
         public Dictionary<(Creature, string), int>? PowersBefore, PowersAfter;
-        /// <summary>See PlayRecord.TargetDraws.</summary>
-        public int? TargetDraws;
         public PlaySnapshot? FullBefore, FullAfter;
         /// <summary>Waterfall Giants already about to blow when the play began; null when the play's start wasn't seen.</summary>
         public HashSet<Creature>? BlowingBefore;
@@ -216,7 +214,7 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
     private static readonly Dictionary<string, Effect[]> SourceEffects = new()
     {
         // draws (Dark Embrace, Game Piece, Iron Club, Joss Paper, Vicious and Centennial Puzzle are
-        // counted in PlayFacts.Draws, so their tabs explain nothing beyond it)
+        // counted in the play's simulated draws, so their tabs explain nothing beyond it)
         [nameof(GremlinHorn)] = new[] { Effect.Draw }, [nameof(UnceasingTop)] = new[] { Effect.Draw }, [nameof(CorrosiveWavePower)] = new[] { Effect.Power },
         [nameof(PagestormPower)] = new[] { Effect.Draw }, [nameof(IterationPower)] = new[] { Effect.Draw },
         [nameof(MotifPower)] = new[] { Effect.Draw }, [nameof(ConductorsBaton)] = new[] { Effect.Power },

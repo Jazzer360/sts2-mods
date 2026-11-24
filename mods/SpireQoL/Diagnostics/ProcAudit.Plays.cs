@@ -46,8 +46,6 @@ public sealed partial class ProcAudit
         /// action, so a teammate's queued play runs): its effects are inside this play's before/after snapshots.
         /// </summary>
         public string? RanDuringPause;
-        /// <summary>What a target-dependent draw card's plays draw at this target, from the board as it started (PlayFacts.TargetDraws).</summary>
-        public int? TargetDraws;
         /// <summary>Every power on every creature when the play started and when it finished.</summary>
         public Dictionary<(Creature, string), int>? PowersBefore, PowersAfter;
         /// <summary>Energy, stars, gold, HP, cards and relics when the play started and finished.</summary>
@@ -223,13 +221,6 @@ public sealed partial class ProcAudit
                         rec.Facts = _ctx.Predictions.LastFacts.TryGetValue(card, out var facts) ? facts : null;
                         rec.Lag = _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1;
                         if (_history != null) rec.StaleBecause = StaleBecause(_history.Entries.ToList(), card, _history.Entries.Count(), play.Player);
-                    }
-                    // A card whose draws depend on its target (Ki Hop, Wrest): what its plays draw at this target, from the
-                    // board as it starts (its own hits and Wrest's pull change the target's Impaled during the play).
-                    if (play.Target != null)
-                    {
-                        try { rec.TargetDraws = PlayFacts.TargetDraws(card, play.Target, rec.Facts?.Plays ?? CardPlays.Count(card)); }
-                        catch (Exception ex) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "audit-target-draws"); }
                     }
                 }
                 _running[action] = rec;
@@ -600,7 +591,7 @@ public sealed partial class ProcAudit
             Lag = captured ? rec.Lag : _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1,
             Before = rec.Before, Target = target, UpgradeBefore = captured ? rec.UpgradeBefore : -1,
             After = rec.After, AfterIds = rec.AfterIds, AfterSkipped = rec.AfterSkipped, FightEnded = rec.FightEnded, RanDuringPause = rec.RanDuringPause,
-            PowersBefore = rec.PowersBefore, PowersAfter = rec.PowersAfter, TargetDraws = captured ? rec.TargetDraws : null,
+            PowersBefore = rec.PowersBefore, PowersAfter = rec.PowersAfter,
             FullBefore = rec.FullBefore, FullAfter = rec.FullAfter, BlowingBefore = rec.BlowingBefore, DeadAtFightEnd = rec.DeadAtFightEnd,
             StaleBecause = captured ? rec.StaleBecause : StaleBecause(hist, card, start, me),
             ShownDiff = captured ? rec.ShownDiff : null, ShownSkip = captured ? rec.ShownSkip : "the play's start wasn't seen",
