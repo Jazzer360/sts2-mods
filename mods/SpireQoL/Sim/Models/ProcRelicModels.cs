@@ -205,23 +205,6 @@ public sealed class RazorTooth : RelicProc
 }
 
 /// <summary>
-/// ConductorsBaton.AfterCardPlayed: once a turn (RelicUse.UsedThisTurn), the play that completes Wah, Cho and Ki applies
-/// ConductorsBatonPower (1) to its owner.
-/// </summary>
-public sealed class ConductorsBaton : RelicProc
-{
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (!Mine(play, owner) || UsedThisTurn(state, owner)) return One(state);
-        var (before, after) = Melodies.Finished(state, play);
-        if (before >= 3 || after < 3) return One(state);
-        MarkUsedThisTurn(state, owner);
-        SimEngine.ApplyPower(state, owner, owner, PowerId.ConductorsBaton, amount: 1, debuff: false);
-        return Fire(state, owner);
-    }
-}
-
-/// <summary>
 /// ConductorsBatonPower.ModifyDamageMultiplicative: its DamageDecrease (0.75) on powered attacks on its owner; it goes at the
 /// start of the owner's next turn (AfterSideTurnStart), so it lasts through the enemy turn.
 /// </summary>

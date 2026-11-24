@@ -528,14 +528,14 @@ public static class ProgramReader
                 var condition = Relative(reached, outer);
                 // A store to the model's own state (this.HasAmalgamDied = true): a step of its own, for what reads that state later.
                 if (instruction.OpCode == OpCodes.Stfld && instruction.Member is { Kind: CodeMemberKind.Field } field && OwnState(field) is { } stored
-                    && flow.ReceiverValue(i, arguments: 1) is NamedValue { Name: "this" })
+                    && flow.StoreReceiver(i) is NamedValue { Name: "this" })
                 {
                     into.Add(new StoreStep(instruction.Offset, stored, flow.ValueBefore(i)) { Condition = condition });
                     continue;
                 }
                 // A store to a plain field of the model's own data (data.etherealCount++): its state, as "Data.etherealCount".
                 if (instruction.OpCode == OpCodes.Stfld && instruction.Member is { Kind: CodeMemberKind.Field } dataField && IsOwnDataType(dataField.DeclaringType)
-                    && IsOwnData(flow.ReceiverValue(i, arguments: 1)))
+                    && IsOwnData(flow.StoreReceiver(i)))
                 {
                     into.Add(new StoreStep(instruction.Offset, OwnDataPrefix + dataField.Name, flow.ValueBefore(i)) { Condition = condition });
                     continue;
@@ -1098,6 +1098,19 @@ public static class ProgramReader
                 };
             }
             return returned;
+        }
+
+        /// <summary>
+        /// What a field store at <paramref name="at"/> is made on, an increment's included (x.f++, x.f += n: x; dup; ldfld f; ...; stfld f,
+        /// whose stored value reads the copy the dup made, so the object is the one under it).
+        /// </summary>
+        public ProgramValue StoreReceiver(int at)
+        {
+            if (Ops[at].Member is { } field)
+                for (var back = at - 1; back >= 1 && back >= at - 12 && Ops[back].OpCode != OpCodes.Stfld; back--)
+                    if (Ops[back].OpCode == OpCodes.Ldfld && Ops[back].Member?.Name == field.Name && Ops[back].Member?.DeclaringType == field.DeclaringType && Ops[back - 1].OpCode == OpCodes.Dup)
+                        return ReadBack(back - 1, depth: 0).Value;
+            return ReceiverValue(at, arguments: 1);
         }
 
         /// <summary>

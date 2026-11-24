@@ -925,3 +925,22 @@ public sealed class StoneCalendar : EndOfTurnRelic
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner) =>
         state.TakesPart(owner) && Data(state, owner) == 0 && Amount(state, owner) > 0 ? DamageAll(state, owner, Amount(state, owner)) : One(state);
 }
+
+// ---- own plain fields and data, copies, AfterApplied (round five, deleted 2026-11-24)
+
+/// <summary>
+/// ConductorsBaton.AfterCardPlayed: once a turn (RelicUse.UsedThisTurn), the play that completes Wah, Cho and Ki applies
+/// ConductorsBatonPower (1) to its owner.
+/// </summary>
+public sealed class ConductorsBaton : RelicProc
+{
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (!Mine(play, owner) || UsedThisTurn(state, owner)) return One(state);
+        var (before, after) = Melodies.Finished(state, play);
+        if (before >= 3 || after < 3) return One(state);
+        MarkUsedThisTurn(state, owner);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.ConductorsBaton, amount: 1, debuff: false);
+        return Fire(state, owner);
+    }
+}

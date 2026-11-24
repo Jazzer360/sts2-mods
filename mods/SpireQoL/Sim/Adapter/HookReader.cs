@@ -291,7 +291,10 @@ public static class HookReader
                 if (instruction.OpCode == System.Reflection.Emit.OpCodes.Stfld && instruction.Member is { } storedField && !storedField.DeclaringType.StartsWith('<') && !storedField.Name.StartsWith('<')
                     && !stepsAt.Contains(instruction.Offset))
                     return $"gap: stores {storedField.DeclaringType}.{storedField.Name} where the reader reads no store";
-                if (instruction.Member is { Kind: CodeMemberKind.Field } field && field.DeclaringType == _type.Name && !field.Name.StartsWith('<')) return $"gap: uses its own field ({field.Name}) directly: what a call on it changes isn't read";
+                // One of its own fields: a plain one (a flag, a count) is its state, read and stored as its properties are; any other (a list, a
+                // card kept) is changed by calls on it the reader doesn't read.
+                if (instruction.Member is { Kind: CodeMemberKind.Field } field && field.DeclaringType == _type.Name && !field.Name.StartsWith('<') && !IsPlainField(field))
+                    return $"gap: uses its own field ({field.Name}) directly: what a call on it changes isn't read";
             }
             return null;
         }
@@ -472,6 +475,14 @@ public static class HookReader
             finally { _inlining.Remove(name); }
         }
 
+        /// <summary>A plain field of its own class (a flag, a count: bool, int, decimal), whose loads and stores are all there is to it.</summary>
+        private static bool IsPlainField(CodeMember field) => field.ValueType is "Boolean" or "Int32" or "Decimal";
+
+        /// <summary>One of its own plain fields read (this._triggeredThisTurn): the field's name, else null.</summary>
+        private string? OwnPlainField(ProgramValue value) =>
+            value is QueryValue { Of: NamedValue { Name: "this" }, IsProperty: false, Arguments.Count: 0, Name: var name, Type: var declaring, ValueType: "Boolean" or "Int32" or "Decimal" }
+            && declaring == _type.Name && _type.GetField(name, Declared) != null ? name : null;
+
         /// <summary>A field or property its own class declares (not a base class's: their state is the game's, not the model's).</summary>
         private bool IsOwnMember(string name) =>
             _type.GetProperty(name, Declared) != null || _type.GetField(name, Declared) != null;
@@ -648,6 +659,9 @@ public static class HookReader
                     return new HookFactValue(HookFact.OwnerDead);
                 case QueryValue { Type: "CombatManager", Name: "IsInProgress" }:
                     return new HookConstant(1m);
+                // Its owner's or its own fight is there (base.Owner.Creature.CombatState != null): in a simulation, always.
+                case QueryValue { Name: "CombatState", Of: var stateOf } when stateOf is NamedValue { Name: "this" } || stateOf != null && IsOwner(stateOf):
+                    return new HookConstant(1m);
                 case QueryValue { Type: "Creature", Name: "IsEnemy", Of: QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } } }:
                     return new HookFactValue(HookFact.PowerOnEnemy);
                 case QueryValue query when IsTakingPart(query):
@@ -671,6 +685,9 @@ public static class HookReader
                 // One of its own true-or-false properties (MiniRegent's UsedThisTurn): its state, 1 when set.
                 case QueryValue { Of: NamedValue { Name: "this" }, IsProperty: true, Name: var property, Type: var declaring } when declaring == _type.Name && IsOwnMember(property):
                     return new HookMath(HookOperation.NotEqual, OwnProperty(property), new HookConstant(0m));
+                // One of its own plain fields (Conductor's Baton's _triggeredThisTurn): its state, 1 when set.
+                case var ownField when OwnPlainField(ownField) is { } fieldName:
+                    return new HookMath(HookOperation.NotEqual, new HookField(fieldName), new HookConstant(0m));
                 case ArithmeticValue:
                     // An int tested as true or false (not (count rem Cards): its remainder is 0).
                     return new HookMath(HookOperation.NotEqual, Value(test), new HookConstant(0m));
@@ -883,6 +900,9 @@ public static class HookReader
                 // One of its own properties (Kunai's AttacksPlayedThisTurn): simulator state, seeded from the game.
                 case QueryValue { Of: NamedValue { Name: "this" }, IsProperty: true, Name: var property, Type: var declaring } when declaring == _type.Name && IsOwnMember(property):
                     return OwnProperty(property);
+                // One of its own plain fields (a count it keeps): simulator state, seeded from the game.
+                case var ownField when OwnPlainField(ownField) is { } fieldName:
+                    return new HookField(fieldName);
                 case QueryValue { Name: "EnergyValue", Of: { } resources } when (resources is StoredValue stored ? stored.Value : resources) is QueryValue { Name: "Resources", Of: NamedValue { Name: "cardPlay" } or ParameterValue { Name: "cardPlay" } }:
                     return new HookFactValue(HookFact.CardEnergy);
                 case QueryValue { Name: "GetResolved", Of: QueryValue { Name: "EnergyCost", Of: { } costOf } } when IsPlayCard(costOf):

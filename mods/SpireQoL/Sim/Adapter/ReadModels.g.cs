@@ -21,6 +21,7 @@ public static partial class ReadModels
         RelicId.CloakClasp.Name,
         PowerId.Colossus.Name,
         PowerId.Concoct.Name,
+        RelicId.ConductorsBaton.Name,
         PowerId.Constrict.Name,
         PowerId.CorrosiveWave.Name,
         PowerId.CrabRage.Name,

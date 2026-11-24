@@ -125,7 +125,7 @@ internal static partial class CoverageLedger
         ["WhisperingEarring"] = "ignore: AfterAutoPrePlayPhaseEnteredLate plays your turn-1 hand (before your plays)",
         // v0.113.0
         ["Byrdpip"] = "ignore: AfterCardPlayed counts Byrd Swoop plays toward its rest-site evolve option (out of combat)",
-        ["ConductorsBaton"] = "covered: AfterCardPlayed applies Conductor's Baton (powered attacks on you deal 75% until your next turn) on the card that brings you to three melodies this turn (proc tab); once applied, intents read it through the game's damage hooks",
+        ["ConductorsBaton"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed applies Conductor's Baton (powered attacks on you deal 75% until your next turn) once a turn (its own _triggeredThisTurn) on a card of yours played with three melodies this turn (the history ledger; proc tab); once applied, intents read it through the game's damage hooks",
         ["Fertilizer"] = "covered: read from its code (ReadModel, decision #195): AfterCardGeneratedForCombat gives Strength when you create a Sadness: proc tab on cards that create one (MadeCards: a made Sadness, the simulator's GeneratedSadness)",
         ["MightyWings"] = "covered: AfterDamageGiven gives 2 Strength when your (or Osty's) powered attack hit deals 30 or more (blocked plus HP lost): proc tab when the simulator's biggest hit of the play reaches it in every branch; the simulator gives the attack's later hits the Strength",
         ["ObsidianVice"] = "covered: read from its code (ReadModel, decision #195): BeforeSideTurnEnd deals its Damage per card in its owner's hand to a random hittable enemy (a branch each)",
