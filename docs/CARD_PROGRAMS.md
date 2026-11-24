@@ -454,6 +454,38 @@ The reader reads any game method, not only a card's play: a monster's moves and 
   named gap with why (`MoveCommandsNotTranslated`). At v0.113.1 (beta) and v0.111.1 (main): 116 monster classes with code, 318 moves
   and 93 hook bodies on each branch, every one read.
 
+### C2. The enemy turn runs each move's program
+
+`SimAdapter.MoveOf` translates the move an enemy is about to make (its `NextMove`'s `_onPerform`) into the enemy turn's actions
+(`SimEnemy.Move`, docs/SIMULATOR.md "Enemy moves"):
+
+| Command | Translated to |
+|---|---|
+| `DamageCmd.Attack` | `MoveAttackAction`: the intent's hits of the attack at its place (one unconditional attack step for each attack intent: every move in the game, `EnemyMoveTests`) |
+| `PowerCmd.Apply<T>` | `MovePowerAction`: on each creature its target argument names, worked out on the board (`targets` the living players, `this.Creature`, `GetTeammatesOf`, a loop's items), its amount its third argument |
+| `CreatureCmd.GainBlock` | `MoveBlockAction`: on each enemy its first argument names, through the game's block math when read |
+
+Values are worked out by the program evaluator on a model's board (`ProgramBoard.Of(monster)`: "this" the monster, no card). The other
+commands are named gaps (`MoveCommandsNotTranslated`); a power or block step on a condition or of a power made first is a reviewed gap
+(`MoveStepGaps`, `EnemyMoveTests.ReviewedGaps`: none changes a later hit). A hidden intent keeps its move hidden.
+
+### C3. Spawns and starting powers
+
+`SimAdapter.SpawnsOf` reads each power's AfterDeath for the creatures it adds (`CreatureCmd.Add<T>`, or a creature made by
+`CreateCreature(ModelDb.Monster<T>())`), on its condition evaluated as the creature dies now, each with every HP its class can start with
+and the powers its AfterAddedToRoom gives it (`StartingPowers`). It replaced `SurpriseSpawns` (`SpawnTests`).
+
+### C4. Conditional branches
+
+`MoveConditions` reads each ConditionalBranch's lambda (`ProgramReader.ReadReturned`, a property through its getter) into a simulator
+condition asked as that monster: `MonsterHp`, `MonsterPower`, `MonsterSideAlive`, or `KnownCondition` for a flag the simulator doesn't follow.
+`ConditionalBranchTests` proves every branch equal to the game's lambda; `IntentForecastAudit` checks it in game; `IntentForecast.NextOn` asks a
+simulated state.
+
+### C5. Hook bodies
+
+Every monster hook is read; `MonsterHookTests` holds each monster's coverage ledger entry to what its hooks' programs do.
+
 ## Order of work (one session)
 
 1. Baseline: `scripts/check.ps1` green. Write the behaviour tests (A4) against today's code: the right cases pass and the

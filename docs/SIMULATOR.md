@@ -64,7 +64,9 @@ Non-goals:
     Iteration, Pagestorm) and Regret (its `BeforeSideTurnEnd` counts the hand before the Ethereal cards exhaust).
   - No potion, orb or monster has a model: no orb class overrides a hook (passives run from `DoTurnEnd`, `OrbQueue`), the
     one potion with combat hooks (Fairy in a Bottle: `ShouldDie`) has no power or relic answering the same hook before it
-    (Lizard Tail's is `ShouldDieLate`), and the monsters' hooks only change music, textures or talk (coverage ledger).
+    (Lizard Tail's is `ShouldDieLate`), and the monsters' hooks only change music, textures or talk, or (Queen) a flag and a move
+    that change no hit this turn: each read as a program, its coverage ledger entry held to what its code does (`MonsterHookTests`,
+    decision #195).
   - Card hooks kept elsewhere, in the game's order: Drum of Battle's energy on its exhaust (after the exhaust's listeners;
     a play exhausting several cards runs every exhaust's listeners first, the game each card's in turn), Epic Retrieval's energy on a dislodged arrow (`SimCardPlay.ArrowEnergy`, after Yah), Howl from Beyond and
     I Am Invincible at the auto-play phase (after Stampede and Simpleton), the enchantments' `AfterCardPlayed` (`PlayGrowth`,

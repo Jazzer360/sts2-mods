@@ -360,13 +360,13 @@ internal static partial class CoverageLedger
         ["SpoilsMap"] = "ignore: AfterCardChangedPiles keeps its map quest (out of combat)",
         ["WhistlingArrows"] = "covered: AfterArrowShot returns it from your discard pile when you shoot an arrow: a return tab on shots with an arrow ready and your hand size after (Procs.ReturnToHand)",
 
-        // ======== monsters
+        // ======== monsters (each hook read as a program, decision #195: MonsterHookTests holds these entries to what its code does)
         ["Aeonglass"] = "ignore: hooks set music and match created Withers to its upgrades",
         ["Crusher"] = "ignore: hooks only change music",
         ["DecimillipedeSegment"] = "ignore: hook only changes a texture (its revive is ReattachPower)",
         ["KinPriest"] = "ignore: AfterDeath of its last follower only calls AllFollowerDeathResponse, which plays a talk line; its move doesn't change",
         ["LagavulinMatriarch"] = "ignore: AfterDamageReceived only marks its shell awake (visual)",
-        ["Queen"] = "ignore: AfterDeath of the Amalgam swaps Burn Bright for Me (Strength to her allies, 20 block) for Enrage (2 Strength): neither attacks, and both act after your turn",
+        ["Queen"] = "ignore: AfterDeath of the Amalgam stores HasAmalgamDied (her conditional branches read it as it stands: MoveConditions) and calls SetMoveImmediate, swapping Burn Bright for Me (Strength to her allies, 20 block) for Enrage (2 Strength): neither attacks, so neither's block or Strength changes a hit this turn, and with the Amalgam dead Burn Bright's Strength has no one to land on",
         ["Rocket"] = "ignore: hooks only change music",
         ["SoulFysh"] = "ignore: hooks only change music",
         ["TestSubject"] = "ignore: hooks only change color and music (its revive is AdaptablePower)",
