@@ -944,6 +944,16 @@ public static class HookReader
         /// <summary>A comparison: of the owner with what the hook was given (a fact), of the card's type, of a power's type for its amount, or of values.</summary>
         private HookValue Compare(CompareValue compare)
         {
+            // A value of several ways compared (a null-conditional chain: dealer.PetOwner?.Creature == base.Owner): the comparison of the first way
+            // that holds, way by way.
+            if (compare.Op is Comparison.Equal or Comparison.NotEqual && (Unstored(compare.Left) is WaysValue || Unstored(compare.Right) is WaysValue))
+            {
+                var (ways, other) = Unstored(compare.Left) is WaysValue leftWays ? (leftWays, compare.Right) : ((WaysValue)Unstored(compare.Right), compare.Left);
+                // A way giving null against its owner (never null in a fight): not equal.
+                HookValue Equal(ProgramValue value) => value is NullValue && IsOwner(other) ? new HookConstant(0m) : Compare(new CompareValue(Comparison.Equal, value, other));
+                var each = new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), Equal(way.Value))).ToList());
+                return compare.Op == Comparison.Equal ? each : Not(each);
+            }
             if (compare.Op is Comparison.Equal or Comparison.NotEqual && OwnerFact(compare.Left, compare.Right) is { } fact)
                 return compare.Op == Comparison.Equal ? fact : Not(fact);
             // The card played is its applier's (cardPlay.Card.Owner == base.Applier.Player).
@@ -1406,6 +1416,9 @@ public static class HookReader
         private static bool IsOwnersOrbs(ProgramValue value) =>
             (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Orbs", Of: QueryValue { Name: "OrbQueue", Of: QueryValue { Name: "PlayerCombatState", Of: { } player } } }
             && IsOwner(player);
+
+        /// <summary>A value as kept in a local or not (a StoredValue's value).</summary>
+        private static ProgramValue Unstored(ProgramValue value) => value is StoredValue stored ? Unstored(stored.Value) : value;
 
         /// <summary>Its owner's Osty (base.Owner.Osty: its player's pet).</summary>
         private static bool IsOwnersOsty(ProgramValue value) => (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Osty", Of: { } ostyOf } && IsOwner(ostyOf);

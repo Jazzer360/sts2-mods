@@ -1274,3 +1274,12 @@ public sealed class MightyWings : SimModel
         SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, relics[ThisRelic], debuff: false);
     }
 }
+
+/// <summary>ReaperFormPower.AfterDamageGiven: its owner's powered hits that get HP through apply Doom.</summary>
+public sealed class ReaperFormPower : ProcModel
+{
+    public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Dealer == owner && hit.Props.IsPoweredAttack() && hit.Unblocked > 0 && hit.Target >= 0) state.LogFired(Name, amount: 0, owner);
+    }
+}

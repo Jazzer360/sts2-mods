@@ -429,17 +429,6 @@ public sealed class TrashToTreasurePower : ProcModel
         cardEvent == CardEvent.Generated && state.EventCard?.Type == SimCardType.Status && player == owner ? Channel(Fire(state, owner), owner, OrbKind.Random, Amount(state, owner)) : One(state);
 }
 
-// ---- powers landing
-
-/// <summary>ReaperFormPower.AfterDamageGiven: its owner's powered hits that get HP through apply Doom.</summary>
-public sealed class ReaperFormPower : ProcModel
-{
-    public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit)
-    {
-        if (hit.Dealer == owner && hit.Props.IsPoweredAttack() && hit.Unblocked > 0 && hit.Target >= 0) state.LogFired(Name, amount: 0, owner);
-    }
-}
-
 // ---- enemy powers acting on your plays
 
 /// <summary>

@@ -96,6 +96,7 @@ public static partial class ReadModels
         PowerId.PrepTime.Name,
         PowerId.Rage.Name,
         RelicId.RainbowRing.Name,
+        PowerId.ReaperForm.Name,
         RelicId.Regalite.Name,
         PowerId.Regen.Name,
         PowerId.Ritual.Name,

@@ -33,6 +33,17 @@ public class AppliedByTests
     }
 
     [Fact]
+    public void ReaperFormsDoomCountsWhatTheHitDealtBlockIncluded()
+    {
+        // ReaperFormPower.AfterDamageGiven: Doom of TotalDamage × its amount on the target of each powered hit of its owner's, a fully blocked one too.
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 50, block: 20) } };
+        state.You.Powers = state.You.Powers.With(PowerId.ReaperForm, amount: 2);
+        var after = Assert.Single(After(state, Play(Card("Strike", SimCardType.Attack), target: 0, plays: 1, Attack(baseDamage: 6))));
+        Assert.Equal(12, after.Enemy(id: 0)!.Powers[PowerId.Doom]);
+        Assert.True(after.Fired.Has(PowerId.ReaperForm.Name));
+    }
+
+    [Fact]
     public void TendersDebuffsHurtYouAndAreItsAppliers()
     {
         // TenderPower.AfterCardPlayed: Strength and Dexterity -1 on you for each card you play: a warning (its debuffs hurt you).

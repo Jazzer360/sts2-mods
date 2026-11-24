@@ -1,5 +1,5 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by capability.
-# 112 hand-written models.
+# 111 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
@@ -31,7 +31,6 @@ hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed): 3 classes, 1 alon
 queries: the damage's or block's props: 3 classes, 1 alone: AimPower, NoBlockPower*, QuietusPower
 hooks: the power amount given: 2 classes, 1 alone: SneckoSkull*, UnsettlingLamp
 a pick: 1 classes, 1 alone: StratagemPower*
-a value of several ways (a local set on each branch, merged): 1 classes, 1 alone: ReaperFormPower*
 commands: AutoPlayFromDrawPile: 1 classes, 1 alone: LostLutePower*
 hooks: BeforeDamageReceived: 1 classes, 1 alone: ThornsPower*
 hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
@@ -119,7 +118,6 @@ Pocketwatch: [hooks: the hand draw] AfterModifyingHandDraw: gap: the simulator r
 QuietusPower: [arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner)] AfterArrowShot: gap: the simulator runs no read model's AfterArrowShot | [hooks: BeforeAttack and AfterAttack] AfterAttack: gap: the simulator runs no read model's AfterAttack | [hooks: BeforeAttack and AfterAttack] BeforeAttack: gap: the simulator runs no read model's BeforeAttack | [queries: the damage's or block's props] ModifyDamageMultiplicative: gap: tests props.HasFlag(32)
 RavenousPower: [a monster's own state set (its flag, its next move)] AfterDeath: gap: sets CorpseSlug.IsRavenous where the reader reads no store
 RazorTooth: [commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn)] AfterCardPlayed: gap: CardCmd.Upgrade isn't translated
-ReaperFormPower: [a value of several ways (a local set on each branch, merged)] AfterDamageGiven: gap: compares the owner with {dealer and dealer != this.Owner and not dealer.PetOwner: null; dealer and dealer != this.Owner and dealer.PetOwner: dealer.PetO...
 ReboundPower: [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
 RedSkull: [hooks: AfterCurrentHpChanged] AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged
 Regret: [the simulator's own model (no game class by its name)] no game class

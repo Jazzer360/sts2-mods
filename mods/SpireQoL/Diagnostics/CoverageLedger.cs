@@ -241,7 +241,7 @@ internal static partial class CoverageLedger
         ["PossessStrengthPower"] = "ignore: returns stolen Strength when it dies",
         ["RagePower"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed block on attacks (proc block)",
         ["RavenousPower"] = "covered: AfterDeath of an ally stuns it (simulator; crossed kill tab), a poison death at the start of the enemies' turn included",
-        ["ReaperFormPower"] = "covered: AfterDamageGiven Doom on attack damage (proc tab; Doom kills after the enemy turn)",
+        ["ReaperFormPower"] = "covered: read from its code (ReadModel, decision #195): AfterDamageGiven Doom on its target by what each powered hit of its owner (or its pet) dealt, block included (proc tab; Doom kills after the enemy turn)",
         ["ReattachPower"] = "ignore: AfterDeath sends a segment to its dead move (reattaching at the end of its turn, no attack) and ShouldAllowHitting keeps it out of hits, so its kill holds for the turn; the simulator never ends the fight early",
         ["ReboundPower"] = "covered: ModifyCardPlayResultLocation puts your next card bound for the discard pile on top of your draw pile, a stack each, decided once before a card play's plays (decision #192); where it lands isn't followed further, as Nostalgia's",
         ["ReflectPower"] = "covered: AfterDamageReceived reflects blocked damage (simulator)",
