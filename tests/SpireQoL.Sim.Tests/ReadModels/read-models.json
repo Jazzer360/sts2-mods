@@ -4478,6 +4478,42 @@
     "HelpsOwner": false
   },
   {
+    "Name": "GalvanicPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "PlayOwner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 12
+            },
+            "NoDealer": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__10.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "CardAffliction",
+                "Of": "Galvanized"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage",
+    "HelpsOwner": false,
+    "HurtsPlayOwner": true
+  },
+  {
     "Name": "GamePiece",
     "Kind": "Relic",
     "Hooks": [

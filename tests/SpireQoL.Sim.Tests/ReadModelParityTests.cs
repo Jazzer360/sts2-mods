@@ -572,7 +572,8 @@ public class ReadModelParityTests
                 foreach (var energy in new[] { 0, 1, 2, 3 })
                     foreach (var (index, count) in new[] { (0, 1), (1, 2) })
                     {
-                        var card = new SimCard("Played", type) { Energy = energy, Ethereal = energy == 1, Stars = energy == 2 ? 2 : 0, Upgradable = energy == 3, Tags = energy == 2 ? new() { SimCardTag.Wah } : new() };
+                        var card = new SimCard("Played", type) { Energy = energy, Ethereal = energy == 1, Stars = energy == 2 ? 2 : 0, Upgradable = energy == 3, Tags = energy == 2 ? new() { SimCardTag.Wah } : new(),
+                            Affliction = energy switch { 1 => SimAffliction.Galvanized, 2 => SimAffliction.Tainted, _ => SimAffliction.None } };
                         yield return new SimCardPlay(card, player, Target: 0, index, count, AutoPlay: energy == 3);
                     }
     }

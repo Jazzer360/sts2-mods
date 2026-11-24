@@ -192,7 +192,7 @@ internal static partial class CoverageLedger
         ["FreeAttackPower"] = "covered: BeforeCardPlayed uses a charge on any Attack from hand (free: tab with the energy saved; crossed when wasted)",
         ["FreePowerPower"] = "covered: BeforeCardPlayed uses a charge on any Power from hand (free: tab with the energy saved; crossed when wasted)",
         ["FreeSkillPower"] = "covered: BeforeCardPlayed uses a charge on any Skill from hand (free: tab with the energy saved; crossed when wasted)",
-        ["GalvanicPower"] = "covered: AfterCardPlayed damages you for Galvanized cards (crossed proc damage)",
+        ["GalvanicPower"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed damages the player who played a Galvanized card (crossed proc damage, decision #221); AfterCardEnteredCombat afflicts a Power entering the fight, which no simulated play plays",
         ["GigantificationPower"] = "covered: triples one attack through ModifyDamageMultiplicative (in the card's damage preview); AfterAttack takes a stack (tab on attacks that spend it; a replay's later plays without it once it runs out)",
         ["GravityPower"] = "covered: read from its code (ReadModel, decision #195): BeforeCardPlayed binds its amount to the play, AfterCardPlayed damages all enemies with it (proc damage); AfterSideTurnEnd removes it",
         ["GuardedPower"] = "covered: read from its code (ReadModel, decision #195): ModifyDamageMultiplicative its DamageDecrease on powered attacks on its owner, each copy its own; AfterDeath removes the copy whose applier died",

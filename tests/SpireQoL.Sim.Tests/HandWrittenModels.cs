@@ -1443,3 +1443,16 @@ public sealed class MasterPlannerPower : ProcModel
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
         Mine(play, owner) && play.Card.Type == SimCardType.Skill ? Fire(state, owner) : One(state);
 }
+
+// ---- a command on the player who played (Sim/Models/ProcPowerModels.cs, deleted 2026-11-24)
+
+/// <summary>GalvanicPower.AfterCardPlayed: a Galvanized card deals its amount to the player who played it (unpowered Move, no dealer).</summary>
+public sealed class GalvanicPower : ProcModel
+{
+    public override TabKind? Tab => TabKind.Damage;
+    public override bool Harmful => true;
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
+        play.Card.Affliction == SimAffliction.Galvanized && Who.IsPlayer(play.Owner)
+            ? SimEngine.ProcDamagePlayer(state, owner, Name, play.Owner, Amount(state, owner), Unpowered | SimProps.Move, noDealer: true)
+            : One(state);
+}

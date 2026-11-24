@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 19 engine rules naming 130 game methods; 5 adapter rules; 100 hand-written models.
+# 19 engine rules naming 130 game methods; 5 adapter rules; 99 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -130,8 +130,6 @@ FeralPower: FeralPower.AfterApplied, FeralPower.AfterModifyingCardPlayResultLoca
   model: AfterApplied, AfterModifyingCardPlayResultLocation, ModifyCardPlayResultLocation
 FlutterPower: FlutterPower.AfterDamageReceived, FlutterPower.ModifyDamageMultiplicative
   model: AfterDamageReceived, ModifyDamageMultiplicative, OutcomeTab
-GalvanicPower: GalvanicPower.AfterCardEnteredCombat, GalvanicPower.AfterCardPlayed, GalvanicPower.BeforeCombatStart
-  model: AfterCardPlayed
 GigantificationPower: GigantificationPower.AfterAttack, GigantificationPower.BeforeAttack, GigantificationPower.InitInternalData, GigantificationPower.ModifyDamageMultiplicative
   model: AfterAttack, ModifyDamageMultiplicative, Qualifies
 HandDrill: HandDrill.AfterBlockBroken

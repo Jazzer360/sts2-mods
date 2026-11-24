@@ -151,6 +151,7 @@ public static class HookReader
             .Where(program => program.Returns != null || program.Steps.Count > 0).ToList();
         var helpsOwner = HelpsOwnerOf(programs);
         var hurtsOwner = HurtsOwnerOf(programs);
+        var hurtsPlayOwner = HurtsPlayOwnerOf(programs);
         var outcome = OutcomeOf(programs);
         // Its own commands another class calls (PoisonPower.Trigger, which Outbreak calls on each enemy's poison): each read as a program; one that
         // doesn't read whole is left out, and a call to it stays what the caller's translation makes of it.
@@ -161,7 +162,7 @@ public static class HookReader
         var spec = new ModelSpec(type.Name, kind, programs)
         {
             Tab = outcome != null ? null : (helpsOwner || hurtsOwner) && TabOf(programs) != null ? TabKind.Trigger : TabOf(programs),
-            HelpsOwner = helpsOwner, HurtsOwner = hurtsOwner, Outcome = outcome,
+            HelpsOwner = helpsOwner, HurtsOwner = hurtsOwner, HurtsPlayOwner = hurtsPlayOwner, Outcome = outcome,
             Copies = kind == ModelKind.Power ? reader.Copies() : PowerCopies.One,
             Commands = commands.Count > 0 ? commands : null,
         };
@@ -409,6 +410,16 @@ public static class HookReader
             .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps())
             .Any(step => step is ApplyPowerStep { Target: HookTarget.Owner, Debuff: true });
 
+    /// <summary>
+    /// A play sets off something that hurts the player who made it: a play hook's damage or debuff on the card's owner (Galvanic's damage to
+    /// whoever plays a Galvanized card). That's the play hurting you, whoever owns the model: a crossed tab (CLAUDE.md "Plain vs crossed",
+    /// ReadModel.HarmfulFor), its own kind of tab kept (a damage tab's amount).
+    /// </summary>
+    internal static bool HurtsPlayOwnerOf(IReadOnlyList<HookProgram> programs) =>
+        programs.Where(program => program.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed)
+            .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps())
+            .Any(step => step is DamageStep { Target: HookTarget.PlayOwner } or ApplyPowerStep { Target: HookTarget.PlayOwner, Debuff: true });
+
     /// <summary>The condition holds only when the fact does (it's one of the condition's ands, not under a not).</summary>
     private static bool Needs(HookValue? when, HookFact fact) => when switch
     {
@@ -626,6 +637,11 @@ public static class HookReader
             try
             {
                 if (PlayersTurnStartHooks.Contains(hook.Name)) return (null, null, "it runs as the players' next turn starts, past the turns a simulation covers");
+                // A card entering the fight afflicted (Galvanic's Galvanized, Vital Spark's Tainted on a Power or Skill made or added): every command an
+                // affliction on the entering card. An affliction is a fact of its card the adapter reads; no simulated play plays a card that
+                // entered the fight during the simulation. Any other change to the entering card (a keyword: Ghost Seed) stays a gap.
+                if (hook.Name == "AfterCardEnteredCombat" && AfflictsTheEnteringCardOnly(hook))
+                    return (null, null, "it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation");
                 if (StartsATurn(hook.Name) && PastTheHorizon(hook) is { } horizon)
                     return horizon.Length == 0 ? (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers") : (null, new GapOf(ReaderCapability.ValueNotFollowed, horizon), null);
                 if (!Enum.TryParse<HookName>(hook.Name, out var name)) return (null, new GapOf(ReaderCapabilities.OfHook(hook.Name), $"gap: the simulator runs no read model's {hook.Name}"), null);
@@ -926,7 +942,7 @@ public static class HookReader
                     if (!noDealer && !IsOwner(values[dealerAt])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: damage dealt by {values[dealerAt]}");
                     // Damage the simulator's procs deal: to every hittable enemy, a roll over them, the creature a power landed on, or its owner.
                     var damaged = Targets(values[targetAt]);
-                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.PowerOwner or HookTarget.Owner or HookTarget.WeakestEnemy or HookTarget.EvokeTargets or HookTarget.Each or HookTarget.LivingPlayers))
+                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.PowerOwner or HookTarget.Owner or HookTarget.WeakestEnemy or HookTarget.EvokeTargets or HookTarget.Each or HookTarget.LivingPlayers or HookTarget.PlayOwner))
                         throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: damage to {values[targetAt]}");
                     return new DamageStep(damaged, amount, props) { NoDealer = noDealer };
                 }
@@ -997,6 +1013,21 @@ public static class HookReader
                 default:
                     throw new Gap(ReaderCapabilities.OfCommand(member.FullName), $"gap: {member} isn't translated");
             }
+        }
+
+        /// <summary>
+        /// The hook's every command afflicts the card it's given (CardCmd.Afflict&lt;T&gt;(card, ...)) and nothing else changes: no store, no
+        /// other command, no call that changes a game object; read whole to tell.
+        /// </summary>
+        private bool AfflictsTheEnteringCardOnly(MethodInfo hook)
+        {
+            ModelProgram program;
+            try { program = ProgramReader.Read(_type, _read, hook.Name); }
+            catch (InvalidOperationException) { return false; }
+            if (program.Unknowns.Any() || OwnData(hook, program) != null) return false;
+            var steps = program.All().ToList();
+            return steps.Count > 0 && steps.All(step => step is CommandStep { Command: { FullName: "CardCmd.Afflict" } } command
+                && command.Values.Count > 0 && command.Values[0] is ParameterValue { Name: "card" } or NamedValue { Name: "card" });
         }
 
         /// <summary>The keywords a params array of the game's CardKeyword names (ApplyKeyword(card, CardKeyword.Sly)), each by its name; null for any other value.</summary>
@@ -1092,6 +1123,8 @@ public static class HookReader
             if (IsOwner(value)) return HookTarget.Owner;
             // Every living player creature (CombatState.PlayerCreatures.Where(c => c.IsAlive), listed or not: Explosive's).
             if (LivingPlayerCreatures(value)) return HookTarget.LivingPlayers;
+            // The player who played the card (cardPlay.Card.Owner.Creature).
+            if (Unstored(value) is QueryValue { Name: "Creature", Of: QueryValue { Name: "Owner", Of: { } ownedCard } } && IsPlayCard(ownedCard)) return HookTarget.PlayOwner;
             if (value is QueryValue { Name: "HittableEnemies" }) return HookTarget.AllEnemies;
             if (value is QueryValue { Name: "NextItem", Arguments: [QueryValue { Name: "HittableEnemies" }] }) return HookTarget.RandomEnemy;
             if (value is QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } }) return HookTarget.PowerOwner;
@@ -1282,6 +1315,10 @@ public static class HookReader
                 // The card played can still be upgraded (Razor Tooth's cardPlay.Card.IsUpgradable).
                 case QueryValue { Name: "IsUpgradable", Of: { } upgradableOf } when IsPlayCard(upgradableOf):
                     return new HookFactValue(HookFact.CardUpgradable);
+                // The card played's affliction is a class (Galvanic's cardPlay.Card.Affliction is Galvanized), by the simulator's name for it.
+                case QueryValue { Name: "is", Of: QueryValue { Name: "Affliction", Of: { } afflictedOf }, Type: var afflictionClass } when IsPlayCard(afflictedOf):
+                    return Enum.TryParse<SimAffliction>(afflictionClass, out var affliction) && affliction is not (SimAffliction.None or SimAffliction.Other)
+                        ? new HookFactValue(HookFact.CardAffliction) { Of = afflictionClass } : throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's affliction {afflictionClass}");
                 case QueryValue { Name: "Contains", Of: QueryValue { Name: "Keywords", Of: { } keywordsOf }, Arguments: [ConstantValue keyword] } when IsPlayCard(keywordsOf) || IsEventCard(keywordsOf):
                     return EnumName(_type.Assembly, "CardKeyword", keyword.Value) == "Ethereal" ? new HookFactValue(HookFact.CardEthereal) : throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's keyword {keyword.Value}");
                 case QueryValue { Name: "is", Of: NamedValue { Name: "power" }, Type: var powerClass }:

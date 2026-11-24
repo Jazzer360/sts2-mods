@@ -117,6 +117,8 @@ public enum HookFact
     CardEthereal,
     /// <summary>The card played can still be upgraded (cardPlay.Card.IsUpgradable: Razor Tooth's test), as the plays before left it.</summary>
     CardUpgradable,
+    /// <summary>The card played's affliction is the class named in Of (cardPlay.Card.Affliction is Galvanized: SimCard.Affliction, by name).</summary>
+    CardAffliction,
     /// <summary>The card played has the tag named in Of (its Tags contain Shiv).</summary>
     CardTag,
     /// <summary>The card played's cost as it's played (EnergyCost.GetResolved()).</summary>
@@ -395,6 +397,8 @@ public enum HookTarget
     /// targets); each skipped once dead, as CreatureCmd.Damage skips a dead target.
     /// </summary>
     LivingPlayers,
+    /// <summary>The player who played the card (cardPlay.Card.Owner.Creature: Galvanic's damage to whoever plays a Galvanized card).</summary>
+    PlayOwner,
 }
 
 /// <summary>One command of a hook's code, on the condition its code runs it on (null: always).</summary>
@@ -562,6 +566,13 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool HurtsOwner { get; init; }
+
+    /// <summary>
+    /// A play sets off something that hurts the player who made it: damage or a debuff on the card's owner (HookReader.HurtsPlayOwnerOf: Galvanic).
+    /// Its tab is crossed whoever owns it: the play hurts you (ReadModel.HarmfulFor).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool HurtsPlayOwner { get; init; }
 
     /// <summary>Its tab is judged on how the turn ends, by what its AfterDeath waits on (HookReader.OutcomeOf); it has no play tab then. Null: none.</summary>
     public HookOutcome? Outcome { get; init; }

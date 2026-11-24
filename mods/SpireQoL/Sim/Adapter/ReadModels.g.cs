@@ -60,6 +60,7 @@ public static partial class ReadModels
         PowerId.Frail.Name,
         nameof(MegaCrit.Sts2.Core.Models.Orbs.FrostOrb),
         RelicId.GalacticDust.Name,
+        PowerId.Galvanic.Name,
         RelicId.GamePiece.Name,
         nameof(MegaCrit.Sts2.Core.Models.Orbs.GlassOrb),
         RelicId.GoldPlatedCables.Name,

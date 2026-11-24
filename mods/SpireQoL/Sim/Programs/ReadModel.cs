@@ -87,7 +87,7 @@ public sealed class ReadModel : SimModel
     /// is a warning only on an enemy, your play helping the other side; a teammate's (Sneaky's block on your Attack) helps yours. A play setting
     /// off something that hurts its owner (ModelSpec.HurtsOwner: Tender's debuffs on you) is a warning on a player, your side (decision #204).
     /// </summary>
-    public override bool HarmfulFor(int owner) => Who.IsEnemy(owner) ? Spec.HelpsOwner : Spec.HurtsOwner;
+    public override bool HarmfulFor(int owner) => Spec.HurtsPlayOwner || (Who.IsEnemy(owner) ? Spec.HelpsOwner : Spec.HurtsOwner);
 
     private readonly CompiledStep[]?[] _steps = new CompiledStep[]?[Enum.GetValues<HookName>().Length];
     /// <summary>The hooks whose program stores to the model's own state: their tests are asked once a run (HookTest).</summary>
@@ -958,6 +958,10 @@ public sealed class ReadModel : SimModel
                                 SimEngine.DamagePlayer(args.State, label, player, dealt, dealtProps, noDealer ? null : args.Owner, card: null);
                         return One(args.State);
                     },
+                    // The player who played the card (cardPlay.Card.Owner.Creature: Galvanic's), through the damage on a player, while they live.
+                    HookTarget.PlayOwner => args => args.Play is { } played && args.State.Player(played.Owner) is { Hp: > 0 }
+                        ? SimEngine.ProcDamagePlayer(args.State, args.Owner, Name, played.Owner, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer)
+                        : One(args.State),
                     // A loop's enemy (the item each round).
                     HookTarget.Each => args => Who.IsEnemy(args.Each) ? SimEngine.ProcDamageOn(args.State, args.Owner, Name, args.Each, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer) : One(args.State),
                     // The living creatures an evoke acted on (AfterOrbEvoked's targets.Where(c => c.IsAlive): Thunder), each in turn.
@@ -1338,6 +1342,12 @@ public sealed class ReadModel : SimModel
                 return (in HookArgs args) => args.Play?.Card.Is(tag) == true ? 1m : 0m;
             }
             case HookFact.EventIsOwners: return (in HookArgs args) => args.Player == args.Owner ? 1m : 0m;
+            case HookFact.CardAffliction:
+            {
+                // The card played's affliction, by the simulator's name for its class (SimCard.Affliction).
+                var affliction = Enum.TryParse<SimAffliction>(named, out var parsed) ? parsed : throw new InvalidOperationException($"{Name}: no affliction {named}");
+                return (in HookArgs args) => args.Play?.Card.Affliction == affliction ? 1m : 0m;
+            }
             case HookFact.CardIs:
                 // The card played (a play hook's: cardPlay.Card is Soul), or the event's card.
                 return (in HookArgs args) => (IsPlayHook(args.Hook) ? args.Play?.Card.Name : args.State.EventCard?.Name) == named ? 1m : 0m;

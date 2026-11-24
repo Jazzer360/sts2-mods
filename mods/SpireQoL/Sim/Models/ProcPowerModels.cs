@@ -427,17 +427,6 @@ public sealed class WitheringPresencePower : ProcModel
     }
 }
 
-/// <summary>GalvanicPower.AfterCardPlayed: a Galvanized card deals its amount to the player who played it (unpowered Move, no dealer).</summary>
-public sealed class GalvanicPower : ProcModel
-{
-    public override TabKind? Tab => TabKind.Damage;
-    public override bool Harmful => true;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        play.Card.Affliction == SimAffliction.Galvanized && Who.IsPlayer(play.Owner)
-            ? SimEngine.ProcDamagePlayer(state, owner, Name, play.Owner, Amount(state, owner), Unpowered | SimProps.Move, noDealer: true)
-            : One(state);
-}
-
 /// <summary>
 /// PersonalHivePower.AfterDamageReceived: each powered attack hit on it from a player puts its amount of Dazed into their draw pile at
 /// random spots (bad for you), where a later draw can find them. Its tab counts them (decision #161): the hits of the play times its amount.
