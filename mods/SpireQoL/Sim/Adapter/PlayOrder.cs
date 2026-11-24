@@ -31,6 +31,10 @@ internal static class PlayOrder
         ImpaleAction => "impale",
         DislodgeAllAction => "dislodge",
         TakeToHandAction => "to-hand",
+        TakeFromHandAction { Event: CardEvent.Exhausted } => "exhaust",
+        TakeFromHandAction { Event: CardEvent.Discarded } => "discard",
+        TakeFromHandAction { Event: CardEvent.Generated } => "generate",
+        TakeFromHandAction => "to-hand",
         AutoPlayFromDrawAction => "auto-play",
         DrawnCardAction => "draw",
         CardEventAction { Event: CardEvent.Drawn } => "draw",
@@ -105,7 +109,7 @@ internal static class PlayOrder
         }
         // Cards leaving and an exhaust pick belong to the event after them.
         for (var i = actions.Count - 2; i >= 0; i--)
-            if (actions[i] is LeaveHandAction or ExhaustFromHandAction && stepOf[i] < 0) stepOf[i] = stepOf[i + 1];
+            if (actions[i] is LeaveHandAction or ExhaustFromHandAction or TakeFromHandAction { Event: null } && stepOf[i] < 0) stepOf[i] = stepOf[i + 1];
         // An action standing for no command stays after the one before it.
         var sortKey = new (int Step, int Round, int Index)[actions.Count];
         var last = (Step: -1, Round: 0, Index: -1);

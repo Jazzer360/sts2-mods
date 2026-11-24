@@ -426,6 +426,48 @@ public static class CardEffects
 
     private static bool IsWholeHand(string? cards) => cards is "Hand.Cards" or "Hand.Cards.ToList";
 
+    // ---- counts a play reads as it runs (decision #189)
+
+    /// <summary>The collection is every card in your hand (PileType.Hand.GetPile(owner).Cards, a list of them).</summary>
+    public static bool IsYourWholeHand(ProgramValue? items) =>
+        Unwrapped(items) is QueryValue { Name: "Cards", Of: QueryValue { Name: "GetPile", Arguments: [ConstantValue { Value: var pile }, ..] } }
+        && Convert.ToInt32(pile) == (int)MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand;
+
+    /// <summary>
+    /// The value counts the cards of a take's collection (Fiend Fire's hits: its hand's cards before it exhausts them; Calculated Gamble's
+    /// draws; The Devil's auto-plays): what that take takes, read as it runs (SimCount.CardsTaken).
+    /// </summary>
+    public static bool CountsTaken(ProgramValue? value, CardsTaken take)
+    {
+        if (value == null || take.Items == null) return false;
+        var items = Unwrapped(take.Items)?.ToString();
+        foreach (var part in value.Parts())
+            if (part is QueryValue { Name: "Count" } count && Unwrapped(count.Of ?? (count.Arguments.Count > 0 ? count.Arguments[0] : null))?.ToString() is { } counted
+                && counted == items)
+                return true;
+        return false;
+    }
+
+    /// <summary>The value reads the room in your hand (CardPile.MaxCardsInHand less your hand: Scrawl, The World, Anointed): SimCount.HandRoom.</summary>
+    public static bool ReadsHandRoom(ProgramValue? value) =>
+        value != null && value.Parts().Any(part => part is QueryValue { Name: "MaxCardsInHand" } or NamedValue { Name: "MaxCardsInHand" });
+
+    /// <summary>
+    /// A count capped by your hand's room, without the room (The World's Min(Cards, room) is Cards): what it would be with room to spare.
+    /// Null when it's the room alone (Anointed, Scrawl).
+    /// </summary>
+    public static ProgramValue? WithoutRoom(ProgramValue value)
+    {
+        value = Unstored(value)!;
+        if (!ReadsHandRoom(value)) return value;
+        return value switch
+        {
+            QueryValue { Name: "Max", Arguments: [ConstantValue, var inner] } => WithoutRoom(inner),
+            QueryValue { Name: "Min", Arguments: [var left, var right] } => ReadsHandRoom(left) ? WithoutRoom(right) : WithoutRoom(left),
+            _ => null,
+        };
+    }
+
     private static bool TakesFromHand(CommandStep command) =>
         command.Command.DeclaringType == "CardCmd" && command.Command.Name is "Exhaust" or "Discard" || Is(command, "CardPileCmd", "Add");
 

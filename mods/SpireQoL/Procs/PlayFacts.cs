@@ -193,6 +193,13 @@ public sealed class PlayFacts
     public int GeneratedStatuses { get; private set; }
     /// <summary>Of those, Sadness cards you create (Fertilizer, All Is Well react: AfterCardGeneratedForCombat).</summary>
     public int SadnessCreated { get; private set; }
+    /// <summary>Where a play's count of made cards comes from as it runs (decision #189): given, the cards the play took, or your hand's room.</summary>
+    public SpireQoL.Sim.SimCount GeneratedFrom { get; init; }
+    /// <summary>One of the made cards is the Sovereign Blade its forge makes when you have none (ForgeCmd.Forge): the first play's only.</summary>
+    public bool ForgesBlade { get; init; }
+
+    /// <summary>The cards a play puts back on your draw pile from your hand (Glimmer, Photon Cut: PutBack; Thinking Ahead one).</summary>
+    internal static int PutBackCount(CardModel card) => card.GetType().Name == nameof(ThinkingAhead) ? 1 : Sts2State.Var(card, "PutBack", fallback: 1);
     /// <summary>
     /// Cards it certainly transforms: each transformed card is a created card (CardCmd.Transform calls
     /// AfterCardGeneratedForCombat when the new card lands in a combat pile), so created-card procs react. None when you choose how
@@ -267,7 +274,7 @@ public sealed class PlayFacts
 
     /// <summary>Hits on this enemy across plays (Dismantle hits Vulnerable enemies twice).</summary>
     public int HitsOn(Creature enemy)
-        => AttackHits == 0 ? 0 : HitsPerPlay(Card, Combat, enemy) * Math.Max(1, Plays);
+        => AttackHits == 0 ? 0 : HitsPerPlay(Card, Combat, enemy);
 
     /// <summary>
     /// Whether this card can hit <paramref name="enemy"/> with a powered attack (your attack, not
@@ -455,16 +462,17 @@ public sealed class PlayFacts
     {
         var hand = Sts2State.Hand(me);
         var others = hand.Where(otherCard => !ReferenceEquals(otherCard, card)).ToList();
-        var draws = CardsDrawnTotal(card, hand.Count, plays);
+        var draws = CardsDrawn(card, hand.Count);
         var swiftDraws = 0;
         // Swift (enchantment): draws its amount when the card is played, once (Swift.AfterCardPlayed disables it).
         if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Swift { Status: MegaCrit.Sts2.Core.Entities.Enchantments.EnchantmentStatus.Normal } swift)
             swiftDraws = swift.Amount;
         var drawPile = Sts2State.DrawPileCount(me);
         var name = card.GetType().Name;
-        var evoked = EvokedOrbs(card, me, ChannelCount(card) * Math.Max(1, plays), Math.Max(1, plays));
+        var evoked = EvokedOrbs(card, me);
         var orbs = OrbDamageFor(evoked, me, combat);
-        var generated = GeneratedCount(card, name, others, me, out var statuses) * Math.Max(1, plays) + ForgedBlade(card.GetType(), me);
+        var forged = ForgedBlade(card.GetType(), me);
+        var generated = GeneratedCount(card, name, others, me, out var statuses, out var generatedFrom) + forged;
         // Cards the play puts into your hand (Bundle of Joy's four): they fill it before anything comes back.
         var createdInHand = MadeIntoHand(card, generated);
 
@@ -477,15 +485,16 @@ public sealed class PlayFacts
             Energy = SafeEnergy(card),
             AutoPlayed = CardPlays.ChoiceAutoPlayed(card),
             Stars = SafeStars(card),
-            // Exhaust keyword (including added Exhaust), or Corruption sending a played skill to the
-            // exhaust pile (CorruptionPower.ModifyCardPlayResultLocation).
+            // Where it goes after its last play (CardModel.GetResultLocationForCardPlay, once however many plays): a dupe (IsDupe: History
+            // Course's copy) or a Power nowhere; the Exhaust keyword (including added Exhaust) or ExhaustOnNextPlay to the exhaust pile;
+            // then Corruption sends a played skill there whatever it was (CorruptionPower.ModifyCardPlayResultLocation).
             ExhaustsSelf = card.Type != CardType.Power
-                           && (card.Keywords.Contains(CardKeyword.Exhaust)
+                           && ((!card.IsDupe && (card.Keywords.Contains(CardKeyword.Exhaust) || card.ExhaustOnNextPlay))
                                || (card.Type == CardType.Skill && me.Creature.Powers.Any(power => power is CorruptionPower))),
-            ExhaustsOthers = ExhaustOthers(card, others, drawPile, plays),
+            ExhaustsOthers = ExhaustOthers(card, others, drawPile),
             // A play that looks at your draw pile (Ki Chant) discards its share each play; the others depend on the hand.
-            Discards = DiscardCount(card, others, draws, plays),
-            LeavesHand = LeavingHand(card, others, drawPile, draws, plays),
+            Discards = DiscardCount(card, others, draws),
+            LeavesHand = LeavingHand(card, others, drawPile, draws),
             TakesWholeHand = Programs.CardEffects.TakesWholeHand(card.GetType()),
             // A discard of your hand without a pick (Storm of Steel, Calculated Gamble) with a Sly card there.
             MayDiscardSly = Programs.CardEffects.Discards(card.GetType()).Any(discard => discard.Way == Programs.CardEffects.TakeWay.Each)
@@ -494,30 +503,31 @@ public sealed class PlayFacts
             DrawsAtMost = SpireQoL.Sim.SimAdapter.DrawnCardReaderOf(card.GetType()) is { DrawsAgain: true }
                 ? Math.Max(draws, CardPile.MaxCardsInHand - (hand.Count - 1)) + swiftDraws : 0,
             EnchantmentDraws = swiftDraws,
-            BlockGains = BlockGainCount(card) * Math.Max(1, plays),
+            BlockGains = BlockGainCount(card),
             Generated = generated,
             GeneratedInHand = createdInHand,
-            GeneratedStatuses = statuses * Math.Max(1, plays),
-            SadnessCreated = Programs.CardEffects.MakesSadness(card.GetType()) ? statuses * Math.Max(1, plays) : 0,
+            GeneratedStatuses = statuses,
+            GeneratedFrom = generatedFrom,
+            ForgesBlade = forged > 0,
+            SadnessCreated = Programs.CardEffects.MakesSadness(card.GetType()) ? statuses : 0,
             CardsBack = ReturnToHand.Returning(card, me, plays, Math.Min(CardPile.MaxCardsInHand, hand.Count - 1 + createdInHand) + draws + swiftDraws,
-                Fool.Shoots(card, me) ? Math.Max(1, plays) : 0),
-            TakenToHand = TakenToHandCount(card, Math.Max(1, plays),
-                room: CardPile.MaxCardsInHand - Math.Min(CardPile.MaxCardsInHand, hand.Count - 1 + createdInHand + draws + swiftDraws)),
+                Fool.Shoots(card, me) ? 1 : 0),
+            TakenToHand = TakenToHandCount(card),
             HandTakeChosen = HandTakeChosenOf(card, hand.Count),
             EnergyBack = card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Sown { Status: MegaCrit.Sts2.Core.Entities.Enchantments.EnchantmentStatus.Normal } sown ? sown.Amount : 0,
-            Transforms = TransformCount(card, others, drawPile) * Math.Max(1, plays),
+            Transforms = TransformCount(card, others, drawPile),
             // A shot with no arrow to shoot does nothing at all (its debuffs neither: Hobbling Shot).
             EnemyDebuffs = Fool.IsShot(card) && !Fool.Shoots(card, me) ? Array.Empty<Type>() : EnemyDebuffTypes(card),
             EnemyTemporaryDebuffs = Fool.IsShot(card) && !Fool.Shoots(card, me) ? Array.Empty<Type>() : EnemyDebuffTypes(card, temporary: true),
             HitsAllEnemies = card.TargetType == TargetType.AllEnemies,
-            Channels = ChannelCount(card) * Math.Max(1, plays),
-            StarGains = StarGainsOf(card) * Math.Max(1, plays),
-            OstyAttacks = IsOstyAttack(card) ? Math.Max(1, plays) : 0,
+            Channels = ChannelCount(card),
+            StarGains = StarGainsOf(card),
+            OstyAttacks = IsOstyAttack(card) ? 1 : 0,
             LosesHp = card.DynamicVars.ContainsKey("HpLoss"),
-            HpLoss = Sts2State.Var(card, "HpLoss") * Math.Max(1, plays),
+            HpLoss = Sts2State.Var(card, "HpLoss"),
             OtherHandCards = others.Count,
             ByOsty = IsOstyAttack(card),
-            AttackHits = (IsOstyAttack(card) ? me.IsOstyAlive && IsAttackOnEnemies(card) : IsPlayerAttack(card)) ? HitsPerPlay(card, combat, target: null) * Math.Max(1, plays) : 0,
+            AttackHits = (IsOstyAttack(card) ? me.IsOstyAlive && IsAttackOnEnemies(card) : IsPlayerAttack(card)) ? HitsPerPlay(card, combat, target: null) : 0,
             OrbDamage = orbs.Exact,
             OrbDamageMin = orbs.Min,
             OrbDamageMax = orbs.Max,
@@ -558,7 +568,7 @@ public sealed class PlayFacts
             EnchantmentDraws = EnchantmentDraws,
             // Cards the card itself puts into your hand, before its enchantment draws.
             AddedToHandBeforeEnchantment = EnchantmentDraws > 0 ? GeneratedInHand : 0,
-            Plays = Math.Max(1, Plays),
+
             IsPower = Card.Type == CardType.Power,
             Exhausts = TotalExhausts,
             ExhaustedFromHand = fromDrawPile ? 0 : ExhaustsOthers,
@@ -574,7 +584,7 @@ public sealed class PlayFacts
             ShufflesFirst = ShufflesFirst(Card),
             HandShuffledIn = Programs.CardEffects.ShufflesDiscardPileIn(Card.GetType()),
             // Calamity adds random attacks to your hand after each attack you play, before your relics draw.
-            AddedToHandAfterPlay = Card.Type == CardType.Attack ? (me.Creature.GetPower<CalamityPower>()?.Amount ?? 0) * Math.Max(1, Plays) : 0,
+            AddedToHandAfterPlay = Card.Type == CardType.Attack ? me.Creature.GetPower<CalamityPower>()?.Amount ?? 0 : 0,
             // Motif draws its amount per melody (Wah, Cho, Ki) this card plays first this turn, once (a replay's
             // later plays aren't first).
             PowerDrawsAfterPlay = (me.Creature.Powers.FirstOrDefault(power => power.GetType().Name == nameof(MotifPower))?.Amount ?? 0)
@@ -606,8 +616,8 @@ public sealed class PlayFacts
             // Ki Chant takes the top cards it looks at off the draw pile: one to your hand, the rest discarded.
             var looked = LooksAt(Card);
             var available = drawPile + (drawInputs.ShufflesFirst ? drawInputs.DiscardPile : 0);
-            drawInputs.TakenFromDrawPile = Math.Min(looked * Math.Max(1, Plays), available);
-            drawInputs.AddedToHandDuringPlay = looked > 0 ? Math.Min(Math.Max(1, Plays), drawInputs.TakenFromDrawPile) : 0;
+            drawInputs.TakenFromDrawPile = Math.Min(looked, available);
+            drawInputs.AddedToHandDuringPlay = looked > 0 ? Math.Min(1, drawInputs.TakenFromDrawPile) : 0;
         }
         _drawInputs = drawInputs;
         var result = PlayChain.Resolve(drawInputs);
@@ -633,7 +643,7 @@ public sealed class PlayFacts
     /// slots (each channel past capacity evokes the front orb first; OrbCmd.Channel). Orbs the play
     /// channels and then evokes itself aren't counted (their type may be random).
     /// </summary>
-    private static List<OrbModel> EvokedOrbs(CardModel card, Player me, int channels, int plays)
+    private static List<OrbModel> EvokedOrbs(CardModel card, Player me)
     {
         var result = new List<OrbModel>();
         var orbQueue = me.PlayerCombatState?.OrbQueue;
@@ -657,7 +667,7 @@ public sealed class PlayFacts
                 if (queue[0] is { } orb) result.Add(orb);
             if (remove) queue.RemoveAt(0);
         }
-        for (var playIndex = 0; playIndex < plays; playIndex++)
+        // One play (decision #189): a replay's later plays evoke what the simulator finds then.
         {
             // Its own evokes (read from its program: OrbsOf): every orb that many times (Shatter), or the front orb (Dualcast, Quadcast, Multicast).
             if (plan.EvokesEachOrb > 0)
@@ -666,7 +676,7 @@ public sealed class PlayFacts
             // Slots the card adds before it channels (The Magician: OrbCmd.AddSlots, up to 10).
             var added = plan.Slots;
             if (added > 0) cap = Math.Min(10, cap + added);
-            for (var channelIndex = 0; channelIndex < channels / Math.Max(1, plays); channelIndex++)
+            for (var channelIndex = 0; channelIndex < ChannelCount(card); channelIndex++)
             {
                 if (cap <= 0) break;
                 if (queue.Count >= cap) EvokeFront(times: 1, remove: true);
@@ -853,8 +863,31 @@ public sealed class PlayFacts
             return total;
         }
         var targets = Targets(card);
-        if (targets == null) return DrawsOnPlay(card, target: null, playsBefore: 0) * plays;
+        if (targets == null) return Enumerable.Range(0, plays).Sum(playIndex => DrawsOnPlay(card, target: null, playIndex));
         return targets.Count > 0 ? targets.Min(target => TargetDraws(card, target, plays) ?? 0) : 0;
+    }
+
+    /// <summary>
+    /// What one draw of the play (a DrawForYou) draws on each of <paramref name="plays"/> plays, its condition evaluated for that play
+    /// (decision #189: a test of the play itself, FTL's plays finished this turn, Fetch's first play, Wrest's arrows), its count its own
+    /// argument on the board, times its loops' rounds; at a target-dependent draw (Ki Hop), the worst target's. The simulator takes each
+    /// play's entry as it runs.
+    /// </summary>
+    internal static IReadOnlyList<int> DrawCountsByPlay(CardModel card, Programs.CardEffects.DrawForYou draw, int plays)
+    {
+        var program = Programs.CardPrograms.Of(card.GetType());
+        int Count(Creature? target, int playIndex)
+        {
+            var board = new Programs.ProgramBoard(card, target, playIndex);
+            if (Programs.ProgramEvaluator.Holds(draw.Condition, board, program) == false) return 0;
+            var count = Programs.ProgramEvaluator.Number(draw.Count, board, program) is { } read ? (int)read
+                : card.DynamicVars.ContainsKey("Cards") ? Sts2State.Var(card, "Cards") : 1;
+            foreach (var loop in draw.Loops) count *= card.DynamicVars.ContainsKey(loop.Over) ? Sts2State.Var(card, loop.Over) : 1;
+            return Math.Max(0, count);
+        }
+        List<int> ByPlay(Creature? target) => Enumerable.Range(0, Math.Max(1, plays)).Select(playIndex => Count(target, playIndex)).ToList();
+        if (!Programs.ProgramEvaluator.AsksTarget(draw.Condition) || Targets(card) is not { Count: > 0 } targets) return ByPlay(target: null);
+        return targets.Select(ByPlay).MinBy(counts => counts.Sum())!;
     }
 
     /// <summary>How many of <paramref name="plays"/> plays in a row start with fewer than <paramref name="max"/> plays finished, <paramref name="finishedBefore"/> before the first.</summary>
@@ -871,12 +904,12 @@ public sealed class PlayFacts
     /// (True Grit's pick when upgraded, its roll when not). A collection that can't be told on the board (the game's template card) is
     /// <paramref name="others"/>.
     /// </summary>
-    internal static int ExhaustOthers(CardModel card, List<CardModel> others, int drawPile, int plays) =>
-        Taken(card, Programs.CardEffects.ExhaustsOfOthers(card.GetType()), others, drawPile, draws: 0, plays, fromHandOnly: false, pickEachPlay: true);
+    internal static int ExhaustOthers(CardModel card, List<CardModel> others, int drawPile) =>
+        Taken(card, Programs.CardEffects.ExhaustsOfOthers(card.GetType()), others, drawPile, draws: 0, fromHandOnly: false);
 
     /// <summary>Of those, the ones that leave your hand: not Cleanse's (your draw pile); of a collection from every pile, the ones in your hand.</summary>
-    private static int ExhaustedFromHand(CardModel card, List<CardModel> others, int drawPile, int plays) =>
-        Taken(card, Programs.CardEffects.ExhaustsOfOthers(card.GetType()), others, drawPile, draws: 0, plays, fromHandOnly: true, pickEachPlay: true);
+    private static int ExhaustedFromHand(CardModel card, List<CardModel> others, int drawPile) =>
+        Taken(card, Programs.CardEffects.ExhaustsOfOthers(card.GetType()), others, drawPile, draws: 0, fromHandOnly: true);
 
     /// <summary>
     /// Cards the play discards, read from its program (CardEffects.Discards: CardCmd.Discard and DiscardAndDraw), counted on the board
@@ -885,12 +918,12 @@ public sealed class PlayFacts
     /// that its filter keeps (Scrape: at most <paramref name="draws"/>); the cards it looked at on top of your draw pile, less the one taken
     /// (Ki Chant, each play). A pick's later plays aren't counted yet (TRACKER).
     /// </summary>
-    internal static int DiscardCount(CardModel card, List<CardModel> others, int draws, int plays = 1) =>
-        Taken(card, Programs.CardEffects.Discards(card.GetType()), others, DrawPileOf(card), draws, plays, fromHandOnly: false, pickEachPlay: false);
+    internal static int DiscardCount(CardModel card, List<CardModel> others, int draws) =>
+        Taken(card, Programs.CardEffects.Discards(card.GetType()), others, DrawPileOf(card), draws, fromHandOnly: false);
 
     /// <summary>Of those, the ones from your hand: not the cards it drew (Scrape's: the simulator's), nor the ones it looked at (Ki Chant's).</summary>
     private static int DiscardedFromHand(CardModel card, List<CardModel> others, int draws) =>
-        Taken(card, Programs.CardEffects.Discards(card.GetType()), others, DrawPileOf(card), draws, plays: 1, fromHandOnly: true, pickEachPlay: false);
+        Taken(card, Programs.CardEffects.Discards(card.GetType()), others, DrawPileOf(card), draws, fromHandOnly: true);
 
     /// <summary>
     /// Most cards a play transforms, read from its program (CardEffects.Transforms: CardCmd.Transform, TransformTo), counted on the board
@@ -899,10 +932,10 @@ public sealed class PlayFacts
     /// (Punch of Joy's Sadness).
     /// </summary>
     internal static int TransformCount(CardModel card, List<CardModel> others, int drawPile) =>
-        Taken(card, Programs.CardEffects.Transforms(card.GetType()), others, drawPile, draws: 0, plays: 1, fromHandOnly: false, pickEachPlay: false, Transformable);
+        Taken(card, Programs.CardEffects.Transforms(card.GetType()), others, drawPile, draws: 0, fromHandOnly: false, Transformable);
 
     /// <summary>The play transforms only cards you choose how many of (Guards: 0 or more): none certainly.</summary>
-    private static bool TransformsChosen(CardModel card) =>
+    internal static bool TransformsChosen(CardModel card) =>
         Programs.CardEffects.Transforms(card.GetType()) is { Count: > 0 } transforms && transforms.All(transform => transform.ChoosesHowMany);
 
     private static bool Transformable(CardModel card)
@@ -926,16 +959,48 @@ public sealed class PlayFacts
 
     /// <summary>
     /// How many cards the play moves into your hand from your piles (CardEffects.TakesIntoHandOf: CardPileCmd.Add to the hand), counted
-    /// on the board (Taken: a pick a play, a roll's count, each card of a collection), as many as <paramref name="room"/> leaves in your
-    /// hand (a card added to a full hand goes to the discard pile instead: CardPileCmd.Add). None when you choose how many (Neow's Fury:
+    /// on the board (Taken: a pick a play, a roll's count, each card of a collection), one play's (decision #189: the simulator applies your hand's room as
+    /// each card comes, a full hand sending it to the discard pile: CardPileCmd.Add). None when you choose how many (Neow's Fury:
     /// HandTakeChosen). Which cards is a pick or a roll; how many is in the piles now.
     /// </summary>
-    internal static int TakenToHandCount(CardModel card, int plays, int room)
+    internal static int TakenToHandCount(CardModel card)
     {
         var takes = Programs.CardEffects.TakesIntoHandOf(card.GetType());
-        if (takes.Count == 0 || room <= 0 || takes.Any(take => take.ChoosesHowMany)) return 0;
-        return Math.Min(room, Taken(card, takes, new List<CardModel>(), DrawPileOf(card), draws: 0, plays, fromHandOnly: false, pickEachPlay: true));
+        if (takes.Count == 0 || takes.Any(take => take.ChoosesHowMany)) return 0;
+        return Taken(card, takes, new List<CardModel>(), DrawPileOf(card), draws: 0, fromHandOnly: false);
     }
+
+    /// <summary>
+    /// The cards in your hand, other than the card played, a take from your hand lets through as the play starts (its collection's filter,
+    /// or its test on the picked card: The Hermit's Curse), for the simulator to follow from there (TakeFromHandAction.Matching). A collection
+    /// over more than your hand (Flak Cannon's statuses in every pile) counts every card of it.
+    /// </summary>
+    internal static int MatchingAtStart(CardModel card, Programs.CardEffects.CardsTaken take, bool everyPile)
+    {
+        var program = Programs.CardPrograms.Of(card.GetType());
+        var board = new Programs.ProgramBoard(card);
+        var others = OwnerOf(card) is { } me ? Sts2State.Hand(me).Where(other => !ReferenceEquals(other, card)).ToList() : new List<CardModel>();
+        if (take.Way == Programs.CardEffects.TakeWay.Picked)
+            return others.Count(other => Programs.ProgramEvaluator.HoldsFor(take.ItemTest, other, board, program) != false);
+        return Collection(take, others, board, program, fromHandOnly: !everyPile, _ => true);
+    }
+
+    /// <summary>The take's collection holds cards outside your hand (Flak Cannon's, Florescence's: every pile), on the board.</summary>
+    internal static bool TakesFromEveryPile(CardModel card, Programs.CardEffects.CardsTaken take)
+    {
+        if (take.Items == null || Programs.ProgramEvaluator.Items(take.Items, new Programs.ProgramBoard(card), Programs.CardPrograms.Of(card.GetType())) is not { } items) return false;
+        return take.Items.Parts().Any(part => part is Programs.QueryValue { Name: "AllCards" }) || items.OfType<CardModel>().Any(item => item.Pile?.Type is not (null or PileType.Hand));
+    }
+
+    /// <summary>The cards one play transforms outside your hand (Charge, Seance: a pick from your draw pile), on the board: they stay in place.</summary>
+    internal static int TransformsOutsideHand(CardModel card) =>
+        Taken(card, Programs.CardEffects.Transforms(card.GetType()).Where(transform => transform.PickPile is not (null or PileType.Hand)).ToList(),
+            new List<CardModel>(), DrawPileOf(card), draws: 0, fromHandOnly: false, Transformable);
+
+    /// <summary>The play discards cards it looked at on top of your draw pile, less the one it took (Ki Chant), on the board: one play's.</summary>
+    internal static int DiscardedOutsideHand(CardModel card) =>
+        Taken(card, Programs.CardEffects.Discards(card.GetType()).Where(discard => discard.Way == Programs.CardEffects.TakeWay.LookedAt).ToList(),
+            new List<CardModel>(), DrawPileOf(card), draws: 0, fromHandOnly: false);
 
     /// <summary>
     /// The play takes cards into your hand and you choose how many (a selector whose least and most differ: Neow's Fury), with cards to
@@ -945,7 +1010,7 @@ public sealed class PlayFacts
     {
         var chosen = Programs.CardEffects.TakesIntoHandOf(card.GetType()).Where(take => take.ChoosesHowMany).ToList();
         if (chosen.Count == 0 || handCount - 1 >= CardPile.MaxCardsInHand) return false;
-        return Taken(card, chosen, new List<CardModel>(), DrawPileOf(card), draws: 0, plays: 1, fromHandOnly: false, pickEachPlay: true) > 0;
+        return Taken(card, chosen, new List<CardModel>(), DrawPileOf(card), draws: 0, fromHandOnly: false) > 0;
     }
 
     /// <summary>Cards in your draw pile; 0 for the game's template card.</summary>
@@ -955,8 +1020,8 @@ public sealed class PlayFacts
     /// How many cards the play's <paramref name="takes"/> take on the board, each whose condition holds:
     /// <list type="bullet">
     /// <item>a pick: the selector's most (its first card: one) of the cards in its pile that its filter and its test on the card let
-    /// through, your hand with the draws its code makes before it, a draw pile with the discard pile its play shuffles in first; on each
-    /// play when <paramref name="pickEachPlay"/>;</item>
+    /// through, your hand with the draws its code makes before it, a draw pile with the discard pile its play shuffles in first;
+    /// one play's (decision #189);</item>
     /// <item>a roll: its count (one, or TakeRandom's) a play, of its collection;</item>
     /// <item>each card of a collection once (a later play finds them gone), one for its first card;</item>
     /// <item>the cards the play drew (<paramref name="draws"/>), and the cards looked at on top of your draw pile less the ones picked, a play.</item>
@@ -964,11 +1029,10 @@ public sealed class PlayFacts
     /// <paramref name="fromHandOnly"/>: only the cards that leave your hand. <paramref name="eligible"/>: the cards the command itself can
     /// take. A collection that can't be told on the board (the game's template card) is <paramref name="others"/>.
     /// </summary>
-    private static int Taken(CardModel card, IReadOnlyList<Programs.CardEffects.CardsTaken> takes, List<CardModel> others, int drawPile, int draws, int plays,
-        bool fromHandOnly, bool pickEachPlay, Func<CardModel, bool>? eligible = null)
+    private static int Taken(CardModel card, IReadOnlyList<Programs.CardEffects.CardsTaken> takes, List<CardModel> others, int drawPile, int draws,
+        bool fromHandOnly, Func<CardModel, bool>? eligible = null)
     {
         if (takes.Count == 0) return 0;
-        var playCount = Math.Max(1, plays);
         var program = Programs.CardPrograms.Of(card.GetType());
         var board = new Programs.ProgramBoard(card);
         bool Eligible(object? item) => eligible == null || item is not CardModel cardItem || eligible(cardItem);
@@ -986,17 +1050,17 @@ public sealed class PlayFacts
                     var pool = pile == PileType.Hand
                         ? others.Count(other => Eligible(other) && Programs.ProgramEvaluator.HoldsFor(take.ItemTest, other, board, program) != false) + DrawsBefore(card, program, take, draws)
                         : PileCount(card, pile, take, board, program, Eligible, otherwise: pile == PileType.Draw ? drawPile : others.Count);
-                    total += Math.Min(pool, Number(take.PerPick, fallback: 1) * (pickEachPlay ? playCount : 1));
+                    total += Math.Min(pool, Number(take.PerPick, fallback: 1));
                     break;
                 }
                 case Programs.CardEffects.TakeWay.Random:
-                    total += Math.Min(Number(take.RollCount, fallback: 1) * playCount, Collection(take, others, board, program, fromHandOnly, Eligible));
+                    total += Math.Min(Number(take.RollCount, fallback: 1), Collection(take, others, board, program, fromHandOnly, Eligible));
                     break;
                 case Programs.CardEffects.TakeWay.Drawn:
                     if (!fromHandOnly) total += draws;
                     break;
                 case Programs.CardEffects.TakeWay.LookedAt:
-                    if (!fromHandOnly) total += Math.Max(0, LooksAt(card) - Number(take.PerPick, fallback: 1)) * playCount;
+                    if (!fromHandOnly) total += Math.Max(0, LooksAt(card) - Number(take.PerPick, fallback: 1));
                     break;
                 default:
                     var each = Collection(take, others, board, program, fromHandOnly, Eligible);
@@ -1044,6 +1108,15 @@ public sealed class PlayFacts
         if (take.Items == null || Programs.ProgramEvaluator.Items(take.Items, board, program) is not { } items) return others.Count;
         return items.Count(item => !ReferenceEquals(item, board.Card) && (!fromHandOnly || item is CardModel { Pile.Type: PileType.Hand }) && eligible(item)
                                    && (take.ItemTest.IsAlways || Programs.ProgramEvaluator.HoldsFor(take.ItemTest, item, board, program) != false));
+    }
+
+    /// <summary>How many top cards of your draw pile the play looks at (Ki Chant's Cards), whatever the pile holds; 0 for one that looks at none.</summary>
+    internal static int LookCount(CardModel card)
+    {
+        var take = Programs.CardEffects.Discards(card.GetType()).FirstOrDefault(discard => discard.Way == Programs.CardEffects.TakeWay.LookedAt);
+        if (take == null) return 0;
+        return take.Looks is { } looks && Programs.ProgramEvaluator.Number(looks, new Programs.ProgramBoard(card), Programs.CardPrograms.Of(card.GetType())) is { } read
+            ? (int)read : Sts2State.Var(card, "Cards", fallback: 3);
     }
 
     /// <summary>
@@ -1144,13 +1217,13 @@ public sealed class PlayFacts
     /// your draw pile, Ki Chant's; nor the ones it drew, Scrape's, the simulator's) and what it exhausts from there (not Cleanse's, from
     /// the draw pile; of Florescence's and Flak Cannon's, from every pile, the ones in your hand).
     /// </summary>
-    internal static int LeavingHand(CardModel card, List<CardModel> others, int drawPile, int draws, int plays)
+    internal static int LeavingHand(CardModel card, List<CardModel> others, int drawPile, int draws)
     {
-        var exhausts = ExhaustedFromHand(card, others, drawPile, plays);
+        var exhausts = ExhaustedFromHand(card, others, drawPile);
         var discards = DiscardedFromHand(card, others, draws);
         // Put back on your draw pile after the draws, from the cards in hand then (you choose which).
         var putBack = Programs.CardEffects.PutsBackFromHand(card.GetType())
-            ? Math.Min(card.GetType().Name == nameof(ThinkingAhead) ? 1 : Sts2State.Var(card, "PutBack", fallback: 1), others.Count + draws) * Math.Max(1, plays) : 0;
+            ? Math.Min(PutBackCount(card), others.Count + draws) : 0;
         return exhausts + discards + putBack;
     }
 
@@ -1327,9 +1400,16 @@ public sealed class PlayFacts
     // A card that makes Sadness (CardEffects.MakesSadness, from its program): its created statuses are all Sadness (GeneratedCount),
     // so that count is the Sadness made.
 
-    internal static int GeneratedCount(CardModel card, string name, List<CardModel> others, Player me, out int statuses)
+    internal static int GeneratedCount(CardModel card, string name, List<CardModel> others, Player me, out int statuses) => GeneratedCount(card, name, others, me, out statuses, out _);
+
+    /// <summary>
+    /// One play's made cards on the board, and where a later play's count comes from (decision #189): the cards the play took from your
+    /// hand (Storm of Steel, Stoke), or the room in your hand (Crash Landing, The Lovers, The Moon), read by the simulator as it runs.
+    /// </summary>
+    internal static int GeneratedCount(CardModel card, string name, List<CardModel> others, Player me, out int statuses, out SpireQoL.Sim.SimCount from)
     {
         statuses = 0;
+        from = SpireQoL.Sim.SimCount.Given;
         int Var(string key, int fallback = 1) => Sts2State.Var(card, key, fallback);
         switch (name)
         {
@@ -1341,13 +1421,13 @@ public sealed class PlayFacts
             case nameof(CrashLanding):
             {
                 var room = Math.Max(0, CardPile.MaxCardsInHand - others.Count);
-                statuses = room; return room;
+                statuses = room; from = SpireQoL.Sim.SimCount.HandRoom; return room;
             }
             // Shivs.
             case nameof(BladeDance): case nameof(BladeOfInk): case nameof(CloakAndDagger): case nameof(UpMySleeve): return Var("Cards");
             case nameof(FanOfKnives): case nameof(HiddenDaggers): return Var("Shivs");
             case nameof(LeadingStrike): return Var("Shivs");
-            case nameof(StormOfSteel): return others.Count;
+            case nameof(StormOfSteel): from = SpireQoL.Sim.SimCount.CardsTaken; return others.Count;
             // Souls.
             case nameof(CaptureSpirit): case nameof(GraveWarden): case nameof(Reave): return Var("Cards");
             // Souls into every living teammate's draw pile, created by you (GlimpseBeyond.OnPlay: AddGeneratedCardsToCombat with
@@ -1359,7 +1439,7 @@ public sealed class PlayFacts
             // Other cards.
             case nameof(BundleOfJoy): case nameof(JackOfAllTrades): case nameof(Jackpot): case nameof(Metamorphosis): case nameof(DualWield): return Var("Cards");
             case nameof(HeirloomHammer): return Var("Repeat");
-            case nameof(Stoke): return others.Count;
+            case nameof(Stoke): from = SpireQoL.Sim.SimCount.CardsTaken; return others.Count;
             case nameof(Abundance): case nameof(AdaptiveStrike): case nameof(Anger): case nameof(Discovery): case nameof(Distraction):
             case nameof(InfernalBlade): case nameof(Largesse): case nameof(ManifestAuthority): case nameof(Outrage): case nameof(Quasar):
             case nameof(Splash): case nameof(Undeath): case nameof(WhiteNoise):
@@ -1377,9 +1457,9 @@ public sealed class PlayFacts
                 return statuses + Var("Joy", fallback: 2) * mates;
             }
             case nameof(TheHierophant): return Var("Cards", fallback: 3);
-            case nameof(TheLovers): return Math.Max(0, CardPile.MaxCardsInHand - others.Count);
+            case nameof(TheLovers): from = SpireQoL.Sim.SimCount.HandRoom; return Math.Max(0, CardPile.MaxCardsInHand - others.Count);
             // Shivs until your hand is full (TheMoon.OnPlay: MaxCardsInHand - hand, once it has left your hand).
-            case nameof(TheMoon): return Math.Max(0, CardPile.MaxCardsInHand - others.Count);
+            case nameof(TheMoon): from = SpireQoL.Sim.SimCount.HandRoom; return Math.Max(0, CardPile.MaxCardsInHand - others.Count);
             case nameof(TheSun): statuses = 1; return 1; // a Soot into your discard pile
             case nameof(MightyShield): case nameof(MightyWeapon): statuses = Var("Cards"); return statuses; // Dazed into your draw pile
         }
@@ -1465,7 +1545,7 @@ public sealed class PlayFacts
         if (perPlay == 0) return 0;
         int Landing(Creature creature)
         {
-            var total = perPlay * Plays;
+            var total = perPlay;
             var artifact = creature.Powers.OfType<ArtifactPower>().Sum(artifactPower => artifactPower.Amount);
             return Math.Max(0, total - artifact);
         }

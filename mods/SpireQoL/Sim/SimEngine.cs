@@ -885,18 +885,20 @@ public static partial class SimEngine
             case CardEventAction cardEventAction: RunCardEvent(branches, cardEventAction); break;
             case DrawnCardAction drawnCardAction: branches.Each(branch => RunDrawnCard(branch, drawnCardAction)); break;
             case AutoPlayFromDrawAction autoPlayFromDrawAction:
-                branches.Each(branch => AutoPlayFromDraw(branch, branch.CurrentPlay?.Owner ?? Who.You, autoPlayFromDrawAction.Count, autoPlayFromDrawAction.ForceExhaust, autoPlayFromDrawAction.Upgrade));
+                branches.Each(branch => AutoPlayFromDraw(branch, branch.CurrentPlay?.Owner ?? Who.You, CountOf(branch, autoPlayFromDrawAction.CountFrom, autoPlayFromDrawAction.Count), autoPlayFromDrawAction.ForceExhaust, autoPlayFromDrawAction.Upgrade));
                 break;
             case ShuffleDrawPileAction shuffleDrawPileAction:
                 branches.Do(branch =>
                 {
                     var owner = branch.CurrentPlay?.Owner ?? Who.You;
-                    if (DrawsFromPile(branch, owner)) branch.MutablePlayer(owner).Draw = branch.Player(owner)!.Draw!.ShuffledWithDiscard(shuffleDrawPileAction.HandIn);
+                    if (DrawsFromPile(branch, owner) && (shuffleDrawPileAction.WhenShorterThan == 0 || branch.Player(owner)!.Draw!.Count < shuffleDrawPileAction.WhenShorterThan))
+                        branch.MutablePlayer(owner).Draw = branch.Player(owner)!.Draw!.ShuffledWithDiscard(shuffleDrawPileAction.HandIn);
                 });
                 break;
             case TakeToHandAction takeToHandAction: branches.Each(branch => RunTakeToHand(branch, takeToHandAction)); break;
             case ExhaustFromHandAction exhaustFromHandAction: branches.Each(branch => RunExhaustFromHand(branch, exhaustFromHandAction)); break;
             case LeaveHandAction leaveHandAction: branches.Do(branch => RunLeaveHand(branch, leaveHandAction)); break;
+            case TakeFromHandAction takeFromHandAction: RunTakeFromHand(branches, takeFromHandAction); break;
             case NotModelledAction notModelledAction: branches.Do(branch => branch.Unmodelled ??= notModelledAction.Reason); break;
             case UnreadAction unreadAction: branches.Do(branch => branch.Unmodelled ??= SimState.Unread(unreadAction.Member)); break;
             case GainEnergyAsHeldAction:

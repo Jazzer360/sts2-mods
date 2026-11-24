@@ -90,15 +90,15 @@ public class CardsTakenTests
     }
 
     [Fact]
-    public void KiChantDiscardsWhatItLooksAtButTheCardItTakesEachPlay()
+    public void KiChantDiscardsWhatItLooksAtButTheCardItTakes()
     {
         // KiChant.OnPlay: the top Cards of your draw pile (after a shuffle when it's short), one into your hand, the rest discarded.
         var gameFight = new GameFight();
         var card = gameFight.Add<KiChant>();
         DrawPile(gameFight, count: 6);
-        var facts = Facts(gameFight, card, plays: 2);
-        Assert.Equal(2 * 2, facts.Discards);
-        Assert.Equal(2, facts.TakenToHand);
+        var facts = Facts(gameFight, card); // one play's (decision #189)
+        Assert.Equal(2, facts.Discards);
+        Assert.Equal(1, facts.TakenToHand);
         Assert.Equal(0, facts.LeavesHand);
         // An empty draw pile with cards in the discard pile: the shuffle first, then the same.
         var empty = new GameFight();

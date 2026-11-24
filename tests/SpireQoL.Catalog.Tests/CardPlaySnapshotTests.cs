@@ -258,6 +258,7 @@ public class CardPlaySnapshotTests
     private static string? ValueText(object? value, List<Creature> enemies) => value switch
     {
         null => null,
+        Enum enumValue when Convert.ToInt32(enumValue) == 0 => null,
         Type type => type.Name,
         CardModel card => card.GetType().Name,
         IDictionary dictionary => string.Join(",", dictionary.Keys.Cast<object>()

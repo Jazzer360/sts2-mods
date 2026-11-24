@@ -311,6 +311,9 @@ public static partial class SimAdapter
                            || me.Creature.Powers.Any(power => power.GetType().Name == nameof(LostLutePower));
             var topUpgrades = handCards.Any(card => AutoPlaysOf(card) is { Upgrade: true });
             var fromPileByKey = new Dictionary<string, (SimHandCard? Plain, SimHandCard? Upgraded, bool Exhausts)>();
+            // The filtered takes of the cards in your hand (decision #189): a card drawn or taken into your hand during a play counts for
+            // the ones it would be taken by (Second Wind's non-Attacks, The Hermit's Curse).
+            var takeFilters = handCards.SelectMany(TakeFiltersOf).ToList();
             SimDrawCard Profile(CardModel card)
             {
                 var turnEnd = TurnEndOf(card);
@@ -334,7 +337,8 @@ public static partial class SimAdapter
                 // It acts when it's exhausted (Drum of Battle): its type goes with it, for an exhaust of a kind.
                 var exhaustEnergy = CardEnergy.WhenExhausted(card);
                 var energyLost = CardEnergy.LostWhenDrawn(card);
-                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}|{invincible}|{perfectFit}|{type}|{free}{sly}|{exhaustEnergy}{(exhaustEnergy > 0 ? SimReaders.TypeOf(card) : SimCardType.None)}|{energyLost}";
+                var takenBy = takeFilters.Count == 0 ? null : takeFilters.Where(filter => filter.Takes(card, false) != false).Select(filter => filter.Key).ToList() is { Count: > 0 } keys ? keys : null;
+                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}|{invincible}|{perfectFit}|{type}|{free}{sly}|{exhaustEnergy}{(exhaustEnergy > 0 ? SimReaders.TypeOf(card) : SimCardType.None)}|{energyLost}|{(takenBy == null ? "" : string.Join(",", takenBy))}";
                 SimHandCard? auto = null;
                 if ((pickable || hellraised) && !autoByKey.TryGetValue(key, out auto))
                 {
@@ -359,7 +363,7 @@ public static partial class SimAdapter
                     EnergyLostOnDraw = energyLost,
                     Exhausting = exhaustEnergy > 0 ? new ExhaustingCard(HandCard: 0, exhaustEnergy, SimReaders.TypeOf(card)) : null,
                     TurnEnd = turnEnd, Fading = fading, HexFading = hexFading, Status = status, Ethereal = ethereal, Strike = strike,
-                    Pickable = pickable, Auto = auto, InvincibleBlock = invincible, PerfectFit = perfectFit, Type = type, Free = free, Sly = sly,
+                    Pickable = pickable, Auto = auto, InvincibleBlock = invincible, PerfectFit = perfectFit, Type = type, Free = free, Sly = sly, TakenBy = takenBy,
                 };
             }
             var profiles = new Dictionary<CardModel, SimDrawCard>(ReferenceEqualityComparer.Instance);

@@ -78,6 +78,10 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
                 // Proc Indicators' facts for this frame when it has them (it runs first), else worked out here.
                 var facts = _ctx.Predictions.FactsThisFrame(card) ?? PlayFacts.For(card, me, combat, CardPlays.Count(card));
                 shuffles = facts.Shuffles && !facts.ShufflesItself; // Reboot's text already says it shuffles
+                // A replay (decision #189): the facts are one play's; its later plays draw on the board the first left, so its simulation
+                // says whether all of them shuffle, at every target it can be aimed at.
+                if (facts is { Plays: > 1, ShufflesItself: false, OutcomeByAim: { Count: > 0 } outcomes })
+                    shuffles = shuffles || outcomes.Values.All(outcome => !outcome.Truncated && outcome.PlayFiredEvery[SpireQoL.Sim.SimKeys.PlayEvent(SpireQoL.Sim.CardEvent.Shuffled)] > 0);
             }
             catch
             {

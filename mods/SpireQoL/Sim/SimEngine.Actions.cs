@@ -21,17 +21,147 @@ public static partial class SimEngine
                 if (player.ExhaustingInHand.Any(card => card.HandCard == cardPlayAction.HandCard))
                     player.ExhaustingInHand = player.ExhaustingInHand.Where(card => card.HandCard != cardPlayAction.HandCard).ToList();
             });
+        // Each filtered take's cards in the hand as the card play starts (decision #189): its plays follow them from here.
+        var matching = NamedCounts.Empty;
+        foreach (var take in cardPlayAction.Body.OfType<TakeFromHandAction>())
+            if (take.Filter != null && !matching.Has(take.Filter)) matching = matching.With(take.Filter, take.Matching);
+        branches.Do(branch => branch.TakeMatching = matching);
         for (var i = 0; i < Math.Max(1, cardPlayAction.Play.PlayCount); i++)
         {
             var play = cardPlayAction.Play with { PlayIndex = i };
-            branches.Do(branch => { branch.CurrentPlay = play; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; });
+            branches.Do(branch => { branch.CurrentPlay = play; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; branch.PlayTaken = 0; });
             HookStep(branches, nameof(SimModel.BeforeCardPlayed), (model, owner, branch) => model.BeforeCardPlayed(branch, owner, play));
             branches.Do(branch => Count(branch, play, PlayStage.Started));
             foreach (var action in cardPlayAction.Body) Run(branches, action);
             branches.Do(branch => Count(branch, play, PlayStage.Finished));
             HookStep(branches, nameof(SimModel.AfterCardPlayed), (model, owner, branch) => model.AfterCardPlayed(branch, owner, play));
         }
-        branches.Do(branch => branch.CurrentPlay = null);
+        branches.Do(branch => { branch.CurrentPlay = null; branch.PlayTaken = 0; branch.TakeMatching = NamedCounts.Empty; });
+    }
+
+    /// <summary>
+    /// A count the action reads on the state as it runs (decision #189): the number it gives, the cards the play's last take took, or the
+    /// room in the play owner's hand now.
+    /// </summary>
+    internal static int CountOf(SimState state, SimCount from, int given)
+    {
+        switch (from)
+        {
+            case SimCount.CardsTaken: return state.PlayTaken;
+            case SimCount.HandRoom:
+                var owner = state.CurrentPlay?.Owner ?? Who.You;
+                return state.Player(owner) is { } player ? Math.Min(given, RoomIn(player)) : given;
+            default: return given;
+        }
+    }
+
+    /// <summary>The most any branch counts (CountOf): how many rounds an action with a count per branch runs, each branch its own.</summary>
+    private static int MostOf(BranchSet branches, SimCount from, int given) =>
+        from == SimCount.Given ? given : branches.States.Count == 0 ? 0 : branches.States.Max(branch => CountOf(branch, from, given));
+
+    /// <summary>
+    /// Cards a play takes from its owner's hand (TakeFromHandAction, decision #189), on the state as it runs: every card of its collection
+    /// there now, or a pick's or a roll's most of the ones it can take. They leave (the whole hand: what was followed in it goes with it),
+    /// then each sets off its event and the take's per-card actions, one card after another; how many is the play's CardsTaken.
+    /// </summary>
+    private static void RunTakeFromHand(BranchSet branches, TakeFromHandAction take) => branches.Each(branch => TakeFromHand(branch, take));
+
+    private static IEnumerable<SimState> TakeFromHand(SimState state, TakeFromHandAction take)
+    {
+        var owner = state.CurrentPlay?.Owner ?? Who.You;
+        if (state.Player(owner) is not { } player) return new[] { state };
+        int count;
+        CardEvent? cardEvent = take.Event;
+        if (take.FromDrawPile)
+        {
+            // A pick from the draw pile (Cleanse): as many as it holds (with no pile read, the adapter's count, less what's been taken).
+            var inPile = player.Draw?.Count ?? Math.Max(0, take.Matching - state.TakeMatching[TakenKey(take)]);
+            count = Math.Min(take.Most, inPile);
+            if (player.Draw == null) state.TakeMatching = state.TakeMatching.Add(TakenKey(take), count);
+            state.PlayTaken = count;
+            IEnumerable<SimState> picked = new[] { state };
+            for (var i = 0; i < count; i++) picked = Then(picked, branch => ExhaustChosenFromDrawPile(branch, owner));
+            return TakenEvents(picked, take, cardEvent, count);
+        }
+        var inHand = Math.Max(0, player.HandCount - player.PlayingFromHand);
+        var known = take.Filter == null || state.TakeMatching.DataOf(take.Filter) == 0;
+        var matching = take.Filter == null ? inHand : Math.Min(inHand, state.TakeMatching[take.Filter]);
+        if (take.Filter != null && !known && take.EventIfNot == null)
+        {
+            // Cards joined the hand whose kind wasn't read: how many it takes isn't known.
+            state.Unmodelled ??= "it takes cards of a kind from your hand, and cards joined it whose kind wasn't read";
+            return new[] { state };
+        }
+        var pool = take.EventIfNot != null ? inHand : matching;
+        count = take.Way == HandTakeWay.Each ? pool : Math.Min(take.Most, pool);
+        if (take.EventIfNot != null)
+        {
+            // A pick its test sends one way or the other: the event is certain only when every card it could take goes the same way.
+            cardEvent = !known ? null : matching >= inHand ? take.Event : matching == 0 ? take.EventIfNot : null;
+            if (take.Filter != null && count > 0)
+                state.TakeMatching = cardEvent == take.Event ? state.TakeMatching.Add(take.Filter, -count)
+                    : cardEvent == take.EventIfNot ? state.TakeMatching : state.TakeMatching.With(take.Filter, matching, data: 1);
+        }
+        else if (take.Filter != null && count > 0) state.TakeMatching = state.TakeMatching.Add(take.Filter, -count);
+        if (take.Leaves && count > 0)
+        {
+            var wholeHand = take.Way == HandTakeWay.Each && take.Filter == null;
+            RunLeaveHand(state, new LeaveHandAction(count) { Whole = wholeHand });
+            // A take of some cards of the hand: the other filtered takes' cards may be among them (only a take of one kind follows its own).
+            if (!wholeHand && take.Filter == null && state.Player(owner) is { } after)
+                foreach (var entry in state.TakeMatching.Items)
+                    state.TakeMatching = state.TakeMatching.With(entry.Name, Math.Min(entry.Amount, Math.Max(0, after.HandCount - after.PlayingFromHand)), entry.Data);
+            if (wholeHand) state.TakeMatching = ZeroedMatching(state.TakeMatching);
+        }
+        state.PlayTaken = count;
+        return TakenEvents(new[] { state }, take, cardEvent, count);
+    }
+
+    /// <summary>Each card taken in turn: its event, then the take's per-card actions.</summary>
+    private static IEnumerable<SimState> TakenEvents(IEnumerable<SimState> states, TakeFromHandAction take, CardEvent? cardEvent, int count)
+    {
+        if (count == 0 || cardEvent == null && take.EachCard.Count == 0) return states;
+        var result = new List<SimState>();
+        foreach (var state in states)
+        {
+            var sub = new BranchSet(state, nested: true);
+            for (var i = 0; i < count; i++)
+            {
+                if (cardEvent is { } each) RunCardEvent(sub, new CardEventAction(each, Count: 1) { Indirect = true });
+                foreach (var action in take.EachCard) Run(sub, action);
+            }
+            result.AddRange(sub.States);
+        }
+        return result;
+    }
+
+    /// <summary>The count of cards a take from your draw pile took, kept with no pile read.</summary>
+    private static string TakenKey(TakeFromHandAction take) => "taken:" + (take.Filter ?? "draw pile");
+
+    /// <summary>The whole hand gone: no filtered take has a card left there, and what joins after is counted from none.</summary>
+    private static NamedCounts ZeroedMatching(NamedCounts matching)
+    {
+        foreach (var entry in matching.Items) matching = matching.With(entry.Name, amount: 0, data: 0);
+        return matching;
+    }
+
+    /// <summary>
+    /// A card joins its owner's hand during a card play: each filtered take it would be taken by counts it (SimDrawCard.TakenBy); with no
+    /// profile read (null), whether it would isn't known.
+    /// </summary>
+    internal static void JoinsTakes(SimState state, IReadOnlyList<string>? takenBy, bool known, bool intoHand, bool made)
+    {
+        if (state.TakeMatching.Count == 0) return;
+        foreach (var entry in state.TakeMatching.Items)
+        {
+            if (entry.Name.StartsWith("taken:", StringComparison.Ordinal)) continue;
+            // A take of every pile counts what's made anywhere (a card moving from a pile into the hand was counted already); a take of
+            // the hand what joins the hand.
+            var everyPile = entry.Name.StartsWith("all:", StringComparison.Ordinal);
+            if (everyPile ? !made : !intoHand) continue;
+            if (!known) state.TakeMatching = state.TakeMatching.With(entry.Name, entry.Amount, data: 1);
+            else if (takenBy?.Contains(entry.Name) == true) state.TakeMatching = state.TakeMatching.With(entry.Name, entry.Amount + 1, entry.Data);
+        }
     }
 
     /// <summary>
@@ -166,6 +296,10 @@ public static partial class SimEngine
     {
         // A shot with no arrow does nothing: no attack, so no hooks either.
         if (at.NeedsArrow && branches.States.All(branch => branch.ArrowAwayAt < 0)) return;
+        // Its hits, each branch its own when it reads them as it runs (decision #189: Fiend Fire's cards taken); none at all: no attack.
+        var mostHits = MostOf(branches, at.HitsFrom, at.Hits);
+        if (mostHits <= 0) return;
+        bool Hits(SimState state, int hit) => hit < CountOf(state, at.HitsFrom, at.Hits);
         var dealer = at.ByOsty ? Who.YourOsty : Who.You;
         branches.Do(branch =>
         {
@@ -175,15 +309,16 @@ public static partial class SimEngine
         });
         AttackInfo Info(SimState state) => new(state.CurrentAttack, state.CurrentPlay?.Owner is { } playOwner && !at.ByOsty ? playOwner : dealer, at.Damage.Props, state.CurrentPlay?.Card);
         HookStep(branches, nameof(SimModel.BeforeAttack), (model, owner, branch) => model.BeforeAttack(branch, owner, Info(branch)));
-        for (var i = 0; i < at.Hits; i++)
+        for (var i = 0; i < mostHits; i++)
         {
+            var hit = i;
             switch (at.Mode)
             {
                 case SimPlay.Target.Single:
                     branches.Each(branch =>
                     {
                         var target = at.TargetId >= 0 ? at.TargetId : branch.CurrentPlay?.Target ?? Who.None;
-                        if (branch.Enemy(target) is not { Alive: true }) return new[] { branch };
+                        if (!Hits(branch, hit) || branch.Enemy(target) is not { Alive: true }) return new[] { branch };
                         var states = HitOnce(branch, Info(branch).Dealer, target, at);
                         // Timber: the kill sets off a second attack on every enemy.
                         if (at.OnKill is { } onKill) states = Then(states, copy => copy.Enemy(target) is { Alive: false }
@@ -192,10 +327,10 @@ public static partial class SimEngine
                     });
                     break;
                 case SimPlay.Target.All:
-                    branches.Each(branch => HitAllRound(branch, rounds: 1));
+                    branches.Each(branch => Hits(branch, hit) ? HitAllRound(branch, rounds: 1) : new[] { branch });
                     break;
                 case SimPlay.Target.Random:
-                    branches.Each(branch => RandomTarget(branch, (copy, id) => HitOnce(copy, Info(copy).Dealer, id, at)));
+                    branches.Each(branch => Hits(branch, hit) ? RandomTarget(branch, (copy, id) => HitOnce(copy, Info(copy).Dealer, id, at)) : new[] { branch });
                     break;
             }
         }
@@ -287,7 +422,12 @@ public static partial class SimEngine
 
     private static void RunBlock(BranchSet branches, GainBlockAction gainBlockAction)
     {
-        for (var i = 0; i < gainBlockAction.Times; i++) branches.Each(branch => BlockOnce(branch, gainBlockAction));
+        // Its gains, each branch its own when it reads them as it runs (decision #189).
+        for (var i = 0; i < MostOf(branches, gainBlockAction.TimesFrom, gainBlockAction.Times); i++)
+        {
+            var gain = i;
+            branches.Each(branch => gain < CountOf(branch, gainBlockAction.TimesFrom, gainBlockAction.Times) ? BlockOnce(branch, gainBlockAction) : new[] { branch });
+        }
     }
 
     /// <summary>
@@ -389,6 +529,12 @@ public static partial class SimEngine
     private static void RunCardEvent(BranchSet branches, CardEventAction cardEventAction)
     {
         if (cardEventAction.FirstPlayOnly && branches.States.Count > 0 && branches.States[0].CurrentPlay is { PlayIndex: > 0 }) return;
+        var made = cardEventAction.Event is CardEvent.Generated or CardEvent.GeneratedStatus or CardEvent.GeneratedSadness;
+        if (cardEventAction.CountFrom != SimCount.Given || cardEventAction.JoinsHand || cardEventAction.ByPlay != null || made && branches.States.Any(branch => branch.TakeMatching.Count > 0))
+        {
+            branches.Each(branch => CardEvents(branch, cardEventAction));
+            return;
+        }
         for (var i = 0; i < cardEventAction.Count; i++)
         {
             // A draw from your draw pile (decision #90): a branch per card that matters, with its reactions.
@@ -407,6 +553,47 @@ public static partial class SimEngine
             });
             branches.Do(branch => branch.EventCard = null);
         }
+    }
+
+    /// <summary>
+    /// A play's card events on one branch, as many as it reads there as they run (decision #189: CountOf), each with its listeners. Cards
+    /// that join the hand (JoinsHand) take a slot as they come: made cards (into a full hand they go to the discard pile, still made),
+    /// draws with no draw pile read (none past No Draw or a full hand).
+    /// </summary>
+    private static IEnumerable<SimState> CardEvents(SimState state, CardEventAction cardEventAction)
+    {
+        var player = cardEventAction.Player ?? state.CurrentPlay?.Owner ?? Who.You;
+        var given = cardEventAction.ByPlay is { Count: > 0 } byPlay ? byPlay[Math.Min(state.CurrentPlay?.PlayIndex ?? 0, byPlay.Count - 1)] : cardEventAction.Count;
+        var count = CountOf(state, cardEventAction.CountFrom, given);
+        IEnumerable<SimState> states = new[] { state };
+        for (var i = 0; i < count; i++) states = Then(states, branch => OneCardEvent(branch, cardEventAction, player));
+        return states;
+    }
+
+    private static IEnumerable<SimState> OneCardEvent(SimState state, CardEventAction cardEventAction, int player)
+    {
+        var cardEvent = cardEventAction.Event;
+        if (cardEvent == CardEvent.Drawn && DrawsFromPile(state, player)) return DrawCards(state, player, count: 1, cardEventAction.Indirect);
+        if (cardEventAction.JoinsHand && state.Player(player) is { } simPlayer)
+        {
+            if (cardEvent == CardEvent.Drawn)
+            {
+                if (DrawsStopped(state, player) || RoomIn(simPlayer) == 0) return new[] { state };
+                // Drawing the whole pile shuffles the discard pile in: I Am Invincible's top isn't known any more.
+                var drawer = state.MutablePlayer(player);
+                if (drawer.InvincibleBlock > 0 && --drawer.InvincibleDrawPile <= 0) drawer.InvincibleBlock = 0;
+            }
+            var made = cardEvent != CardEvent.Drawn;
+            if (RoomIn(simPlayer) > 0)
+            {
+                AddToHand(state, player, count: 1, takenBy: made ? cardEventAction.TakenBy : null, known: made && cardEventAction.TakenBy != null);
+                return FireCardEvent(state, cardEvent, player, cardEventAction.Indirect);
+            }
+        }
+        // A made card outside the hand (or into a full one: the discard pile) still counts for a take of every pile.
+        if (cardEvent is CardEvent.Generated or CardEvent.GeneratedStatus or CardEvent.GeneratedSadness)
+            JoinsTakes(state, cardEventAction.TakenBy, known: cardEventAction.TakenBy != null, intoHand: false, made: true);
+        return FireCardEvent(state, cardEvent, player, cardEventAction.Indirect);
     }
 
     /// <summary>A relic's or power's value (its DynamicVar) as the adapter read it (SimState.Vars), or the fallback.</summary>

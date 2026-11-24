@@ -51,7 +51,8 @@ public static partial class SimAdapter
             IsAttack = card.Type == CardType.Attack,
             Plays = plays,
             // A card played from elsewhere (Howl from Beyond from the exhaust pile) doesn't leave the hand.
-            HandDelta = (card.Pile?.Type is PileType.Exhaust or PileType.Draw ? 0 : -1) + facts.Draws + facts.GeneratedInHand + facts.ReturnsToHand + facts.TakenToHand,
+            // What its plays draw, make and take into your hand joins it as they run (decision #189); the cards its hooks bring back after.
+            HandDelta = (card.Pile?.Type is PileType.Exhaust or PileType.Draw ? 0 : -1) + facts.ReturnsToHand,
             FadingDelta = IsFading(card, combat) ? -1 : 0,
             HexFadingDelta = IsFading(card, combat) && EtherealOnlyFromHex(card) ? -1 : 0,
         };
@@ -64,7 +65,8 @@ public static partial class SimAdapter
             if (aimedAt < allies.Count) { play.AllyTarget = aimedAt; ally = allies[aimedAt].Creature; allyId = Who.Teammate(aimedAt); }
         }
         play.HandCard = card.Pile?.Type == PileType.Hand ? HandId(card) : 0;
-        play.Draws = facts.Draws;
+        // Its draws join the hand as the simulator runs them (decision #189): none for the card leaving to account for.
+        play.Draws = 0;
         // Whom its block and channels are for, read from its code (decision #182): a teammate it's aimed at (Lift, Ignition).
         play.BlockToAlly = Procs.Programs.CardEffects.BlocksAnother(card.GetType());
         play.ChannelToAlly = Procs.Programs.CardEffects.ChannelsForTarget(card.GetType());
@@ -77,12 +79,12 @@ public static partial class SimAdapter
         // shot at X 0.
         var shot = Fool.TriesShot(card);
         if (shot) play.Body.Add(new ShootAction());
-        if (facts.AttackHits > 0 && AttackOf(card, facts, me, combat, ids, targetId, plays, name) is { } attack)
+        if (facts.AttackHits > 0 && AttackOf(card, facts, me, combat, ids, targetId, name) is { } attack)
             play.Body.Add((shot ? attack with { NeedsArrow = true } : attack) with { StretchFromDamage = name == nameof(BlossomShot) });
         if (shot) play.Body.Add(new ImpaleAction());
         // Recall, Uproot, Wrest: every arrow of yours out of the target.
         if (Procs.Programs.CardEffects.DislodgesArrows(card.GetType())) play.Body.Add(new DislodgeAllAction());
-        if (facts.BlockGains > 0 && BlockOf(card, facts, me, combat, ids, targetId, plays, name, ally, allyId) is { } block) play.Body.Add(block);
+        if (facts.BlockGains > 0 && BlockOf(card, facts, me, combat, ids, targetId, name, ally, allyId) is { } block) play.Body.Add(block);
         // Block for every player (Rally): the same value to each living teammate too, worked out on them (their Dexterity, Frail).
         if (facts.BlockGains > 0 && Procs.Programs.CardEffects.BlocksEachPlayer(card.GetType()) && card.DynamicVars.TryGetValue("Block", out var allBlock))
         {
@@ -90,7 +92,7 @@ public static partial class SimAdapter
             for (var teammateIndex = 0; teammateIndex < mates.Count; teammateIndex++)
             {
                 if (mates[teammateIndex].Creature is not { IsAlive: true } mate) continue;
-                play.Body.Add(new GainBlockAction(facts.BlockGains / plays, allBlock.BaseValue, SimProps.Move)
+                play.Body.Add(new GainBlockAction(facts.BlockGains, allBlock.BaseValue, SimProps.Move)
                     { Captured = SimReaders.Block(combat, card, mate, allBlock.BaseValue, ValueProp.Move), To = Who.Teammate(teammateIndex) });
             }
         }
@@ -130,10 +132,13 @@ public static partial class SimAdapter
         if (Procs.Programs.CardEffects.GainsStarsOnKill(card.GetType()))
             for (var i = 0; i < play.Body.Count; i++)
                 if (play.Body[i] is AttackAction attackAction) { play.Body[i] = attackAction with { KillRewards = attackAction.KillRewards.Append(new KillReward(CardEvent.StarsGained, Count: 1)).ToList() }; break; }
+        // Ki Chant shuffles your discard pile in when your draw pile is short of what it looks at (each play, as it runs), then takes.
+        if (Procs.Programs.CardEffects.ShufflesWhenShort(card.GetType()) && PlayFacts.LookCount(card) is > 0 and var looks)
+            play.Body.Add(new ShuffleDrawPileAction(Array.Empty<SimDrawGroup>()) { WhenShorterThan = looks });
         play.Body.AddRange(TakesToHand(facts, me));
-        AddCardEvents(play, facts, plays);
+        AddCardEvents(play, facts, me);
         // Reboot: your hand into your draw pile and a shuffle (CardPileCmd.Shuffle) before its draws, right after the hand leaves.
-        if (Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType()) && play.Body.FindIndex(action => action is LeaveHandAction { Whole: true }) is var leaves and >= 0)
+        if (Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType()) && play.Body.FindIndex(action => action is TakeFromHandAction { Way: HandTakeWay.Each, Filter: null, Leaves: true }) is var leaves and >= 0)
             play.Body.Insert(leaves + 1, new ShuffleDrawPileAction(PileType.Hand.GetPile(me).Cards.Where(other => other != card)
                 .Select(other => DrawProfiles.GetValueOrDefault(other)).OfType<SimDrawCard>().GroupBy(profile => profile.Key)
                 .Select(sameProfile => new SimDrawGroup(sameProfile.First(), sameProfile.Count())).ToList()));
@@ -141,7 +146,7 @@ public static partial class SimAdapter
         // How many, whether they exhaust and whether they're upgraded first, read from its program (AutoPlaysOf): Havoc one that
         // exhausts, Cascade its X (one more upgraded), The Devil the cards in your hand as it plays, upgraded when it is.
         if (AutoPlaysOf(card) is { } autoPlays)
-            play.Body.Add(new AutoPlayFromDrawAction(autoPlays.Count) { ForceExhaust = autoPlays.ForceExhaust, Upgrade = autoPlays.Upgrade });
+            play.Body.Add(new AutoPlayFromDrawAction(autoPlays.Count) { ForceExhaust = autoPlays.ForceExhaust, Upgrade = autoPlays.Upgrade, CountFrom = AutoPlayCountsTaken(card) ? SimCount.CardsTaken : SimCount.Given });
         // A replay of a card whose numbers change with each play in a way its code doesn't show (decision #160: Thrash).
         if (plays > 1 && PlayGrowth.Of(card).Unmodelled is { } growthUnknown) play.Body.Add(new NotModelledAction(growthUnknown));
         if (DrawnCardReaderOf(card.GetType()) is { } reader) UseDrawnCard(play, reader);
@@ -221,47 +226,36 @@ public static partial class SimAdapter
     }
 
     /// <summary>
-    /// The card events the play causes (PlayFacts' counts), for the models that react to them: the energy it spends and gives back
-    /// (before the play), each play's draws, discards, other exhausts, created cards and star gains (indirect, but star gains), the
-    /// stars it spends (first play), its own exhaust and a shuffle (after).
+    /// The card events one play causes (decision #189: the play's own description, the engine repeats it), for the models that react to
+    /// them: the energy it spends and gives back (before the play), what it takes from your hand (TakesFromHand: each play takes what it
+    /// finds), its draws, the cards it makes and its star gains, the stars it spends (first play), its own exhaust and a shuffle (after
+    /// the last play: it goes to its result pile once).
     /// </summary>
-    private static void AddCardEvents(SimPlay play, PlayFacts facts, int plays)
+    private static void AddCardEvents(SimPlay play, PlayFacts facts, Player me)
     {
-        void Each(List<SimAction> to, CardEvent cardEvent, int total, bool indirect, bool perPlay = true)
+        static void Add(List<SimAction> to, CardEvent cardEvent, int count, bool indirect)
         {
-            var perStep = perPlay ? total / plays : total;
-            if (perStep > 0) to.Add(new CardEventAction(cardEvent, perStep) { Indirect = indirect });
+            if (count > 0) to.Add(new CardEventAction(cardEvent, count) { Indirect = indirect });
         }
-        Each(play.Before, CardEvent.EnergyGained, facts.EnergyBack, indirect: false, perPlay: false);
-        Each(play.Before, CardEvent.EnergySpent, facts.EnergySpent, indirect: false, perPlay: false);
-        // What it takes from your hand (discards, exhausts) and its draws: PlayOrder puts them in its code's order (decision #182),
-        // which decides the room the draws have.
-        void Leaving(List<SimAction> into)
-        {
-            // Which cards it takes (what those that act when exhausted do: Drum of Battle), read from the hand as it is.
-            if (facts.ExhaustsOthers > 0 && PlayFacts.ExhaustPickOf(facts.Card) is { } exhaustPick) into.Add(exhaustPick);
-            // Then they leave, before what their leaving sets off: the game takes them one at a time, each draw it sets off (Dark
-            // Embrace, Tough Bandages) following a card out, so those draws have its room, and a play that takes the whole hand takes
-            // what was in it, not what the draws bring in (a dev review: Fiend Fire with Dark Embrace drew 7, predicted 2).
-            if (facts.TakesWholeHand) into.Add(new LeaveHandAction(Count: 0) { Whole = true });
-            else if (facts.LeavesHand / plays > 0) into.Add(new LeaveHandAction(facts.LeavesHand / plays));
-            Each(into, CardEvent.Discarded, facts.Discards, indirect: true);
-            Each(into, CardEvent.Exhausted, facts.ExhaustsOthers, indirect: true);
-            // A Sly card it discards without a choice (the whole hand: CardCmd.Discard's AutoPlay, SlyDiscard) plays itself: not
-            // simulated yet (tracker). One you pick is a card, never a particular one (decision #92): your own decision, neither
-            // simulated nor marked (PlayFacts.MayDiscardSly leaves picks out).
-            if (facts.MayDiscardSly) into.Add(new NotModelledAction("a Sly card in your hand it discards plays itself"));
-            // How many it takes into your hand is your choice (Neow's Fury): your hand after it isn't known.
-            if (facts.HandTakeChosen) into.Add(new NotModelledAction("you choose how many cards it takes into your hand"));
-        }
-        Leaving(play.Body);
-        Each(play.Body, CardEvent.Drawn, Math.Min(facts.OwnDraws, facts.Draws), indirect: true);
-        var sadness = facts.SadnessCreated;
-        var statuses = Math.Max(0, facts.GeneratedStatuses - sadness);
-        Each(play.Body, CardEvent.Generated, Math.Max(0, facts.Generated + facts.TransformsCertain - statuses - sadness), indirect: true);
-        Each(play.Body, CardEvent.GeneratedStatus, statuses, indirect: true);
-        Each(play.Body, CardEvent.GeneratedSadness, sadness, indirect: true);
-        Each(play.Body, CardEvent.StarsGained, facts.StarGains, indirect: false);
+        Add(play.Before, CardEvent.EnergyGained, facts.EnergyBack, indirect: false);
+        Add(play.Before, CardEvent.EnergySpent, facts.EnergySpent, indirect: false);
+        // What it takes from your hand (discards, exhausts, put back) and its draws: PlayOrder puts them in its code's order (decision
+        // #182), which decides the room the draws have; each play reads its hand as it runs.
+        // Which cards it exhausts (what those that act when exhausted do: Drum of Battle), read from the hand as it is.
+        if (facts.ExhaustsOthers > 0 && PlayFacts.ExhaustPickOf(facts.Card) is { FromDrawPile: false } exhaustPick) play.Body.Add(exhaustPick);
+        var takes = TakesFromHand(facts.Card, play);
+        play.Body.AddRange(takes);
+        // The cards it discards that aren't in your hand: the ones it looked at on top of your draw pile (Ki Chant), on the board.
+        Add(play.Body, CardEvent.Discarded, PlayFacts.DiscardedOutsideHand(facts.Card), indirect: true);
+        // A Sly card it discards without a choice (the whole hand: CardCmd.Discard's AutoPlay, SlyDiscard) plays itself: not simulated
+        // yet (tracker). One you pick is a card, never a particular one (decision #92): your own decision, neither simulated nor marked
+        // (PlayFacts.MayDiscardSly leaves picks out).
+        if (facts.MayDiscardSly) play.Body.Add(new NotModelledAction("a Sly card in your hand it discards plays itself"));
+        // How many it takes into your hand is your choice (Neow's Fury): your hand after it isn't known.
+        if (facts.HandTakeChosen) play.Body.Add(new NotModelledAction("you choose how many cards it takes into your hand"));
+        play.Body.AddRange(DrawsOf(facts, me));
+        AddMadeCards(play, facts, takes.Count > 0);
+        Add(play.Body, CardEvent.StarsGained, facts.StarGains, indirect: false);
         // Spent with the energy, before the card does anything (PlayCardAction: SpendResources, then OnPlay): the play's first action,
         // so Mini Regent's Strength is on the card's own hits. Inside the play, as Galactic Dust and Child of the Stars read its stars.
         if (facts.Stars > 0) play.Body.Insert(0, new CardEventAction(CardEvent.StarsSpent, Count: 1) { FirstPlayOnly = true });
@@ -270,6 +264,253 @@ public static partial class SimAdapter
         if (facts.ExhaustsSelf && CardEnergy.WhenExhausted(facts.Card) is > 0 and var ownExhaustEnergy)
             play.After.Add(new CardEventAction(CardEvent.EnergyGained, ownExhaustEnergy) { Player = play.Card!.Owner });
         if (facts.Shuffles) play.After.Add(new CardEventAction(CardEvent.Shuffled, Count: 1) { Indirect = true });
+    }
+
+    /// <summary>
+    /// What one play takes from your hand, read from its program (decision #189: CardEffects' takes), each as a TakeFromHandAction the
+    /// simulator decides as it runs: the exhausts of other cards (a pick, a roll, each card of a collection; a pick from your draw pile:
+    /// Cleanse), the discards from your hand (a pick shared with an exhaust by a test on the card: The Hermit), the transforms in your hand
+    /// (created cards; not when you choose how many), the cards put back on your draw pile. A take whose own test of the play fails on the
+    /// board (True Grit's pick when it isn't upgraded) isn't one: nothing a play does changes it. A filtered take (Second Wind's non-Attacks)
+    /// carries its cards in your hand now; one over every pile (Flak Cannon's statuses) takes its hand's share out silently, then counts every
+    /// pile's. A loop's other commands run after each card (Second Wind's block: the play's block action moves into it).
+    /// </summary>
+    private static List<SimAction> TakesFromHand(CardModel card, SimPlay play)
+    {
+        var type = card.GetType();
+        var program = Procs.Programs.CardPrograms.Of(type);
+        var board = new Procs.Programs.ProgramBoard(card);
+        var actions = new List<SimAction>();
+        var serial = 0;
+        int Number(Procs.Programs.ProgramValue? value) => value != null && Procs.Programs.ProgramEvaluator.Number(value, board, program) is { } read ? Math.Max(0, (int)read) : 1;
+        var exhausts = Procs.Programs.CardEffects.ExhaustsOfOthers(type);
+        var discards = Procs.Programs.CardEffects.Discards(type);
+        void Take(Procs.Programs.CardEffects.CardsTaken take, CardEvent? cardEvent, CardEvent? eventIfNot = null, bool leaves = true)
+        {
+            if (Procs.Programs.ProgramEvaluator.Holds(take.PlayTest, board, program) == false) return;
+            var key = $"{type.Name}#{serial++}";
+            switch (take.Way)
+            {
+                case Procs.Programs.CardEffects.TakeWay.Picked when take.PickPile is MegaCrit.Sts2.Core.Entities.Cards.PileType.Draw:
+                    if (cardEvent == CardEvent.Exhausted)
+                        actions.Add(new TakeFromHandAction(HandTakeWay.Pick) { Event = cardEvent, FromDrawPile = true, Most = Number(take.PerPick), Matching = PlayFacts.ExhaustOthers(card, new List<CardModel>(), DrawPileOfCard(card)) });
+                    return;
+                case Procs.Programs.CardEffects.TakeWay.Picked when take.PickPile is null or MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand:
+                {
+                    var filtered = !take.ItemTest.IsAlways || eventIfNot != null;
+                    actions.Add(new TakeFromHandAction(HandTakeWay.Pick)
+                    {
+                        Event = cardEvent, EventIfNot = eventIfNot, Leaves = leaves, Most = Number(take.PerPick),
+                        Filter = filtered ? key : null, Matching = filtered ? PlayFacts.MatchingAtStart(card, take, everyPile: false) : 0,
+                    });
+                    return;
+                }
+                case Procs.Programs.CardEffects.TakeWay.Random or Procs.Programs.CardEffects.TakeWay.Each:
+                {
+                    var way = take.Way == Procs.Programs.CardEffects.TakeWay.Random ? HandTakeWay.Random : take.Single ? HandTakeWay.Pick : HandTakeWay.Each;
+                    var most = take.Way == Procs.Programs.CardEffects.TakeWay.Random ? Number(take.RollCount) : 1;
+                    if (Procs.Programs.CardEffects.IsYourWholeHand(take.Items) && take.ItemTest.IsAlways)
+                    {
+                        actions.Add(new TakeFromHandAction(way) { Event = cardEvent, Leaves = leaves, Most = most, EachCard = EachCardOf(take, play, program) });
+                        return;
+                    }
+                    if (PlayFacts.TakesFromEveryPile(card, take))
+                    {
+                        // Every pile's (Flak Cannon): its hand's share leaves first, then each card of every pile sets off its event.
+                        actions.Add(new TakeFromHandAction(way) { Leaves = leaves, Most = most, Filter = key, Matching = PlayFacts.MatchingAtStart(card, take, everyPile: false) });
+                        actions.Add(new TakeFromHandAction(way) { Event = cardEvent, Leaves = false, Most = most, Filter = "all:" + key, Matching = PlayFacts.MatchingAtStart(card, take, everyPile: true), EachCard = EachCardOf(take, play, program) });
+                        return;
+                    }
+                    actions.Add(new TakeFromHandAction(way)
+                    {
+                        Event = cardEvent, Leaves = leaves, Most = most, Filter = key, Matching = PlayFacts.MatchingAtStart(card, take, everyPile: false), EachCard = EachCardOf(take, play, program),
+                    });
+                    return;
+                }
+            }
+        }
+        foreach (var exhaust in exhausts)
+        {
+            var shared = discards.FirstOrDefault(discard => discard.Pick != null && ReferenceEquals(discard.Pick, exhaust.Pick));
+            Take(exhaust, CardEvent.Exhausted, shared != null ? CardEvent.Discarded : null);
+        }
+        foreach (var discard in discards)
+            if (!exhausts.Any(exhaust => exhaust.Pick != null && ReferenceEquals(exhaust.Pick, discard.Pick)))
+                Take(discard, CardEvent.Discarded);
+        // Transformed in your hand: a created card each (CardCmd.Transform), the card staying in place; none certain when you choose how many.
+        foreach (var transform in Procs.Programs.CardEffects.Transforms(type))
+            if (!transform.ChoosesHowMany && transform.PickPile is null or MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand)
+                Take(transform, CardEvent.Generated, leaves: false);
+        // Put back on your draw pile from your hand, after its draws (Glimmer, Photon Cut, Thinking Ahead): you choose which.
+        if (Procs.Programs.CardEffects.PutsBackFromHand(type)) actions.Add(new TakeFromHandAction(HandTakeWay.Pick) { Most = PlayFacts.PutBackCount(card) });
+        // Your whole hand moved somewhere else (Reboot: into your draw pile): it leaves, setting off nothing.
+        if (Procs.Programs.CardEffects.TakesWholeHand(type) && !actions.Any(action => action is TakeFromHandAction { Way: HandTakeWay.Each, Filter: null, Leaves: true }))
+            actions.Add(new TakeFromHandAction(HandTakeWay.Each));
+        return actions;
+    }
+
+    /// <summary>
+    /// The filtered takes from your hand of a card's play (TakesFromHand's keys, in its order), each with the test a card in your hand
+    /// passes to be taken: what a card joining your hand during the play counts for (SimDrawCard.TakenBy, CardEventAction.TakenBy).
+    /// </summary>
+    internal static List<(string Key, Func<CardModel, bool, bool?> Takes)> TakeFiltersOf(CardModel card)
+    {
+        var type = card.GetType();
+        var program = Procs.Programs.CardPrograms.Of(type);
+        var board = new Procs.Programs.ProgramBoard(card);
+        var filters = new List<(string, Func<CardModel, bool, bool?>)>();
+        var serial = 0;
+        var exhausts = Procs.Programs.CardEffects.ExhaustsOfOthers(type);
+        var discards = Procs.Programs.CardEffects.Discards(type);
+        void Take(Procs.Programs.CardEffects.CardsTaken take, bool shared)
+        {
+            if (Procs.Programs.ProgramEvaluator.Holds(take.PlayTest, board, program) == false) return;
+            var key = $"{type.Name}#{serial++}";
+            switch (take.Way)
+            {
+                case Procs.Programs.CardEffects.TakeWay.Picked when take.PickPile is null or MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand:
+                    if (!take.ItemTest.IsAlways || shared) filters.Add((key, (other, made) => Procs.Programs.ProgramEvaluator.HoldsFor(Tests(take.ItemTest, made), other, board, program)));
+                    break;
+                case Procs.Programs.CardEffects.TakeWay.Random or Procs.Programs.CardEffects.TakeWay.Each:
+                    if (Procs.Programs.CardEffects.IsYourWholeHand(take.Items) && take.ItemTest.IsAlways) break;
+                    filters.Add((key, (other, made) => (take.Filter is { } filter ? Procs.Programs.ProgramEvaluator.Passes(new Procs.Programs.LambdaValue(filter.Parameter, Tests(filter.Body, made)), other, board, program) : true) is var passes
+                                              && Procs.Programs.ProgramEvaluator.HoldsFor(Tests(take.ItemTest, made), other, board, program) is var holds
+                                              && passes != false && holds != false ? (passes == null || holds == null ? null : true) : false));
+                    break;
+            }
+        }
+        foreach (var exhaust in exhausts) Take(exhaust, shared: discards.Any(discard => discard.Pick != null && ReferenceEquals(discard.Pick, exhaust.Pick)));
+        foreach (var discard in discards)
+            if (!exhausts.Any(exhaust => exhaust.Pick != null && ReferenceEquals(exhaust.Pick, discard.Pick))) Take(discard, shared: false);
+        foreach (var transform in Procs.Programs.CardEffects.Transforms(type))
+            if (!transform.ChoosesHowMany && transform.PickPile is null or MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand) Take(transform, shared: false);
+        return filters;
+    }
+
+    /// <summary>
+    /// The filtered takes a card the play makes would be taken by (each of the card's CreateSteps, read on its canonical card), every
+    /// pile's take as well as its hand's share; null when what it makes can't be told (a helper's cards) or a test can't be read on it.
+    /// </summary>
+    private static IReadOnlyList<string>? MadeTakenBy(CardModel card)
+    {
+        var filters = TakeFiltersOf(card);
+        if (filters.Count == 0) return Array.Empty<string>();
+        var made = Procs.Programs.CardPrograms.Of(card.GetType()).All().OfType<Procs.Programs.CreateStep>().Select(create => create.Card).Distinct().ToList();
+        if (made.Count != 1 || ModelDb.AllCards.FirstOrDefault(canonical => canonical.GetType().Name == made[0]) is not { } madeCard) return null;
+        var keys = new List<string>();
+        foreach (var (key, takes) in filters)
+        {
+            // A made card is in a combat pile (never the exhaust pile): a test of its pile isn't asked of it.
+            switch (takes(madeCard, true))
+            {
+                case true: keys.Add(key); keys.Add("all:" + key); break;
+                case null: return null;
+            }
+        }
+        return keys;
+    }
+
+    /// <summary>A take's test as asked of a card: of a card the play makes, without its tests of the card's pile (it's in a combat pile, never the exhaust pile).</summary>
+    private static Procs.Programs.ProgramCondition Tests(Procs.Programs.ProgramCondition condition, bool made)
+    {
+        if (!made || condition.Terms.Count != 1) return condition;
+        var kept = Procs.Programs.ProgramCondition.Always;
+        foreach (var literal in condition.Terms[0])
+            if (!literal.Test.Parts().Any(part => part is Procs.Programs.QueryValue { Name: "Pile" })) kept = kept.And(literal);
+        return kept;
+    }
+
+    /// <summary>Cards in the owner's draw pile; 0 with none read.</summary>
+    private static int DrawPileOfCard(CardModel card)
+    {
+        try { return card.Owner is { } owner ? MegaCrit.Sts2.Core.Entities.Cards.PileType.Draw.GetPile(owner).Cards.Count : 0; } catch { return 0; }
+    }
+
+    /// <summary>
+    /// What a take's loop does after each card besides taking it (Second Wind: block for each card exhausted): the play's block action, as
+    /// one gain, moved out of the play into the take.
+    /// </summary>
+    private static IReadOnlyList<SimAction> EachCardOf(Procs.Programs.CardEffects.CardsTaken take, SimPlay play, Procs.Programs.CardProgram program)
+    {
+        var loop = program.All().OfType<Procs.Programs.LoopStep>()
+            .FirstOrDefault(candidate => new Procs.Programs.CardProgram("", candidate.Body).Commands.Any(command => ReferenceEquals(command, take.Command)));
+        if (loop == null || !new Procs.Programs.CardProgram("", loop.Body).Commands.Any(command => command.Command is { DeclaringType: "CreatureCmd", Name: "GainBlock" })) return Array.Empty<SimAction>();
+        if (play.Body.OfType<GainBlockAction>().FirstOrDefault() is not { } block) return Array.Empty<SimAction>();
+        play.Body.Remove(block);
+        return new SimAction[] { block with { Times = 1 } };
+    }
+
+
+
+    /// <summary>
+    /// One play's draws, each from its program (CardEffects.DrawsForYou), in order: a count of the cards the play took (Calculated Gamble)
+    /// or of your hand's room (Scrawl) read as it runs; else its count on each play, its condition evaluated for that play (FTL, Fetch).
+    /// Then Swift's draw, the first play's only (Swift turns itself off). With no draw pile read, the cards join the hand as they're drawn.
+    /// </summary>
+    private static IEnumerable<SimAction> DrawsOf(PlayFacts facts, Player me)
+    {
+        var card = facts.Card;
+        var type = card.GetType();
+        var takes = Procs.Programs.CardEffects.ExhaustsOfOthers(type).Concat(Procs.Programs.CardEffects.Discards(type)).ToList();
+        foreach (var draw in Procs.Programs.CardEffects.DrawsForYou(type))
+        {
+            if (takes.Any(take => Procs.Programs.CardEffects.CountsTaken(draw.Count, take)))
+            {
+                yield return new CardEventAction(CardEvent.Drawn, Count: 0) { Indirect = true, JoinsHand = true, CountFrom = SimCount.CardsTaken };
+                continue;
+            }
+            if (Procs.Programs.CardEffects.ReadsHandRoom(draw.Count))
+            {
+                yield return new CardEventAction(CardEvent.Drawn, int.MaxValue) { Indirect = true, JoinsHand = true, CountFrom = SimCount.HandRoom };
+                continue;
+            }
+            var byPlay = PlayFacts.DrawCountsByPlay(card, draw, facts.Plays);
+            if (byPlay.All(count => count == 0)) continue;
+            yield return new CardEventAction(CardEvent.Drawn, byPlay[0]) { Indirect = true, JoinsHand = true, ByPlay = byPlay.Distinct().Count() > 1 ? byPlay : null };
+        }
+        if (facts.EnchantmentDraws > 0)
+            yield return new FirstPlayOnly(new SimAction[] { new CardEventAction(CardEvent.Drawn, facts.EnchantmentDraws) { Indirect = true, JoinsHand = true } });
+    }
+
+    /// <summary>
+    /// The cards one play makes (PlayFacts: Generated, its statuses and Sadness; transforms outside your hand), into your hand as they're
+    /// made when they go there (CardCode.MadeInto), each play's count its own or read as it runs (the cards the play took: Storm of Steel;
+    /// your hand's room: The Moon). The Sovereign Blade a forge makes is the first play's only: a later play finds it.
+    /// </summary>
+    private static void AddMadeCards(SimPlay play, PlayFacts facts, bool takes)
+    {
+        var forged = facts.ForgesBlade ? 1 : 0;
+        var sadness = facts.SadnessCreated;
+        var statuses = Math.Max(0, facts.GeneratedStatuses - sadness);
+        var plain = Math.Max(0, facts.Generated - forged - statuses - sadness);
+        var made = plain + statuses + sadness;
+        var inHand = Math.Max(0, facts.GeneratedInHand - forged);
+        var from = takes || facts.GeneratedFrom != SimCount.CardsTaken ? facts.GeneratedFrom : SimCount.Given;
+        // What its filtered takes would make of each card it makes, for a later play (decision #189).
+        var takenBy = made > 0 ? MadeTakenBy(facts.Card) : null;
+        void Made(CardEvent cardEvent, int count, bool joinsHand)
+        {
+            if (from != SimCount.Given && made > 0)
+            {
+                if (count > 0) play.Body.Add(new CardEventAction(cardEvent, from == SimCount.HandRoom ? int.MaxValue : 0) { Indirect = true, JoinsHand = joinsHand, CountFrom = from, TakenBy = takenBy });
+                return;
+            }
+            if (count > 0) play.Body.Add(new CardEventAction(cardEvent, count) { Indirect = true, JoinsHand = joinsHand, TakenBy = takenBy });
+        }
+        var allInHand = inHand >= made;
+        // Into your hand first, the rest elsewhere (Severance: one of three into your hand).
+        if (!allInHand && inHand > 0 && from == SimCount.Given)
+        {
+            Made(CardEvent.Generated, Math.Min(inHand, plain), joinsHand: true);
+            Made(CardEvent.Generated, plain - Math.Min(inHand, plain), joinsHand: false);
+        }
+        else Made(CardEvent.Generated, plain, allInHand);
+        Made(CardEvent.GeneratedStatus, statuses, allInHand);
+        Made(CardEvent.GeneratedSadness, sadness, allInHand);
+        // Transformed outside your hand (Charge, Seance: your draw pile): a created card each, in place.
+        if (PlayFacts.TransformsOutsideHand(facts.Card) is > 0 and var transformed && !PlayFacts.TransformsChosen(facts.Card))
+            play.Body.Add(new CardEventAction(CardEvent.Generated, transformed) { Indirect = true });
+        if (forged > 0) play.Body.Add(new FirstPlayOnly(new SimAction[] { new CardEventAction(CardEvent.Generated, Count: 1) { Indirect = true, JoinsHand = true } }));
     }
 
     private static bool IsPowerVar<T>(DynamicVar dynamicVar) where T : PowerModel =>
@@ -281,7 +522,7 @@ public static partial class SimAdapter
     /// aren't simulated). Timber's kill attack and Rain Shot's splash ride along.
     /// </summary>
     private static AttackAction? AttackOf(CardModel card, PlayFacts facts, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids,
-        int targetId, int plays, string name)
+        int targetId, string name)
     {
         var mode = card.TargetType switch
         {
@@ -292,8 +533,11 @@ public static partial class SimAdapter
         };
         if (mode == SimPlay.Target.None) return null;
         var aimed = ids.FirstOrDefault(entry => entry.Value == targetId).Key;
-        var hits = (mode == SimPlay.Target.Single && aimed != null ? facts.HitsOn(aimed) : facts.AttackHits) / plays;
-        if (hits <= 0) return null;
+        var hits = mode == SimPlay.Target.Single && aimed != null ? facts.HitsOn(aimed) : facts.AttackHits;
+        // A hit count that counts the cards a take of the play took (Fiend Fire: its hand), read as it runs (decision #189).
+        var hitsTaken = Procs.Programs.CardEffects.Attacks(card.GetType()) is [var attackStep, ..]
+                        && Procs.Programs.CardEffects.ExhaustsOfOthers(card.GetType()).Concat(Procs.Programs.CardEffects.Discards(card.GetType())).Any(take => Procs.Programs.CardEffects.CountsTaken(attackStep.Command.HitCountValue, take));
+        if (hits <= 0 && !hitsTaken) return null;
 
         var baseOn = new Dictionary<int, decimal>();
         var captured = new Dictionary<int, CapturedTerms>();
@@ -331,10 +575,11 @@ public static partial class SimAdapter
                 if (creature.IsAlive && creature.IsHittable) killTerms[id] = SimReaders.Damage(me.RunState, combat, card, me.Creature, creature, kdv.BaseValue, kdv.Props);
             onKill = new DamageSpec(kdv.BaseValue, SimReaders.Props(kdv.Props)) { Captured = killTerms };
         }
-        var growth = plays > 1 && !fixedNumbers ? PlayGrowth.Of(card) : PlayGrowth.Growth.None;
+        var growth = facts.Plays > 1 && !fixedNumbers ? PlayGrowth.Of(card) : PlayGrowth.Growth.None;
         return new AttackAction(hits, mode, new DamageSpec(baseDamage, SimReaders.Props(props))
             { BaseOn = baseOn, Captured = captured, Fixed = fixedNumbers, GrowsEachPlay = growth.Damage, EnchantFirstPlayOnly = growth.EnchantFirstPlayOnly })
         {
+            HitsFrom = hitsTaken ? SimCount.CardsTaken : SimCount.Given,
             ByOsty = facts.ByOsty, // a single target: the play's (SimPlay.TargetId)
             OnKill = onKill,
             Splash = PlayFacts.SplashCards.Contains(name), // the target's damage to every other enemy
@@ -349,9 +594,9 @@ public static partial class SimAdapter
     /// game's number.
     /// </summary>
     private static GainBlockAction? BlockOf(CardModel card, PlayFacts facts, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids,
-        int targetId, int plays, string name, Creature? ally, int allyId)
+        int targetId, string name, Creature? ally, int allyId)
     {
-        var gains = facts.BlockGains / plays;
+        var gains = facts.BlockGains;
         if (gains <= 0) return null;
         var toAlly = Procs.Programs.CardEffects.BlocksAnother(card.GetType());
         var to = toAlly ? allyId : Who.You;
@@ -360,7 +605,7 @@ public static partial class SimAdapter
         if (name == nameof(Fisticuffs))
         {
             // Fisticuffs.OnPlay: CreatureCmd.GainBlock(the damage dealt, ValueProp.Move), so Dexterity and Frail apply.
-            var dealt = aimed != null ? facts.TotalDamage(aimed) / plays : 0;
+            var dealt = aimed != null ? facts.TotalDamage(aimed) : 0;
             return new GainBlockAction(gains, dealt, SimProps.Move) { Captured = SimReaders.Block(combat, card, me.Creature, dealt, ValueProp.Move), To = to };
         }
         int? fixedEach = name switch
@@ -376,7 +621,7 @@ public static partial class SimAdapter
         else if (card.DynamicVars.TryGetValue("Block", out var otherDynamicVar)) baseValue = otherDynamicVar.BaseValue;
         else return new GainBlockAction(gains, CardBlock(card, combat, me), SimProps.Move) { Fixed = true, To = to };
         var gainer = toAlly && ally != null ? ally : me.Creature;
-        var growth = plays > 1 ? PlayGrowth.Of(card) : PlayGrowth.Growth.None;
+        var growth = facts.Plays > 1 ? PlayGrowth.Of(card) : PlayGrowth.Growth.None;
         return new GainBlockAction(gains, baseValue, SimProps.Move)
         {
             Captured = SimReaders.Block(combat, card, gainer, baseValue, ValueProp.Move), To = to, GrowsEachPlay = growth.Block,
@@ -518,22 +763,46 @@ public static partial class SimAdapter
     }
 
     /// <summary>
-    /// What a play takes into your hand from your piles (HandTakeOf): each pile's cards it can take, by profile (DrawProfiles), as a
-    /// TakeToHandAction. A take from every pile (Summon Forth) takes all it can from each. None with no pile read.
+    /// What one play takes into your hand from your piles (HandTakeOf), each play on its own (decision #189): each pile's cards it can
+    /// take, by profile (DrawProfiles), as a TakeToHandAction whose cards join your hand as they come (into a full hand, the discard pile).
+    /// How many a play takes: a pick's most, a roll's count (read as it runs when it counts your hand's room: The World, Anointed), every
+    /// card of a collection (All For One; a later play finds them gone). None with no pile read.
     /// </summary>
     private static IEnumerable<SimAction> TakesToHand(PlayFacts facts, Player me)
     {
         if (facts.TakenToHand <= 0 || HandTakeOf(facts.Card) is not { } take) yield break;
+        var (count, from) = HandTakeCount(facts.Card);
         foreach (var pile in take.Piles)
         {
-            if (pile is not (PileType.Draw or PileType.Discard) || Eligible(me, pile == PileType.Discard, take.Eligible) is not { Count: > 0 } counts) continue;
-            var fromDiscard = pile == PileType.Discard;
-            if (take.Piles.Count > 1)
-                yield return new FirstPlayOnly(new SimAction[] { new TakeToHandAction(counts.Values.Sum(), counts) { Random = take.Random, FromDiscard = fromDiscard } });
-            else if (take.AllAtOnce)
-                yield return new FirstPlayOnly(new SimAction[] { new TakeToHandAction(facts.TakenToHand, counts) { Random = take.Random, FromDiscard = fromDiscard } });
-            else
-                yield return new TakeToHandAction(Count: 1, counts) { Random = take.Random, FromDiscard = fromDiscard };
+            if (pile is not (PileType.Draw or PileType.Discard)) continue;
+            var counts = Eligible(me, pile == PileType.Discard, take.Eligible);
+            // A play that shuffles your discard pile in first when your draw pile is short (Ki Chant) can take from what it shuffles in.
+            if (pile == PileType.Draw && Procs.Programs.CardEffects.ShufflesWhenShort(facts.Card.GetType()))
+                foreach (var (key, inDiscard) in Eligible(me, fromDiscard: true, take.Eligible)) counts[key] = counts.GetValueOrDefault(key) + inDiscard;
+            if (counts.Count == 0) continue;
+            yield return new TakeToHandAction(take.Piles.Count > 1 ? int.MaxValue : count, counts)
+                { Random = take.Random, FromDiscard = pile == PileType.Discard, JoinsHand = true, CountFrom = from };
+        }
+    }
+
+    /// <summary>How many cards one play takes into your hand (its take's pick, roll or collection), and whether the simulator reads it as it runs.</summary>
+    private static (int Count, SimCount From) HandTakeCount(CardModel card)
+    {
+        var take = Procs.Programs.CardEffects.TakesIntoHandOf(card.GetType())[0];
+        var program = Procs.Programs.CardPrograms.Of(card.GetType());
+        var board = new Procs.Programs.ProgramBoard(card);
+        int Number(Procs.Programs.ProgramValue value) => Procs.Programs.ProgramEvaluator.Number(value, board, program) is { } read ? Math.Max(0, (int)read) : 1;
+        switch (take.Way)
+        {
+            case Procs.Programs.CardEffects.TakeWay.Picked:
+                return (Number(take.PerPick), SimCount.Given);
+            case Procs.Programs.CardEffects.TakeWay.Random when take.RollCount is { } roll:
+                if (!Procs.Programs.CardEffects.ReadsHandRoom(roll)) return (Number(roll), SimCount.Given);
+                return (Procs.Programs.CardEffects.WithoutRoom(roll) is { } capped ? Number(capped) : int.MaxValue, SimCount.HandRoom);
+            case Procs.Programs.CardEffects.TakeWay.Random:
+                return (1, SimCount.Given);
+            default:
+                return (int.MaxValue, SimCount.Given);
         }
     }
 
@@ -556,6 +825,12 @@ public static partial class SimAdapter
                                                                                               && Procs.Programs.ProgramEvaluator.Holds(inner.Condition ?? Procs.Programs.ProgramCondition.Always, board, program) != false);
         return (Math.Max(0, count), exhausts, upgrades);
     }
+
+    /// <summary>The count of cards it auto-plays counts the cards a take of the play took (The Devil: one per card it exhausted), read as it runs.</summary>
+    private static bool AutoPlayCountsTaken(CardModel card) =>
+        Procs.Programs.CardEffects.Find(Procs.Programs.CardPrograms.Of(card.GetType()), command => command.Command is { DeclaringType: "CardPileCmd", Name: "AutoPlayFromDrawPile" }) is [var autoPlay, ..]
+        && autoPlay.Command.Values.Count > 2
+        && Procs.Programs.CardEffects.ExhaustsOfOthers(card.GetType()).Any(take => Procs.Programs.CardEffects.CountsTaken(autoPlay.Command.Values[2], take));
 
     /// <summary>How many cards of each profile in your draw or discard pile pass the filter.</summary>
     private static Dictionary<string, int> Eligible(Player me, bool fromDiscard, Func<CardModel, bool> eligible)

@@ -792,6 +792,21 @@ public sealed class SimState
     internal CardEventCounts PlayEvents = CardEventCounts.None;
     /// <summary>Block gains from the current card play (Unmovable doesn't count them).</summary>
     internal int PlayCardBlockGains;
+    /// <summary>The cards the current play's last take took (TakeFromHandAction; SimCount.CardsTaken), 0 at each play's start.</summary>
+    internal int PlayTaken;
+    /// <summary>
+    /// Through the current card play, each filtered take's cards in its owner's hand (TakeFromHandAction.Filter): set as the card play
+    /// starts, then followed as cards leave and join the hand. Data 1: not known any more (a card joined whose kind wasn't read).
+    /// </summary>
+    internal NamedCounts TakeMatching = NamedCounts.Empty;
+
+    /// <summary>What a card play inside another (an auto-play) puts aside and gives back: the outer play's own scratch.</summary>
+    internal readonly record struct PlayFrame(SimCardPlay? Play, CardEventCounts Events, int BlockGains, int Attack, int Taken, NamedCounts Matching);
+
+    internal PlayFrame SaveFrame() => new(CurrentPlay, PlayEvents, PlayCardBlockGains, CurrentAttack, PlayTaken, TakeMatching);
+
+    internal void RestoreFrame(PlayFrame frame) =>
+        (CurrentPlay, PlayEvents, PlayCardBlockGains, CurrentAttack, PlayTaken, TakeMatching) = (frame.Play, frame.Events, frame.BlockGains, frame.Attack, frame.Taken, frame.Matching);
 
     /// <summary>The listeners (SimEngine.Listeners) and the power and relic sets they were built from: rebuilt when one changes.</summary>
     internal List<(SimModel Model, int Owner)>? ListenerCache;
@@ -955,6 +970,8 @@ public sealed class SimState
         }
         // Mid-draw (between AfterCardDrawn listeners), branches that drew different cards stay apart.
         if (DrawnCard != null) Add(DrawnCard.Key.GetHashCode());
+        // What a take in the play took and what's left for the next (decision #189): a later play reads them.
+        Add(PlayTaken); TakeMatching.Hash(Add);
         Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed); Add(DrawnTally); Add(Unmodelled == null ? 0 : Unmodelled.GetHashCode());
         foreach (var pick in AutoPicks) { Add(pick.Card.GetHashCode()); Add(pick.Target); } // branches that picked different cards stay apart (the check tells them apart)
         foreach (var enemy in Enemies) enemy.Hash(Add);

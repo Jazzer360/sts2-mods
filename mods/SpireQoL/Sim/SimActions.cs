@@ -47,6 +47,8 @@ public sealed record DamageSpec(decimal Base, SimProps Props)
 /// </summary>
 public sealed record AttackAction(int Hits, SimPlay.Target Mode, DamageSpec Damage) : SimAction
 {
+    /// <summary>Where its hit count comes from (decision #189): Hits, or what the simulator reads as it runs (Fiend Fire: the cards taken).</summary>
+    public SimCount HitsFrom { get; init; }
     /// <summary>The enemy aimed at (Mode Single; -1: the play's target).</summary>
     [JsonConverter(typeof(CreatureIdJson))]
     public int TargetId { get; init; } = Who.None;
@@ -105,6 +107,8 @@ public sealed record DrawnCardAction(int Count) : SimAction
 /// <summary>Block (CreatureCmd.GainBlock) through the block pipeline, Times times; to you or the play's targeted teammate.</summary>
 public sealed record GainBlockAction(int Times, decimal Base, SimProps Props) : SimAction
 {
+    /// <summary>Where its number of gains comes from (decision #189): Times, or what the simulator reads as it runs.</summary>
+    public SimCount TimesFrom { get; init; }
     public CapturedTerms? Captured { get; init; }
     /// <summary>Fixed: the amount is final (no modelled terms).</summary>
     public bool Fixed { get; init; }
@@ -151,6 +155,63 @@ public sealed record LeaveHandAction(int Count) : SimAction
 }
 
 /// <summary>
+/// Where a count a play's action uses comes from (decision #189): a number the adapter gave, or something the simulator reads on its own
+/// state when the action runs, so a replay's later play counts the board the earlier ones left.
+/// </summary>
+public enum SimCount
+{
+    /// <summary>The number the action gives.</summary>
+    Given,
+    /// <summary>The cards this play's last take took (TakeFromHandAction: Fiend Fire's hits, Storm of Steel's Shivs, Calculated Gamble's draws).</summary>
+    CardsTaken,
+    /// <summary>The room in the play owner's hand now (The Moon's Shivs, Crash Landing's statuses, Scrawl's draws).</summary>
+    HandRoom,
+}
+
+/// <summary>How a TakeFromHandAction takes its cards.</summary>
+public enum HandTakeWay
+{
+    /// <summary>Every card of the collection in the hand now (Fiend Fire your hand, Second Wind its non-Attacks).</summary>
+    Each,
+    /// <summary>Cards you pick, up to Most (Acrobatics, Burning Pact, Purity): how many is exact, which never is (decision #188).</summary>
+    Pick,
+    /// <summary>Cards a roll takes, up to Most (True Grit, Thrash).</summary>
+    Random,
+}
+
+/// <summary>
+/// Cards a play takes from its owner's hand (CardCmd.Exhaust, Discard, Transform, CardPileCmd.Add back onto the draw pile), decided on
+/// the state as the action runs (decision #189): each play takes what it finds there, so a replay's later play takes what the earlier
+/// ones left and what they drew. They leave the hand (unless they're transformed in place), then each sets off <see cref="Event"/> one
+/// card at a time, with <see cref="EachCard"/> after each (a loop's other commands: Second Wind's block). How many it took is the play's
+/// CardsTaken (SimCount), for what counts them later (Fiend Fire's hits).
+/// </summary>
+public sealed record TakeFromHandAction(HandTakeWay Way) : SimAction
+{
+    /// <summary>What each card taken sets off (Exhausted, Discarded, Generated for a transform); null: nothing (put back on the draw pile).</summary>
+    public CardEvent? Event { get; init; }
+    /// <summary>
+    /// A pick its test sends one way or the other (The Hermit: a Curse is exhausted, any other card discarded): Event for a card the
+    /// filter lets through, this for one it doesn't. When the hand holds both, which happens is your pick (decision #188): neither is set off.
+    /// </summary>
+    public CardEvent? EventIfNot { get; init; }
+    /// <summary>A pick's or a roll's most cards a play.</summary>
+    public int Most { get; init; } = 1;
+    /// <summary>
+    /// The take's filter (its card and step, SimDrawCard.TakenBy): only the cards in the hand it lets through. Null: any card.
+    /// </summary>
+    public string? Filter { get; init; }
+    /// <summary>The cards in the hand the filter lets through as the card play starts (the adapter's count; the simulator follows it after).</summary>
+    public int Matching { get; init; }
+    /// <summary>The cards leave the hand (false: transformed where they are).</summary>
+    public bool Leaves { get; init; } = true;
+    /// <summary>From the owner's draw pile instead of the hand (Cleanse): the pick is a card of the pile (decision #188).</summary>
+    public bool FromDrawPile { get; init; }
+    /// <summary>What the play does after each card it takes, before the next (the take's loop's other commands).</summary>
+    public IReadOnlyList<SimAction> EachCard { get; init; } = Array.Empty<SimAction>();
+}
+
+/// <summary>
 /// Cards a play moves from your draw pile (Wish, Secret Weapon, Seeker Strike, Anointed...) or your discard pile (FromDiscard:
 /// Hologram, Dredge, The World...) into your hand with CardPileCmd.Add, <paramref name="Count"/> of them: each leaves its pile and
 /// joins the hand as it is (what acts there at the end of your turn, Ethereal, what Stampede could pick; the hand's count is the
@@ -162,6 +223,13 @@ public sealed record TakeToHandAction(int Count, IReadOnlyDictionary<string, int
 {
     public bool Random { get; init; }
     public bool FromDiscard { get; init; }
+    /// <summary>
+    /// Each card joins the hand's count as it's taken, into a full hand going to the discard pile instead (CardPileCmd.Add), so what
+    /// the play does next finds it there (decision #189). False: the play's HandDelta counts it (the test shorthand).
+    /// </summary>
+    public bool JoinsHand { get; init; }
+    /// <summary>Where its count comes from as it runs (decision #189): Count, or at most Count of your hand's room (The World).</summary>
+    public SimCount CountFrom { get; init; }
 }
 
 /// <summary>
@@ -173,13 +241,19 @@ public sealed record AutoPlayFromDrawAction(int Count) : SimAction
 {
     public bool ForceExhaust { get; init; }
     public bool Upgrade { get; init; }
+    /// <summary>Where its count comes from as it runs (decision #189): Count, or the cards the play took (The Devil: one per card it exhausted).</summary>
+    public SimCount CountFrom { get; init; }
 }
 
 /// <summary>
 /// The play owner's draw pile shuffled with their discard pile (CardPileCmd.Shuffle), after <paramref name="HandIn"/> joined the draw
 /// pile (Reboot: every card in your hand, CardPileCmd.Add to the draw pile; the hand itself leaves with LeaveHandAction).
 /// </summary>
-public sealed record ShuffleDrawPileAction(IReadOnlyList<SimDrawGroup> HandIn) : SimAction;
+public sealed record ShuffleDrawPileAction(IReadOnlyList<SimDrawGroup> HandIn) : SimAction
+{
+    /// <summary>Only when the draw pile holds fewer than this many cards (Ki Chant: CardPileCmd.ShuffleIfNecessary before it looks); 0: always.</summary>
+    public int WhenShorterThan { get; init; }
+}
 
 /// <summary>How a play picks the cards it exhausts (ExhaustFromHandAction).</summary>
 public enum ExhaustPick { Random, All, Chosen }
@@ -213,6 +287,20 @@ public sealed record CardEventAction(CardEvent Event, int Count) : SimAction
     /// Shivs); null: the play's owner.
     /// </summary>
     public int? Player { get; init; }
+    /// <summary>Where its count comes from (decision #189): Count, or what the simulator reads as it runs (the cards taken, your hand's room).</summary>
+    public SimCount CountFrom { get; init; }
+    /// <summary>
+    /// Its events are cards joining the owner's hand as they happen (cards made into your hand; draws with no draw pile read), into a
+    /// full hand none (decision #189). False: the play's HandDelta counts them (the test shorthand).
+    /// </summary>
+    public bool JoinsHand { get; init; }
+    /// <summary>
+    /// Its count on each play of a replay (the last for any after it), when a test of the play itself decides it (FTL's plays this turn,
+    /// Fetch's first play): Count is the first play's. Null: Count on every play.
+    /// </summary>
+    public IReadOnlyList<int>? ByPlay { get; init; }
+    /// <summary>The filtered takes of the play each card it makes would be taken by (decision #189: SimDrawCard.TakenBy); null: not known.</summary>
+    public IReadOnlyList<string>? TakenBy { get; init; }
 }
 
 /// <summary>

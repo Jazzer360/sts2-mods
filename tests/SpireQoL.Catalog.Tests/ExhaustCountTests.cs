@@ -8,15 +8,15 @@ namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
 /// Other cards a play exhausts, read from its program and counted on the board (decision #182, CardEffects.ExhaustsOfOthers): a
-/// filter over your hand, a test on the picked card, a pick from your draw pile, and a replay's later plays.
+/// filter over your hand, a test on the picked card and a pick from your draw pile: one play's (decision #189).
 /// </summary>
 [Collection(GameFightCollection.Name)]
 public class ExhaustCountTests
 {
-    private static int Exhausts(GameFight gameFight, CardModel card, int plays = 1)
+    private static int Exhausts(GameFight gameFight, CardModel card)
     {
         var others = PileType.Hand.GetPile(gameFight.Me).Cards.Where(other => !ReferenceEquals(other, card)).ToList();
-        return PlayFacts.ExhaustOthers(card, others, drawPile: PileType.Draw.GetPile(gameFight.Me).Cards.Count, plays);
+        return PlayFacts.ExhaustOthers(card, others, drawPile: PileType.Draw.GetPile(gameFight.Me).Cards.Count);
     }
 
     [Fact]
@@ -33,14 +33,13 @@ public class ExhaustCountTests
     [Fact]
     public void SecondWindExhaustsYourNonAttacksOnce()
     {
-        // A replay's later play finds them gone.
+        // One play's (a replay's later play finds them gone in the simulator: SimPerPlayTests).
         var gameFight = new GameFight();
         var card = gameFight.Add<SecondWind>();
         gameFight.Add<StrikeIronclad>();
         gameFight.Add<DefendIronclad>();
         gameFight.Add<Dazed>();
         Assert.Equal(2, Exhausts(gameFight, card));
-        Assert.Equal(2, Exhausts(gameFight, card, plays: 2));
     }
 
     [Fact]
@@ -55,14 +54,13 @@ public class ExhaustCountTests
     }
 
     [Fact]
-    public void BrandExhaustsOneCardAPlayWhileYourHandHasThem()
+    public void BrandExhaustsOneCardAPlay()
     {
         var gameFight = new GameFight();
         var card = gameFight.Add<Brand>();
         gameFight.Add<StrikeIronclad>();
-        Assert.Equal(1, Exhausts(gameFight, card, plays: 2));
+        Assert.Equal(1, Exhausts(gameFight, card));
         gameFight.Add<DefendIronclad>();
-        Assert.Equal(2, Exhausts(gameFight, card, plays: 2));
     }
 
     [Fact]
@@ -73,6 +71,6 @@ public class ExhaustCountTests
         gameFight.Add<StrikeIronclad>();
         Assert.Equal(0, Exhausts(gameFight, card));
         gameFight.Add<DefendIronclad>(PileType.Draw);
-        Assert.Equal(1, Exhausts(gameFight, card, plays: 2));
+        Assert.Equal(1, Exhausts(gameFight, card));
     }
 }

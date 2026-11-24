@@ -46,6 +46,14 @@ public static class SimKeys
     /// <summary>Block a play gave its player from evoking Frost orbs (the log's amount), for the play audit's block check.</summary>
     public const string FrostEvokeBlock = "FrostOrb";
 
+    private static readonly string[] EventNames = Enum.GetValues<CardEvent>().Select(cardEvent => "event:" + cardEvent).ToArray();
+
+    /// <summary>
+    /// A card event of the play's own player, in the play log (decision #189): over every play of a replay and what follows it, the least and
+    /// the most over its outcomes (SimOutcome.PlayFiredEvery, PlayFiredAny), for the play check's counts: "event:Exhausted".
+    /// </summary>
+    public static string PlayEvent(CardEvent cardEvent) => EventNames[(int)cardEvent];
+
     /// <summary>A player's turn counts with one more play at this stage: in all, of its type, and of each of its tags.</summary>
     public static NamedCounts CountPlay(NamedCounts turn, PlayStage stage, SimCardType type, IEnumerable<SimCardTag> tags)
     {

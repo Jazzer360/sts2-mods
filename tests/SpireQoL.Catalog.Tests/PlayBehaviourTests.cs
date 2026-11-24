@@ -279,4 +279,103 @@ public class PlayBehaviourTests
         Assert.All(branches, branch => Assert.True(branch.Fired.Has(nameof(TuningFork))));
         Assert.All(branches, branch => Assert.Equal(7, branch.You.Block)); // its Block value
     }
+
+    // ---- replays: each play on the board the one before it left (decision #189)
+
+    [Fact]
+    public void FiendFireReplayedExhaustsTheHandEachPlayFinds()
+    {
+        // FiendFire.OnPlay: every card in your hand exhausted, then a hit for each. Played twice with 3 others and nothing to draw: the
+        // first play takes the 3 and hits 3 times; the second finds an empty hand (the shared-out count hit 3 times on each play).
+        var gameFight = Fight();
+        var enemy = Enemy(gameFight);
+        var card = gameFight.Add<FiendFire>();
+        Cards<StrikeIronclad>(gameFight, count: 3, PileType.Hand);
+        var after = Only(PlayOut(gameFight, card, enemy, plays: 2));
+        Assert.Equal(200 - 3 * 7, after.Enemies.Single().Hp);
+        Assert.Equal(0, after.You.HandCount);
+    }
+
+    [Fact]
+    public void FiendFireReplayedWithDarkEmbraceExhaustsWhatTheFirstPlayDrew()
+    {
+        // With Dark Embrace each exhaust draws a card (DarkEmbracePower.AfterCardExhausted), so the second play exhausts the 3 the first
+        // drew and hits 3 more times; its own exhaust after the last play draws once more.
+        var gameFight = Fight();
+        var enemy = Enemy(gameFight);
+        Power<DarkEmbracePower>(gameFight.Me.Creature, amount: 1);
+        var card = gameFight.Add<FiendFire>();
+        Cards<StrikeIronclad>(gameFight, count: 3, PileType.Hand);
+        Cards<DefendIronclad>(gameFight, count: 10, PileType.Draw);
+        var after = Only(PlayOut(gameFight, card, enemy, plays: 2));
+        Assert.Equal(200 - 6 * 7, after.Enemies.Single().Hp);
+        Assert.Equal(3 + 3 + 1, after.You.Drawn);
+        Assert.Equal(3 + 1, after.You.HandCount);
+    }
+
+    [Fact]
+    public void AReplayedExhaustCardExhaustsItselfOnce()
+    {
+        // The card goes to its result pile once, after the last play (CardModel.OnPlayWrapper): Feel No Pain blocks once for its own
+        // exhaust, and once for the one card its first play exhausts.
+        var gameFight = Fight();
+        var enemy = Enemy(gameFight);
+        Power<FeelNoPainPower>(gameFight.Me.Creature, amount: 3);
+        var card = gameFight.Add<FiendFire>();
+        gameFight.Add<StrikeIronclad>();
+        var after = Only(PlayOut(gameFight, card, enemy, plays: 3));
+        Assert.Equal(3 * (1 + 1), after.You.Block);
+    }
+
+    [Theory]
+    [InlineData(typeof(Acrobatics))]
+    [InlineData(typeof(Survivor))]
+    [InlineData(typeof(Prepared))]
+    public void EachPlayOfAReplayedDiscardDiscards(Type cardType)
+    {
+        // Acrobatics and Prepared draw, then you discard; Survivor blocks, then you discard: each play discards (the shared-out count
+        // gave the second play none). Tough Bandages blocks on each card discarded.
+        var gameFight = Fight();
+        Enemy(gameFight);
+        Relic<ToughBandages>(gameFight);
+        var card = (CardModel)typeof(GameFight).GetMethods().Single(method => method.Name == nameof(GameFight.Add) && method.IsGenericMethodDefinition)
+            .MakeGenericMethod(cardType).Invoke(gameFight, new object?[] { PileType.Hand, false })!;
+        Cards<StrikeIronclad>(gameFight, count: 3, PileType.Hand);
+        Cards<DefendIronclad>(gameFight, count: 10, PileType.Draw);
+        var perPlay = Sts2Mods.Core.Game.Sts2State.Var(card, "Cards", fallback: 1);
+        var discards = cardType == typeof(Prepared) ? perPlay : 1;
+        var branches = PlayOut(gameFight, card, plays: 2);
+        Assert.All(branches, branch => Assert.Equal(2 * discards, branch.Fired[nameof(ToughBandages)]));
+        Assert.All(branches, branch => Assert.Equal(discards, branch.PlayEvents[CardEvent.Discarded]));
+    }
+
+    [Fact]
+    public void TheHermitWithACurseAndAnotherCardTakesOneCard()
+    {
+        // TheHermit.OnPlay: the card you pick is exhausted if it's a Curse, else discarded. With both in hand, one card leaves; which way
+        // it goes is your pick (decision #188), so neither is certain (an exhaust and a discard were counted, 2 cards leaving).
+        var gameFight = Fight();
+        Enemy(gameFight);
+        var card = gameFight.Add<TheHermit>();
+        gameFight.Add<Normality>();
+        gameFight.Add<StrikeIronclad>();
+        Cards<DefendIronclad>(gameFight, count: 10, PileType.Draw);
+        var branches = PlayOut(gameFight, card);
+        Assert.All(branches, branch => Assert.Equal(1, branch.You.HandCount - branch.You.Drawn));
+        Assert.All(branches, branch => Assert.Equal(0, branch.PlayEvents[CardEvent.Discarded]));
+    }
+
+    [Fact]
+    public void AReplayedPickFindsWhatTheFirstPlayDrew()
+    {
+        // Acrobatics alone in your hand, played twice: each play draws, then you discard one of what's there, so both plays discard.
+        var gameFight = Fight();
+        Enemy(gameFight);
+        var card = gameFight.Add<Acrobatics>();
+        Cards<DefendIronclad>(gameFight, count: 10, PileType.Draw);
+        var draws = Sts2Mods.Core.Game.Sts2State.Var(card, "Cards");
+        var after = Only(PlayOut(gameFight, card, plays: 2));
+        Assert.Equal(2 * draws, after.You.Drawn);
+        Assert.Equal(2 * draws - 2, after.You.HandCount);
+    }
 }

@@ -292,6 +292,13 @@ hooks.
     the cards and amounts are the table's.
   - A power's own action the card runs, awaited (`CardProgramReader.IsPowerAction`: Outbreak's `PoisonPower.Trigger` on each enemy's
     poison) is a step like a command; `CardEffects.TriggersPoison` replaced `TriggerPoisonCards` (only Outbreak has one, on both branches).
+  - **One play, repeated** (2026-11-23, decision #189): the adapter describes one play from the program and the simulator's loop repeats
+    it, as `CardModel.OnPlayWrapper` does; the card goes to its pile once, after the last play. What a play takes from your hand is a
+    `TakeFromHandAction` from its `CardsTaken` (every card of the collection there now, a pick's or a roll's most, a filtered take's cards
+    followed through the play), decided by the simulator as it runs; a value that counts what a take took (`CardEffects.CountsTaken`: Fiend
+    Fire's hit count, Calculated Gamble's draws, The Devil's auto-plays) or your hand's room (`CardEffects.ReadsHandRoom`: Scrawl, The World)
+    is read there too (`SimCount`). `PlayFacts` holds one play's counts; nothing is multiplied or shared out by the play count
+    (`PerPlayRuleTests`).
   - **The evaluator** (`ProgramEvaluator`) evaluates a condition before the play, each query translated once: a property of the
     game's objects is read (the game's own answer), a method only when it only asks (`Is`, `Has`, `Can`, `Get`, `Contains`,
     `HappenedThisTurn`), never anything about the RNG; Linq over a collection with the code's own lambda; your hand without the
@@ -379,7 +386,8 @@ round two). What's left, by file: `PlayFacts` 62 (`GeneratedCount` and the forge
 
 | Table (where) | Cards | What the program doesn't say yet |
 |---|---|---|
-| (no table) a replay's later plays and your hand | Restlessness, Impatience, Scrawl replayed | A condition on your hand is evaluated on the hand before the play for every play of a replay, as before: the cards the first play draws aren't in it yet (the simulator knows them; the evaluator doesn't). |
+| (no table) a replay's later plays: conditions | Restlessness, Impatience replayed; Sacrifice and Bone Shards' Osty; Double Energy; Spite; Pact's End | Since decision #189 the adapter describes one play and the simulator repeats it, reading what each play takes from your hand, what counts it (`SimCount.CardsTaken`) and your hand's room (`SimCount.HandRoom`) as it runs (Scrawl replayed draws into the room the first play left). A condition the evaluator reads (your hand's types, Osty, your energy, HP lost this turn, the exhaust pile) is still decided on the board before the first play, or for each play by its index (`CardEventAction.ByPlay`: FTL, Fetch, Wrest): the simulator needs its own conditions (the owner's next step). |
+| (no table) Flak Cannon's hits on a replay | Flak Cannon | Its hit count is its `CalculatedHits` var (the statuses it will exhaust), a calculated var's lambda the reader doesn't follow, so it isn't recognized as the count of what its take took. |
 | `GeneratedCount` (PlayFacts) | cards that make cards | Within reach: `CardPileCmd.AddGeneratedCard(s)ToCombat`'s cards (a `CreateStep`, a loop's rounds, a helper's count: Shiv.CreateInHand) and their pile. Not done yet. |
 | `SplashCards`, `OverkillReaders`, `RepeatPerKillCards` | Rain Shot, Omnislice, Fisticuffs, Blossom Shot, Echoing Slash | What a hit's result feeds (`TotalDamage + OverkillDamage` into the next damage, a kill into the loop's count): needs arithmetic over a command's result. |
 | `TeammatesShivCards` | Blade Symphony | The player a helper's Shivs go to (an argument inside the helper: a game helper's parameters aren't bound to its caller's arguments yet). |

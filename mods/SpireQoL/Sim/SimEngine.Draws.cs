@@ -5,6 +5,13 @@ public static partial class SimEngine
     /// <summary>CardPile.MaxCardsInHand.</summary>
     public const int MaxHand = 10;
 
+    /// <summary>
+    /// The room in a player's hand (decision #189): CardPile.MaxCardsInHand less the cards there, the ones being played having left. The
+    /// one place the hand's size is held to its most: a draw stops at none (CardPileCmd.Draw), a card added with none goes to the discard
+    /// pile instead (CardPileCmd.Add), and a card's own count of your hand's room reads it (SimCount.HandRoom).
+    /// </summary>
+    internal static int RoomIn(SimPlayer player) => Math.Max(0, MaxHand - (player.HandCount - player.PlayingFromHand));
+
     /// <summary>A player's draws go through their draw pile (decision #90): only yours, when the adapter filled it.</summary>
     internal static bool DrawsFromPile(SimState state, int player) => state.Player(player)?.Draw != null;
 
@@ -52,7 +59,7 @@ public static partial class SimEngine
                 var next = new List<SimState>();
                 foreach (var copy in Then(going, branch => DrawOne(branch, player, drawnCardAction.Indirect, record: true)))
                     (copy.DrawRecord!.Count > drawn && copy.DrawRecord[^1].Card.Type == drawnCardAction.DrawAgainIf
-                        && copy.Player(player)!.HandCount - copy.Player(player)!.PlayingFromHand < MaxHand ? next : done).Add(copy);
+                        && RoomIn(copy.Player(player)!) > 0 ? next : done).Add(copy);
                 going = next;
             }
             states = done;
@@ -106,9 +113,8 @@ public static partial class SimEngine
     {
         if (DrawsStopped(state, player)) return new[] { state };
         var simPlayer = state.Player(player)!;
-        // The cards being played have left their owner's hand already (the game moves each before OnPlay); HandCount drops each at CardResolved.
-        var inHand = simPlayer.HandCount - simPlayer.PlayingFromHand;
-        if (inHand >= MaxHand) return new[] { state };
+        // A full hand draws nothing (RoomIn: the cards being played have left it already; HandCount drops each at CardResolved).
+        if (RoomIn(simPlayer) == 0) return new[] { state };
         var pile = simPlayer.Draw!;
         if (pile.Count == 0)
         {
@@ -168,7 +174,7 @@ public static partial class SimEngine
             simPlayer.HandCount--;
             return new[] { state };
         }
-        var (current, events, blockGains, attack) = (state.CurrentPlay, state.PlayEvents, state.PlayCardBlockGains, state.CurrentAttack);
+        var frame = state.SaveFrame();
         var result = new List<SimState>();
         foreach (var play in plays)
         {
@@ -178,7 +184,7 @@ public static partial class SimEngine
             ApplyPlay(sub, play);
             foreach (var copy in sub.States)
             {
-                (copy.CurrentPlay, copy.PlayEvents, copy.PlayCardBlockGains, copy.CurrentAttack) = (current, events, blockGains, attack);
+                copy.RestoreFrame(frame);
                 result.Add(copy);
             }
         }
@@ -192,14 +198,16 @@ public static partial class SimEngine
     /// (CardPileCmd.Add). The cards being played still hold their slots until they resolve. An Ethereal one exhausts at end of turn
     /// (Fading); what they are isn't known to a pick from the hand (Stampede).
     /// </summary>
-    internal static void AddToHand(SimState state, int player, int count, bool ethereal = false)
+    internal static void AddToHand(SimState state, int player, int count, bool ethereal = false, IReadOnlyList<string>? takenBy = null, bool known = false)
     {
         if (count <= 0 || state.Player(player) == null) return;
         var simPlayer = state.MutablePlayer(player);
-        var added = Math.Min(count, Math.Max(0, MaxHand - (simPlayer.HandCount - simPlayer.PlayingFromHand)));
+        var added = Math.Min(count, RoomIn(simPlayer));
         simPlayer.HandCount += added;
         if (ethereal) simPlayer.Fading += added;
         if (added > 0 && simPlayer.AutoHand != null) state.AutoPlaysUnknown = true;
+        // Made cards: what each would be taken by (TakenBy), when known.
+        for (var i = 0; i < added; i++) JoinsTakes(state, takenBy, known, intoHand: true, made: true);
     }
 
     /// <summary>
@@ -209,6 +217,7 @@ public static partial class SimEngine
     /// </summary>
     private static void JoinHand(SimState state, SimPlayer simPlayer, SimDrawCard card, int id)
     {
+        JoinsTakes(state, card.TakenBy, known: true, intoHand: true, made: false);
         if (card.TurnEnd != null) simPlayer.TurnEndCards = new List<TurnEndCard>(simPlayer.TurnEndCards) { card.TurnEnd };
         if (card.Exhausting != null) simPlayer.ExhaustingInHand = new List<ExhaustingCard>(simPlayer.ExhaustingInHand) { card.Exhausting with { HandCard = id } };
         if (card.Fading) simPlayer.Fading++;
@@ -233,8 +242,15 @@ public static partial class SimEngine
     internal static IEnumerable<SimState> RunTakeToHand(SimState state, TakeToHandAction take)
     {
         var player = state.CurrentPlay?.Owner ?? Who.You;
-        if (!DrawsFromPile(state, player) || take.Count <= 0) return new[] { state };
-        return TakeToHand(state, player, take, take.Eligible, take.Count);
+        var count = CountOf(state, take.CountFrom, take.Count);
+        if (count <= 0) return new[] { state };
+        if (!DrawsFromPile(state, player))
+        {
+            // No pile read: only the count, into the hand when it joins it.
+            if (take.JoinsHand) AddToHand(state, player, Math.Min(count, take.Eligible.Values.Sum()));
+            return new[] { state };
+        }
+        return TakeToHand(state, player, take, take.Eligible, count);
     }
 
     /// <summary>The profile with this key in the pile a take comes from.</summary>
@@ -260,7 +276,7 @@ public static partial class SimEngine
         {
             // Every one it can take: no pick to make.
             foreach (var (key, available) in candidates)
-                for (var i = 0; i < available; i++) TakeOne(state, player, key, take.FromDiscard);
+                for (var i = 0; i < available; i++) TakeOne(state, player, key, take.FromDiscard, take.JoinsHand);
             return new[] { state };
         }
         if (!take.Random)
@@ -270,7 +286,7 @@ public static partial class SimEngine
             var plain = candidates.FindIndex(candidate => ProfileIn(pile, take.FromDiscard, candidate.Key) is { Plain: true });
             if (plain < 0 && candidates.Count > 1) state.Unmodelled ??= "you choose which card it takes into your hand, and they differ in what the simulation follows";
             var chosen = candidates[Math.Max(0, plain)].Key;
-            TakeOne(state, player, chosen, take.FromDiscard);
+            TakeOne(state, player, chosen, take.FromDiscard, take.JoinsHand);
             return TakeToHand(state, player, take, Less(eligible, chosen), count - 1);
         }
         var result = new List<SimState>();
@@ -278,7 +294,7 @@ public static partial class SimEngine
         {
             var branch = candidates.Count == 1 ? state : state.Clone();
             branch.Weight = state.Weight * candidates[i].Available / total;
-            TakeOne(branch, player, candidates[i].Key, take.FromDiscard);
+            TakeOne(branch, player, candidates[i].Key, take.FromDiscard, take.JoinsHand);
             result.AddRange(TakeToHand(branch, player, take, Less(eligible, candidates[i].Key), count - 1));
         }
         return result;
@@ -291,7 +307,7 @@ public static partial class SimEngine
     /// One card of this profile out of its pile into the hand: from the discard pile, or the draw pile's unordered rest when it's there,
     /// else its known top.
     /// </summary>
-    private static void TakeOne(SimState state, int player, string key, bool fromDiscard)
+    private static void TakeOne(SimState state, int player, string key, bool fromDiscard, bool joinsHand)
     {
         var simPlayer = state.MutablePlayer(player);
         var pile = simPlayer.Draw!;
@@ -312,6 +328,16 @@ public static partial class SimEngine
             var topIndex = pile.Top.FindIndex(drawCard => drawCard.Key == key);
             card = pile.Top[topIndex];
             simPlayer.Draw = pile.WithoutTopAt(topIndex);
+        }
+        if (joinsHand)
+        {
+            // Into a full hand it goes to the discard pile instead (CardPileCmd.Add).
+            if (RoomIn(simPlayer) == 0)
+            {
+                simPlayer.Draw = simPlayer.Draw.WithDiscarded(card);
+                return;
+            }
+            simPlayer.HandCount++;
         }
         simPlayer.TakenToHand++;
         JoinHand(state, simPlayer, card, TakenId(simPlayer.TakenToHand));
@@ -384,7 +410,7 @@ public static partial class SimEngine
             Discarded(state, player, card);
             return new[] { state };
         }
-        var (current, events, blockGains, attack) = (state.CurrentPlay, state.PlayEvents, state.PlayCardBlockGains, state.CurrentAttack);
+        var frame = state.SaveFrame();
         var result = new List<SimState>();
         foreach (var play in plays)
         {
@@ -394,7 +420,7 @@ public static partial class SimEngine
             ApplyPlay(sub, play);
             foreach (var copy in sub.States)
             {
-                (copy.CurrentPlay, copy.PlayEvents, copy.PlayCardBlockGains, copy.CurrentAttack) = (current, events, blockGains, attack);
+                copy.RestoreFrame(frame);
                 if (card.ExhaustsWhenPlayed) result.Add(copy);
                 else if (forceExhaust) result.AddRange(ProcCardEvent(copy, CardEvent.Exhausted, count: 1, player, indirect: true));
                 else

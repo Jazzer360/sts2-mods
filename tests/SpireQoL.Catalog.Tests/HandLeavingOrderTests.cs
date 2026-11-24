@@ -23,14 +23,14 @@ public class HandLeavingOrderTests
         var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
         Assert.NotNull(facts);
         var play = SimAdapter.Play(card, facts!, gameFight.Me, gameFight.Combat, new Dictionary<Creature, int>(), targetId: 0);
-        var leave = play.Body.FindIndex(simAction => simAction is LeaveHandAction);
-        var exhausts = play.Body.FindIndex(simAction => simAction is CardEventAction { Event: CardEvent.Exhausted });
-        Assert.True(leave >= 0 && exhausts >= 0, string.Join(", ", play.Body.Select(simAction => simAction.GetType().Name)));
-        Assert.True(leave < exhausts, "the hand leaves after its exhausts: " + string.Join(", ", play.Body.Select(simAction => simAction.ToString())));
+        // One action takes the hand (decision #189: TakeFromHandAction), the cards leaving before their exhausts set anything off.
+        var exhausts = play.Body.FindIndex(simAction => simAction is TakeFromHandAction { Way: HandTakeWay.Each, Filter: null, Event: CardEvent.Exhausted });
+        Assert.True(exhausts >= 0, string.Join(", ", play.Body.Select(simAction => simAction.GetType().Name)));
         // Its code exhausts the hand, then attacks (FiendFire.OnPlay): what the exhausts set off (Charon's Ashes' hits) lands before its
         // kill (a dev review: the lethal play showed no Charon's Ashes tab).
         Assert.True(Procs.Programs.CardPrograms.Before(Procs.Programs.CardPrograms.Of(typeof(FiendFire)), "Exhaust", "Attack"));
         var attack = play.Body.FindIndex(simAction => simAction is AttackAction);
         Assert.True(exhausts < attack, "its exhausts come after its attack");
+        Assert.Equal(SimCount.CardsTaken, ((AttackAction)play.Body[attack]).HitsFrom);
     }
 }

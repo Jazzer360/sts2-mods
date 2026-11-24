@@ -331,6 +331,26 @@ public sealed partial class ProcAudit
                 else issues.Add(what);
             }
         }
+        // A replay (decision #189): its facts are one play's; what all its plays do together is the simulation's (each play on the board the
+        // one before it left), its card events over its outcomes at the target it was played at.
+        if (facts is { Plays: > 1 })
+        {
+            if (facts.Sim?.AimFor(window.Target) is { } aim && facts.OutcomeByAim?.TryGetValue(aim, out var replay) == true && !replay.Truncated)
+            {
+                int Most(CardEvent cardEvent) => replay.PlayFiredAny[SimKeys.PlayEvent(cardEvent)];
+                var leastDraws = replay.PlayFiredEvery[SimKeys.PlayEvent(CardEvent.Drawn)];
+                if (draws < leastDraws && !window.FightEnded) issues.Add($"draws: predicted {leastDraws}, actual {draws}");
+                Budget(Effect.Draw, "draws", draws, Math.Max(Most(CardEvent.Drawn), facts.DrawsAtMost));
+                Budget(Effect.Exhaust, "exhausts", exhausts, Most(CardEvent.Exhausted));
+                Budget(Effect.Discard, "discards", discards, Most(CardEvent.Discarded));
+                var made = Most(CardEvent.Generated) + Most(CardEvent.GeneratedStatus) + Most(CardEvent.GeneratedSadness) + (Procs.PlayFacts.TransformsChosen(window.Card) ? facts.Transforms : 0);
+                Budget(Effect.Generate, "created cards", generated, made);
+                MadeByTabs(made);
+            }
+            else modelLines.Skip("budget", "a replay's counts are its simulation's, and it has none for the target it was played at");
+            modelLines.Skip("orbs channeled", "a replay's channels aren't in its simulation's play log yet (tracker)");
+            facts = null;
+        }
         if (facts != null)
         {
             // Draws and channels aren't a choice: fewer than predicted is a model gap (FTL's play limit),

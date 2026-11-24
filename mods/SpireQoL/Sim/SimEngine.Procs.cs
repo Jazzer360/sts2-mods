@@ -164,7 +164,11 @@ public static partial class SimEngine
     {
         // The play's own events (Unceasing Top: a play that draws or creates nothing for its player); a teammate's draws and
         // cards (Huddle Up, Blade Symphony) aren't the player's.
-        if (player == (state.CurrentPlay?.Owner ?? Who.You)) state.PlayEvents = state.PlayEvents.Add(cardEvent);
+        if (player == (state.CurrentPlay?.Owner ?? Who.You))
+        {
+            state.PlayEvents = state.PlayEvents.Add(cardEvent);
+            state.LogFired(SimKeys.PlayEvent(cardEvent));
+        }
         if (!Who.IsPlayer(player)) return;
         var simPlayer = state.MutablePlayer(player);
         if (cardEvent == CardEvent.EnergySpent) simPlayer.Energy--;
