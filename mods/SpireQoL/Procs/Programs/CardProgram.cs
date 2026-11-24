@@ -227,6 +227,30 @@ public static class CardProgramReader
         return found;
     }
 
+    /// <summary>
+    /// What each calculated value of a card multiplies its extra value by (CalculatedVar.WithMultiplier's lambda in its CanonicalVars: Finisher's
+    /// Attacks finished this turn, Murder's cards drawn), by the value's name ("CalculatedHits", "CalculatedDamage"), as the lambda returns it.
+    /// </summary>
+    public static IReadOnlyDictionary<string, ProgramValue> CalculatedMultipliers(Type cardType, Func<MethodBase, List<CodeOp>> read)
+    {
+        var found = new Dictionary<string, ProgramValue>();
+        for (var type = cardType; type != null && found.Count == 0; type = type.BaseType)
+        {
+            if (type.GetProperty("CanonicalVars", All) is not { GetMethod: { } getter }) continue;
+            List<CodeOp> ops;
+            try { ops = read(getter); }
+            catch { break; }
+            foreach (var (createdValue, returned) in new Reader(cardType, read).MultiplierValues(getter, ops))
+            {
+                if (createdValue is not QueryValue { Name: ".ctor" } created) continue;
+                var name = created.Arguments.Count > 0 && created.Arguments[0] is NamedValue { Name: var text } && text.StartsWith('"') ? text.Trim('"')
+                    : created.Type == "CalculatedDamageVar" ? "CalculatedDamage" : created.Type == "CalculatedBlockVar" ? "CalculatedBlock" : null;
+                if (name != null) found.TryAdd(name, returned);
+            }
+        }
+        return found;
+    }
+
     /// <summary>A value reads the game's log of the fight (CombatManager.Instance.History).</summary>
     public static bool ReadsHistory(ProgramValue value) => value.Parts().Any(part => part is QueryValue { Name: "History", Type: "CombatManager" });
 
@@ -297,6 +321,34 @@ public static class CardProgramReader
 
         /// <summary>What a method returns, as a condition (a getter's value).</summary>
         public ProgramCondition Returned(MethodBase method) => Flow.Of(_read(method), method, LambdaOf, HelperValue).Returned();
+
+        /// <summary>
+        /// Each WithMultiplier call in a method's code (a card's CanonicalVars): the calculated value it's asked of, and what its lambda
+        /// returns, read from the lambda's own code (its own lambdas followed).
+        /// </summary>
+        public List<(ProgramValue Created, ProgramValue Returned)> MultiplierValues(MethodBase method, List<CodeOp> ops)
+        {
+            var flow = Flow.Of(ops, method, LambdaOf, HelperValue);
+            var values = new List<(ProgramValue, ProgramValue)>();
+            for (var i = 0; i < flow.Ops.Count; i++)
+            {
+                if (!flow.Ops[i].IsCall || flow.Ops[i].Member is not { Name: "WithMultiplier" }) continue;
+                try
+                {
+                    if (flow.ValueBefore(i + 1) is not QueryValue { Of: { } created }) continue;
+                    CodeMember? pointer = null;
+                    for (var back = i - 1; back >= 0 && back >= i - 8 && pointer == null; back--)
+                        if (flow.Ops[back].OpCode == OpCodes.Ldftn) pointer = flow.Ops[back].Member;
+                    if (pointer == null || Lambda(pointer) is not { } body) continue;
+                    if (Flow.Of(_read(body), body, LambdaOf, HelperValue).ReturnedValue() is { } returned) values.Add((created, returned));
+                }
+                catch
+                {
+                    // not read
+                }
+            }
+            return values;
+        }
 
         /// <summary>The values the calls in a method's code work out that read the game's log of the fight (decision #191).</summary>
         public List<ProgramValue> HistoryValues(MethodBase method, List<CodeOp> ops)

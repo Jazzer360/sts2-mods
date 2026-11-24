@@ -42,8 +42,25 @@ public sealed record DamageSpec(decimal Base, SimProps Props)
     /// <summary>The enchantment's captured terms are on the first play only: it turns itself off after a play (decision #160: Vigorous).</summary>
     public bool EnchantFirstPlayOnly { get; init; }
 
+    /// <summary>
+    /// The base follows a count of the fight's log as the simulation goes (a calculated value: Murder's cards drawn, Gold Axe's plays): the
+    /// base was worked out on the board, at that count; each more adds Per (decision #191).
+    /// </summary>
+    public LoggedAmount? Logged { get; init; }
+
     public decimal BaseFor(int target) => BaseOn != null && BaseOn.TryGetValue(target, out var baseOnTarget) ? baseOnTarget : Base;
     public CapturedTerms TermsFor(int target) => Captured != null && Captured.TryGetValue(target, out var terms) ? terms : CapturedTerms.None;
+}
+
+/// <summary>
+/// An amount a calculated value gives (CalculatedVar: base + extra × its multiplier), its multiplier a count of the fight's log (decision
+/// #191): the amount on the board was worked out at <paramref name="AtStart"/>; each one the ledger counts more adds <paramref name="Per"/>
+/// (the extra value times what each entry adds to the multiplier).
+/// </summary>
+public sealed record LoggedAmount(HistoryQuery Query, decimal Per, int AtStart)
+{
+    /// <summary>What the ledger counted since the board, for the play's owner; 0 when the start state has no seed for it (the board's amount).</summary>
+    public decimal More(SimState state, int owner) => SimEngine.HistoryCount(state, owner, Query) is { } now ? Per * (now - AtStart) : 0m;
 }
 
 /// <summary>
@@ -54,6 +71,8 @@ public sealed record AttackAction(int Hits, SimPlay.Target Mode, DamageSpec Dama
 {
     /// <summary>Where its hit count comes from (decision #189): Hits, or what the simulator reads as it runs (Fiend Fire: the cards taken).</summary>
     public SimCount HitsFrom { get; init; }
+    /// <summary>Its hits follow a count of the fight's log as the simulation goes (Finisher's Attacks this turn: decision #191).</summary>
+    public LoggedAmount? HitsLogged { get; init; }
     /// <summary>The enemy aimed at (Mode Single; -1: the play's target).</summary>
     [JsonConverter(typeof(CreatureIdJson))]
     public int TargetId { get; init; } = Who.None;

@@ -366,9 +366,11 @@ public static partial class SimEngine
         // A shot with no arrow does nothing: no attack, so no hooks either.
         if (at.NeedsArrow && branches.States.All(branch => branch.ArrowAwayAt < 0)) return;
         // Its hits, each branch its own when it reads them as it runs (decision #189: Fiend Fire's cards taken); none at all: no attack.
-        var mostHits = MostOf(branches, at.HitsFrom, at.Hits);
+        // A count of the fight's log adds hits as the simulation goes (Finisher: decision #191).
+        int HitsOf(SimState state) => CountOf(state, at.HitsFrom, at.Hits) + (at.HitsLogged is { } logged ? (int)logged.More(state, state.CurrentPlay?.Owner ?? Who.You) : 0);
+        var mostHits = branches.States.Count == 0 ? 0 : branches.States.Max(HitsOf);
         if (mostHits <= 0) return;
-        bool Hits(SimState state, int hit) => hit < CountOf(state, at.HitsFrom, at.Hits);
+        bool Hits(SimState state, int hit) => hit < HitsOf(state);
         var dealer = at.ByOsty ? Who.YourOsty : Who.You;
         branches.Do(branch =>
         {
@@ -454,7 +456,8 @@ public static partial class SimEngine
         var card = state.CurrentPlay?.Card;
         var ctx = new DamageCtx(dealer, target, spec.Props, card, state.CurrentPlay);
         // A replay's damage has what the card gained from its plays before it (decision #160).
-        var baseDamage = spec.BaseFor(target) + spec.GrowsEachPlay * (state.CurrentPlay?.PlayIndex ?? 0);
+        var baseDamage = spec.BaseFor(target) + spec.GrowsEachPlay * (state.CurrentPlay?.PlayIndex ?? 0)
+            + (spec.Logged?.More(state, state.CurrentPlay?.Owner ?? Who.You) ?? 0m); // a calculated value on the fight's log (decision #191)
         var terms = spec.TermsFor(target);
         if (spec.EnchantFirstPlayOnly && state.CurrentPlay?.PlayIndex > 0) terms = WithoutEnchantment(terms);
         var amount = spec.Fixed ? Math.Max(0, (int)baseDamage) : ModifiedDamage(state, baseDamage, ctx, terms);

@@ -203,6 +203,24 @@ public class SimHistoryTests
     }
 
     [Fact]
+    public void ACalculatedValueOnTheLogFollowsTheChain()
+    {
+        // Finisher: a hit per Attack finished this turn (CalculatedHits). None on the board; replayed, its second play finds the first one
+        // finished: one hit.
+        var attacksFinished = new HistoryQuery(HistoryKind.CardPlayFinished, HistoryScope.ThisTurn, HistoryWhose.Owner) { CardType = SimCardType.Attack };
+        var finisher = Card("Finisher", Hit(damage: 6, hits: 0) with { HitsLogged = new LoggedAmount(attacksFinished, Per: 1, AtStart: 0) });
+        finisher.Plays = 2;
+        finisher.Card = new SimCardPlay(new SimCard("Finisher", SimCardType.Attack), Who.You, Target: 0, PlayIndex: 0, PlayCount: 2, AutoPlay: false);
+        Assert.Equal(44, Assert.Single(SimEngine.Run(Board(), finisher).Branches).Enemies[0].Hp);
+        // Murder: 1 damage, one more for each card drawn this fight (CalculatedDamage): a draw earlier in the play adds one.
+        var drawn = new HistoryQuery(HistoryKind.CardDrawn, HistoryScope.ThisFight, HistoryWhose.Owner);
+        var murderHit = new AttackAction(Hits: 1, SimPlay.Target.Single, new DamageSpec(Base: 0m, SimProps.Move)
+            { BaseOn = new Dictionary<int, decimal> { [0] = 1 }, Fixed = true, Logged = new LoggedAmount(drawn, Per: 1, AtStart: 0) });
+        var murder = Card("Murder", new CardEventAction(CardEvent.Drawn, Count: 2) { Indirect = true }, murderHit);
+        Assert.Equal(47, Assert.Single(SimEngine.Run(Board(queries: drawn), murder).Branches).Enemies[0].Hp);
+    }
+
+    [Fact]
     public void TheLedgerKeepsThePlaysNamesAndReportsHoldIt()
     {
         // The plays of the turn by type keep the names replay cases already hold; the ledger and its queries go through a report's JSON.

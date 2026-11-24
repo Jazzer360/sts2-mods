@@ -48,6 +48,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Bubble Bubble poisons only a target that already has poison, Go for the Eyes weakens only an enemy that intends to attack and isn't stunned by then, and Molten Fist applies as much Vulnerable as its target has (it applied 1 whatever the target had, none included), each asked as the play runs, as in the game: a replayed Molten Fist doubles the Vulnerable its first play gave.
 - Feral returns a replayed 0-cost Attack once and uses one charge (it came back on each play); a Feral played after 0-cost Attacks this turn counts them, and more Feral on one adds charges, as in the game. Echo Form's extra play is decided as each card play starts, from the plays before it in the same turn: a card auto-played after the one you play (Stampede) is no longer predicted doubled.
 - An attack whose hit count its code works out on a test (Spite's HP lost this turn, Dismantle's Vulnerable target, Wah Blast's Cho or Ki this turn) asks it as each play runs: Spite hits twice after HP lost earlier in the same play, and a replay's later play counts what the earlier ones did.
+- A calculated value on what happened in the fight (Murder's and Death March's draws, Gold Axe's plays, Supermassive's and Anguish's made cards, Finisher's, Lunar Blast's, Tear Asunder's and Pull From Below's hits) follows what the plays before it did: a replayed Finisher hits once on its second play after its first, a replayed Gold Axe hits harder.
 
 ### Main Saves 1.0.27
 #### Changed

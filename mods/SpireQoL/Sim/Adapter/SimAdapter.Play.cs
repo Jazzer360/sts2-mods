@@ -81,7 +81,7 @@ public static partial class SimAdapter
         // shot at X 0.
         var shot = Fool.TriesShot(card);
         if (shot) play.Body.Add(new ShootAction());
-        if (facts.AttackHits > 0 && AttackOf(card, facts, me, combat, ids, targetId, name) is { } attack)
+        if ((facts.AttackHits > 0 || PlayFacts.IsPlayerAttack(card) && HitsLoggedOf(card, combat) != null) && AttackOf(card, facts, me, combat, ids, targetId, name) is { } attack)
         {
             attack = (shot ? attack with { NeedsArrow = true } : attack) with { StretchFromDamage = name == nameof(BlossomShot) };
             // A hit count the code works out on a condition the simulator asks (Spite: two hits when you lost HP this turn, else one):
@@ -539,6 +539,15 @@ public static partial class SimAdapter
         dynamicVar.GetType() is { IsGenericType: true } type && type.GetGenericTypeDefinition() == typeof(PowerVar<>) && type.GetGenericArguments()[0] == typeof(T);
 
     /// <summary>
+    /// The attack's hits when its WithHitCount gives its calculated hits (CalculatedHits) on a count of the fight's log (Finisher's Attacks
+    /// this turn, Rattle's Osty attacks): they follow the ledger as the simulation goes (decision #191). Null for any other hit count.
+    /// </summary>
+    private static LoggedAmount? HitsLoggedOf(CardModel card, ICombatState combat) =>
+        Procs.Programs.CardEffects.Attacks(card.GetType()) is [var attack, ..]
+        && attack.Command.HitCountValue?.Parts().Any(part => part is Procs.Programs.CardValue { Key: "CalculatedHits" }) == true
+            ? HistoryLedger.LoggedOf(card, "CalculatedHits", combat) : null;
+
+    /// <summary>
     /// The attack's hit count's ways when its code works it out on a test the simulator asks (WithHitCount's argument a value two ways
     /// leave: Spite's {not LostHpThisTurn: 1; LostHpThisTurn: HitCount}): each way's condition (after the ways before it fail, as the first
     /// way that holds gives the value) and its hits, the card's own number. Null when it isn't such a count.
@@ -585,7 +594,10 @@ public static partial class SimAdapter
         // A hit count that counts the cards a take of the play took (Fiend Fire: its hand), read as it runs (decision #189).
         var hitsTaken = Procs.Programs.CardEffects.Attacks(card.GetType()) is [var attackStep, ..]
                         && Procs.Programs.CardEffects.ExhaustsOfOthers(card.GetType()).Concat(Procs.Programs.CardEffects.Discards(card.GetType())).Any(take => Procs.Programs.CardEffects.CountsTaken(attackStep.Command.HitCountValue, take));
-        if (hits <= 0 && !hitsTaken) return null;
+        // Hits that follow the fight's log (Finisher's Attacks this turn): none on the board, some once the chain or a replay's earlier play
+        // adds to the count (decision #191).
+        var hitsLogged = HitsLoggedOf(card, combat);
+        if (hits <= 0 && !hitsTaken && hitsLogged == null) return null;
 
         var baseOn = new Dictionary<int, decimal>();
         var captured = new Dictionary<int, CapturedTerms>();
@@ -616,9 +628,15 @@ public static partial class SimAdapter
             captured[id] = SimReaders.Damage(me.RunState, combat, card, me.Creature, creature, baseValue, props);
         }
         var growth = facts.Plays > 1 && !fixedNumbers ? PlayGrowth.Of(card) : PlayGrowth.Growth.None;
+        // A calculated value on the fight's log (decision #191): its damage (Murder's draws) or its hits (Finisher's Attacks) follow the
+        // ledger as the simulation goes, from the board's.
         return new AttackAction(hits, mode, new DamageSpec(baseDamage, SimReaders.Props(props))
-            { BaseOn = baseOn, Captured = captured, Fixed = fixedNumbers, GrowsEachPlay = growth.Damage, EnchantFirstPlayOnly = growth.EnchantFirstPlayOnly })
+            {
+                BaseOn = baseOn, Captured = captured, Fixed = fixedNumbers, GrowsEachPlay = growth.Damage, EnchantFirstPlayOnly = growth.EnchantFirstPlayOnly,
+                Logged = calc != null && !fixedNumbers ? HistoryLedger.LoggedOf(card, "CalculatedDamage", combat) : null,
+            })
         {
+            HitsLogged = hitsLogged,
             HitsFrom = hitsTaken ? SimCount.CardsTaken : SimCount.Given,
             ByOsty = facts.ByOsty, // a single target: the play's (SimPlay.TargetId)
             Splash = PlayFacts.SplashCards.Contains(name), // the target's damage to every other enemy

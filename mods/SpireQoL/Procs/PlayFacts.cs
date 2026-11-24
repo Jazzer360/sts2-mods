@@ -1298,7 +1298,7 @@ public sealed class PlayFacts
     private static bool IsAttackOnEnemies(CardModel card)
         => card.Type == CardType.Attack && card.TargetType is TargetType.AnyEnemy or TargetType.AllEnemies or TargetType.RandomEnemy;
 
-    private static bool IsPlayerAttack(CardModel card)
+    internal static bool IsPlayerAttack(CardModel card)
         => card.Type == CardType.Attack
            && (card.DynamicVars.ContainsKey("Damage") || card.DynamicVars.ContainsKey("CalculatedDamage"))
            && card.TargetType is TargetType.AnyEnemy or TargetType.AllEnemies or TargetType.RandomEnemy;

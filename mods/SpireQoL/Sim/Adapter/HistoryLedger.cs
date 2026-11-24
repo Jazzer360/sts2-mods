@@ -68,6 +68,42 @@ internal static class HistoryLedger
         return queries;
     }
 
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyDictionary<string, ProgramValue>> Multipliers = new();
+
+    /// <summary>
+    /// A card's calculated value whose multiplier is a count of the fight's log the ledger counts (Finisher's CalculatedHits: Attacks finished
+    /// this turn; Murder's CalculatedDamage: cards drawn): its question, what each entry adds (its extra value, times the multiplier's own
+    /// factor), and the count now, for its owner. Null for any other value.
+    /// </summary>
+    internal static LoggedAmount? LoggedOf(CardModel card, string name, ICombatState combat)
+    {
+        try
+        {
+            if (!card.DynamicVars.TryGetValue(name, out var dynamicVar) || dynamicVar is not MegaCrit.Sts2.Core.Localization.DynamicVars.CalculatedVar calculated || card.Owner is not { } owner) return null;
+            var multipliers = Multipliers.GetOrAdd(card.GetType(), type => CardProgramReader.CalculatedMultipliers(type, RuntimeCode.Read));
+            if (!multipliers.TryGetValue(name, out var multiplier) || Linear(multiplier) is not var (question, factor) || HistoryQueryReader.Read(question).Query is not { } query) return null;
+            var extra = typeof(MegaCrit.Sts2.Core.Localization.DynamicVars.CalculatedVar)
+                .GetMethod("GetExtraVar", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.Invoke(calculated, null) as MegaCrit.Sts2.Core.Localization.DynamicVars.DynamicVar;
+            if (extra == null) return null;
+            var turn = NamedCounts.Empty;
+            var fight = Seed(new[] { query }, owner, combat, ref turn);
+            return new LoggedAmount(query, extra.BaseValue * factor, (query.Scope == HistoryScope.ThisTurn ? turn : fight)[query.Key]);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>A multiplier that is a count of the log (Count(...)), plus a constant (1 + Count(...): Rattle, Tear Asunder): the count and its factor.</summary>
+    private static (QueryValue Count, decimal Factor)? Linear(ProgramValue value) => value switch
+    {
+        QueryValue { Type: "Enumerable", Name: "Count" } count when CardProgramReader.ReadsHistory(count) => (count, 1m),
+        ArithmeticValue { Op: "add", Left: ConstantValue, Right: var counted } => Linear(counted),
+        ArithmeticValue { Op: "add", Left: var counted, Right: ConstantValue } => Linear(counted),
+        _ => null,
+    };
+
     /// <summary>A player's counts of the questions, from the game's log now: this turn's into <paramref name="turn"/>, the fight's returned.</summary>
     internal static NamedCounts Seed(IReadOnlyList<HistoryQuery> queries, Player player, ICombatState combat, ref NamedCounts turn)
     {
