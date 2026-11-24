@@ -15,7 +15,6 @@ public class SimModelOwnerScanTests
     private static readonly Dictionary<string, string> Reviewed = new()
     {
         ["private static int SlotOf(int applier) => applier == Who.You ? 0"] = "Tag Team's Data names each applier's slot (one copy per applier, instanced): you and each teammate by id, not the owner",
-        ["if (owner == Who.You) state.ParryingShieldFired = true;"] = "the forecast audit's flag for your Parrying Shield; a teammate's still deals its damage",
         ["ProcBlockFor(branch, owner, Name, Who.You, amount, Unpowered)"] = "a teammate's power giving you block (Covering Fire gives every other player its block)",
         ["hit.Dealer != Who.You || !hit.Props.IsPoweredAttack()"] = "ImpaledPower is your arrows in an enemy (a teammate's are TeammatesImpaledPower)",
         ["CardEvent.ArrowDislodged, Who.You"] = "ImpaledPower is your arrows: they come back to you",
@@ -23,7 +22,6 @@ public class SimModelOwnerScanTests
         ["dealer == Who.YourOsty ? Who.You : dealer"] = "your Osty's damage counts as yours",
         ["(owner == Who.You && breaker == Who.YourOsty)"] = "Hand Drill: your Osty breaking block counts as you (only your Osty is a dealer in the simulator; a teammate's Osty's hits are captured numbers)",
         ["OstyLoses(state, Who.You, hit)"] = "Thorns hitting back at your Osty",
-        ["owner != Who.You ? null"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
         ["owner == Who.You ? new(Harmful: false, outcome => outcome.PlayBreaksBlockInAll)"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
         ["owner == Who.You ? OutcomeRules.YouLoseHp"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
         ["if (owner != Who.You) return null;"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",

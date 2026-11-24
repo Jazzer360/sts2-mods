@@ -58,6 +58,8 @@ internal readonly struct HookArgs
     public int Each { get; init; }
     /// <summary>The locals this run kept (LetStep, by its slot); null: it keeps none.</summary>
     public decimal[]? Locals { get; init; }
+    /// <summary>Asked of the players' next turn (a payout there: decision #238): the turn number is the next one.</summary>
+    public bool NextTurn { get; init; }
 
     /// <summary>The same hook on another branch (its answers so far its own).</summary>
     public HookArgs On(SimState branch) => this with { State = branch, Asked = (int[]?)Asked?.Clone(), Taken = (int[]?)Taken?.Clone(), Locals = (decimal[]?)Locals?.Clone() };
@@ -92,7 +94,59 @@ public sealed class ReadModel : SimModel
     /// is a warning only on an enemy, your play helping the other side; a teammate's (Sneaky's block on your Attack) helps yours. A play setting
     /// off something that hurts its owner (ModelSpec.HurtsOwner: Tender's debuffs on you) is a warning on a player, your side (decision #204).
     /// </summary>
-    public override bool HarmfulFor(int owner) => Spec.HurtsPlayOwner || (Who.IsEnemy(owner) ? Spec.HelpsOwner : Spec.HurtsOwner);
+    public override bool HarmfulFor(int owner) => GivesUpDuringTheTurn || Spec.HurtsPlayOwner || (Who.IsEnemy(owner) ? Spec.HelpsOwner : Spec.HurtsOwner);
+
+    /// <summary>Its play tab says a play gives a bonus up (a payout the play decides: decision #238): crossed for every owner.</summary>
+    public override bool Harmful => GivesUpDuringTheTurn;
+
+    /// <summary>A play hook of its code turns it dark (ModelSpec.DarkensOnPlay): the play check holds its crossed tab to that.</summary>
+    public override ActedSeen Seen => Spec.DarkensOnPlay ? ActedSeen.StatusCleared : ActedSeen.Flash;
+
+    // ---- payouts (decision #238)
+
+    /// <summary>Its payouts a play decides (Payout.DuringTheTurn), each compiled once: its condition during the turn, asked of its hook's turn.</summary>
+    private readonly (Evaluate Condition, HookName? Hook, bool NextTurn)[] _duringTheTurn = Array.Empty<(Evaluate, HookName?, bool)>();
+
+    /// <summary>Its payouts decided where they're paid, by their hook: each condition, asked as the engine runs the hook.</summary>
+    private readonly Dictionary<HookName, Evaluate[]> _paidWhere = new();
+
+    /// <summary>The fields its payouts a play decides read: a play hook's store to one can give the bonus up.</summary>
+    private readonly HashSet<string> _payoutFields = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// It has a payout decided where it's paid (Parrying Shield's block as your turn ends): its tab is about the end of your turn, never set off
+    /// during the play (the play check leaves it to the forecast check).
+    /// </summary>
+    public bool PaysWhereItsDecided => _paidWhere.Count > 0;
+
+    /// <summary>It has a payout a play decides: its tab is a crossed trigger on the play that gives it up.</summary>
+    public bool GivesUpDuringTheTurn => _duringTheTurn.Length > 0;
+
+    /// <summary>A payout a play decides reads the fight's log of card plays (Ripple Basin's): the engine asks it as it logs each play (SimEngine.RecordPlay).</summary>
+    public bool PayoutReadsThePlayLog { get; }
+
+    /// <summary>
+    /// Some payout a play decides is still on for its owner (its condition during the turn holds): the bonus isn't given up yet. Asked before and
+    /// after what can turn it off during the play (its own store, the fight's log of plays), so the play that does logs its crossed tab's firing.
+    /// </summary>
+    public bool PayoutOn(SimState state, int owner)
+    {
+        foreach (var (condition, hook, nextTurn) in _duringTheTurn)
+        {
+            var args = new HookArgs { State = state, Owner = owner, Player = owner, Hook = hook ?? default, NextTurn = nextTurn };
+            if (condition(in args) != 0m) return true;
+        }
+        return false;
+    }
+
+    /// <summary>A payout that was on is off now: the play gave the bonus up (the crossed tab's firing, decision #238).</summary>
+    public void GaveUp(SimState state, int owner, bool wasOn)
+    {
+        if (wasOn && !PayoutOn(state, owner)) state.LogFired(Name, amount: 0, owner);
+    }
+
+    /// <summary>The key its payouts are kept under in a branch (SimState.Payouts): its source's log key.</summary>
+    private string PaidKey(int owner) => SimKeys.Logged(Name, Who.KindOf(owner) == CreatureKind.You ? null : owner);
 
     private readonly CompiledStep[]?[] _steps = new CompiledStep[]?[Enum.GetValues<HookName>().Length];
     /// <summary>The hooks whose program stores to the model's own state: their tests are asked once a run (HookTest).</summary>
@@ -109,7 +163,10 @@ public sealed class ReadModel : SimModel
 
     public override bool Instanced => Spec.Copies == PowerCopies.EachApplication;
 
-    public ReadModel(ModelSpec spec) : base(spec.Name, spec.Hooks.Select(program => SimHookOf(program.Hook)).Append(spec.Outcome != null ? nameof(OutcomeTab) : "").Where(hook => hook.Length > 0).Distinct())
+    public ReadModel(ModelSpec spec) : base(spec.Name, spec.Hooks.Select(program => SimHookOf(program.Hook))
+        .Append(spec.Outcome != null || spec.Payouts?.Any(payout => payout.DuringTheTurn == null) == true ? nameof(OutcomeTab) : "")
+        .Concat(spec.Payouts?.Where(payout => payout.DuringTheTurn == null && Enum.TryParse<HookName>(payout.Hook, out _)).Select(payout => SimHookOf(Enum.Parse<HookName>(payout.Hook))) ?? Array.Empty<string>())
+        .Where(hook => hook.Length > 0).Distinct())
     {
         Spec = spec;
         HasCopies = spec.Kind == ModelKind.Power && spec.Copies != PowerCopies.One;
@@ -119,6 +176,19 @@ public sealed class ReadModel : SimModel
             .SelectMany(program => new ModelSpec(spec.Name, spec.Kind, new[] { program }).Values()).OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
         foreach (var test in spec.Values().OfType<HookTest>()) _testSlots.TryAdd(test.At, _testSlots.Count);
         foreach (var let in spec.Steps().OfType<LetStep>()) _localSlots.TryAdd(let.Name, _localSlots.Count);
+        foreach (var payout in spec.Payouts ?? Array.Empty<Payout>())
+        {
+            HookName? hook = Enum.TryParse<HookName>(payout.Hook, out var parsed) ? parsed : null;
+            if (payout.DuringTheTurn is { } during)
+            {
+                _duringTheTurn = _duringTheTurn.Append((Compile(during), hook, payout.NextTurn)).ToArray();
+                _payoutFields.UnionWith(new ModelSpec(Name, spec.Kind, Array.Empty<HookProgram>()) { Payouts = new[] { new Payout(payout.Hook, during) } }.Values().OfType<HookField>().Select(field => field.Field));
+                PayoutReadsThePlayLog |= new ModelSpec(Name, spec.Kind, Array.Empty<HookProgram>()) { Payouts = new[] { new Payout(payout.Hook, during) } }.Values().OfType<HookHistory>().Any();
+            }
+            else if (hook is { } paidIn && !payout.NextTurn)
+                _paidWhere[paidIn] = (_paidWhere.TryGetValue(paidIn, out var those) ? those : Array.Empty<Evaluate>()).Append(Compile(payout.Condition)).ToArray();
+            else throw new InvalidOperationException($"{Name}: a payout in {payout.Hook} that can't be judged from a simulation");
+        }
         if (spec.Kind == ModelKind.Orb)
         {
             if (spec.Orb is not { } orbKind) throw new InvalidOperationException($"{spec.Name}: an orb with no kind");
@@ -541,8 +611,22 @@ public sealed class ReadModel : SimModel
         HookOutcome.KillsAnother => Who.IsEnemy(owner) ? Models.OutcomeRules.KillsAnother(owner) : null,
         HookOutcome.KillsOne => owner == Who.You ? Models.OutcomeRules.KillsOne : null,
         HookOutcome.ReactsToHpLoss => ReactsToHpLoss(now, owner),
-        _ => null,
+        _ => _paidWhere.Count > 0 ? PaidWhere(now, owner) : null,
     };
+
+    /// <summary>
+    /// Its payout decided where it's paid (decision #238), yours: ending the turn now, does it pay in every outcome? If not, a bonus where the play
+    /// makes it pay in every outcome (it sets it up); if so, a warning where the play stops it in some outcome (it gives it up), with the chance of
+    /// those. Set off after the play (as your turn ends), so the play check can't see it. Not a teammate's: the play's bonus is its own player's.
+    /// </summary>
+    private OutcomeRule? PaidWhere(SimOutcome now, int owner)
+    {
+        if (owner != Who.You) return null;
+        var key = PaidKey(owner);
+        bool Paid(SimState branch) => branch.Payouts.Has(key);
+        return !now.InEvery(Paid) ? new OutcomeRule(Harmful: false, outcome => outcome.InEvery(Paid), InPlay: false)
+            : new OutcomeRule(Harmful: true, outcome => !outcome.InEvery(Paid), branch => !Paid(branch), InPlay: false);
+    }
 
     /// <summary>
     /// Its reaction to its owner losing HP (HookOutcome.ReactsToHpLoss, decision #238), as its acting or flash log says it acted: on you, a bonus when
@@ -564,7 +648,23 @@ public sealed class ReadModel : SimModel
     public bool UsesApplier => Spec.UsesApplier();
 
     /// <summary>A hook of the players' side's turn ending (decision #51), in its place among them.</summary>
-    private IEnumerable<SimState> TurnEnd(HookName hook, SimState state, int owner) => Run(hook, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay });
+    private IEnumerable<SimState> TurnEnd(HookName hook, SimState state, int owner)
+    {
+        var args = new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay };
+        // A payout decided where it's paid (Parrying Shield's block as your turn ends): whether its condition holds here, kept in the branch for the
+        // tab judged on how the turn ends (decision #238). Its tests are asked as the hook starts, before any of its steps.
+        if (_paidWhere.TryGetValue(hook, out var conditions))
+        {
+            var asked = args with { Hook = hook };
+            foreach (var condition in conditions)
+                if (condition(in asked) != 0m)
+                {
+                    state.Payouts = state.Payouts.With(PaidKey(owner), 1);
+                    break;
+                }
+        }
+        return Run(hook, args);
+    }
 
     public override decimal ModifyDamageAdditive(SimState state, int owner, DamageCtx damage) => Returned(HookName.ModifyDamageAdditive, state, owner, damage, otherwise: 0m);
     public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) => Returned(HookName.ModifyDamageMultiplicative, state, owner, damage, otherwise: 1m);
@@ -1174,12 +1274,16 @@ public sealed class ReadModel : SimModel
                 var value = Compile(store.Value);
                 var key = FieldKey(store.Field);
                 var field = store.Field;
+                // A store a payout the play decides reads (Art of War's AnyAttacksPlayedThisTurn): the play that turns it off gives the bonus up there.
+                var decides = _payoutFields.Contains(field);
                 return args =>
                 {
                     if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
                     var stored = (int)value(in args);
                     if (args.Copy > 0) ListCopies(args.State, args.Owner);
+                    var wasOn = decides && args.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed && PayoutOn(args.State, args.Owner);
                     SimEngine.SetField(args.State, args.Owner, args.Copy > 0 ? CopyFieldKey(args.Copy, field) : key, stored);
+                    if (wasOn) GaveUp(args.State, args.Owner, wasOn);
                     return One(args.State);
                 };
             }
@@ -1606,7 +1710,7 @@ public sealed class ReadModel : SimModel
             case HookFact.HasApplier: return (in HookArgs args) => ApplierOf(in args) != Who.None ? 1m : 0m;
             case HookFact.ApplierIsPlayer: return (in HookArgs args) => Who.IsPlayer(ApplierOf(in args)) ? 1m : 0m;
             case HookFact.PlayIsAppliers: return (in HookArgs args) => args.Play is { } play && ApplierOf(in args) is var applier && applier != Who.None && play.Owner == applier ? 1m : 0m;
-            case HookFact.TurnNumber: return (in HookArgs args) => args.State.TurnNumber;
+            case HookFact.TurnNumber: return (in HookArgs args) => args.State.TurnNumber + (args.NextTurn ? 1 : 0);
             case HookFact.OwnerDead: return (in HookArgs args) => (args.State.Player(args.Owner) is { } player ? player.Died || player.Hp <= 0 : args.State.Enemy(args.Owner) is not { Alive: true }) ? 1m : 0m;
             case HookFact.CreatureThere:
             {

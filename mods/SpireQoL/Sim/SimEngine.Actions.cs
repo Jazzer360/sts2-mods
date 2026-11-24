@@ -470,9 +470,16 @@ public static partial class SimEngine
     private static void Count(SimState state, SimCardPlay play, PlayStage stage)
     {
         if (state.Player(play.Owner) == null) return;
+        // A payout a play decides by the fight's log of plays (Ripple Basin's: no Attack this turn): the play counted here can turn it off, giving
+        // the bonus up there (decision #238).
+        List<(ReadModel Model, int Owner)>? watching = null;
+        foreach (var (model, owner) in Listeners(state))
+            if (model is ReadModel { PayoutReadsThePlayLog: true } read && read.PayoutOn(state, owner)) (watching ??= new()).Add((read, owner));
         var player = state.MutablePlayer(play.Owner);
         player.Turn = SimKeys.CountPlay(player.Turn, stage, play.Card.Type, play.Card.Tags);
         if (state.History.Count > 0) RecordPlay(state, play, stage);
+        if (watching != null)
+            foreach (var (read, owner) in watching) read.GaveUp(state, owner, wasOn: true);
     }
 
     // ------------------------------------------------------------------ attacks

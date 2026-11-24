@@ -44,6 +44,8 @@ public class BonusTabParityTests
     private static readonly Dictionary<string, string> ReviewedChecks = new(StringComparer.Ordinal)
     {
         ["MonarchsGazePower"] = "its code never flashes (MonarchsGazePower.AfterDamageGiven: PowerCmd.Apply alone), so the play check no longer expects a flash where its tab shows",
+        ["ArtOfWar"] = "its crossed tab is held to the relic going dark (ActedSeen.StatusCleared: GivenUpIssues), never to a flash; a read model's entry here is its code's flashes during the play, of which it has none (ArtOfWar.AfterCardPlayed sets its Status alone)",
+        ["RippleBasin"] = "its crossed tab is held to the relic going dark (ActedSeen.StatusCleared: GivenUpIssues), never to a flash; a read model's entry here is its code's flashes during the play, of which it has none (RippleBasin.AfterCardPlayed sets its Status alone)",
     };
 
     /// <summary>
@@ -155,6 +157,7 @@ public class BonusTabParityTests
         if (random.Next(5) == 0) player.Thorns = random.Next(1, 4);
         // An Attack already played this turn (the fight's log and Art of War's own flag).
         var attacked = random.Next(3) == 0;
+        if (attacked) player.AttacksThisTurn = 1;
         if (attacked)
             player.Turn = SimKeys.CountPlay(SimKeys.CountPlay(player.Turn, PlayStage.Started, SimCardType.Attack, new HashSet<SimCardTag>()), PlayStage.Finished, SimCardType.Attack, new HashSet<SimCardTag>());
         void Var(string model, string key, int value) => state.Vars[$"{id}:{model}:{key}"] = value;

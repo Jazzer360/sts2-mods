@@ -333,10 +333,6 @@ public sealed class SimPlayer
     [JsonIgnore] public int Inferno { get => Powers[PowerId.Inferno]; set => Set(PowerId.Inferno, value); }
 
     // Relics (amount: their block or damage; Data where said).
-    [JsonIgnore] public int RippleBasinBlock { get => Relics[RelicId.RippleBasin]; set => SetRelic(RelicId.RippleBasin, value); }
-    /// <summary>Parrying Shield (amount: its damage; Data: the block it needs).</summary>
-    [JsonIgnore] public int ParryingShieldDamage { get => Relics[RelicId.ParryingShield]; set => Relics = Relics.With(RelicId.ParryingShield, value, Relics.DataOf(RelicId.ParryingShield)); }
-    [JsonIgnore] public int ParryingShieldBlock { get => Relics.DataOf(RelicId.ParryingShield); set => Relics = Relics.With(RelicId.ParryingShield, Relics[RelicId.ParryingShield], value); }
     /// <summary>
     /// Pael's Eye is armed (unused this combat, no card played this turn): BeforeSideTurnEndEarly exhausts your whole hand.
     /// A card you play disarms it (BeforeCardPlayed); auto-plays don't.
@@ -694,6 +690,11 @@ public sealed class SimState
     public int BlockAtEnemyTurn;
     /// <summary>Your Parrying Shield fired at the end of your turn (your block at least its threshold).</summary>
     public bool ParryingShieldFired;
+    /// <summary>
+    /// The payouts whose condition held where their hook ran (ModelSpec.Payouts decided where they're paid: Parrying Shield's damage as your turn
+    /// ends, decision #238), each under its source's log key (SimKeys.Logged): what a tab judged on how the turn ends compares with ending it now.
+    /// </summary>
+    public NamedCounts Payouts = NamedCounts.Empty;
     public List<(string Name, int Amount)> EndOfTurnBlock = new();
     public List<(string Name, int Amount)> Blockable = new();
     public List<(string Name, int Amount)> Unblockable = new();
@@ -1061,6 +1062,7 @@ public sealed class SimState
         // Passed by reference to each part's Hash: no delegate or closure for the key, which is made for every copy of the state.
         var key = new BranchKey();
 
+        if (Payouts.Count > 0) Payouts.Hash(ref key);
         key.Add(ParryingShieldFired ? 1 : 0); key.Add(BlockDemand); key.Add(SkippedPoisoned); key.Add(SkippedEndOfTurn); key.Add(CancelledHits);
         if (DrawRecord != null)
         {

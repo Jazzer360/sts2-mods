@@ -223,8 +223,8 @@ public class SimReviewTests
         // DisintegrationPower: AfterSideTurnEndLate, after Parrying Shield (AfterSideTurnEnd).
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, block: 0, hits: 1) } };
         state.You.Block = 10;
-        state.You.ParryingShieldBlock = 10;
-        state.You.ParryingShieldDamage = 5;
+        state.WithRelic(Who.You, RelicId.ParryingShield, "Block", value: 10);
+        state.WithRelic(Who.You, RelicId.ParryingShield, "Damage", value: 5);
         state.You.Powers = state.You.Powers.With(PowerId.Disintegration, amount: 4);
         Assert.True(SimEngine.Run(state).DeadInAll(enemyId: 1));
     }

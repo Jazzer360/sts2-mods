@@ -171,9 +171,6 @@ public static class SimReaders
     internal static readonly Dictionary<string, (string Var, int Fallback)> RelicAmountVars = new()
     {
         [nameof(SneckoSkull)] = Var("PoisonPower", fallback: 1),
-        // End-of-turn relics: their block, damage or stars.
-        [nameof(RippleBasin)] = Var("Block"),
-        [nameof(ParryingShield)] = Var("Damage"),
     };
 
     /// <summary>A relic's value by its DynamicVars key, and what to take when it can't be read.</summary>
@@ -209,7 +206,6 @@ public static class SimReaders
                     data = Sts2State.Private(relic, "StrengthApplied", fallback: true) ? Models.RedSkull.StrengthGiven : 0; // its Strength already given
                     break;
                 // End-of-turn relics (their block, damage or stars: RelicAmountVars), and what they wait for (Data).
-                case nameof(ParryingShield): data = Sts2State.Var(relic, "Block"); break;
                 // Its Data is the model's own: energy spent during the play being simulated (PaelsTears), so none yet.
                 case nameof(PaelsTears): data = 0; break;
                 case nameof(UnsettlingLamp):

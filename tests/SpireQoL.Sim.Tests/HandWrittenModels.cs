@@ -1778,3 +1778,46 @@ public sealed class SlipperyPower : SimModel
         if (state.Enemy(owner) is { } enemy) enemy.SlipperyTriggered = true;
     }
 }
+
+// ---- a bonus a play gives up or sets up (Sim/Models/ProcRelicModels.cs and EndOfTurnModels.cs, deleted 2026-11-24)
+
+/// <summary>ArtOfWar / RippleBasin.AfterCardPlayed: the turn's first Attack gives up their end-of-turn bonus (bad for you).</summary>
+public abstract class FirstAttackGivesUp : RelicProc
+{
+    public override bool Harmful => true;
+    /// <summary>The play that gives up the bonus clears the relic's Active status (AfterCardPlayed: Status = Normal); it doesn't flash.</summary>
+    public override ActedSeen Seen => ActedSeen.StatusCleared;
+    public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play) =>
+        Mine(play, owner) && play.Card.Type == SimCardType.Attack && SimEngine.TurnOf(state, owner)[SimKeys.Plays(PlayStage.Started, SimCardType.Attack)] == 0 ? Fire(state, owner) : One(state);
+}
+
+public sealed class ArtOfWar : FirstAttackGivesUp { }
+/// <summary>RippleBasin: also BeforeSideTurnEnd: its block (amount) when its owner played no Attack this turn.</summary>
+public sealed class RippleBasin : FirstAttackGivesUp
+{
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner) =>
+        state.TakesPart(owner) && state.Player(owner) is { AttacksThisTurn: 0 } && Amount(state, owner) > 0 ? Block(state, owner, Amount(state, owner)) : One(state);
+}
+
+/// <inheritdoc cref="SpireQoL.Sim.Models.EndOfTurnModel"/>
+public abstract class EndOfTurnRelic : RelicProc
+{
+    public override TabKind? Tab => null;
+}
+
+/// <summary>ParryingShield.AfterSideTurnEnd: its damage (amount) to a random hittable enemy when its owner has at least its Block (Data).</summary>
+public sealed class ParryingShield : EndOfTurnRelic
+{
+    /// <summary>Plain when this play makes it fire for sure and ending the turn now might not; crossed when it would for sure now and the play can stop it.</summary>
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
+        owner != Who.You ? null
+        : !now.InEvery(branch => branch.ParryingShieldFired) ? new(Harmful: false, outcome => outcome.InEvery(branch => branch.ParryingShieldFired), InPlay: false)
+        : new(Harmful: true, outcome => !outcome.InEvery(branch => branch.ParryingShieldFired), branch => !branch.ParryingShieldFired, InPlay: false);
+
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner)
+    {
+        if (!state.TakesPart(owner) || Amount(state, owner) <= 0 || state.Player(owner) is not { } player || player.Block < Data(state, owner)) return One(state);
+        if (owner == Who.You) state.ParryingShieldFired = true;
+        return DamageRandom(state, owner, Amount(state, owner));
+    }
+}

@@ -15,8 +15,8 @@ public class SimParryingShieldTests
         state.You.Block = block;
         state.You.Plating = 4;          // Gorget's Plating on turn one
         state.WithRelic(Who.You, RelicId.Orichalcum, "Block", value: 6);  // only when you end your turn with no block
-        state.You.ParryingShieldBlock = 10;
-        state.You.ParryingShieldDamage = 6;
+        state.WithRelic(Who.You, RelicId.ParryingShield, "Block", value: 10);
+        state.WithRelic(Who.You, RelicId.ParryingShield, "Damage", value: 6);
         return state;
     }
 
@@ -27,16 +27,16 @@ public class SimParryingShieldTests
     {
         // No block: Plating 4 + Orichalcum 6 = 10, it fires.
         var now = SimEngine.Run(Start());
-        Assert.True(now.ParryingShieldInAll);
+        Assert.True(now.PaidInEvery(RelicId.ParryingShield.Name, owner: null));
 
         // One Defend (5): Orichalcum no longer arms, 5 + 4 = 9, it doesn't (a crossed tab).
         var oneDefend = SimEngine.Run(Start(), Defend);
-        Assert.False(oneDefend.ParryingShieldInAny);
+        Assert.False(oneDefend.PaidInSome(RelicId.ParryingShield.Name, owner: null));
 
         // From 5 block, a second Defend: 10 + 4 = 14, it fires again (a plain tab).
         var afterOne = SimEngine.Run(Start(block: 5));
-        Assert.False(afterOne.ParryingShieldInAny);
-        Assert.True(SimEngine.Run(Start(block: 5), Defend).ParryingShieldInAll);
+        Assert.False(afterOne.PaidInSome(RelicId.ParryingShield.Name, owner: null));
+        Assert.True(SimEngine.Run(Start(block: 5), Defend).PaidInEvery(RelicId.ParryingShield.Name, owner: null));
     }
 
     [Fact]
@@ -47,9 +47,9 @@ public class SimParryingShieldTests
         var state = Start(block: 10);
         state.You.Plating = 4;
         state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", Amount: 5));
-        Assert.False(SimEngine.Run(state).ParryingShieldInAny);
+        Assert.False(SimEngine.Run(state).PaidInSome(RelicId.ParryingShield.Name, owner: null));
         state.You.TurnEndCards.Clear();
         state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", Amount: 4));
-        Assert.True(SimEngine.Run(state).ParryingShieldInAll);
+        Assert.True(SimEngine.Run(state).PaidInEvery(RelicId.ParryingShield.Name, owner: null));
     }
 }

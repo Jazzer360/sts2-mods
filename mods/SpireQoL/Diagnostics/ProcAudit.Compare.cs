@@ -142,7 +142,7 @@ public sealed partial class ProcAudit
         // ---- relic tabs whose relic didn't fire (crossed ones mean "this breaks it": no flash)
         foreach (var (name, otherTab) in sourceOf)
         {
-            if (otherTab.Crossed || !otherTab.Key.StartsWith("proc:", StringComparison.Ordinal) || EndOfTurnRelicTabs.Contains(name)) continue;
+            if (otherTab.Crossed || !otherTab.Key.StartsWith("proc:", StringComparison.Ordinal) || SimModels.Get(name) is ReadModel { PaysWhereItsDecided: true }) continue;
             // The play ended the fight: the game stops at the killing hit, so a relic that acts after it (Bone Flute after
             // Osty's attack) never gets to.
             if (window.FightEnded) continue;

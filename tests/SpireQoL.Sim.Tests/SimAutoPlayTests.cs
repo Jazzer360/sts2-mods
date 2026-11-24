@@ -71,7 +71,7 @@ public class SimAutoPlayTests
     {
         // Ripple Basin (BeforeSideTurnEnd) checks for an attack played this turn: the auto-play phase comes first.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 10) } };
-        state.You.RippleBasinBlock = 4;
+        state.WithRelic(Who.You, RelicId.RippleBasin, "Block", value: 4);
         Assert.Equal(6, SimEngine.Run(state).TakenMax);
         state.You.ExhaustAutoPlays.Add(AllEnemies("HowlFromBeyond", damage: 3, ids: 1));
         Assert.Equal(10, SimEngine.Run(state).TakenMax);
@@ -250,7 +250,7 @@ public class SimAutoPlayTests
     {
         // Their Howl counts as their Attack this turn: your Ripple Basin still gives its block, and your hand keeps its size.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 10) } };
-        state.You.RippleBasinBlock = 4;
+        state.WithRelic(Who.You, RelicId.RippleBasin, "Block", value: 4);
         state.You.HandCount = 3;
         var mate = new SimPlayer { Hp = 50 };
         mate.ExhaustAutoPlays.Add(TeammatesHowl(damage: 3, ids: 1));

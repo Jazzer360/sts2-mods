@@ -11,12 +11,6 @@ public abstract class EndOfTurnModel : ProcModel
     public override TabKind? Tab => null;
 }
 
-/// <inheritdoc cref="EndOfTurnModel"/>
-public abstract class EndOfTurnRelic : RelicProc
-{
-    public override TabKind? Tab => null;
-}
-
 /// <summary>PlatingPower.BeforeSideTurnEndEarly: its amount of block (unpowered).</summary>
 public sealed class PlatingPower : EndOfTurnModel
 {
@@ -33,23 +27,6 @@ public sealed class ConsumingShadowPower : EndOfTurnModel
         IEnumerable<SimState> states = One(state);
         for (var i = 0; i < Amount(state, owner); i++) states = states.SelectMany(branch => SimEngine.EvokeLast(branch, owner)).ToList();
         return states;
-    }
-}
-
-/// <summary>ParryingShield.AfterSideTurnEnd: its damage (amount) to a random hittable enemy when its owner has at least its Block (Data).</summary>
-public sealed class ParryingShield : EndOfTurnRelic
-{
-    /// <summary>Plain when this play makes it fire for sure and ending the turn now might not; crossed when it would for sure now and the play can stop it.</summary>
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        owner != Who.You ? null
-        : !now.ParryingShieldInAll ? new(Harmful: false, outcome => outcome.ParryingShieldInAll, InPlay: false)
-        : new(Harmful: true, outcome => !outcome.ParryingShieldInAll, branch => !branch.ParryingShieldFired, InPlay: false);
-
-    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner)
-    {
-        if (!state.TakesPart(owner) || Amount(state, owner) <= 0 || state.Player(owner) is not { } player || player.Block < Data(state, owner)) return One(state);
-        if (owner == Who.You) state.ParryingShieldFired = true;
-        return DamageRandom(state, owner, Amount(state, owner));
     }
 }
 

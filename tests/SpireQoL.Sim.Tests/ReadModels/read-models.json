@@ -1479,6 +1479,224 @@
     "HelpsOwner": false
   },
   {
+    "Name": "ArtOfWar",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AnyAttacksPlayedThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "ArtOfWar.AfterCardPlayed:0011",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "ArtOfWar.AfterCardPlayed:0037",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "ArtOfWar.AfterCardPlayed:0045",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "AnyAttacksPlayedLastTurn"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AnyAttacksPlayedLastTurn",
+            "Value": {
+              "$kind": "HookField",
+              "Field": "AnyAttacksPlayedThisTurn"
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "ArtOfWar.AfterSideTurnEnd:0011",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AnyAttacksPlayedThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "ArtOfWar.AfterSideTurnEnd:0011",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false,
+    "Payouts": [
+      {
+        "Hook": "AfterEnergyReset",
+        "Condition": {
+          "$kind": "HookMath",
+          "Operation": "And",
+          "Left": {
+            "$kind": "HookMath",
+            "Operation": "And",
+            "Left": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterEnergyReset\u003Ed__16.MoveNext:0020",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            },
+            "Right": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterEnergyReset\u003Ed__16.MoveNext:003F",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "Greater",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TurnNumber"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                }
+              }
+            }
+          },
+          "Right": {
+            "$kind": "HookNot",
+            "Inner": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterEnergyReset\u003Ed__16.MoveNext:004C",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "NotEqual",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "AnyAttacksPlayedLastTurn"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                }
+              }
+            }
+          }
+        },
+        "NextTurn": true,
+        "DuringTheTurn": {
+          "$kind": "HookMath",
+          "Operation": "And",
+          "Left": {
+            "$kind": "HookMath",
+            "Operation": "And",
+            "Left": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterEnergyReset\u003Ed__16.MoveNext:0020",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            },
+            "Right": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterEnergyReset\u003Ed__16.MoveNext:003F",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "Greater",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TurnNumber"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                }
+              }
+            }
+          },
+          "Right": {
+            "$kind": "HookNot",
+            "Inner": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterEnergyReset\u003Ed__16.MoveNext:004C",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "NotEqual",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "AnyAttacksPlayedThisTurn"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    ],
+    "DarkensOnPlay": true
+  },
+  {
     "Name": "AutomationPower",
     "Kind": "Power",
     "Hooks": [
@@ -17820,6 +18038,102 @@
     "Copies": "EachApplication"
   },
   {
+    "Name": "ParryingShield",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "RandomEnemy",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Damage",
+              "Canonical": 6
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Damage.Props",
+              "Canonical": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__4.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__4.MoveNext:005B",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "OwnerBlock"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "Block",
+                      "Canonical": 10
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Payouts": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Condition": {
+          "$kind": "HookMath",
+          "Operation": "And",
+          "Left": {
+            "$kind": "HookTest",
+            "At": "\u003CAfterSideTurnEnd\u003Ed__4.MoveNext:002A",
+            "Test": {
+              "$kind": "HookFactValue",
+              "Fact": "TakesPart"
+            }
+          },
+          "Right": {
+            "$kind": "HookNot",
+            "Inner": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__4.MoveNext:005B",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "Less",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OwnerBlock"
+                },
+                "Right": {
+                  "$kind": "HookVar",
+                  "Key": "Block",
+                  "Canonical": 10
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
     "Name": "PerfectFit",
     "Kind": "Enchantment",
     "Hooks": [],
@@ -19521,6 +19835,161 @@
     "Kind": "Affliction",
     "Hooks": [],
     "HelpsOwner": false
+  },
+  {
+    "Name": "RippleBasin",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__6.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeSideTurnEnd\u003Ed__6.MoveNext:0053",
+                  "Test": {
+                    "$kind": "HookHistory",
+                    "Query": {
+                      "Kind": "CardPlayFinished",
+                      "Scope": "ThisTurn",
+                      "Whose": "Owner",
+                      "Details": "None",
+                      "CardType": "Attack"
+                    },
+                    "Any": true
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Block",
+              "Canonical": 4
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Block.Props",
+              "Canonical": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__6.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeSideTurnEnd\u003Ed__6.MoveNext:0053",
+                  "Test": {
+                    "$kind": "HookHistory",
+                    "Query": {
+                      "Kind": "CardPlayFinished",
+                      "Scope": "ThisTurn",
+                      "Whose": "Owner",
+                      "Details": "None",
+                      "CardType": "Attack"
+                    },
+                    "Any": true
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false,
+    "Payouts": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Condition": {
+          "$kind": "HookMath",
+          "Operation": "And",
+          "Left": {
+            "$kind": "HookTest",
+            "At": "\u003CBeforeSideTurnEnd\u003Ed__6.MoveNext:002A",
+            "Test": {
+              "$kind": "HookFactValue",
+              "Fact": "TakesPart"
+            }
+          },
+          "Right": {
+            "$kind": "HookNot",
+            "Inner": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeSideTurnEnd\u003Ed__6.MoveNext:0053",
+              "Test": {
+                "$kind": "HookHistory",
+                "Query": {
+                  "Kind": "CardPlayFinished",
+                  "Scope": "ThisTurn",
+                  "Whose": "Owner",
+                  "Details": "None",
+                  "CardType": "Attack"
+                },
+                "Any": true
+              }
+            }
+          }
+        },
+        "DuringTheTurn": {
+          "$kind": "HookMath",
+          "Operation": "And",
+          "Left": {
+            "$kind": "HookTest",
+            "At": "\u003CBeforeSideTurnEnd\u003Ed__6.MoveNext:002A",
+            "Test": {
+              "$kind": "HookFactValue",
+              "Fact": "TakesPart"
+            }
+          },
+          "Right": {
+            "$kind": "HookNot",
+            "Inner": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeSideTurnEnd\u003Ed__6.MoveNext:0053",
+              "Test": {
+                "$kind": "HookHistory",
+                "Query": {
+                  "Kind": "CardPlayFinished",
+                  "Scope": "ThisTurn",
+                  "Whose": "Owner",
+                  "Details": "None",
+                  "CardType": "Attack"
+                },
+                "Any": true
+              }
+            }
+          }
+        }
+      }
+    ],
+    "DarkensOnPlay": true
   },
   {
     "Name": "RitualPower",

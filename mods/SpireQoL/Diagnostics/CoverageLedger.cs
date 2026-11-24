@@ -41,7 +41,7 @@ internal static partial class CoverageLedger
     private static readonly Dictionary<string, string> Reviewed = new()
     {
         // ======== relics
-        ["ArtOfWar"] = "covered: AfterCardPlayed/AfterSideTurnEnd track attacks per turn; crossed tab on the first attack (proc rule)",
+        ["ArtOfWar"] = "covered: read from its code (ReadModel, decision #238): AfterCardPlayed marks an Attack played this turn, AfterSideTurnEnd keeps it as last turn's; its AfterEnergyReset pays its energy on !AnyAttacksPlayedLastTurn (past the turn predicted), so the play that turns that off gives it up: its crossed tab, checked by the relic going dark (its AfterCardPlayed sets Status Normal)",
         ["BeatingRemnant"] = "covered: read from its code (ReadModel, decision #195): ModifyHpLostAfterOsty caps HP its owner loses at MaxHpLoss less its DamageReceivedThisTurn, which AfterDamageReceived counts (its BeforeSideTurnStart reset comes as its owner's next turn starts)",
         ["BiiigHug"] = "covered: AfterShuffle adds a Soot to the draw pile; crossed shuffle tab (its model; the Soot's own created-card event, AddGeneratedCardToCombat with you as its creator, isn't raised yet: TRACKER 22)",
         ["BingBong"] = "ignore: AfterCardChangedPiles copies cards added to your deck (deck, not combat piles)",
@@ -96,7 +96,7 @@ internal static partial class CoverageLedger
         ["PaelsEye"] = "covered: crossed tab covers giving up its extra turn (ShouldTakeExtraTurnEarly, AfterTakingExtraTurn); Incoming Damage shows its icon while ending now gives the extra turn (Hook.ShouldTakeExtraTurn); the simulator exhausts your hand at BeforeSideTurnEndEarly (Feel No Pain, Charon's Ashes, Forgotten Soul; nothing left in hand to act)",
         ["PaelsLegion"] = "covered: AfterCardPlayed doubles block of the first block card off cooldown (proc tab, tracker)",
         ["PaelsTears"] = "covered: BeforeSideTurnEnd notes leftover energy (crossed tab on cards that leave no energy once the play has resolved, energy it gets back counted)",
-        ["ParryingShield"] = "covered: AfterSideTurnEnd damages a random enemy with enough block (model ParryingShield)",
+        ["ParryingShield"] = "covered: read from its code (ReadModel, decision #238): AfterSideTurnEnd damages a random hittable enemy when its owner's block is at least its Block; whether that holds as your turn ends, with the play against without it, is its tab (plain where the play makes it pay, crossed where it stops it)",
         ["PenNib"] = "covered: Before/AfterCardPlayed doubles every 10th attack (proc tab, tracker; damage through the game's math; a replay doubles only the play that reaches 10, in the simulator)",
         ["Permafrost"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed block on the first Power (proc block)",
         ["PhilosophersStone"] = "ignore: AfterCreatureAddedToCombat gives enemies Strength as they enter (intents read live)",
@@ -105,7 +105,7 @@ internal static partial class CoverageLedger
         ["RazorTooth"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed upgrades the played card (CardCmd.Upgrade: a replay's later plays are its upgraded copy's, decision #218; proc tab)",
         ["RedSkull"] = "covered: AfterCurrentHpChanged Strength at low HP (proc tab on HP-loss cards)",
         ["Regalite"] = "covered: read from its code (ReadModel, decision #195): AfterCardGeneratedForCombat block on the first created card per turn (proc block)",
-        ["RippleBasin"] = "covered: BeforeSideTurnEnd block if no attack was played (model RippleBasin; crossed tab on the first attack)",
+        ["RippleBasin"] = "covered: read from its code (ReadModel, decision #238): BeforeSideTurnEnd gains its Block when the fight's log has no Attack of its owner's this turn; the play that logs one gives it up: its crossed tab, checked by the relic going dark (its AfterCardPlayed sets Status Normal)",
         ["ScreamingFlagon"] = "covered: read from its code (ReadModel, decision #195): BeforeSideTurnEnd damages all enemies with an empty hand",
         ["SelfFormingClay"] = "covered: read from its code (ReadModel, decision #238): AfterDamageReceived applies SelfFormingClayPower (block as its owner's next turn starts) on their HP loss; its tab is its reaction to your HP loss, judged on the play's outcomes",
         ["Shuriken"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed Strength every N attacks (proc tab, tracker)",

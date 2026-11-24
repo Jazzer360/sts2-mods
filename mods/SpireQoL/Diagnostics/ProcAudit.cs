@@ -170,11 +170,6 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
     private static readonly HashSet<string> SimTabSources =
         SimModels.Names.Where(name => SimModels.Get(name) is { } model && (model.Tab != null || model.JudgedOnOutcome)).ToHashSet();
 
-    /// <summary>
-    /// Relic tabs about the end of your turn, not the play: they never fire during it (Parrying Shield doesn't
-    /// even flash). The forecast check covers what they do (enemy HP at the end of your turn).
-    /// </summary>
-    private static readonly HashSet<string> EndOfTurnRelicTabs = new() { nameof(ParryingShield) };
 
     /// <summary>Your relics and powers that react to an enemy dying or being hit.</summary>
     private static readonly HashSet<string> KillReactive = new() { nameof(GremlinHorn), nameof(CompostPower), nameof(MightyWings) };

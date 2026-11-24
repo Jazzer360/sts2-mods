@@ -680,10 +680,12 @@ public class ProcModelTests
     public void ArtOfWarAndPaelsEyeWarnOnTheTurnsFirstPlays()
     {
         var state = Relic(Relic(State(), RelicId.ArtOfWar), RelicId.PaelsEye);
+        state.TurnNumber = 1; // the game numbers its turns from 1 (ArtOfWar.AfterEnergyReset pays from the second)
         var after = One(state, Play(Card("Strike"), target: 0, plays: 2, Attack(baseDamage: 1)));
         Assert.Equal(1, after.Fired["ArtOfWar"]);
         Assert.Equal(1, after.Fired["PaelsEye"]);
         state.You.Turn = state.You.Turn.Add("Started", delta: 1).Add(SimKeys.Plays(PlayStage.Started, SimCardType.Attack), delta: 1);
+        SimEngine.SetField(state, Who.You, "ArtOfWar.AnyAttacksPlayedThisTurn", 1); // its own record of that Attack, as the game keeps it
         var later = One(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1)));
         Assert.False(later.Fired.Has("ArtOfWar"));
         Assert.False(later.Fired.Has("PaelsEye"));
@@ -901,7 +903,7 @@ public class ProcModelTests
         {
             var model = SimModels.Get(name)!;
             // Covering Fire: no tab by design (decision #25); end-of-turn models show in Incoming Damage, not on cards.
-            if (model is Models.ProcModel and not Models.EndOfTurnModel and not Models.EndOfTurnRelic && name != "CoveringFirePower") Assert.NotNull(model.Tab);
+            if (model is Models.ProcModel and not Models.EndOfTurnModel && name != "CoveringFirePower") Assert.NotNull(model.Tab);
         }
     }
     // ---- draw and energy tabs (decision #132): the amount is what the source really gave

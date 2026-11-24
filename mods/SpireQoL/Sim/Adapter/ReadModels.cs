@@ -42,7 +42,8 @@ public static partial class ReadModels
             {
                 if (Compiles(reading.Spec) is not { } notCompiled)
                 {
-                    specs.Add(reading.Spec with { Tab = HasTabRow(type.Name) ? reading.Spec.Tab : null, Outcome = HasTabRow(type.Name) ? reading.Spec.Outcome : null });
+                    // Its payouts too (decision #238): a class whose code pays out on a condition but has no row (Orichalcum) gets no tab from them.
+                    specs.Add(HasTabRow(type.Name) ? reading.Spec : reading.Spec with { Tab = null, Outcome = null, Payouts = null });
                     continue;
                 }
                 reading = reading with { Hooks = reading.Hooks.Append(new HookReading("(compiled)", "gap: " + notCompiled)).ToList() };

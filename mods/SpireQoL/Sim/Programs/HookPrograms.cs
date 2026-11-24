@@ -614,6 +614,27 @@ public enum HookOutcome
 }
 
 /// <summary>
+/// What a model pays out after the play, on a condition its code tests (decision #238): a command that gives (block, damage to the enemies, energy,
+/// cards, an orb, a heal, a buff on its owner) in a hook of the players' turn's end or of their next turn's start, and the test it waits on.
+/// <paramref name="Hook"/>: the game's hook it's in; <paramref name="Condition"/>: its test as the code reads it there.
+/// </summary>
+public sealed record Payout(string Hook, HookValue Condition)
+{
+    /// <summary>It's in a hook of the players' next turn's start (AfterEnergyReset, AfterPlayerTurnStart...), past every simulation: never run.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool NextTurn { get; init; }
+
+    /// <summary>
+    /// Its condition as it stands during your turn (<see cref="Condition"/> with what the turn's end stores before the payout put in its place:
+    /// Art of War's AnyAttacksPlayedLastTurn is its AnyAttacksPlayedThisTurn), when what it reads only a play changes (the model's own state its play
+    /// hooks store, the fight's log of card plays): decided by the play, so a play that turns it off gives up the bonus there and then. Null:
+    /// decided where it's paid (Parrying Shield's block as your turn ends).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public HookValue? DuringTheTurn { get; init; }
+}
+
+/// <summary>
 /// Whether a model is a power (on a creature: its PowerSet entry), a relic (on a player: its RelicSet entry) or an orb (in a player's orb slots: a
 /// SimOrb, its programs run where OrbCmd and OrbQueue run them, never a listener).
 /// </summary>
@@ -664,6 +685,21 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
 
     /// <summary>Its tab is judged on how the turn ends, by what its AfterDeath waits on (HookReader.OutcomeOf); it has no play tab then. Null: none.</summary>
     public HookOutcome? Outcome { get; init; }
+
+    /// <summary>
+    /// What it pays out after the play and on what (decision #238): its tab says a play gives the bonus up or sets it up. A payout decided by the
+    /// play (Payout.DuringTheTurn) is a crossed play tab, logged as the play turns it off; one decided where it's paid is a tab judged on how
+    /// the turn ends. Null: none (or no settings row to show its tab: ReadModels.Specs).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<Payout>? Payouts { get; init; }
+
+    /// <summary>
+    /// A play hook of its code sets its Status to Normal (the relic going dark: the game's own sign that the play gave its bonus up, Art of War's
+    /// and Ripple Basin's AfterCardPlayed): the play check holds its crossed tab to that (ActedSeen.StatusCleared).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool DarkensOnPlay { get; init; }
 
     /// <summary>
     /// An enchantment whose ModifyShuffleOrder moves its card to the front of the cards a shuffle puts into the draw pile (Perfect Fit's
@@ -746,7 +782,8 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
         });
         return Hooks.SelectMany(program => Inside(program.Returns).Concat(program.Steps.SelectMany(OfStep)))
             .Concat((Commands ?? Array.Empty<CommandProgram>()).SelectMany(command => command.Steps.SelectMany(OfStep)))
-            .Concat((OrbValues ?? new Dictionary<string, HookValue>()).Values.SelectMany(Inside));
+            .Concat((OrbValues ?? new Dictionary<string, HookValue>()).Values.SelectMany(Inside))
+            .Concat((Payouts ?? Array.Empty<Payout>()).SelectMany(payout => Inside(payout.Condition).Concat(Inside(payout.DuringTheTurn))));
     }
 
     /// <summary>Every step of its programs, a counter loop's included.</summary>

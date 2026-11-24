@@ -43,8 +43,8 @@ public class SimTeammateParityTests
             case "Plating": player.Plating = 4; break;
             case "Orichalcum": state.WithRelic(id, RelicId.Orichalcum, "Block", value: 6); break;
             case "Cloak Clasp": state.WithRelic(id, RelicId.CloakClasp, "Block", value: 1); player.HandCount = 5; break;
-            case "Ripple Basin": player.RippleBasinBlock = 4; break;
-            case "Parrying Shield": player.Plating = 10; player.ParryingShieldBlock = 10; player.ParryingShieldDamage = 6; break;
+            case "Ripple Basin": state.WithRelic(id, RelicId.RippleBasin, "Block", value: 4); break;
+            case "Parrying Shield": player.Plating = 10; state.WithRelic(id, RelicId.ParryingShield, "Block", value: 10).WithRelic(id, RelicId.ParryingShield, "Damage", value: 6); break;
             case "Frost and Hailstorm":
                 player.Orbs.Add(new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 });
                 player.Hailstorm = 3;

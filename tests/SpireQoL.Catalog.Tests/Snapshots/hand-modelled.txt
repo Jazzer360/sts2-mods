@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 135 game methods; 3 adapter rules; 79 hand-written models.
+# 20 engine rules naming 135 game methods; 3 adapter rules; 76 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -79,8 +79,6 @@ Fairy in a Bottle and Lizard Tail: a death held back, healed from 0
 
 ## The hand-written models (Sim/Models): each game class's hooks, and what its model answers
 
-ArtOfWar: ArtOfWar.AfterCardPlayed, ArtOfWar.AfterCombatEnd, ArtOfWar.AfterEnergyReset, ArtOfWar.AfterSideTurnEnd
-  model: nothing it overrides
 AsleepPower: AsleepPower.AfterDamageReceived, AsleepPower.AfterSideTurnEnd, AsleepPower.BeforeSideTurnEndVeryEarly
   model: AfterDamageReceived, OutcomeTab
 BiiigHug: BiiigHug.AfterObtained, BiiigHug.AfterShuffle
@@ -153,8 +151,6 @@ PaelsTears: PaelsTears.AfterCombatEnd, PaelsTears.AfterSideTurnStart, PaelsTears
   model: AfterCardEvent, AfterPlayResolved
 ParryPower: no hooks of its own
   model: nothing it overrides
-ParryingShield: ParryingShield.AfterSideTurnEnd
-  model: AfterSideTurnEnd, OutcomeTab
 PenNib: PenNib.AfterCardPlayed, PenNib.BeforeCardPlayed, PenNib.ModifyDamageMultiplicative
   model: AfterCardPlayed, BeforeCardPlayed, ModifyDamageMultiplicative
 PersonalHivePower: PersonalHivePower.AfterDamageReceived
@@ -176,8 +172,6 @@ ReboundPower: ReboundPower.AfterModifyingCardPlayResultLocation, ReboundPower.Af
 RedSkull: RedSkull.AfterCombatEnd, RedSkull.AfterCurrentHpChanged, RedSkull.AfterRoomEntered
   model: AfterDamageReceived, OutcomeTab
 Regret: no game class by its name (the simulator's own)
-  model: BeforeSideTurnEnd
-RippleBasin: RippleBasin.AfterCardPlayed, RippleBasin.AfterCombatEnd, RippleBasin.BeforeSideTurnEnd, RippleBasin.BeforeSideTurnStart
   model: BeforeSideTurnEnd
 RupturePower: RupturePower.AfterCardPlayed, RupturePower.AfterDamageReceived, RupturePower.BeforeCardPlayed, RupturePower.InitInternalData
   model: nothing it overrides

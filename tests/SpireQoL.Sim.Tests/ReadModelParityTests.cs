@@ -63,6 +63,9 @@ public class ReadModelParityTests
         ["SelfFormingClay.AfterDamageReceived"] = "target == base.Owner && result.UnblockedDamage > 0: PowerCmd.Apply<SelfFormingClayPower>(base.Owner, BlockNextTurn), where the hand-written model only had its tab. The power gives its block as its owner's next turn starts, past every simulation: no prediction changes. Its tab is the reaction's rule (decision #238), judged as the hand-written one's was",
         ["DemonTongue.AfterDamageReceived"] = "_triggeredThisTurn = true; Flash(); CreatureCmd.Heal(base.Owner, UnblockedDamage): the same heal, its once-a-turn flag its own field; the read model logs its Flash (the flash log, decision #199) where the hand-written one logged the heal as a firing. A heal is no tab's amount, and its tab is the reaction's rule (decision #238), which reads either log: what's shown doesn't change",
         ["SlipperyPower.AfterDamageReceived"] = "target == base.Owner && result.UnblockedDamage >= 1: Flash(); PowerCmd.Decrement(this): the same charge spent; the read model logs its Flash (the flash log, decision #199) where the hand-written one logged a firing and set its enemy's SlipperyTriggered. Its tab is the reaction's rule (decision #238), which reads either log, over the whole turn as the flag was: what's shown doesn't change",
+        ["ArtOfWar.BeforeCardPlayed"] = "its code has no BeforeCardPlayed: the hand-written model logged its crossed tab's firing on the turn's first Attack there; the read model logs it where its payout (AfterEnergyReset's energy on !AnyAttacksPlayedLastTurn, which AfterSideTurnEnd sets from AnyAttacksPlayedThisTurn) goes off: AfterCardPlayed's store (decision #238). The play's log is the same over the play (BonusTabParityTests); this board's turn is 0, before any the game numbers, where the payout is never on",
+        ["ArtOfWar.AfterCardPlayed"] = "AnyAttacksPlayedThisTurn = true on its owner's Attack while !AnyAttacksPlayedLastTurn: the store that gives its payout up logs the crossed tab's firing (decision #238), as ArtOfWar.BeforeCardPlayed's review says",
+        ["RippleBasin.BeforeCardPlayed"] = "its code has no BeforeCardPlayed: the hand-written model logged its crossed tab's firing on the turn's first Attack there; the read model's is logged where the fight's log counts the play that turns its payout off (BeforeSideTurnEnd's block on no Attack of its owner's this turn: SimEngine.Count, decision #238). The play's log is the same over the play (BonusTabParityTests)",
         ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
     };
 
@@ -73,14 +76,14 @@ public class ReadModelParityTests
     private static readonly Dictionary<string, string> RelicAmountVars = new(StringComparer.Ordinal) {
         [RelicId.CharonsAshes.Name] = "Damage", [RelicId.ForgottenSoul.Name] = "Damage", [RelicId.Orichalcum.Name] = "Block", [RelicId.FakeOrichalcum.Name] = "Block",
         [RelicId.ScreamingFlagon.Name] = "Damage", [RelicId.CloakClasp.Name] = "Block", [RelicId.ObsidianVice.Name] = "Damage", [RelicId.LunarPastry.Name] = "Stars", [RelicId.StoneCalendar.Name] = "Damage",
-        [RelicId.MightyWings.Name] = "StrengthPower", [RelicId.TungstenRod.Name] = "HpLossReduction", [RelicId.BeatingRemnant.Name] = "MaxHpLoss", [RelicId.TheBoot.Name] = "DamageMinimum",
+        [RelicId.MightyWings.Name] = "StrengthPower", [RelicId.TungstenRod.Name] = "HpLossReduction", [RelicId.BeatingRemnant.Name] = "MaxHpLoss", [RelicId.TheBoot.Name] = "DamageMinimum", [RelicId.RippleBasin.Name] = "Block", [RelicId.ParryingShield.Name] = "Damage",
     };
 
     /// <summary>
     /// The relics whose hand-written model's Data the adapter read from one of their values (SimReaders.Relics), by that value's key: the board
     /// gives the Data as the adapter did (Mighty Wings' DamageThreshold).
     /// </summary>
-    private static readonly Dictionary<string, string> RelicDataVars = new(StringComparer.Ordinal) { [RelicId.MightyWings.Name] = "DamageThreshold" };
+    private static readonly Dictionary<string, string> RelicDataVars = new(StringComparer.Ordinal) { [RelicId.MightyWings.Name] = "DamageThreshold", [RelicId.ParryingShield.Name] = "Block" };
 
     /// <summary>
     /// The powers whose hand-written model's Data the adapter read from one of their values (SimReaders.Powers), by that value's key: the board

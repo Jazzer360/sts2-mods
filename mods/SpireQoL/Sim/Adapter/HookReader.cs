@@ -152,8 +152,17 @@ public static class HookReader
                 .Select(variable => VarFieldPrefix + variable.Key) : Array.Empty<string>())
             .ToHashSet(StringComparer.Ordinal);
         if (storedVars.Count > 0) programs = programs.Select(program => VarsAsState(program, storedVars)).ToList();
+        // What it pays out after the play, on what (decision #238): read from its turn-end hooks and its next turn's start, which never run.
+        var nextTurn = Hooks(type).Where(hook => PlayersTurnStartHooks.Contains(hook.Name)).OrderBy(hook => hook.Name, StringComparer.Ordinal)
+            .Select(hook => (hook.Name, Steps: reader.NextTurnSteps(hook))).ToList();
+        // A model whose commands act during the play too (Joss Paper's draw as a card exhausts) keeps its play tab: its payouts give none.
+        var actsDuringThePlay = TabOf(programs.Where(program => !TurnEndHooks.Contains(program.Hook) && !StartsATurn(program.Hook.ToString())).ToList()) != null;
+        var payouts = actsDuringThePlay ? new List<Payout>() : PayoutsOf(programs, nextTurn);
+        // A play hook that sets the relic's Status to Normal (RelicStatus.Normal, 0): it goes dark, the game's sign of a bonus given up.
+        var darkens = kind == ModelKind.Relic && programs.Where(program => program.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed)
+            .SelectMany(program => new ModelSpec(type.Name, kind, new[] { program }).Steps()).Any(step => step is StoreFieldStep { Field: StatusField, Value: HookConstant { Value: 0m } });
         // A store to a field no program reads changes only what the game shows (Kunai's IsActivating): left out.
-        var fieldsRead = new ModelSpec(type.Name, kind, programs).Values().OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
+        var fieldsRead = new ModelSpec(type.Name, kind, programs) { Payouts = payouts }.Values().OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
         programs = programs.Select(program => program with { Steps = program.Steps.Where(step => step is not StoreFieldStep store || fieldsRead.Contains(store.Field)).ToList() })
             .Where(program => program.Returns != null || program.Steps.Count > 0).ToList();
         var helpsOwner = HelpsOwnerOf(programs);
@@ -166,9 +175,13 @@ public static class HookReader
             .Select(command => new CommandProgram(command.Name, command.Steps!)).ToList();
         // A crossed tab carries no amount (only the four core resources' plain tabs do: decision #132): a trigger, as it is for every owner of a
         // class one owner's is crossed for (a teammate's Sneaky keeps the trigger an enemy's would have). A tab judged on the outcome is its only one.
+        // A payout decided where it's paid is a tab judged on the outcome, its only one; one the play decides is a crossed trigger on the play
+        // that gives it up (decision #238).
         var spec = new ModelSpec(type.Name, kind, programs)
         {
-            Tab = outcome != null ? null : (helpsOwner || hurtsOwner) && TabOf(programs) != null ? TabKind.Trigger : TabOf(programs),
+            Tab = outcome != null || payouts.Any(payout => payout.DuringTheTurn == null) ? null : payouts.Count > 0 ? TabKind.Trigger
+                : (helpsOwner || hurtsOwner) && TabOf(programs) != null ? TabKind.Trigger : TabOf(programs),
+            Payouts = payouts.Count > 0 ? payouts : null, DarkensOnPlay = darkens,
             HelpsOwner = helpsOwner, HurtsOwner = hurtsOwner, HurtsPlayOwner = hurtsPlayOwner, Outcome = outcome,
             Copies = kind == ModelKind.Power ? reader.Copies() : PowerCopies.One,
             Commands = commands.Count > 0 ? commands : null,
@@ -431,6 +444,118 @@ public static class HookReader
         }
         return ReactsToHpLoss(programs) ? HookOutcome.ReactsToHpLoss : null;
     }
+
+    /// <summary>The relic's Status (RelicModel.Status: Normal 0, Active 1), as a store of its code names it.</summary>
+    private const string StatusField = "Status";
+
+    /// <summary>The hooks of the players' turn's end, in the game's order (decision #51).</summary>
+    private static readonly HookName[] TurnEndHooks =
+        { HookName.BeforeSideTurnEndVeryEarly, HookName.BeforeSideTurnEndEarly, HookName.BeforeSideTurnEnd, HookName.AfterSideTurnEnd, HookName.AfterSideTurnEndLate };
+
+    /// <summary>
+    /// What a model pays out after the play (decision #238): each command that gives (block for its owner, damage to the enemies, energy, cards, an
+    /// orb, a heal, stars, a buff on its owner or a debuff on the enemies) in a hook of the players' turn's end or of their next turn's start
+    /// (<paramref name="nextTurn"/>: those hooks' commands, null where the reader stops), on a test of its code beyond its owner taking part:
+    /// that test is the payout's condition. A payout whose condition only a play changes (DuringTheTurn) is decided by the play; one in the
+    /// next turn's start that isn't can't be judged from a simulation (what it reads then isn't what the simulation ends with): left out.
+    /// </summary>
+    internal static List<Payout> PayoutsOf(IReadOnlyList<HookProgram> programs, IEnumerable<(string Hook, IReadOnlyList<HookStep>? Steps)> nextTurn)
+    {
+        var payouts = new List<Payout>();
+        void Add(string hook, IEnumerable<HookStep> steps, bool next, int turnEndHooksBefore)
+        {
+            foreach (var step in steps)
+            {
+                if (!Gives(step) || step.When is not { } when || OnlyTakesPart(when) || payouts.Any(payout => payout.Hook == hook && Equals(payout.Condition, when))) continue;
+                var during = DuringTheTurn(when, programs, turnEndHooksBefore, next);
+                // Decided during the turn by nothing a play changes (Stone Calendar's turn number): no play gives it up or sets it up.
+                if (during != null && !PlayChanges(during, programs)) continue;
+                payouts.Add(new Payout(hook, when) { NextTurn = next, DuringTheTurn = during });
+            }
+        }
+        for (var i = 0; i < TurnEndHooks.Length; i++)
+            if (programs.FirstOrDefault(program => program.Hook == TurnEndHooks[i]) is { } program) Add(program.Hook.ToString(), program.Steps, next: false, i);
+        foreach (var (hook, steps) in nextTurn)
+            if (steps != null) Add(hook, steps, next: true, TurnEndHooks.Length);
+        return payouts.Where(payout => !payout.NextTurn || payout.DuringTheTurn != null).ToList();
+    }
+
+    /// <summary>A command that gives its owner's side something (a payout's command).</summary>
+    private static bool Gives(HookStep step) => step switch
+    {
+        GainBlockStep { To: null } or GainEnergyStep or DrawStep or ChannelStep or HealStep or GainStarsStep => true,
+        DamageStep damage => damage.Target is not (HookTarget.Owner or HookTarget.PlayOwner or HookTarget.LivingPlayers),
+        ApplyPowerStep apply => apply.Target == HookTarget.Owner ? !apply.Debuff : apply.Target is HookTarget.AllEnemies && apply.Debuff,
+        _ => false,
+    };
+
+    /// <summary>A condition that only asks its owner takes part (or that the hook's player is its owner): no condition of the payout's own.</summary>
+    private static bool OnlyTakesPart(HookValue when) => when switch
+    {
+        HookTest test => OnlyTakesPart(test.Test),
+        HookFactValue { Fact: HookFact.TakesPart or HookFact.EventIsOwners } => true,
+        HookMath { Operation: HookOperation.And } both => OnlyTakesPart(both.Left) && OnlyTakesPart(both.Right),
+        _ => false,
+    };
+
+    /// <summary>
+    /// A payout's condition as it stands during the turn: the turn's end's stores before the payout (its first <paramref name="turnEndHooksBefore"/>
+    /// hooks), each on its owner taking part, put in place of the fields they store (backwards, as the code runs them forwards), when what it then
+    /// reads only a play changes: its own fields that only its play hooks (and the turn's end) store, the fight's log of this turn's card plays
+    /// (not for a next turn's payout), its owner taking part, the hook's player, the turn number, constants and its values. Null when it reads
+    /// anything else (block, the hand, energy, a hit) or a store it waits on can't be put in place.
+    /// </summary>
+    private static HookValue? DuringTheTurn(HookValue condition, IReadOnlyList<HookProgram> programs, int turnEndHooksBefore, bool nextTurn)
+    {
+        for (var i = turnEndHooksBefore - 1; i >= 0; i--)
+        {
+            if (programs.FirstOrDefault(program => program.Hook == TurnEndHooks[i]) is not { } program) continue;
+            foreach (var store in program.Steps.OfType<StoreFieldStep>().Reverse())
+            {
+                if (!Reads(condition, store.Field)) continue;
+                if (store.When != null && !OnlyTakesPart(store.When)) return null;
+                condition = Substituted(condition, store.Field, store.Value);
+            }
+        }
+        var storedBy = programs.SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps().OfType<StoreFieldStep>().Select(store => (program.Hook, store.Field))).ToList();
+        bool Allowed(HookValue value) => value switch
+        {
+            HookConstant or HookVar => true,
+            HookFactValue fact => fact.Fact is HookFact.TakesPart or HookFact.EventIsOwners or HookFact.TurnNumber,
+            HookField field => storedBy.Where(stored => stored.Field == field.Field)
+                .All(stored => stored.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed || TurnEndHooks.Contains(stored.Hook)),
+            HookHistory history => !nextTurn && history.Query.Kind is HistoryKind.CardPlayStarted or HistoryKind.CardPlayFinished,
+            HookTest test => Allowed(test.Test),
+            HookNot not => Allowed(not.Inner),
+            HookMath math => Allowed(math.Left) && Allowed(math.Right),
+            _ => false,
+        };
+        return Allowed(condition) ? condition : null;
+    }
+
+    /// <summary>A condition during the turn reads what a play changes: a field a play hook of its own stores, or the fight's log of card plays.</summary>
+    private static bool PlayChanges(HookValue during, IReadOnlyList<HookProgram> programs)
+    {
+        var values = new ModelSpec("", ModelKind.Power, Array.Empty<HookProgram>()) { Payouts = new[] { new Payout("", during) } }.Values().ToList();
+        var storedOnAPlay = programs.Where(program => program.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed)
+            .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps().OfType<StoreFieldStep>()).Select(store => store.Field).ToHashSet(StringComparer.Ordinal);
+        return values.Any(value => value is HookHistory || value is HookField field && storedOnAPlay.Contains(field.Field));
+    }
+
+    /// <summary>The value reads the field.</summary>
+    private static bool Reads(HookValue value, string field) => new ModelSpec("", ModelKind.Power, Array.Empty<HookProgram>()) { Payouts = new[] { new Payout("", value) } }
+        .Values().OfType<HookField>().Any(read => read.Field == field);
+
+    /// <summary>The value with what a store put in a field in place of the field.</summary>
+    private static HookValue Substituted(HookValue value, string field, HookValue stored) => value switch
+    {
+        HookField read when read.Field == field => stored,
+        HookTest test => test with { Test = Substituted(test.Test, field, stored) },
+        HookNot not => new HookNot(Substituted(not.Inner, field, stored)),
+        HookMath math => math with { Left = Substituted(math.Left, field, stored), Right = Substituted(math.Right, field, stored) },
+        HookWays ways => new HookWays(ways.Ways.Select(way => new HookWay(Substituted(way.When, field, stored), Substituted(way.Value, field, stored))).ToList()),
+        _ => value,
+    };
 
     /// <summary>
     /// Its AfterDamageReceived acts (a step that isn't a store) on its owner losing HP, every step waiting on target == base.Owner and
@@ -778,33 +903,9 @@ public static class HookReader
                 if (!Enum.TryParse<HookName>(hook.Name, out var name)) return (null, new GapOf(ReaderCapabilities.OfHook(hook.Name), $"gap: the simulator runs no read model's {hook.Name}"), null);
                 if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name is HookName.ModifyCardPlayCount or HookName.ModifyOrbPassiveTriggerCounts)
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(Ways(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
-                var program = ProgramReader.Read(_type, _read, hook.Name);
-                _stores = program.All().OfType<StoreStep>().ToList();
-                if (program.Unknowns.FirstOrDefault() is { } unknown) return (null, new GapOf(ReaderCapability.ValueNotFollowed, "gap: the reader can't follow it: " + unknown), null);
-                if (OwnData(hook, program) is { } data) return (null, data, null);
-                var steps = new List<HookStep>();
-                var placed = new List<(int Offset, int Index)>();
-                _lets = new List<(string Name, int Offset, HookValue Value)>();
-                _shownValues = true;
-                try
-                {
-                    foreach (var step in program.Steps)
-                    {
-                        placed.Add((step.Offset, steps.Count));
-                        steps.AddRange(Step(step));
-                    }
-                    // Each local kept (a let) worked out where the code keeps it: before the first step after its place.
-                    foreach (var (local, offset, value) in _lets.OrderByDescending(let => let.Offset))
-                    {
-                        var at = placed.Where(place => place.Offset > offset).Select(place => place.Index).DefaultIfEmpty(steps.Count).Min();
-                        steps.Insert(at, new LetStep(local, value));
-                    }
-                }
-                finally
-                {
-                    _lets = null;
-                    _shownValues = false;
-                }
+                var body = BodySteps(hook);
+                if (body.Gap is { } bodyGap) return (null, bodyGap, null);
+                var steps = body.Steps!;
                 // A step its code runs on a side the simulator never ends (AfterSideTurnEnd of the enemies' side) never runs: left out.
                 var never = steps.RemoveAll(step => step.When is HookConstant { Value: 0m });
                 if (steps.Count == 0) return (null, null, never == 0 ? null : StartsATurn(hook.Name) ? "its commands wait on the players' side's turn starting, past the turns a simulation covers" : "its commands wait on the enemies' side's turn ending, which no simulation reaches");
@@ -818,6 +919,50 @@ public static class HookReader
             {
                 return (null, new GapOf(ReaderCapability.NotRead, $"gap: not read ({exception.GetType().Name}: {exception.Message})"), null);
             }
+        }
+
+        /// <summary>A hook body's commands, each translated at its place (a let where the code keeps a local), or the gap where the reader stops.</summary>
+        private (List<HookStep>? Steps, GapOf? Gap) BodySteps(MethodInfo hook)
+        {
+            var program = ProgramReader.Read(_type, _read, hook.Name);
+            _stores = program.All().OfType<StoreStep>().ToList();
+            if (program.Unknowns.FirstOrDefault() is { } unknown) return (null, new GapOf(ReaderCapability.ValueNotFollowed, "gap: the reader can't follow it: " + unknown));
+            if (OwnData(hook, program) is { } data) return (null, data);
+            var steps = new List<HookStep>();
+            var placed = new List<(int Offset, int Index)>();
+            _lets = new List<(string Name, int Offset, HookValue Value)>();
+            _shownValues = true;
+            try
+            {
+                foreach (var step in program.Steps)
+                {
+                    placed.Add((step.Offset, steps.Count));
+                    steps.AddRange(Step(step));
+                }
+                // Each local kept (a let) worked out where the code keeps it: before the first step after its place.
+                foreach (var (local, offset, value) in _lets.OrderByDescending(let => let.Offset))
+                {
+                    var at = placed.Where(place => place.Offset > offset).Select(place => place.Index).DefaultIfEmpty(steps.Count).Min();
+                    steps.Insert(at, new LetStep(local, value));
+                }
+            }
+            finally
+            {
+                _lets = null;
+                _shownValues = false;
+            }
+            return (steps, null);
+        }
+
+        /// <summary>
+        /// The commands of a hook that runs as the players' next turn starts (AfterEnergyReset, AfterPlayerTurnStart...): never run (past a simulation's
+        /// horizon), read for what it pays out and on what (ModelSpec.Payouts, decision #238). Null where the reader stops.
+        /// </summary>
+        public IReadOnlyList<HookStep>? NextTurnSteps(MethodInfo hook)
+        {
+            _hook = hook.Name;
+            try { return BodySteps(hook).Steps; }
+            catch (Exception) { return null; }
         }
 
         /// <summary>
@@ -2091,6 +2236,9 @@ public static class HookReader
             if (other is NamedValue { Name: "applier" } or ParameterValue { Name: "applier" }) return new HookFactValue(HookFact.ApplierIsOwner);
             // The player an event happened to (AfterOrbChanneled's player, AfterShuffle's): the event's player is its owner.
             if (other is NamedValue { Name: "player" or "shuffler" } or ParameterValue { Name: "player" or "shuffler" } && _hook is "AfterOrbChanneled" or "AfterShuffle")
+                return new HookFactValue(HookFact.EventIsOwners);
+            // The player whose next turn starts (AfterEnergyReset's, AfterPlayerTurnStart's player: a payout's hook, decision #238): asked of its owner's.
+            if (other is NamedValue { Name: "player" } or ParameterValue { Name: "player" } && PlayersTurnStartHooks.Contains(_hook))
                 return new HookFactValue(HookFact.EventIsOwners);
             // Another creature the code names (a pet's player, a creature's player): the creatures' comparison (CreatureCompare).
             if (CreatureOf(other) != null) return null;
