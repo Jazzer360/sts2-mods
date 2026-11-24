@@ -30,7 +30,7 @@ public class SimMadeInHandTests
     {
         // Neutralize (0 energy) with Feral 1 in a hand of 7: it goes back to the hand, so 7 stay (a report: predicted 6, actual 7).
         var state = Hand(cards: 7);
-        state.You.Powers = state.You.Powers.With(PowerId.Feral, amount: 1, data: 1);
+        state.You.Powers = state.You.Powers.With(PowerId.Feral, amount: 1, data: 0); // none came back yet (FeralPower.zeroCostAttacksPlayed)
         var after = After(state, Played("Neutralize", SimCardType.Attack, energy: 0));
         Assert.True(after.Fired.Has("FeralPower"));
         Assert.Equal(7, after.You.HandCount);

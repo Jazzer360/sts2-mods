@@ -44,7 +44,9 @@ public static partial class SimAdapter
         int targetId, int owner)
     {
         var name = card.GetType().Name;
-        var plays = Math.Max(1, facts.Plays);
+        // The plays the simulator doesn't decide itself: Echo Form's it decides as the play starts (CardPlayAction.CountByModels).
+        var playTarget = ids.FirstOrDefault(entry => entry.Value == targetId).Key;
+        var plays = Math.Max(1, facts.Plays - CardPlays.ModelledReplays(card, playTarget));
         var play = new SimPlay
         {
             Name = name,

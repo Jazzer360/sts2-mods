@@ -135,7 +135,9 @@ block; PowerVar<T> → apply power; Cards → draw...) checked against the comma
 already reads them), with per-card scripts where the code does something else (today's per-card switches in `PlayFacts`
 and `SimAdapter`, moved). A card whose script isn't known gets the facts it has now and is listed by the coverage check.
 The script runs once per play (play count from the game: `ModifyCardPlayCount`), with `BeforeCardPlayed` and
-`AfterCardPlayed` around each play, then the enchantment's and affliction's scripts.
+`AfterCardPlayed` around each play, then the enchantment's and affliction's scripts. A card play's shape is decided once before its first play, as
+`OnPlayWrapper` does (decision #192): where the card goes after (`ModifyCardPlayResultLocation`: Feral, Nostalgia) and the play count the
+simulator's own models add (`ModifyCardPlayCount`: Echo Form, on the history ledger), each branch its own.
 
 Its actions run in the order the card's own code runs its commands (decision #182, docs/CARD_PROGRAMS.md): `CardProgramReader`
 reads the card's `OnPlay` (its state machine, local functions and the delegates it hands to commands) from the running game

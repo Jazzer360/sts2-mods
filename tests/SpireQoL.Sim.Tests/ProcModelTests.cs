@@ -232,9 +232,9 @@ public class ProcModelTests
     public void FeralNostalgiaAndPaleBlueDotCountTheirCharges()
     {
         var free = new SimCard("Claw", SimCardType.Attack) { Energy = 0 };
-        Assert.True(One(Power(State(), PowerId.Feral, amount: 1, data: 1), Play(free, target: 0, plays: 1, Attack(baseDamage: 1))).Fired.Has("FeralPower"));
-        Assert.False(One(Power(State(), PowerId.Feral, amount: 1, data: 0), Play(free, target: 0, plays: 1, Attack(baseDamage: 1))).Fired.Has("FeralPower"));
-        Assert.False(One(Power(State(), PowerId.Feral, amount: 1, data: 1), Play(free with { Dupe = true }, target: 0, plays: 1, Attack(baseDamage: 1))).Fired.Has("FeralPower"));
+        Assert.True(One(Power(State(), PowerId.Feral, amount: 1, data: 0), Play(free, target: 0, plays: 1, Attack(baseDamage: 1))).Fired.Has("FeralPower"));
+        Assert.False(One(Power(State(), PowerId.Feral, amount: 1, data: 1), Play(free, target: 0, plays: 1, Attack(baseDamage: 1))).Fired.Has("FeralPower"));
+        Assert.False(One(Power(State(), PowerId.Feral, amount: 1, data: 0), Play(free with { Dupe = true }, target: 0, plays: 1, Attack(baseDamage: 1))).Fired.Has("FeralPower"));
 
         var state = Power(State(), PowerId.Nostalgia, amount: 1);
         Assert.True(One(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1))).Fired.Has("NostalgiaPower"));

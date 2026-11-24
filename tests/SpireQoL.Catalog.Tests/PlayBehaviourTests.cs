@@ -224,6 +224,42 @@ public class PlayBehaviourTests
         }
     }
 
+    [Fact]
+    public void EchoFormPlaysTheTurnsFirstCardTwiceAndAfterThatOnce()
+    {
+        // EchoFormPower.ModifyCardPlayCount: once more while fewer than its amount of your card plays this turn were the first of their series
+        // (the game's log). The simulator decides it as the play starts, from the ledger (decision #191).
+        var log = GameFight.Log;
+        log.Clear();
+        try
+        {
+            var first = Fight();
+            var enemy = Enemy(first);
+            Power<EchoFormPower>(first.Me.Creature, amount: 1);
+            var firstStrike = first.Add<StrikeIronclad>();
+            var firstAfter = Only(PlayOut(first, firstStrike, enemy, plays: CardPlays.Count(firstStrike)));
+            Assert.Equal(200 - 2 * 6, firstAfter.Enemies[0].Hp);
+
+            var later = Fight();
+            var laterEnemy = Enemy(later);
+            Power<EchoFormPower>(later.Me.Creature, amount: 1);
+            var played = later.Add<DefendIronclad>(PileType.Discard);
+            var earlier = new CardPlay
+            {
+                Card = played, Player = later.Me, Target = null, ResultPile = PileType.Discard, IsAutoPlay = false, PlayIndex = 0, PlayCount = 1,
+                Resources = new ResourceInfo { EnergySpent = 1, EnergyValue = 1, StarsSpent = 0, StarValue = 0 },
+            };
+            log.Add(new MegaCrit.Sts2.Core.Combat.History.Entries.CardPlayStartedEntry(earlier, later.Combat.RoundNumber, later.Combat.CurrentSide, CombatManager.Instance.History, later.Combat.Players));
+            var strike = later.Add<StrikeIronclad>();
+            var laterAfter = Only(PlayOut(later, strike, laterEnemy, plays: CardPlays.Count(strike)));
+            Assert.Equal(200 - 6, laterAfter.Enemies[0].Hp);
+        }
+        finally
+        {
+            log.Clear();
+        }
+    }
+
     // ---- a pick in the middle of a play is a card, never a particular one (decision #92)
 
     [Fact]

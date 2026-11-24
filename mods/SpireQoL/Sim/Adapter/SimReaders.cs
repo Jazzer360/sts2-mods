@@ -83,7 +83,9 @@ public static class SimReaders
                     .Aggregate(0, (bits, copy) => bits | (idOf(copy.Applier!) is { } coverer ? Models.CoveredPower.CovererBit(coverer) : 0));
                 break;
             // Counters the proc models count down (the power's own number: DisplayAmount, or its CardsLeft value).
-            case nameof(FeralPower) or nameof(OrbitPower) or nameof(AutomationPower) or nameof(CacophonyPower): data = Math.Max(0, power.DisplayAmount); break;
+            // Feral: its zeroCostAttacksPlayed (its own count: the model compares it with its amount, which more Feral raises).
+            case nameof(FeralPower): data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } feral ? Sts2State.Private(feral, "zeroCostAttacksPlayed", fallback: 0) : Math.Max(0, power.Amount - power.DisplayAmount); break;
+            case nameof(OrbitPower) or nameof(AutomationPower) or nameof(CacophonyPower): data = Math.Max(0, power.DisplayAmount); break;
             case nameof(PanachePower) or nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)); break;
             // Once a turn (PowerUse.UsedThisTurn: already this turn).
             case nameof(PaleBlueDotPower): data = Internal(power, "alreadyActivatedThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;

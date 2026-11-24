@@ -91,6 +91,26 @@ public class HistoryLedgerTests
         Assert.True(checkedModels > 5);
     }
 
+    [Theory]
+    [MemberData(nameof(Branches))]
+    public void EachModelsQuestionsAreItsGameCodes(string branch)
+    {
+        // A model that reads the ledger (Feral's AfterApplied, Echo Form's ModifyCardPlayCount) declares its questions; each is one its game
+        // class's code asks, read and translated from that code on each branch.
+        if (!File.Exists(PathOf(branch))) return;
+        using var code = new BranchCode(PathOf(branch));
+        var models = code.Models().GroupBy(type => type.Name).ToDictionary(group => group.Key, group => group.First());
+        var checkedModels = 0;
+        foreach (var name in SimModels.Names)
+        {
+            if (SimModels.Get(name) is not { History.Count: > 0 } model || !models.TryGetValue(name, out var type)) continue;
+            var asked = CardProgramReader.HistoryQueries(type, code.Read).Select(found => HistoryQueryReader.Read((QueryValue)found.Query, code.EnumName).Query).ToList();
+            foreach (var query in model.History) Assert.True(asked.Contains(query), $"{name} asks {query}; its code asks {string.Join(", ", asked)}");
+            checkedModels++;
+        }
+        Assert.True(checkedModels >= 2);
+    }
+
     // ---- the seed: the game's own answer
 
     private static CardPlay PlayOf(CardModel card, Player player, int energy = 1, int index = 0, bool auto = false) => new()

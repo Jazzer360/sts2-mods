@@ -49,7 +49,7 @@ public static partial class SimEngine
         var details = HistoryDetail.None;
         if (play.PlayIndex == 0) details |= HistoryDetail.FirstInSeries;
         if (!play.AutoPlay) details |= HistoryDetail.NotAutoPlay;
-        if (play.Card.Energy == 0 && !play.Card.CostsX) details |= HistoryDetail.ZeroEnergy;
+        if (play.Card.Energy == 0) details |= HistoryDetail.ZeroEnergy; // Resources.EnergyValue: an X cost's X too
         if (stage == PlayStage.Finished && play.Card.Ethereal) details |= HistoryDetail.Ethereal;
         var kind = stage == PlayStage.Started ? HistoryKind.CardPlayStarted : HistoryKind.CardPlayFinished;
         Record(state, new HistoryEvent(kind, play.Owner) { Details = details, CardType = play.Card.Type, CardTags = play.Card.Tags, CardKnown = true });

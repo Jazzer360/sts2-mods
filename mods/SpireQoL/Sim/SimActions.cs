@@ -20,6 +20,11 @@ public sealed record CardPlayAction(SimCardPlay Play, IReadOnlyList<SimAction> B
     public bool FromHand { get; init; }
     /// <summary>The card in its owner's hand it is (SimPlay.HandCard; 0: none).</summary>
     public int HandCard { get; init; }
+    /// <summary>
+    /// Its play count is decided by the simulator's models as it starts (Hook.ModifyCardPlayCount: Echo Form on the fight's log), from
+    /// Play.PlayCount as the count the sources it doesn't model gave. False: Play.PlayCount is the whole count.
+    /// </summary>
+    public bool CountByModels { get; init; }
 }
 
 /// <summary>

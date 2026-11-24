@@ -245,35 +245,79 @@ public sealed class SmoggyPower : ProcModel
 }
 
 /// <summary>
-/// FeralPower.ModifyCardPlayResultLocation: an Attack its owner plays for 0 energy (not a copy) goes back to their hand while it
-/// has charges left this turn (Data: its DisplayAmount): it keeps its slot, where the card would have left the hand at CardResolved.
+/// FeralPower (Data: its zeroCostAttacksPlayed). ModifyCardPlayResultLocation, decided once before a card play's plays: an Attack its
+/// owner plays for 0 energy (not a copy) goes back to the top of their hand while fewer than its amount came back this turn;
+/// AfterModifyingCardPlayResultLocation counts it and flashes. A new Feral starts its count at the 0-cost Attacks its owner started this
+/// turn (AfterApplied: the fight's log, decision #191); more Feral on it only raises its amount (PowerCmd.Apply).
 /// </summary>
 public sealed class FeralPower : ProcModel
 {
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    /// <summary>FeralPower.AfterApplied's question: CardPlayStartedEntry, this turn, its owner's, an Attack, Resources.EnergyValue == 0.</summary>
+    public static readonly HistoryQuery FreeAttacksStarted =
+        new(HistoryKind.CardPlayStarted, HistoryScope.ThisTurn, HistoryWhose.Owner) { Details = HistoryDetail.ZeroEnergy, CardType = SimCardType.Attack };
+
+    public override IReadOnlyList<HistoryQuery> History => new[] { FreeAttacksStarted };
+
+    public override void AfterApplied(SimState state, int owner, int applier, int amount)
     {
-        if (!Mine(play, owner) || play.Card.Type != SimCardType.Attack || play.Card.Energy != 0 || play.Card.Dupe) return One(state);
-        var left = Data(state, owner);
-        if (left <= 0) return One(state);
-        Set(state, owner, Amount(state, owner), left - 1);
-        SimEngine.AddToHand(state, owner, count: 1);
-        return Fire(state, owner);
+        if (SimEngine.HistoryCount(state, owner, FreeAttacksStarted) is { } started) Set(state, owner, Amount(state, owner), started);
+        else state.Unmodelled ??= SimEngine.HistoryUnknown;
+    }
+
+    public override SimResultLocation ModifyCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location)
+    {
+        if (!Mine(play, owner) || play.Card.Type != SimCardType.Attack || play.Card.Energy > 0 || play.Card.Dupe) return location;
+        return Data(state, owner) >= Amount(state, owner) ? location : SimResultLocation.HandTop;
+    }
+
+    public override void AfterModifyingCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location)
+    {
+        Set(state, owner, Amount(state, owner), Data(state, owner) + 1);
+        Fire(state, owner);
     }
 }
 
 /// <summary>
-/// NostalgiaPower.ModifyCardPlayResultLocation: its owner's first Amount attacks and skills each turn (plays started before this
-/// one) go on top of their draw pile, unless they exhaust.
+/// EchoFormPower.ModifyCardPlayCount: a card its owner plays is played once more while fewer than its amount of their card plays this
+/// turn were the first of their series (the fight's log, decision #191: CardPlayStartedEntry, IsFirstInSeries). Its tag is the
+/// double-play tag (CardPlays), not a proc: it logs no firing.
+/// </summary>
+public sealed class EchoFormPower : SimModel
+{
+    /// <summary>EchoFormPower.ModifyCardPlayCount's question: CardPlayStartedEntry, this turn, its owner's, IsFirstInSeries.</summary>
+    public static readonly HistoryQuery FirstPlaysStarted =
+        new(HistoryKind.CardPlayStarted, HistoryScope.ThisTurn, HistoryWhose.Owner) { Details = HistoryDetail.FirstInSeries };
+
+    public override IReadOnlyList<HistoryQuery> History => new[] { FirstPlaysStarted };
+
+    public override int ModifyCardPlayCount(SimState state, int owner, SimCardPlay play, int count)
+    {
+        if (play.Owner != owner) return count;
+        if (SimEngine.HistoryCount(state, owner, FirstPlaysStarted) is not { } started)
+        {
+            state.Unmodelled ??= SimEngine.HistoryUnknown;
+            return count;
+        }
+        return started >= SimEngine.PowerOn(state, owner, ThisPower) ? count : count + 1;
+    }
+}
+
+/// <summary>
+/// NostalgiaPower.ModifyCardPlayResultLocation, decided once before a card play's plays: its owner's Attack or Skill bound for their
+/// discard pile (not exhausting, not sent elsewhere) goes on top of their draw pile while fewer than its amount of their Attack and Skill
+/// plays started this turn; AfterModifyingCardPlayResultLocation flashes. Where the card lands isn't followed further (its tag).
 /// </summary>
 public sealed class NostalgiaPower : ProcModel
 {
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    public override SimResultLocation ModifyCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location)
     {
-        if (!Mine(play, owner) || play.Card.Type is not (SimCardType.Attack or SimCardType.Skill) || play.Card.ExhaustsSelf) return One(state);
+        if (!Mine(play, owner) || play.Card.Type is not (SimCardType.Attack or SimCardType.Skill) || play.Card.ExhaustsSelf || location != SimResultLocation.Default) return location;
         var turn = SimEngine.TurnOf(state, owner);
-        var before = turn[SimKeys.Plays(PlayStage.Started, SimCardType.Attack)] + turn[SimKeys.Plays(PlayStage.Started, SimCardType.Skill)] - 1;
-        return before < Amount(state, owner) ? Fire(state, owner) : One(state);
+        var started = turn[SimKeys.Plays(PlayStage.Started, SimCardType.Attack)] + turn[SimKeys.Plays(PlayStage.Started, SimCardType.Skill)];
+        return started < Amount(state, owner) ? SimResultLocation.DrawTop : location;
     }
+
+    public override void AfterModifyingCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location) => Fire(state, owner);
 }
 
 /// <summary>

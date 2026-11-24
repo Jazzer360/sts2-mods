@@ -336,7 +336,31 @@ public abstract class SimModel
     public virtual void AfterModifyingBlockAmount(SimState state, int owner, int amount, SimCardPlay? play) { }
     /// <summary>After a damage amount it changed (the game's AfterModifyingDamageAmount): most only flash (FlashesOnDamageModified).</summary>
     public virtual void AfterModifyingDamageAmount(SimState state, int owner, SimCard? card) { if (FlashesOnDamageModified) state.LogFired(Name, amount: 0, owner); }
+
+    // ---- a card play's own shape, decided once before its plays (CardModel.OnPlayWrapper: Hook.ModifyCardPlayResultLocation, then
+    // GeneratePlayCount's Hook.ModifyCardPlayCount), each listener in turn on what the one before it gave
+
+    /// <summary>
+    /// Hook.ModifyCardPlayCount: how many times the card play plays (Echo Form). Asked once, before its first play, for a card play whose
+    /// count the simulator decides (CardPlayAction.CountByModels); a model that changes it is told after (AfterModifyingCardPlayCount).
+    /// </summary>
+    public virtual int ModifyCardPlayCount(SimState state, int owner, SimCardPlay play, int count) => count;
+    public virtual void AfterModifyingCardPlayCount(SimState state, int owner, SimCardPlay play) { }
+    /// <summary>
+    /// Hook.ModifyCardPlayResultLocation: where the card goes once its plays are over (Feral: back to your hand). Asked once, before its
+    /// first play; a model that changes it is told after (AfterModifyingCardPlayResultLocation), still before the plays.
+    /// </summary>
+    public virtual SimResultLocation ModifyCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location) => location;
+    public virtual void AfterModifyingCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location) { }
+    /// <summary>The questions its game code asks of the fight's log (decision #191), as the history ledger counts them (held to the code: HistoryLedgerTests).</summary>
+    public virtual IReadOnlyList<HistoryQuery> History => Array.Empty<HistoryQuery>();
 }
+
+/// <summary>
+/// Where a played card goes once its plays are over, as Hook.ModifyCardPlayResultLocation leaves it: its usual pile (Default), the top of
+/// its owner's hand (Feral), the top of their draw pile (Nostalgia).
+/// </summary>
+public enum SimResultLocation { Default, HandTop, DrawTop }
 
 /// <summary>
 /// A card's own hooks (its class's overrides of the game's hooks), listening from its owner's piles: the game lists every card in
@@ -366,6 +390,10 @@ public static class SimModels
     public static SimModel? Get(string name) => ByName.GetValueOrDefault(name);
 
     public static bool Has(string name) => ByName.ContainsKey(name);
+
+    /// <summary>The model decides a card play's count itself (it overrides ModifyCardPlayCount: Echo Form): the adapter leaves its part out (CardPlays.ModelledReplays).</summary>
+    public static bool DecidesPlayCount(string name) =>
+        Get(name) is { } model && model.GetType().GetMethod(nameof(SimModel.ModifyCardPlayCount))?.DeclaringType != typeof(SimModel);
 
     public static IEnumerable<string> Names => ByName.Keys;
 }

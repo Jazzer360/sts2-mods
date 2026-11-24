@@ -91,6 +91,30 @@ public static class CardPlays
     public static bool ChoiceAutoPlayed(CardModel card)
         => card.Owner is { } me && card.Pile?.Type == PileType.Hand && ChoiceAutoPlays(me) > 0;
 
+    /// <summary>
+    /// The part of the card's play count at <paramref name="target"/> that the simulator's own models give (Echo Form: SimModels.DecidesPlayCount):
+    /// the simulation decides it as the play starts, on the fight's log as the chain left it (decision #191), so the adapter leaves it out.
+    /// </summary>
+    public static int ModelledReplays(CardModel card, Creature? target)
+    {
+        var combat = card.CombatState;
+        if (combat == null) return 0;
+        try
+        {
+            int all = card.GetEnchantedReplayCount() + 1, without = all;
+            foreach (var model in combat.IterateHookListeners())
+            {
+                all = model.ModifyCardPlayCount(card, target, all);
+                if (!SpireQoL.Sim.SimModels.DecidesPlayCount(model.GetType().Name)) without = model.ModifyCardPlayCount(card, target, without);
+            }
+            return Math.Max(0, all - without);
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+
     /// <summary>The play count the game would give the card at this target (null: none), and the models that changed it.</summary>
     private static int PlayCount(ICombatState combat, CardModel card, Creature? target, out IEnumerable<AbstractModel> changedBy)
     {

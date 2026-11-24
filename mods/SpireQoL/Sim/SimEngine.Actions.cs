@@ -29,17 +29,77 @@ public static partial class SimEngine
         foreach (var counted in HandFilters(cardPlayAction.Body))
             if (!matching.Has(counted.Filter!)) matching = matching.With(counted.Filter!, counted.Matching);
         branches.Do(branch => branch.TakeMatching = matching);
-        for (var i = 0; i < Math.Max(1, cardPlayAction.Play.PlayCount); i++)
+        // Decided once, before the first play (OnPlayWrapper): where the card goes after (Feral), then how many times it plays (Echo Form).
+        branches.Do(branch => DecideCardPlay(branch, cardPlayAction));
+        var most = branches.States.Count == 0 ? 1 : branches.States.Max(branch => branch.PlayCountNow);
+        for (var i = 0; i < most; i++)
         {
-            var play = cardPlayAction.Play with { PlayIndex = i };
-            branches.Do(branch => { branch.CurrentPlay = play; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; branch.PlayTaken = 0; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty; });
-            HookStep(branches, nameof(SimModel.BeforeCardPlayed), (model, owner, branch) => model.BeforeCardPlayed(branch, owner, play));
-            branches.Do(branch => Count(branch, play, PlayStage.Started));
-            foreach (var action in cardPlayAction.Body) Run(branches, action);
-            branches.Do(branch => Count(branch, play, PlayStage.Finished));
-            HookStep(branches, nameof(SimModel.AfterCardPlayed), (model, owner, branch) => model.AfterCardPlayed(branch, owner, play));
+            var index = i;
+            // Branches whose card play has fewer plays are over (each its own count: a branch's ledger can differ).
+            var over = branches.States.Where(branch => branch.PlayCountNow <= index).ToList();
+            if (over.Count > 0)
+            {
+                branches.States = branches.States.Where(branch => branch.PlayCountNow > index).ToList();
+                branches.Aside += over.Count;
+            }
+            try
+            {
+                branches.Do(branch => { branch.CurrentPlay = cardPlayAction.Play with { PlayIndex = index, PlayCount = branch.PlayCountNow }; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; branch.PlayTaken = 0; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty; });
+                HookStep(branches, nameof(SimModel.BeforeCardPlayed), (model, owner, branch) => model.BeforeCardPlayed(branch, owner, branch.CurrentPlay!));
+                branches.Do(branch => Count(branch, branch.CurrentPlay!, PlayStage.Started));
+                foreach (var action in cardPlayAction.Body) Run(branches, action);
+                branches.Do(branch => Count(branch, branch.CurrentPlay!, PlayStage.Finished));
+                HookStep(branches, nameof(SimModel.AfterCardPlayed), (model, owner, branch) => model.AfterCardPlayed(branch, owner, branch.CurrentPlay!));
+            }
+            finally
+            {
+                if (over.Count > 0)
+                {
+                    branches.Aside -= over.Count;
+                    branches.States.AddRange(over);
+                }
+            }
         }
-        branches.Do(branch => { branch.CurrentPlay = null; branch.PlayTaken = 0; branch.TakeMatching = NamedCounts.Empty; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty; });
+        // The card goes where the shape said (CardPlay.ResultPile): back on top of its owner's hand (Feral), keeping its slot.
+        branches.Do(branch =>
+        {
+            if (branch.PlayResultLocation == SimResultLocation.HandTop) AddToHand(branch, cardPlayAction.Play.Owner, count: 1);
+            branch.CurrentPlay = null; branch.PlayTaken = 0; branch.TakeMatching = NamedCounts.Empty; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty;
+            branch.PlayCountNow = 0; branch.PlayResultLocation = SimResultLocation.Default;
+        });
+    }
+
+    /// <summary>
+    /// A card play's shape, before its first play (CardModel.OnPlayWrapper): Hook.ModifyCardPlayResultLocation over every listener in
+    /// order, then AfterModifyingCardPlayResultLocation for each that changed it; then its play count: the action's own, or (CountByModels)
+    /// that through Hook.ModifyCardPlayCount, then AfterModifyingCardPlayCount for each that changed it.
+    /// </summary>
+    private static void DecideCardPlay(SimState state, CardPlayAction cardPlayAction)
+    {
+        var play = cardPlayAction.Play with { PlayIndex = 0 };
+        var location = SimResultLocation.Default;
+        List<(SimModel Model, int Owner)>? moved = null;
+        foreach (var (model, owner) in Listeners(state))
+        {
+            var before = location;
+            location = model.ModifyCardPlayResultLocation(state, owner, play, location);
+            if (location != before) (moved ??= new()).Add((model, owner));
+        }
+        if (moved != null) foreach (var (model, owner) in moved) model.AfterModifyingCardPlayResultLocation(state, owner, play, location);
+        state.PlayResultLocation = location;
+        var count = Math.Max(1, play.PlayCount);
+        if (cardPlayAction.CountByModels)
+        {
+            List<(SimModel Model, int Owner)>? counted = null;
+            foreach (var (model, owner) in Listeners(state))
+            {
+                var before = count;
+                count = model.ModifyCardPlayCount(state, owner, play, count);
+                if (count != before) (counted ??= new()).Add((model, owner));
+            }
+            if (counted != null) foreach (var (model, owner) in counted) model.AfterModifyingCardPlayCount(state, owner, play);
+        }
+        state.PlayCountNow = Math.Max(1, count);
     }
 
     /// <summary>

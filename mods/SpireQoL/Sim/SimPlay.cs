@@ -153,10 +153,11 @@ public sealed class SimScript
         script.Actions.AddRange(simPlay.Before);
         var play = simPlay.Card is { } card ? card with { Target = simPlay.TargetId } : new SimCardPlay(new SimCard(simPlay.Name, simPlay.IsAttack ? SimCardType.Attack : SimCardType.Skill), Who.You, simPlay.TargetId, PlayIndex: 0,
             Math.Max(1, simPlay.Plays), simPlay.AutoPlay);
+        // Its count is the plays the simulator doesn't decide itself (SimPlay.Plays), and its models' (Echo Form) as it starts.
         var body = new List<SimAction>(simPlay.Body);
         var shorthand = Shorthand(simPlay);
         if (shorthand.Count > 0) body.Add(new FirstPlayOnly(shorthand));
-        script.Actions.Add(new CardPlayAction(play, body) { FromHand = simPlay.HandCard != 0, HandCard = simPlay.HandCard });
+        script.Actions.Add(new CardPlayAction(play, body) { FromHand = simPlay.HandCard != 0, HandCard = simPlay.HandCard, CountByModels = true });
         script.Actions.AddRange(simPlay.After);
         script.Actions.Add(new CardResolvedAction(simPlay.HandDelta, simPlay.HandCard, simPlay.AutoPlay, simPlay.Draws, simPlay.FadingDelta, simPlay.IsAttack) { Owner = play.Owner, HexFadingDelta = simPlay.HexFadingDelta });
         if (simPlay.RandomPoison > 0 && simPlay.RandomPoisonTimes > 0)
