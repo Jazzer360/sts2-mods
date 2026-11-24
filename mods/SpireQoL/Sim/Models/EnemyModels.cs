@@ -3,20 +3,6 @@ namespace SpireQoL.Sim.Models;
 // Enemy powers that change their attack during your turn (decompile v0.113.1). Their intent is worked out when it lands, so a
 // Strength change here is what the attack deals.
 
-/// <summary>EnragePower.AfterCardPlayed: every Skill played gives its owner its amount of Strength.</summary>
-public sealed class EnragePower : SimModel
-{
-    public override TabKind? Tab => TabKind.Trigger;
-    public override bool Harmful => true;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (play.Card.Type != SimCardType.Skill || state.Enemy(owner) is not { Alive: true }) return One(state);
-        state.LogFired(Name, amount: 0, owner);
-        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, SimEngine.PowerOn(state, owner, ThisPower), debuff: false);
-        return One(state);
-    }
-}
-
 /// <summary>
 /// MonarchsGazePower.AfterDamageGiven: each powered hit its owner deals takes its amount of Strength from the target for the turn
 /// (MonarchsGazeStrengthDownPower: a temporary Strength loss; Artifact can take it).

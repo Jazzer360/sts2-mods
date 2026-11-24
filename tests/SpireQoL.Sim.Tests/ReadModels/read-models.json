@@ -80,7 +80,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "AllIsWellPower",
@@ -124,7 +125,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "ArsenalPower",
@@ -154,7 +156,8 @@
         ]
       }
     ],
-    "Tab": "Trigger"
+    "Tab": "Trigger",
+    "Harmful": false
   },
   {
     "Name": "BurstPower",
@@ -289,7 +292,8 @@
           ]
         }
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "CharonsAshes",
@@ -324,7 +328,8 @@
         ]
       }
     ],
-    "Tab": "Damage"
+    "Tab": "Damage",
+    "Harmful": false
   },
   {
     "Name": "CorrosiveWavePower",
@@ -370,7 +375,8 @@
         ]
       }
     ],
-    "Tab": "Trigger"
+    "Tab": "Trigger",
+    "Harmful": false
   },
   {
     "Name": "DanseMacabrePower",
@@ -422,7 +428,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "DaughterOfTheWind",
@@ -475,7 +482,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "DebilitatePower",
@@ -497,7 +505,8 @@
           }
         ]
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "DexterityPower",
@@ -733,7 +742,8 @@
           ]
         }
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "DoubleDamagePower",
@@ -1006,7 +1016,8 @@
           ]
         }
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "DuplicationPower",
@@ -1084,7 +1095,47 @@
           ]
         }
       }
-    ]
+    ],
+    "Harmful": false
+  },
+  {
+    "Name": "EnragePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__4.MoveNext:0029",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardType"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 2
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger",
+    "Harmful": true
   },
   {
     "Name": "EnvenomPower",
@@ -1146,7 +1197,8 @@
         ]
       }
     ],
-    "Tab": "Trigger"
+    "Tab": "Trigger",
+    "Harmful": false
   },
   {
     "Name": "FakeOrichalcum",
@@ -1251,7 +1303,8 @@
           }
         ]
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "FeelNoPainPower",
@@ -1282,7 +1335,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "Fertilizer",
@@ -1326,7 +1380,8 @@
         ]
       }
     ],
-    "Tab": "Trigger"
+    "Tab": "Trigger",
+    "Harmful": false
   },
   {
     "Name": "ForgottenSoul",
@@ -1361,7 +1416,8 @@
         ]
       }
     ],
-    "Tab": "Damage"
+    "Tab": "Damage",
+    "Harmful": false
   },
   {
     "Name": "FrailPower",
@@ -1448,7 +1504,8 @@
           ]
         }
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "GamePiece",
@@ -1496,7 +1553,8 @@
         ]
       }
     ],
-    "Tab": "Draw"
+    "Tab": "Draw",
+    "Harmful": false
   },
   {
     "Name": "GravityPower",
@@ -1576,7 +1634,8 @@
         ]
       }
     ],
-    "Tab": "Damage"
+    "Tab": "Damage",
+    "Harmful": false
   },
   {
     "Name": "HatchPower",
@@ -1598,7 +1657,8 @@
           }
         ]
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "HelicalDart",
@@ -1642,7 +1702,8 @@
         ]
       }
     ],
-    "Tab": "Trigger"
+    "Tab": "Trigger",
+    "Harmful": false
   },
   {
     "Name": "HighVoltagePower",
@@ -1671,7 +1732,8 @@
           }
         ]
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "IntimidatingHelmet",
@@ -1725,7 +1787,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "IronClub",
@@ -1808,7 +1871,8 @@
         ]
       }
     ],
-    "Tab": "Draw"
+    "Tab": "Draw",
+    "Harmful": false
   },
   {
     "Name": "IvoryTile",
@@ -1857,7 +1921,8 @@
         ]
       }
     ],
-    "Tab": "Energy"
+    "Tab": "Energy",
+    "Harmful": false
   },
   {
     "Name": "KiVersePower",
@@ -2060,7 +2125,8 @@
           ]
         }
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "Kunai",
@@ -2187,7 +2253,8 @@
         ]
       }
     ],
-    "Tab": "Trigger"
+    "Tab": "Trigger",
+    "Harmful": false
   },
   {
     "Name": "Kusarigama",
@@ -2339,7 +2406,8 @@
         ]
       }
     ],
-    "Tab": "Damage"
+    "Tab": "Damage",
+    "Harmful": false
   },
   {
     "Name": "LetterOpener",
@@ -2470,7 +2538,8 @@
         ]
       }
     ],
-    "Tab": "Damage"
+    "Tab": "Damage",
+    "Harmful": false
   },
   {
     "Name": "LostWisp",
@@ -2525,7 +2594,8 @@
         ]
       }
     ],
-    "Tab": "Damage"
+    "Tab": "Damage",
+    "Harmful": false
   },
   {
     "Name": "MiniRegent",
@@ -2618,7 +2688,8 @@
         ]
       }
     ],
-    "Tab": "Trigger"
+    "Tab": "Trigger",
+    "Harmful": false
   },
   {
     "Name": "Nunchaku",
@@ -2742,7 +2813,8 @@
         ]
       }
     ],
-    "Tab": "Energy"
+    "Tab": "Energy",
+    "Harmful": false
   },
   {
     "Name": "OneTwoPunchPower",
@@ -2877,7 +2949,8 @@
           ]
         }
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "Orichalcum",
@@ -2982,7 +3055,8 @@
           }
         ]
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "OrnamentalFan",
@@ -3111,7 +3185,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "Permafrost",
@@ -3246,7 +3321,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "PillarOfCreationPower",
@@ -3277,7 +3353,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "RagePower",
@@ -3344,7 +3421,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "RainbowRing",
@@ -3841,7 +3919,8 @@
         ]
       }
     ],
-    "Tab": "Trigger"
+    "Tab": "Trigger",
+    "Harmful": false
   },
   {
     "Name": "Regalite",
@@ -3936,7 +4015,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "ScreamingFlagon",
@@ -3990,7 +4070,8 @@
           }
         ]
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "ShroudPower",
@@ -4034,7 +4115,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "Shuriken",
@@ -4161,7 +4243,8 @@
         ]
       }
     ],
-    "Tab": "Trigger"
+    "Tab": "Trigger",
+    "Harmful": false
   },
   {
     "Name": "SignalBoostPower",
@@ -4280,7 +4363,8 @@
           ]
         }
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "SleightOfFleshPower",
@@ -4376,7 +4460,8 @@
         ]
       }
     ],
-    "Tab": "Damage"
+    "Tab": "Damage",
+    "Harmful": false
   },
   {
     "Name": "SmokestackPower",
@@ -4429,7 +4514,8 @@
         ]
       }
     ],
-    "Tab": "Damage"
+    "Tab": "Damage",
+    "Harmful": false
   },
   {
     "Name": "SoarPower",
@@ -4525,7 +4611,8 @@
           ]
         }
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "SpeedsterPower",
@@ -4570,7 +4657,8 @@
         ]
       }
     ],
-    "Tab": "Damage"
+    "Tab": "Damage",
+    "Harmful": false
   },
   {
     "Name": "SpiritOfAshPower",
@@ -4613,7 +4701,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "StormPower",
@@ -4718,7 +4807,8 @@
         ]
       }
     ],
-    "Tab": "Trigger"
+    "Tab": "Trigger",
+    "Harmful": false
   },
   {
     "Name": "Storyteller",
@@ -4748,7 +4838,8 @@
           }
         ]
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "StrengthPower",
@@ -4835,7 +4926,8 @@
           ]
         }
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "SubroutinePower",
@@ -4943,7 +5035,8 @@
         ]
       }
     ],
-    "Tab": "Energy"
+    "Tab": "Energy",
+    "Harmful": false
   },
   {
     "Name": "TaintedPower",
@@ -5030,7 +5123,8 @@
           ]
         }
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "TerritorialPower",
@@ -5059,7 +5153,8 @@
           }
         ]
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "TheAbacus",
@@ -5092,7 +5187,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "ThrowingAxe",
@@ -5227,7 +5323,8 @@
           ]
         }
       }
-    ]
+    ],
+    "Harmful": false
   },
   {
     "Name": "Tingsha",
@@ -5274,7 +5371,8 @@
         ]
       }
     ],
-    "Tab": "Damage"
+    "Tab": "Damage",
+    "Harmful": false
   },
   {
     "Name": "ToughBandages",
@@ -5319,7 +5417,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "TuningFork",
@@ -5509,7 +5608,8 @@
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Block",
+    "Harmful": false
   },
   {
     "Name": "ViciousPower",
@@ -5572,7 +5672,8 @@
         ]
       }
     ],
-    "Tab": "Draw"
+    "Tab": "Draw",
+    "Harmful": false
   },
   {
     "Name": "WhittlingKnife",
@@ -5603,6 +5704,7 @@
         ]
       }
     ],
-    "Tab": "Trigger"
+    "Tab": "Trigger",
+    "Harmful": false
   }
 ]

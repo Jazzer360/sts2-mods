@@ -584,3 +584,19 @@ public sealed class EnvenomPower : SimModel
         SimEngine.ApplyPower(state, owner, hit.Target, PowerId.Poison, SimEngine.PowerOn(state, owner, ThisPower), debuff: true);
     }
 }
+
+// ---- an enemy reacting to your play (Sim/Models/EnemyModels.cs), deleted 2026-11-24: a crossed tab
+
+/// <summary>EnragePower.AfterCardPlayed: every Skill played gives its owner its amount of Strength.</summary>
+public sealed class EnragePower : SimModel
+{
+    public override TabKind? Tab => TabKind.Trigger;
+    public override bool Harmful => true;
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (play.Card.Type != SimCardType.Skill || state.Enemy(owner) is not { Alive: true }) return One(state);
+        state.LogFired(Name, amount: 0, owner);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, SimEngine.PowerOn(state, owner, ThisPower), debuff: false);
+        return One(state);
+    }
+}

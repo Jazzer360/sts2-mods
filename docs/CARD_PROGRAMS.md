@@ -510,6 +510,7 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 | `ModifyCardPlayCount(card, target, playCount)`'s returns, `AfterModifyingCardPlayCount(card)` | the play count by the first way that holds (`HookFact.PlayCountSoFar`; `card` the card played), the steps after it changed it (decision #192) |
 | `AfterDamageGiven` / `AfterDamageReceived(dealer, result, props, target, cardSource)` | run inside the damage on the state given; `result.UnblockedDamage` is `HookFact.HitUnblocked`, `target` a command's `HookTarget.HitTarget` |
 | a command on a creature a read model can't act on (damage to its owner, a power on a roll) | a gap at reading |
+| a play hook's block for its owner or buff on it, on a condition that doesn't need the play to be its owner's | a crossed tab (`ModelSpec.Harmful`, a trigger) |
 | `base.Owner.Creature.Block`, `PileType.Hand.GetPile(base.Owner).Cards.Count` / `.IsEmpty` | `HookFact.OwnerBlock`, `HookFact.OwnerHandCount` |
 | `new PowerVar<T>(n)`, `new PowerVar<T>("Name", n)` in CanonicalVars | the value keyed by T's class (the constructor's type argument: `CodeMember.TypeArguments`) or by its name |
 | a power whose copies act on their own (`PowerInstanceType.Instanced`), a game object's property set or field stored where no step is read (a `DynamicVar.BaseValue--`) | a gap, so a class is never read whole while part of what it does is dropped |

@@ -29,6 +29,7 @@ public class ReadModelParityTests
         ["DuplicationPower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: as Burst's",
         ["OneTwoPunchPower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: as Burst's",
         ["KiVersePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: as Burst's",
+        ["EnragePower.AfterCardPlayed"] = "cardPlay.Card.Type == Skill, with no test of its owner's side: on a player it gives them Strength on every Skill too (the hand-written model wanted a living enemy). Only enemies have it in the game; on a dead enemy it answers nothing (its powers went with it): no prediction changes",
         ["CorrosiveWavePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. You draw nothing after it this turn: no prediction changes",
         ["SleightOfFleshPower.AfterPowerApplied"] = "!(power is ITemporaryPower): a temporary power landing (Dark Shackles) doesn't set it off, the Strength its BeforeApplied applies does. The simulator lands a temporary Strength power as that Strength (SimAdapter.PowersFrom), which both count: no prediction changes",
         ["ShroudPower.AfterPowerApplied"] = "applier == base.Owner && power is DoomPower, with no test of the target: Doom you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Doom on a player today",

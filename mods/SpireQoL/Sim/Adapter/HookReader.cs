@@ -111,7 +111,9 @@ public static class HookReader
         var fieldsRead = new ModelSpec(type.Name, kind, programs).Values().OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
         programs = programs.Select(program => program with { Steps = program.Steps.Where(step => step is not StoreFieldStep store || fieldsRead.Contains(store.Field)).ToList() })
             .Where(program => program.Returns != null || program.Steps.Count > 0).ToList();
-        var spec = new ModelSpec(type.Name, kind, programs) { Tab = TabOf(programs) };
+        var harmful = HarmfulOf(programs);
+        // A crossed tab carries no amount (only the four core resources' plain tabs do: decision #132): a trigger.
+        var spec = new ModelSpec(type.Name, kind, programs) { Tab = harmful && TabOf(programs) != null ? TabKind.Trigger : TabOf(programs), Harmful = harmful };
         return new ModelReading(spec, readings);
     }
 
@@ -132,6 +134,26 @@ public static class HookReader
             }
         return steps.Any(step => step is ApplyPowerStep or ChannelStep) ? TabKind.Trigger : null;
     }
+
+    /// <summary>
+    /// A play anyone makes sets off something that helps the model's owner: a play hook's block for its owner, or a buff on it, on a condition
+    /// that doesn't need the play to be its owner's (Enrage's Strength on every Skill, Sneaky's block on another's Attack). On an enemy, that's
+    /// your play helping it: a crossed tab (CLAUDE.md "Plain vs crossed").
+    /// </summary>
+    internal static bool HarmfulOf(IReadOnlyList<HookProgram> programs) =>
+        programs.Where(program => program.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed)
+            .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps())
+            .Any(step => step is GainBlockStep or ApplyPowerStep { Target: HookTarget.Owner, Debuff: false } && !Needs(step.When, HookFact.PlayIsOwners));
+
+    /// <summary>The condition holds only when the fact does (it's one of the condition's ands, not under a not).</summary>
+    private static bool Needs(HookValue? when, HookFact fact) => when switch
+    {
+        HookFactValue value => value.Fact == fact,
+        HookTest test => Needs(test.Test, fact),
+        HookMath { Operation: HookOperation.And } both => Needs(both.Left, fact) || Needs(both.Right, fact),
+        HookMath { Operation: HookOperation.Or } either => Needs(either.Left, fact) && Needs(either.Right, fact),
+        _ => false,
+    };
 
     private static bool Derives(Type type, string baseName)
     {

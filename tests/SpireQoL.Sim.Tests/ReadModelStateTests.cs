@@ -95,6 +95,23 @@ public class ReadModelStateTests
     }
 
     [Fact]
+    public void EnrageHelpsALivingEnemyAndIsGoneWithADeadOne()
+    {
+        // EnragePower.AfterCardPlayed: a Skill gives its owner its amount of Strength: a crossed tab (your play helps it). Once its owner is
+        // dead its powers went with it (Creature.RemoveAllPowersAfterDeath): nothing.
+        var enrage = Assert.IsType<ReadModel>(SimModels.Get(PowerId.Enrage.Name));
+        Assert.True(enrage.Harmful);
+        Assert.Equal(TabKind.Trigger, enrage.Tab);
+        var state = new SimState { You = new SimPlayer { Hp = 50 } };
+        state.Enemies.Add(new SimEnemy { Id = 0, Name = "E0", Hp = 40, Powers = PowerSet.Empty.With(PowerId.Enrage, amount: 2) });
+        var after = Assert.Single(enrage.AfterCardPlayed(state, owner: 0, Played(SimCardType.Skill)));
+        Assert.Equal(2, after.Enemies[0].Powers[PowerId.Strength]);
+        after.Enemies[0].Hp = 0;
+        var dead = Assert.Single(enrage.AfterCardPlayed(after, owner: 0, Played(SimCardType.Skill)));
+        Assert.Equal(2, dead.Enemies[0].Powers[PowerId.Strength]);
+    }
+
+    [Fact]
     public void MiniRegentAsksItsFlagOnceAsTheGameDoes()
     {
         // MiniRegent.AfterStarsSpent: if (!UsedThisTurn) { UsedThisTurn = true; Apply<StrengthPower> }: the Strength after the store still

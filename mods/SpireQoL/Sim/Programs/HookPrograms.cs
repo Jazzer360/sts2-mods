@@ -241,6 +241,12 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     public TabKind? Tab { get; init; }
 
     /// <summary>
+    /// Its tab is crossed (a warning: the play helps someone else), when a play anyone makes, not only its owner, sets off something that helps
+    /// its owner (block, a buff on itself): on an enemy, your play helping it (Enrage). Read from its programs (HookReader.HarmfulOf).
+    /// </summary>
+    public bool Harmful { get; init; }
+
+    /// <summary>
     /// Why its hooks weren't read, for a class whose hooks read whole at the reviewed builds and no longer do (a game update): no program, and
     /// every simulation it's in is unknown (SimState.Unmodelled, decision #92). Null: read.
     /// </summary>

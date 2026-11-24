@@ -59,6 +59,8 @@ public sealed class ReadModel : SimModel
 
     public override TabKind? Tab => Spec.Tab;
 
+    public override bool Harmful => Spec.Harmful;
+
     private readonly CompiledStep[]?[] _steps = new CompiledStep[]?[Enum.GetValues<HookName>().Length];
     /// <summary>The hooks whose program stores to the model's own state: their tests are asked once a run (HookTest).</summary>
     private readonly bool[] _asksOnce = new bool[Enum.GetValues<HookName>().Length];
@@ -198,14 +200,14 @@ public sealed class ReadModel : SimModel
 
     private decimal Returned(HookName hook, SimState state, int owner, DamageCtx damage, decimal otherwise)
     {
-        if (_returns[(int)hook] is not { } returns) return otherwise;
+        if (_returns[(int)hook] is not { } returns || Gone(state, owner)) return otherwise;
         var args = new HookArgs { State = state, Owner = owner, Damage = damage, Play = damage.Play };
         return returns(in args);
     }
 
     private decimal Returned(HookName hook, SimState state, int owner, BlockCtx block, decimal otherwise)
     {
-        if (_returns[(int)hook] is not { } returns) return otherwise;
+        if (_returns[(int)hook] is not { } returns || Gone(state, owner)) return otherwise;
         var args = new HookArgs { State = state, Owner = owner, Block = block, Play = block.Play };
         return returns(in args);
     }
@@ -216,10 +218,17 @@ public sealed class ReadModel : SimModel
     /// </summary>
     private IEnumerable<SimState> Run(HookName hook, HookArgs args)
     {
-        if (_steps[(int)hook] is not { } steps) return One(args.State);
+        if (_steps[(int)hook] is not { } steps || Gone(args.State, args.Owner)) return One(args.State);
         args = args with { Hook = hook, Asked = _asksOnce[(int)hook] ? new int[_testSlots.Count] : null, Taken = _takes[(int)hook] ? new int[1] : null };
         return RunSteps(steps, args);
     }
+
+    /// <summary>
+    /// A power whose owner, an enemy, is dead: the game removed it with the creature's powers (Creature.RemoveAllPowersAfterDeath; a power
+    /// that stays overrides ShouldPowerBeRemovedAfterOwnerDeath, a hook no read model answers), so it answers nothing. A hit's own reactions
+    /// still run on the creature it killed (the game's deaths come after them).
+    /// </summary>
+    private bool Gone(SimState state, int owner) => Spec.Kind == ModelKind.Power && Who.IsEnemy(owner) && state.Enemy(owner) is not { Alive: true };
 
     /// <summary>Compiled steps in order on one branch (see Run).</summary>
     private static IEnumerable<SimState> RunSteps(CompiledStep[] steps, HookArgs args)

@@ -178,7 +178,7 @@ internal static partial class CoverageLedger
         ["DoubleDamagePower"] = "covered: read from its code (ReadModel, decision #195): ModifyDamageMultiplicative, AfterSideTurnEnd's Decrement",
         ["DuplicationPower"] = "covered: read from its code (ReadModel, decision #195): ModifyCardPlayCount replays any card of yours, AfterModifyingCardPlayCount a stack used (the double-play tab from the game's hook; decision #192); AfterSideTurnEnd removes itself",
         ["EchoFormPower"] = "covered: double plays (Hook.ModifyCardPlayCount: the double-play tab from the game's hook; in the simulator its model decides each card play's count as it starts, on the fight's log: decision #192)",
-        ["EnragePower"] = "covered: AfterCardPlayed Strength on Skills (simulator intents; crossed tab)",
+        ["EnragePower"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed Strength on any Skill (simulator intents; a crossed tab, read from its code: a play anyone makes helps its owner)",
         ["EnvenomPower"] = "covered: read from its code (ReadModel, decision #195): AfterDamageGiven poisons the target of its owner's powered hits that get HP through",
         ["EscapeArtistPower"] = "ignore: AfterSideTurnEnd ticks down",
         ["FeelNoPainPower"] = "covered: read from its code (ReadModel, decision #195): AfterCardExhausted block (proc block; simulator for Ethereal exhausts)",

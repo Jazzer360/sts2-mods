@@ -24,6 +24,7 @@ public static partial class ReadModels
         PowerId.Dexterity.Name,
         PowerId.DoubleDamage.Name,
         PowerId.Duplication.Name,
+        PowerId.Enrage.Name,
         PowerId.Envenom.Name,
         RelicId.FakeOrichalcum.Name,
         PowerId.FeelNoPain.Name,
