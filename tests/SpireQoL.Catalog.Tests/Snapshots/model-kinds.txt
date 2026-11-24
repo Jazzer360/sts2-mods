@@ -136,7 +136,6 @@ SimReaders.Read (powers): SurroundedPower: hand-written; reads its own field Fac
 SimReaders.Read (powers): CoveredPower: hand-written; reads the game's Applier, the game's Owner.Powers: needs more than its own fields and values
 SimReaders.Read (powers): FeralPower: hand-written; reads its own field _internalData, its own field zeroCostAttacksPlayed, the game's DisplayAmount: needs more than its own fields and values
 SimReaders.Read (powers): WitheringPresencePower: hand-written; reads its own value CardsLeft: a read model's own fields and values replace it
-SimReaders.Read (powers): PaleBlueDotPower: read from code; reads its own field alreadyActivatedThisTurn: a read model's own fields and values replace it
 SimReaders.Read (powers): YahPower: hand-written; reads its own field triggeredThisTurn: a read model's own fields and values replace it
 SimReaders.Read (powers): VigorPower: hand-written; reads its own field _internalData, its own field commandToModify: a read model's own fields and values replace it
 SimReaders.Read (powers): AimPower: hand-written; reads its own field _internalData, its own field commandToModify: a read model's own fields and values replace it
@@ -152,9 +151,6 @@ SimReaders.Relics: PaelsLegion: hand-written; reads its own field Cooldown, its 
 SimReaders.Relics: CentennialPuzzle: hand-written; reads its own field UsedThisCombat: a read model's own fields and values replace it
 SimReaders.Relics: JossPaper: hand-written; reads its own field CardsExhausted, its own field EtherealCount: a read model's own fields and values replace it
 SimReaders.Relics: Pocketwatch: hand-written; reads its own field _cardsPlayedThisTurn, its own value CardThreshold: a read model's own fields and values replace it
-SimReaders.Relics: MiniRegent: read from code; reads its own field UsedThisTurn: a read model's own fields and values replace it
-SimReaders.Relics: Regalite: read from code; reads its own field UsedThisTurn: a read model's own fields and values replace it
-SimReaders.Relics: RainbowRing: read from code; reads its own field ActivationCountThisTurn: a read model's own fields and values replace it
 SimReaders.Relics: DemonTongue: hand-written; reads its own field _triggeredThisTurn: a read model's own fields and values replace it
 SimReaders.Relics: RedSkull: hand-written; reads its own value HpThreshold, its own field StrengthApplied, the game's MaxHp: needs more than its own fields and values
 SimReaders.Relics: ParryingShield: hand-written; reads its own value Block: a read model's own fields and values replace it

@@ -91,7 +91,6 @@ public static class SimReaders
             case nameof(FeralPower): data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } feral ? Sts2State.Private(feral, "zeroCostAttacksPlayed", fallback: 0) : Math.Max(0, power.Amount - power.DisplayAmount); break;
             case nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)); break;
             // Once a turn (PowerUse.UsedThisTurn: already this turn).
-            case nameof(PaleBlueDotPower): data = Internal(power, "alreadyActivatedThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
             case nameof(YahPower): data = Internal(power, "triggeredThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
             // Bound to the attack under way (BeforeAttack set commandToModify): every other card's damage gets nothing from it.
             case nameof(VigorPower) or nameof(AimPower) or nameof(QuietusPower) or nameof(GigantificationPower):
@@ -208,9 +207,6 @@ public static class SimReaders
                 // Its count toward the next draw, and the Ethereal exhausts counted as the turn ends (its EtherealCount: 0 mid-turn).
                 case nameof(JossPaper): amount = Sts2State.Private(relic, "CardsExhausted", fallback: 0); data = Sts2State.Private(relic, "EtherealCount", fallback: 0); break;
                 case nameof(Pocketwatch): amount = Sts2State.Private(relic, "_cardsPlayedThisTurn", fallback: 0); data = Sts2State.Var(relic, "CardThreshold", fallback: 3); break;
-                // Once a turn: armed until used, used this turn (RelicUse).
-                case nameof(MiniRegent) or nameof(Regalite): data = Sts2State.Private(relic, "UsedThisTurn", fallback: true) ? 0 : (int)RelicUse.Armed; break;
-                case nameof(RainbowRing): data = Sts2State.Private(relic, "ActivationCountThisTurn", fallback: 0) >= 1 ? (int)RelicUse.UsedThisTurn : 0; break;
                 case nameof(DemonTongue): data = Sts2State.Private(relic, "_triggeredThisTurn", fallback: true) ? (int)RelicUse.UsedThisTurn : 0; break;
                 // The HP at or below which it gives Strength (its threshold of your max HP).
                 case nameof(RedSkull):

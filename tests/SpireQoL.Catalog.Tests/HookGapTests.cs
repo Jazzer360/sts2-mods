@@ -266,6 +266,19 @@ public class HookGapTests
         Assert.True(File.ReadAllText(path).ReplaceLineEndings("\n") == text, $"{path} isn't {what}: regenerate it with SPIREQOL_UPDATE_SNAPSHOT=1 and explain the change");
     }
 
+    /// <summary>
+    /// The adapter keeps no per-class reading for a class read from its code (SimReaders.Read's powers, SimReaders.Relics, RelicAmountVars): its
+    /// own fields and values are seeded for it (SimReaders.Fields, AddVars), so such a reading is dead or stands in for its code.
+    /// </summary>
+    [Fact]
+    public void NoAdapterReadingForAClassReadFromItsCode()
+    {
+        if (!File.Exists(BranchCode.BetaPath)) return;
+        using var beta = new BranchCode(BranchCode.BetaPath);
+        var stale = AdapterTables(beta, ModSources()).Where(line => line.StartsWith("SimReaders.", StringComparison.Ordinal) && line.Contains(": read from code;", StringComparison.Ordinal)).ToList();
+        Assert.True(stale.Count == 0, "the adapter reads a class read from its code by name: " + string.Join("; ", stale));
+    }
+
     /// <summary>Every gap the reader names on either branch, of every kind, carries the capability it waits on.</summary>
     [Fact]
     public void EveryGapNamesItsCapability()
