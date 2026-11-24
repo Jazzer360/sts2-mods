@@ -1043,6 +1043,72 @@
     "HelpsOwner": false
   },
   {
+    "Name": "BufferPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterModifyingHpLostAfterOsty",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep"
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyHpLostAfterOstyLate",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "BufferPower.ModifyHpLostAfterOstyLate:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "BufferPower.ModifyHpLostAfterOstyLate:0012",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "SourceCardIs",
+                  "Of": "BrightestFlame"
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "BurstPower",
     "Kind": "Power",
     "Hooks": [

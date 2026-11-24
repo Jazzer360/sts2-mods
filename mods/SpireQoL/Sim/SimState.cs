@@ -12,8 +12,6 @@ namespace SpireQoL.Sim;
 public enum MainRule
 {
     None = 0,
-    /// <summary>Buffer stops HP lost to Brightest Flame too (beta lets it through).</summary>
-    BufferStopsBrightestFlame = 1,
     /// <summary>Omnislice's splash is unpowered (Unpowered | Move) through every damage modifier, and Thorns answers it (beta: a powered hit, caps only).</summary>
     SplashIsUnpowered = 2,
     /// <summary>Juggling copies the third Attack into your hand as it's played (beta: once it's played).</summary>
@@ -775,6 +773,7 @@ public sealed class SimState
     public Dictionary<string, decimal> Fractions = new();
 
     /// <summary>The rules the running game does main's way (decision #169); None: beta's. Read once from the game, never changed.</summary>
+    [JsonConverter(typeof(MainRuleJson))]
     public MainRule MainRules;
 
     /// <summary>

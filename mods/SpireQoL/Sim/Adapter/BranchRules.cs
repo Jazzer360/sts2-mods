@@ -24,10 +24,6 @@ public sealed record BranchRule(string Name, CodeFact Fact, bool OnBeta, MainRul
 /// <summary>Every rule whose game code differs between the branches (decision #169), and which behaviour the running game has.</summary>
 internal static class BranchRules
 {
-    public static readonly BranchRule BufferLetsBrightestFlameThrough = new(nameof(BufferLetsBrightestFlameThrough),
-        new CodeFact(typeof(BufferPower), nameof(BufferPower.ModifyHpLostAfterOstyLate), nameof(BrightestFlame)), OnBeta: true, MainRule.BufferStopsBrightestFlame,
-        "beta's BufferPower.ModifyHpLostAfterOstyLate lets HP lost to Brightest Flame through (cardSource is BrightestFlame); main's stops it");
-
     public static readonly BranchRule OmnisliceSplashIsPowered = new(nameof(OmnisliceSplashIsPowered),
         new CodeFact(typeof(ThornsPower), nameof(ThornsPower.BeforeDamageReceived), nameof(Omnislice)), OnBeta: false, MainRule.SplashIsUnpowered,
         "beta's Omnislice splashes a powered hit (ValueProp.Move) with only the damage caps; main's splash is unpowered (Unpowered | Move) through " +
@@ -43,7 +39,7 @@ internal static class BranchRules
 
     public static IReadOnlyList<BranchRule> All { get; } = new[]
     {
-        BufferLetsBrightestFlameThrough, OmnisliceSplashIsPowered, JugglingCopiesAfterThePlay, PlowStrengthNeedsPlow,
+        OmnisliceSplashIsPowered, JugglingCopiesAfterThePlay, PlowStrengthNeedsPlow,
     };
 
     private static readonly ConcurrentDictionary<BranchRule, bool> Beta = new();

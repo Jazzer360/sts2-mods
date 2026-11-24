@@ -149,7 +149,7 @@ internal static partial class CoverageLedger
         ["BlockNextTurnPower"] = "ignore: AfterBlockCleared block at the start of your next turn",
         ["BlurPower"] = "ignore: ShouldClearBlock keeps your block into your next turn",
         ["BorrowedTimePower"] = "ignore: AfterSideTurnEnd removes itself",
-        ["BufferPower"] = "covered: ModifyHpLostAfterOstyLate stops HP loss (simulator Buffer)",
+        ["BufferPower"] = "covered: read from its code (ReadModel, decision #230): ModifyHpLostAfterOstyLate stops HP its owner would lose (each branch's own Brightest Flame case), AfterModifyingHpLostAfterOsty takes a stack; its GetScaledAmountForMultiplayer never runs (ShouldScaleInMultiplayer is false)",
         ["BurrowedPower"] = "covered: AfterBlockBroken stuns, ShouldClearBlock keeps block (simulator)",
         ["BurstPower"] = "covered: read from its code (ReadModel, decision #195): ModifyCardPlayCount replays your Skills, AfterModifyingCardPlayCount a stack used (the double-play tab from the game's hook; decided as each card play starts: decision #192); AfterSideTurnEnd removes itself",
         ["CacophonyPower"] = "covered: read from its code (ReadModel, decision #195), each copy on its own (decision #196): AfterCardDrawn damages a random enemy every N draws (proc damage, tracker)",

@@ -67,6 +67,26 @@ public static class SimJson
 }
 
 /// <summary>
+/// The main rules a state names (decision #169), by name: one a later build no longer has (its branches' code is read now: Buffer's Brightest Flame,
+/// decision #230) is left out as it's read, so a report written before still reads. Written as the enum's names, as every enum is (decision #213).
+/// </summary>
+public sealed class MainRuleJson : JsonConverter<MainRule>
+{
+    private static readonly MainRule AllRules = Enum.GetValues<MainRule>().Aggregate(MainRule.None, (all, rule) => all | rule);
+
+    public override MainRule Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.Number) return (MainRule)reader.GetInt32() & AllRules;
+        var rules = MainRule.None;
+        foreach (var name in (reader.GetString() ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            if (Enum.TryParse<MainRule>(name, out var rule)) rules |= rule;
+        return rules;
+    }
+
+    public override void Write(Utf8JsonWriter writer, MainRule value, JsonSerializerOptions options) => writer.WriteStringValue(value.ToString());
+}
+
+/// <summary>
 /// A creature id that may be no one (a play's target, who cast Hex): no one (Who.None) is written as null. Read, null is no one,
 /// and so is -1, which meant no one in states written before Who.None (a target is never you, the other -1).
 /// </summary>

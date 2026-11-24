@@ -712,6 +712,9 @@ public static class HookReader
             try
             {
                 if (PlayersTurnStartHooks.Contains(hook.Name)) return (null, null, "it runs as the players' next turn starts, past the turns a simulation covers");
+                // PowerCmd.Apply calls it only for a power whose ShouldScaleInMultiplayer is true (read from its code: PowerModel's is false).
+                if (hook.Name == "GetScaledAmountForMultiplayer" && Returned(_type, "get_ShouldScaleInMultiplayer") is not ConstantValue { Value: not 0 })
+                    return (null, null, "PowerCmd.Apply never calls it: the power's ShouldScaleInMultiplayer is false");
                 // A card entering the fight afflicted (Galvanic's Galvanized, Vital Spark's Tainted on a Power or Skill made or added): every command an
                 // affliction on the entering card. An affliction is a fact of its card the adapter reads; no simulated play plays a card that
                 // entered the fight during the simulation. Any other change to the entering card (a keyword: Ghost Seed) stays a gap.

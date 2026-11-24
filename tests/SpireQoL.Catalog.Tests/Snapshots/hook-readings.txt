@@ -13,7 +13,7 @@ power BlackHolePower: AfterCardPlayed: gap: the value cardPlay.Resources.StarsSp
 power BlockNextTurnPower: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
 power BlurPower: AfterPreventingBlockClear: gap: the simulator runs no read model's AfterPreventingBlockClear | AfterSideTurnStart: read | ShouldClearBlock: gap: the simulator runs no read model's ShouldClearBlock
 power BorrowedTimePower: AfterSideTurnEnd: read | TryModifyEnergyCostInCombat: gap: the simulator runs no read model's TryModifyEnergyCostInCombat
-power BufferPower: AfterModifyingHpLostAfterOsty: read | GetScaledAmountForMultiplayer: gap: the simulator runs no read model's GetScaledAmountForMultiplayer | ModifyHpLostAfterOstyLate: read
+power BufferPower: AfterModifyingHpLostAfterOsty: read | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply never calls it: the power's ShouldScaleInMultiplayer is false | ModifyHpLostAfterOstyLate: read
 power BurrowedPower: AfterBlockBroken: gap: the simulator runs no read model's AfterBlockBroken | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | ShouldClearBlock: gap: the simulator runs no read model's ShouldClearBlock
 power BurstPower: AfterModifyingCardPlayCount: read | AfterSideTurnEnd: read | ModifyCardPlayCount: read
 power CacophonyPower: AfterCardDrawn: read

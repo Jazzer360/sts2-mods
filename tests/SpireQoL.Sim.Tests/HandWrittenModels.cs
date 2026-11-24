@@ -1628,3 +1628,22 @@ public sealed class SlowPower : SimModel
         return One(state);
     }
 }
+
+// ---- multiplayer scaling never called (Sim/Models/PlayerModels.cs, deleted 2026-11-24)
+
+/// <summary>
+/// BufferPower.ModifyHpLostAfterOstyLate: HP its owner would lose becomes 0 (beta: not from Brightest Flame); when that changes the amount, it
+/// loses a stack (AfterModifyingHpLostAfterOsty: Decrement) instead of flashing. (Main's way, MainRule.BufferStopsBrightestFlame, went with it:
+/// each branch's own code is read now; the parity board plays beta's, as the installed game is.)
+/// </summary>
+public sealed class BufferPower : SimModel
+{
+    public override decimal ModifyHpLostAfterOstyLate(SimState state, int owner, DamageCtx damage, decimal amount) =>
+        damage.Target != owner || damage.Card?.Name == CardId.BrightestFlame.Name ? amount : 0m;
+    public override void AfterModifyingHpLost(SimState state, int owner, bool afterOsty)
+    {
+        var powers = SimEngine.PowersOf(state, owner);
+        SimEngine.SetPowers(state, owner, powers[ThisPower] <= 1 ? powers.Without(ThisPower) : powers.With(ThisPower, powers[ThisPower] - 1));
+        state.LogFired(Name, amount: 0, owner);
+    }
+}

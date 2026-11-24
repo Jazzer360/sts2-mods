@@ -17,26 +17,6 @@ public class SimMainRuleTests
     }
 
     [Fact]
-    public void BufferLetsBrightestFlameThroughOnBetaAndStopsItOnMain()
-    {
-        // BufferPower.ModifyHpLostAfterOstyLate: beta returns the amount for cardSource is BrightestFlame; main has no such case.
-        SimPlay Flame() => new()
-        {
-            Name = "BrightestFlame", HandCard = 7, HandDelta = -1,
-            Card = new SimCardPlay(new SimCard("BrightestFlame", SimCardType.Skill), Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: false),
-            Body = { new LoseHpAction(Amount: 3) },
-        };
-        var beta = Board(MainRule.None, new SimEnemy { Id = 1, Name = "E1", Hp = 50 });
-        beta.You.Buffer = 1;
-        Assert.Equal(3, Assert.Single(SimEngine.Run(beta, Flame()).Branches).You.Taken);
-        var main = Board(MainRule.BufferStopsBrightestFlame, new SimEnemy { Id = 1, Name = "E1", Hp = 50 });
-        main.You.Buffer = 1;
-        var stopped = Assert.Single(SimEngine.Run(main, Flame()).Branches);
-        Assert.Equal(0, stopped.You.Taken);
-        Assert.Equal(0, stopped.You.Buffer);
-    }
-
-    [Fact]
     public void OmnislicesSplashIsPoweredOnBetaAndUnpoweredOnMain()
     {
         // Omnislice's 8 splashes onto the second enemy. Beta: a powered hit (ValueProp.Move), so your Envenom poisons it; main: unpowered,
