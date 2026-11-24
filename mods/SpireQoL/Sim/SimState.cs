@@ -261,7 +261,18 @@ public sealed class SimEnemy
 }
 
 /// <summary>A card in hand that acts when its owner's turn ends: its class name, its title, and its Damage or HpLoss value.</summary>
-public sealed record TurnEndCard(string Card, string Title, int Amount);
+public sealed record TurnEndCard(string Card, string Title, int Amount)
+{
+    /// <summary>
+    /// The card itself as the hooks see it (its class, type, affliction...): the cardSource its OnTurnEndInHand passes its damage (Burn's
+    /// CreatureCmd.Damage(..., this, null)). Null when it wasn't read (a test's, an older report's): a card of its class.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public SimCard? Source { get; init; }
+
+    /// <summary>Its class, title and amount, as the record printed them before it carried its card: what tells two apart (a draw profile's key).</summary>
+    public override string ToString() => $"TurnEndCard {{ Card = {Card}, Title = {Title}, Amount = {Amount} }}";
+}
 
 /// <summary>
 /// A creature an enemy's death adds to the fight (SimEnemy.Spawns): its name, and every HP it can start with, each equally likely

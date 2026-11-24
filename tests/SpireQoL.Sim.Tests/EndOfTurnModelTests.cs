@@ -153,6 +153,28 @@ public class EndOfTurnModelTests
     }
 
     [Fact]
+    public void ACardActingInHandIsItsDamagesCard()
+    {
+        // Every OnTurnEndInHand passes the card itself as its damage's cardSource (Burn: CreatureCmd.Damage(ctx, base.Owner.Creature, Damage, this,
+        // null); Regret: CreatureCmd.Damage(ctx, base.Owner.Creature, CardsInHand, props, this, null)), and the HP-loss passes are told it, as Buffer's
+        // `cardSource is BrightestFlame` asks of an HP cost. A power stopping damage from a Burn stops the Burn's, not the Regret's.
+        var state = new SimState { Enemies = { Attacker(id: 0, hp: 50) } };
+        state.You.Hp = 50;
+        state.You.MaxHp = 80;
+        state.You.HandCount = 2;
+        state.You.Powers = state.You.Powers.With(new PowerId(ReadModelsFile.StopsBurns.Name), amount: 1);
+        state.You.TurnEndCards.Add(new TurnEndCard(CardId.Burn.Name, "Burn", Amount: 2) { Source = new SimCard(CardId.Burn.Name, SimCardType.Status) });
+        state.You.TurnEndCards.Add(new TurnEndCard(CardId.Regret.Name, "Regret", Amount: 0));
+        state.You.Cards = state.You.Cards.With(CardId.Regret, amount: 1); // its BeforeSideTurnEnd counts the hand (RegretCard)
+        var outcome = SimEngine.Run(state);
+        Assert.Equal(2, outcome.TakenMax); // Regret's 2 (two cards in hand), the Burn's stopped
+        Assert.All(outcome.Branches, branch => Assert.Equal(48, branch.You.Hp));
+        // A turn-end card read without its card (a test's, an older report's) is a card of its class all the same.
+        state.You.TurnEndCards[0] = new TurnEndCard(CardId.Burn.Name, "Burn", Amount: 2);
+        Assert.Equal(2, SimEngine.Run(state).TakenMax);
+    }
+
+    [Fact]
     public void DemiseIgnoresYourBlockAndConstrictUsesIt()
     {
         var state = new SimState { Enemies = { Attacker(id: 0, hp: 50) } };

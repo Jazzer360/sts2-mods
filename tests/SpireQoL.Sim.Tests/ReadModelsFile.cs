@@ -26,6 +26,15 @@ internal static class ReadModelsFile
     public static readonly ModelSpec Uncompilable = new("UncompilableForTestsPower", ModelKind.Power,
         new[] { new HookProgram(HookName.AfterCardPlayed, new HookStep[] { new DamageStep(HookTarget.HitTarget, new HookConstant(3m), new HookConstant(4m)) }) });
 
+    /// <summary>
+    /// A power that stops the HP its owner would lose to damage from a Burn (`cardSource is Burn`): what a hit's card is, as the HP-loss passes are
+    /// told it (EndOfTurnModelTests). No game class has its name.
+    /// </summary>
+    public static readonly ModelSpec StopsBurns = new("StopsBurnsForTestsPower", ModelKind.Power,
+        new[] { new HookProgram(HookName.ModifyHpLostAfterOstyLate, Array.Empty<HookStep>()) { Returns = new HookWays(new[] {
+            new HookWay(new HookFactValue(HookFact.SourceCardIs) { Of = CardId.Burn.Name }, new HookConstant(0m)),
+            new HookWay(new HookConstant(1m), new HookFactValue(HookFact.HpLostSoFar)) }) } });
+
     [ModuleInitializer]
-    internal static void Use() => SimModels.Read = () => Specs().Append(Unreadable).Append(Uncompilable);
+    internal static void Use() => SimModels.Read = () => Specs().Append(Unreadable).Append(Uncompilable).Append(StopsBurns);
 }

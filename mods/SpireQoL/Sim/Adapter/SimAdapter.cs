@@ -515,7 +515,7 @@ public static partial class SimAdapter
     {
         if (!SimEngine.HandAtTurnEnd.TryGetValue(card.GetType().Name, out var kind)) return null;
         var amount = kind switch { SimEngine.InHand.Damage => Sts2State.Var(card, "Damage"), SimEngine.InHand.HpLoss => Sts2State.Var(card, "HpLoss"), _ => 0 };
-        return new TurnEndCard(card.GetType().Name, SafeCardTitle(card), amount);
+        return new TurnEndCard(card.GetType().Name, SafeCardTitle(card), amount) { Source = SimReaders.Card(card, energy: 0) };
     }
 
     /// <summary>Which card in your hand a play is (SimPlay.HandCard, SimHandCard.Id): its object identity.</summary>

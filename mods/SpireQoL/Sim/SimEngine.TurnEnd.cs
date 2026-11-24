@@ -37,9 +37,9 @@ public static partial class SimEngine
             if (!HandAtTurnEnd.TryGetValue(card.Card, out var kind)) continue;
             var props = kind == InHand.Damage ? SimProps.Unpowered | SimProps.Move : SimProps.Unblockable | SimProps.Unpowered | SimProps.Move;
             // CreatureCmd.Damage of its owner (Burn's, Regret's): the one path for damage to a player (decision #219). Its dealer is the card's
-            // owner (the command's cardSource.Owner.Creature); the card itself isn't kept (TurnEndCard has its class and amount only), and no
-            // damage hook on a player tests a turn-end card's facts.
-            DamagePlayer(state, card.Title, player, card.Amount, props, dealer: player, card: null);
+            // owner (the command's cardSource.Owner.Creature), and its card the card itself (the command's cardSource: this), as the damage math,
+            // the HP-loss passes and the hit's reactions see it (Buffer asks whether it's Brightest Flame).
+            DamagePlayer(state, card.Title, player, card.Amount, props, dealer: player, card: card.Source ?? new SimCard(card.Card, SimCardType.None));
         }
     }
 }
