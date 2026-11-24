@@ -73,6 +73,7 @@ public static partial class ReadModels
         PowerId.SpiritOfAsh.Name,
         PowerId.Storm.Name,
         RelicId.Storyteller.Name,
+        PowerId.Strangle.Name,
         PowerId.Strength.Name,
         PowerId.Subroutine.Name,
         PowerId.Tainted.Name,

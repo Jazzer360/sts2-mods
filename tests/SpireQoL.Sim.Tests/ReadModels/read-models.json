@@ -5260,6 +5260,100 @@
     "Harmful": false
   },
   {
+    "Name": "StranglePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "BoundTaken"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 6
+            },
+            "NoDealer": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__9.MoveNext:002E",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakeBound"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__10.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeCardPlayed",
+        "Steps": [
+          {
+            "$kind": "BindStep",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "StranglePower.BeforeCardPlayed:0012",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "StranglePower.BeforeCardPlayed:0007",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HasApplier"
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "ApplierIsPlayer"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "StranglePower.BeforeCardPlayed:0030",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsAppliers"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage",
+    "Harmful": false
+  },
+  {
     "Name": "StrengthPower",
     "Kind": "Power",
     "Hooks": [

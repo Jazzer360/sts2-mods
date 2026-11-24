@@ -591,10 +591,16 @@ public sealed class ReadModel : SimModel
             }
             case HookFact.DeadIsApplier: return (in HookArgs args) => DataCreature.In(SimEngine.PowersOf(args.State, args.Owner).DataOf(ThisPower)) is var applier && applier != Who.None && applier == args.Target ? 1m : 0m;
             case HookFact.DeadIsOwner: return (in HookArgs args) => args.Target == args.Owner ? 1m : 0m;
+            case HookFact.HasApplier: return (in HookArgs args) => ApplierOf(in args) != Who.None ? 1m : 0m;
+            case HookFact.ApplierIsPlayer: return (in HookArgs args) => Who.IsPlayer(ApplierOf(in args)) ? 1m : 0m;
+            case HookFact.PlayIsAppliers: return (in HookArgs args) => args.Play is { } play && ApplierOf(in args) is var applier && applier != Who.None && play.Owner == applier ? 1m : 0m;
             case HookFact.OwnerDead: return (in HookArgs args) => (args.State.Player(args.Owner) is { } player ? player.Died || player.Hp <= 0 : args.State.Enemy(args.Owner) is not { Alive: true }) ? 1m : 0m;
             default: throw new InvalidOperationException($"{Name}: no fact {fact.Fact}");
         }
     }
+
+    /// <summary>Who applied this power: its Data (DataCreature), as a read power that asks keeps it (ModelSpec.UsesApplier); Who.None when no one.</summary>
+    private int ApplierOf(in HookArgs args) => DataCreature.In(SimEngine.PowersOf(args.State, args.Owner).DataOf(ThisPower));
 
     /// <summary>The type of the hook's card: the card played, or the event's card (a made Status or Sadness by its event; one drawn as its profile says).</summary>
     private static SimCardType CardTypeOf(in HookArgs args)

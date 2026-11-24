@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Combat;
@@ -274,7 +274,7 @@ internal static partial class CoverageLedger
         ["SteamEruptionPower"] = "covered: AfterDeath effect (crossed kill tab from the simulator)",
         ["StockPower"] = "covered: AfterDeath spawns another Axebot while stock is left, which attacks this enemy turn: crossed kill tab from the simulator; Incoming Damage reads the new Axebot once it's there",
         ["StormPower"] = "covered: read from its code (ReadModel, decision #195): BeforeCardPlayed binds its amount to a Power played, AfterCardPlayed channels that much Lightning",
-        ["StranglePower"] = "covered: AfterCardPlayed damages it per card (proc damage)",
+        ["StranglePower"] = "covered: read from its code (ReadModel, decision #195): BeforeCardPlayed binds its amount to a card its applier (a player) plays; AfterCardPlayed deals it to its owner (unblockable, no dealer)",
         ["StratagemPower"] = "covered: AfterShuffle picks cards (proc tab on shuffles)",
         ["SubroutinePower"] = "covered: read from its code (ReadModel, decision #195): BeforeCardPlayed binds its amount to a Power played, AfterCardPlayed gives that much energy, one at a time (proc tab)",
         ["SuckPower"] = "ignore: AfterAttack Strength after its own attack (later attacks)",

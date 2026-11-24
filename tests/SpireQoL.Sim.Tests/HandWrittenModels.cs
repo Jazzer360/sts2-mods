@@ -692,3 +692,18 @@ public sealed class ConstrictPower : TurnEndDebuff
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) =>
         state.TakesPart(owner) && !ApplierDead(state, owner, ThisPower) ? Hurt(state, owner, Amount(state, owner), Unpowered, selfDealt: true) : One(state);
 }
+
+// ---- the applier's plays (Sim/Models/ProcPowerModels.cs, deleted 2026-11-24)
+
+/// <summary>StranglePower (on an enemy, Data = its applier + 100): each card the applier plays deals its amount to it (unblockable, unpowered, no dealer).</summary>
+public sealed class StranglePower : ProcModel
+{
+    public override TabKind? Tab => TabKind.Damage;
+    public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (DataCreature.In(Data(state, owner)) == play.Owner) Bind(state, owner, Amount(state, owner));
+        return One(state);
+    }
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
+        TakeBound(state, owner) is { } bound ? SimEngine.ProcDamageOn(state, owner, Name, owner, bound, SimProps.Unblockable | Unpowered, noDealer: true) : One(state);
+}

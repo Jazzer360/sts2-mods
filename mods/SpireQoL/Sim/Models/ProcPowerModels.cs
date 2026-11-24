@@ -71,19 +71,6 @@ public sealed class JugglingPower : ProcModel
         Mine(play, owner) && TakeBound(state, owner) is { } bound ? MakeInHand(Fire(state, owner), CardEvent.Generated, bound, owner) : One(state);
 }
 
-/// <summary>StranglePower (on an enemy, Data = its applier + 100): each card the applier plays deals its amount to it (unblockable, unpowered, no dealer).</summary>
-public sealed class StranglePower : ProcModel
-{
-    public override TabKind? Tab => TabKind.Damage;
-    public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (DataCreature.In(Data(state, owner)) == play.Owner) Bind(state, owner, Amount(state, owner));
-        return One(state);
-    }
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        TakeBound(state, owner) is { } bound ? SimEngine.ProcDamageOn(state, owner, Name, owner, bound, SimProps.Unblockable | Unpowered, noDealer: true) : One(state);
-}
-
 /// <summary>OblivionPower (on an enemy, Data = its applier + 100): each card the applier plays applies Doom to it.</summary>
 public sealed class OblivionPower : ProcModel
 {

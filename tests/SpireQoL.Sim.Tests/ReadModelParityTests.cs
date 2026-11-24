@@ -34,6 +34,9 @@ public class ReadModelParityTests
         ["SleightOfFleshPower.AfterPowerApplied"] = "!(power is ITemporaryPower): a temporary power landing (Dark Shackles) doesn't set it off, the Strength its BeforeApplied applies does. The simulator lands a temporary Strength power as that Strength (SimAdapter.PowersFrom), which both count: no prediction changes",
         ["ShroudPower.AfterPowerApplied"] = "applier == base.Owner && power is DoomPower, with no test of the target: Doom you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Doom on a player today",
         ["ConstrictPower.AfterDeath"] = "!wasRemovalPrevented && creature == base.Applier: PowerCmd.Remove(this), it goes as its applier dies, where the hand-written model kept it and dealt nothing as the turn ended with its applier dead. Nothing is dealt either way (the scenario's turn end shows it): no prediction changes",
+        ["StranglePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: on a player it goes as their turn ends. Only enemies have it in the game (an enemy takes no part in the players' turn ending): no prediction changes",
+        ["StranglePower.BeforeCardPlayed"] = "as its AfterCardPlayed (the plays' runs count both hooks)",
+        ["StranglePower.AfterCardPlayed"] = "CreatureCmd.Damage(base.Owner, ...), with no test of its owner's side: on a player it hurts them for their own plays (the hand-written model dealt damage to enemies only). Only enemies have it in the game (Strangle the card applies it to one): no prediction changes",
         ["SneakyPower.AfterCardPlayed"] = "cardPlay.Card.Owner.Creature != base.Owner && cardPlay.Card.Type == Attack, with no test of its owner's side: on a player it gives them block on another's Attack (the hand-written model wanted an enemy). Only enemies have it in the game: no prediction changes",
         ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
     };
@@ -147,8 +150,11 @@ public class ReadModelParityTests
         state.Enemies.Add(new SimEnemy { Id = 1, Name = "E1", Hp = 25, Block = 5, Hits = new List<int> { 3, 3 } });
         foreach (var variable in VarsOf(model.Spec))
             state.Vars[$"{owner}:{model.Name}:{variable.Key}"] = variable.Key.EndsWith(".Props", StringComparison.Ordinal) ? (int)variable.Canonical : (int)variable.Canonical + 1;
-        // A power whose code asks who applied it keeps its applier as its Data: enemy 0 here (DataCreature), as the adapter reads it.
-        var powerData = PowerDataVars.TryGetValue(model.Name, out var dataVar) ? state.Vars[$"{owner}:{model.Name}:{dataVar}"] : model.UsesApplier ? DataCreature.Of(0) : 0;
+        // A power whose code asks who applied it keeps its applier as its Data (DataCreature), as the adapter reads it: you, for one that asks
+        // whether its applier is a player or played the card; else enemy 0 (one that asks whether its applier died).
+        var playersApplier = model.Spec.Values().Any(value => value is HookFactValue { Fact: HookFact.ApplierIsPlayer or HookFact.PlayIsAppliers });
+        var powerData = PowerDataVars.TryGetValue(model.Name, out var dataVar) ? state.Vars[$"{owner}:{model.Name}:{dataVar}"]
+            : model.UsesApplier ? DataCreature.Of(playersApplier ? Who.You : 0) : 0;
         if (model.Spec.Kind == ModelKind.Power) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).With(new PowerId(model.Name), amount: 3, data: powerData));
         var amount = RelicAmountVars.TryGetValue(model.Name, out var amountVar) ? state.Vars[$"{owner}:{model.Name}:{amountVar}"] : 0;
         // A relic whose amount is its value keeps no flag (SimReaders.Relics); any other starts armed.

@@ -115,6 +115,12 @@ public enum HookFact
     DeadIsApplier,
     /// <summary>The creature that died is the owner (AfterDeath's creature == base.Owner).</summary>
     DeadIsOwner,
+    /// <summary>The power has an applier (base.Applier isn't null): its Data names one (ModelSpec.UsesApplier).</summary>
+    HasApplier,
+    /// <summary>The power's applier is a player (base.Applier?.Player isn't null).</summary>
+    ApplierIsPlayer,
+    /// <summary>The card played is its applier's (cardPlay.Card.Owner == base.Applier.Player).</summary>
+    PlayIsAppliers,
 }
 
 /// <summary>An operation of the code on two values (decimal throughout; a true-or-false is 1 or 0).</summary>
@@ -303,7 +309,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     }
 
     /// <summary>Its code asks who applied it (base.Applier): it keeps its applier as its Data (DataCreature), read and landed so.</summary>
-    public bool UsesApplier() => Values().Any(value => value is HookFactValue { Fact: HookFact.DeadIsApplier });
+    public bool UsesApplier() => Values().Any(value => value is HookFactValue { Fact: HookFact.DeadIsApplier or HookFact.HasApplier or HookFact.ApplierIsPlayer or HookFact.PlayIsAppliers });
 
     /// <summary>Its own fields and properties its programs read or store (the adapter seeds them from the game: SimReaders.Fields).</summary>
     public IEnumerable<string> Fields() =>

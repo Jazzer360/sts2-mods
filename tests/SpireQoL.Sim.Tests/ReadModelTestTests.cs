@@ -89,3 +89,20 @@ public class PerCardLabelTests
         Assert.Contains(("Obsidian Vice ×4", 4), branch.EndOfTurnDamage);
     }
 }
+
+/// <summary>A read power whose code asks who applied it (base.Applier) keeps its applier as its Data, read so and landed so (SimEngine.ApplyPower).</summary>
+public class ApplierTests
+{
+    [Fact]
+    public void AStrangleThatLandsKeepsItsApplierAndHurtsOnTheirNextPlay()
+    {
+        // StranglePower asks base.Applier: one that lands in the simulation (the first play of a replayed Strangle) keeps you as its applier,
+        // so your next play binds its amount (BeforeCardPlayed) and deals it to its owner (AfterCardPlayed), as in the game.
+        var state = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = 30, Hits = new List<int> { 4 } } } };
+        Assert.True(SimEngine.ApplyPower(state, Who.You, target: 0, PowerId.Strangle, amount: 2, debuff: true));
+        Assert.Equal(DataCreature.Of(Who.You), state.Enemy(id: 0)!.Powers.DataOf(PowerId.Strangle));
+        var skill = new SimPlay { Name = "Defend", Card = new SimCardPlay(new SimCard("Defend", SimCardType.Skill), Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: false) };
+        SimEngine.ApplyPlayTo(state, skill, out var after, out _);
+        Assert.All(after, branch => Assert.Equal(28, branch.Enemy(id: 0)!.Hp));
+    }
+}

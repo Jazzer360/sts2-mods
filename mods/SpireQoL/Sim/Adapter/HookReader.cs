@@ -575,6 +575,24 @@ public static class HookReader
                     return new HookConstant(0m);
                 case ParameterValue { Name: "cardSource" } or NamedValue { Name: "cardSource" }:
                     return new HookFactValue(HookFact.FromCard);
+                // A value of several ways (a null-conditional chain: base.Applier?.Player) tested as true: a way holds and its value is true.
+                case WaysValue ways:
+                {
+                    HookValue? any = null;
+                    foreach (var (when, wayValue) in ways.Ways)
+                    {
+                        var way = Simplified(new HookMath(HookOperation.And, Condition(when) ?? new HookConstant(1m), Test(wayValue)));
+                        any = any == null ? way : new HookMath(HookOperation.Or, any, way);
+                    }
+                    return Simplified(any ?? new HookConstant(0m));
+                }
+                case NullValue:
+                    return new HookConstant(0m);
+                // Who applied this power: there is one (base.Applier), a player (base.Applier.Player).
+                case var applier when IsApplier(applier):
+                    return new HookFactValue(HookFact.HasApplier);
+                case var applierPlayer when IsApplierPlayer(applierPlayer):
+                    return new HookFactValue(HookFact.ApplierIsPlayer);
                 // A death the game prevented (AfterDeath's wasRemovalPrevented): the simulator's deaths are never prevented (it tells AfterDeath
                 // only of the deaths it follows through: SimEngine.AllyDeaths).
                 case ParameterValue { Name: "wasRemovalPrevented" } or NamedValue { Name: "wasRemovalPrevented" } when _hook == "AfterDeath":
@@ -618,6 +636,10 @@ public static class HookReader
         {
             if (compare.Op is Comparison.Equal or Comparison.NotEqual && OwnerFact(compare.Left, compare.Right) is { } fact)
                 return compare.Op == Comparison.Equal ? fact : Not(fact);
+            // The card played is its applier's (cardPlay.Card.Owner == base.Applier.Player).
+            if (compare.Op is Comparison.Equal or Comparison.NotEqual
+                && (CardOwnerOf(compare.Left) is { } leftCard && IsPlayCard(leftCard) && IsApplierPlayer(compare.Right) || CardOwnerOf(compare.Right) is { } rightCard && IsPlayCard(rightCard) && IsApplierPlayer(compare.Left)))
+                return compare.Op == Comparison.Equal ? new HookFactValue(HookFact.PlayIsAppliers) : Not(new HookFactValue(HookFact.PlayIsAppliers));
             // The creature that died is the one who applied this power (creature == base.Applier).
             if (compare.Op is Comparison.Equal or Comparison.NotEqual && (IsDead(compare.Left) && IsApplier(compare.Right) || IsApplier(compare.Left) && IsDead(compare.Right)))
                 return compare.Op == Comparison.Equal ? new HookFactValue(HookFact.DeadIsApplier) : Not(new HookFactValue(HookFact.DeadIsApplier));
@@ -906,7 +928,10 @@ public static class HookReader
             && _type.GetMethods(Declared).FirstOrDefault(method => method.Name == "AfterDeath")?.GetParameters().FirstOrDefault(parameter => parameter.ParameterType.Name == "Creature")?.Name == creature;
 
         /// <summary>The creature that applied this power (base.Applier).</summary>
-        private static bool IsApplier(ProgramValue value) => value is QueryValue { Name: "Applier", Of: NamedValue { Name: "this" }, Type: "PowerModel" };
+        private static bool IsApplier(ProgramValue value) => (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Applier", Of: NamedValue { Name: "this" }, Type: "PowerModel" };
+
+        /// <summary>The player who applied this power (base.Applier.Player).</summary>
+        private static bool IsApplierPlayer(ProgramValue value) => (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Player", Of: { } applier } && IsApplier(applier);
 
         private static bool IsDealer(ProgramValue value) => value is ParameterValue { Name: "dealer" } or NamedValue { Name: "dealer" };
 
