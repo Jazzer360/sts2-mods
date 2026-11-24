@@ -53,6 +53,7 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.BlockGained), nameof(SimPlayer.BeaconOfHope), nameof(SimPlayer.BeaconGiving),
         nameof(SimPlayer.Powers), nameof(SimPlayer.Relics), // their powers and relics are on screen
         nameof(SimPlayer.Turn), // the cards they played this turn: you watch them play
+        nameof(SimPlayer.Fight), // the fight's log (decision #191): what happened, on screen
         "_orbsShared",
     };
 

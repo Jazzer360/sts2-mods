@@ -12,7 +12,11 @@ namespace SpireQoL.Procs.Programs;
 /// Where a card's condition is evaluated: the card, the target its play is aimed at (null: none, or not known), and how many of its
 /// replay's plays have finished before the one evaluated (Echo Form's second play: 1).
 /// </summary>
-public sealed record ProgramBoard(CardModel Card, Creature? Target = null, int PlaysBefore = 0);
+public sealed record ProgramBoard(CardModel Card, Creature? Target = null, int PlaysBefore = 0)
+{
+    /// <summary>The model whose code is evaluated, when it isn't the card (a power or a relic asking the fight's log: decision #191); null: the card.</summary>
+    public object? Self { get; init; }
+}
 
 /// <summary>
 /// Evaluates what a card's code tests (ProgramCondition, ProgramValue) against the board as it is before the play, the way the game
@@ -49,6 +53,13 @@ public static class ProgramEvaluator
     public static object? Value(ProgramValue value, ProgramBoard board, CardProgram program)
     {
         var result = Evaluate(value, new Context(board, program, new Dictionary<string, object?>()));
+        return result == Unknown ? null : result;
+    }
+
+    /// <summary>The value with its parameters bound (a calculated value's lambda's card): null when it can't be told.</summary>
+    public static object? Value(ProgramValue value, ProgramBoard board, CardProgram program, IReadOnlyDictionary<string, object?> parameters)
+    {
+        var result = Evaluate(value, new Context(board, program, parameters));
         return result == Unknown ? null : result;
     }
 
@@ -126,7 +137,7 @@ public static class ProgramEvaluator
             {
                 ConstantValue constant => (decimal)constant.Value,
                 NullValue => null,
-                NamedValue { Name: "this" } => context.Board.Card,
+                NamedValue { Name: "this" } => context.Board.Self ?? context.Board.Card,
                 NamedValue { Name: "cardPlay" } => ThePlay,
                 // decimal's constants (Decimal.One, Zero, MinusOne: Resonance's -1 Strength).
                 NamedValue { Name: "Decimal.One" } => 1m,

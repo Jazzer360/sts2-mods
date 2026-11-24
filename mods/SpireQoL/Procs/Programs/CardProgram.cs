@@ -185,6 +185,50 @@ public static class CardProgramReader
         return null;
     }
 
+    /// <summary>
+    /// The questions to the game's log of the fight (CombatManager.Instance.History) a model type's code asks (decision #191), each the value
+    /// its code works out: read from every method of the type and of the types nested in it (its state machines, its lambdas), each the
+    /// outermost value a call there works out that reads the log. One that uses a parameter of a helper of the type's own (Spite's
+    /// LostHpThisTurn(creature)) is read where the helper is called, with what its caller passes.
+    /// </summary>
+    public static IReadOnlyList<(string Method, ProgramValue Query)> HistoryQueries(Type owner, Func<MethodBase, List<CodeOp>> read)
+    {
+        var found = new List<(string Method, ProgramValue Query)>();
+        var reader = new Reader(owner, read);
+        var methods = new List<(Type Type, MethodBase Method, List<CodeOp> Ops)>();
+        foreach (var type in new[] { owner }.Concat(CardCode.NestedTypes(owner)))
+            foreach (var method in type.GetMethods(All).Cast<MethodBase>().Concat(type.GetConstructors(All)))
+            {
+                try { methods.Add((type, method, read(method))); }
+                catch { /* no code to read */ }
+            }
+        static bool AsksTheLog(List<CodeOp> ops) => ops.Any(instruction => instruction.IsCall && instruction.Member is { Name: "get_History", DeclaringType: "CombatManager" });
+        // A helper of the type's own that asks the log: read where it's called too, with what its caller passes.
+        var helpers = methods.Where(entry => entry.Type == owner && !entry.Method.Name.StartsWith('<') && AsksTheLog(entry.Ops)
+                && methods.Any(caller => caller.Method != entry.Method && caller.Ops.Any(instruction => instruction.IsCall && instruction.Member is { } called && called.DeclaringType == owner.Name && called.Name == entry.Method.Name)))
+            .Select(entry => entry.Method.Name).ToHashSet();
+        foreach (var (type, method, ops) in methods)
+        {
+            if (!AsksTheLog(ops) && !ops.Any(instruction => instruction.IsCall && instruction.Member is { } member && member.DeclaringType == owner.Name && helpers.Contains(member.Name))) continue;
+            var own = type == owner && helpers.Contains(method.Name) ? method.GetParameters().Select(parameter => parameter.Name).ToHashSet() : new HashSet<string?>();
+            var queries = new Dictionary<string, QueryValue>();
+            foreach (var value in reader.HistoryValues(method, ops))
+                foreach (var part in value.Parts())
+                    if (part is QueryValue { Type: "Enumerable" } query && ReadsHistory(query)) queries.TryAdd(query.ToString(), query);
+            // The last query of a chain (Where then Sum: the Sum), not the ones it's asked of; one that uses the helper's own parameters is
+            // read where it's called.
+            var sources = queries.Values.Where(query => query.Arguments.Count > 0).Select(query => query.Arguments[0].ToString()).ToHashSet();
+            foreach (var (text, query) in queries)
+                if (!sources.Contains(text)
+                    && !query.Parts().Any(inner => inner is ParameterValue { Name: var name } && own.Contains(name) || inner is NamedValue { Name: var captured } && own.Contains(captured)))
+                    found.Add((type.Name + "." + method.Name, query));
+        }
+        return found;
+    }
+
+    /// <summary>A value reads the game's log of the fight (CombatManager.Instance.History).</summary>
+    public static bool ReadsHistory(ProgramValue value) => value.Parts().Any(part => part is QueryValue { Name: "History", Type: "CombatManager" });
+
     /// <summary>The method whose code runs: an async method's state machine's MoveNext, else the method itself.</summary>
     internal static MethodBase? Body(Type owner, string method) =>
         owner.GetMethods(All).FirstOrDefault(candidate => candidate.Name == method) is { } found ? BodyOf(found) : null;
@@ -246,6 +290,22 @@ public static class CardProgramReader
         /// <summary>What a method returns, as a condition (a getter's value).</summary>
         public ProgramCondition Returned(MethodBase method) => Flow.Of(_read(method), method, LambdaOf, HelperValue).Returned();
 
+        /// <summary>The values the calls in a method's code work out that read the game's log of the fight (decision #191).</summary>
+        public List<ProgramValue> HistoryValues(MethodBase method, List<CodeOp> ops)
+        {
+            var flow = Flow.Of(ops, method, LambdaOf, HelperValue);
+            var values = new List<ProgramValue>();
+            for (var i = 0; i < flow.Ops.Count; i++)
+            {
+                if (!flow.Ops[i].IsCall || flow.Ops[i].Member is not { ReturnsValue: true }) continue;
+                ProgramValue value;
+                try { value = flow.ValueBefore(i + 1); }
+                catch { continue; }
+                if (ReadsHistory(value)) values.Add(value);
+            }
+            return values;
+        }
+
         /// <summary>
         /// What a helper of the card's own (not async: SecondWind.GetCards, FlakCannon.GetStatuses) returns, from its one way to a return,
         /// with its parameters as the call passes them; null when it isn't one or can't be read.
@@ -260,7 +320,8 @@ public static class CardProgramReader
                 var returned = Flow.Of(_read(found), found, LambdaOf, helperOf: null).ReturnedValue();
                 if (returned == null) return null;
                 var names = found.GetParameters();
-                return returned.Map(value => value is ParameterValue parameter && Array.FindIndex(names, name => name.Name == parameter.Name) is var index and >= 0 && index < passed.Count
+                // A parameter, or a lambda's capture of it (a closure's field named after it: Spite's creature in its Any).
+                return returned.Map(value => value is ParameterValue or NamedValue && Array.FindIndex(names, name => name.Name == (value as ParameterValue)?.Name || name.Name == (value as NamedValue)?.Name) is var index and >= 0 && index < passed.Count
                     ? passed[index] : null);
             }
             catch { return null; }

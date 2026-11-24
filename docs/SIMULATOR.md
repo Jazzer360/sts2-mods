@@ -90,6 +90,11 @@ don't change. Added:
 - `Models` on each player: the relic models with their counters (Pen Nib's count, Kunai's count, Pael's Legion armed...).
 - The play and attack in progress, players' turn counters (cards started and finished this turn, by type and tag), and an
   **event log** for the current play (which model flashed, damage and block it caused).
+- The **history ledger** (decision #191, `Sim/SimHistory.cs`, `SimEngine.History.cs`): the questions the board's models ask of the game's
+  log of the fight (`SimState.History`: an entry kind, this turn or the fight, whose, the detail the code tests), each player's count
+  of each (`SimPlayer.Turn`, `SimPlayer.Fight`) seeded once by the adapter from the game's log and counted forward by the simulator's
+  own events where the game logs them; this turn's counts start over as the enemies' turn starts. A condition reads one as a count
+  (`CountCondition` of `SimCounted.History`).
 
 ### Models (`Sim/Models/`)
 `SimModel` has virtual methods with the game's names and meaning: the pipeline terms (`ModifyDamageAdditive`,

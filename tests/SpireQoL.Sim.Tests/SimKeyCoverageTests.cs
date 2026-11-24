@@ -24,7 +24,7 @@ public class SimKeyCoverageTests
         ["SimState.Log"] = Bookkeeping, ["SimState.Work"] = Bookkeeping, ["SimState.ListenerCache"] = Bookkeeping, ["SimState.ListenerSets"] = Bookkeeping,
         ["SimState._teammatesShared"] = Bookkeeping, ["SimPlayer._orbsShared"] = Bookkeeping,
         // Read from the game once and never changed.
-        ["SimState.Vars"] = Constant, ["SimState.MainRules"] = Constant, ["SimState.Titles"] = Constant, ["SimState.TeammatesBeforeMe"] = Constant,
+        ["SimState.Vars"] = Constant, ["SimState.MainRules"] = Constant, ["SimState.History"] = Constant, ["SimState.Titles"] = Constant, ["SimState.TeammatesBeforeMe"] = Constant,
         ["SimEnemy.Name"] = Constant, ["SimEnemy.Hittable"] = Constant, ["SimEnemy.Imbalanced"] = Constant, ["SimEnemy.Intent"] = Constant,
         ["SimEnemy.TeammateHits"] = Constant, ["SimEnemy.StartedAlive"] = Constant, ["SimEnemy.CrabRageBlock"] = Constant,
         ["SimEnemy.Explosive"] = Constant, ["SimEnemy.ExplosiveOnTeammates"] = Constant, ["SimEnemy.PoisonTriggers"] = Constant,

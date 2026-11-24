@@ -44,6 +44,18 @@ internal sealed class BranchCode : IDisposable
     public IEnumerable<Type> Cards() => Assembly.GetTypes()
         .Where(type => type.Namespace == "MegaCrit.Sts2.Core.Models.Cards" && !type.IsAbstract && !type.IsNested && Derives(type, "CardModel"));
 
+    /// <summary>Every model class on this branch (cards, relics, powers, potions, enchantments...), not nested.</summary>
+    public IEnumerable<Type> Models() => Assembly.GetTypes()
+        .Where(type => type.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models", StringComparison.Ordinal) == true && !type.IsNested);
+
+    /// <summary>An enum member's name on this branch (its numbers can differ from the loaded game's: main has no Wah tag).</summary>
+    public string? EnumName(string enumType, long value)
+    {
+        var type = Assembly.GetTypes().FirstOrDefault(candidate => candidate.IsEnum && candidate.Name == enumType && candidate.Namespace?.StartsWith("MegaCrit", StringComparison.Ordinal) == true);
+        return type?.GetFields(BindingFlags.Public | BindingFlags.Static)
+            .FirstOrDefault(field => field.IsLiteral && Convert.ToInt64(field.GetRawConstantValue(), System.Globalization.CultureInfo.InvariantCulture) == value)?.Name;
+    }
+
     private static bool Derives(Type type, string baseName)
     {
         for (var current = type.BaseType; current != null; current = current.BaseType)

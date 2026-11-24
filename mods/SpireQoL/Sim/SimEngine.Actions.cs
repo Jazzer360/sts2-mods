@@ -296,6 +296,7 @@ public static partial class SimEngine
         if (state.Player(play.Owner) == null) return;
         var player = state.MutablePlayer(play.Owner);
         player.Turn = SimKeys.CountPlay(player.Turn, stage, play.Card.Type, play.Card.Tags);
+        if (state.History.Count > 0) RecordPlay(state, play, stage);
     }
 
     // ------------------------------------------------------------------ attacks
@@ -339,6 +340,8 @@ public static partial class SimEngine
                     break;
             }
         }
+        // The game logs the attack (CreatureAttackedEntry, its attacker) before AfterAttack (decision #191: Rattle and Flatten count Osty's).
+        branches.Do(branch => { if (branch.History.Count > 0) Record(branch, new HistoryEvent(HistoryKind.CreatureAttacked, Info(branch).Dealer)); });
         HookStep(branches, nameof(SimModel.AfterAttack), (model, owner, branch) => model.AfterAttack(branch, owner, Info(branch)));
         // Blossom Shot: Stretch for the damage it dealt (PowerCmd.Apply<StretchPower> after the attack, inside the shot).
         if (at.StretchFromDamage)
@@ -474,6 +477,8 @@ public static partial class SimEngine
             SetPowers(state, target, powers[PowerId.Artifact] > 1 ? powers.Add(PowerId.Artifact, delta: -1) : powers.Without(PowerId.Artifact));
             return false;
         }
+        // The game's log has it now (PowerReceivedEntry: the power, who applied it), before its hooks (decision #191).
+        if (state.History.Count > 0) Record(state, new HistoryEvent(HistoryKind.PowerReceived, applier) { Power = power });
         if (target >= 0 && power == PowerId.Poison)
         {
             state.Enemy(target)?.AddPoison(amount);

@@ -273,9 +273,16 @@ public sealed class SimPlayer
     public CardSet Cards = CardSet.Empty;
     /// <summary>
     /// What they played this turn, as the hooks count it (the game's CardPlaysStarted and CardPlaysFinished), under SimKeys.Plays: "Started",
-    /// "Started:Attack", "Finished:Skill", "Finished#Shiv" (by tag)... Each play of a replay counts.
+    /// "Started:Attack", "Finished:Skill", "Finished#Shiv" (by tag)... Each play of a replay counts. With them, the history ledger's other
+    /// counts of this turn (decision #191: each HistoryQuery of SimState.History scoped to this turn, under its Key), seeded from the game's
+    /// log and counted forward as the simulation goes; all of it starts over when the enemies' turn starts.
     /// </summary>
     public NamedCounts Turn = NamedCounts.Empty;
+    /// <summary>
+    /// The history ledger's counts over the whole fight (decision #191: each HistoryQuery of SimState.History scoped to the fight, under its
+    /// Key), seeded from the game's log and counted forward. An entry whose Data is 1 had an event whose card wasn't read: its count isn't known.
+    /// </summary>
+    public NamedCounts Fight = NamedCounts.Empty;
 
     // Powers that react or act at end of turn.
     [JsonIgnore] public int Juggernaut { get => Powers[PowerId.Juggernaut]; set => Set(PowerId.Juggernaut, value); }
@@ -525,7 +532,7 @@ public sealed class SimPlayer
         add(AutoHand?.Count ?? -1);
         // By what each card is, in any order: branches that picked identical copies hold the same hand, and merge.
         if (AutoHand != null) foreach (var key in AutoHand.Select(handCard => handCard.Key).OrderBy(key => key.Digest)) add(key.GetHashCode());
-        Powers.Hash(add); Relics.Hash(add); Turn.Hash(add);
+        Powers.Hash(add); Relics.Hash(add); Turn.Hash(add); Fight.Hash(add);
         add(Orbs.Count);
         foreach (var orb in Orbs) orb.Hash(add);
     }
@@ -750,6 +757,13 @@ public sealed class SimState
 
     /// <summary>The rules the running game does main's way (decision #169); None: beta's. Read once from the game, never changed.</summary>
     public MainRule MainRules;
+
+    /// <summary>
+    /// The history ledger's questions (decision #191): every query of the game's log of the fight that the cards, relics and powers on this
+    /// board ask, each player's count of it seeded by the adapter (SimPlayer.Turn, SimPlayer.Fight) and counted forward by the simulator's
+    /// own events (SimEngine.Record). Shared by every branch and never changed.
+    /// </summary>
+    public IReadOnlyList<HistoryQuery> History = Array.Empty<HistoryQuery>();
 
     /// <summary>A card event is being dispatched (draw, exhaust, discard...): what fires then is an indirect proc (the Indirect procs setting).</summary>
     internal bool IndirectNow;

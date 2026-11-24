@@ -6,6 +6,9 @@ public static partial class SimEngine
     /// <summary>Why a branch's condition couldn't be told (it runs as if it held, and the play is unknown).</summary>
     internal const string HandMatchingUnknown = "a condition on the kind of cards in your hand, after cards joined it whose kind wasn't read";
 
+    /// <summary>Why a count of the fight's log couldn't be told (decision #191): an event it may count had a card whose kind wasn't read.</summary>
+    internal const string HistoryUnknown = "a count of the fight's log, after an event whose card's kind wasn't read";
+
     /// <summary>
     /// A WhenAction: its actions on the branches where its condition holds; the others go on untouched. A branch whose condition can't be
     /// told runs them, and is unknown (SimState.Unmodelled).
@@ -114,6 +117,11 @@ public static partial class SimEngine
                 return state.Player(owner)?.Turn[SimKeys.Plays(PlayStage.Finished)] ?? 0;
             case SimCounted.CardPlaysFinished:
                 return counted.Before + (state.CurrentPlay?.PlayIndex ?? 0);
+            case SimCounted.History:
+                if (counted.Query == null) return null;
+                var logged = HistoryCount(state, owner, counted.Query);
+                if (logged == null) state.Unmodelled ??= HistoryUnknown;
+                return logged;
             default:
                 throw new NotSupportedException($"No count for {counted.Counted}");
         }

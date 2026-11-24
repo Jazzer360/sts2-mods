@@ -170,6 +170,7 @@ public static partial class SimEngine
             state.LogFired(SimKeys.PlayEvent(cardEvent));
         }
         if (!Who.IsPlayer(player)) return;
+        RecordCardEvent(state, cardEvent, player); // the game's log has it before its After hook (decision #191)
         var simPlayer = state.MutablePlayer(player);
         if (cardEvent == CardEvent.EnergySpent) simPlayer.Energy--;
         else if (cardEvent == CardEvent.EnergyGained) simPlayer.Energy++;

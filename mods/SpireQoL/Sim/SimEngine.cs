@@ -678,6 +678,7 @@ public static partial class SimEngine
     private static void PlayerDamaged(SimState state, int player, int? dealer, SimProps props, int blocked, int lost)
     {
         if (blocked <= 0 && lost <= 0) return;
+        RecordDamageReceived(state, player, props, lost); // DamageReceivedEntry, before the damage hooks (decision #191)
         var listeners = Listeners(state);
         if (listeners.Count == 0) return;
         var hit = new DamageEvent(dealer, player, props, state.CurrentPlay?.Card, blocked + lost, blocked, lost, Killed: false);
@@ -1263,6 +1264,7 @@ public static partial class SimEngine
     {
         AllyDeaths(state); // deaths at your end of turn
         state.EnemyTurnNow = true; // Inferno and the like react only on their owner's side's turn
+        TurnCountsStartOver(state); // nothing of the players' turn happened "this turn" now (decision #191)
         // Every enemy's poison ticks as the enemies' turn starts (PoisonPower.AfterSideTurnStart, before ExecuteEnemyTurn), stunned
         // or not, and Hardened Shell's budget resets then. The tick is damage (PoisonPower.Trigger: CreatureCmd.Damage, Unblockable |
         // Unpowered, no dealer): the HP-loss pipeline caps it (Hardened Shell, Slippery) and the damage hooks hear it (Shriek stuns at

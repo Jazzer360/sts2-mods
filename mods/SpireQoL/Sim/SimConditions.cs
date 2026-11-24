@@ -38,6 +38,11 @@ public enum SimCounted
     PlaysFinishedThisTurn,
     /// <summary>This card's own plays finished this turn: the ones before the card play, then each play of a replay (Fetch's HasBeenPlayedThisTurn).</summary>
     CardPlaysFinished,
+    /// <summary>
+    /// The play owner's count of a query of the game's log of the fight (decision #191: the history ledger, CountCondition.Query): an exhaust
+    /// this turn (Forgotten Ritual, Evil Eye), HP lost this turn (Spite), Doom applied this turn (Death's Door), Osty's attacks (Flatten).
+    /// </summary>
+    History,
 }
 
 /// <summary>
@@ -77,6 +82,9 @@ public sealed record CountCondition(SimCounted Counted, SimCompare Compare, int 
 
     /// <summary>CardPlaysFinished: this card's plays finished this turn before the card play (the adapter's count from the game's history).</summary>
     public int Before { get; init; }
+
+    /// <summary>History: the query of the fight's log it counts (its count in the ledger: SimEngine.HistoryCount).</summary>
+    public HistoryQuery? Query { get; init; }
 }
 
 /// <summary>The condition doesn't hold.</summary>

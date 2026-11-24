@@ -168,7 +168,10 @@ public static partial class SimAdapter
             state.Enemies.Add(enemy);
         }
 
+        // The history ledger (decision #191): the questions this board's models ask of the fight's log, each player's counts seeded here, once.
+        state.History = HistoryLedger.QueriesFor(combat);
         FillPlayer(state.You, me, combat, IdOf);
+        state.You.Fight = HistoryLedger.Seed(state.History, me, combat, ref state.You.Turn);
         foreach (var power in me.Creature.Powers) SimReaders.AddVars(state, Who.You, power);
         foreach (var relic in me.Relics) SimReaders.AddVars(state, Who.You, relic);
         FillAutoPlays(state.You, me, combat, ids);
@@ -189,6 +192,7 @@ public static partial class SimAdapter
             var creature = other.Creature;
             var player = new SimPlayer();
             FillPlayer(player, other, combat, IdOf);
+            player.Fight = HistoryLedger.Seed(state.History, other, combat, ref player.Turn);
             var mateId = Who.Teammate(state.Teammates.Count);
             foreach (var power in creature.Powers) SimReaders.AddVars(state, mateId, power);
             foreach (var relic in other.Relics) SimReaders.AddVars(state, mateId, relic);
@@ -750,17 +754,20 @@ public static partial class SimAdapter
         }
     }
 
+    /// <summary>An orb's kind to the simulator, by its class.</summary>
+    internal static OrbKind KindOf(OrbModel orb) => orb switch
+    {
+        LightningOrb => OrbKind.Lightning,
+        FrostOrb => OrbKind.Frost,
+        DarkOrb => OrbKind.Dark,
+        GlassOrb => OrbKind.Glass,
+        PlasmaOrb => OrbKind.Plasma,
+        _ => OrbKind.Unknown,
+    };
+
     private static SimOrb ToSim(OrbModel orb, ICombatState combat)
     {
-        var kind = orb switch
-        {
-            LightningOrb => OrbKind.Lightning,
-            FrostOrb => OrbKind.Frost,
-            DarkOrb => OrbKind.Dark,
-            GlassOrb => OrbKind.Glass,
-            PlasmaOrb => OrbKind.Plasma,
-            _ => OrbKind.Unknown,
-        };
+        var kind = KindOf(orb);
         var triggers = 1;
         try { triggers = Hook.ModifyOrbPassiveTriggerCount(combat, orb, 1, out _); } catch { /* 1 */ }
         var sim = new SimOrb { Kind = kind, Passive = (int)orb.PassiveVal, Evoke = (int)orb.EvokeVal, Triggers = triggers };
