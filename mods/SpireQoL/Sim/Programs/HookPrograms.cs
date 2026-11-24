@@ -321,7 +321,14 @@ public sealed record GainStarsStep(HookValue Amount) : HookStep;
 /// Its own Flash() at its place in the code: logged in the flash log (SimState.Flashed), which the play check holds to the game's flashes;
 /// the tabs read the acting log, so a model that acts without flashing keeps its tab (decision #199).
 /// </summary>
-public sealed record FlashStep : HookStep;
+public sealed record FlashStep : HookStep
+{
+    /// <summary>
+    /// Why its condition isn't read (a test the reader can't translate), when it isn't: it may flash or not as the hook runs, which only the
+    /// play check asks (an unknown flash, logged apart: SimKeys.UnknownFlash), so the rest of the body still reads. Null: read, on When.
+    /// </summary>
+    public string? Unknown { get; init; }
+}
 
 /// <summary>PowerCmd.Apply of <paramref name="Power"/> on <paramref name="Target"/>, applied by the owner.</summary>
 public sealed record ApplyPowerStep(string Power, HookTarget Target, HookValue Amount) : HookStep

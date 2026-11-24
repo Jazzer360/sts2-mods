@@ -430,8 +430,14 @@ public static class HookReader
                     return body.Count == 0 ? Array.Empty<HookStep>() : new[] { new RepeatStep(times, body) { When = Condition(step.Condition) } };
                 }
                 case FlashCall:
-                    // Its own Flash(): where the game shows it acting, for the play check (decision #199).
-                    return new HookStep[] { new FlashStep { When = Condition(step.Condition) } };
+                {
+                    // Its own Flash(): where the game shows it acting, for the play check (decision #199). On a test the reader can't translate,
+                    // an unknown flash: it may flash or not, which only the play check asks (skipped there, with why), so the rest still reads.
+                    HookValue? when;
+                    try { when = Condition(step.Condition); }
+                    catch (Gap gap) { return new HookStep[] { new FlashStep { Unknown = gap.Message } }; }
+                    return new HookStep[] { new FlashStep { When = when } };
+                }
                 case ChoiceStep:
                     throw new Gap("gap: a pick");
                 case CreateStep create:

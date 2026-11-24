@@ -960,10 +960,12 @@ public sealed class SimState
     /// A read model's own Flash() ran (decision #199): logged in the flash log under the play log's names (yours and an enemy's under the plain
     /// name, an enemy's and a teammate's also as "Name@id").
     /// </summary>
-    public void LogFlash(string source, int owner)
+    /// <param name="unknown">A flash on a condition the reader doesn't read: logged under its entry's unknown key (SimKeys.UnknownFlash).</param>
+    public void LogFlash(string source, int owner, bool unknown = false)
     {
         void Under(string key)
         {
+            if (unknown) key = SimKeys.UnknownFlash(key);
             Flashed = Flashed.Add(key, delta: 1);
             FlashedAny = FlashedAny.Add(key, delta: 1);
         }

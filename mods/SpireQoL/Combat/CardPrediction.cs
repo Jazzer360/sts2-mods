@@ -68,6 +68,11 @@ public sealed class CardPrediction
     /// <summary>Per aim: the tabbed sources the play sets off in every outcome, and in some.</summary>
     public IReadOnlyDictionary<int, IReadOnlyCollection<Type>>? FiresEveryByAim { get; set; }
     public IReadOnlyDictionary<int, IReadOnlyCollection<Type>>? FiresAnyByAim { get; set; }
+    /// <summary>
+    /// The sources whose code flashes on a condition the reader doesn't read, which some outcome of the play reached (an unknown flash: may or may
+    /// not): the play check doesn't hold them to a flash or its absence, and counts why.
+    /// </summary>
+    public IReadOnlyCollection<string> FlashUnknown { get; set; } = Array.Empty<string>();
 
     /// <summary>What its simulations didn't model (decision #92, rule 2): gaps the play audit counts.</summary>
     public IReadOnlyList<string> Unmodelled { get; set; } = Array.Empty<string>();
@@ -128,7 +133,7 @@ public sealed class CardPrediction
         CardsBack = CardsBack.Concat(next.CardsBack).ToList(),
         ChosenTransformsAtMost = ChosenTransformsAtMost + next.ChosenTransformsAtMost,
         Sim = next.Sim, Drawn = next.Drawn, OutcomeByAim = next.OutcomeByAim, DeathByAim = next.DeathByAim,
-        FiresEveryByAim = next.FiresEveryByAim, FiresAnyByAim = next.FiresAnyByAim,
+        FiresEveryByAim = next.FiresEveryByAim, FiresAnyByAim = next.FiresAnyByAim, FlashUnknown = next.FlashUnknown.Count == 0 ? FlashUnknown : FlashUnknown.Count == 0 ? next.FlashUnknown : FlashUnknown.Union(next.FlashUnknown).ToList(),
         RandomOutcome = RandomOutcome || next.RandomOutcome, SimPending = SimPending || next.SimPending, SimIncomplete = SimIncomplete || next.SimIncomplete,
         Unmodelled = Unmodelled.Concat(next.Unmodelled).Distinct().ToList(),
         Before = this,

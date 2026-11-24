@@ -37,6 +37,8 @@ public sealed class CardPredictions
     private readonly Dictionary<string, bool[]> _firesAt = new();
     /// <summary>Per tabbed source this frame's card: whether each aim sets it off in every outcome and in some (CardPrediction.FiresEveryByAim).</summary>
     private readonly Dictionary<string, (Type T, bool[] Every, bool[] Any)> _firesBy = new();
+    /// <summary>The sources this frame's card reaches an unknown flash of (CardPrediction.FlashUnknown).</summary>
+    private readonly HashSet<string> _flashUnknown = new(StringComparer.Ordinal);
 
     /// <summary>Each card's prediction from the last frame it was in hand (kept after it leaves; ProcAudit).</summary>
     public IReadOnlyDictionary<CardModel, CardPrediction> LastPredictions => _lastPredictions;
@@ -577,6 +579,7 @@ public sealed class CardPredictions
         var outcomes = task.Latest;
         _firesAt.Clear();
         _firesBy.Clear();
+        _flashUnknown.Clear();
         var baseline = forecast.Outcome;
         if (outcomes.Any(outcome => outcome.Truncated || outcome.Branches.Count > 1)) prediction.RandomOutcome = true;
         prediction.SimIncomplete = outcomes.Any(outcome => outcome.Truncated);
@@ -647,6 +650,7 @@ public sealed class CardPredictions
                 aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim, aimed => (IReadOnlyCollection<Type>)_firesBy.Values.Where(value => at(value)[aimed.index]).Select(value => value.T).Distinct().ToList());
             prediction.FiresEveryByAim = By(fired => fired.Every);
             prediction.FiresAnyByAim = By(fired => fired.Any);
+            prediction.FlashUnknown = _flashUnknown.Count == 0 ? Array.Empty<string>() : _flashUnknown.ToList();
             var enemies = forecast.Ids.Values.Distinct().ToList();
             prediction.DeathByAim = aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim,
                 aimed => (IReadOnlyDictionary<int, SimChance>)enemies.ToDictionary(id => id, id => outcomes[aimed.index].DeadChanceRange(id)));
@@ -709,11 +713,13 @@ public sealed class CardPredictions
         if (src is PowerModel && SimAdapter.IsTemporaryThorns(src.GetType())) return; // its Thorns has the ThornsPower tab
         var name = SimReaders.ModelName(src);
         var model = SimModels.Get(name);
-        if ((kindOverride ?? model?.Tab) is not { } kind) return;
-        var harmful = model?.HarmfulFor(ownerId ?? Who.You) ?? false; // by whose side it helps (decision #198)
         // An enemy's or a teammate's source reads its own key (SimState.LogFired: a teammate's firings are only there); yours, the
         // plain name.
         var key = SimKeys.Logged(name, ownerId);
+        // A read model's flash on a condition the reader doesn't read (an unknown flash), tab or not: the play check counts why it can't tell.
+        if (model is ReadModel && outcomes.Any(outcome => outcome.PlayFlashedAny.Has(SimKeys.UnknownFlash(key)))) _flashUnknown.Add(src.GetType().Name);
+        if ((kindOverride ?? model?.Tab) is not { } kind) return;
+        var harmful = model?.HarmfulFor(ownerId ?? Who.You) ?? false; // by whose side it helps (decision #198)
         static int Data(NamedCounts log, string logKey) => log.DataOf(logKey);
         bool Fired(NamedCounts log) => log.Has(key) && (_indirect || log[key] > log[SimKeys.Indirect(key)]);
         {
@@ -723,6 +729,10 @@ public sealed class CardPredictions
             var srcName = src.GetType().Name;
             var every = outcomes.Select(outcome => (flashLog ? outcome.PlayFlashedEvery : outcome.PlayFiredEvery).Has(key)).ToArray();
             var any = outcomes.Select(outcome => (flashLog ? outcome.PlayFlashedAny : outcome.PlayFiredAny).Has(key)).ToArray();
+            // A flash on a condition the reader doesn't read (an unknown flash): it may flash there.
+            if (flashLog)
+                for (var i = 0; i < any.Length; i++)
+                    if (outcomes[i].PlayFlashedAny.Has(SimKeys.UnknownFlash(key))) any[i] = true;
             if (_firesBy.TryGetValue(srcName, out var had) && had.Every.Length == every.Length)
                 for (var i = 0; i < every.Length; i++) { every[i] |= had.Every[i]; any[i] |= had.Any[i]; }
             _firesBy[srcName] = (src.GetType(), every, any);

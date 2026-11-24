@@ -60,6 +60,17 @@ public class ReadModelFlashTests
     }
 
     [Fact]
+    public void AFlashOnAConditionTheReaderDoesntReadIsUnknownAndTheRestStillRuns()
+    {
+        // if (<a test not read>) Flash(); GainBlock(4): the flash may or may not happen (logged apart, for the play check only), the block lands.
+        var unknown = Run(SimCardType.Attack, new FlashStep { Unknown = "gap: tests something" }, new GainBlockStep(new HookConstant(4m), Unpowered));
+        Assert.False(unknown.Flashed.Has("TestFlashPower"));
+        Assert.True(unknown.FlashedAny.Has(SimKeys.UnknownFlash("TestFlashPower")));
+        Assert.Equal(4, unknown.You.Block);
+        Assert.True(unknown.Fired.Has("TestFlashPower"));
+    }
+
+    [Fact]
     public void FlashesMergeLikeFiringsEveryAndAny()
     {
         var once = new SimState();

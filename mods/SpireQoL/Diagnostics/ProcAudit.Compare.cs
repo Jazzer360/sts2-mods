@@ -42,6 +42,12 @@ public sealed partial class ProcAudit
         foreach (var otherModel in flashed.Distinct())
         {
             if (sourceOf.ContainsKey(otherModel.GetType().Name) || Modifiers.Contains(otherModel.GetType().Name) || TeammateOnly.Contains(otherModel.GetType().Name)) continue;
+            // Its code flashes on a condition the reader doesn't read (an unknown flash the play reached): whether it should have can't be told.
+            if (window.Prediction?.FlashUnknown.Contains(otherModel.GetType().Name) == true)
+            {
+                modelLines.Skip("no tab", "its code flashes on a condition the reader doesn't read", otherModel.GetType().Name);
+                continue;
+            }
             // A power or relic that only changes numbers (Fasten's block on Defends): the play's block, damage and HP checks cover it.
             // One with its own tab (The Boot raising a small hit) is still checked for it.
             if (CodeIndex.OnlyModifies(otherModel.GetType()) && SimModels.Get(otherModel.GetType().Name)?.Tab == null) continue;

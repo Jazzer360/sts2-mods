@@ -25,6 +25,14 @@ public static class SimKeys
     /// <summary>The play log's entry for a firing set off by a card event (the Indirect procs setting): "~" before its name.</summary>
     public static string Indirect(string key) => IndirectNames.GetOrAdd(key, plain => "~" + plain);
 
+    private static readonly ConcurrentDictionary<string, string> UnknownFlashNames = new();
+
+    /// <summary>
+    /// The flash log's entry for a flash its code calls on a condition the reader doesn't read (FlashStep.Unknown): "?" before the source's
+    /// entry. It may have flashed or not; only the play check asks, and treats it as not known.
+    /// </summary>
+    public static string UnknownFlash(string key) => UnknownFlashNames.GetOrAdd(key, plain => "?" + plain);
+
     /// <summary>The play log's entry for a source: "Name" for yours, "Name@id" for anyone else's (an enemy's is also under "Name").</summary>
     public static string Logged(string name, int? owner) => owner is { } id && id != Who.You ? Owned(name, id) : name;
 
