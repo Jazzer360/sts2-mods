@@ -56,8 +56,17 @@ public class OutcomeTabTests
     [Fact]
     public void DemonTongueShowsOnlyWhileUnusedThisTurn()
     {
-        Assert.NotNull(Model("DemonTongue").OutcomeTab(You(hp: 30, RelicId.DemonTongue), Ended(), Who.You));
-        Assert.Null(Model("DemonTongue").OutcomeTab(You(hp: 30, RelicId.DemonTongue, data: 2), Ended(), Who.You));
+        // DemonTongue.AfterDamageReceived: once a turn (!_triggeredThisTurn), it heals the HP you lose on your turn: a play that costs HP sets it off
+        // while it's unused, never once it's used (its own field, read from the game).
+        static bool SetOff(bool used)
+        {
+            var start = You(hp: 30, RelicId.DemonTongue);
+            SimEngine.SetField(start, Who.You, "DemonTongue._triggeredThisTurn", used ? 1 : 0);
+            var rule = Model("DemonTongue").OutcomeTab(start, Ended(start), Who.You)!;
+            return rule.SetOff(SimEngine.Run(start, new SimPlay { Name = "Bloodletting", HpCost = 3, HpCostTimes = 1 }));
+        }
+        Assert.True(SetOff(used: false));
+        Assert.False(SetOff(used: true));
     }
 
     [Fact]

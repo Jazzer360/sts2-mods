@@ -46,11 +46,16 @@ public class BonusTabParityTests
         ["MonarchsGazePower"] = "its code never flashes (MonarchsGazePower.AfterDamageGiven: PowerCmd.Apply alone), so the play check no longer expects a flash where its tab shows",
     };
 
-    /// <summary>A scenario's line as compared: the play check's entry for a reviewed class left out.</summary>
+    /// <summary>
+    /// A scenario's line as compared: the play check's entry for a reviewed class left out, and every entry no aim sets off (the play check reads
+    /// only the aims a source is set off at: one with none is the same as none).
+    /// </summary>
     private static string Compared(string line)
     {
         foreach (var name in ReviewedChecks.Keys)
             line = System.Text.RegularExpressions.Regex.Replace(line, $@"(\| checked [^|]*?){name} [01]+/[01]+; ", "$1");
+        while (System.Text.RegularExpressions.Regex.Match(line, @"(\| checked [^|]*?)\w+ 0+/0+; ") is { Success: true } none)
+            line = line.Remove(none.Index + none.Groups[1].Length, none.Length - none.Groups[1].Length);
         return line;
     }
 

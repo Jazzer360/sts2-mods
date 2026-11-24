@@ -103,34 +103,8 @@ public abstract class ReactsToYourHpLoss : SimModel
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => owner == Who.You ? OutcomeRules.YouLoseHp : null;
 }
 
-/// <summary>SelfFormingClay: block next turn.</summary>
-public sealed class SelfFormingClay : ReactsToYourHpLoss { }
-
-/// <summary>EmotionChip: the front orb's passive next turn.</summary>
-public sealed class EmotionChip : ReactsToYourHpLoss { }
-
 /// <summary>RupturePower: Strength when you lose HP on your turn.</summary>
 public sealed class RupturePower : ReactsToYourHpLoss { }
-
-/// <summary>
-/// DemonTongue.AfterDamageReceived: once a turn (RelicUse.UsedThisTurn), on its owner's side's turn, heals the HP they just lost
-/// (the HP-loss modifiers already applied).
-/// </summary>
-public sealed class DemonTongue : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        owner == Who.You && !((RelicUse)SimEngine.RelicsOf(start, owner).DataOf(ThisRelic)).HasFlag(RelicUse.UsedThisTurn) ? OutcomeRules.YouLoseHp : null;
-    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
-    {
-        if (hit.Target != owner || hit.Unblocked <= 0 || state.EnemyTurnNow || state.Player(owner) is not { Died: false, Hp: < int.MaxValue }) return;
-        var relics = SimEngine.RelicsOf(state, owner);
-        if (((RelicUse)relics.DataOf(ThisRelic)).HasFlag(RelicUse.UsedThisTurn)) return;
-        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], relics.DataOf(ThisRelic) | (int)RelicUse.UsedThisTurn));
-        var player = state.MutablePlayer(owner);
-        player.Hp = (int)Math.Min(player.MaxHp, (long)player.Hp + hit.Unblocked);
-        state.LogFired(Name, hit.Unblocked, owner);
-    }
-}
 
 /// <summary>
 /// RedSkull: Strength once your HP is at or below its threshold (AfterCurrentHpChanged). The adapter's amount is the HP at the

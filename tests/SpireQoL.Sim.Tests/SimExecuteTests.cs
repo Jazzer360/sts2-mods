@@ -106,7 +106,7 @@ public class SimExecuteTests
             Assert.Equal(19, branch.Enemy(id: 1)!.Hp);
             Assert.Equal(1, branch.Enemy(id: 1)!.Slippery);
         });
-        Assert.True(SimEngine.Run(state, play).SlipperyInAny(enemyId: 1));
+        Assert.True(SimEngine.Run(state, play).ActedInAny(PowerId.Slippery.Name, owner: 1));
     }
 
     [Fact]

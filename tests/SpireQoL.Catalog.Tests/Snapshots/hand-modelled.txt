@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 135 game methods; 3 adapter rules; 83 hand-written models.
+# 20 engine rules naming 135 game methods; 3 adapter rules; 79 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -109,12 +109,8 @@ CoveringFirePower: CoveringFirePower.AfterArrowShot (beta only)
   model: AfterArrowShot
 CurlUpPower: CurlUpPower.AfterCardPlayed, CurlUpPower.AfterDamageReceived, CurlUpPower.InitInternalData
   model: AfterCardPlayed, AfterDamageReceived
-DemonTongue: DemonTongue.AfterDamageReceived, DemonTongue.BeforeSideTurnStart
-  model: AfterDamageReceived, OutcomeTab
 DevourLifePower: DevourLifePower.AfterCardPlayed
   model: AfterCardPlayed
-EmotionChip: EmotionChip.AfterCombatEnd, EmotionChip.AfterDamageReceived, EmotionChip.AfterPlayerTurnStart
-  model: nothing it overrides
 ExplosiveArrowsPower: ExplosiveArrowsPower.AfterArrowImpaled (beta only)
   model: AfterArrowImpaled
 FeralPower: FeralPower.AfterApplied, FeralPower.AfterModifyingCardPlayResultLocation, FeralPower.AfterSideTurnStart, FeralPower.InitInternalData, FeralPower.ModifyCardPlayResultLocation
@@ -187,8 +183,6 @@ RupturePower: RupturePower.AfterCardPlayed, RupturePower.AfterDamageReceived, Ru
   model: nothing it overrides
 SeekingEdgePower: no hooks of its own
   model: nothing it overrides
-SelfFormingClay: SelfFormingClay.AfterDamageReceived
-  model: nothing it overrides
 SerpentFormPower: SerpentFormPower.AfterApplied, SerpentFormPower.AfterCardPlayed, SerpentFormPower.AfterRemoved, SerpentFormPower.BeforeCardPlayed, SerpentFormPower.InitInternalData
   model: Act
 ShadowmeldPower: ShadowmeldPower.AfterSideTurnEnd, ShadowmeldPower.ModifyBlockMultiplicative
@@ -199,8 +193,6 @@ SicEmPower: SicEmPower.AfterDamageGiven, SicEmPower.AfterSideTurnEnd
   model: AfterDamageGiven
 SkittishPower: SkittishPower.AfterAttack, SkittishPower.AfterSideTurnEnd, SkittishPower.GetScaledAmountForMultiplayer, SkittishPower.InitInternalData
   model: AfterAttack, AfterDamageReceived, BeforeAttack
-SlipperyPower: SlipperyPower.AfterDamageReceived, SlipperyPower.GetScaledAmountForMultiplayer, SlipperyPower.ModifyHpLostAfterOsty
-  model: AfterDamageReceived, AfterModifyingHpLost, ModifyHpLostAfterOsty, OutcomeTab
 SlumberPower: SlumberPower.AfterDamageReceived, SlumberPower.AfterRemoved, SlumberPower.AfterSideTurnEnd
   model: AfterDamageReceived, OutcomeTab
 SmoggyPower: SmoggyPower.AfterCardEnteredCombat, SmoggyPower.AfterCardPlayed, SmoggyPower.AfterSideTurnEnd, SmoggyPower.ShouldPlay

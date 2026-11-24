@@ -540,8 +540,25 @@ public sealed class ReadModel : SimModel
         HookOutcome.KillsIt => Who.IsEnemy(owner) ? Models.OutcomeRules.KillsIt(owner) : null,
         HookOutcome.KillsAnother => Who.IsEnemy(owner) ? Models.OutcomeRules.KillsAnother(owner) : null,
         HookOutcome.KillsOne => owner == Who.You ? Models.OutcomeRules.KillsOne : null,
+        HookOutcome.ReactsToHpLoss => ReactsToHpLoss(now, owner),
         _ => null,
     };
+
+    /// <summary>
+    /// Its reaction to its owner losing HP (HookOutcome.ReactsToHpLoss, decision #238), as its acting or flash log says it acted: on you, a bonus when
+    /// the play sets it off in every outcome (you lose HP during the play); on an enemy, a warning when the play sets it off in some outcome of the turn
+    /// and ending the turn now sets it off in none, with the chance of the outcomes that do. Not a teammate's: the play's HP loss is its own player's.
+    /// </summary>
+    private OutcomeRule? ReactsToHpLoss(SimOutcome now, int owner)
+    {
+        // On you, a reaction that spends itself (Slippery's charge: its AfterDamageReceived's Decrement) gives you nothing for the HP: no bonus.
+        if (owner == Who.You)
+            return Spec.Of(HookName.AfterDamageReceived)?.Steps.Any(step => step is DecrementPowerStep or RemovePowerStep) == true ? null
+                : new OutcomeRule(Harmful: false, outcome => outcome.PlayFiredEvery.Has(Name) || outcome.PlayFlashedEvery.Has(Name));
+        if (!Who.IsEnemy(owner)) return null;
+        bool Acted(SimState branch) => SimOutcome.Acted(branch, Name, owner);
+        return now.ActedInAny(Name, owner) ? null : new OutcomeRule(Harmful: true, outcome => outcome.ActedInAny(Name, owner), Acted);
+    }
 
     /// <summary>It keeps its applier as its Data (its code asks base.Applier): the engine lands it so (SimEngine.ApplyPower).</summary>
     public bool UsesApplier => Spec.UsesApplier();
@@ -561,7 +578,7 @@ public sealed class ReadModel : SimModel
     public override void AfterModifyingDamageAmount(SimState state, int owner, SimCard? card)
     {
         if (_steps[(int)HookName.AfterModifyingDamageAmount] == null) return;
-        state.LogFired(Name, amount: 0, owner);
+        if (Spec.Outcome == null) state.LogFired(Name, amount: 0, owner); // its acting log is its play tab's: one judged on the outcome has none
         foreach (var branch in Run(HookName.AfterModifyingDamageAmount, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay }))
             if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingDamageAmount branched inside a damage");
     }
@@ -594,7 +611,7 @@ public sealed class ReadModel : SimModel
     /// </summary>
     public override void AfterModifyingHpLost(SimState state, int owner, bool afterOsty)
     {
-        state.LogFired(Name, amount: 0, owner);
+        if (Spec.Outcome == null) state.LogFired(Name, amount: 0, owner); // its acting log is its play tab's: one judged on the outcome has none
         var hook = afterOsty ? HookName.AfterModifyingHpLostAfterOsty : HookName.AfterModifyingHpLostBeforeOsty;
         foreach (var branch in Run(hook, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay }))
             if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: {hook} branched inside a hit");

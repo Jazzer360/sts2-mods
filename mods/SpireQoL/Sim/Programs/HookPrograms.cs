@@ -602,7 +602,16 @@ public sealed record HookProgram(HookName Hook, IReadOnlyList<HookStep> Steps)
 /// (an enemy's: a warning on a play that can kill it), another death on its owner's side (an enemy's: a warning on a play that kills another
 /// enemy), a death on the other side (a player's: a bonus on a play that kills an enemy in every outcome).
 /// </summary>
-public enum HookOutcome { KillsIt, KillsAnother, KillsOne }
+public enum HookOutcome
+{
+    KillsIt, KillsAnother, KillsOne,
+    /// <summary>
+    /// Its AfterDamageReceived acts on its owner losing HP (every step waits on target == base.Owner and result.UnblockedDamage &gt; 0) and gives
+    /// nothing a tab counts (decision #132): on you, a bonus on a play you lose HP during in every outcome (Self-Forming Clay's block next turn);
+    /// on an enemy, a warning on a play that makes it act in some outcome where ending the turn now wouldn't (Slippery's 1 HP a hit): decision #238.
+    /// </summary>
+    ReactsToHpLoss,
+}
 
 /// <summary>
 /// Whether a model is a power (on a creature: its PowerSet entry), a relic (on a player: its RelicSet entry) or an orb (in a player's orb slots: a

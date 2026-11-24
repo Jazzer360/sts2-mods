@@ -5198,6 +5198,226 @@
     "HelpsOwner": false
   },
   {
+    "Name": "DemonTongue",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageReceived",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "_triggeredThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__3.MoveNext:0050",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "OwnersTurn"
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__3.MoveNext:0068",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "TargetIsOwner"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__3.MoveNext:007B",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Greater",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HitUnblocked"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__3.MoveNext:0088",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "_triggeredThisTurn"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__3.MoveNext:0050",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "OwnersTurn"
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__3.MoveNext:0068",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "TargetIsOwner"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__3.MoveNext:007B",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Greater",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HitUnblocked"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__3.MoveNext:0088",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "_triggeredThisTurn"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "HealStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "HitUnblocked"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__3.MoveNext:0050",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "OwnersTurn"
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__3.MoveNext:0068",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "TargetIsOwner"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__3.MoveNext:007B",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Greater",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HitUnblocked"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__3.MoveNext:0088",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "_triggeredThisTurn"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "ReactsToHpLoss"
+  },
+  {
     "Name": "DexterityPower",
     "Kind": "Power",
     "Hooks": [
@@ -6031,6 +6251,50 @@
       }
     ],
     "HelpsOwner": false
+  },
+  {
+    "Name": "EmotionChip",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageReceived",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "EmotionChip.AfterDamageReceived:001E",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TargetIsOwner"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "EmotionChip.AfterDamageReceived:002D",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Greater",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HitUnblocked"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "ReactsToHpLoss"
   },
   {
     "Name": "EnragePower",
@@ -19533,6 +19797,59 @@
     "HelpsOwner": false
   },
   {
+    "Name": "SelfFormingClay",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageReceived",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "SelfFormingClayPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "BlockNextTurn",
+              "Canonical": 3
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__7.MoveNext:0036",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TargetIsOwner"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__7.MoveNext:0049",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Greater",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HitUnblocked"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "ReactsToHpLoss"
+  },
+  {
     "Name": "SerratedArrowsPower",
     "Kind": "Power",
     "Hooks": [
@@ -20379,6 +20696,154 @@
     ],
     "Tab": "Damage",
     "HelpsOwner": false
+  },
+  {
+    "Name": "SlipperyPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageReceived",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__7.MoveNext:001D",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TargetIsOwner"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__7.MoveNext:0030",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "GreaterOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HitUnblocked"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__7.MoveNext:001D",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TargetIsOwner"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__7.MoveNext:0030",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "GreaterOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HitUnblocked"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyHpLostAfterOsty",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "SlipperyPower.ModifyHpLostAfterOsty:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "SlipperyPower.ModifyHpLostAfterOsty:0016",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Less",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HpLostSoFar"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "SlipperyPower.ModifyHpLostAfterOsty:0016",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HpLostSoFar"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "ReactsToHpLoss"
   },
   {
     "Name": "SlowPower",

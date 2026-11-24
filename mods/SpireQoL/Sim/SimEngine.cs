@@ -127,7 +127,11 @@ public sealed class SimOutcome
     /// <summary>Stunned during your turn (Burrowed, Flutter, Plow, Shriek) and alive when its turn comes, in every branch.</summary>
     public bool StunnedInAll(int enemyId) => InEvery(branch => branch.Enemy(enemyId) is { StunnedThisTurn: true, DiedBeforeActing: false });
     public bool GambitInAll(int enemyId) => InEvery(branch => branch.Enemy(enemyId) is { GambitTriggered: true });
-    public bool SlipperyInAny(int enemyId) => InSome(branch => branch.Enemy(enemyId) is { SlipperyTriggered: true });
+    /// <summary>A model acted (its acting log or its code's flash: SimState.FiredAny, FlashedAny) in some branch, over the whole turn (its owner: SimKeys.Logged).</summary>
+    public bool ActedInAny(string model, int? owner) => InSome(branch => Acted(branch, model, owner));
+
+    /// <summary>A model acted in this branch, over the whole turn so far (its acting log or its code's flash).</summary>
+    public static bool Acted(SimState branch, string model, int? owner) => branch.FiredAny.Has(SimKeys.Logged(model, owner)) || branch.FlashedAny.Has(SimKeys.Logged(model, owner));
     /// <summary>The play kills some enemy in every branch (not always the same one).</summary>
     public bool PlayKillsInAll;
     /// <summary>The play's biggest powered hit (blocked plus HP lost), in the branch where it's smallest (Mighty Wings).</summary>

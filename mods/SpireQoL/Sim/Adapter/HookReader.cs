@@ -429,7 +429,29 @@ public static class HookReader
             if (Requires(step.When, DeadAndOwner, holds: true)) return HookOutcome.KillsAnother;
             if (Requires(step.When, DeadAndOwner, holds: false)) return HookOutcome.KillsOne;
         }
-        return null;
+        return ReactsToHpLoss(programs) ? HookOutcome.ReactsToHpLoss : null;
+    }
+
+    /// <summary>
+    /// Its AfterDamageReceived acts (a step that isn't a store) on its owner losing HP, every step waiting on target == base.Owner and
+    /// result.UnblockedDamage &gt; 0 (or &gt;= 1), and nothing it does is a tab's amount (block, damage, cards drawn, energy: those are the play
+    /// log's tabs, Centennial Puzzle's draw): its tab is judged on how the turn ends (HookOutcome.ReactsToHpLoss).
+    /// </summary>
+    internal static bool ReactsToHpLoss(IReadOnlyList<HookProgram> programs)
+    {
+        if (programs.FirstOrDefault(program => program.Hook == HookName.AfterDamageReceived) is not { } received) return false;
+        var steps = new ModelSpec("", ModelKind.Power, new[] { received }).Steps().ToList();
+        static bool LostHp(HookValue value) => value is HookMath { Left: HookFactValue { Fact: HookFact.HitUnblocked } } math
+            && (math.Operation == HookOperation.Greater && math.Right is HookConstant { Value: 0m } || math.Operation == HookOperation.GreaterOrEqual && math.Right is HookConstant { Value: 1m });
+        static bool Needs(HookValue? when, Func<HookValue, bool> matches) => when switch
+        {
+            HookTest test => matches(test.Test) || Needs(test.Test, matches),
+            HookMath { Operation: HookOperation.And } both => Needs(both.Left, matches) || Needs(both.Right, matches),
+            _ => when != null && matches(when),
+        };
+        return steps.Any(step => step is not StoreFieldStep)
+            && steps.All(step => Needs(step.When, value => value is HookFactValue { Fact: HookFact.TargetIsOwner }) && Needs(step.When, LostHp))
+            && TabOf(programs) is null or TabKind.Trigger;
     }
 
     /// <summary>The condition holds only when a fact <paramref name="matches"/> holds (or fails: <paramref name="holds"/> false): one of its ands.</summary>

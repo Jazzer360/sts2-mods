@@ -60,25 +60,6 @@ public sealed class HardenedShellPower : SimModel
     }
 }
 
-/// <summary>SlipperyPower: at most 1 HP per damage to its owner (AfterOsty); each that loses HP flashes and takes a charge.</summary>
-public sealed class SlipperyPower : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        Who.IsEnemy(owner) && !now.SlipperyInAny(owner) ? new(Harmful: true, outcome => outcome.SlipperyInAny(owner), branch => branch.Enemy(owner) is { SlipperyTriggered: true }) : null;
-
-    public override decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount) =>
-        damage.Target != owner || amount < 1m ? amount : 1m;
-    public override void AfterModifyingHpLost(SimState state, int owner, bool afterOsty) { } // it flashes when the damage lands
-    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
-    {
-        if (hit.Target != owner || hit.Unblocked < 1) return;
-        state.LogFired(Name, amount: 0, owner);
-        var powers = SimEngine.PowersOf(state, owner);
-        SimEngine.SetPowers(state, owner, powers[ThisPower] <= 1 ? powers.Without(ThisPower) : powers.With(ThisPower, powers[ThisPower] - 1));
-        if (state.Enemy(owner) is { } enemy) enemy.SlipperyTriggered = true;
-    }
-}
-
 /// <summary>BurrowedPower.AfterBlockBroken: breaking its owner's block stuns it, and the power goes (with its block-keeping).</summary>
 public sealed class BurrowedPower : SimModel
 {

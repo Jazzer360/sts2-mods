@@ -48,7 +48,7 @@ public class SimOstyAttackTests
     {
         var state = new SimState { Enemies = { E(id: 1, hp: 30) } };
         state.Enemies[0].Slippery = 1;
-        Assert.True(SimEngine.Run(state, Poke(target: 1, damage: 6, byOsty: true)).SlipperyInAny(enemyId: 1));
+        Assert.True(SimEngine.Run(state, Poke(target: 1, damage: 6, byOsty: true)).ActedInAny(PowerId.Slippery.Name, owner: 1));
     }
 
     [Fact]

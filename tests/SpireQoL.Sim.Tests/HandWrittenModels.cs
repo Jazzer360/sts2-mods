@@ -1731,3 +1731,50 @@ public sealed class MonarchsGazePower : SimModel
         SimEngine.ApplyInHit(state, owner, hit.Target, PowerId.Strength, -SimEngine.PowerOn(state, owner, ThisPower), debuff: true);
     }
 }
+
+// ---- reactions to losing HP (Sim/Models/OutcomeModels.cs and ReactionModels.cs, deleted 2026-11-24)
+
+/// <summary>SelfFormingClay: block next turn.</summary>
+public sealed class SelfFormingClay : ReactsToYourHpLoss { }
+
+/// <summary>EmotionChip: the front orb's passive next turn.</summary>
+public sealed class EmotionChip : ReactsToYourHpLoss { }
+
+/// <summary>
+/// DemonTongue.AfterDamageReceived: once a turn (RelicUse.UsedThisTurn), on its owner's side's turn, heals the HP they just lost
+/// (the HP-loss modifiers already applied).
+/// </summary>
+public sealed class DemonTongue : SimModel
+{
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
+        owner == Who.You && !((RelicUse)SimEngine.RelicsOf(start, owner).DataOf(ThisRelic)).HasFlag(RelicUse.UsedThisTurn) ? OutcomeRules.YouLoseHp : null;
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Target != owner || hit.Unblocked <= 0 || state.EnemyTurnNow || state.Player(owner) is not { Died: false, Hp: < int.MaxValue }) return;
+        var relics = SimEngine.RelicsOf(state, owner);
+        if (((RelicUse)relics.DataOf(ThisRelic)).HasFlag(RelicUse.UsedThisTurn)) return;
+        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], relics.DataOf(ThisRelic) | (int)RelicUse.UsedThisTurn));
+        var player = state.MutablePlayer(owner);
+        player.Hp = (int)Math.Min(player.MaxHp, (long)player.Hp + hit.Unblocked);
+        state.LogFired(Name, hit.Unblocked, owner);
+    }
+}
+
+/// <summary>SlipperyPower: at most 1 HP per damage to its owner (AfterOsty); each that loses HP flashes and takes a charge.</summary>
+public sealed class SlipperyPower : SimModel
+{
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
+        Who.IsEnemy(owner) && !now.InSome(branch => branch.Enemy(owner) is { SlipperyTriggered: true }) ? new(Harmful: true, outcome => outcome.InSome(branch => branch.Enemy(owner) is { SlipperyTriggered: true }), branch => branch.Enemy(owner) is { SlipperyTriggered: true }) : null;
+
+    public override decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount) =>
+        damage.Target != owner || amount < 1m ? amount : 1m;
+    public override void AfterModifyingHpLost(SimState state, int owner, bool afterOsty) { } // it flashes when the damage lands
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Target != owner || hit.Unblocked < 1) return;
+        state.LogFired(Name, amount: 0, owner);
+        var powers = SimEngine.PowersOf(state, owner);
+        SimEngine.SetPowers(state, owner, powers[ThisPower] <= 1 ? powers.Without(ThisPower) : powers.With(ThisPower, powers[ThisPower] - 1));
+        if (state.Enemy(owner) is { } enemy) enemy.SlipperyTriggered = true;
+    }
+}

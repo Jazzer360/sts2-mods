@@ -101,7 +101,7 @@ public class SimBeingHitTests
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, block: 0, hits: 10) } };
         state.Enemies[0].Slippery = 2;
         var outcome = SimEngine.Run(state, Strike(target: 1, damage: 20, hits: 2));
-        Assert.True(outcome.SlipperyInAny(enemyId: 1));
+        Assert.True(outcome.ActedInAny(PowerId.Slippery.Name, owner: 1));
         Assert.False(outcome.DeadInAll(enemyId: 1)); // two hits of 20 lose it only 2 HP
         Assert.Equal(10, outcome.TakenMax);
     }
