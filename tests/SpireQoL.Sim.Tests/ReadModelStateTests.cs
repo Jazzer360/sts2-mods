@@ -100,12 +100,32 @@ public class ReadModelStateTests
         // EnragePower.AfterCardPlayed: a Skill gives its owner its amount of Strength: a crossed tab (your play helps it). Once its owner is
         // dead its powers went with it: the engine's listeners leave them out (DeathListenerTests), as for every model.
         var enrage = Assert.IsType<ReadModel>(SimModels.Get(PowerId.Enrage.Name));
-        Assert.True(enrage.Harmful);
+        Assert.True(enrage.HarmfulFor(owner: 0));
         Assert.Equal(TabKind.Trigger, enrage.Tab);
         var state = new SimState { You = new SimPlayer { Hp = 50 } };
         state.Enemies.Add(new SimEnemy { Id = 0, Name = "E0", Hp = 40, Powers = PowerSet.Empty.With(PowerId.Enrage, amount: 2) });
         var after = Assert.Single(enrage.AfterCardPlayed(state, owner: 0, Played(SimCardType.Skill)));
         Assert.Equal(2, after.Enemies[0].Powers[PowerId.Strength]);
+    }
+
+    /// <summary>
+    /// A tab is crossed by whose side its effect helps, from the player whose card plays (CLAUDE.md "Plain vs crossed": it helps the enemy or
+    /// hurts you). SneakyPower.AfterCardPlayed gives its owner block when another creature plays an Attack, and the multiplayer card Sneaky
+    /// applies it to its own player (Sneaky.OnPlay: base.Owner.Creature): a teammate's Sneaky set off by your Attack helps your side, a plain tab.
+    /// The same code on an enemy (Enrage's Strength on your Skill) helps the other side: crossed.
+    /// </summary>
+    [Fact]
+    public void ATabIsCrossedOnlyWhenItHelpsTheOtherSide()
+    {
+        var sneaky = Assert.IsType<ReadModel>(SimModels.Get(PowerId.Sneaky.Name));
+        Assert.False(sneaky.HarmfulFor(Who.Teammate(0)));
+        Assert.False(sneaky.HarmfulFor(Who.You));
+        Assert.True(sneaky.HarmfulFor(owner: 0));
+        var enrage = Assert.IsType<ReadModel>(SimModels.Get(PowerId.Enrage.Name));
+        Assert.True(enrage.HarmfulFor(owner: 2));
+        Assert.False(enrage.HarmfulFor(Who.Teammate(1)));
+        // A hand-written model's crossing is its own (Tender hurts its own player).
+        Assert.True(SimModels.Get("TenderPower")!.HarmfulFor(Who.You));
     }
 
     [Fact]

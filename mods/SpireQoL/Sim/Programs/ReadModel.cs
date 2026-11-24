@@ -62,7 +62,11 @@ public sealed class ReadModel : SimModel
 
     public override TabKind? Tab => Spec.Tab;
 
-    public override bool Harmful => Spec.Harmful;
+    /// <summary>
+    /// Crossed by whose side its effect helps (decision #198): a play anyone makes setting off something that helps its owner (ModelSpec.HelpsOwner)
+    /// is a warning only on an enemy, your play helping the other side; a teammate's (Sneaky's block on your Attack) helps yours.
+    /// </summary>
+    public override bool HarmfulFor(int owner) => Spec.HelpsOwner && Who.IsEnemy(owner);
 
     private readonly CompiledStep[]?[] _steps = new CompiledStep[]?[Enum.GetValues<HookName>().Length];
     /// <summary>The hooks whose program stores to the model's own state: their tests are asked once a run (HookTest).</summary>

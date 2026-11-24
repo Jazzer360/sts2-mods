@@ -126,13 +126,13 @@ public static class HookReader
         var fieldsRead = new ModelSpec(type.Name, kind, programs).Values().OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
         programs = programs.Select(program => program with { Steps = program.Steps.Where(step => step is not StoreFieldStep store || fieldsRead.Contains(store.Field)).ToList() })
             .Where(program => program.Returns != null || program.Steps.Count > 0).ToList();
-        var harmful = HarmfulOf(programs);
+        var helpsOwner = HelpsOwnerOf(programs);
         var outcome = OutcomeOf(programs);
-        // A crossed tab carries no amount (only the four core resources' plain tabs do: decision #132): a trigger. A tab judged on the outcome
-        // is its only one.
+        // A crossed tab carries no amount (only the four core resources' plain tabs do: decision #132): a trigger, as it is for every owner of a
+        // class one owner's is crossed for (a teammate's Sneaky keeps the trigger an enemy's would have). A tab judged on the outcome is its only one.
         var spec = new ModelSpec(type.Name, kind, programs)
         {
-            Tab = outcome != null ? null : harmful && TabOf(programs) != null ? TabKind.Trigger : TabOf(programs), Harmful = harmful, Outcome = outcome,
+            Tab = outcome != null ? null : helpsOwner && TabOf(programs) != null ? TabKind.Trigger : TabOf(programs), HelpsOwner = helpsOwner, Outcome = outcome,
             Copies = kind == ModelKind.Power ? reader.Copies() : PowerCopies.One,
         };
         return new ModelReading(spec, readings);
@@ -221,9 +221,9 @@ public static class HookReader
     /// <summary>
     /// A play anyone makes sets off something that helps the model's owner: a play hook's block for its owner, or a buff on it, on a condition
     /// that doesn't need the play to be its owner's (Enrage's Strength on every Skill, Sneaky's block on another's Attack). On an enemy, that's
-    /// your play helping it: a crossed tab (CLAUDE.md "Plain vs crossed").
+    /// your play helping it: a crossed tab (CLAUDE.md "Plain vs crossed"); on a teammate, your play helping your side: plain (ReadModel.HarmfulFor).
     /// </summary>
-    internal static bool HarmfulOf(IReadOnlyList<HookProgram> programs) =>
+    internal static bool HelpsOwnerOf(IReadOnlyList<HookProgram> programs) =>
         programs.Where(program => program.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed)
             .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps())
             .Any(step => step is GainBlockStep or ApplyPowerStep { Target: HookTarget.Owner, Debuff: false } && !Needs(step.When, HookFact.PlayIsOwners));

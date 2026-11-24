@@ -233,6 +233,11 @@ public abstract class SimModel
     /// <summary>Its tab is crossed (a warning: it helps the enemy, hurts you, or gives up a bonus), shown when it fires in some branch.</summary>
     public virtual bool Harmful => false;
     /// <summary>
+    /// Its tab is crossed for this owner (an enemy's id, a player's): a hand-written model's crossing is its own (<see cref="Harmful"/>); a
+    /// read model's is by whose side its effect helps (ReadModel.HarmfulFor).
+    /// </summary>
+    public virtual bool HarmfulFor(int owner) => Harmful;
+    /// <summary>
     /// How the game shows that it acted, for the play check (decision #117): a flash (the default), or, for a relic whose crossed tab
     /// means the play gives up its bonus, the relic going dark (its Active status cleared: Art of War, Ripple Basin, Pael's Eye) or
     /// no energy left after the play (Pael's Tears, which judges the energy as your turn ends), or its counter going past its limit

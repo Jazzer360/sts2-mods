@@ -523,7 +523,7 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 | `AfterDamageGiven` / `AfterDamageReceived(dealer, result, props, target, cardSource)` | run inside the damage on the state given; `result.UnblockedDamage` is `HookFact.HitUnblocked`, `target` a command's `HookTarget.HitTarget` |
 | `CreatureCmd.Damage(base.Owner, ...)`, `CreatureCmd.Heal(base.Owner, amount)`, `base.Owner.IsDead` | `DamageStep` on `HookTarget.Owner` (a player through the damage on a player, named by its title in Incoming Damage's breakdown), `HealStep` (up to max HP), `HookFact.OwnerDead` |
 | a command on a creature a read model can't act on (a power on a roll, damage to a hit's target) | a gap at reading |
-| a play hook's block for its owner or buff on it, on a condition that doesn't need the play to be its owner's | a crossed tab (`ModelSpec.Harmful`, a trigger) |
+| a play hook's block for its owner or buff on it, on a condition that doesn't need the play to be its owner's | a trigger tab (`ModelSpec.HelpsOwner`), crossed on an enemy owner, plain on a player's (`ReadModel.HarmfulFor`, decision #198) |
 | `base.Owner.Creature.Block`, `PileType.Hand.GetPile(base.Owner).Cards.Count` / `.IsEmpty` (its Cards kept in a local or not) | `HookFact.OwnerBlock`, `HookFact.OwnerHandCount`; an amount per card in the hand is named with the count in Incoming Damage's breakdown ("Cloak Clasp ×3") |
 | `OrbQueue.Orbs.Count(o => o is FrostOrb)` | `HookFact.OwnerOrbCount` (the kind from the lambda's test) |
 | `new PowerVar<T>(n)`, `new PowerVar<T>("Name", n)` in CanonicalVars | the value keyed by T's class (the constructor's type argument: `CodeMember.TypeArguments`) or by its name |

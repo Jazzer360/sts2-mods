@@ -710,7 +710,7 @@ public sealed class CardPredictions
         var name = SimReaders.ModelName(src);
         var model = SimModels.Get(name);
         if ((kindOverride ?? model?.Tab) is not { } kind) return;
-        var harmful = model?.Harmful ?? false;
+        var harmful = model?.HarmfulFor(ownerId ?? Who.You) ?? false; // by whose side it helps (decision #198)
         // An enemy's or a teammate's source reads its own key (SimState.LogFired: a teammate's firings are only there); yours, the
         // plain name.
         var key = SimKeys.Logged(name, ownerId);

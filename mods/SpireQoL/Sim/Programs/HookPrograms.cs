@@ -368,10 +368,11 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     public TabKind? Tab { get; init; }
 
     /// <summary>
-    /// Its tab is crossed (a warning: the play helps someone else), when a play anyone makes, not only its owner, sets off something that helps
-    /// its owner (block, a buff on itself): on an enemy, your play helping it (Enrage). Read from its programs (HookReader.HarmfulOf).
+    /// A play anyone makes, not only its owner, sets off something that helps its owner (block, a buff on itself): read from its programs
+    /// (HookReader.HelpsOwnerOf). Its tab is crossed where that owner is on the other side from the player whose card plays (an enemy's
+    /// Enrage), plain on yours (a teammate's Sneaky): ReadModel.HarmfulFor (decision #198).
     /// </summary>
-    public bool Harmful { get; init; }
+    public bool HelpsOwner { get; init; }
 
     /// <summary>Its tab is judged on how the turn ends, by what its AfterDeath waits on (HookReader.OutcomeOf); it has no play tab then. Null: none.</summary>
     public HookOutcome? Outcome { get; init; }

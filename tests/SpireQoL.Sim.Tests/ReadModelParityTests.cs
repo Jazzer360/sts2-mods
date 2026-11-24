@@ -17,6 +17,15 @@ public class ReadModelParityTests
         .Select(type => (SimModel)Activator.CreateInstance(type)!).ToDictionary(model => model.Name, StringComparer.Ordinal);
 
     /// <summary>
+    /// Crossings reviewed (a read model's tab is crossed by whose side it helps: decision #198): the model, and why its crossing differs from the
+    /// hand-written one's on the owners the game gives it. Held to differing (EveryReviewedDifferenceIsOne).
+    /// </summary>
+    private static readonly Dictionary<string, string> ReviewedCrossing = new(StringComparer.Ordinal)
+    {
+        ["SneakyPower"] = "its block on another player's Attack helps its owner, a player (the owner board): your side, a plain tab, where the hand-written model's was crossed on the enemy it wrongly acted on (a fix)",
+    };
+
+    /// <summary>
     /// Differences reviewed: "Model.Hook" → the game's line the read model follows and the hand-written one didn't, and why it changes no
     /// prediction (or which, a fix).
     /// </summary>
@@ -110,13 +119,15 @@ public class ReadModelParityTests
         var hand = HandWritten[name];
         var read = Assert.IsType<ReadModel>(SimModels.Get(name));
         Assert.Equal(hand.Tab, read.Tab);
-        Assert.Equal(hand.Harmful, read.Harmful);
         Assert.Equal(hand.Seen, read.Seen);
         Assert.Equal(hand.Instanced, read.Instanced);
         Assert.Equal(hand.JudgedOnOutcome, read.JudgedOnOutcome);
         // A tab judged on the outcome: the same rule for each owner (none, or a warning or a bonus, set off by the play or later).
         foreach (var owner in OwnersOf(read))
         {
+            // Crossed for each owner as the hand-written model was (a read model's crossing is by whose side it helps: decision #198).
+            if (!ReviewedCrossing.ContainsKey(name))
+                Assert.True(hand.HarmfulFor(owner) == read.HarmfulFor(owner), $"{name}: crossed {read.HarmfulFor(owner)} for owner {owner}, the hand-written model {hand.HarmfulFor(owner)}");
             static string RuleOf(OutcomeRule? rule) => rule == null ? "none" : $"harmful {rule.Harmful}, in play {rule.InPlay}, by branch {rule.InBranch != null}, in some {rule.InSome != null}";
             Assert.Equal(RuleOf(hand.OutcomeTab(Board(read, owner), new SimOutcome(), owner)), RuleOf(read.OutcomeTab(Board(read, owner), new SimOutcome(), owner)));
         }
@@ -153,6 +164,11 @@ public class ReadModelParityTests
             var differs = OwnersOf(read).SelectMany(owner => Calls(hook, owner).Select(entry => (owner, entry.Call)))
                 .Any(entry => entry.Call(HandWritten[name], Board(read, entry.owner)) != entry.Call(read, Board(read, entry.owner)));
             if (!differs) stale.Add(key);
+        }
+        foreach (var name in ReviewedCrossing.Keys)
+        {
+            var read = Assert.IsType<ReadModel>(SimModels.Get(name));
+            if (OwnersOf(read).All(owner => HandWritten[name].HarmfulFor(owner) == read.HarmfulFor(owner))) stale.Add(name + " (crossing)");
         }
         Assert.True(stale.Count == 0, $"reviewed, but the read model does what the hand-written one did there: {string.Join(", ", stale)}");
     }

@@ -81,7 +81,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "AllIsWellPower",
@@ -126,7 +126,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "ArsenalPower",
@@ -158,7 +158,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "AutomationPower",
@@ -272,7 +272,7 @@
       }
     ],
     "Tab": "Energy",
-    "Harmful": false,
+    "HelpsOwner": false,
     "Copies": "EachApplication"
   },
   {
@@ -385,7 +385,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "CacophonyPower",
@@ -476,7 +476,7 @@
       }
     ],
     "Tab": "Damage",
-    "Harmful": false,
+    "HelpsOwner": false,
     "Copies": "EachApplication"
   },
   {
@@ -513,7 +513,7 @@
       }
     ],
     "Tab": "Damage",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "ChildOfTheStarsPower",
@@ -573,7 +573,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "CloakClasp",
@@ -633,7 +633,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "ColossusPower",
@@ -737,7 +737,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "ConcoctPower",
@@ -823,7 +823,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "ConductorsBaton",
@@ -1100,7 +1100,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "ConstrictPower",
@@ -1149,7 +1149,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "CorrosiveWavePower",
@@ -1196,7 +1196,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "CrabRagePower",
@@ -1329,7 +1329,7 @@
         ]
       }
     ],
-    "Harmful": false,
+    "HelpsOwner": false,
     "Outcome": "KillsAnother"
   },
   {
@@ -1383,7 +1383,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "DaughterOfTheWind",
@@ -1437,7 +1437,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "DebilitatePower",
@@ -1460,7 +1460,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "DemisePower",
@@ -1493,7 +1493,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "DexterityPower",
@@ -1730,7 +1730,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "DisintegrationPower",
@@ -1763,7 +1763,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "DoubleDamagePower",
@@ -2037,7 +2037,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "DuplicationPower",
@@ -2112,7 +2112,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "EchoFormPower",
@@ -2214,7 +2214,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "EnragePower",
@@ -2254,7 +2254,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": true
+    "HelpsOwner": true
   },
   {
     "Name": "EnvenomPower",
@@ -2317,7 +2317,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "FakeOrichalcum",
@@ -2423,7 +2423,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "FeelNoPainPower",
@@ -2455,7 +2455,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "Fertilizer",
@@ -2501,7 +2501,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "FlankingPower",
@@ -2605,7 +2605,7 @@
         }
       }
     ],
-    "Harmful": false,
+    "HelpsOwner": false,
     "Copies": "EachApplication"
   },
   {
@@ -2642,7 +2642,7 @@
       }
     ],
     "Tab": "Damage",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "FrailPower",
@@ -2702,7 +2702,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "GalacticDust",
@@ -2866,7 +2866,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "GamePiece",
@@ -2915,7 +2915,7 @@
       }
     ],
     "Tab": "Draw",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "GravityPower",
@@ -2996,7 +2996,7 @@
       }
     ],
     "Tab": "Damage",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "GremlinHorn",
@@ -3062,7 +3062,7 @@
         ]
       }
     ],
-    "Harmful": false,
+    "HelpsOwner": false,
     "Outcome": "KillsOne"
   },
   {
@@ -3140,7 +3140,7 @@
         }
       }
     ],
-    "Harmful": false,
+    "HelpsOwner": false,
     "Copies": "EachApplication"
   },
   {
@@ -3199,7 +3199,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "HatchPower",
@@ -3222,7 +3222,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "HelicalDart",
@@ -3267,7 +3267,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "HighVoltagePower",
@@ -3298,7 +3298,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "IntimidatingHelmet",
@@ -3353,7 +3353,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "IronClub",
@@ -3437,7 +3437,7 @@
       }
     ],
     "Tab": "Draw",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "IterationPower",
@@ -3511,7 +3511,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "IvoryTile",
@@ -3561,7 +3561,7 @@
       }
     ],
     "Tab": "Energy",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "KiVersePower",
@@ -3717,7 +3717,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "KnockdownPower",
@@ -3821,7 +3821,7 @@
         }
       }
     ],
-    "Harmful": false,
+    "HelpsOwner": false,
     "Copies": "EachApplication"
   },
   {
@@ -3951,7 +3951,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "Kusarigama",
@@ -4104,7 +4104,7 @@
       }
     ],
     "Tab": "Damage",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "LeadershipPower",
@@ -4192,7 +4192,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "LetterOpener",
@@ -4324,7 +4324,7 @@
       }
     ],
     "Tab": "Damage",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "LostWisp",
@@ -4380,7 +4380,7 @@
       }
     ],
     "Tab": "Damage",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "LunarPastry",
@@ -4408,7 +4408,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "MiniRegent",
@@ -4503,7 +4503,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "MonologuePower",
@@ -4648,7 +4648,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false,
+    "HelpsOwner": false,
     "Copies": "EachApplication"
   },
   {
@@ -6006,7 +6006,7 @@
       }
     ],
     "Tab": "Draw",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "Nunchaku",
@@ -6131,7 +6131,7 @@
       }
     ],
     "Tab": "Energy",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "ObsidianVice",
@@ -6193,7 +6193,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "OneTwoPunchPower",
@@ -6305,7 +6305,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "OrbitPower",
@@ -6623,7 +6623,7 @@
       }
     ],
     "Tab": "Energy",
-    "Harmful": false,
+    "HelpsOwner": false,
     "Copies": "EachApplication"
   },
   {
@@ -6730,7 +6730,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "OrnamentalFan",
@@ -6860,7 +6860,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "PaleBlueDotPower",
@@ -7034,7 +7034,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "PanachePower",
@@ -7254,7 +7254,7 @@
       }
     ],
     "Tab": "Damage",
-    "Harmful": false,
+    "HelpsOwner": false,
     "Copies": "EachApplication"
   },
   {
@@ -7391,7 +7391,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "PillarOfCreationPower",
@@ -7423,7 +7423,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "RagePower",
@@ -7491,7 +7491,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "RainbowRing",
@@ -7991,7 +7991,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "Regalite",
@@ -8087,7 +8087,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "RegenPower",
@@ -8155,7 +8155,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "RitualPower",
@@ -8308,7 +8308,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "ScreamingFlagon",
@@ -8363,7 +8363,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "SerratedArrowsPower",
@@ -8664,7 +8664,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "ShroudPower",
@@ -8709,7 +8709,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "Shuriken",
@@ -8838,7 +8838,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "SignalBoostPower",
@@ -8934,7 +8934,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "SleightOfFleshPower",
@@ -9031,7 +9031,7 @@
       }
     ],
     "Tab": "Damage",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "SmokestackPower",
@@ -9085,7 +9085,7 @@
       }
     ],
     "Tab": "Damage",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "SneakyPower",
@@ -9140,7 +9140,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": true
+    "HelpsOwner": true
   },
   {
     "Name": "SoarPower",
@@ -9209,7 +9209,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "SpeedsterPower",
@@ -9255,7 +9255,7 @@
       }
     ],
     "Tab": "Damage",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "SpiritOfAshPower",
@@ -9299,7 +9299,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "StoneCalendar",
@@ -9358,7 +9358,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "StormPower",
@@ -9464,7 +9464,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "Storyteller",
@@ -9495,7 +9495,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "StranglePower",
@@ -9589,7 +9589,7 @@
       }
     ],
     "Tab": "Damage",
-    "Harmful": false,
+    "HelpsOwner": false,
     "Copies": "PerApplier"
   },
   {
@@ -9650,7 +9650,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "SubroutinePower",
@@ -9759,7 +9759,7 @@
       }
     ],
     "Tab": "Energy",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "TaintedPower",
@@ -9819,7 +9819,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "TerritorialPower",
@@ -9850,7 +9850,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "TheAbacus",
@@ -9884,7 +9884,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "TheBombPower",
@@ -10004,7 +10004,7 @@
         ]
       }
     ],
-    "Harmful": false,
+    "HelpsOwner": false,
     "Copies": "EachApplication"
   },
   {
@@ -10033,7 +10033,7 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "ThrowingAxe",
@@ -10169,7 +10169,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "Tingsha",
@@ -10217,7 +10217,7 @@
       }
     ],
     "Tab": "Damage",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "ToughBandages",
@@ -10263,7 +10263,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "TrackingPower",
@@ -10581,7 +10581,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "TunePower",
@@ -10619,7 +10619,7 @@
         ]
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "TuningFork",
@@ -10810,7 +10810,7 @@
       }
     ],
     "Tab": "Block",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "ViciousPower",
@@ -10874,7 +10874,7 @@
       }
     ],
     "Tab": "Draw",
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "VulnerablePower",
@@ -14253,7 +14253,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "WeakPower",
@@ -14913,7 +14913,7 @@
         }
       }
     ],
-    "Harmful": false
+    "HelpsOwner": false
   },
   {
     "Name": "WhittlingKnife",
@@ -14945,6 +14945,6 @@
       }
     ],
     "Tab": "Trigger",
-    "Harmful": false
+    "HelpsOwner": false
   }
 ]
