@@ -628,6 +628,16 @@ public static partial class SimEngine
             ? PowerOn(state, aimedEnemy.Id, other) : 0
         : apply.Amount;
 
+    /// <summary>
+    /// PowerCmd.Apply as a power's or relic's hook runs it: the power lands (ApplyPower), then the listeners hear it (AfterPowerApplied: the
+    /// game's Hook.AfterPowerAmountChanged), as a card's application is heard (Shroud's block on Doom you apply, Sleight of Flesh's damage on a
+    /// debuff you land).
+    /// </summary>
+    internal static IEnumerable<SimState> ApplyAndTell(SimState state, int applier, int target, PowerId power, int amount, bool debuff) =>
+        ApplyPower(state, applier, target, power, amount, debuff)
+            ? Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, branch) => model.AfterPowerApplied(branch, owner, power, amount, applier, target, debuff))
+            : new[] { state };
+
     /// <summary>The power on each creature it reaches, then AfterPowerApplied for each that landed (Artifact took none of it).</summary>
     private static void RunApplyPower(BranchSet branches, ApplyPowerAction applyPowerAction)
     {

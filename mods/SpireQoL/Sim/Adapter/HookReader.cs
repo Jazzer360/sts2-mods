@@ -137,12 +137,14 @@ public static class HookReader
         programs = programs.Select(program => program with { Steps = program.Steps.Where(step => step is not StoreFieldStep store || fieldsRead.Contains(store.Field)).ToList() })
             .Where(program => program.Returns != null || program.Steps.Count > 0).ToList();
         var helpsOwner = HelpsOwnerOf(programs);
+        var hurtsOwner = HurtsOwnerOf(programs);
         var outcome = OutcomeOf(programs);
         // A crossed tab carries no amount (only the four core resources' plain tabs do: decision #132): a trigger, as it is for every owner of a
         // class one owner's is crossed for (a teammate's Sneaky keeps the trigger an enemy's would have). A tab judged on the outcome is its only one.
         var spec = new ModelSpec(type.Name, kind, programs)
         {
-            Tab = outcome != null ? null : helpsOwner && TabOf(programs) != null ? TabKind.Trigger : TabOf(programs), HelpsOwner = helpsOwner, Outcome = outcome,
+            Tab = outcome != null ? null : (helpsOwner || hurtsOwner) && TabOf(programs) != null ? TabKind.Trigger : TabOf(programs),
+            HelpsOwner = helpsOwner, HurtsOwner = hurtsOwner, Outcome = outcome,
             Copies = kind == ModelKind.Power ? reader.Copies() : PowerCopies.One,
         };
         return new ModelReading(spec, readings);
@@ -237,6 +239,16 @@ public static class HookReader
         programs.Where(program => program.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed)
             .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps())
             .Any(step => step is GainBlockStep or ApplyPowerStep { Target: HookTarget.Owner, Debuff: false } && !Needs(step.When, HookFact.PlayIsOwners));
+
+    /// <summary>
+    /// A play sets off something that hurts the model's owner: a play hook's debuff on its owner (Tender's Strength and Dexterity
+    /// down on each card you play). On a player, that's the play hurting you or your side: a crossed tab (CLAUDE.md "Plain vs crossed");
+    /// on an enemy, it helps you: plain (ReadModel.HarmfulFor).
+    /// </summary>
+    internal static bool HurtsOwnerOf(IReadOnlyList<HookProgram> programs) =>
+        programs.Where(program => program.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed)
+            .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps())
+            .Any(step => step is ApplyPowerStep { Target: HookTarget.Owner, Debuff: true });
 
     /// <summary>The condition holds only when the fact does (it's one of the condition's ands, not under a not).</summary>
     private static bool Needs(HookValue? when, HookFact fact) => when switch
@@ -530,7 +542,12 @@ public static class HookReader
                     var targetAt = IndexOf(types, "Creature", "IEnumerable`1");
                     var amountAt = IndexOf(types, "Decimal");
                     var applierAt = IndexOf(types, from: amountAt + 1, "Creature");
-                    if (applierAt < 0 || !IsOwner(values[applierAt])) throw new Gap($"gap: {power} applied by someone else");
+                    // Its applier: its owner, the applier the power keeps (base.Applier), or no one (null).
+                    HookCreature? by = applierAt < 0 ? throw new Gap($"gap: {power} applied by someone else")
+                        : IsOwner(values[applierAt]) ? null
+                        : IsApplier(values[applierAt]) ? new HookCreature(HookWho.Applier)
+                        : values[applierAt] is NullValue ? new HookCreature(HookWho.NoOne)
+                        : throw new Gap($"gap: {power} applied by someone else");
                     var amount = Value(values[amountAt]);
                     if (Targets(values[targetAt]) is not (HookTarget.Owner or HookTarget.PowerOwner or HookTarget.AllEnemies or HookTarget.HitTarget)) throw new Gap($"gap: {power} on {values[targetAt]}");
                     // A temporary Strength or Dexterity power (Helical Dart's) lands as the Strength or Dexterity its BeforeApplied applies, by its sign
@@ -538,11 +555,11 @@ public static class HookReader
                     if (TemporaryOf(power) is { } underlying)
                     {
                         var negative = LandsAsDebuff(power, amount);
-                        return new ApplyPowerStep(underlying, Targets(values[targetAt]), negative ? new HookMath(HookOperation.Multiply, amount, new HookConstant(-1m)) : amount) { Debuff = negative };
+                        return new ApplyPowerStep(underlying, Targets(values[targetAt]), negative ? new HookMath(HookOperation.Multiply, amount, new HookConstant(-1m)) : amount) { Debuff = negative, By = by };
                     }
                     return new ApplyPowerStep(power, Targets(values[targetAt]), amount)
                     {
-                        Debuff = LandsAsDebuff(power, amount), DebuffWhenNegative = amount is not HookConstant && AllowsNegative(power),
+                        Debuff = LandsAsDebuff(power, amount), DebuffWhenNegative = amount is not HookConstant && AllowsNegative(power), By = by,
                     };
                 }
                 case "OrbCmd.Channel":

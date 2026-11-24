@@ -5398,6 +5398,102 @@
     "HelpsOwner": false
   },
   {
+    "Name": "LagavulinMatriarchDominionPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003F",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": -1
+              }
+            },
+            "Debuff": false,
+            "DebuffWhenNegative": true,
+            "By": {
+              "Who": "NoOne",
+              "PetOwner": false
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003F",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DexterityPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": -1
+              }
+            },
+            "Debuff": false,
+            "DebuffWhenNegative": true,
+            "By": {
+              "Who": "NoOne",
+              "PetOwner": false
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003F",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003F",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "LeadershipPower",
     "Kind": "Power",
     "Hooks": [
@@ -8789,6 +8885,110 @@
     ],
     "Tab": "Energy",
     "HelpsOwner": false
+  },
+  {
+    "Name": "OblivionPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__9.MoveNext:002E",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakeBound"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DoomPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "BoundTaken"
+            },
+            "Debuff": true,
+            "By": {
+              "Who": "Applier",
+              "PetOwner": false
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__9.MoveNext:002E",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakeBound"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookConstant",
+              "Value": 1
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeCardPlayed",
+        "Steps": [
+          {
+            "$kind": "BindStep",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "OblivionPower.BeforeCardPlayed:0012",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "OblivionPower.BeforeCardPlayed:0007",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HasApplier"
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "ApplierIsPlayer"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "OblivionPower.BeforeCardPlayed:0030",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsAppliers"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false,
+    "HurtsOwner": true,
+    "Copies": "PerApplier"
   },
   {
     "Name": "ObsidianVice",
@@ -13517,6 +13717,166 @@
       }
     ],
     "HelpsOwner": false
+  },
+  {
+    "Name": "TenderPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "CardsPlayedThisTurn",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "CardsPlayedThisTurn"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:0036",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:0036",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookConstant",
+              "Value": -1
+            },
+            "Debuff": true,
+            "By": {
+              "Who": "Applier",
+              "PetOwner": false
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:0036",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DexterityPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookConstant",
+              "Value": -1
+            },
+            "Debuff": true,
+            "By": {
+              "Who": "Applier",
+              "PetOwner": false
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:0036",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookField",
+              "Field": "CardsPlayedThisTurn"
+            },
+            "Debuff": false,
+            "DebuffWhenNegative": true,
+            "By": {
+              "Who": "Applier",
+              "PetOwner": false
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__13.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DexterityPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookField",
+              "Field": "CardsPlayedThisTurn"
+            },
+            "Debuff": false,
+            "DebuffWhenNegative": true,
+            "By": {
+              "Who": "Applier",
+              "PetOwner": false
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__13.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "CardsPlayedThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__13.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false,
+    "HurtsOwner": true
   },
   {
     "Name": "TerritorialPower",

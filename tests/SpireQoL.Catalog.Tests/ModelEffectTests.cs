@@ -31,7 +31,7 @@ public class ModelEffectTests
         GameModels.EnsureLoaded();
         var report = ModelAmountCheck.Run();
         // Fewer each round: a model read from its code (decision #195) takes its amounts where its code does, and isn't compared.
-        Assert.True(report.Compared > 25, $"only {report.Compared} models compared: the check stopped reading the game's hooks or the models");
+        Assert.True(report.Compared > 23, $"only {report.Compared} models compared: the check stopped reading the game's hooks or the models");
         Assert.True(report.Differences.Count + report.Unread.Count + report.StaleReviews.Count == 0, Describe(report));
     }
 

@@ -297,7 +297,7 @@ public class ProcModelTests
     [Fact]
     public void TenderAndSmoggyAreWarnings()
     {
-        Assert.True(SimModels.Get("TenderPower")!.Harmful);
+        Assert.True(SimModels.Get("TenderPower")!.HarmfulFor(Who.You)); // read from its code: its debuffs on you hurt you (decision #204)
         Assert.True(SimModels.Get("SmoggyPower")!.Harmful);
         Assert.True(One(Power(State(), PowerId.Smoggy, amount: 1), Events(Card("A", SimCardType.Skill), plays: 1)).Fired.Has("SmoggyPower"));
         Assert.False(One(Power(State(), PowerId.Smoggy, amount: 1), Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1))).Fired.Has("SmoggyPower"));

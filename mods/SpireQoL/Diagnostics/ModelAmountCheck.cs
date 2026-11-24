@@ -43,11 +43,6 @@ internal static class ModelAmountCheck
     {
         // The same total, a loop in the game.
         ["CentennialPuzzle Draw: game 1; model Var Cards"] = "the game draws one card Cards times (a for loop up to DynamicVars.Cards); the model draws Cards",
-        // After the turn the simulator predicts: nothing predicted reads them.
-        ["TenderPower Apply StrengthPower: game -1 | ?TenderPower.get_CardsPlayedThisTurn; model -1"] =
-            "AfterSideTurnEnd gives back the Strength it took this turn (CardsPlayedThisTurn): nothing predicted after your turn ends deals your powered damage",
-        ["TenderPower Apply DexterityPower: game -1 | ?TenderPower.get_CardsPlayedThisTurn; model -1"] =
-            "AfterSideTurnEnd gives back the Dexterity it took this turn (CardsPlayedThisTurn): nothing predicted after your turn ends gains your powered block",
         // The same arithmetic, over something a hook's parameter or a count holds in the game and the simulation holds elsewhere.
         ["NecroMasteryPower Damage: game mul(-?parameter delta, Amount); model mul(?parameter lost, Amount)"] =
             "its amount × the HP Osty lost: AfterCurrentHpChanged's -delta in the game, AfterOstyHpLost's lost in the model",

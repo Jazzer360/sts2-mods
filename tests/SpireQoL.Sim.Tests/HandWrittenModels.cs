@@ -1226,3 +1226,32 @@ public sealed class PagestormPower : SimModel
             ? SimEngine.ProcCardEvent(state, CardEvent.Drawn, count: SimEngine.PowerOn(state, owner, ThisPower), owner, indirect: true)
             : One(state);
 }
+
+// ---- a power applied by its applier (round seven: Sim/Models/ProcPowerModels.cs, deleted 2026-11-24)
+
+/// <summary>OblivionPower (on an enemy, Data = its applier + 100): each card the applier plays applies Doom to it.</summary>
+public sealed class OblivionPower : ProcModel
+{
+    public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (DataCreature.In(Data(state, owner)) == play.Owner) Bind(state, owner, Amount(state, owner));
+        return One(state);
+    }
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
+        TakeBound(state, owner) is not null ? Fire(state, owner) : One(state);
+}
+
+/// <summary>TenderPower.AfterCardPlayed: each card its owner plays takes 1 Strength and 1 Dexterity (Artifact can take them).</summary>
+public sealed class TenderPower : SimModel
+{
+    public override TabKind? Tab => TabKind.Trigger;
+    public override bool Harmful => true;
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (play.Owner != owner) return One(state);
+        state.LogFired(Name, amount: 0, owner);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, amount: -1, debuff: true);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Dexterity, amount: -1, debuff: true);
+        return One(state);
+    }
+}

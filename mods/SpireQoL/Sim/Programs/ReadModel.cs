@@ -64,9 +64,10 @@ public sealed class ReadModel : SimModel
 
     /// <summary>
     /// Crossed by whose side its effect helps (decision #198): a play anyone makes setting off something that helps its owner (ModelSpec.HelpsOwner)
-    /// is a warning only on an enemy, your play helping the other side; a teammate's (Sneaky's block on your Attack) helps yours.
+    /// is a warning only on an enemy, your play helping the other side; a teammate's (Sneaky's block on your Attack) helps yours. A play setting
+    /// off something that hurts its owner (ModelSpec.HurtsOwner: Tender's debuffs on you) is a warning on a player, your side (decision #204).
     /// </summary>
-    public override bool HarmfulFor(int owner) => Spec.HelpsOwner && Who.IsEnemy(owner);
+    public override bool HarmfulFor(int owner) => Who.IsEnemy(owner) ? Spec.HelpsOwner : Spec.HurtsOwner;
 
     private readonly CompiledStep[]?[] _steps = new CompiledStep[]?[Enum.GetValues<HookName>().Length];
     /// <summary>The hooks whose program stores to the model's own state: their tests are asked once a run (HookTest).</summary>
@@ -594,22 +595,32 @@ public sealed class ReadModel : SimModel
                 var alwaysDebuff = apply.Debuff;
                 var debuffWhenNegative = apply.DebuffWhenNegative;
                 var target = apply.Target;
+                var appliedBy = apply.By;
                 return args =>
                 {
                     var state = args.State;
                     var given = (int)amount(in args);
                     var debuff = alwaysDebuff || debuffWhenNegative && given < 0;
+                    // Its applier: its owner, or the creature its code names (the applier it keeps; no one).
+                    var applier = appliedBy == null ? args.Owner : CreatureOf(in args, appliedBy);
+                    if (fires) state.LogFired(Name, amount: 0, args.Owner);
+                    // Each landing heard by the listeners (PowerCmd.Apply: Hook.AfterPowerAmountChanged), on each one's own creature in turn.
                     switch (target)
                     {
-                        case HookTarget.Owner: SimEngine.ApplyPower(state, args.Owner, args.Owner, power, given, debuff); break;
-                        case HookTarget.PowerOwner or HookTarget.HitTarget: SimEngine.ApplyPower(state, args.Owner, args.Target, power, given, debuff); break;
+                        case HookTarget.Owner: return SimEngine.ApplyAndTell(state, applier, args.Owner, power, given, debuff);
+                        case HookTarget.PowerOwner or HookTarget.HitTarget: return SimEngine.ApplyAndTell(state, applier, args.Target, power, given, debuff);
                         case HookTarget.AllEnemies:
-                            foreach (var enemy in state.Targetable.ToList()) SimEngine.ApplyPower(state, args.Owner, enemy.Id, power, given, debuff);
-                            break;
+                        {
+                            IEnumerable<SimState> states = One(state);
+                            foreach (var enemy in state.Targetable.ToList())
+                            {
+                                var id = enemy.Id;
+                                states = SimEngine.Then(states, branch => branch.Enemy(id) is { Alive: true } ? SimEngine.ApplyAndTell(branch, applier, id, power, given, debuff) : One(branch));
+                            }
+                            return states;
+                        }
                         default: throw new InvalidOperationException($"{Name}: no power on {target}");
                     }
-                    if (fires) state.LogFired(Name, amount: 0, args.Owner);
-                    return One(state);
                 };
             }
             case StoreFieldStep store:

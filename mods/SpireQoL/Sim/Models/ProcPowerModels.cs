@@ -55,18 +55,6 @@ public sealed class JugglingPower : ProcModel
         Mine(play, owner) && TakeBound(state, owner) is { } bound ? MakeInHand(Fire(state, owner), play.Card, bound, owner) : One(state);
 }
 
-/// <summary>OblivionPower (on an enemy, Data = its applier + 100): each card the applier plays applies Doom to it.</summary>
-public sealed class OblivionPower : ProcModel
-{
-    public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (DataCreature.In(Data(state, owner)) == play.Owner) Bind(state, owner, Amount(state, owner));
-        return One(state);
-    }
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        TakeBound(state, owner) is not null ? Fire(state, owner) : One(state);
-}
-
 /// <summary>
 /// BlackHolePower: its amount to every hittable enemy (unpowered) each time its owner gains stars (AfterStarsGained), and after
 /// the last play of a card that spent stars (AfterCardPlayed, IsLastInSeries).

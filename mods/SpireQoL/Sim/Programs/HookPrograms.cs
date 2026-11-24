@@ -185,6 +185,8 @@ public enum HookWho
     PowerOwner,
     /// <summary>Who applied this power (base.Applier, kept as its Data).</summary>
     Applier,
+    /// <summary>No creature (a null the code passes: PowerCmd.Apply with no applier).</summary>
+    NoOne,
 }
 
 /// <summary>A creature a hook's code names (HookWho), or the player who owns it when it's a pet (creature.PetOwner.Creature: Osty's player).</summary>
@@ -344,6 +346,13 @@ public sealed record ApplyPowerStep(string Power, HookTarget Target, HookValue A
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool DebuffWhenNegative { get; init; }
+
+    /// <summary>
+    /// Who applies it (PowerCmd.Apply's applier): the power's applier it keeps (base.Applier: Oblivion's Doom, Tender's Strength), no one (a
+    /// null), or (null here) its owner.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public HookCreature? By { get; init; }
 }
 
 /// <summary>A store to one of the model's own fields or properties a program reads (this.AttacksPlayedThisTurn = ... + 1).</summary>
@@ -403,6 +412,13 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     /// </summary>
     public bool HelpsOwner { get; init; }
 
+    /// <summary>
+    /// A play sets off something that hurts its owner: a debuff on itself or damage to it (HookReader.HurtsOwnerOf). Its tab is crossed where that
+    /// owner is a player (Tender), plain on an enemy: ReadModel.HarmfulFor.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool HurtsOwner { get; init; }
+
     /// <summary>Its tab is judged on how the turn ends, by what its AfterDeath waits on (HookReader.OutcomeOf); it has no play tab then. Null: none.</summary>
     public HookOutcome? Outcome { get; init; }
 
@@ -457,7 +473,8 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
 
     /// <summary>Its code asks who applied it (base.Applier): it keeps its applier as its Data (DataCreature), read and landed so.</summary>
     public bool UsesApplier() => Values().Any(value => value is HookFactValue { Fact: HookFact.DeadIsApplier or HookFact.HasApplier or HookFact.ApplierIsPlayer or HookFact.PlayIsAppliers }
-        || value is HookFactValue fact && (fact.Creature?.Who == HookWho.Applier || fact.Other?.Who == HookWho.Applier));
+        || value is HookFactValue fact && (fact.Creature?.Who == HookWho.Applier || fact.Other?.Who == HookWho.Applier))
+        || Steps().Any(step => step is ApplyPowerStep { By.Who: HookWho.Applier });
 
     /// <summary>Its own fields and properties its programs read or store (the adapter seeds them from the game: SimReaders.Fields).</summary>
     public IEnumerable<string> Fields() =>

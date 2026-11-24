@@ -144,21 +144,6 @@ public sealed class SlowPower : SimModel
     }
 }
 
-/// <summary>TenderPower.AfterCardPlayed: each card its owner plays takes 1 Strength and 1 Dexterity (Artifact can take them).</summary>
-public sealed class TenderPower : SimModel
-{
-    public override TabKind? Tab => TabKind.Trigger;
-    public override bool Harmful => true;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (play.Owner != owner) return One(state);
-        state.LogFired(Name, amount: 0, owner);
-        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, amount: -1, debuff: true);
-        SimEngine.ApplyPower(state, owner, owner, PowerId.Dexterity, amount: -1, debuff: true);
-        return One(state);
-    }
-}
-
 /// <summary>
 /// LethalityPower.ModifyDamageMultiplicative: 1 + amount/100 on the owner's first Attack play each turn (a replay's later
 /// plays don't get it; attack plays started this turn: the owner's Turn "Started:Attack").
