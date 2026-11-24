@@ -286,7 +286,7 @@ hooks.
     card that uses what it draws to one of these. `SimAdapter.AutoPlaysOf` reads `CardPileCmd.AutoPlayFromDrawPile`'s count, its
     exhaust argument and the upgrading callback it's given (Havoc, Cascade's X, The Devil's hand, upgraded), replacing those cards'
     names in the adapter.
-  - Enemies' Strength (2026-11-23, round three): `SimAdapter.EnemyStrengthOf` reads each `PowerCmd.Apply` of `StrengthPower` or of
+  - Enemies' Strength (2026-11-23, round three; since decision #193 each step's own action, `SimAdapter.PowersFrom`): the adapter reads each `PowerCmd.Apply` of `StrengthPower` or of
     a temporary Strength power (`TemporaryStrengthPower`, its sign from whether it's a debuff) to the enemy the card is aimed at or to
     every enemy you can hit (a loop over them or all at once), its amount evaluated (decimal's operators and constants now evaluate:
     Shared Fate's `-EnemyStrengthLoss`, Resonance's `Decimal.MinusOne`). It replaced `EnemyStrengthCards`; StrengthLossTests proves

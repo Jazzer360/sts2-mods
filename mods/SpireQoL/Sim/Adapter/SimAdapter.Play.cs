@@ -173,17 +173,11 @@ public static partial class SimAdapter
         var program = Procs.Programs.CardPrograms.Of(type);
         var board = new Procs.Programs.ProgramBoard(card);
         var filters = new List<(string, Func<CardModel, bool, bool?>)>();
-        var serial = 0;
-        var exhausts = Procs.Programs.CardEffects.ExhaustsOfOthers(type);
-        var discards = Procs.Programs.CardEffects.Discards(type);
-        void Take(Procs.Programs.CardEffects.CardsTaken take, bool shared)
-        {
-            if (Procs.Programs.ProgramEvaluator.Holds(take.PlayTest, board, program) == false) return;
-            var key = $"{type.Name}#{serial++}";
+        foreach (var (take, key, _, eventIfNot, _) in TakesInOrder(card))
             switch (take.Way)
             {
                 case Procs.Programs.CardEffects.TakeWay.Picked when take.PickPile is null or MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand:
-                    if (!take.ItemTest.IsAlways || shared) filters.Add((key, (other, made) => Procs.Programs.ProgramEvaluator.HoldsFor(Tests(take.ItemTest, made), other, board, program)));
+                    if (!take.ItemTest.IsAlways || eventIfNot != null) filters.Add((key, (other, made) => Procs.Programs.ProgramEvaluator.HoldsFor(Tests(take.ItemTest, made), other, board, program)));
                     break;
                 case Procs.Programs.CardEffects.TakeWay.Random or Procs.Programs.CardEffects.TakeWay.Each:
                     if (Procs.Programs.CardEffects.IsYourWholeHand(take.Items) && take.ItemTest.IsAlways) break;
@@ -192,12 +186,6 @@ public static partial class SimAdapter
                                               && passes != false && holds != false ? (passes == null || holds == null ? null : true) : false));
                     break;
             }
-        }
-        foreach (var exhaust in exhausts) Take(exhaust, shared: discards.Any(discard => discard.Pick != null && ReferenceEquals(discard.Pick, exhaust.Pick)));
-        foreach (var discard in discards)
-            if (!exhausts.Any(exhaust => exhaust.Pick != null && ReferenceEquals(exhaust.Pick, discard.Pick))) Take(discard, shared: false);
-        foreach (var transform in Procs.Programs.CardEffects.Transforms(type))
-            if (!transform.ChoosesHowMany && transform.PickPile is null or MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand) Take(transform, shared: false);
         // And the filters its conditions ask of your hand (decision #190: Impatience's Attacks), followed the same way.
         foreach (var filter in Procs.Programs.ConditionReader.HandFiltersOf(type, program))
             filters.Add((filter.Key, (other, _) => Procs.Programs.ProgramEvaluator.Passes(filter.Lambda, other, board, program)));
@@ -304,35 +292,6 @@ public static partial class SimAdapter
         }
         return result;
     }
-    /// <summary>
-    /// The Strength a play takes from enemies or gives them, read from its program (decision #182): each PowerCmd.Apply of StrengthPower
-    /// or of a temporary Strength power (TemporaryStrengthPower: Piercing Wail, Dark Shackles take Strength until the end of the turn, a
-    /// debuff's sign) to its target when it's aimed at an enemy, or to every enemy you can hit (a loop over them, or all of them at once:
-    /// Crush Under), on its condition: the power, the amount (its argument on the board: Shared Fate's -EnemyStrengthLoss, Resonance's -1)
-    /// and whether it's every enemy.
-    /// </summary>
-    internal static List<(Type Power, int Amount, bool All)> EnemyStrengthOf(CardModel card)
-    {
-        var changes = new List<(Type, int, bool)>();
-        var program = Procs.Programs.CardPrograms.Of(card.GetType());
-        var board = new Procs.Programs.ProgramBoard(card);
-        var applied = Diagnostics.CardCoverage.PowersApplied(card.GetType());
-        foreach (var apply in Procs.Programs.CardEffects.Find(program, command => command.Command is { DeclaringType: "PowerCmd", Name: "Apply", GenericArguments.Count: 1 }))
-        {
-            if (applied.FirstOrDefault(type => type.Name == apply.Command.Command.GenericArguments[0]) is not { } power
-                || power != typeof(StrengthPower) && !typeof(TemporaryStrengthPower).IsAssignableFrom(power)
-                || apply.Command.Values.Count < 3 || Procs.Programs.ProgramEvaluator.Holds(apply.Condition, board, program) == false) continue;
-            var whom = apply.Command.Values[1];
-            var all = whom.Parts().Concat(apply.Loops.SelectMany(loop => loop.Items?.Parts() ?? Array.Empty<Procs.Programs.ProgramValue>()))
-                .Any(part => part is Procs.Programs.QueryValue { Name: "HittableEnemies" });
-            var atTarget = card.TargetType == TargetType.AnyEnemy && whom.Parts().Any(part => part is Procs.Programs.QueryValue { Name: "Target", Of: Procs.Programs.NamedValue { Name: "cardPlay" } });
-            if (!all && !atTarget) continue;
-            var amount = Procs.Programs.ProgramEvaluator.Number(apply.Command.Values[2], board, program) is { } read ? (int)read : 1;
-            var sign = typeof(TemporaryStrengthPower).IsAssignableFrom(power) && PlayFacts.IsDebuffType(power) ? -1 : 1;
-            changes.Add((power, sign * amount, all));
-        }
-        return changes;
-    }
     /// <summary>How a card's play takes cards into your hand (HandTakeOf).</summary>
     /// <param name="Piles">The piles it takes them from (your draw pile, your discard pile; both for a collection over every pile).</param>
     /// <param name="Eligible">Which cards there it can take.</param>
@@ -419,25 +378,6 @@ public static partial class SimAdapter
         }
     }
 
-    /// <summary>
-    /// The cards a play auto-plays from the top of your draw pile (CardPileCmd.AutoPlayFromDrawPile in its program): how many (its count
-    /// argument on the board: Havoc 1, Cascade its X and one more upgraded, The Devil the cards in your hand), whether they exhaust (its
-    /// exhaust argument: Havoc's), and whether they're upgraded first (the callback it gives upgrading them, on its condition: The Devil
-    /// upgraded). Null for a card that auto-plays none.
-    /// </summary>
-    internal static (int Count, bool ForceExhaust, bool Upgrade)? AutoPlaysOf(CardModel card)
-    {
-        var program = Procs.Programs.CardPrograms.Of(card.GetType());
-        if (Procs.Programs.CardEffects.Find(program, command => command.Command is { DeclaringType: "CardPileCmd", Name: "AutoPlayFromDrawPile" }) is not [var autoPlay, ..])
-            return null;
-        var board = new Procs.Programs.ProgramBoard(card);
-        var values = autoPlay.Command.Values;
-        var count = values.Count > 2 && Procs.Programs.ProgramEvaluator.Number(values[2], board, program) is { } read ? (int)read : 1;
-        var exhausts = values.Count > 4 && values[4] is Procs.Programs.ConstantValue { Value: not 0 };
-        var upgrades = autoPlay.Command.Inner.OfType<Procs.Programs.CommandStep>().Any(inner => inner.Command is { DeclaringType: "CardCmd", Name: "Upgrade" }
-                                                                                              && Procs.Programs.ProgramEvaluator.Holds(inner.Condition ?? Procs.Programs.ProgramCondition.Always, board, program) != false);
-        return (Math.Max(0, count), exhausts, upgrades);
-    }
 
 
     /// <summary>How many cards of each profile in your draw or discard pile pass the filter.</summary>

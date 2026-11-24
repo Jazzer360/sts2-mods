@@ -9,7 +9,8 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// Strength a card takes from enemies or gives them, read from its program (decision #182: SimAdapter.EnemyStrengthOf). Issue #371: a
+/// Strength a card takes from enemies or gives them, read from its program (decisions #182, #193: each PowerCmd.Apply of Strength or a
+/// temporary Strength power to an enemy is a Strength action of the play, SimAdapter.PowersFrom). Issue #371: a
 /// card that takes enemies' Strength this turn (Piercing Wail: PiercingWailPower, a TemporaryStrengthPower) applies one debuff, so one
 /// Artifact charge takes all of it. Its simulated play has exactly one Strength debuff per card, never the temporary power as well
 /// (Artifact took that one and the Strength still landed).
@@ -17,8 +18,8 @@ namespace SpireQoL.Catalog.Tests;
 [Collection(GameFightCollection.Name)]
 public class StrengthLossTests
 {
-    /// <summary>Each card that changes enemies' Strength, in a fight.</summary>
-    private static IEnumerable<(string Name, CardModel Card, GameFight Fight)> StrengthCards()
+    /// <summary>Each card whose play changes enemies' Strength, in a fight, with the Strength actions of its play (on enemies).</summary>
+    private static IEnumerable<(string Name, CardModel Card, GameFight Fight, List<ApplyPowerAction> Changes)> StrengthCards()
     {
         GameModels.EnsureLoaded();
         foreach (var canon in ModelDb.AllCards)
@@ -26,15 +27,22 @@ public class StrengthLossTests
             var gameFight = new GameFight();
             var card = gameFight.Combat.CreateCard(canon, gameFight.Me);
             PileType.Hand.GetPile(gameFight.Me).AddInternal(card);
-            if (SimAdapter.EnemyStrengthOf(card).Count > 0) yield return (canon.GetType().Name, card, gameFight);
+            var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
+            var play = SimAdapter.Play(card, facts, gameFight.Me, gameFight.Combat, new Dictionary<Creature, int>(), targetId: -1);
+            var changes = Flattened(play.Body).OfType<ApplyPowerAction>()
+                .Where(apply => apply.Power == PowerId.Strength && apply.To is ApplyPowerAction.Where.Target or ApplyPowerAction.Where.AllEnemies).ToList();
+            if (changes.Count > 0) yield return (canon.GetType().Name, card, gameFight, changes);
         }
     }
+
+    private static IEnumerable<SimAction> Flattened(IEnumerable<SimAction> actions) =>
+        actions.SelectMany(action => action is WhenAction guarded ? Flattened(guarded.Then).Prepend(action) : new[] { action });
 
     [Fact]
     public void EachStrengthCardAppliesOneDebuff()
     {
         var wrong = new List<string>();
-        foreach (var (name, card, gameFight) in StrengthCards())
+        foreach (var (name, card, gameFight, _) in StrengthCards())
         {
             var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
             var play = SimAdapter.Play(card, facts, gameFight.Me, gameFight.Combat, new Dictionary<Creature, int>(), targetId: -1);
@@ -55,13 +63,13 @@ public class StrengthLossTests
             ["CrushUnder"] = ("StrengthLoss", true, -1), ["Mangle"] = ("StrengthLoss", false, -1), ["DyingStar"] = ("StrengthLoss", true, -1),
             ["SharedFate"] = ("EnemyStrengthLoss", false, -1), ["Resonance"] = ("", true, -1), ["FightMe"] = ("EnemyStrength", false, 1),
         };
-        var read = StrengthCards().ToDictionary(entry => entry.Name, entry => (Card: entry.Card, Changes: SimAdapter.EnemyStrengthOf(entry.Card)));
+        var read = StrengthCards().ToDictionary(entry => entry.Name, entry => (Card: entry.Card, entry.Changes));
         Assert.Equal(table.Keys.Where(name => ModelDb.AllCards.Any(card => card.GetType().Name == name)).Order(), read.Keys.Order());
         foreach (var (name, (variable, all, sign)) in table)
         {
             if (!read.TryGetValue(name, out var entry)) continue;
-            var (_, amount, isAll) = Assert.Single(entry.Changes);
-            Assert.Equal((sign * (variable == "" ? 1 : Sts2State.Var(entry.Card, variable)), all), (amount, isAll));
+            var change = Assert.Single(entry.Changes);
+            Assert.Equal((sign * (variable == "" ? 1 : Sts2State.Var(entry.Card, variable)), all), (change.Amount, change.To == ApplyPowerAction.Where.AllEnemies));
         }
     }
 }

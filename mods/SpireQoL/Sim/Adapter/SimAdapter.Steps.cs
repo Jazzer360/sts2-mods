@@ -922,21 +922,18 @@ public static partial class SimAdapter
         var program = play.Program;
         var board = play.Board;
         var result = new Dictionary<CommandStep, List<SimAction>>(ReferenceEqualityComparer.Instance);
-        var serial = 0;
         int Count(ProgramValue? value) => value != null && ProgramEvaluator.Number(value, board, program) is { } read ? Math.Max(0, (int)read) : 1;
         var exhausts = CardEffects.ExhaustsOfOthers(type);
-        var discards = CardEffects.Discards(type);
-        void Take(CardEffects.CardsTaken take, CardEvent? cardEvent, CardEvent? eventIfNot = null, bool leaves = true)
+        foreach (var (take, key, cardEvent, eventIfNot, leaves) in TakesInOrder(card))
         {
-            if (ProgramEvaluator.Holds(take.PlayTest, board, program) == false) return;
-            var key = $"{type.Name}#{serial++}";
             var actions = result.TryGetValue(take.Command, out var already) ? already : result[take.Command] = new List<SimAction>();
+            if (eventIfNot != null && CardEffects.Discards(type).FirstOrDefault(discard => ReferenceEquals(discard.Pick, take.Pick)) is { } shared) play.Consumed.Add(shared.Command);
             switch (take.Way)
             {
                 case CardEffects.TakeWay.Picked when take.PickPile is PileType.Draw:
                     if (cardEvent == CardEvent.Exhausted)
                         actions.Add(new TakeFromHandAction(HandTakeWay.Pick) { Event = cardEvent, FromDrawPile = true, Most = Count(take.PerPick), Matching = PlayFacts.ExhaustOthers(card, new List<CardModel>(), DrawPileOfCard(card)) });
-                    return;
+                    break;
                 case CardEffects.TakeWay.Picked when take.PickPile is null or PileType.Hand:
                 {
                     var filtered = !take.ItemTest.IsAlways || eventIfNot != null;
@@ -945,51 +942,58 @@ public static partial class SimAdapter
                         Event = cardEvent, EventIfNot = eventIfNot, Leaves = leaves, Most = Count(take.PerPick),
                         Filter = filtered ? key : null, Matching = filtered ? PlayFacts.MatchingAtStart(card, take, everyPile: false) : 0,
                     });
-                    return;
+                    break;
                 }
                 case CardEffects.TakeWay.Random or CardEffects.TakeWay.Each:
                 {
                     var way = take.Way == CardEffects.TakeWay.Random ? HandTakeWay.Random : take.Single ? HandTakeWay.Pick : HandTakeWay.Each;
                     var most = take.Way == CardEffects.TakeWay.Random ? Count(take.RollCount) : 1;
                     if (CardEffects.IsYourWholeHand(take.Items) && take.ItemTest.IsAlways)
-                    {
                         actions.Add(new TakeFromHandAction(way) { Event = cardEvent, Leaves = leaves, Most = most, EachCard = EachCardOf(take, play) });
-                        return;
-                    }
-                    if (PlayFacts.TakesFromEveryPile(card, take))
+                    else if (PlayFacts.TakesFromEveryPile(card, take))
                     {
                         // Every pile's (Flak Cannon): its hand's share leaves first, then each card of every pile sets off its event.
                         actions.Add(new TakeFromHandAction(way) { Leaves = leaves, Most = most, Filter = key, Matching = PlayFacts.MatchingAtStart(card, take, everyPile: false) });
                         actions.Add(new TakeFromHandAction(way) { Event = cardEvent, Leaves = false, Most = most, Filter = "all:" + key, Matching = PlayFacts.MatchingAtStart(card, take, everyPile: true), EachCard = EachCardOf(take, play) });
-                        return;
                     }
-                    actions.Add(new TakeFromHandAction(way)
-                    {
-                        Event = cardEvent, Leaves = leaves, Most = most, Filter = key, Matching = PlayFacts.MatchingAtStart(card, take, everyPile: false), EachCard = EachCardOf(take, play),
-                    });
-                    return;
+                    else
+                        actions.Add(new TakeFromHandAction(way)
+                        {
+                            Event = cardEvent, Leaves = leaves, Most = most, Filter = key, Matching = PlayFacts.MatchingAtStart(card, take, everyPile: false), EachCard = EachCardOf(take, play),
+                        });
+                    break;
                 }
             }
         }
-        foreach (var exhaust in exhausts)
-        {
-            var shared = discards.FirstOrDefault(discard => discard.Pick != null && ReferenceEquals(discard.Pick, exhaust.Pick));
-            if (shared != null) play.Consumed.Add(shared.Command);
-            Take(exhaust, CardEvent.Exhausted, shared != null ? CardEvent.Discarded : null);
-        }
-        foreach (var discard in discards)
-            if (!exhausts.Any(exhaust => exhaust.Pick != null && ReferenceEquals(exhaust.Pick, discard.Pick)))
-                Take(discard, CardEvent.Discarded);
-        // Transformed in your hand: a created card each (CardCmd.Transform), the card staying in place; none certain when you choose how many.
-        foreach (var transform in CardEffects.Transforms(type))
-            if (!transform.ChoosesHowMany && transform.PickPile is null or PileType.Hand)
-                Take(transform, CardEvent.Generated, leaves: false);
         // What acts when exhausted among the cards the play's exhausts take from your hand (Drum of Battle), before the first.
         if (exhausts.Select(exhaust => result.GetValueOrDefault(exhaust.Command)).FirstOrDefault(actions => actions is { Count: > 0 }) is { } firstActions && PlayFacts.ExhaustPickOf(card) is { FromDrawPile: false } exhaustPick)
             firstActions.Insert(0, exhaustPick);
         return result;
     }
 
+    /// <summary>
+    /// The play's takes from your hand in their filters' order (each named "Card#n": TakesOf, TakeFiltersOf), each whose own test of the
+    /// play holds on the board: the exhausts of other cards (a pick shared with a discard by a test on the card sends the others to the
+    /// discard: The Hermit), the discards, the transforms in your hand (made in place; none when you choose how many).
+    /// </summary>
+    private static List<(CardEffects.CardsTaken Take, string Key, CardEvent? Event, CardEvent? EventIfNot, bool Leaves)> TakesInOrder(CardModel card)
+    {
+        var type = card.GetType();
+        var program = CardPrograms.Of(type);
+        var board = new ProgramBoard(card);
+        var exhausts = CardEffects.ExhaustsOfOthers(type);
+        var discards = CardEffects.Discards(type);
+        var ordered = new List<(CardEffects.CardsTaken, CardEvent?, CardEvent?, bool)>();
+        foreach (var exhaust in exhausts)
+            ordered.Add((exhaust, CardEvent.Exhausted, discards.Any(discard => discard.Pick != null && ReferenceEquals(discard.Pick, exhaust.Pick)) ? CardEvent.Discarded : null, true));
+        foreach (var discard in discards)
+            if (!exhausts.Any(exhaust => exhaust.Pick != null && ReferenceEquals(exhaust.Pick, discard.Pick))) ordered.Add((discard, CardEvent.Discarded, null, true));
+        foreach (var transform in CardEffects.Transforms(type))
+            if (!transform.ChoosesHowMany && transform.PickPile is null or PileType.Hand) ordered.Add((transform, CardEvent.Generated, null, false));
+        var serial = 0;
+        return ordered.Where(entry => ProgramEvaluator.Holds(entry.Item1.PlayTest, board, program) != false)
+            .Select(entry => (entry.Item1, $"{type.Name}#{serial++}", entry.Item2, entry.Item3, entry.Item4)).ToList();
+    }
     /// <summary>
     /// What a take's loop does after each card besides taking it (Second Wind: block for each card exhausted): its other commands' actions,
     /// once each, taken out of the play's own steps.
@@ -1078,14 +1082,28 @@ public static partial class SimAdapter
     /// </summary>
     private static List<SimAction> AutoPlayFrom(CardEffects.Found found, StepPlay play)
     {
-        var command = found.Command;
-        var count = Number(play, command.Values.Count > 2 ? command.Values[2] : null, fallback: 1);
+        var (count, exhausts, upgrades) = AutoPlayOf(found.Command, play.Card);
+        var countsTaken = found.Command.Values.Count > 2 && CardEffects.ExhaustsOfOthers(play.Type).Any(take => CardEffects.CountsTaken(found.Command.Values[2], take));
+        return new List<SimAction> { new AutoPlayFromDrawAction(count) { ForceExhaust = exhausts, Upgrade = upgrades, CountFrom = countsTaken ? SimCount.CardsTaken : SimCount.Given } };
+    }
+
+    /// <summary>An auto-play step's count on the board, its exhaust argument and whether its callback upgrades the cards (on its condition).</summary>
+    private static (int Count, bool ForceExhaust, bool Upgrade) AutoPlayOf(CommandStep command, CardModel card)
+    {
+        var program = CardPrograms.Of(card.GetType());
+        var board = new ProgramBoard(card);
+        var count = command.Values.Count > 2 && ProgramEvaluator.Number(command.Values[2], board, program) is { } read ? (int)read : 1;
         var exhausts = ValueAt(command, 4) is ConstantValue { Value: not 0 };
         var upgrades = command.Inner.OfType<CommandStep>().Any(inner => inner.Command is { DeclaringType: "CardCmd", Name: "Upgrade" }
-                                                                         && ProgramEvaluator.Holds(inner.Condition ?? ProgramCondition.Always, play.Board, play.Program) != false);
-        var countsTaken = command.Values.Count > 2 && CardEffects.ExhaustsOfOthers(play.Type).Any(take => CardEffects.CountsTaken(command.Values[2], take));
-        return new List<SimAction> { new AutoPlayFromDrawAction(Math.Max(0, count)) { ForceExhaust = exhausts, Upgrade = upgrades, CountFrom = countsTaken ? SimCount.CardsTaken : SimCount.Given } };
+                                                                         && ProgramEvaluator.Holds(inner.Condition ?? ProgramCondition.Always, board, program) != false);
+        return (Math.Max(0, count), exhausts, upgrades);
     }
+
+    /// <summary>The first auto-play of the card's play (AutoPlayOf); null for a card that auto-plays none.</summary>
+    internal static (int Count, bool ForceExhaust, bool Upgrade)? AutoPlaysOf(CardModel card) =>
+        CardPrograms.Of(card.GetType()).Commands.FirstOrDefault(command => command.Command is { DeclaringType: "CardPileCmd", Name: "AutoPlayFromDrawPile" }) is { } autoPlay
+            ? AutoPlayOf(autoPlay, card) : null;
+
 
     /// <summary>
     /// Cards made for each player a loop goes over (GetTeammatesOf: you and each living teammate; Blade Symphony's Shivs, Glimpse Beyond's
