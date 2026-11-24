@@ -56,7 +56,7 @@ public sealed partial class ProcAudit
             if (entries.OfType<DamageReceivedEntry>().Any(damage => damage.Result.WasTargetKilled && damage.Result.Receiver == creature)) continue;
             if (own.Contains(type) || acted.Contains(type) || tabbed.Contains(type) || SimComparedPowers.Contains(type)) continue;
             if (creature == me.Creature && SpentByAnyPlay.Contains(type)) continue;
-            if (creature == me.Creature && SpentByAttack.Contains(type) && window.Card.Type == CardType.Attack) continue;
+            if (creature == me.Creature && SpentByAttack(type) && window.Card.Type == CardType.Attack) continue;
             // A double-play source this play used (Burst, Duplication: ModifyCardPlayCount, then a stack goes) when the card
             // played more than once: its tag is Keyword Tags' (the game's own play-count query), not a proc rule.
             if (creature == me.Creature && PowerTypeNamed(type) is { } countSource

@@ -13,6 +13,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Play Preview: while you hold a card where letting go would play it (aimed at its target, for one that needs one; above the hand's play line, or once selected with a controller or the keyboard, for one that doesn't), Incoming Damage, Teammate Incoming Damage and the Death Skull show the turn as it would go after you play it, tinted lavender, and an enemy intent the play changes gets a line through its damage and the new number above it in the same font (Weak lowering it, Strength raising it; the line alone for an enemy the play kills in every outcome). Every outcome of the play was already worked out for each card and target, so it shows at once; the card tabs don't change. A new check holds it to the board the play leaves.
 
 #### Changed
+- The Play audit tells a damage cap's flash and a power an attack spends from the game's code for them, where it kept their names (Buffer's flash as it stops HP is a cap's too now).
 - Vigor, Gigantification, Bone Flute and Calcify are worked out from their own code (the attack Vigor and Gigantification keep and spend, Bone Flute's block for each attack your Osty makes, Calcify on Osty's attacks). What's shown is unchanged but for the fix below.
 - Aim is worked out from its own code (the arrow attack it keeps and spends, and Heavy Shot's multiplier from Heavy Shot's own code). What's shown is unchanged.
 - Lethality is worked out from its own code (the first Attack you play each turn). What's shown is unchanged.

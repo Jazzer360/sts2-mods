@@ -40,7 +40,7 @@ public sealed partial class ProcAudit
         // ---- sources that fired with no tab (missing rules)
         foreach (var otherModel in flashed.Distinct())
         {
-            if (sourceOf.ContainsKey(otherModel.GetType().Name) || Modifiers.Contains(otherModel.GetType().Name) || TeammateOnly.Contains(otherModel.GetType().Name)) continue;
+            if (sourceOf.ContainsKey(otherModel.GetType().Name) || Modifier(otherModel.GetType()) || TeammateOnly.Contains(otherModel.GetType().Name)) continue;
             // Its code flashes on a condition the reader doesn't read (an unknown flash the play reached): whether it should have can't be told.
             if (window.Prediction?.FlashUnknown.Contains(otherModel.GetType().Name) == true)
             {
@@ -288,7 +288,7 @@ public sealed partial class ProcAudit
         // A damage cap outside the game's damage math stopped some of it, seen by its flash: Hardened Shell (HardenedShellPower caps HP
         // lost per turn in ModifyHpLostBeforeOstyLate, which the damage hooks don't reach), Slippery (SlipperyPower.ModifyHpLostAfterOsty: at
         // most 1 HP a hit; Vantom).
-        static bool Caps(AbstractModel otherModel) => otherModel is PowerModel { Owner.IsEnemy: true } && (Modifiers.Contains(otherModel.GetType().Name) || otherModel.GetType().Name == nameof(SlipperyPower));
+        static bool Caps(AbstractModel otherModel) => otherModel is PowerModel { Owner.IsEnemy: true } && CodeIndex.Does(otherModel.GetType(), Array.Empty<string>(), CapHooks);
         var capped = flashed.Any(Caps);
         if (orbsUnread && (toEnemies < eMin || toEnemies > eMax)) modelLines.Skip("damage to enemies", "its orbs' evokes are its simulation's, and it has no finished outcome at the target it was played at", $"predicted {Range(eMin, eMax)}, actual {toEnemies}");
         else if (toEnemies < eMin && capped) modelLines.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}, capped by {string.Join(", ", flashed.Where(Caps).Select(otherModel => otherModel.GetType().Name).Distinct())}");

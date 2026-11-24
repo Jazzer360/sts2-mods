@@ -125,10 +125,15 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
     private enum Effect { Draw, Exhaust, Discard, Generate, Orb, Summon, Power }
 
     /// <summary>
-    /// Powers that flash when they change damage (caps), not because a play set them off. The
-    /// card's damage already reflects them, so they never get a tab.
+    /// Powers that flash when they change damage (caps), not because a play set them off: their code caps a damage or the HP it takes
+    /// (ModifyDamageCap, an HP-loss pass) and flashes as it does (AfterModifyingDamageAmount, AfterModifyingHpLost*): Hard to Kill, Intangible,
+    /// Hardened Shell. The card's damage already reflects them, so they never get a tab.
     /// </summary>
-    private static readonly HashSet<string> Modifiers = new() { nameof(HardToKillPower), nameof(HardenedShellPower), nameof(IntangiblePower) };
+    internal static bool Modifier(Type type) => typeof(PowerModel).IsAssignableFrom(type) && CodeIndex.Does(type, Array.Empty<string>(), CapHooks)
+        && CodeIndex.Does(type, Array.Empty<string>(), new[] { "AfterModifyingDamageAmount", "AfterModifyingHpLostBeforeOsty", "AfterModifyingHpLostAfterOsty" });
+
+    /// <summary>The hooks that cap a damage or the HP it takes (Hook.ModifyDamage's cap, the HP-loss passes).</summary>
+    private static readonly string[] CapHooks = { "ModifyDamageCap", "ModifyHpLostBeforeOsty", "ModifyHpLostBeforeOstyLate", "ModifyHpLostAfterOsty", "ModifyHpLostAfterOstyLate" };
 
     /// <summary>
     /// Your powers that react to which card is drawn (draw more, auto-play it): the draw order is
@@ -202,10 +207,10 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
     private static readonly HashSet<string> SpentByAnyPlay = new(SpireQoL.Procs.FreeCards.Powers);
 
     /// <summary>
-    /// Your powers your next powered attack uses up (BeforeAttack marks the command, AfterAttack spends it): Vigor,
-    /// Gigantification.
+    /// Your powers an attack uses up (BeforeAttack marks the command, AfterAttack spends it: Vigor, Gigantification), read from their code (their
+    /// AfterAttack takes their own stacks: HookReader.SpentByAnAttack). One a card's play count spends (One-Two Punch) is the play-count check's.
     /// </summary>
-    private static readonly HashSet<string> SpentByAttack = new() { nameof(VigorPower), nameof(GigantificationPower), nameof(OneTwoPunchPower) };
+    internal static bool SpentByAttack(string type) => SimModels.Get(type) is ReadModel { Spec: var spec } && HookReader.SpentByAnAttack(spec);
 
     /// <summary>Your stats a source that changes powers can take away (Tender: 1 Strength and Dexterity per card).</summary>
     private static readonly HashSet<string> Stats = new() { nameof(StrengthPower), nameof(DexterityPower), nameof(FocusPower) };

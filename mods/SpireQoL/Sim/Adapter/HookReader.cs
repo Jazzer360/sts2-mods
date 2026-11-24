@@ -484,6 +484,14 @@ public static class HookReader
         program.Hook == HookName.AfterAttack && new ModelSpec("", ModelKind.Power, new[] { program }).Steps().Any(step => step is DecrementPowerStep or RemovePowerStep);
 
     /// <summary>
+    /// A power an attack spends: its AfterAttack takes its own stacks (Decrement, Remove: Gigantification's) or changes its own amount
+    /// (PowerCmd.ModifyAmount(this, ...): Vigor's, by what it started the attack with).
+    /// </summary>
+    internal static bool SpentByAnAttack(ModelSpec spec) =>
+        spec.Kind == ModelKind.Power && spec.Of(HookName.AfterAttack) is { } afterAttack
+        && (SpentByAnAttack(afterAttack) || new ModelSpec(spec.Name, spec.Kind, new[] { afterAttack }).Steps().Any(step => step is ApplyPowerStep { Target: HookTarget.Owner } own && own.Power == spec.Name));
+
+    /// <summary>
     /// A play anyone makes sets off something that helps the model's owner: a play hook's block for its owner, or a buff on it, on a condition
     /// that doesn't need the play to be its owner's (Enrage's Strength on every Skill, Sneaky's block on another's Attack). On an enemy, that's
     /// your play helping it: a crossed tab (CLAUDE.md "Plain vs crossed"); on a teammate, your play helping your side: plain (ReadModel.HarmfulFor).
