@@ -23,6 +23,41 @@ public class EndOfTurnModelTests
     }
 
     [Fact]
+    public void DarkEmbracesEtherealDrawsComeAfterTheHandActs()
+    {
+        // DarkEmbracePower.AfterCardExhausted: an Ethereal card exhausted as the turn ends (causedByEthereal) only counts (its etherealCount); its
+        // AfterSideTurnEnd draws Amount × the count, after the cards in hand acted (DoTurnEnd): a Burn it draws doesn't burn you this turn.
+        var state = new SimState { Enemies = { Attacker(id: 0, hp: 50) } };
+        state.You.Hp = 50;
+        state.You.MaxHp = 80;
+        state.You.HandCount = 1;
+        state.You.Fading = 1;
+        state.You.Powers = state.You.Powers.With(PowerId.DarkEmbrace, amount: 1);
+        state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("Burn") { TurnEnd = new TurnEndCard("Burn", "Burn", Amount: 2) }, Count: 5) } };
+        var outcome = SimEngine.Run(state);
+        Assert.All(outcome.Branches, branch => Assert.Equal(50, branch.You.Hp));
+        Assert.All(outcome.Branches, branch => Assert.Equal(1, branch.You.Drawn));
+    }
+
+    [Fact]
+    public void JossPapersEtherealCountJoinsAsTheTurnEnds()
+    {
+        // JossPaper.AfterCardExhausted: an Ethereal exhaust at the turn's end counts toward EtherealCount; AfterSideTurnEnd adds it to CardsExhausted
+        // and draws if the threshold is met, after the hand acted: at 4 of 5, the Ethereal one draws a card, a Burn that doesn't burn you this turn.
+        var state = new SimState { Enemies = { Attacker(id: 0, hp: 50) } };
+        state.You.Hp = 50;
+        state.You.MaxHp = 80;
+        state.You.HandCount = 1;
+        state.You.Fading = 1;
+        state.You.Relics = state.You.Relics.With(RelicId.JossPaper, amount: 4, data: 0);
+        if (SimModels.Get(RelicId.JossPaper.Name) is ReadModel joss) state.You.Fields = state.You.Fields.With(joss.FieldKey("CardsExhausted"), 4);
+        state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("Burn") { TurnEnd = new TurnEndCard("Burn", "Burn", Amount: 2) }, Count: 5) } };
+        var outcome = SimEngine.Run(state);
+        Assert.All(outcome.Branches, branch => Assert.Equal(50, branch.You.Hp));
+        Assert.All(outcome.Branches, branch => Assert.Equal(1, branch.You.Drawn));
+    }
+
+    [Fact]
     public void ATeammateBeforeYouActsFirst()
     {
         // Your teammate comes before you in player order: their Screaming Flagon (empty hand) kills E0 before your Obsidian

@@ -46,8 +46,6 @@ internal static class ModelAmountCheck
         // The same arithmetic, over something a hook's parameter or a count holds in the game and the simulation holds elsewhere.
         ["NecroMasteryPower Damage: game mul(-?parameter delta, Amount); model mul(?parameter lost, Amount)"] =
             "its amount × the HP Osty lost: AfterCurrentHpChanged's -delta in the game, AfterOstyHpLost's lost in the model",
-        ["DarkEmbracePower Draw: game Amount | mul(Amount, ?field etherealCount); model Amount"] =
-            "its amount per card exhausted; the Ethereal ones exhausted as the turn ends draw together at AfterSideTurnEnd (amount × etherealCount), the same number",
     };
 
     /// <summary>The check on the loaded game.</summary>

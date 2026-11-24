@@ -802,6 +802,8 @@ public sealed class SimState
 
     /// <summary>A card event is being dispatched (draw, exhaust, discard...): what fires then is an indirect proc (the Indirect procs setting).</summary>
     internal bool IndirectNow;
+    /// <summary>The card event being told is an Ethereal card its owner's turn end exhausts (AfterCardExhausted's causedByEthereal: HookFact.CausedByEthereal).</summary>
+    internal bool EtherealNow;
 
     /// <summary>The card play being resolved (its hooks and actions read it), and the attack in progress (Vigor, Aim...).</summary>
     internal SimCardPlay? CurrentPlay;

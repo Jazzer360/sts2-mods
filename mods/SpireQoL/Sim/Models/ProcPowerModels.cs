@@ -407,14 +407,6 @@ public sealed class ConquerorPower : ProcModel
 
 // ---- card events: exhausts, draws, discards, stars, energy, shuffles, created cards
 
-/// <summary>DarkEmbracePower.AfterCardExhausted: for each card its owner exhausts, draws its amount (CardPileCmd.Draw(Amount)).</summary>
-public sealed class DarkEmbracePower : ProcModel
-{
-    public override TabKind? Tab => TabKind.Draw;
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.Exhausted && player == owner ? Cause(Fire(state, owner), CardEvent.Drawn, count: Amount(state, owner), owner) : One(state);
-}
-
 /// <summary>StratagemPower.AfterShuffle: a pick from the draw pile on each shuffle.</summary>
 public sealed class StratagemPower : ProcModel
 {

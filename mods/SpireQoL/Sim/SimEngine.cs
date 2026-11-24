@@ -1203,7 +1203,7 @@ public static partial class SimEngine
         {
             OrbPassives(branches, player);
             ExplosionCheck(branches); // kills by orb passives
-            branches.Each(branch => branch.Player(player) is { } simPlayer && Exhausting(branch, simPlayer) is > 0 and var exhausting && branch.TakesPart(player) ? ProcCardEvent(branch, CardEvent.Exhausted, exhausting, player, indirect: false) : new[] { branch });
+            branches.Each(branch => branch.Player(player) is { } simPlayer && Exhausting(branch, simPlayer) is > 0 and var exhausting && branch.TakesPart(player) ? ProcCardEvent(branch, CardEvent.Exhausted, exhausting, player, indirect: false, causedByEthereal: true) : new[] { branch });
             branches.Do(branch => CardsActInHand(branch, player));
             ExplosionCheck(branches);
         }

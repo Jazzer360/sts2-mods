@@ -1899,6 +1899,129 @@
     "HelpsOwner": false
   },
   {
+    "Name": "DarkEmbracePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardExhausted",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.etherealCount",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "Data.etherealCount"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardExhausted\u003Ed__8.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardExhausted\u003Ed__8.MoveNext:0037",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CausedByEthereal"
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DrawStep",
+            "Count": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardExhausted\u003Ed__8.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardExhausted\u003Ed__8.MoveNext:0037",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CausedByEthereal"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DrawStep",
+            "Count": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              },
+              "Right": {
+                "$kind": "HookField",
+                "Field": "Data.etherealCount"
+              }
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__9.MoveNext:0025",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.etherealCount",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__9.MoveNext:0025",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Draw",
+    "HelpsOwner": false
+  },
+  {
     "Name": "DaughterOfTheWind",
     "Kind": "Relic",
     "Hooks": [

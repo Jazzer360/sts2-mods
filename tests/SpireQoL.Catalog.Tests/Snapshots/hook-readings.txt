@@ -35,7 +35,7 @@ power CrabRagePower: AfterDeath: read
 power CurlUpPower: AfterCardPlayed: gap: sets LouseProgenitor.Curled where the reader reads no store | AfterDamageReceived: gap: the value cardSource | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power DampenPower: AfterApplied: gap: changes a collection (IEnumerator`1.get_Current) where the reader reads no step | AfterDeath: gap: changes its own data (casters.Remove) by creature | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power DanseMacabrePower: BeforeCardPlayed: read
-power DarkEmbracePower: AfterCardExhausted: gap: tests causedByEthereal | AfterSideTurnEnd: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
+power DarkEmbracePower: AfterCardExhausted: read | AfterSideTurnEnd: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power DebilitatePower: AfterSideTurnEnd: read
 power DemisePower: AfterSideTurnEnd: read
 power DevourLifePower: AfterCardPlayed: gap: OstyCmd.Summon isn't translated
@@ -229,7 +229,7 @@ relic InfusedCore: AfterSideTurnStart: gap: a loop | ModifyOrbValue: gap: the si
 relic IntimidatingHelmet: BeforeCardPlayed: read
 relic IronClub: AfterCardPlayed: read
 relic IvoryTile: AfterCardPlayed: read
-relic JossPaper: AfterCardExhausted: gap: tests causedByEthereal | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterSideTurnEnd: read
+relic JossPaper: AfterCardExhausted: gap: a local keeps this.CardsExhausted from before it's stored, and is used after | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterSideTurnEnd: gap: a local keeps this.CardsExhausted from before it's stored, and is used after
 relic Kunai: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers
 relic Kusarigama: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterSideTurnEnd: read | BeforeCombatStart: not run: before the fight: the state is read after it
 relic LavaLamp: AfterDamageReceived: gap: tests this.Owner.RunState.CurrentRoom is CombatRoom | AfterRoomEntered: not run: entering a room: outside the fight's turns | TryModifyCardRewardOptionsLate: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)

@@ -230,18 +230,36 @@ public sealed class UnceasingTop : RelicProc
 
 // ---- card events
 
-/// <summary>JossPaper.AfterCardExhausted: a draw once its ExhaustAmount cards are exhausted (Amount: CardsExhausted).</summary>
+/// <summary>
+/// JossPaper.AfterCardExhausted: its owner's exhausts count toward its draws (Amount: CardsExhausted), a draw for each ExhaustAmount; an Ethereal
+/// card its owner's turn end exhausts (causedByEthereal: SimState.EtherealNow) counts in its EtherealCount (Data) instead, added as the turn ends
+/// (AfterSideTurnEnd), then the draws if the count is met: after the cards in hand acted. Hand-written: its code keeps CardsExhausted in a local
+/// before the store that takes the draws off, which the reader doesn't keep (hook-gaps.txt).
+/// </summary>
 public sealed class JossPaper : RelicProc
 {
     public override TabKind? Tab => TabKind.Draw;
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
     {
         if (cardEvent != CardEvent.Exhausted || player != owner) return One(state);
-        var needed = Var(state, owner, "ExhaustAmount", fallback: 5);
-        var count = Amount(state, owner) + 1;
-        if (count < needed) { Set(state, owner, count, Data(state, owner)); return One(state); }
-        Set(state, owner, count - needed, Data(state, owner));
-        return Cause(Fire(state, owner), CardEvent.Drawn, count: 1, owner);
+        if (state.EtherealNow)
+        {
+            Set(state, owner, Amount(state, owner), Data(state, owner) + 1);
+            return One(state);
+        }
+        return DrawIfMet(state, owner, Amount(state, owner) + 1, Data(state, owner));
+    }
+
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) =>
+        state.TakesPart(owner) && Data(state, owner) > 0 ? DrawIfMet(state, owner, Amount(state, owner) + Data(state, owner), ethereal: 0) : One(state);
+
+    /// <summary>DrawIfThresholdMet: at ExhaustAmount or more, the count goes to its remainder and a card is drawn for each ExhaustAmount.</summary>
+    private IEnumerable<SimState> DrawIfMet(SimState state, int owner, int count, int ethereal)
+    {
+        var needed = Math.Max(1, Var(state, owner, "ExhaustAmount", fallback: 5));
+        if (count < needed) { Set(state, owner, count, ethereal); return One(state); }
+        Set(state, owner, count % needed, ethereal);
+        return Cause(Fire(state, owner), CardEvent.Drawn, count: count / needed, owner);
     }
 }
 

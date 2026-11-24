@@ -741,6 +741,8 @@ public sealed class ReadModel : SimModel
     /// <summary>Card events it causes (draws, energy), each through every listener; a draw or energy tab counts what they gave (decision #132).</summary>
     private IEnumerable<SimState> Cause(HookArgs args, CardEvent cardEvent, int count, bool fires)
     {
+        // None to draw or gain (Dark Embrace's amount × an Ethereal count of 0 as the turn ends): CardPileCmd.Draw and PlayerCmd.GainEnergy do nothing.
+        if (count <= 0) return One(args.State);
         if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
         // A death's: queued until the hit or action that killed is over (SimEngine.Raise), as the deaths are told inside it; a draw or energy tab
         // counts them as they come.
@@ -873,6 +875,7 @@ public sealed class ReadModel : SimModel
             case HookFact.CardEthereal: return (in HookArgs args) => (args.Hook == HookName.AfterCardDrawn ? args.State.DrawnCard?.Ethereal
                 : IsCardEventHook(args.Hook) ? args.State.EventCard?.Ethereal : args.Play?.Card.Ethereal) == true ? 1m : 0m;
             case HookFact.CardEnergy: return (in HookArgs args) => args.Play?.Card.Energy ?? 0;
+            case HookFact.CausedByEthereal: return (in HookArgs args) => args.Hook == HookName.AfterCardExhausted && args.State.EtherealNow ? 1m : 0m;
             case HookFact.CardTag:
             {
                 var tag = Enum.Parse<SimCardTag>(named!);

@@ -177,6 +177,11 @@ public enum HookFact
     SourceCardIs,
     /// <summary>What the hit dealt, its block included (result.TotalDamage: Mighty Wings' threshold, Reaper Form's Doom).</summary>
     HitTotal,
+    /// <summary>
+    /// The card exhausted is an Ethereal card its owner's turn end exhausts (AfterCardExhausted's causedByEthereal: Dark Embrace and Joss Paper count
+    /// it, to act as the turn ends), not one a play exhausts: SimState.EtherealNow.
+    /// </summary>
+    CausedByEthereal,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>

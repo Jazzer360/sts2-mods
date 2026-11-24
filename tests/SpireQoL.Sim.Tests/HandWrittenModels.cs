@@ -1300,3 +1300,13 @@ public sealed class Metronome : RelicProc
         return count + 1 == needed ? RelicDamageAll(state, owner) : One(state);
     }
 }
+
+// ---- the card's facts: an Ethereal exhaust at the turn's end (Sim/Models/ProcPowerModels.cs, deleted 2026-11-24)
+
+/// <summary>DarkEmbracePower.AfterCardExhausted: for each card its owner exhausts, draws its amount (CardPileCmd.Draw(Amount)).</summary>
+public sealed class DarkEmbracePower : ProcModel
+{
+    public override TabKind? Tab => TabKind.Draw;
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
+        cardEvent == CardEvent.Exhausted && player == owner ? Cause(Fire(state, owner), CardEvent.Drawn, count: Amount(state, owner), owner) : One(state);
+}

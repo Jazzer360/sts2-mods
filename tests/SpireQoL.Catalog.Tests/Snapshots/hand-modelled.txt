@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 18 engine rules naming 133 game methods; 5 adapter rules; 110 hand-written models.
+# 18 engine rules naming 133 game methods; 5 adapter rules; 109 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -119,8 +119,6 @@ CoveringFirePower: CoveringFirePower.AfterArrowShot (beta only)
   model: AfterArrowShot
 CurlUpPower: CurlUpPower.AfterCardPlayed, CurlUpPower.AfterDamageReceived, CurlUpPower.InitInternalData
   model: AfterCardPlayed, AfterDamageReceived
-DarkEmbracePower: DarkEmbracePower.AfterCardExhausted, DarkEmbracePower.AfterSideTurnEnd, DarkEmbracePower.InitInternalData
-  model: AfterCardEvent
 DemonTongue: DemonTongue.AfterDamageReceived, DemonTongue.BeforeSideTurnStart
   model: AfterDamageReceived, OutcomeTab
 DevourLifePower: DevourLifePower.AfterCardPlayed
@@ -164,7 +162,7 @@ IntangiblePower: IntangiblePower.AfterModifyingDamageAmount, IntangiblePower.Aft
 InterceptPower: InterceptPower.AfterRemoved, InterceptPower.AfterSideTurnEnd, InterceptPower.InitInternalData, InterceptPower.ModifyDamageMultiplicative
   model: ModifyDamageMultiplicative
 JossPaper: JossPaper.AfterCardExhausted, JossPaper.AfterCombatEnd, JossPaper.AfterSideTurnEnd
-  model: AfterCardEvent
+  model: AfterCardEvent, AfterSideTurnEnd
 JugglingPower: JugglingPower.AfterApplied, JugglingPower.AfterCardPlayed, JugglingPower.AfterSideTurnEnd, JugglingPower.BeforeCardPlayed, JugglingPower.InitInternalData
   model: AfterCardPlayed, BeforeCardPlayed
 LethalityPower: LethalityPower.ModifyDamageMultiplicative

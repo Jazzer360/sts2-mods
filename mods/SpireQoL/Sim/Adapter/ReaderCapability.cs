@@ -116,6 +116,8 @@ public enum ReaderCapability
     Arithmetic,
     /// <summary>A value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place).</summary>
     ValueNotFollowed,
+    /// <summary>A local kept before a store to the state it read, used after the store (the value as it was then).</summary>
+    LocalKeptBeforeAStore,
     /// <summary>The code couldn't be read at all (an exception in the reader).</summary>
     NotRead,
 }
@@ -176,6 +178,7 @@ public static class ReaderCapabilities
         ReaderCapability.TurnNumber => "the turn number",
         ReaderCapability.Arithmetic => "queries: arithmetic (Math.Pow, a negation)",
         ReaderCapability.ValueNotFollowed => "a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)",
+        ReaderCapability.LocalKeptBeforeAStore => "a local kept before a store to what it read (the value as it was then)",
         ReaderCapability.NotRead => "the code couldn't be read",
         _ => capability.ToString(),
     };

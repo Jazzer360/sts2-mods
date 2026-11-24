@@ -145,13 +145,13 @@ public static partial class SimEngine
     /// <param name="onEach">Called for each event that happens (each card drawn: a full hand or empty piles give fewer), before
     /// its listeners: a draw or energy tab counting its source's (decision #132).</param>
     /// <param name="card">The card each event is about, when known (a made card's class and type: Hook.AfterCardGeneratedForCombat's card).</param>
-    public static IEnumerable<SimState> ProcCardEvent(SimState state, CardEvent cardEvent, int count, int player, bool indirect = true, Action<SimState>? onEach = null, SimCard? card = null)
+    public static IEnumerable<SimState> ProcCardEvent(SimState state, CardEvent cardEvent, int count, int player, bool indirect = true, Action<SimState>? onEach = null, SimCard? card = null, bool causedByEthereal = false)
     {
         // Your draws come from your draw pile (decision #90): which card matters.
         if (cardEvent == CardEvent.Drawn && DrawsStopped(state, player)) return DrawPrevented(state, player);
         if (cardEvent == CardEvent.Drawn && DrawsFromPile(state, player)) return DrawCards(state, player, count, indirect, onEach);
         IEnumerable<SimState> states = new[] { state };
-        for (var i = 0; i < count; i++) states = Then(states, branch => { onEach?.Invoke(branch); return FireCardEvent(branch, cardEvent, player, indirect, card); });
+        for (var i = 0; i < count; i++) states = Then(states, branch => { onEach?.Invoke(branch); return FireCardEvent(branch, cardEvent, player, indirect, card, causedByEthereal: causedByEthereal); });
         return states;
     }
 
@@ -169,7 +169,7 @@ public static partial class SimEngine
     /// while they run; a card event inside a listener's sets its own and gives the outer one back). A draw's card is its profile
     /// (<paramref name="drawn"/>, SimState.DrawnCard: from the draw pile; null, a draw whose card isn't read), never an outer draw's.
     /// </summary>
-    internal static List<SimState> FireCardEvent(SimState state, CardEvent cardEvent, int player, bool indirect, SimCard? card = null, SimDrawCard? drawn = null)
+    internal static List<SimState> FireCardEvent(SimState state, CardEvent cardEvent, int player, bool indirect, SimCard? card = null, SimDrawCard? drawn = null, bool causedByEthereal = false)
     {
         var outerCard = state.EventCard;
         var outerDrawn = state.DrawnCard;
@@ -177,11 +177,14 @@ public static partial class SimEngine
         if (cardEvent == CardEvent.Drawn) state.DrawnCard = drawn;
         CountEvent(state, cardEvent, player);
         var was = state.IndirectNow;
+        var outerEthereal = state.EtherealNow;
         state.IndirectNow = indirect || was;
+        state.EtherealNow = causedByEthereal;
         var after = Hook(state, nameof(SimModel.AfterCardEvent), (model, owner, branch) => model.AfterCardEvent(branch, owner, cardEvent, player)).ToList();
         foreach (var branch in after)
         {
             branch.IndirectNow = was;
+            branch.EtherealNow = outerEthereal;
             branch.EventCard = outerCard;
             branch.DrawnCard = outerDrawn;
         }

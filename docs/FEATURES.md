@@ -299,7 +299,7 @@ Beside the last number (the heart line when there is one): a skull when this mig
   - Orichalcum / Fake Orichalcum (only if you have 0 block when your turn starts ending: BeforeSideTurnEndVeryEarly, before Pael's Eye exhausts your hand)
   - Cloak Clasp (block × cards in hand)
   - Ripple Basin (only if you haven't played an attack this turn)
-  - Feel No Pain × Ethereal cards still in hand: they exhaust at end of turn (after Orichalcum checks your block), each giving Feel No Pain's block (and setting off every other exhaust effect: Charon's Ashes, Forgotten Soul, Dark Embrace's draws and what they set off)
+  - Feel No Pain × Ethereal cards still in hand: they exhaust at end of turn (after Orichalcum checks your block), each giving Feel No Pain's block (and setting off every other exhaust effect: Charon's Ashes, Forgotten Soul; Dark Embrace and Joss Paper count them and draw as your turn ends, after the cards in your hand act, as the game does)
   - Each player's end-of-turn effects come in player order (a teammate before you acts first), and each source shows under the game's own name
   - Not counted: Horn Cleat and Captain's Wheel. They give block at the *start* of turn 2/3, after the enemy has attacked; Relic Counters shows their countdown.
 

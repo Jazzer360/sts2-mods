@@ -313,6 +313,12 @@ public static class HookReader
         private readonly Func<MethodBase, List<CodeOp>> _read;
         private string _hook = "";
 
+        /// <summary>The stores of the body being read (a local kept before one of them, used after it, is the value as it was then).</summary>
+        private List<StoreStep> _stores = new();
+
+        /// <summary>The place of the step being read (its offset in its method).</summary>
+        private int _at;
+
         /// <summary>
         /// Its own values a method of its own that isn't a hook stores (The Bomb's SetDamage: DynamicVars.Damage.BaseValue = damage, which its card
         /// calls as it lands), as state fields ("Var.Damage"): each instance has its own.
@@ -353,6 +359,7 @@ public static class HookReader
             try
             {
                 var program = ProgramReader.Read(_type, _read, method.Name);
+                _stores = program.All().OfType<StoreStep>().ToList();
                 if (program.Unknowns.Any() || OwnData(method, program) != null) return null;
                 var steps = program.Steps.SelectMany(Step).ToList();
                 return steps.Count == 0 ? null : steps;
@@ -380,6 +387,7 @@ public static class HookReader
                 else
                 {
                     var program = ProgramReader.Read(_type, _read, hook.Name);
+                    _stores = program.All().OfType<StoreStep>().ToList();
                     if (program.Unknowns.FirstOrDefault() is { } unknown) return Gapped(hook.Name, new GapOf(ReaderCapability.ValueNotFollowed, "gap: the reader can't follow it: " + unknown));
                     if (OwnData(hook, program) is { } data) return Gapped(hook.Name, data);
                     foreach (var step in program.Steps) _ = Step(step).ToList();
@@ -410,6 +418,7 @@ public static class HookReader
                 if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name == HookName.ModifyCardPlayCount)
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(Ways(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
                 var program = ProgramReader.Read(_type, _read, hook.Name);
+                _stores = program.All().OfType<StoreStep>().ToList();
                 if (program.Unknowns.FirstOrDefault() is { } unknown) return (null, new GapOf(ReaderCapability.ValueNotFollowed, "gap: the reader can't follow it: " + unknown), null);
                 if (OwnData(hook, program) is { } data) return (null, data, null);
                 var steps = new List<HookStep>();
@@ -512,6 +521,7 @@ public static class HookReader
 
         private IEnumerable<HookStep> Step(ProgramStep step)
         {
+            _at = step.Offset;
             switch (step)
             {
                 case CommandStep command:
@@ -864,6 +874,9 @@ public static class HookReader
                     return EnumName(_type.Assembly, "CardTag", tag.Value) is { } tagName && Enum.TryParse<SimCardTag>(tagName, out _)
                         ? new HookFactValue(HookFact.CardTag) { Of = tagName } : throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's tag {tag.Value}");
                 // A card drawn in a simulation is never the turn's hand draw.
+                // The card exhausted is an Ethereal one its owner's turn end exhausts (AfterCardExhausted's causedByEthereal).
+                case ParameterValue { Name: "causedByEthereal" } or NamedValue { Name: "causedByEthereal" } when _hook == "AfterCardExhausted":
+                    return new HookFactValue(HookFact.CausedByEthereal);
                 case NamedValue { Name: "fromHandDraw" }:
                     return new HookConstant(0m);
                 case ParameterValue { Name: "cardSource" } or NamedValue { Name: "cardSource" }:
@@ -1218,6 +1231,10 @@ public static class HookReader
                 // -x on a decimal (Monologue's -StrengthApplied).
                 case QueryValue { Type: "Decimal", Name: "op_UnaryNegation", Arguments: [var negated] }:
                     return new HookMath(HookOperation.Multiply, Value(negated), new HookConstant(-1m));
+                // A local kept before a store to its own state it read, used after that store (Joss Paper's int cardsExhausted = CardsExhausted, then
+                // CardsExhausted %= ExhaustAmount, then Draw(cardsExhausted / ExhaustAmount)): the value as it was, which the reader doesn't keep.
+                case StoredValue stored when _stores.Any(store => store.Offset > stored.Offset && store.Offset < _at && ReadsOwn(stored.Value, store.Field)):
+                    throw new Gap(ReaderCapability.LocalKeptBeforeAStore, $"gap: a local keeps {stored.Value} from before it's stored, and is used after");
                 case StoredValue stored:
                     return Value(stored.Value);
                 case CompareValue compare:
@@ -1519,6 +1536,10 @@ public static class HookReader
         private static bool IsOwnersOrbs(ProgramValue value) =>
             (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Orbs", Of: QueryValue { Name: "OrbQueue", Of: QueryValue { Name: "PlayerCombatState", Of: { } player } } }
             && IsOwner(player);
+
+        /// <summary>The value reads its model's own field or property by this name (this.CardsExhausted; its data's field, Data.name).</summary>
+        private static bool ReadsOwn(ProgramValue value, string field) => value.Parts().Any(part => part is QueryValue { Name: var name, Of: var receiver }
+            && (receiver is NamedValue { Name: "this" } && name == field || receiver != null && ProgramReader.IsOwnData(receiver) && ProgramReader.OwnDataPrefix + name == field));
 
         /// <summary>A value as kept in a local or not (a StoredValue's value).</summary>
         private static ProgramValue Unstored(ProgramValue value) => value is StoredValue stored ? Unstored(stored.Value) : value;

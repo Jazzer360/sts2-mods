@@ -31,6 +31,7 @@ public static partial class ReadModels
         PowerId.CorrosiveWave.Name,
         PowerId.CrabRage.Name,
         PowerId.DanseMacabre.Name,
+        PowerId.DarkEmbrace.Name,
         RelicId.DaughterOfTheWind.Name,
         PowerId.Debilitate.Name,
         PowerId.Demise.Name,

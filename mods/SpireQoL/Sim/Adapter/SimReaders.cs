@@ -208,10 +208,10 @@ public static class SimReaders
                     data = Sts2State.Private<object?>(relic, "AffectedCardPlay", fallback: null) != null ? Models.PaelsLegion.BoundToPlay : 0;
                     break;
                 case nameof(CentennialPuzzle): amount = Sts2State.Private(relic, "UsedThisCombat", fallback: false) ? 1 : 0; break; // used up this combat
+                // Its count toward the next draw, and the Ethereal exhausts counted as the turn ends (its EtherealCount: 0 mid-turn).
+                case nameof(JossPaper): amount = Sts2State.Private(relic, "CardsExhausted", fallback: 0); data = Sts2State.Private(relic, "EtherealCount", fallback: 0); break;
                 case nameof(Pocketwatch): amount = Sts2State.Private(relic, "_cardsPlayedThisTurn", fallback: 0); data = Sts2State.Var(relic, "CardThreshold", fallback: 3); break;
                 case nameof(BeatingRemnant): data = (int)Sts2State.Private(relic, "DamageReceivedThisTurn", fallback: 0m); break;
-                // Counters the models keep counting (their tray number, or the private count behind it).
-                case nameof(JossPaper): amount = Sts2State.Private(relic, "CardsExhausted", fallback: 0); break;
                 // Once a turn: armed until used, used this turn (RelicUse).
                 case nameof(MiniRegent) or nameof(Regalite): data = Sts2State.Private(relic, "UsedThisTurn", fallback: true) ? 0 : (int)RelicUse.Armed; break;
                 case nameof(RainbowRing): data = Sts2State.Private(relic, "ActivationCountThisTurn", fallback: 0) >= 1 ? (int)RelicUse.UsedThisTurn : 0; break;
