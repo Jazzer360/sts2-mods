@@ -779,6 +779,12 @@ public sealed class SimState
     /// </summary>
     public Dictionary<string, int> Vars = new();
 
+    /// <summary>
+    /// The values among Vars that aren't whole numbers (Vulnerable's DamageIncrease 1.5, Colossus' DamageDecrease 0.5), as the game has them:
+    /// Vars holds their whole part. Shared by every branch and never changed; read models read them with SimEngine.VarValue.
+    /// </summary>
+    public Dictionary<string, decimal> Fractions = new();
+
     /// <summary>The rules the running game does main's way (decision #169); None: beta's. Read once from the game, never changed.</summary>
     public MainRule MainRules;
 

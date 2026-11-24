@@ -2,24 +2,6 @@ namespace SpireQoL.Sim.Models;
 
 // Damage sources keyed on the target or on positions that change during your turn (decompile v0.113.1).
 
-/// <summary>TrackingPower.ModifyDamageMultiplicative: 1 + amount/100 on the owner's (or pet's) powered hits from a card on a Weak enemy.</summary>
-public sealed class TrackingPower : SimModel
-{
-    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage)
-    {
-        if (!damage.Props.IsPoweredAttack() || damage.Card == null) return 1m;
-        if (!(damage.Dealer == owner || (owner == Who.You && damage.Dealer == Who.YourOsty))) return 1m;
-        return SimEngine.PowersOf(state, damage.Target).Has(PowerId.Weak) ? 1m + SimEngine.PowerOn(state, owner, ThisPower) / 100m : 1m;
-    }
-}
-
-/// <summary>ColossusPower.ModifyDamageMultiplicative: powered attacks on its owner from a Vulnerable dealer deal its DamageDecrease (0.5).</summary>
-public sealed class ColossusPower : SimModel
-{
-    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
-        damage.Target == owner && damage.Props.IsPoweredAttack() && damage.Dealer is { } dealer && SimEngine.PowersOf(state, dealer).Has(PowerId.Vulnerable) ? 0.5m : 1m;
-}
-
 /// <summary>
 /// FlutterPower: powered attacks on its owner deal its DamageDecrease% (Data; 50 by default); each that gets HP through takes a
 /// stack (AfterDamageReceived), and the last stuns it.

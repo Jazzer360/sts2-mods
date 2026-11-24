@@ -251,6 +251,12 @@ public static partial class SimEngine
 
     public static int PowerOn(SimState state, int id, PowerId power) => PowersOf(state, id)[power];
 
+    /// <summary>
+    /// The creature has the power (Creature.HasPower&lt;T&gt;): its entry, or for Impaled a teammate's arrows in it too (the simulator keeps them
+    /// apart, as ImpaledPowerOther; the game's is one ImpaledPower).
+    /// </summary>
+    public static bool HasPower(SimState state, int id, PowerId power) => power == Impaled ? IsImpaled(state, id) : PowersOf(state, id).Has(power);
+
     /// <summary>What a creature's models read from their code keep of their own (SimPlayer.Fields, SimEnemy.Fields), by id.</summary>
     public static NamedCounts FieldsOf(SimState state, int id) => Who.IsEnemy(id) ? state.Enemy(id)?.Fields ?? NamedCounts.Empty : state.Player(id)?.Fields ?? NamedCounts.Empty;
 

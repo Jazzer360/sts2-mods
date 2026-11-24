@@ -737,6 +737,13 @@ public static partial class SimEngine
     public static int Var(SimState state, int owner, string model, string var, int fallback) =>
         state.Vars.TryGetValue($"{owner}:{model}:{var}", out var value) ? value : fallback;
 
+    /// <summary>A value as the game has it, a fraction included (SimState.Fractions), else the whole one (Var), else <paramref name="fallback"/>.</summary>
+    public static decimal VarValue(SimState state, int owner, string model, string var, decimal fallback)
+    {
+        var key = $"{owner}:{model}:{var}";
+        return state.Fractions.TryGetValue(key, out var fraction) ? fraction : state.Vars.TryGetValue(key, out var value) ? value : fallback;
+    }
+
     /// <summary>What the adapter adds to a value's key for its total over an instanced power's copies (SimReaders.AddVars).</summary>
     public const string TotalSuffix = ".Total";
 

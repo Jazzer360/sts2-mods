@@ -1,3 +1,6 @@
+| a creature the code names (`dealer`, `target`, AfterDeath's creature, `power.Owner`, `base.Applier`, a creature's `Player` or a player's `Creature`, a pet's `PetOwner.Creature`) tested: there (`!= null`), `IsPlayer` / `.Player`, `IsMonster`, `IsEnemy`, `HasPower<T>()` / `GetPower<T>()`, `Player.GetRelic<T>()`; two compared (`==`, `Side == Side`, `Side == side` as the players' turn ends, `Side == CombatSide.X`) | `HookFact.CreatureThere`, `CreatureIsPlayer`, `CreatureIsMonster`, `CreatureHasPower`, `CreatureHasRelic`, `SameCreature`, `SameSide`, `CreatureOnPlayersSide`, each about a `HookCreature` (`HookWho`, its `PetOwner`); Osty is a monster, no player, on the players' side; Impaled is either player's arrows (`SimEngine.HasPower`) |
+| `props.IsCardOrMonsterMove()` | `HookFact.CardOrMonsterMove` |
+| a value that isn't a whole number (`new DynamicVar("DamageDecrease", 0.5m)`) | the game's value (`SimState.Fractions`, `SimEngine.VarValue`), not its whole part |
 # Card programs: a card plays in its own code's order (decision #182)
 
 The simulator never decides the order of a card's effects. Each card's play is read from the game's code in the running game:

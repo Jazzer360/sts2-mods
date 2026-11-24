@@ -174,6 +174,7 @@ public static class SimReaders
             foreach (var (key, dynamicVar) in dv0)
             {
                 vars[$"{id}:{name}:{key}"] = dynamicVar.IntValue;
+                if (dynamicVar.BaseValue != dynamicVar.IntValue) state.Fractions[$"{id}:{name}:{key}"] = dynamicVar.BaseValue;
                 if (instanced)
                 {
                     var totalKey = $"{id}:{name}:{key}{SimEngine.TotalSuffix}";

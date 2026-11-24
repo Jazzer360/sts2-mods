@@ -38,6 +38,8 @@ public class ReadModelParityTests
         ["StranglePower.BeforeCardPlayed"] = "as its AfterCardPlayed (the plays' runs count both hooks)",
         ["StranglePower.AfterCardPlayed"] = "CreatureCmd.Damage(base.Owner, ...), with no test of its owner's side: on a player it hurts them for their own plays (the hand-written model dealt damage to enemies only). Only enemies have it in the game (Strangle the card applies it to one): no prediction changes",
         ["SneakyPower.AfterCardPlayed"] = "cardPlay.Card.Owner.Creature != base.Owner && cardPlay.Card.Type == Attack, with no test of its owner's side: on a player it gives them block on another's Attack (the hand-written model wanted an enemy). Only enemies have it in the game: no prediction changes",
+        ["ConcoctPower.AfterSideTurnEnd"] = "base.Owner.Side != side: PowerCmd.Remove(this) as the other side's turn ends, which for the players' turn the simulator ends is an enemy owner. The engine runs the turn's end for players' models only (SimEngine.EndOfTurn), and only players have it: no prediction changes",
+        ["SerratedArrowsPower.ModifyDamageMultiplicative"] = "target.HasPower<ImpaledPower>(), with no test of the target's side: a player with Impaled would count (the hand-written model wanted an enemy). Only enemies are impaled (ArrowCmd.ImpaleTarget: an arrow in the shot's target, an enemy): no prediction changes",
         ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
     };
 
@@ -55,6 +57,12 @@ public class ReadModelParityTests
     /// gives the Data as the adapter did (Hailstorm's FrostOrbs, the Frost orbs it needs).
     /// </summary>
     private static readonly Dictionary<string, string> PowerDataVars = new(StringComparer.Ordinal) { [PowerId.Hailstorm.Name] = "FrostOrbs" };
+
+    /// <summary>
+    /// "Model.Var": values the hand-written model wrote as a constant (Colossus' 0.5) that the read model reads from its values: the board gives
+    /// the game's value (its canonical one), so the two read the same number.
+    /// </summary>
+    private static readonly HashSet<string> HandWrittenConstants = new(StringComparer.Ordinal) { $"{PowerId.Colossus.Name}.DamageDecrease" };
 
     public static TheoryData<string> Models() => new(HandWritten.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
@@ -149,7 +157,26 @@ public class ReadModelParityTests
         state.Enemies.Add(new SimEnemy { Id = 0, Name = "E0", Hp = 30, Hits = new List<int> { 6 } });
         state.Enemies.Add(new SimEnemy { Id = 1, Name = "E1", Hp = 25, Block = 5, Hits = new List<int> { 3, 3 } });
         foreach (var variable in VarsOf(model.Spec))
-            state.Vars[$"{owner}:{model.Name}:{variable.Key}"] = variable.Key.EndsWith(".Props", StringComparison.Ordinal) ? (int)variable.Canonical : (int)variable.Canonical + 1;
+        {
+            var key = $"{owner}:{model.Name}:{variable.Key}";
+            // A value the hand-written model had as a constant is the game's (its canonical value): the read model reads it, the same number.
+            var value = variable.Key.EndsWith(".Props", StringComparison.Ordinal) || HandWrittenConstants.Contains($"{model.Name}.{variable.Key}") ? variable.Canonical : variable.Canonical + 1;
+            state.Vars[key] = (int)value;
+            if (value != (int)value) state.Fractions[key] = value;
+        }
+        // The powers and relics its code asks other creatures about (creature.HasPower<T>(), Player.GetRelic<T>()), on enemy 1 and the teammate
+        // (a dealer, a target), so each question is asked of a creature with it and of one without; Impaled also as a teammate's arrows (the
+        // simulator's ImpaledPowerOther) on enemy 0.
+        foreach (var fact in model.Spec.Values().OfType<HookFactValue>())
+        {
+            if (fact is { Fact: HookFact.CreatureHasPower or HookFact.CreaturePowerAmount, Of: { } power })
+            {
+                foreach (var holder in new[] { 1, Who.Teammate(0) }) SimEngine.SetPowers(state, holder, SimEngine.PowersOf(state, holder).With(new PowerId(power), amount: 2, data: 0));
+                if (power == PowerId.Impaled.Name) SimEngine.SetPowers(state, 0, SimEngine.PowersOf(state, 0).With(SimEngine.ImpaledOther, amount: 1, data: 0));
+            }
+            if (fact is { Fact: HookFact.CreatureHasRelic, Of: { } relic })
+                SimEngine.SetRelics(state, Who.Teammate(0), SimEngine.RelicsOf(state, Who.Teammate(0)).With(new RelicId(relic), amount: 0, data: 0));
+        }
         // A power whose code asks who applied it keeps its applier as its Data (DataCreature), as the adapter reads it: you, for one that asks
         // whether its applier is a player or played the card; else enemy 0 (one that asks whether its applier died).
         var playersApplier = model.Spec.Values().Any(value => value is HookFactValue { Fact: HookFact.ApplierIsPlayer or HookFact.PlayIsAppliers });

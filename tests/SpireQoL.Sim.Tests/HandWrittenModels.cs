@@ -707,3 +707,45 @@ public sealed class StranglePower : ProcModel
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
         TakeBound(state, owner) is { } bound ? SimEngine.ProcDamageOn(state, owner, Name, owner, bound, SimProps.Unblockable | Unpowered, noDealer: true) : One(state);
 }
+
+// ---- the hook's creatures (round four: Sim/Models/TargetModels.cs, StatModels.cs, ReactionModels.cs, deleted 2026-11-24)
+
+/// <summary>TrackingPower.ModifyDamageMultiplicative: 1 + amount/100 on the owner's (or pet's) powered hits from a card on a Weak enemy.</summary>
+public sealed class TrackingPower : SimModel
+{
+    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage)
+    {
+        if (!damage.Props.IsPoweredAttack() || damage.Card == null) return 1m;
+        if (!(damage.Dealer == owner || (owner == Who.You && damage.Dealer == Who.YourOsty))) return 1m;
+        return SimEngine.PowersOf(state, damage.Target).Has(PowerId.Weak) ? 1m + SimEngine.PowerOn(state, owner, ThisPower) / 100m : 1m;
+    }
+}
+
+/// <summary>ColossusPower.ModifyDamageMultiplicative: powered attacks on its owner from a Vulnerable dealer deal its DamageDecrease (0.5).</summary>
+public sealed class ColossusPower : SimModel
+{
+    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
+        damage.Target == owner && damage.Props.IsPoweredAttack() && damage.Dealer is { } dealer && SimEngine.PowersOf(state, dealer).Has(PowerId.Vulnerable) ? 0.5m : 1m;
+}
+
+/// <summary>SerratedArrowsPower.ModifyDamageMultiplicative: 1 + amount/100 on the owner's (or pet's) powered hits on an Impaled enemy.</summary>
+public sealed class SerratedArrowsPower : SimModel
+{
+    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage)
+    {
+        if (!damage.Props.IsPoweredAttack() || !(damage.Dealer == owner || (owner == Who.You && damage.Dealer == Who.YourOsty))) return 1m;
+        return damage.Target >= 0 && SimEngine.IsImpaled(state, damage.Target) ? 1m + SimEngine.PowerOn(state, owner, ThisPower) / 100m : 1m;
+    }
+}
+
+/// <summary>ConcoctPower.AfterDamageGiven: a powered hit of its owner's that gets HP through poisons the target (as Envenom, read from its code).</summary>
+public sealed class ConcoctPower : SimModel
+{
+    public override TabKind? Tab => TabKind.Trigger;
+    public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Dealer != owner || !hit.Props.IsPoweredAttack() || hit.Unblocked <= 0) return;
+        state.LogFired(Name, amount: 0, owner);
+        SimEngine.ApplyPower(state, owner, hit.Target, PowerId.Poison, SimEngine.PowerOn(state, owner, ThisPower), debuff: true);
+    }
+}

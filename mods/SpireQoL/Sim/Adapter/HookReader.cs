@@ -616,6 +616,8 @@ public static class HookReader
                     return new HookFactValue(HookFact.PoweredAttack);
                 case QueryValue { Name: "IsPoweredCardOrMonsterMoveBlock", Arguments: [var props] } when IsProps(props):
                     return new HookFactValue(HookFact.PoweredBlock);
+                case QueryValue { Name: "IsCardOrMonsterMove", Arguments: [var props] } when IsProps(props):
+                    return new HookFactValue(HookFact.CardOrMonsterMove);
                 case QueryValue { Name: "Contains", Of: QueryValue { Name: "Keywords", Of: { } keywordsOf }, Arguments: [ConstantValue keyword] } when IsPlayCard(keywordsOf):
                     return EnumName(_type.Assembly, "CardKeyword", keyword.Value) == "Ethereal" ? new HookFactValue(HookFact.CardEthereal) : throw new Gap($"gap: tests the card's keyword {keyword.Value}");
                 case QueryValue { Name: "is", Of: NamedValue { Name: "power" }, Type: var powerClass }:
@@ -630,9 +632,98 @@ public static class HookReader
                 case ArithmeticValue:
                     // An int tested as true or false (not (count rem Cards): its remainder is 0).
                     return new HookMath(HookOperation.NotEqual, Value(test), new HookConstant(0m));
+                case var creatureTest when CreatureTest(creatureTest) is { } creatureFact:
+                    return creatureFact;
                 default:
                     throw new Gap($"gap: tests {test}");
             }
+        }
+
+        /// <summary>
+        /// A test of a creature the hook's code names (CreatureOf): it's there (dealer != null), a player (creature.Player, IsPlayer), a monster
+        /// (IsMonster), an enemy (IsEnemy), has a power (HasPower&lt;T&gt;(), GetPower&lt;T&gt;() != null) or a relic (Player.GetRelic&lt;T&gt;()); null for
+        /// any other test.
+        /// </summary>
+        private HookValue? CreatureTest(ProgramValue test)
+        {
+            if (test is StoredValue stored) return CreatureTest(stored.Value);
+            if (CreatureOf(test) is { } there)
+                return test is QueryValue { Name: "Player" } ? CreatureFact(HookFact.CreatureIsPlayer, there) : CreatureFact(HookFact.CreatureThere, there);
+            if (test is not QueryValue { Of: { } of } query || CreatureOf(of) is not { } creature) return null;
+            switch (query.Name)
+            {
+                case "IsPlayer": return CreatureFact(HookFact.CreatureIsPlayer, creature);
+                case "IsMonster": return CreatureFact(HookFact.CreatureIsMonster, creature);
+                case "IsEnemy": return Not(CreatureFact(HookFact.CreatureOnPlayersSide, creature));
+                case "HasPower" or "GetPower" when query.GenericArguments is [var power]:
+                    return CreatureFact(HookFact.CreatureHasPower, creature) with { Of = PowerClass(power) };
+                case "GetRelic" when query.GenericArguments is [var relic]:
+                    return CreatureFact(HookFact.CreatureHasRelic, creature) with { Of = RelicClass(relic) };
+                default: return null;
+            }
+        }
+
+        private static HookFactValue CreatureFact(HookFact fact, HookCreature creature) => new(fact) { Creature = creature };
+
+        /// <summary>A power class of this branch, by name (a gap for anything else: an interface, a base class).</summary>
+        private string PowerClass(string name) =>
+            _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + name) is { IsInterface: false, IsAbstract: false } ? name : throw new Gap($"gap: tests a power {name}");
+
+        private string RelicClass(string name) =>
+            _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Relics." + name) is { IsInterface: false, IsAbstract: false } ? name : throw new Gap($"gap: tests a relic {name}");
+
+        /// <summary>
+        /// The creature a value names: the owner, the damage's dealer or target (a Modify, block or hit hook's), the creature that died (AfterDeath's),
+        /// the one a power landed on, the power's applier; a creature's player or a player's creature is the same creature here (a test of a
+        /// creature's player is whether it's a player); a pet's player (PetOwner) its own. Null for anything else.
+        /// </summary>
+        private HookCreature? CreatureOf(ProgramValue value)
+        {
+            if (value is StoredValue stored) return CreatureOf(stored.Value);
+            if (IsOwner(value)) return new HookCreature(HookWho.Owner);
+            if (IsDead(value)) return new HookCreature(HookWho.Dead);
+            if (IsDealer(value) && DamageHooks.Contains(_hook)) return new HookCreature(HookWho.Dealer);
+            if (value is ParameterValue { Name: "target" } or NamedValue { Name: "target" } && DamageHooks.Contains(_hook)) return new HookCreature(HookWho.Target);
+            if (IsApplier(value)) return new HookCreature(HookWho.Applier);
+            if (value is QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } } && _hook == "AfterPowerAmountChanged") return new HookCreature(HookWho.PowerOwner);
+            if (value is QueryValue { Name: "Player" or "Creature", Of: { } of }) return CreatureOf(of);
+            if (value is QueryValue { Name: "PetOwner", Of: { } pet } && CreatureOf(pet) is { PetOwner: false } owned) return owned with { PetOwner = true };
+            return null;
+        }
+
+        /// <summary>The hooks given a damage's or block's dealer and target (the Modify hooks, a hit's reactions).</summary>
+        private static readonly HashSet<string> DamageHooks = new(StringComparer.Ordinal)
+        {
+            "ModifyDamageAdditive", "ModifyDamageMultiplicative", "ModifyDamageMultiplicativeLate", "ModifyBlockAdditive", "ModifyBlockMultiplicative", "AfterDamageGiven", "AfterDamageReceived",
+        };
+
+        /// <summary>
+        /// Two creatures the code names compared (creature == base.Owner of a model called on another, creature.Side == base.Owner.Side, a creature's
+        /// side against the side whose turn ends or a side named), or a creature against null; null for anything else.
+        /// </summary>
+        private HookValue? CreatureCompare(CompareValue compare)
+        {
+            if (compare.Op is not (Comparison.Equal or Comparison.NotEqual)) return null;
+            HookValue? holds = null;
+            if (compare.Left is QueryValue { Name: "Side", Of: { } leftOf } && CreatureOf(leftOf) is { } leftSide)
+            {
+                if (compare.Right is QueryValue { Name: "Side", Of: { } rightOf } && CreatureOf(rightOf) is { } rightSide)
+                    holds = CreatureFact(HookFact.SameSide, leftSide) with { Other = rightSide };
+                // The side whose turn ends (AfterSideTurnEnd's side): the simulator ends the players'.
+                else if (compare.Right is ParameterValue { Name: "side" } or NamedValue { Name: "side" } && _hook.Contains("SideTurnEnd", StringComparison.Ordinal))
+                    holds = CreatureFact(HookFact.CreatureOnPlayersSide, leftSide);
+                else if (compare.Right is ConstantValue side && EnumName(_type.Assembly, "CombatSide", side.Value) is { } sideName)
+                    holds = sideName == "Player" ? CreatureFact(HookFact.CreatureOnPlayersSide, leftSide) : Not(CreatureFact(HookFact.CreatureOnPlayersSide, leftSide));
+            }
+            else if (compare.Right is QueryValue { Name: "Side" } && compare.Left is not QueryValue { Name: "Side" })
+                return CreatureCompare(compare with { Left = compare.Right, Right = compare.Left });
+            else if (CreatureOf(compare.Left) is { } left)
+            {
+                if (compare.Right is NullValue) holds = Not(CreatureFact(HookFact.CreatureThere, left));
+                else if (CreatureOf(compare.Right) is { } right) holds = CreatureFact(HookFact.SameCreature, left) with { Other = right };
+            }
+            else if (compare.Left is NullValue && CreatureOf(compare.Right) is { } nulled) holds = Not(CreatureFact(HookFact.CreatureThere, nulled));
+            return holds == null ? null : compare.Op == Comparison.Equal ? holds : Not(holds);
         }
 
         /// <summary>A comparison: of the owner with what the hook was given (a fact), of the card's type, of a power's type for its amount, or of values.</summary>
@@ -672,6 +763,7 @@ public static class HookReader
                 var players = EnumName(_type.Assembly, "CombatSide", side.Value) == "Player";
                 return new HookConstant((compare.Op == Comparison.Equal) == players ? 1m : 0m);
             }
+            if (CreatureCompare(compare) is { } creatures) return creatures;
             return new HookMath(OperationOf(compare.Op), Value(compare.Left), Value(compare.Right));
         }
 
@@ -690,6 +782,8 @@ public static class HookReader
             if (IsDealer(other)) return new HookFactValue(HookFact.DealerIsOwner);
             if (other is ParameterValue { Name: "target" } or NamedValue { Name: "target" }) return new HookFactValue(HookFact.TargetIsOwner);
             if (other is NamedValue { Name: "applier" } or ParameterValue { Name: "applier" }) return new HookFactValue(HookFact.ApplierIsOwner);
+            // Another creature the code names (a pet's player, a creature's player): the creatures' comparison (CreatureCompare).
+            if (CreatureOf(other) != null) return null;
             throw new Gap($"gap: compares the owner with {other}");
         }
 

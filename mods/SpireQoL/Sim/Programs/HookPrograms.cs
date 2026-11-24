@@ -83,6 +83,8 @@ public enum HookFact
     PoweredAttack,
     /// <summary>The block is a powered card's or move's (props.IsPoweredCardOrMonsterMoveBlock()).</summary>
     PoweredBlock,
+    /// <summary>The damage or block is a card's or a monster move's (props.IsCardOrMonsterMove(): its Move flag), powered or not.</summary>
+    CardOrMonsterMove,
     /// <summary>The damage or block comes from a card (cardSource != null).</summary>
     FromCard,
     /// <summary>The damage's or block's card is the owner's (cardSource.Owner.Creature == base.Owner).</summary>
@@ -121,6 +123,49 @@ public enum HookFact
     ApplierIsPlayer,
     /// <summary>The card played is its applier's (cardPlay.Card.Owner == base.Applier.Player).</summary>
     PlayIsAppliers,
+    /// <summary>The creature named in Creature is there (dealer != null, target != null).</summary>
+    CreatureThere,
+    /// <summary>The creature named in Creature is a player (creature.IsPlayer, creature.Player != null): a pet (Osty) isn't.</summary>
+    CreatureIsPlayer,
+    /// <summary>The creature named in Creature is a monster (creature.IsMonster): an enemy, or a pet (Osty).</summary>
+    CreatureIsMonster,
+    /// <summary>The creature named in Creature has the power named in Of (creature.HasPower&lt;T&gt;(), creature.GetPower&lt;T&gt;() != null).</summary>
+    CreatureHasPower,
+    /// <summary>The creature named in Creature is a player with the relic named in Of (creature.Player?.GetRelic&lt;T&gt;() != null).</summary>
+    CreatureHasRelic,
+    /// <summary>The amount of the power named in Of on the creature named in Creature (a called power's base.Amount: Cruelty's).</summary>
+    CreaturePowerAmount,
+    /// <summary>The creatures named in Creature and Other are the same one (target == base.Owner of a model called on another creature).</summary>
+    SameCreature,
+    /// <summary>The creatures named in Creature and Other are on the same side (creature.Side == base.Owner.Side).</summary>
+    SameSide,
+    /// <summary>The creature named in Creature is on the players' side (its Side is the side whose turn ends: the simulator ends the players').</summary>
+    CreatureOnPlayersSide,
+}
+
+/// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>
+public enum HookWho
+{
+    /// <summary>The model's owner (base.Owner, base.Owner.Creature).</summary>
+    Owner,
+    /// <summary>The damage's dealer (dealer: a Modify hook's, a hit's).</summary>
+    Dealer,
+    /// <summary>The damage's or block's target (target: a Modify hook's, a hit's).</summary>
+    Target,
+    /// <summary>The creature that died (AfterDeath's creature).</summary>
+    Dead,
+    /// <summary>The creature the power landing landed on (power.Owner in AfterPowerAmountChanged).</summary>
+    PowerOwner,
+    /// <summary>Who applied this power (base.Applier, kept as its Data).</summary>
+    Applier,
+}
+
+/// <summary>A creature a hook's code names (HookWho), or the player who owns it when it's a pet (creature.PetOwner.Creature: Osty's player).</summary>
+public sealed record HookCreature(HookWho Who)
+{
+    public bool PetOwner { get; init; }
+
+    public override string ToString() => PetOwner ? Who + ".PetOwner" : Who.ToString();
 }
 
 /// <summary>An operation of the code on two values (decimal throughout; a true-or-false is 1 or 0).</summary>
@@ -136,6 +181,12 @@ public sealed record HookConstant(decimal Value) : HookValue;
 public sealed record HookFactValue(HookFact Fact) : HookValue
 {
     public string? Of { get; init; }
+
+    /// <summary>The creature a creature's fact is about (CreatureThere, CreatureHasPower, SameCreature...); null for the others.</summary>
+    public HookCreature? Creature { get; init; }
+
+    /// <summary>The other creature a comparison of two is about (SameCreature, SameSide).</summary>
+    public HookCreature? Other { get; init; }
 }
 
 /// <summary>

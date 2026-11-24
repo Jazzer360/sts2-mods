@@ -472,8 +472,8 @@ public sealed class ReadModel : SimModel
             case HookVar variable:
             {
                 var key = variable.Key;
-                var canonical = (int)variable.Canonical;
-                return (in HookArgs args) => SimEngine.Var(args.State, args.Owner, Name, key, canonical);
+                var canonical = variable.Canonical;
+                return (in HookArgs args) => SimEngine.VarValue(args.State, args.Owner, Name, key, canonical);
             }
             case HookNot not:
             {
@@ -570,6 +570,7 @@ public sealed class ReadModel : SimModel
             case HookFact.TargetIsOwner: return (in HookArgs args) => (args.Damage?.Target ?? args.Block?.Target ?? args.Hit?.Target) == args.Owner ? 1m : 0m;
             case HookFact.PoweredAttack: return (in HookArgs args) => (args.Damage?.Props ?? args.Hit?.Props)?.IsPoweredAttack() == true ? 1m : 0m;
             case HookFact.PoweredBlock: return (in HookArgs args) => args.Block?.Props.IsPoweredBlock() == true ? 1m : 0m;
+            case HookFact.CardOrMonsterMove: return (in HookArgs args) => (args.Damage?.Props ?? args.Block?.Props ?? args.Hit?.Props)?.IsCardOrMonsterMove() == true ? 1m : 0m;
             case HookFact.FromCard: return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card) != null ? 1m : 0m;
             case HookFact.CardIsOwners: return (in HookArgs args) => (args.Damage?.Play ?? args.Block?.Play)?.Owner == args.Owner ? 1m : 0m;
             case HookFact.TakesPart: return (in HookArgs args) => args.State.TakesPart(args.Owner) ? 1m : 0m;
@@ -595,8 +596,79 @@ public sealed class ReadModel : SimModel
             case HookFact.ApplierIsPlayer: return (in HookArgs args) => Who.IsPlayer(ApplierOf(in args)) ? 1m : 0m;
             case HookFact.PlayIsAppliers: return (in HookArgs args) => args.Play is { } play && ApplierOf(in args) is var applier && applier != Who.None && play.Owner == applier ? 1m : 0m;
             case HookFact.OwnerDead: return (in HookArgs args) => (args.State.Player(args.Owner) is { } player ? player.Died || player.Hp <= 0 : args.State.Enemy(args.Owner) is not { Alive: true }) ? 1m : 0m;
+            case HookFact.CreatureThere:
+            {
+                var creature = CreatureNamed(fact);
+                return (in HookArgs args) => CreatureOf(in args, creature) != Who.None ? 1m : 0m;
+            }
+            case HookFact.CreatureIsPlayer:
+            {
+                var creature = CreatureNamed(fact);
+                return (in HookArgs args) => Who.IsPlayer(CreatureOf(in args, creature)) ? 1m : 0m;
+            }
+            case HookFact.CreatureIsMonster:
+            {
+                // An enemy, or a pet (Osty is a monster that fights for its player: Creature.IsMonster).
+                var creature = CreatureNamed(fact);
+                return (in HookArgs args) => CreatureOf(in args, creature) is var id && (Who.IsEnemy(id) || id == Who.YourOsty) ? 1m : 0m;
+            }
+            case HookFact.CreatureHasPower:
+            {
+                var creature = CreatureNamed(fact);
+                var power = new PowerId(named!);
+                return (in HookArgs args) => CreatureOf(in args, creature) is var id && id != Who.None && SimEngine.HasPower(args.State, id, power) ? 1m : 0m;
+            }
+            case HookFact.CreatureHasRelic:
+            {
+                var creature = CreatureNamed(fact);
+                var relic = new RelicId(named!);
+                return (in HookArgs args) => CreatureOf(in args, creature) is var id && Who.IsPlayer(id) && SimEngine.RelicsOf(args.State, id).Has(relic) ? 1m : 0m;
+            }
+            case HookFact.CreaturePowerAmount:
+            {
+                var creature = CreatureNamed(fact);
+                var power = new PowerId(named!);
+                return (in HookArgs args) => CreatureOf(in args, creature) is var id && id != Who.None ? SimEngine.PowerOn(args.State, id, power) : 0m;
+            }
+            case HookFact.SameCreature:
+            {
+                var (creature, other) = (CreatureNamed(fact), fact.Other ?? throw new InvalidOperationException($"{Name}: {fact.Fact} names one creature"));
+                return (in HookArgs args) => CreatureOf(in args, creature) is var id && id != Who.None && id == CreatureOf(in args, other) ? 1m : 0m;
+            }
+            case HookFact.SameSide:
+            {
+                var (creature, other) = (CreatureNamed(fact), fact.Other ?? throw new InvalidOperationException($"{Name}: {fact.Fact} names one creature"));
+                return (in HookArgs args) => CreatureOf(in args, creature) is var id && CreatureOf(in args, other) is var otherId && id != Who.None && otherId != Who.None
+                    && Who.IsEnemy(id) == Who.IsEnemy(otherId) ? 1m : 0m;
+            }
+            case HookFact.CreatureOnPlayersSide:
+            {
+                var creature = CreatureNamed(fact);
+                return (in HookArgs args) => CreatureOf(in args, creature) is var id && id != Who.None && !Who.IsEnemy(id) ? 1m : 0m;
+            }
             default: throw new InvalidOperationException($"{Name}: no fact {fact.Fact}");
         }
+    }
+
+    private HookCreature CreatureNamed(HookFactValue fact) => fact.Creature ?? throw new InvalidOperationException($"{Name}: {fact.Fact} names no creature");
+
+    /// <summary>
+    /// The creature a hook's code names, as the simulator has it (Who.None: none, a null in the game's code): the owner, the damage's dealer
+    /// and target (a Modify hook's, a block's, a hit's), the creature that died or a power landed on, the applier it keeps; a pet's player for
+    /// its PetOwner (your Osty's: you), none for anyone else's.
+    /// </summary>
+    private int CreatureOf(in HookArgs args, HookCreature creature)
+    {
+        var id = creature.Who switch
+        {
+            HookWho.Owner => args.Owner,
+            HookWho.Dealer => args.Damage is { } damage ? damage.Dealer ?? Who.None : args.Hit?.Dealer ?? Who.None,
+            HookWho.Target => args.Damage?.Target ?? args.Block?.Target ?? args.Hit?.Target ?? Who.None,
+            HookWho.Dead or HookWho.PowerOwner => args.Target,
+            HookWho.Applier => ApplierOf(in args),
+            _ => Who.None,
+        };
+        return creature.PetOwner ? id == Who.YourOsty ? Who.You : Who.None : id;
     }
 
     /// <summary>Who applied this power: its Data (DataCreature), as a read power that asks keeps it (ModelSpec.UsesApplier); Who.None when no one.</summary>

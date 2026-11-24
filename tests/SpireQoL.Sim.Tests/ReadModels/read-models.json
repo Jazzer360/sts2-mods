@@ -392,6 +392,321 @@
     "Harmful": false
   },
   {
+    "Name": "ColossusPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "ColossusPower.ModifyDamageMultiplicative:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "ColossusPower.ModifyDamageMultiplicative:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "ColossusPower.ModifyDamageMultiplicative:0015",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PoweredAttack"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "ColossusPower.ModifyDamageMultiplicative:0007",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "TargetIsOwner"
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "ColossusPower.ModifyDamageMultiplicative:0015",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PoweredAttack"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "ColossusPower.ModifyDamageMultiplicative:001F",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureThere",
+                      "Creature": {
+                        "Who": "Dealer",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "ColossusPower.ModifyDamageMultiplicative:0007",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "TargetIsOwner"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "ColossusPower.ModifyDamageMultiplicative:0015",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredAttack"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "ColossusPower.ModifyDamageMultiplicative:001F",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureThere",
+                      "Creature": {
+                        "Who": "Dealer",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "ColossusPower.ModifyDamageMultiplicative:002E",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureHasPower",
+                      "Of": "VulnerablePower",
+                      "Creature": {
+                        "Who": "Dealer",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "ColossusPower.ModifyDamageMultiplicative:0007",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "TargetIsOwner"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "ColossusPower.ModifyDamageMultiplicative:0015",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredAttack"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "ColossusPower.ModifyDamageMultiplicative:001F",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureThere",
+                      "Creature": {
+                        "Who": "Dealer",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "ColossusPower.ModifyDamageMultiplicative:002E",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CreatureHasPower",
+                    "Of": "VulnerablePower",
+                    "Creature": {
+                      "Who": "Dealer",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookVar",
+                "Key": "DamageDecrease",
+                "Canonical": 0.5
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "Harmful": false
+  },
+  {
+    "Name": "ConcoctPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageGiven",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "PoisonPower",
+            "Target": "HitTarget",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": true,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageGiven\u003Ed__6.MoveNext:0020",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "DealerIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageGiven\u003Ed__6.MoveNext:0032",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageGiven\u003Ed__6.MoveNext:0045",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Greater",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HitUnblocked"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__7.MoveNext:0022",
+              "Test": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreatureOnPlayersSide",
+                  "Creature": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger",
+    "Harmful": false
+  },
+  {
     "Name": "ConstrictPower",
     "Kind": "Power",
     "Hooks": [
@@ -2643,6 +2958,183 @@
     "Harmful": false
   },
   {
+    "Name": "LeadershipPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ModifyDamageAdditive",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "LeadershipPower.ModifyDamageAdditive:0008",
+                  "Test": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookFactValue",
+                      "Fact": "DealerIsOwner"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "LeadershipPower.ModifyDamageAdditive:0008",
+                  "Test": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookFactValue",
+                      "Fact": "DealerIsOwner"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "LeadershipPower.ModifyDamageAdditive:0022",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "SameSide",
+                      "Creature": {
+                        "Who": "Owner",
+                        "PetOwner": false
+                      },
+                      "Other": {
+                        "Who": "Dealer",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "LeadershipPower.ModifyDamageAdditive:0008",
+                    "Test": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwner"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "LeadershipPower.ModifyDamageAdditive:0022",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "SameSide",
+                      "Creature": {
+                        "Who": "Owner",
+                        "PetOwner": false
+                      },
+                      "Other": {
+                        "Who": "Dealer",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "LeadershipPower.ModifyDamageAdditive:0030",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PoweredAttack"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "LeadershipPower.ModifyDamageAdditive:0008",
+                    "Test": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwner"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "LeadershipPower.ModifyDamageAdditive:0022",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "SameSide",
+                      "Creature": {
+                        "Who": "Owner",
+                        "PetOwner": false
+                      },
+                      "Other": {
+                        "Who": "Dealer",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "LeadershipPower.ModifyDamageAdditive:0030",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "Harmful": false
+  },
+  {
     "Name": "LetterOpener",
     "Kind": "Relic",
     "Hooks": [
@@ -4437,6 +4929,391 @@
     "Harmful": false
   },
   {
+    "Name": "SerratedArrowsPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0006",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0006",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PoweredAttack"
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0016",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwner"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "SerratedArrowsPower.ModifyDamageMultiplicative:002A",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "DealerIsOwnersPet"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0006",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PoweredAttack"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0016",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "DealerIsOwner"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0033",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureThere",
+                            "Creature": {
+                              "Who": "Target",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0006",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PoweredAttack"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "SerratedArrowsPower.ModifyDamageMultiplicative:002A",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "DealerIsOwnersPet"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0033",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureThere",
+                            "Creature": {
+                              "Who": "Target",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0006",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0016",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "DealerIsOwner"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "SerratedArrowsPower.ModifyDamageMultiplicative:003B",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureHasPower",
+                          "Of": "ImpaledPower",
+                          "Creature": {
+                            "Who": "Target",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0006",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredAttack"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "SerratedArrowsPower.ModifyDamageMultiplicative:002A",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwnersPet"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "SerratedArrowsPower.ModifyDamageMultiplicative:003B",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureHasPower",
+                        "Of": "ImpaledPower",
+                        "Creature": {
+                          "Who": "Target",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0006",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0016",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "DealerIsOwner"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0033",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureThere",
+                        "Creature": {
+                          "Who": "Target",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "SerratedArrowsPower.ModifyDamageMultiplicative:003B",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureHasPower",
+                      "Of": "ImpaledPower",
+                      "Creature": {
+                        "Who": "Target",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0006",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "SerratedArrowsPower.ModifyDamageMultiplicative:002A",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "DealerIsOwnersPet"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "SerratedArrowsPower.ModifyDamageMultiplicative:0033",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureThere",
+                        "Creature": {
+                          "Who": "Target",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "SerratedArrowsPower.ModifyDamageMultiplicative:003B",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureHasPower",
+                      "Of": "ImpaledPower",
+                      "Creature": {
+                        "Who": "Target",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Add",
+                "Left": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "Divide",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 100
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "Harmful": false
+  },
+  {
     "Name": "ShroudPower",
     "Kind": "Power",
     "Hooks": [
@@ -5930,6 +6807,504 @@
       }
     ],
     "Tab": "Block",
+    "Harmful": false
+  },
+  {
+    "Name": "TrackingPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "TrackingPower.ModifyDamageMultiplicative:0006",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "TrackingPower.ModifyDamageMultiplicative:0006",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "TrackingPower.ModifyDamageMultiplicative:0010",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "FromCard"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "TrackingPower.ModifyDamageMultiplicative:0006",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredAttack"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "TrackingPower.ModifyDamageMultiplicative:0010",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "FromCard"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "TrackingPower.ModifyDamageMultiplicative:0020",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwner"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "TrackingPower.ModifyDamageMultiplicative:0034",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "DealerIsOwnersPet"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "TrackingPower.ModifyDamageMultiplicative:0006",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "PoweredAttack"
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "TrackingPower.ModifyDamageMultiplicative:0010",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "FromCard"
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "TrackingPower.ModifyDamageMultiplicative:0020",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "DealerIsOwner"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TrackingPower.ModifyDamageMultiplicative:003D",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureThere",
+                            "Creature": {
+                              "Who": "Target",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "TrackingPower.ModifyDamageMultiplicative:0006",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "PoweredAttack"
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "TrackingPower.ModifyDamageMultiplicative:0010",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "FromCard"
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "TrackingPower.ModifyDamageMultiplicative:0034",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "DealerIsOwnersPet"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TrackingPower.ModifyDamageMultiplicative:003D",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureThere",
+                            "Creature": {
+                              "Who": "Target",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "TrackingPower.ModifyDamageMultiplicative:0006",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PoweredAttack"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "TrackingPower.ModifyDamageMultiplicative:0010",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "FromCard"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "TrackingPower.ModifyDamageMultiplicative:0020",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "DealerIsOwner"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "TrackingPower.ModifyDamageMultiplicative:0045",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureHasPower",
+                          "Of": "WeakPower",
+                          "Creature": {
+                            "Who": "Target",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "TrackingPower.ModifyDamageMultiplicative:0006",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "TrackingPower.ModifyDamageMultiplicative:0010",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "FromCard"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "TrackingPower.ModifyDamageMultiplicative:0034",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwnersPet"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "TrackingPower.ModifyDamageMultiplicative:0045",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureHasPower",
+                        "Of": "WeakPower",
+                        "Creature": {
+                          "Who": "Target",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "TrackingPower.ModifyDamageMultiplicative:0006",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PoweredAttack"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "TrackingPower.ModifyDamageMultiplicative:0010",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "FromCard"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "TrackingPower.ModifyDamageMultiplicative:0020",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "DealerIsOwner"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "TrackingPower.ModifyDamageMultiplicative:003D",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureThere",
+                        "Creature": {
+                          "Who": "Target",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "TrackingPower.ModifyDamageMultiplicative:0045",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureHasPower",
+                      "Of": "WeakPower",
+                      "Creature": {
+                        "Who": "Target",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "TrackingPower.ModifyDamageMultiplicative:0006",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PoweredAttack"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "TrackingPower.ModifyDamageMultiplicative:0010",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "FromCard"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "TrackingPower.ModifyDamageMultiplicative:0034",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "DealerIsOwnersPet"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "TrackingPower.ModifyDamageMultiplicative:003D",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureThere",
+                        "Creature": {
+                          "Who": "Target",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "TrackingPower.ModifyDamageMultiplicative:0045",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureHasPower",
+                      "Of": "WeakPower",
+                      "Creature": {
+                        "Who": "Target",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Add",
+                "Left": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "Divide",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 100
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
     "Harmful": false
   },
   {

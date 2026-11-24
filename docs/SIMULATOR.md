@@ -214,9 +214,9 @@ Reads state only (CLAUDE.md: rules live in the simulator):
   - Modelled (can change during your turn): Strength, Dexterity, Vigor, Gigantification, Aim, Quietus, Vulnerable, Weak,
     Frail, Pen Nib, Slow, Lethality, Phantom Blades, Stretch, Pael's Legion, Vambrace, Serrated Arrows, Wah Hammer,
     Tracking, Colossus, Surrounded, Covered, Intercept, Tainted, Unmovable, Flutter, Hard to Kill, Intangible, Shadowmeld,
-    Double Damage, Undying Sigil, One for All.
+    Double Damage, Undying Sigil, One for All, Soar and Leadership (read from their code by decision #195's rule).
   - Captured (fixed for the turn): Accuracy, Calcify, Conductor's Baton, Conqueror, Dislike You, Flanking, Guarded, Hang,
-    Honing, Knockdown, Leadership, Shrink, Soar, Tank, Strike Dummy, Fake Strike Dummy, Miniature Cannon, Mystic Lighter,
+    Honing, Knockdown, Shrink, Tank, Strike Dummy, Fake Strike Dummy, Miniature Cannon, Mystic Lighter,
     Vitruvian Minion, Fasten, No Block, Mock Revive, multiplayer scaling.
 - Every class with combat hooks keeps its ledger entry (covered / ignore / gap); "covered" now names the model.
 - A source new in a game update is captured (exact for the turn) and reported by the coverage check until reviewed.

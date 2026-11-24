@@ -222,16 +222,6 @@ public sealed class PhantomBladesPower : SimModel
     }
 }
 
-/// <summary>SerratedArrowsPower.ModifyDamageMultiplicative: 1 + amount/100 on the owner's (or pet's) powered hits on an Impaled enemy.</summary>
-public sealed class SerratedArrowsPower : SimModel
-{
-    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage)
-    {
-        if (!damage.Props.IsPoweredAttack() || !(damage.Dealer == owner || (owner == Who.You && damage.Dealer == Who.YourOsty))) return 1m;
-        return damage.Target >= 0 && SimEngine.IsImpaled(state, damage.Target) ? 1m + SimEngine.PowerOn(state, owner, ThisPower) / 100m : 1m;
-    }
-}
-
 /// <summary>
 /// Pen Nib (relic): Amount is AttacksPlayed (0-9). Data 1 while a card the game is playing right now is bound to be doubled
 /// (AttackToDouble, read mid-play: no card simulated here is that card, so none is doubled), 2 while a play simulated here is.
