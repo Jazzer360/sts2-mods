@@ -212,6 +212,7 @@ public class SimPlayShapeTests
         Assert.Equal(15, After(state, BlockSkill(), BlockSkill()).You.Block);
         var used = Board();
         used.You.Relics = used.You.Relics.With(RelicId.ThrowingAxe, amount: 0, data: 0);
+        used.You.Fields = used.You.Fields.With("ThrowingAxe.UsedThisCombat", amount: 1); // its own UsedThisCombat, as the adapter reads it
         Assert.Equal(10, After(used, BlockSkill(), BlockSkill()).You.Block);
     }
 

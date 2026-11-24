@@ -449,8 +449,7 @@ public static class SimModels
     public static bool Has(string name) => ByName.Value.ContainsKey(name);
 
     /// <summary>The model decides a card play's count itself (it overrides ModifyCardPlayCount: Echo Form): the adapter leaves its part out (CardPlays.ModelledReplays).</summary>
-    public static bool DecidesPlayCount(string name) =>
-        Get(name) is { } model && model.GetType().GetMethod(nameof(SimModel.ModifyCardPlayCount))?.DeclaringType != typeof(SimModel);
+    public static bool DecidesPlayCount(string name) => Get(name) is { } model && model.Overrides(nameof(SimModel.ModifyCardPlayCount));
 
     public static IEnumerable<string> Names => ByName.Value.Keys;
 }

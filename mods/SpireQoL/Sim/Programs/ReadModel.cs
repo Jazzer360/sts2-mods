@@ -21,6 +21,8 @@ internal readonly struct HookArgs
     public int Applier { get; init; }
     public int Target { get; init; }
     public bool Debuff { get; init; }
+    /// <summary>The card play's count so far (ModifyCardPlayCount).</summary>
+    public int PlayCount { get; init; }
     /// <summary>The damage or block being worked out (the Modify hooks).</summary>
     public DamageCtx? Damage { get; init; }
     public BlockCtx? Block { get; init; }
@@ -108,6 +110,8 @@ public sealed class ReadModel : SimModel
         HookName.BeforeSideTurnEnd => nameof(BeforeSideTurnEnd),
         HookName.AfterSideTurnEnd => nameof(AfterSideTurnEnd),
         HookName.AfterSideTurnEndLate => nameof(AfterSideTurnEndLate),
+        HookName.ModifyCardPlayCount => nameof(ModifyCardPlayCount),
+        HookName.AfterModifyingCardPlayCount => nameof(AfterModifyingCardPlayCount),
         HookName.ModifyDamageAdditive => nameof(ModifyDamageAdditive),
         HookName.ModifyDamageMultiplicative => nameof(ModifyDamageMultiplicative),
         HookName.ModifyDamageMultiplicativeLate => nameof(ModifyDamageMultiplicativeLate),
@@ -153,6 +157,21 @@ public sealed class ReadModel : SimModel
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner) => TurnEnd(HookName.BeforeSideTurnEnd, state, owner);
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) => TurnEnd(HookName.AfterSideTurnEnd, state, owner);
     public override IEnumerable<SimState> AfterSideTurnEndLate(SimState state, int owner) => TurnEnd(HookName.AfterSideTurnEndLate, state, owner);
+
+    /// <summary>Hook.ModifyCardPlayCount: the value of its code's first way that holds (playCount, playCount + 1...), decided once before the plays.</summary>
+    public override int ModifyCardPlayCount(SimState state, int owner, SimCardPlay play, int count)
+    {
+        if (_returns[(int)HookName.ModifyCardPlayCount] is not { } returns) return count;
+        var args = new HookArgs { State = state, Owner = owner, Hook = HookName.ModifyCardPlayCount, Play = play, PlayCount = count };
+        return (int)returns(in args);
+    }
+
+    /// <summary>After it changed a card play's count (a stack used: PowerCmd.Decrement; Throwing Axe's UsedThisCombat): deterministic, on the state given.</summary>
+    public override void AfterModifyingCardPlayCount(SimState state, int owner, SimCardPlay play)
+    {
+        foreach (var branch in Run(HookName.AfterModifyingCardPlayCount, new HookArgs { State = state, Owner = owner, Play = play }))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingCardPlayCount branched");
+    }
 
     /// <summary>A hook of the players' side's turn ending (decision #51), in its place among them.</summary>
     private IEnumerable<SimState> TurnEnd(HookName hook, SimState state, int owner) => Run(hook, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay });
@@ -483,6 +502,7 @@ public sealed class ReadModel : SimModel
             case HookFact.TakesPart: return (in HookArgs args) => args.State.TakesPart(args.Owner) ? 1m : 0m;
             case HookFact.TakeBound: return (in HookArgs args) => Take(in args) ? 1m : 0m;
             case HookFact.BoundTaken: return (in HookArgs args) => args.Taken?[0] ?? 0;
+            case HookFact.PlayCountSoFar: return (in HookArgs args) => args.PlayCount;
             case HookFact.OwnerBlock: return (in HookArgs args) => args.State.Player(args.Owner)?.Block ?? args.State.Enemy(args.Owner)?.Block ?? 0;
             case HookFact.OwnerHandCount: return (in HookArgs args) => args.State.Player(args.Owner)?.HandCount ?? 0;
             default: throw new InvalidOperationException($"{Name}: no fact {fact.Fact}");
@@ -492,7 +512,7 @@ public sealed class ReadModel : SimModel
     /// <summary>The type of the hook's card: the card played, or the event's card (a made Status or Sadness by its event; one drawn as its profile says).</summary>
     private static SimCardType CardTypeOf(in HookArgs args)
     {
-        if (args.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed) return args.Play?.Card.Type ?? SimCardType.None;
+        if (args.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed or HookName.ModifyCardPlayCount or HookName.AfterModifyingCardPlayCount) return args.Play?.Card.Type ?? SimCardType.None;
         return args.Event switch
         {
             CardEvent.GeneratedStatus => SimCardType.Status,

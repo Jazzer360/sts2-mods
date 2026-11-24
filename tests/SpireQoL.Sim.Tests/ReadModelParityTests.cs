@@ -25,6 +25,10 @@ public class ReadModelParityTests
         ["DoubleDamagePower.AfterSideTurnEnd"] = "PowerCmd.Decrement(this) when its owner takes part: it goes down as your turn ends. After it no card of yours plays this turn (the auto-plays come before), so no damage it doubles is left: no prediction changes",
         ["RagePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. No card of yours plays after it (the auto-plays come before): no prediction changes",
         ["GravityPower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. No card of yours plays after it (the auto-plays come before): no prediction changes",
+        ["BurstPower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. No card of yours plays after it (the auto-plays come before): no prediction changes",
+        ["DuplicationPower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: as Burst's",
+        ["OneTwoPunchPower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: as Burst's",
+        ["KiVersePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: as Burst's",
         ["CorrosiveWavePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. You draw nothing after it this turn: no prediction changes",
         ["SleightOfFleshPower.AfterPowerApplied"] = "!(power is ITemporaryPower): a temporary power landing (Dark Shackles) doesn't set it off, the Strength its BeforeApplied applies does. The simulator lands a temporary Strength power as that Strength (SimAdapter.PowersFrom), which both count: no prediction changes",
         ["ShroudPower.AfterPowerApplied"] = "applier == base.Owner && power is DoomPower, with no test of the target: Doom you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Doom on a player today",
@@ -105,7 +109,7 @@ public class ReadModelParityTests
         nameof(SimModel.ModifyBlockAdditive), nameof(SimModel.ModifyBlockMultiplicative),
         nameof(SimModel.BeforeCardPlayed), nameof(SimModel.AfterCardPlayed), nameof(SimModel.AfterCardEvent), nameof(SimModel.AfterPowerApplied),
         nameof(SimModel.BeforeSideTurnEndVeryEarly), nameof(SimModel.BeforeSideTurnEndEarly), nameof(SimModel.BeforeSideTurnEnd), nameof(SimModel.AfterSideTurnEnd),
-        nameof(SimModel.AfterSideTurnEndLate),
+        nameof(SimModel.AfterSideTurnEndLate), nameof(SimModel.ModifyCardPlayCount), nameof(SimModel.AfterModifyingCardPlayCount),
     };
 
     [Fact]
@@ -216,6 +220,24 @@ public class ReadModelParityTests
                                     yield return ($"{power.Name} {amount} by {applier} on {target}, debuff {debuff}", (model, state) =>
                                         Branches(model.AfterPowerApplied(state, owner, power, amount, applier, target, debuff)));
                 break;
+            case nameof(SimModel.ModifyCardPlayCount) or nameof(SimModel.AfterModifyingCardPlayCount):
+                // Each play's shape decided four times in turn, as the engine decides it (DecideCardPlay): the count from 1 and from 2, and
+                // AfterModifyingCardPlayCount when it changed it (a stack used each time); each count and each step's outcome compared.
+                foreach (var play in Plays(others))
+                    yield return ($"the play count of {Describe(play)}, four times", (model, state) =>
+                    {
+                        var text = new StringBuilder();
+                        foreach (var from in new[] { 1, 2, 1, 1 })
+                        {
+                            // A listener only while it's there (the engine lists the powers and relics on the board): a power used up answers no more.
+                            if (!SimEngine.PowersOf(state, owner).Has(new PowerId(model.Name)) && !SimEngine.RelicsOf(state, owner).Has(new RelicId(model.Name))) { text.Append("gone // "); continue; }
+                            var count = model.ModifyCardPlayCount(state, owner, play, from);
+                            if (count != from) model.AfterModifyingCardPlayCount(state, owner, play);
+                            text.Append($"{from} -> {count}: ").Append(Branches(new[] { state })).Append(" // ");
+                        }
+                        return text.ToString();
+                    });
+                break;
             case nameof(SimModel.BeforeSideTurnEndVeryEarly) or nameof(SimModel.BeforeSideTurnEndEarly) or nameof(SimModel.BeforeSideTurnEnd) or nameof(SimModel.AfterSideTurnEnd)
                 or nameof(SimModel.AfterSideTurnEndLate):
                 // The players' turn ending, every hook in the game's order (what an earlier one sets, a later one reads), on the board and with no
@@ -245,7 +267,7 @@ public class ReadModelParityTests
                 foreach (var energy in new[] { 0, 1, 2, 3 })
                     foreach (var (index, count) in new[] { (0, 1), (1, 2) })
                     {
-                        var card = new SimCard("Played", type) { Energy = energy, Ethereal = energy == 1, Stars = energy == 2 ? 2 : 0, Upgradable = energy == 3 };
+                        var card = new SimCard("Played", type) { Energy = energy, Ethereal = energy == 1, Stars = energy == 2 ? 2 : 0, Upgradable = energy == 3, Tags = energy == 2 ? new() { SimCardTag.Wah } : new() };
                         yield return new SimCardPlay(card, player, Target: 0, index, count, AutoPlay: energy == 3);
                     }
     }

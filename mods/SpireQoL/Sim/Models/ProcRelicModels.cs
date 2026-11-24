@@ -329,21 +329,3 @@ public sealed class BoneFlute : RelicProc
         owner == Who.You && attack.Dealer == Who.YourOsty && state.You.OstyHp > 0 ? RelicBlock(state, owner) : One(state);
 }
 
-/// <summary>
-/// ThrowingAxe (Data: RelicUse.Armed while unused this fight). ModifyCardPlayCount: its owner's first card play of the fight plays once more;
-/// AfterModifyingCardPlayCount uses it up (UsedThisCombat). Decided as each card play starts (decision #192). Its tag is the double-play tag
-/// (CardPlays), not a proc: it logs no firing.
-/// </summary>
-public sealed class ThrowingAxe : SimModel
-{
-    private static bool Armed(SimState state, int owner) => ((RelicUse)SimEngine.RelicsOf(state, owner).DataOf(RelicId.ThrowingAxe)).HasFlag(RelicUse.Armed);
-
-    public override int ModifyCardPlayCount(SimState state, int owner, SimCardPlay play, int count) =>
-        Armed(state, owner) && play.Owner == owner ? count + 1 : count;
-
-    public override void AfterModifyingCardPlayCount(SimState state, int owner, SimCardPlay play)
-    {
-        var relics = SimEngine.RelicsOf(state, owner);
-        SimEngine.SetRelics(state, owner, relics.With(RelicId.ThrowingAxe, relics[RelicId.ThrowingAxe], 0));
-    }
-}

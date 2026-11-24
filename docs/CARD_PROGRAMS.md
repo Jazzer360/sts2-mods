@@ -507,6 +507,7 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 | a counter loop (`for (i = 0; i < n; i++)`) | `RepeatStep`: its body n times, n worked out as it starts, a firing on the first round only |
 | `OrbCmd.Channel<T>(owner)` | `ChannelStep` (`SimEngine.ChannelKind`) |
 | the players' side's turn-end hooks (BeforeSideTurnEndVeryEarly, Early, BeforeSideTurnEnd, AfterSideTurnEnd, AfterSideTurnEndLate) | run where the engine runs every model's (decision #51) |
+| `ModifyCardPlayCount(card, target, playCount)`'s returns, `AfterModifyingCardPlayCount(card)` | the play count by the first way that holds (`HookFact.PlayCountSoFar`; `card` the card played), the steps after it changed it (decision #192) |
 | `base.Owner.Creature.Block`, `PileType.Hand.GetPile(base.Owner).Cards.Count` / `.IsEmpty` | `HookFact.OwnerBlock`, `HookFact.OwnerHandCount` |
 | `new PowerVar<T>(n)`, `new PowerVar<T>("Name", n)` in CanonicalVars | the value keyed by T's class (the constructor's type argument: `CodeMember.TypeArguments`) or by its name |
 | a power whose copies act on their own (`PowerInstanceType.Instanced`), a game object's property set or field stored where no step is read (a `DynamicVar.BaseValue--`) | a gap, so a class is never read whole while part of what it does is dropped |

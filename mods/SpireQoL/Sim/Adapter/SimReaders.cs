@@ -236,7 +236,6 @@ public static class SimReaders
                     data = Sts2State.Private<object?>(relic, "AffectedCardPlay", fallback: null) != null ? Models.PaelsLegion.BoundToPlay : 0;
                     break;
                 case nameof(CentennialPuzzle): amount = Sts2State.Private(relic, "UsedThisCombat", fallback: false) ? 1 : 0; break; // used up this combat
-                case nameof(ThrowingAxe): data = Sts2State.Private(relic, "UsedThisCombat", fallback: true) ? 0 : (int)RelicUse.Armed; break; // unused this combat
                 case nameof(Pocketwatch): amount = Sts2State.Private(relic, "_cardsPlayedThisTurn", fallback: 0); data = Sts2State.Var(relic, "CardThreshold", fallback: 3); break;
                 case nameof(BeatingRemnant): data = (int)Sts2State.Private(relic, "DamageReceivedThisTurn", fallback: 0m); break;
                 // Counters the models keep counting (their tray number, or the private count behind it).

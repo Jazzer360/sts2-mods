@@ -250,52 +250,6 @@ public sealed class EchoFormPower : SimModel
 }
 
 /// <summary>
-/// A power that plays its owner's cards of a kind once more, a stack used each time (ModifyCardPlayCount: +1; AfterModifyingCardPlayCount:
-/// PowerCmd.Decrement, gone at 0), decided as each card play starts (decision #192): Burst, Duplication, One-Two Punch, Signal Boost, Ki
-/// Verse. Its tag is the double-play tag (CardPlays), not a proc: it logs no firing. Removed at its owner's turn's end, after the plays.
-/// </summary>
-public abstract class ExtraPlayPower : SimModel
-{
-    /// <summary>The card is of the kind it replays (its ModifyCardPlayCount's test of the card).</summary>
-    protected abstract bool Replays(SimCard card);
-
-    public override int ModifyCardPlayCount(SimState state, int owner, SimCardPlay play, int count) =>
-        play.Owner == owner && Replays(play.Card) && SimEngine.PowerOn(state, owner, ThisPower) > 0 ? count + 1 : count;
-
-    public override void AfterModifyingCardPlayCount(SimState state, int owner, SimCardPlay play) => SimEngine.DecrementPower(state, owner, ThisPower);
-}
-
-/// <summary>BurstPower: its owner's Skills.</summary>
-public sealed class BurstPower : ExtraPlayPower
-{
-    protected override bool Replays(SimCard card) => card.Type == SimCardType.Skill;
-}
-
-/// <summary>DuplicationPower: any card of its owner's.</summary>
-public sealed class DuplicationPower : ExtraPlayPower
-{
-    protected override bool Replays(SimCard card) => true;
-}
-
-/// <summary>OneTwoPunchPower: its owner's Attacks.</summary>
-public sealed class OneTwoPunchPower : ExtraPlayPower
-{
-    protected override bool Replays(SimCard card) => card.Type == SimCardType.Attack;
-}
-
-/// <summary>SignalBoostPower: its owner's Powers.</summary>
-public sealed class SignalBoostPower : ExtraPlayPower
-{
-    protected override bool Replays(SimCard card) => card.Type == SimCardType.Power;
-}
-
-/// <summary>KiVersePower: its owner's melodies (cards tagged Wah, Cho or Ki).</summary>
-public sealed class KiVersePower : ExtraPlayPower
-{
-    protected override bool Replays(SimCard card) => card.Is(SimCardTag.Wah) || card.Is(SimCardTag.Cho) || card.Is(SimCardTag.Ki);
-}
-
-/// <summary>
 /// TagTeamPower on an enemy, one copy per applier as the game's (PowerInstanceType.Instanced): Data holds each applier's amount, 4 bits each
 /// (you, each teammate, no one: DataFor), the power's amount their total. ModifyCardPlayCount: an Attack aimed at this enemy or at every
 /// enemy (TargetType AnyEnemy at it, AllEnemies) plays each other applier's amount more times (card.Owner.Creature == base.Applier: not its

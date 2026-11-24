@@ -174,7 +174,7 @@ public static class HookReader
                 if (TurnStartHooks.Contains(hook.Name))
                     return PastTheHorizon(hook) is { } turnStartGap ? (null, turnStartGap, null) : (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers");
                 if (!Enum.TryParse<HookName>(hook.Name, out var name)) return (null, $"gap: the simulator runs no read model's {hook.Name}", null);
-                if (hook.ReturnType.Name is "Decimal")
+                if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name == HookName.ModifyCardPlayCount)
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Ways(ProgramReader.ReadReturnedWays(_type, hook, _read)) }, null, null);
                 var program = ProgramReader.Read(_type, _read, hook.Name);
                 if (program.Unknowns.FirstOrDefault() is { } unknown) return (null, "gap: the reader can't follow it: " + unknown, null);
@@ -302,7 +302,7 @@ public static class HookReader
         }
 
         /// <summary>Its own data's Remove(cardPlay.Card, out value): what it bound to the play in progress, taken.</summary>
-        private static bool IsTakeBound(ProgramValue value) =>
+        private bool IsTakeBound(ProgramValue value) =>
             value is QueryValue { Name: "Remove", Of: QueryValue { Of: { } dataOf }, Arguments: [var key, _] } && ProgramReader.IsOwnData(dataOf) && IsPlayCard(key);
 
         // ---- commands
@@ -642,6 +642,8 @@ public static class HookReader
                 case NamedValue { Name: "Decimal.One" }: return new HookConstant(1m);
                 case NamedValue { Name: "Decimal.MinusOne" }: return new HookConstant(-1m);
                 case NamedValue { Name: "amount" } when _hook == "AfterPowerAmountChanged": return new HookFactValue(HookFact.PowerAmount);
+                // The play count the listeners before it gave (ModifyCardPlayCount's playCount).
+                case ParameterValue { Name: "playCount" } or NamedValue { Name: "playCount" } when _hook == "ModifyCardPlayCount": return new HookFactValue(HookFact.PlayCountSoFar);
                 case QueryValue { Type: "Decimal", Name: ".ctor", Arguments: var parts } when parts.All(part => part is ConstantValue):
                 {
                     var numbers = parts.Cast<ConstantValue>().Select(part => part.Value).ToList();
@@ -812,9 +814,15 @@ public static class HookReader
             _ => null,
         };
 
-        private static bool IsPlayCard(ProgramValue value) => value is QueryValue { Type: "CardPlay", Name: "Card", Of: NamedValue { Name: "cardPlay" } or ParameterValue { Name: "cardPlay" } };
+        /// <summary>The card played: cardPlay.Card, or a play-shape hook's card (ModifyCardPlayCount's card: the card whose play it decides).</summary>
+        private bool IsPlayCard(ProgramValue value) =>
+            value is QueryValue { Type: "CardPlay", Name: "Card", Of: NamedValue { Name: "cardPlay" } or ParameterValue { Name: "cardPlay" } }
+            || value is NamedValue { Name: "card" } or ParameterValue { Name: "card" } && PlayShapeHooks.Contains(_hook);
 
-        private bool IsEventCard(ProgramValue value) => value is NamedValue { Name: "card" } or ParameterValue { Name: "card" } && _hook != "AfterCardPlayed";
+        /// <summary>The hooks that decide a card play's shape before its plays, their card the one played (decision #192).</summary>
+        private static readonly HashSet<string> PlayShapeHooks = new(StringComparer.Ordinal) { "ModifyCardPlayCount", "AfterModifyingCardPlayCount" };
+
+        private bool IsEventCard(ProgramValue value) => value is NamedValue { Name: "card" } or ParameterValue { Name: "card" } && _hook != "AfterCardPlayed" && !PlayShapeHooks.Contains(_hook);
 
         private static bool IsSourceCard(ProgramValue value) => value is ParameterValue { Name: "cardSource" } or NamedValue { Name: "cardSource" };
 
