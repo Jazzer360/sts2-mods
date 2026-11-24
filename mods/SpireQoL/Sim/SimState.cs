@@ -606,6 +606,9 @@ public sealed class SimHandCard
         Plays = Id == 0 ? Plays : Plays.Select(play => play.HandCard == Id ? play.AsHandCard(id) : play).ToList(),
     };
 
+    /// <summary>This card made free this turn (CardModel.SetToFreeThisTurn): its cost 0, the rest the same (its key its own).</summary>
+    public SimHandCard FreeCopy() => new() { Id = Id, Name = Name, IsAttack = IsAttack, Cost = 0, Plays = Plays };
+
     public string Name = "";
     public bool IsAttack;
     /// <summary>Its cost now (X costs: 999999999, as SimpletonPower orders them).</summary>

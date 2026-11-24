@@ -78,6 +78,13 @@ public static class HookReader
     };
 
     /// <summary>
+    /// The game's values a model's code sets that only show (on a card, in a tooltip): no code a fight runs reads them (AfflictionModel.Amount:
+    /// Vital Spark sets its cards' Tainted amount; only the affliction's tooltip and the multiplayer checksum read it). A catalog scan holds every
+    /// one to that on both branches (ShownOnlyValueTests): a game update whose code reads one fails it.
+    /// </summary>
+    internal static readonly IReadOnlySet<string> ShownOnly = new HashSet<string>(StringComparer.Ordinal) { "AfflictionModel.set_Amount" };
+
+    /// <summary>
     /// The hooks that run only as the players' turn starts (CombatManager.SetupPlayerTurn, for the players starting a turn): after a simulation's
     /// horizon, which ends with the enemy turn, whatever their bodies do.
     /// </summary>
@@ -385,7 +392,7 @@ public static class HookReader
                 case GainEnergyStep: return TabKind.Energy;
             }
         // A pass of the HP-loss pipeline changes the HP a hit takes: it acts (the hand-written models' trigger: Tungsten Rod, The Boot).
-        return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep or UpgradeCardStep or ApplyKeywordStep)
+        return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep)
             || programs.Any(program => program.Returns != null && program.Hook is HookName.ModifyHpLostBeforeOsty or HookName.ModifyHpLostBeforeOstyLate or HookName.ModifyHpLostAfterOsty or HookName.ModifyHpLostAfterOstyLate)
             ? TabKind.Trigger : null;
     }
@@ -642,6 +649,7 @@ public static class HookReader
                 // entered the fight during the simulation. Any other change to the entering card (a keyword: Ghost Seed) stays a gap.
                 if (hook.Name == "AfterCardEnteredCombat" && AfflictsTheEnteringCardOnly(hook))
                     return (null, null, "it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation");
+                if (SetsShownOnly(hook)) return (null, null, "it only sets what its cards show (an affliction's amount): no code a fight runs reads it");
                 if (StartsATurn(hook.Name) && PastTheHorizon(hook) is { } horizon)
                     return horizon.Length == 0 ? (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers") : (null, new GapOf(ReaderCapability.ValueNotFollowed, horizon), null);
                 if (!Enum.TryParse<HookName>(hook.Name, out var name)) return (null, new GapOf(ReaderCapabilities.OfHook(hook.Name), $"gap: the simulator runs no read model's {hook.Name}"), null);
@@ -700,7 +708,7 @@ public static class HookReader
             List<CodeOp> ops;
             try { ops = _read(ProgramReader.BodyOf(hook)); }
             catch { return null; }
-            var stepsAt = program.All().Where(step => step is DataStep or StoreStep).Select(step => step.Offset).ToHashSet();
+            var stepsAt = program.All().Where(step => step is DataStep or StoreStep or CardActionStep).Select(step => step.Offset).ToHashSet();
             var usesData = ops.Any(instruction => instruction.IsCall && instruction.Member is { Name: "GetInternalData" });
             var nested = Procs.CardCode.NestedTypes(_type).Where(type => !type.Name.StartsWith('<')).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
             for (var index = 0; index < ops.Count; index++)
@@ -712,12 +720,12 @@ public static class HookReader
                     && !CollectionQueries.Contains(call.Name) && !stepsAt.Contains(instruction.Offset)
                     && !(call.Name == "Remove" && call.ParameterCount == 2 && index + 1 < ops.Count && ops[index + 1].OpCode != System.Reflection.Emit.OpCodes.Pop))
                     return new GapOf(ReaderCapability.OwnData, $"gap: changes a collection ({call.FullName}) where the reader reads no step");
-                if (instruction.IsCall && ChangesAGameObject(instruction.Member)) return new GapOf(SetOn(instruction.Member!.DeclaringType, call: true), $"gap: changes a game object outside a command ({instruction.Member!.FullName})");
+                if (instruction.IsCall && !stepsAt.Contains(instruction.Offset) && ChangesAGameObject(instruction.Member)) return new GapOf(SetOn(instruction.Member!.DeclaringType, call: true), $"gap: changes a game object outside a command ({instruction.Member!.FullName})");
                 // A property set on one of the game's objects the reader reads no store for (Panache's DynamicVars["CardsLeft"].BaseValue--).
                 // A text set (a StringVar's StringValue: words its tooltip shows) is what's shown, never a number anything reads.
                 if (instruction.IsCall && instruction.Member is { Kind: CodeMemberKind.Method, HasThis: true } setter && setter.Name.StartsWith("set_", StringComparison.Ordinal)
                     && setter.Namespace.StartsWith("MegaCrit", StringComparison.Ordinal) && !setter.Namespace.Contains(".Nodes", StringComparison.Ordinal) && !stepsAt.Contains(instruction.Offset)
-                    && setter.ParameterTypes is not ["String"])
+                    && setter.ParameterTypes is not ["String"] && !ShownOnly.Contains(setter.DeclaringType + "." + setter.Name))
                     return new GapOf(SetOn(setter.DeclaringType, call: false), $"gap: sets {setter.DeclaringType}.{setter.Name[4..]} where the reader reads no store");
                 // A field stored on one of the game's objects (not the hook's own locals) the reader reads no store for.
                 if (instruction.OpCode == System.Reflection.Emit.OpCodes.Stfld && instruction.Member is { } storedField && !storedField.DeclaringType.StartsWith('<') && !storedField.Name.StartsWith('<')
@@ -729,6 +737,71 @@ public static class HookReader
                     return new GapOf(ReaderCapability.OwnData, $"gap: uses its own field ({field.Name}) directly: what a call on it changes isn't read");
             }
             return null;
+        }
+
+        /// <summary>While a hand pick's step is read: its condition's tests of the pick hold (Test).</summary>
+        private bool _handPickHolds;
+
+        /// <summary>The hook is the card played's own (BeforeCardPlayed, AfterCardPlayed): its card's facts are the play's.</summary>
+        private static bool IsPlayHook(string? hook) => hook is "BeforeCardPlayed" or "AfterCardPlayed";
+
+        /// <summary>
+        /// The card is the game's random pick from the owner's hand (every way a NextItem over GetPile(PileType.Hand, base.Owner).Cards, filtered
+        /// or not: a fallback chain), whose first pick is among the cards that cost (a filter asking CostsEnergyOrStars): a card that costs, when
+        /// one does (Mummified Hand's).
+        /// </summary>
+        private bool PicksAHandCardThatCosts(ProgramValue card)
+        {
+            var leaves = new List<ProgramValue>();
+            void Collect(ProgramValue value)
+            {
+                if (value is StoredValue stored) value = stored.Value;
+                if (value is WaysValue ways) foreach (var (_, way) in ways.Ways) Collect(way);
+                else leaves.Add(value);
+            }
+            Collect(card);
+            return leaves.Count > 0 && leaves.All(leaf => leaf is QueryValue { Name: "NextItem", Arguments: [var items] } && FromOwnersHand(items))
+                && leaves[0] is QueryValue { Arguments: [var first] } && Filters(first).Any(filter => filter.Body.Terms.Any(term => term.Any(literal =>
+                    literal.Holds && literal.Test is QueryValue { Name: "CostsEnergyOrStars" })));
+        }
+
+        /// <summary>The cards of the owner's hand, filtered (Where) or listed (ToList) or not: GetPile(PileType.Hand, base.Owner).Cards.</summary>
+        private bool FromOwnersHand(ProgramValue items)
+        {
+            while (true)
+            {
+                if (items is StoredValue stored) items = stored.Value;
+                if (items is QueryValue { Name: "Where" or "ToList", Arguments: [var source, ..] }) { items = source; continue; }
+                return items is QueryValue { Name: "Cards", Of: QueryValue { Name: "GetPile", Arguments: [ConstantValue pile, var owner] } }
+                    && EnumName(_type.Assembly, "PileType", pile.Value) == "Hand" && IsOwner(owner);
+            }
+        }
+
+        /// <summary>The filters (Where's lambdas) on a list of items, outermost first.</summary>
+        private static IEnumerable<LambdaValue> Filters(ProgramValue items)
+        {
+            while (true)
+            {
+                if (items is StoredValue stored) items = stored.Value;
+                if (items is QueryValue { Name: "Where", Arguments: [var source, LambdaValue filter] }) { yield return filter; items = source; continue; }
+                if (items is QueryValue { Name: "ToList", Arguments: [var listed] }) { items = listed; continue; }
+                yield break;
+            }
+        }
+
+        /// <summary>
+        /// The hook's code only sets values that show (ShownOnly), over loops of its own: nothing it does reaches what a fight runs. Read whole to
+        /// tell: no command, store, flash or change to its data, no unknown, and at least one such value set.
+        /// </summary>
+        private bool SetsShownOnly(MethodInfo hook)
+        {
+            ModelProgram program;
+            List<CodeOp> ops;
+            try { program = ProgramReader.Read(_type, _read, hook.Name); ops = _read(ProgramReader.BodyOf(hook)); }
+            catch (InvalidOperationException) { return false; }
+            if (program.Unknowns.Any() || OwnData(hook, program) != null) return false;
+            return program.All().All(step => step is LoopStep)
+                && ops.Any(instruction => instruction.IsCall && instruction.Member is { } setter && ShownOnly.Contains(setter.DeclaringType + "." + setter.Name));
         }
 
         /// <summary>
@@ -852,6 +925,17 @@ public static class HookReader
                     var body = loop.Body.SelectMany(Step).ToList();
                     return body.Count == 0 ? Array.Empty<HookStep>() : new[] { new RepeatStep(times, body) { When = Condition(step.Condition) } };
                 }
+                // A card in the owner's hand made free this turn (Mummified Hand's SetToFreeThisTurn on its pick from the hand): on the card played's
+                // own hook, the pick the game's random one among the hand's cards that cost. Whether the pick found a card is the step's own (it acts
+                // only on a card that costs): the pick's tests in its condition hold.
+                case CardActionStep { Action.Name: "SetToFreeThisTurn", Values.Count: 0 } free when IsPlayHook(_hook) && PicksAHandCardThatCosts(free.Card):
+                {
+                    _handPickHolds = true;
+                    try { return new[] { new FreeInHandStep { When = Condition(step.Condition) } }; }
+                    finally { _handPickHolds = false; }
+                }
+                case CardActionStep action:
+                    throw new Gap(ReaderCapability.CardChanged, $"gap: changes {action.Card} ({action.Action.FullName})");
                 case FlashCall:
                 {
                     // Its own Flash(): where the game shows it acting, for the play check (decision #199). On a test the reader can't translate,
@@ -975,7 +1059,7 @@ public static class HookReader
                         : values[applierAt] is NullValue ? new HookCreature(HookWho.NoOne)
                         : throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: {power} applied by someone else");
                     var amount = Value(values[amountAt]);
-                    if (Targets(values[targetAt]) is not (HookTarget.Owner or HookTarget.PowerOwner or HookTarget.AllEnemies or HookTarget.HitTarget or HookTarget.PlayTarget)) throw new Gap(Other(values[targetAt]), $"gap: {power} on {values[targetAt]}");
+                    if (Targets(values[targetAt]) is not (HookTarget.Owner or HookTarget.PowerOwner or HookTarget.AllEnemies or HookTarget.HitTarget or HookTarget.PlayTarget or HookTarget.PlayOwner)) throw new Gap(Other(values[targetAt]), $"gap: {power} on {values[targetAt]}");
                     // A temporary Strength or Dexterity power (Helical Dart's) lands as the Strength or Dexterity its BeforeApplied applies, by its sign
                     // (TemporaryStrengthPower, TemporaryDexterityPower: IsPositive), as the card programs land it (SimAdapter.PowersFrom).
                     if (TemporaryOf(power) is { } underlying)
@@ -1225,6 +1309,10 @@ public static class HookReader
         {
             switch (test)
             {
+                // A pick from the owner's hand tested as there, in the condition of the step it guards (FreeInHandStep: the step acts on what the
+                // hand holds).
+                case QueryValue { Name: "NextItem", Arguments: [var picked] } when _handPickHolds && FromOwnersHand(picked):
+                    return new HookConstant(1m);
                 case CompareValue compare:
                     return Compare(compare);
                 // An enchantment's status tested as true or false (Normal is 0: Swift's and Sown's status == Normal): its state, not 0.

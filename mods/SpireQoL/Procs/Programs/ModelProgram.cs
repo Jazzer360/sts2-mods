@@ -112,6 +112,16 @@ public sealed record DataStep(int Offset, string Data, string Operation, IReadOn
 }
 
 /// <summary>
+/// A power's or relic's code changing a card through the card's own method, not a command (MummifiedHand's cardModel?.SetToFreeThisTurn()): the
+/// card it's called on and its arguments. Read for powers and relics only (a card's own play reads its changes apart).
+/// </summary>
+public sealed record CardActionStep(int Offset, CodeMember Action, ProgramValue Card) : ProgramStep(Offset)
+{
+    public IReadOnlyList<ProgramValue> Values { get; init; } = Array.Empty<ProgramValue>();
+    public override string ToString() => $"card {Card}.{Action.Name}({string.Join(", ", Values)})" + When;
+}
+
+/// <summary>
 /// A power's or relic's own Flash() (this.Flash()): what the game shows as it acts, at its place in the code. Not a change, but where the
 /// play check holds a prediction to a flash (decision #199).
 /// </summary>
@@ -348,6 +358,15 @@ public static class ProgramReader
     /// </summary>
     internal static bool IsModelAction(CodeMember member) =>
         member is { Kind: CodeMemberKind.Method, HasThis: true, DeclaringType: nameof(MegaCrit.Sts2.Core.Models.MonsterModel), Namespace: "MegaCrit.Sts2.Core.Models" }
+        && (member.ValueType == typeof(void).Name || member.ValueType == nameof(Task)) && !member.Name.StartsWith('<')
+        && !member.Name.StartsWith("get_", StringComparison.Ordinal) && !member.Name.StartsWith("set_", StringComparison.Ordinal) && !Asks(member.Name) && !ShowsOnly(member.Name);
+
+    /// <summary>
+    /// A card's own action (CardModel.SetToFreeThisTurn): an instance method of CardModel that returns nothing or a task and isn't a question, a
+    /// property or a show.
+    /// </summary>
+    internal static bool IsCardAction(CodeMember member) =>
+        member is { Kind: CodeMemberKind.Method, HasThis: true, DeclaringType: nameof(MegaCrit.Sts2.Core.Models.CardModel), Namespace: "MegaCrit.Sts2.Core.Models" }
         && (member.ValueType == typeof(void).Name || member.ValueType == nameof(Task)) && !member.Name.StartsWith('<')
         && !member.Name.StartsWith("get_", StringComparison.Ordinal) && !member.Name.StartsWith("set_", StringComparison.Ordinal) && !Asks(member.Name) && !ShowsOnly(member.Name);
 
@@ -611,6 +630,12 @@ public static class ProgramReader
                 if (member is { Kind: CodeMemberKind.Method, HasThis: true, Name: "Flash" } && IsPowerOrRelic && flow.ReceiverValue(i, member.ParameterCount) is NamedValue { Name: "this" })
                 {
                     into.Add(new FlashCall(instruction.Offset) { Condition = condition });
+                    continue;
+                }
+                // A card's own action a power's or relic's code calls (SetToFreeThisTurn on a card in the hand): a step, with the card it's on.
+                if (IsPowerOrRelic && IsCardAction(member))
+                {
+                    into.Add(new CardActionStep(instruction.Offset, member, flow.ReceiverValue(i, member.ParameterCount)) { Condition = condition, Values = flow.ArgumentValues(i, member) });
                     continue;
                 }
                 if (IsModelAction(member))

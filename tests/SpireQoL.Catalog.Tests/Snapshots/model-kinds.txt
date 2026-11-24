@@ -3,10 +3,10 @@
 
 ## Powers and relics
 
-beta powers: 304 classes, 273 with hooks; read from code 94, hand-written 72, neither 109 (each by its first gap: Snapshots/hook-readings.txt)
-beta relics: 316 classes, 310 with hooks; read from code 48, hand-written 24, neither 238 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 83, hand-written 60, neither 94 (each by its first gap: Snapshots/hook-readings.txt)
-main relics: 299 classes, 293 with hooks; read from code 41, hand-written 23, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 304 classes, 273 with hooks; read from code 95, hand-written 71, neither 109 (each by its first gap: Snapshots/hook-readings.txt)
+beta relics: 316 classes, 310 with hooks; read from code 49, hand-written 23, neither 238 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 84, hand-written 59, neither 94 (each by its first gap: Snapshots/hook-readings.txt)
+main relics: 299 classes, 293 with hooks; read from code 42, hand-written 22, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 6, the game's own code, called live 6, read from its code 5, a per-name rule 4, no hooks 2
 
@@ -199,9 +199,9 @@ name gate: WuppysLoyaltyPower in Sim/Adapter/SimAdapter.cs: not modelled from co
 ## Capabilities across every kind, by the classes each blocks on beta (alone: the classes it's the last one for; hand-written powers and relics and every other kind's class with a body to read)
 
 a potion's chosen target (OnUse's target, as a card play's): 28 classes, 27 alone: Ambergris (potion)*, BeetleJuice (potion)*, BlockPotion (potion)*, BloodPotion (potion)*, DexterityPotion (potion)*, FairyInABottle (potion), FirePotion (potion)*, FlexPotion (potion)*, Fortifier (potion)*, FyshOil (potion)*, GhostInAJar (potion)*, GigantificationPotion (potion)*, HeartOfIron (potion)*, LiquidBronze (potion)*, LuckyTonic (potion)*, MazalethsGift (potion)*, PoisonPotion (potion)*, PotionOfDoom (potion)*, PotionShapedRock (potion)*, PowderedDemise (potion)*, PrecisionPotion (potion)*, RegenPotion (potion)*, ShipInABottle (potion)*, SpeedPotion (potion)*, StableSerum (potion)*, StrengthPotion (potion)*, VulnerablePotion (potion)*, WeakPotion (potion)*
-commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn): 12 classes, 11 alone: MummifiedHand*, MusicBox, AttackPotion (potion)*, BottledSong (potion)*, ColorlessPotion (potion)*, LiquidMemories (potion)*, OrobicAcid (potion)*, PowerPotion (potion)*, SkillPotion (potion)*, SneckoOil (potion)*, SoldiersStew (potion)*, TouchOfInsanity (potion)*
+commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn): 11 classes, 10 alone: MusicBox, AttackPotion (potion)*, BottledSong (potion)*, ColorlessPotion (potion)*, LiquidMemories (potion)*, OrobicAcid (potion)*, PowerPotion (potion)*, SkillPotion (potion)*, SneckoOil (potion)*, SoldiersStew (potion)*, TouchOfInsanity (potion)*
 its own data: a card or a play kept, a field used directly: 15 classes, 8 alone: BlackHolePower, CalamityPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, MusicBox, PaelsLegion, PenNib, RupturePower*, SerpentFormPower*, StretchPower*, UnsettlingLamp, Vambrace, WitheringPresencePower*, Ashwater (potion)*
-a command on another creature (the players, a card's owner, a roll's list): 9 classes, 8 alone: VitalSparkPower, Clarity (potion)*, CureAll (potion)*, Duplicator (potion)*, EnergyPotion (potion)*, ExplosiveAmpoule (potion)*, FocusPotion (potion)*, RadiantTincture (potion)*, SwiftPotion (potion)*
+a command on another creature (the players, a card's owner, a roll's list): 8 classes, 8 alone: Clarity (potion)*, CureAll (potion)*, Duplicator (potion)*, EnergyPotion (potion)*, ExplosiveAmpoule (potion)*, FocusPotion (potion)*, RadiantTincture (potion)*, SwiftPotion (potion)*
 read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 8 classes, 8 alone: ArtOfWar*, ConquerorPower*, DemonTongue*, EmotionChip*, MonarchsGazePower*, ParryingShield*, RippleBasin*, SelfFormingClay*
 commands: a card made (AddGeneratedCardToCombat, a made card): 6 classes, 6 alone: BiiigHug*, BurningSticks*, PersonalHivePower*, CrystallineEuphoria (potion)*, CunningPotion (potion)*, PotOfGhouls (potion)*
 the engine runs no read enchantment (its bodies read whole but for that): 6 classes, 6 alone: Glam (enchantment)*, Imbued (enchantment)*, PerfectFit (enchantment)*, Slither (enchantment)*, SlumberingEssence (enchantment)*, Spiral (enchantment)*
@@ -209,8 +209,8 @@ a loop over items (creatures, cards): 8 classes, 5 alone: CompostPower*, Impaled
 a monster's own state set (its flag, its next move): 10 classes, 4 alone: AsleepPower, CurlUpPower, FlutterPower*, ImbalancedPower*, InfestedPower, PlowPower*, RavenousPower*, SlumberPower, SteamEruptionPower, StockPower
 arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd): 6 classes, 4 alone: CoveringFirePower*, ExplosiveArrowsPower*, ImpaledPower, QuietusPower, Twine*, YahPower*
 commands: another command (no translation): 4 classes, 4 alone: Hexed (affliction)*, BottledPotential (potion)*, FruitJuice (potion)*, KingsCourage (potion)*
-another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 6 classes, 3 alone: CoveredPower, HardenedShellPower*, SurprisePower, VitalSparkPower, Goopy (enchantment)*, FoulPotion (potion)*
 hooks: BeforeAttack and AfterAttack: 6 classes, 3 alone: AimPower, BoneFlute*, GigantificationPower*, QuietusPower, SkittishPower, VigorPower*
+another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 5 classes, 3 alone: CoveredPower, HardenedShellPower*, SurprisePower, Goopy (enchantment)*, FoulPotion (potion)*
 a pick: 3 classes, 3 alone: StratagemPower*, DropletOfPrecognition (potion)*, GamblersBrew (potion)*
 a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 3 classes, 3 alone: InsatiableDominionPower*, ShadowmeldPower*, Tainted (affliction)*
 commands: OstyCmd.Summon: 3 classes, 3 alone: DevourLifePower*, SicEmPower*, BoneBrew (potion)*

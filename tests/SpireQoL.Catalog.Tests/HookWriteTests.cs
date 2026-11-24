@@ -71,7 +71,7 @@ public class HookWriteTests
                 if (spec.Of(name) is { Returns: not null }) continue;
                 var translated = spec.Of(name)?.Steps ?? Array.Empty<HookStep>();
                 var flat = new ModelSpec(spec.Name, spec.Kind, new[] { new HookProgram(name, translated) }).Steps().ToList();
-                var commands = steps.OfType<CommandStep>().Count(step => step.Condition is not { IsNever: true });
+                var commands = steps.OfType<CommandStep>().Count(step => step.Condition is not { IsNever: true }) + steps.OfType<CardActionStep>().Count(step => step.Condition is not { IsNever: true });
                 var commandSteps = flat.Count(step => step is not (StoreFieldStep or BindStep or UnbindStep or RepeatStep or ForEachStep or LetStep or FlashStep));
                 if (commands != commandSteps) dropped.Add($"{type.Name}.{hook.Name}: {commands} commands, {commandSteps} translated");
                 foreach (var store in steps.OfType<StoreStep>())
@@ -85,8 +85,8 @@ public class HookWriteTests
 
     /// <summary>
     /// The scan sees a write the program has no step for: Vital Spark's AfterPowerAmountChanged sets each Tainted card's affliction amount
-    /// (item.Affliction.Amount = base.Amount), a property set on another of the game's objects that no store step reads (the reader names it a
-    /// gap); Panache's count of its own (DynamicVars["CardsLeft"].BaseValue--) is a store step of its state.
+    /// (item.Affliction.Amount = base.Amount), a property set on another of the game's objects that no store step reads (the reader takes it as
+    /// only shown, HookReader.ShownOnly, and doesn't run the hook); Panache's count of its own (DynamicVars["CardsLeft"].BaseValue--) is a store step of its state.
     /// </summary>
     [Fact]
     public void TheScanFindsAWriteWithNoStep()
@@ -115,7 +115,8 @@ public class HookWriteTests
         "store" => steps.OfType<StoreStep>().Any(step => step.Field == write.Name || step.Field == ProgramReader.OwnDataPrefix + write.Name
             || write.Name == "BaseValue" && step.Field.StartsWith(ProgramReader.OwnVarPrefix, StringComparison.Ordinal)),
         "data" => steps.OfType<DataStep>().Any(step => step.Operation == write.Name),
-        _ => steps.OfType<CommandStep>().Any(step => step.Command.FullName == write.Name) || steps.OfType<ChoiceStep>().Any(step => step.Command.FullName == write.Name),
+        _ => steps.OfType<CommandStep>().Any(step => step.Command.FullName == write.Name) || steps.OfType<ChoiceStep>().Any(step => step.Command.FullName == write.Name)
+            || steps.OfType<CardActionStep>().Any(step => step.Action.FullName == write.Name),
     };
 
     /// <summary>

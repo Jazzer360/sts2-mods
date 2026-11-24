@@ -1456,3 +1456,30 @@ public sealed class GalvanicPower : ProcModel
             ? SimEngine.ProcDamagePlayer(state, owner, Name, play.Owner, Amount(state, owner), Unpowered | SimProps.Move, noDealer: true)
             : One(state);
 }
+
+// ---- a power on the player who played (Sim/Models/EnemyModels.cs, deleted 2026-11-24)
+
+/// <summary>VitalSparkPower.AfterCardPlayed: playing a Tainted card gives its player Tainted (its amount: more damage from powered attacks).</summary>
+public sealed class VitalSparkPower : SimModel
+{
+    public override TabKind? Tab => TabKind.Trigger;
+    public override bool Harmful => true;
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (play.Card.Affliction != SimAffliction.Tainted) return One(state);
+        state.LogFired(Name, amount: 0, owner);
+        return SimEngine.ApplyAndTell(state, owner, play.Owner, PowerId.Tainted, SimEngine.PowerOn(state, owner, ThisPower), debuff: false);
+    }
+}
+
+// ---- a card in the hand made free (Sim/Models/ProcRelicModels.cs, deleted 2026-11-24)
+
+/// <summary>
+/// MummifiedHand.AfterCardPlayed: each Power you play makes a random other card in your hand free this turn (it prefers one that
+/// still costs something; with none, nothing changes).
+/// </summary>
+public sealed class MummifiedHand : RelicProc
+{
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
+        Mine(play, owner) && play.Card.Type == SimCardType.Power && play.Card.OthersInHandCost ? Fire(state, owner) : One(state);
+}

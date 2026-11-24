@@ -286,7 +286,7 @@ public sealed class ReadModel : SimModel
         var compiled = new List<CompiledStep>();
         foreach (var step in steps)
         {
-            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or ApplyKeywordStep;
+            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep;
             // An enchantment's effects are its card's (no tab of its own, nothing in the play log: its card's play shows them).
             var fires = firstRound && acts && Spec.Kind != ModelKind.Enchantment && !firing.Any(earlier => Equals(earlier.When, step.When));
             if (acts) firing.Add(step);
@@ -916,7 +916,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep
+            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1051,6 +1051,8 @@ public sealed class ReadModel : SimModel
                     {
                         case HookTarget.Owner: return SimEngine.ApplyAndTell(state, applier, args.Owner, power, given, debuff);
                         case HookTarget.PowerOwner or HookTarget.HitTarget: return SimEngine.ApplyAndTell(state, applier, args.Target, power, given, debuff);
+                        // The player who played the card (cardPlay.Card.Owner.Creature: Vital Spark's Tainted on whoever plays a Tainted card).
+                        case HookTarget.PlayOwner: return args.Play is { } played ? SimEngine.ApplyAndTell(state, applier, played.Owner, power, given, debuff) : One(state);
                         case HookTarget.AllEnemies:
                         {
                             IEnumerable<SimState> states = One(state);
@@ -1100,6 +1102,15 @@ public sealed class ReadModel : SimModel
                     SimEngine.UpgradeCardInPlay(args.State);
                     if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
                     return One(args.State);
+                };
+            // A card in its owner's hand made free this turn (Mummified Hand's pick): it acts when another card in that hand costs something (the
+            // card played's fact, read as it was played), on a card the game picks at random (SimEngine.FreeInHand).
+            case FreeInHandStep:
+                return args =>
+                {
+                    if (args.Play is not { Card.OthersInHandCost: true } played) return One(args.State);
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                    return SimEngine.FreeInHand(args.State, args.Owner, played.Card.HandId);
                 };
             case ApplyKeywordStep keywordStep:
             {

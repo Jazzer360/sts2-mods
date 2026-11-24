@@ -18,19 +18,6 @@ public sealed class MonarchsGazePower : SimModel
     }
 }
 
-/// <summary>VitalSparkPower.AfterCardPlayed: playing a Tainted card gives its player Tainted (its amount: more damage from powered attacks).</summary>
-public sealed class VitalSparkPower : SimModel
-{
-    public override TabKind? Tab => TabKind.Trigger;
-    public override bool Harmful => true;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (play.Card.Affliction != SimAffliction.Tainted) return One(state);
-        state.LogFired(Name, amount: 0, owner);
-        return SimEngine.ApplyAndTell(state, owner, play.Owner, PowerId.Tainted, SimEngine.PowerOn(state, owner, ThisPower), debuff: false);
-    }
-}
-
 /// <summary>RavenousPower (AfterDeath of an ally): it's stunned.</summary>
 public sealed class RavenousPower : SimModel
 {

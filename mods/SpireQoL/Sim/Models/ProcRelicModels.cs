@@ -163,16 +163,6 @@ public sealed class UnsettlingLamp : RelicProc
 
 // ---- on play
 
-/// <summary>
-/// MummifiedHand.AfterCardPlayed: each Power you play makes a random other card in your hand free this turn (it prefers one that
-/// still costs something; with none, nothing changes).
-/// </summary>
-public sealed class MummifiedHand : RelicProc
-{
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Type == SimCardType.Power && play.Card.OthersInHandCost ? Fire(state, owner) : One(state);
-}
-
 /// <summary>ChemicalX.ModifyXValue: X-cost cards (energy or stars) get more.</summary>
 public sealed class ChemicalX : RelicProc
 {

@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 19 engine rules naming 130 game methods; 5 adapter rules; 99 hand-written models.
+# 20 engine rules naming 132 game methods; 5 adapter rules; 97 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -10,6 +10,9 @@ A card play: its shape (play count, result location), each play's hooks and its 
 A card changed during its play: an upgrade of the card in play makes its later plays its upgraded copy's (read by the adapter from an upgraded copy), a keyword added stays on it
   game: CardCmd.Upgrade, CardModel.UpgradeInternal, CardModel.FinalizeUpgradeInternal, CardCmd.ApplyKeyword, CardModel.AddKeyword
   simulator: SimEngine.UpgradeCardInPlay, SimEngine.KeywordCardInPlay, SimEngine.WithKeywords
+A card in a hand made free this turn: the game's random pick among the cards that cost, what a simulation reads of it (the cheapest card at the turn's end)
+  game: CardModel.SetToFreeThisTurn, CardModel.CostsEnergyOrStars
+  simulator: SimEngine.FreeInHand
 Damage to a creature: the damage math, block, the HP-loss pipeline, a death held back, the hit's reactions
   game: CreatureCmd.Damage, Hook.ModifyDamage, Hook.AfterModifyingDamageAmount, Hook.BeforeDamageReceived, Hook.ModifyHpLost, Hook.AfterModifyingHpLostBeforeOsty, Hook.AfterModifyingHpLostAfterOsty, Hook.ModifyPreBlockDamageTarget (beta only), Hook.ModifyUnblockedDamageTarget, Hook.AfterBlockBroken, Hook.AfterDamageGiven, Hook.AfterDamageReceived, Hook.ShouldDie, Hook.AfterPreventingDeath, Creature.DamageBlockInternal, Creature.LoseHpInternal
   simulator: SimEngine.Damage, SimEngine.ModifiedDamage, SimEngine.CalcDamage, SimEngine.PlainDamage, SimEngine.AnyListensToDamage, SimEngine.HpLossPipeline, SimEngine.HpLoss, SimEngine.PlayerDamaged, SimEngine.LandBlockable, SimEngine.LandOnPlayer, SimEngine.LandUnblockable, SimEngine.LoseHp, SimEngine.Lose, SimEngine.PlayHp, SimEngine.BiggestHit, SimEngine.HitOnce, SimEngine.HitAll, SimEngine.HitRandom, SimEngine.RandomTarget, SimEngine.ProcHitOn, SimEngine.ProcDamageAll, SimEngine.ProcDamageRandom, SimEngine.ProcDamageOn, SimEngine.ProcDamagePlayer, SimEngine.DamagePlayer, SimEngine.RunDamage, SimEngine.IntentDamage, SimEngine.WithoutEnchantment, SimEngine.DamageAllEnemies
@@ -164,8 +167,6 @@ MagicBombPower: MagicBombPower.AfterDeath, MagicBombPower.AfterSideTurnEnd
   model: AfterSideTurnEnd
 MonarchsGazePower: MonarchsGazePower.AfterDamageGiven
   model: AfterDamageGiven
-MummifiedHand: MummifiedHand.AfterCardPlayed
-  model: AfterCardPlayed
 MusicBox: MusicBox.AfterCardPlayed, MusicBox.AfterCombatEnd, MusicBox.BeforeCardPlayed, MusicBox.BeforeSideTurnStart
   model: AfterCardPlayed, BeforeCardPlayed
 NecroMasteryPower: NecroMasteryPower.AfterCurrentHpChanged
@@ -271,8 +272,6 @@ Vambrace: Vambrace.AfterCardPlayed, Vambrace.AfterCombatEnd, Vambrace.AfterModif
 VigorPower: VigorPower.AfterAttack, VigorPower.BeforeAttack, VigorPower.InitInternalData, VigorPower.ModifyDamageAdditive
   model: AfterAttack, ModifyDamageAdditive, Qualifies
 ViolentChordPower: ViolentChordPower.AfterCardPlayed (beta only)
-  model: AfterCardPlayed
-VitalSparkPower: VitalSparkPower.AfterCardEnteredCombat, VitalSparkPower.AfterCardPlayed, VitalSparkPower.AfterPowerAmountChanged, VitalSparkPower.AfterRemoved, VitalSparkPower.BeforeCombatStart
   model: AfterCardPlayed
 Void: no game class by its name (the simulator's own)
   model: AfterCardEvent

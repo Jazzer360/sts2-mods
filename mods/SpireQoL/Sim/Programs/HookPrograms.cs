@@ -510,6 +510,12 @@ public sealed record UpgradeCardStep : HookStep;
 /// </summary>
 public sealed record ApplyKeywordStep(string Keyword) : HookStep;
 
+/// <summary>
+/// A card in the owner's hand made free this turn (CardModel.SetToFreeThisTurn on the game's random pick from the hand: Mummified Hand's
+/// NextItem over the cards that cost energy or stars, else the rest), as the card played's own play hook runs it (SimEngine.FreeInHand).
+/// </summary>
+public sealed record FreeInHandStep : HookStep;
+
 /// <summary>PowerCmd.Remove(this): the power itself goes from its owner.</summary>
 public sealed record RemovePowerStep : HookStep;
 

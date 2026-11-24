@@ -11068,6 +11068,657 @@
     "HelpsOwner": false
   },
   {
+    "Name": "MummifiedHand",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "FreeInHandStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "MummifiedHand.AfterCardPlayed:0023",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "MummifiedHand.AfterCardPlayed:0037",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "MummifiedHand.AfterCardPlayed:0104",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "MummifiedHand.AfterCardPlayed:0023",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "PlayIsOwners"
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "MummifiedHand.AfterCardPlayed:0037",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 3
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "MummifiedHand.AfterCardPlayed:00EE",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "MummifiedHand.AfterCardPlayed:0023",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "PlayIsOwners"
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "MummifiedHand.AfterCardPlayed:0037",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardType"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 3
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "MummifiedHand.AfterCardPlayed:00F9",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Or",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:0023",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "PlayIsOwners"
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:0037",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardType"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 3
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "MummifiedHand.AfterCardPlayed:00EE",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "MummifiedHand.AfterCardPlayed:0023",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "PlayIsOwners"
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookTest",
+                                  "At": "MummifiedHand.AfterCardPlayed:0037",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Equal",
+                                    "Left": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardType"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 3
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:0023",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "PlayIsOwners"
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:0037",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardType"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 3
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:00EE",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "And",
+                                  "Left": {
+                                    "$kind": "HookTest",
+                                    "At": "MummifiedHand.AfterCardPlayed:0023",
+                                    "Test": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "PlayIsOwners"
+                                    }
+                                  },
+                                  "Right": {
+                                    "$kind": "HookTest",
+                                    "At": "MummifiedHand.AfterCardPlayed:0037",
+                                    "Test": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Equal",
+                                      "Left": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardType"
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 3
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "MummifiedHand.AfterCardPlayed:0023",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "PlayIsOwners"
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "MummifiedHand.AfterCardPlayed:0037",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 3
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "MummifiedHand.AfterCardPlayed:00EE",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:0023",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "PlayIsOwners"
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:0037",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardType"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 3
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "MummifiedHand.AfterCardPlayed:00F9",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Or",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:0023",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "PlayIsOwners"
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:0037",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardType"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 3
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "MummifiedHand.AfterCardPlayed:00EE",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "MummifiedHand.AfterCardPlayed:0023",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "PlayIsOwners"
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookTest",
+                                  "At": "MummifiedHand.AfterCardPlayed:0037",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Equal",
+                                    "Left": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardType"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 3
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:0023",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "PlayIsOwners"
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:0037",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardType"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 3
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:00EE",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "And",
+                                  "Left": {
+                                    "$kind": "HookTest",
+                                    "At": "MummifiedHand.AfterCardPlayed:0023",
+                                    "Test": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "PlayIsOwners"
+                                    }
+                                  },
+                                  "Right": {
+                                    "$kind": "HookTest",
+                                    "At": "MummifiedHand.AfterCardPlayed:0037",
+                                    "Test": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Equal",
+                                      "Left": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardType"
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 3
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "MummifiedHand.AfterCardPlayed:0023",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PlayIsOwners"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "MummifiedHand.AfterCardPlayed:0037",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardType"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 3
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "MummifiedHand.AfterCardPlayed:00F9",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Or",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:0023",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "PlayIsOwners"
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:0037",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardType"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 3
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "MummifiedHand.AfterCardPlayed:00EE",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "MummifiedHand.AfterCardPlayed:0023",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "PlayIsOwners"
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookTest",
+                                  "At": "MummifiedHand.AfterCardPlayed:0037",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Equal",
+                                    "Left": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardType"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 3
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:0023",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "PlayIsOwners"
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:0037",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardType"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 3
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "MummifiedHand.AfterCardPlayed:00EE",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "And",
+                                  "Left": {
+                                    "$kind": "HookTest",
+                                    "At": "MummifiedHand.AfterCardPlayed:0023",
+                                    "Test": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "PlayIsOwners"
+                                    }
+                                  },
+                                  "Right": {
+                                    "$kind": "HookTest",
+                                    "At": "MummifiedHand.AfterCardPlayed:0037",
+                                    "Test": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Equal",
+                                      "Left": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardType"
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 3
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false
+  },
+  {
     "Name": "NeurosurgePower",
     "Kind": "Power",
     "Hooks": [
@@ -19122,6 +19773,55 @@
     ],
     "Tab": "Draw",
     "HelpsOwner": false
+  },
+  {
+    "Name": "VitalSparkPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__10.MoveNext:0026",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "CardAffliction",
+                "Of": "Tainted"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "TaintedPower",
+            "Target": "PlayOwner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": true,
+            "By": {
+              "Who": "NoOne",
+              "PetOwner": false
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__10.MoveNext:0026",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "CardAffliction",
+                "Of": "Tainted"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false,
+    "HurtsPlayOwner": true
   },
   {
     "Name": "VulnerablePower",
