@@ -147,6 +147,18 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void ASpawnJoinsWithThePowersItStartsWith()
+    {
+        // A creature a death adds starts with the powers its AfterAddedToRoom gives it (SimSpawn.Powers, read from its code): 3 Plating here,
+        // and it has them as it joins.
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 5) } };
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Surprise, amount: 1);
+        state.Enemies[0].Spawns = new List<SimSpawn> { new("Plated", new[] { 20 }) { Powers = PowerSet.Empty.With(PowerId.Plating, amount: 3) } };
+        var branch = Assert.Single(SimEngine.Run(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 6))).Branches);
+        Assert.Equal(3, branch.Enemy(id: 1)!.Powers[PowerId.Plating]);
+    }
+
+    [Fact]
     public void BlossomShotGivesStretchForTheDamageItDealt()
     {
         // BlossomShot.OnPlay: PowerCmd.Apply<StretchPower>(the sum of TotalDamage + OverkillDamage) after the attack: 6 into 2 block and

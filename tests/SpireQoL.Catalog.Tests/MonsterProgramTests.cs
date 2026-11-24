@@ -91,6 +91,9 @@ public class MonsterProgramTests
         var program = ProgramReader.Read(queen, code.Read, "AfterDeath");
         Assert.Contains(program.All().OfType<StoreStep>(), store => store.Field == "HasAmalgamDied" && store.Value.ToString() == "1");
         Assert.Contains(program.Commands, command => command.Command.FullName == "MonsterModel.SetMoveImmediate");
+        // A store to another object's property (Surprise's heistPower.Target = ...) isn't the model's own state.
+        var surprise = code.Models().Single(type => type.Name == "SurprisePower");
+        Assert.Empty(ProgramReader.Read(surprise, code.Read, "AfterDeath").All().OfType<StoreStep>());
         // base.AfterAddedToRoom() is MonsterModel's own code (nothing), not a step.
         Assert.DoesNotContain(ProgramReader.Read(code.Assembly.GetTypes().Single(type => type.Name == "Byrdonis" && type.Namespace == "MegaCrit.Sts2.Core.Models.Monsters"), code.Read, "AfterAddedToRoom").Commands,
             command => command.Command.DeclaringType == "MonsterModel");

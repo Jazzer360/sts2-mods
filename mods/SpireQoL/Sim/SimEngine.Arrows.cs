@@ -143,7 +143,7 @@ public static partial class SimEngine
             {
                 var copy = index == spawn.Hp.Count - 1 ? branch : branch.Clone();
                 copy.Weight = branch.Weight / spawn.Hp.Count;
-                copy.Enemies.Add(new SimEnemy { Id = copy.Enemies.Max(enemy => enemy.Id) + 1, Name = spawn.Name, Hp = hp });
+                copy.Enemies.Add(new SimEnemy { Id = copy.Enemies.Max(enemy => enemy.Id) + 1, Name = spawn.Name, Hp = hp, Powers = spawn.Powers });
                 return copy;
             }).ToList());
         return states;

@@ -482,13 +482,15 @@ public static class ProgramReader
                 if (flow.ReachedAt(i) is not { IsNever: false } reached) continue;
                 var condition = Relative(reached, outer);
                 // A store to the model's own state (this.HasAmalgamDied = true): a step of its own, for what reads that state later.
-                if (instruction.OpCode == OpCodes.Stfld && instruction.Member is { Kind: CodeMemberKind.Field } field && OwnState(field) is { } stored)
+                if (instruction.OpCode == OpCodes.Stfld && instruction.Member is { Kind: CodeMemberKind.Field } field && OwnState(field) is { } stored
+                    && flow.ReceiverValue(i, arguments: 1) is NamedValue { Name: "this" })
                 {
                     into.Add(new StoreStep(instruction.Offset, stored, flow.ValueBefore(i)) { Condition = condition });
                     continue;
                 }
                 if (!instruction.IsCall || instruction.Member is not { } member) continue;
-                if (member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1 } && member.Name.StartsWith("set_", StringComparison.Ordinal) && OwnState(member) is { } property)
+                if (member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1 } && member.Name.StartsWith("set_", StringComparison.Ordinal) && OwnState(member) is { } property
+                    && flow.ReceiverValue(i, arguments: 1) is NamedValue { Name: "this" })
                 {
                     into.Add(new StoreStep(instruction.Offset, property, flow.ArgumentValues(i, member)[0]) { Condition = condition });
                     continue;
@@ -1027,6 +1029,17 @@ public static class ProgramReader
                 };
             }
             return returned;
+        }
+
+        /// <summary>
+        /// What an instance call or a field store at <paramref name="at"/> is made on (the object under its <paramref name="arguments"/>
+        /// values on the stack: this, a local), or unknown.
+        /// </summary>
+        public ProgramValue ReceiverValue(int at, int arguments)
+        {
+            var cursor = at;
+            for (var argument = 0; argument < arguments && cursor >= 0; argument++) cursor = ReadBack(cursor, depth: 0).Start;
+            return cursor >= 0 ? ReadBack(cursor, depth: 0).Value : new UnknownValue("receiver");
         }
 
         /// <summary>The values the call at <paramref name="callAt"/> passes, in order (unknown ones as UnknownValue).</summary>

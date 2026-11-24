@@ -261,7 +261,11 @@ public sealed record TurnEndCard(string Card, string Title, int Amount);
 /// (Creature.SetUniqueMonsterHpValue: a value in its range no other enemy has, then ScaleMonsterHpForMultiplayer). It joins with a
 /// move that does nothing this turn (the gremlins' SPAWNED_MOVE: a stun intent).
 /// </summary>
-public sealed record SimSpawn(string Name, IReadOnlyList<int> Hp);
+public sealed record SimSpawn(string Name, IReadOnlyList<int> Hp)
+{
+    /// <summary>The powers it starts with (its AfterAddedToRoom's, read from its code: decision #195).</summary>
+    public PowerSet Powers { get; init; } = PowerSet.Empty;
+}
 
 /// <summary>One copy of a counter power (SimPlayer.Counters): what it still has to count, and what it gives when it gets there.</summary>
 public sealed record CounterCopy(PowerId Power, int Left, int Amount);

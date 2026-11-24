@@ -55,6 +55,10 @@ public static class ProgramEvaluator
     public static bool? Holds(ProgramCondition condition, ProgramBoard board, ModelProgram program) =>
         Holds(condition, new Context(board, program, new Dictionary<string, object?>()));
 
+    /// <summary>Whether <paramref name="condition"/> holds with the method's parameters bound (a hook's: AfterDeath's target): null when it can't be told.</summary>
+    public static bool? Holds(ProgramCondition condition, ProgramBoard board, ModelProgram program, IReadOnlyDictionary<string, object?> parameters) =>
+        Holds(condition, new Context(board, program, parameters));
+
     /// <summary>The value on the board (a number as a decimal, an object, null): null when it can't be told.</summary>
     public static object? Value(ProgramValue value, ProgramBoard board, ModelProgram program)
     {

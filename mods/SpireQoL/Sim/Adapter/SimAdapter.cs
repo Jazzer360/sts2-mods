@@ -123,8 +123,8 @@ public static partial class SimAdapter
             // Explosive: its death damages every living player (unpowered, blockable), through the game's damage math.
             if (creature.IsAlive && (ExplosiveOf?.Invoke(creature) ?? 0) is > 0 and var explosive) enemy.Explosive = ExplosiveOn(creature, me.Creature, explosive, me, combat);
             enemy.StartedAlive = creature.IsAlive;
-            // Surprise: the gremlins its death adds, with every HP each can start with.
-            if (creature.IsAlive && creature.Powers.Any(power => power.GetType().Name == nameof(SurprisePower))) enemy.Spawns = SurpriseSpawns(combat);
+            // The creatures its death adds (Surprise's gremlins), read from its powers' AfterDeath code, with every HP each can start with.
+            if (creature.IsAlive) enemy.Spawns = SpawnsOf(creature, combat);
             // An ally dying: Ravenous stuns it (and gives Strength for later); Crab Rage gives it Strength once.
             // Crab Rage: its Strength and block when an ally dies (CrabRagePower model: Strength as its amount, block here).
             if (creature.GetPower<CrabRagePower>() is { } crab)
@@ -574,34 +574,6 @@ public static partial class SimAdapter
         if (card.TargetType == TargetType.AnyAlly) return new List<SimPlay>();
         if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, combat, ids, target: Who.None, owner) };
         return ids.Where(entry => entry.Key.IsAlive && entry.Key.IsHittable).Select(entry => AutoPlay(card, me, combat, ids, entry.Value, owner)).ToList();
-    }
-
-    /// <summary>
-    /// SurprisePower.AfterDeath's gremlins, in the order the game adds them (CreatureCmd.Add: the Sneaky Gremlin, then the Fat Gremlin it
-    /// made first): every HP each can start with, equally likely (Creature.SetUniqueMonsterHpValue: a value in its range that no enemy
-    /// in the fight has, from all of them when none is free; each made before the other joins, so neither excludes the other), then
-    /// scaled for the players (ScaleMonsterHpForMultiplayer). Null when it can't be read.
-    /// </summary>
-    private static List<SimSpawn>? SurpriseSpawns(ICombatState combat)
-    {
-        try
-        {
-            var taken = combat.Enemies.Select(creature => creature.MaxHp).ToHashSet();
-            var players = combat.Players.Count;
-            var act = combat.RunState.CurrentActIndex;
-            SimSpawn Of(MonsterModel monster)
-            {
-                var range = Enumerable.Range(monster.MinInitialHp, monster.MaxInitialHp - monster.MinInitialHp + 1).ToList();
-                var free = range.Where(hp => !taken.Contains(hp)).ToList();
-                if (free.Count == 0) free = range;
-                return new SimSpawn(Combat.TurnEndModel.SafeTitle(monster), free.Select(hp => players == 1 ? hp : (int)Creature.ScaleHpForMultiplayer(hp, combat.Encounter, players, act)).ToList());
-            }
-            return new List<SimSpawn> { Of(ModelDb.Monster<MegaCrit.Sts2.Core.Models.Monsters.SneakyGremlin>()), Of(ModelDb.Monster<MegaCrit.Sts2.Core.Models.Monsters.FatGremlin>()) };
-        }
-        catch
-        {
-            return null;
-        }
     }
 
     /// <summary>
