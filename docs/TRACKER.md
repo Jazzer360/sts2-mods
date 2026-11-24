@@ -474,6 +474,15 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 
 ---
 
+## 22. Model programs: powers and relics (decision #195, 2026-11-24)
+
+- [x] Hook programs: any power's or relic's hook body read into the simulator's program (`HookReader` → `ModelSpec`), run by one generic model (`ReadModel`), compiled once per class. Commands: GainBlock, Damage (every enemy, a random one, the creature a power landed on), Draw, GainEnergy, Apply, the power's own Remove/Decrement/TickDownDuration. Facts (`HookFact`) for the hook's parameters; values over base.Amount, DynamicVars (canonical values from CanonicalVars) and constants.
+- [x] Modify hooks as expressions (`ReadReturnedWays` → `HookWays`).
+- [x] The scan (`HookProgramTests`): every power's and relic's hook body on both branches translated, never run (with why) or a named gap; counts pinned (beta: powers 73 read, 82 never run, 414 gaps; relics 9 read, 294 never run, 212 gaps).
+- [x] Group 1, the damage and block math: Strength, Dexterity, Frail, Double Damage (parity on every scenario: `ReadModelParityTests`; snapshots and golden unchanged).
+- [ ] Hooks no read model runs yet (the biggest gap kind): the damage-time hooks (BeforeDamageReceived, AfterDamageGiven, AfterDamageReceived, AfterBlockBroken), AfterAttack/BeforeAttack, AfterBlockGained, AfterOrbChanneled, AfterDeath, the end-of-turn hooks other than AfterSideTurnEnd, ModifyCardPlayCount and ModifyCardPlayResultLocation, the HP-loss pipeline, ModifyHandDraw and the Try/Should hooks.
+- [ ] A model's own state as simulator state: stores to its fields and properties (Kunai's AttacksPlayedThisTurn), its internal data (`GetInternalData`: Afterimage's amounts bound to a play, Dark Embrace's Ethereal count), seeded from the game and part of the state key.
+- [ ] Turn-start hooks of powers on enemies (they act as the enemies' turn starts: the enemy turn runs no read model there yet).
 ## 21. Model programs: enemies (decision #195, 2026-11-24)
 
 - [x] The reader reads any game method (`ProgramReader`, `ModelProgram`, `ModelPrograms`): a monster's moves and hooks, found by shape (`MonsterCode`). Stores to the model's own state are steps (`StoreStep`), a monster's calls into MonsterModel that change it too (`SetMoveImmediate`), `base.` hook calls are their base code.

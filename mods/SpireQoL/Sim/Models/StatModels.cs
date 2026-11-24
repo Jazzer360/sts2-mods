@@ -3,32 +3,7 @@ namespace SpireQoL.Sim.Models;
 // The damage and block sources that can change during your turn (docs/SIMULATOR.md "Coverage"), each from its
 // decompiled body (v0.113.1). Amounts live on the owner's PowerSet; Data holds what a model keeps between hooks.
 
-/// <summary>StrengthPower.ModifyDamageAdditive: its amount on the owner's powered attacks (negative allowed).</summary>
-public sealed class StrengthPower : SimModel
-{
-    public override decimal ModifyDamageAdditive(SimState state, int owner, DamageCtx damage) =>
-        damage.Dealer == owner && damage.Props.IsPoweredAttack() ? SimEngine.PowerOn(state, owner, ThisPower) : 0m;
-}
-
-/// <summary>
-/// DexterityPower.ModifyBlockAdditive: its amount on powered block: from a card, the card's owner must be its owner; without a
-/// card, its owner must be the one gaining it.
-/// </summary>
-public sealed class DexterityPower : SimModel
-{
-    public override decimal ModifyBlockAdditive(SimState state, int owner, BlockCtx block)
-    {
-        if (block.Play != null ? block.Play.Owner != owner : block.Target != owner) return 0m;
-        return block.Props.IsPoweredBlock() ? SimEngine.PowerOn(state, owner, ThisPower) : 0m;
-    }
-}
-
-/// <summary>FrailPower.ModifyBlockMultiplicative: 0.75 on its owner's powered block.</summary>
-public sealed class FrailPower : SimModel
-{
-    public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block) =>
-        block.Target == owner && block.Props.IsPoweredBlock() ? 0.75m : 1m;
-}
+// Strength, Dexterity, Frail and Double Damage are read from their code (ReadModel, decision #195).
 
 /// <summary>
 /// VulnerablePower.ModifyDamageMultiplicative: 1.5 on powered attacks on its owner; the dealer's Paper Phrog adds 0.25, the
@@ -184,13 +159,6 @@ public sealed class GigantificationPower : AttackBoundPower
         state.LogFired(Name, amount: 0, owner);
         return One(state);
     }
-}
-
-/// <summary>DoubleDamagePower.ModifyDamageMultiplicative: 2 on the owner's (or their pet's) powered attacks from a card.</summary>
-public sealed class DoubleDamagePower : SimModel
-{
-    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
-        (damage.Dealer == owner || (owner == Who.You && damage.Dealer == Who.YourOsty)) && damage.Props.IsPoweredAttack() && damage.Card != null ? 2m : 1m;
 }
 
 /// <summary>

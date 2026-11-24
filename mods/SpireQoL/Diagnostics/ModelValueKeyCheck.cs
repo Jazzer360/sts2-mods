@@ -83,11 +83,17 @@ internal static class ModelValueKeyCheck
         foreach (var name in SimModels.Names)
         {
             if (SimModels.Get(name) is not { } model) continue;
+            // A model read from its code reads the keys its code names (decision #195).
+            if (model is ReadModel read)
+            {
+                keys.AddRange(read.Spec.Values().OfType<HookVar>().Select(variable => new ValueKey(model.Name, variable.Key.Replace(".Props", "", StringComparison.Ordinal), "read from its code")));
+                continue;
+            }
             foreach (var method in ModelEffectCheck.OwnTypes(model.GetType()).SelectMany(type => type.GetMethods(All).Cast<MethodBase>().Concat(type.GetConstructors(All))))
                 keys.AddRange(KeysIn(method, ownModel: model.Name, unread));
         }
         // A model named by a literal (SimEngine.Var(state, player, "InfusedCore", "ExtraDamage")): anywhere in the simulator.
-        foreach (var type in typeof(SimEngine).Assembly.GetTypes().Where(type => type.Namespace?.StartsWith("SpireQoL.Sim", StringComparison.Ordinal) == true))
+        foreach (var type in typeof(SimEngine).Assembly.GetTypes().Where(type => type.Namespace?.StartsWith("SpireQoL.Sim", StringComparison.Ordinal) == true && !ModelEffectCheck.OwnTypes(typeof(ReadModel)).Contains(type)))
             foreach (var method in type.GetMethods(All).Cast<MethodBase>().Concat(type.GetConstructors(All)))
                 keys.AddRange(KeysIn(method, ownModel: null, unread));
         keys.AddRange(SimReaders.RelicAmountVars.Select(entry => new ValueKey(entry.Key, entry.Value.Var, "SimReaders.RelicAmountVars")));

@@ -48,6 +48,9 @@ public static class ModEntry
         MigrateSettings(settings, hadSettings);
         Sim.SimAdapter.IncludeTeammates = settings.MultiplayerPredictions;
         Combat.TurnEndModel.CountTeammateHands = settings.TeammateHands;
+        // The powers and relics modelled from their code: read from the running game when the simulator first asks (decision #195).
+        Sim.SimModels.Read = Sim.ReadModels.Specs;
+        _ = Sim.SimModels.Has(Sim.PowerId.Strength.Name); // read them now, on the game's thread, not in a search on a worker
         DevMode = settings.DevMode ?? File.Exists(Path.Combine(Path.GetDirectoryName(typeof(ModEntry).Assembly.Location) ?? "", DevMarker));
         Log.DetailsToGameLog = DevMode;
         if (DevMode) Log.Info($"dev mode on ({(settings.DevMode == true ? "DevMode in the settings file" : DevMarker + " beside the DLL")})");

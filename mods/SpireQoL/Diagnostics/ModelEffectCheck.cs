@@ -66,7 +66,8 @@ internal static class ModelEffectCheck
         var result = new List<(string, string)>();
         foreach (var name in SimModels.Names.OrderBy(modelName => modelName, StringComparer.Ordinal))
         {
-            if (Reviewed.ContainsKey(name) || !gameTypes.TryGetValue(name, out var types) || SimModels.Get(name) is not { } model) continue;
+            // A model read from its code (decision #195) runs what its code does: nothing of it to explain.
+            if (Reviewed.ContainsKey(name) || !gameTypes.TryGetValue(name, out var types) || SimModels.Get(name) is not { } model || model is ReadModel) continue;
             var commands = types.SelectMany(HookCalls).Where(GameEffects.Contains).Distinct().OrderBy(command => command, StringComparer.Ordinal).ToList();
             if (commands.Count == 0 || ChangesTheSimulation(model.GetType())) continue;
             result.Add((name, string.Join(", ", commands)));

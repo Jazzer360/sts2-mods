@@ -210,6 +210,13 @@ public static class ProgramReader
         new Reader(owner, read).ReturnedValue(BodyOf(method));
 
     /// <summary>
+    /// What a method of a model returns on each way to a return (a Modify hook's early returns: Strength's 0 for another dealer, 0 for an
+    /// unpowered hit, else base.Amount), in the code's order: the value of the first way whose condition holds (decision #195).
+    /// </summary>
+    public static WaysValue ReadReturnedWays(Type owner, MethodBase method, Func<MethodBase, List<CodeOp>> read) =>
+        new Reader(owner, read).ReturnedWays(BodyOf(method));
+
+    /// <summary>
     /// The questions to the game's log of the fight (CombatManager.Instance.History) a model type's code asks (decision #191), each the value
     /// its code works out: read from every method of the type and of the types nested in it (its state machines, its lambdas), each the
     /// outermost value a call there works out that reads the log. One that uses a parameter of a helper of the type's own (Spite's
@@ -358,6 +365,9 @@ public static class ProgramReader
 
         /// <summary>What a method returns, as a value (null when no one way returns it).</summary>
         public ProgramValue? ReturnedValue(MethodBase method) => Flow.Of(_read(method), method, LambdaOf, HelperValue).ReturnedValue();
+
+        /// <summary>What a method returns on each way to a return, in order.</summary>
+        public WaysValue ReturnedWays(MethodBase method) => Flow.Of(_read(method), method, LambdaOf, HelperValue).ReturnedWays();
 
         /// <summary>
         /// Each WithMultiplier call in a method's code (a card's CanonicalVars): the calculated value it's asked of, and what its lambda
@@ -1068,6 +1078,15 @@ public static class ProgramReader
                 cursor = argument.Start;
             }
             return values;
+        }
+
+        /// <summary>Each way to a return, with the condition it's reached on and the value it returns, in the code's order.</summary>
+        public WaysValue ReturnedWays()
+        {
+            var ways = new List<(ProgramCondition When, ProgramValue Value)>();
+            for (var i = 0; i < Ops.Count; i++)
+                if (Ops[i].OpCode == OpCodes.Ret && ReachedAt(i) is { IsNever: false } reached) ways.Add((reached, ValueBefore(i)));
+            return new WaysValue(ways);
         }
 
         /// <summary>What a method returns when one way reaches its return (a helper's value); null otherwise.</summary>

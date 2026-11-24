@@ -91,7 +91,8 @@ internal static class ModelAmountCheck
         var stale = Reviewed.Keys.ToHashSet();
         foreach (var name in SimModels.Names.OrderBy(modelName => modelName, StringComparer.Ordinal))
         {
-            if (!byName.TryGetValue(name, out var types) || SimModels.Get(name) is not { } model) continue;
+            // A model read from its code (decision #195) takes its amounts where its code does, by construction.
+            if (!byName.TryGetValue(name, out var types) || SimModels.Get(name) is not { } model || model is ReadModel) continue;
             var game = types.SelectMany(type => GameAmounts(ModelEffectCheck.HookMethods(type), readGame)).ToList();
             // A relic whose amount the adapter reads from one of its values (SimReaders.RelicAmountVars): its Amount is that value.
             var amountVar = types.Any(type => type.Namespace == "MegaCrit.Sts2.Core.Models.Relics") && SimReaders.RelicAmountVars.TryGetValue(name, out var read) ? "Var " + read.Var : null;

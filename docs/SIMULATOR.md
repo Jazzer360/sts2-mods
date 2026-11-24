@@ -110,6 +110,8 @@ don't change. Added:
 interpreter's back) and may `Flash()`. Each model is written from its decompiled body and names it in a comment. Models
 are stateless code; their numbers live in the state (`Powers`, relic counters), so branches copy only numbers.
 
+Since decision #195 a model is read from the game's code where the reader can (`ReadModel`, Sim/Programs): its hooks' programs (`ModelSpec`, pure data) are read once per class from the running game's code by the adapter (`HookReader`, `ReadModels`), compiled into delegates, and run through the same engine functions (`ProcBlock`, `ProcDamageAll`, `ProcCardEvent`, `ApplyPower`); `SimModels` holds both kinds, a class being one or the other. The simulator's tests run the read models from `tests/SpireQoL.Sim.Tests/ReadModels/read-models.json`, written and checked by the catalog tests (docs/CARD_PROGRAMS.md C6).
+
 ### The interpreter (`Sim/SimEngine.cs`)
 A script's actions run in order on the branch set; each action is a step (or a few), and a hook that may branch (a random
 target) returns its branches, chained with the existing merging step (`SimEngine.Then`), so identical branches merge after

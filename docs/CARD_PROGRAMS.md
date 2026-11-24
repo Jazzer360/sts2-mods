@@ -486,6 +486,27 @@ simulated state.
 
 Every monster hook is read; `MonsterHookTests` holds each monster's coverage ledger entry to what its hooks' programs do.
 
+### C6. Powers' and relics' hooks
+
+A power's or relic's hook bodies are read the same way (`HookReader`) into the simulator's hook programs (`ModelSpec`, `HookProgram`, pure data
+in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once per class into delegates (decision #31).
+
+| Game code | Read as |
+|---|---|
+| `CreatureCmd.GainBlock(base.Owner, amount or BlockVar, props)` | `GainBlockStep`: `SimEngine.ProcBlock`, as the hand-written models' `Block` |
+| `CreatureCmd.Damage(HittableEnemies / NextItem(HittableEnemies) / power.Owner, amount or DamageVar, props, base.Owner or null)` | `DamageStep`: `ProcDamageAll`, `ProcDamageRandom` (a branch per enemy), `ProcDamageOn` |
+| `CardPileCmd.Draw(count, base.Owner.Player)`, `PlayerCmd.GainEnergy(amount, base.Owner)` | `DrawStep`, `GainEnergyStep`: card events, each counted by a draw or energy tab |
+| `PowerCmd.Apply<T>(base.Owner / HittableEnemies / power.Owner, amount, base.Owner)` | `ApplyPowerStep` (its debuff from the power's own `Type`, or `AllowNegative` with less than 0) |
+| `PowerCmd.Remove(this)`, `Decrement(this)`, `TickDownDuration(this)` | `RemovePowerStep`, `DecrementPowerStep` |
+| a test of the hook's parameters (`cardPlay.Card.Owner == base.Owner.Player`, `card.Type == Attack`, `applier == base.Owner`, `props.IsPoweredAttack()`, `participants.Contains(base.Owner)`...) | a `HookFact`, translated once for every model |
+| `base.Amount`, `base.DynamicVars.Block` (its key from DynamicVarSet's getter), constants, arithmetic | `HookFactValue(Amount)`, `HookVar` (its canonical value from the class's CanonicalVars), `HookConstant`, `HookMath` |
+| a Modify hook's returns (`ReadReturnedWays`) | `HookWays`: the value of the first way whose test holds |
+
+What isn't read is a named gap (a store to the model's own state, its internal data, a hook no read model runs yet, a query with no fact), and a
+hook the simulator never runs says why (outside fights: `OutOfCombatHooks.txt`; a relic's turn-start body that waits on its owner's next turn).
+`HookProgramTests` reads every power's and relic's hooks on both branches and pins the counts; the classes read (`ReadModels.Classes`) must be
+read whole. `ReadModelParityTests` holds each read model to the hand-written model it replaced (kept as it was in the test project) on every
+hook it answers.
 ## Order of work (one session)
 
 1. Baseline: `scripts/check.ps1` green. Write the behaviour tests (A4) against today's code: the right cases pass and the

@@ -14,6 +14,8 @@
   <ItemGroup>
     <None Include="Cases/*.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="Cases/*.txt" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The powers and relics modelled from their code, as the installed game's code reads them (the catalog tests write it: decision #195). -->
+    <None Include="ReadModels/*.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />

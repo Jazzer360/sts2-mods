@@ -256,6 +256,17 @@ public abstract class SimModel
         ListensToDamage = DamageHooks.Any(_overrides.Contains);
     }
 
+    /// <summary>
+    /// A model of the game class <paramref name="name"/> whose hooks are the ones its own code answers (a model read from the game's code,
+    /// ReadModel: the engine calls it only for those, as it calls a hand-written model only for the ones it overrides).
+    /// </summary>
+    protected SimModel(string name, IEnumerable<string> hooks)
+    {
+        _name = name;
+        _overrides = hooks.ToHashSet();
+        ListensToDamage = DamageHooks.Any(_overrides.Contains);
+    }
+
     private static readonly string[] DamageHooks =
     {
         nameof(ModifyDamageCap), nameof(BeforeDamageReceived), nameof(AfterBlockBroken), nameof(ModifyHpLostBeforeOsty),
@@ -377,28 +388,43 @@ public abstract class CardListener : SimModel
 {
 }
 
-/// <summary>The models the simulator knows, by the game's class name. A name not here isn't modelled.</summary>
+/// <summary>
+/// The models the simulator knows, by the game's class name: the hand-written ones (a class of this assembly each) and the ones read from the
+/// game's code (ReadModel, decision #195), which <see cref="Read"/> gives once, before the first model is asked for: in the game the adapter
+/// reads them from the running game's code, in the simulator's tests they come from the file the catalog tests write. A name not here isn't
+/// modelled.
+/// </summary>
 public static class SimModels
 {
-    private static readonly Dictionary<string, SimModel> ByName = new();
+    /// <summary>
+    /// Where the read models come from (set once, before any simulation: the mod's entry, the tests' module initializers). Null: none.
+    /// </summary>
+    public static Func<IEnumerable<ModelSpec>>? Read { get; set; }
 
-    static SimModels()
+    private static readonly Lazy<Dictionary<string, SimModel>> ByName = new(Load, LazyThreadSafetyMode.ExecutionAndPublication);
+
+    private static Dictionary<string, SimModel> Load()
     {
+        var byName = new Dictionary<string, SimModel>(StringComparer.Ordinal);
         foreach (var type in typeof(SimModel).Assembly.GetTypes())
         {
             if (type.IsAbstract || !typeof(SimModel).IsAssignableFrom(type) || type.GetConstructor(Type.EmptyTypes) == null) continue;
             var model = (SimModel)Activator.CreateInstance(type)!;
-            ByName[model.Name] = model;
+            byName[model.Name] = model;
         }
+        // A read model never stands in for a hand-written one: a class is one or the other (ReadModelTests holds the two sets apart).
+        foreach (var spec in Read?.Invoke() ?? Enumerable.Empty<ModelSpec>())
+            byName.TryAdd(spec.Name, new ReadModel(spec));
+        return byName;
     }
 
-    public static SimModel? Get(string name) => ByName.GetValueOrDefault(name);
+    public static SimModel? Get(string name) => ByName.Value.GetValueOrDefault(name);
 
-    public static bool Has(string name) => ByName.ContainsKey(name);
+    public static bool Has(string name) => ByName.Value.ContainsKey(name);
 
     /// <summary>The model decides a card play's count itself (it overrides ModifyCardPlayCount: Echo Form): the adapter leaves its part out (CardPlays.ModelledReplays).</summary>
     public static bool DecidesPlayCount(string name) =>
         Get(name) is { } model && model.GetType().GetMethod(nameof(SimModel.ModifyCardPlayCount))?.DeclaringType != typeof(SimModel);
 
-    public static IEnumerable<string> Names => ByName.Keys;
+    public static IEnumerable<string> Names => ByName.Value.Keys;
 }

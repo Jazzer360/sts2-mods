@@ -323,7 +323,7 @@ public static partial class SimEngine
     /// Chains a branching effect inside one step (Juggernaut on each block gain Beacon of Hope shares,
     /// Forgotten Soul after Feel No Pain): identical results merge, as between steps.
     /// </summary>
-    private static List<SimState> Then(IEnumerable<SimState> states, Func<SimState, IEnumerable<SimState>> f)
+    internal static List<SimState> Then(IEnumerable<SimState> states, Func<SimState, IEnumerable<SimState>> f)
     {
         var next = new List<SimState>();
         var seen = new Dictionary<long, SimState>();
