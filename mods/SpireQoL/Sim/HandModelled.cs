@@ -66,7 +66,7 @@ public static class HandModelled
             new[] { "SimEngine.OstyLoses" },
             new[] { "Hook.AfterCurrentHpChanged", "Hook.ModifyUnblockedDamageTarget" }),
         new("Poison: Outbreak's trigger of every enemy's poison, and the game's preview of the next tick (the tick itself is PoisonPower's code: decision #201)",
-            new[] { "SimEngine.TriggerPoison", "SimEngine.PoisonTick" },
+            new[] { "SimEngine.RunModelCommand", "SimEngine.PoisonTick" },
             new[] { "PoisonPower.Trigger", "PoisonPower.CalculateTotalDamageNextTurn" }),
         new("Deaths: the hooks told as each happens, a dead enemy's powers gone, Explosive, the creatures a death adds, a kill, a stun",
             new[] { "SimEngine.AllyDeaths", "SimEngine.ExplosionCheck", "SimEngine.Explosions", "SimEngine.Spawn", "SimEngine.Stun", "SimEngine.RunExecute" },

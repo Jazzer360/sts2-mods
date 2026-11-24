@@ -110,6 +110,14 @@ public static class HookReader
     public static IEnumerable<MethodInfo> Hooks(Type type) => type.GetMethods(Declared)
         .Where(method => method.IsVirtual && !method.Attributes.HasFlag(MethodAttributes.NewSlot) && !method.IsSpecialName && !NotHooks.Contains(method.Name));
 
+    /// <summary>
+    /// A class's own commands others can call: its public methods that aren't hooks, return a Task and take nothing (PoisonPower.Trigger, which
+    /// Outbreak calls on each enemy's poison).
+    /// </summary>
+    public static IEnumerable<MethodInfo> OwnCommands(Type type) => type.GetMethods(Declared)
+        .Where(method => method.IsPublic && !method.IsStatic && !method.IsVirtual && !method.IsSpecialName && method.GetParameters().Length == 0 && method.ReturnType.Name == nameof(Task))
+        .OrderBy(method => method.Name, StringComparer.Ordinal);
+
     /// <summary>Reads a power's or a relic's hooks with <paramref name="read"/> (the loaded game's code, or an assembly file's).</summary>
     public static ModelReading Read(Type type, Func<MethodBase, List<CodeOp>> read)
     {
@@ -142,6 +150,10 @@ public static class HookReader
         var helpsOwner = HelpsOwnerOf(programs);
         var hurtsOwner = HurtsOwnerOf(programs);
         var outcome = OutcomeOf(programs);
+        // Its own commands another class calls (PoisonPower.Trigger, which Outbreak calls on each enemy's poison): each read as a program; one that
+        // doesn't read whole is left out, and a call to it stays what the caller's translation makes of it.
+        var commands = OwnCommands(type).Select(method => (method.Name, Steps: reader.OwnCommand(method))).Where(command => command.Steps != null)
+            .Select(command => new CommandProgram(command.Name, command.Steps!)).ToList();
         // A crossed tab carries no amount (only the four core resources' plain tabs do: decision #132): a trigger, as it is for every owner of a
         // class one owner's is crossed for (a teammate's Sneaky keeps the trigger an enemy's would have). A tab judged on the outcome is its only one.
         var spec = new ModelSpec(type.Name, kind, programs)
@@ -149,6 +161,7 @@ public static class HookReader
             Tab = outcome != null ? null : (helpsOwner || hurtsOwner) && TabOf(programs) != null ? TabKind.Trigger : TabOf(programs),
             HelpsOwner = helpsOwner, HurtsOwner = hurtsOwner, Outcome = outcome,
             Copies = kind == ModelKind.Power ? reader.Copies() : PowerCopies.One,
+            Commands = commands.Count > 0 ? commands : null,
         };
         return new ModelReading(spec, readings);
     }
@@ -331,6 +344,27 @@ public static class HookReader
             _type = type;
             _kind = kind;
             _read = read;
+        }
+
+        /// <summary>One of its own commands another class calls, read whole into steps; null where the reader stops (it's then not read).</summary>
+        public IReadOnlyList<HookStep>? OwnCommand(MethodInfo method)
+        {
+            _hook = method.Name;
+            try
+            {
+                var program = ProgramReader.Read(_type, _read, method.Name);
+                if (program.Unknowns.Any() || OwnData(method, program) != null) return null;
+                var steps = program.Steps.SelectMany(Step).ToList();
+                return steps.Count == 0 ? null : steps;
+            }
+            catch (Gap)
+            {
+                return null;
+            }
+            catch (InvalidOperationException)
+            {
+                return null;
+            }
         }
 
         /// <summary>One hook body of a kind the engine runs no read program for, read to its first gap (ReadEffects).</summary>

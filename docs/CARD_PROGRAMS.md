@@ -306,6 +306,9 @@ hooks.
     the cards and amounts are the table's.
   - A power's own action the card runs, awaited (`ProgramReader.IsPowerAction`: Outbreak's `PoisonPower.Trigger` on each enemy's
     poison) is a step like a command; `CardEffects.TriggersPoison` replaced `TriggerPoisonCards` (only Outbreak has one, on both branches).
+    Since decision #210 the command runs as the power's own code does: a power's public commands (`HookReader.OwnCommands`) are read into its
+    spec (`ModelSpec.Commands`), and a card's call of one is a `ModelCommandAction` the read model runs on each enemy's instance
+    (`ReadModel.RunCommand`), where the engine ticked it by hand.
   - **One play, repeated** (2026-11-23, decision #189): the adapter describes one play from the program and the simulator's loop repeats
     it, as `CardModel.OnPlayWrapper` does; the card goes to its pile once, after the last play. What a play takes from your hand is a
     `TakeFromHandAction` from its `CardsTaken` (every card of the collection there now, a pick's or a roll's most, a filtered take's cards

@@ -4,8 +4,9 @@ using static SpireQoL.Sim.Tests.ScriptBuilder;
 namespace SpireQoL.Sim.Tests;
 
 /// <summary>
-/// Outbreak setting off every enemy's poison during the play (Outbreak.OnPlay: PoisonPower.Trigger on each), and Accelerant's
-/// extra ticks: PoisonPower.TriggerCount is 1 + every living player's Accelerant, at most the stacks (decompile v0.113.1).
+/// Outbreak setting off every enemy's poison during the play (Outbreak.OnPlay: PoisonPower.Trigger on each, run from PoisonPower's own code:
+/// ModelCommandAction, decision #210), and Accelerant's extra ticks: PoisonPower.TriggerCount is 1 + every living player's Accelerant, at most
+/// the stacks (decompile v0.113.1). The board has the Accelerant the adapter reads the trigger count from (SimEnemy.PoisonTriggers, the preview's).
 /// </summary>
 public class PoisonTriggerTests
 {
@@ -18,7 +19,14 @@ public class PoisonTriggerTests
     }
 
     private static SimScript Outbreak(int poison) => Play(Card("Outbreak", SimCardType.Skill), target: Who.None, plays: 1,
-        new ApplyPowerAction(PowerId.Poison, poison) { Debuff = true, To = ApplyPowerAction.Where.AllEnemies }, new TriggerPoisonAction());
+        new ApplyPowerAction(PowerId.Poison, poison) { Debuff = true, To = ApplyPowerAction.Where.AllEnemies }, new ModelCommandAction(PowerId.Poison.Name, Method: "Trigger"));
+
+    /// <summary>A board with the Accelerant on you that makes each enemy's poison tick <paramref name="triggers"/> times.</summary>
+    private static SimState WithAccelerant(SimState state, int triggers)
+    {
+        if (triggers > 1) state.You.Powers = state.You.Powers.With(PowerId.Accelerant, amount: triggers - 1);
+        return state;
+    }
 
     [Fact]
     public void OutbreakTicksEveryEnemysPoisonOnce()
@@ -35,7 +43,7 @@ public class PoisonTriggerTests
     public void AccelerantTicksItMoreTimesEvenOnAnUnpoisonedEnemy()
     {
         // Accelerant 2 (from any players): 3 ticks per trigger. A fresh 9 poison hits 9, 8, 7 and leaves 6.
-        var state = new SimState { Enemies = { Poisoned(id: 0, hp: 50, stacks: 0, triggers: 3) } };
+        var state = WithAccelerant(new SimState { Enemies = { Poisoned(id: 0, hp: 50, stacks: 0, triggers: 3) } }, triggers: 3);
         var after = After(state, Outbreak(poison: 9)).Single();
         Assert.Equal(26, after.Enemy(id: 0)!.Hp);
         Assert.Equal(6, after.Enemy(id: 0)!.PoisonStacks);
@@ -45,7 +53,7 @@ public class PoisonTriggerTests
     [Fact]
     public void TicksStopAtTheStacksAndAtDeath()
     {
-        var state = new SimState { Enemies = { Poisoned(id: 0, hp: 50, stacks: 0, triggers: 5), Poisoned(id: 1, hp: 3, stacks: 0, triggers: 5) } };
+        var state = WithAccelerant(new SimState { Enemies = { Poisoned(id: 0, hp: 50, stacks: 0, triggers: 5), Poisoned(id: 1, hp: 3, stacks: 0, triggers: 5) } }, triggers: 5);
         var after = After(state, Outbreak(poison: 2)).Single();
         Assert.Equal(47, after.Enemy(id: 0)!.Hp); // 2 + 1: two stacks, two ticks
         Assert.Equal(0, after.Enemy(id: 0)!.PoisonStacks);
@@ -61,5 +69,26 @@ public class PoisonTriggerTests
         Assert.Equal(9, after.Enemy(id: 0)!.Poison);
         Assert.Equal(2, after.Enemy(id: 1)!.PoisonTriggers);
         Assert.Equal(1, after.You.Powers[PowerId.Accelerant]);
+    }
+
+    [Fact]
+    public void AnOlderReportsTriggerPoisonActionRunsAsTheCommand()
+    {
+        var state = new SimState { Enemies = { Poisoned(id: 0, hp: 33, stacks: 3) } };
+        var after = After(state, Play(Card("Outbreak", SimCardType.Skill), target: Who.None, plays: 1, new TriggerPoisonAction())).Single();
+        Assert.Equal(30, after.Enemy(id: 0)!.Hp);
+        Assert.Equal(2, after.Enemy(id: 0)!.PoisonStacks);
+    }
+
+    [Fact]
+    public void ADeadPlayersAccelerantAddsNoTick()
+    {
+        // TriggerCount sums the living opponents' Accelerant (Where(c => c.IsAlive)): a teammate who died adds none.
+        var state = new SimState { Enemies = { Poisoned(id: 0, hp: 50, stacks: 0) } };
+        state.Teammates.Add(new SimPlayer { Hp = 0, Died = true });
+        state.Teammates[0].Powers = state.Teammates[0].Powers.With(PowerId.Accelerant, amount: 2);
+        var after = After(state, Outbreak(poison: 5)).Single();
+        Assert.Equal(45, after.Enemy(id: 0)!.Hp);
+        Assert.Equal(4, after.Enemy(id: 0)!.PoisonStacks);
     }
 }

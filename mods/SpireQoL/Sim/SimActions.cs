@@ -364,9 +364,12 @@ public sealed record CardEventAction(CardEvent Event, int Count) : SimAction
 public sealed record DamageAction(DamageSpec Damage) : SimAction;
 
 /// <summary>
-/// Outbreak: every hittable enemy's poison triggers now (PoisonPower.Trigger), one enemy after another: a hit per trigger
-/// (Accelerant adds triggers) for its stacks then, unblockable, the stacks going down by 1 after each hit it survives.
+/// A card calling a power's own command on each hittable enemy's instance of it, one enemy after another (Outbreak: PoisonPower.Trigger on each
+/// enemy's poison): the command as the power's code runs it (ModelSpec.Commands, a read model's RunCommand), decision #210.
 /// </summary>
+public sealed record ModelCommandAction(string Power, string Method) : SimAction;
+
+/// <summary>An older report's name for Outbreak's ModelCommandAction (PoisonPower.Trigger on each enemy's poison), read as it.</summary>
 public sealed record TriggerPoisonAction : SimAction;
 
 /// <summary>

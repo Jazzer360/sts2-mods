@@ -62,7 +62,7 @@ public static partial class SimAdapter
         ["ArrowCmd.TryShootArrow"] = "ShootAction",
         ["ArrowCmd.ImpaleTarget"] = "what its delegate runs, then ImpaleAction",
         ["ArrowCmd.DislodgeArrow"] = "DislodgeAllAction (the loop around it pulls every arrow of yours out)",
-        [nameof(PoisonPower) + ".Trigger"] = "TriggerPoisonAction (every enemy's poison)",
+        [nameof(PoisonPower) + ".Trigger"] = "ModelCommandAction: the power's own command on each enemy's instance of it, as its code runs it (ModelSpec.Commands)",
     };
 
     /// <summary>The game commands a card's step can call that have no simulator action yet, each with why (TRACKER).</summary>
@@ -211,8 +211,9 @@ public static partial class SimAdapter
                 return (new List<SimAction> { new StripBlockAction(RemoveArtifact: play.Program.Commands.Any(other => other.Command is { DeclaringType: "PowerCmd", Name: "Remove" } && Argument(other, 0) == "cardPlay.Target")) }, null);
             case ("PowerCmd", "Apply"):
                 return (PowersFrom(found, play), null);
-            case (nameof(PoisonPower), "Trigger"):
-                return (new List<SimAction> { new TriggerPoisonAction() }, null);
+            // A power's own command the card calls on each enemy's instance of it (Outbreak: PoisonPower.Trigger), read from the power's code.
+            case (var power, var method) when SimModels.Get(power) is ReadModel read && read.HasCommand(method):
+                return (new List<SimAction> { new ModelCommandAction(power, method) }, null);
             case ("CardPileCmd", "Draw" or "DrawWithoutBlockingOnOtherPlayers"):
                 return (DrawsFrom(found, play), null);
             case ("PlayerCmd", "GainEnergy"):

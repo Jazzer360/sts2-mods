@@ -32,23 +32,34 @@ public static partial class SimEngine
         return DrainPending(branch);
     });
 
-    private static IEnumerable<SimState> TriggerPoison(SimState state)
+    /// <summary>
+    /// A card calling a power's own command on each hittable enemy that has it, one after another (Outbreak: PoisonPower.Trigger on each enemy's
+    /// poison), as the power's code runs it (ReadModel.RunCommand, decision #210), the deaths it causes handled after each. A power whose command
+    /// isn't read makes the simulation unknown. The game's preview of an enemy's next poison tick (PoisonPower.CalculateTotalDamageNextTurn, the
+    /// play check's) follows the stacks the command spent.
+    /// </summary>
+    private static IEnumerable<SimState> RunModelCommand(SimState state, string power, string method)
     {
-        foreach (var enemy in state.Targetable.ToList())
+        if (SimModels.Get(power) is not ReadModel model || !model.HasCommand(method))
         {
-            if (enemy.PoisonStacks <= 0) continue;
-            var before = enemy.PoisonStacks;
-            var ticks = Math.Min(enemy.PoisonStacks, Math.Max(1, enemy.PoisonTriggers));
-            for (var i = 0; i < ticks && enemy.Alive; i++)
-            {
-                Damage(state, enemy, enemy.PoisonStacks, dealer: null, SimProps.Unblockable | SimProps.Unpowered);
-                if (enemy.Alive) enemy.PoisonStacks--;
-            }
-            // The next tick's damage (Poison, the game's preview) drops by what the spent stacks dealt.
-            enemy.Poison = Math.Max(0, enemy.Poison - (PoisonTick(before, enemy.PoisonTriggers) - PoisonTick(enemy.PoisonStacks, enemy.PoisonTriggers)));
-            AllyDeaths(state);
+            state.Unmodelled ??= $"{power}.{method} isn't read from its code: what it does isn't simulated";
+            return new[] { state };
         }
-        return DrainPending(state);
+        var id = new PowerId(power);
+        IEnumerable<SimState> states = new[] { state };
+        foreach (var enemyId in state.Targetable.Select(enemy => enemy.Id).ToList())
+            states = Then(states.ToList(), branch =>
+            {
+                if (branch.Enemy(enemyId) is not { Alive: true } enemy || !PowersOf(branch, enemyId).Has(id)) return new[] { branch };
+                var before = enemy.PoisonStacks;
+                return Then(model.RunCommand(method, branch, enemyId).ToList(), after =>
+                {
+                    after.Enemy(enemyId)?.FollowPoisonPreview(before);
+                    AllyDeaths(after);
+                    return DrainPending(after);
+                });
+            });
+        return states;
     }
 
     /// <summary>A poison tick's damage before modifiers: the stacks, then one less, for min(stacks, triggers) hits.</summary>

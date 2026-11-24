@@ -101,6 +101,33 @@ public sealed class ReadModel : SimModel
             if (program.Returns != null) _returns[(int)program.Hook] = Compile(program.Returns);
             _steps[(int)program.Hook] = CompileSteps(program.Steps, new List<HookStep>(), firstRound: true);
         }
+        foreach (var command in spec.Commands ?? Array.Empty<CommandProgram>())
+        {
+            var one = new ModelSpec(spec.Name, spec.Kind, new[] { new HookProgram(HookName.OwnCommand, command.Steps) });
+            _commands[command.Method] = (CompileSteps(command.Steps, new List<HookStep>(), firstRound: true), one.Steps().Any(step => step is StoreFieldStep) || GuardsSeveral(one));
+        }
+    }
+
+    /// <summary>Its own commands another class calls (ModelSpec.Commands), compiled, and whether a run asks each test once.</summary>
+    private readonly Dictionary<string, (CompiledStep[] Steps, bool AsksOnce)> _commands = new(StringComparer.Ordinal);
+
+    /// <summary>It has this command of its own read (PoisonPower's Trigger).</summary>
+    public bool HasCommand(string method) => _commands.ContainsKey(method);
+
+    /// <summary>
+    /// One of its own commands, called by another class on its owner's instance of it (Outbreak: PoisonPower.Trigger on each enemy's poison), run
+    /// as its code runs it: on the state given, its owner's first copy for a power kept in copies (the instance GetPower gives).
+    /// </summary>
+    public IEnumerable<SimState> RunCommand(string method, SimState state, int owner)
+    {
+        if (!_commands.TryGetValue(method, out var command)) return One(state);
+        var copies = HasCopies ? CopiesOrOne(state, owner) : AsOne;
+        var copy = copies.Count > 0 ? copies[0] : 0;
+        if (HasCopies && copy == 0) return One(state);
+        return RunSteps(command.Steps, new HookArgs
+        {
+            State = state, Owner = owner, Play = state.CurrentPlay, Hook = HookName.OwnCommand, Copy = copy, Asked = command.AsksOnce ? new int[_testSlots.Count] : null,
+        });
     }
 
     /// <summary>One of the code's tests (by its place) is in the condition of more than one step of the program.</summary>

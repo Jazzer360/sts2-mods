@@ -45,7 +45,12 @@ public enum HookName
     AfterSideTurnStartLate,
     /// <summary>Hook.AfterOrbChanneled: an orb was channeled for a player (its player the hook's).</summary>
     AfterOrbChanneled,
+    /// <summary>A command of the model's own another class calls (PoisonPower.Trigger, which Outbreak calls on each enemy's poison): ModelSpec.Commands.</summary>
+    OwnCommand,
 }
+
+/// <summary>A command of a model's own (a public method of its class that returns a Task and takes nothing: PoisonPower.Trigger), read as a program.</summary>
+public sealed record CommandProgram(string Method, IReadOnlyList<HookStep> Steps);
 
 /// <summary>
 /// How a power's applications are kept (the game's PowerInstanceType): one instance its amounts stack into, a copy of its own per application
@@ -434,6 +439,13 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     public PowerCopies Copies { get; init; }
 
     /// <summary>
+    /// Its own commands another class calls, each read as a program (PoisonPower.Trigger: Outbreak's card calls it on each enemy's poison, a
+    /// ModelCommandAction): run where they're called, never as hooks. Null: none read.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<CommandProgram>? Commands { get; init; }
+
+    /// <summary>
     /// Why its hooks weren't read, for a class whose hooks read whole at the reviewed builds and no longer do (a game update): no program, and
     /// every simulation it's in is unknown (SimState.Unmodelled, decision #92). Null: read.
     /// </summary>
@@ -465,14 +477,14 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             RepeatStep repeat => Inside(repeat.Times).Concat(repeat.Steps.SelectMany(OfStep)),
             _ => Array.Empty<HookValue>(),
         });
-        return Hooks.SelectMany(program => Inside(program.Returns).Concat(program.Steps.SelectMany(OfStep)));
+        return Hooks.SelectMany(program => Inside(program.Returns).Concat(program.Steps.SelectMany(OfStep))).Concat((Commands ?? Array.Empty<CommandProgram>()).SelectMany(command => command.Steps.SelectMany(OfStep)));
     }
 
     /// <summary>Every step of its programs, a counter loop's included.</summary>
     public IEnumerable<HookStep> Steps()
     {
         static IEnumerable<HookStep> All(HookStep step) => step is RepeatStep repeat ? new[] { step }.Concat(repeat.Steps.SelectMany(All)) : new[] { step };
-        return Hooks.SelectMany(program => program.Steps).SelectMany(All);
+        return Hooks.SelectMany(program => program.Steps).Concat((Commands ?? Array.Empty<CommandProgram>()).SelectMany(command => command.Steps)).SelectMany(All);
     }
 
     /// <summary>Its code asks who applied it (base.Applier): it keeps its applier as its Data (DataCreature), read and landed so.</summary>

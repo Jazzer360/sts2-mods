@@ -222,6 +222,13 @@ public sealed class SimEnemy
         PoisonStacks += stacks;
     }
 
+    /// <summary>The preview of its next tick (Poison) lowered by what the stacks it had (<paramref name="before"/>) dealt more than its stacks now.</summary>
+    internal void FollowPoisonPreview(int before)
+    {
+        if (PoisonStacks == before) return;
+        Poison = Math.Max(0, Poison - (SimEngine.PoisonTick(before, PoisonTriggers) - SimEngine.PoisonTick(PoisonStacks, PoisonTriggers)));
+    }
+
     /// <summary>The preview of its next tick (Poison) raised by what <paramref name="stacks"/> more stacks add, before they land.</summary>
     internal void RaisePoisonPreview(int stacks)
     {
