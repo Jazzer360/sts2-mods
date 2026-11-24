@@ -132,7 +132,7 @@ internal static partial class CoverageLedger
         ["ObsidianVice"] = "covered: read from its code (ReadModel, decision #195): BeforeSideTurnEnd deals its Damage per card in its owner's hand to a random hittable enemy (a branch each)",
         ["Storyteller"] = "ignore: read from its code (ReadModel, decision #195): BeforeSideTurnEnd gives Aim, which only adds to your arrow attacks, none of them after your turn ends; AfterRoomEntered gives it at the start of combat",
         ["Thumbscrew"] = "covered: ModifyAttackHitCount adds a hit to your multi-hit attacks (applied through Hook.ModifyAttackHitCount in BoardCounts.HitsPerPlay, as the card preview does)",
-        ["Twine"] = "covered: AfterArrowDislodged gains block per arrow of yours dislodged (model Twine; the simulator dislodges arrows: ImpaledPower model, Recall, Uproot, Wrest)",
+        ["Twine"] = "covered: read from its code (ReadModel, decision #236): AfterArrowDislodged gains its Block for its owner when the arrow knocked loose is its owner's (arrow.owner: the event's player; the simulator dislodges arrows: ImpaledPower model, Recall, Uproot)",
         ["WhittlingKnife"] = "covered: read from its code (ReadModel, decision #195): AfterShuffle gives Aim: proc tab on cards whose draws or own code shuffle (the simulation's shuffle event)",
         ["Wuppy"] = "covered: AfterCurrentHpChanged/BeforeCombatStart keep a pet Wuppy that takes the powered attacks aimed at its owner while it lives (WuppysLoyaltyPower: simulator, yours and teammates')",
 
@@ -335,7 +335,7 @@ internal static partial class CoverageLedger
         ["TunePower"] = "covered: read from its code (ReadModel, decision #195): AfterSideTurnEnd gives a free card next turn when you played a Ki (the fight's log: MelodyCmd.PlayedKiThisTurn)",
         ["ViolentChordPower"] = "covered: AfterCardPlayed damages every enemy on your first Wah each turn (proc damage: simulator)",
         ["WuppysLoyaltyPower"] = "covered: ModifyPreBlockDamageTarget sends powered attacks on its pet owner to Wuppy while it lives, whole, before block (simulator: SimPlayer.WuppyHp, yours and each teammate's; their Thorns still hits back first)",
-        ["YahPower"] = "covered: AfterArrowDislodged gives energy once per turn when your arrow is dislodged (model YahPower; the simulator dislodges arrows)",
+        ["YahPower"] = "covered: read from its code (ReadModel, decision #236): AfterArrowDislodged gives its amount of energy when the arrow knocked loose is its owner's, once a turn (its own data's triggeredThisTurn, reset by BeforeSideTurnStart as its owner's turn starts)",
 
         // ======== cards
         ["BansheesCry"] = "ignore: its own cost (read from the card)",

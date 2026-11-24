@@ -191,7 +191,7 @@ power VulnerablePower: AfterSideTurnEnd: not run: its commands wait on the enemi
 power WeakPower: AfterSideTurnEnd: not run: its commands wait on the enemies' side's turn ending, which no simulation reaches | ModifyDamageMultiplicative: read
 power WitheringPresencePower: AfterCardPlayed: gap: the value cardPlay.Card.Owner
 power WuppysLoyaltyPower: ModifyPreBlockDamageTarget: gap: the simulator runs no read model's ModifyPreBlockDamageTarget | ShouldAllowHitting: gap: the simulator runs no read model's ShouldAllowHitting | ShouldCreatureBeRemovedFromCombatAfterDeath: gap: the simulator runs no read model's ShouldCreatureBeRemovedFromCombatAfterDeath | ShouldPowerBeRemovedAfterOwnerDeath: gap: the simulator runs no read model's ShouldPowerBeRemovedAfterOwnerDeath
-power YahPower: AfterArrowDislodged: gap: compares the owner with arrow.owner().Creature | BeforeSideTurnStart: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
+power YahPower: AfterArrowDislodged: read | BeforeSideTurnStart: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 relic ArtOfWar: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterEnergyReset: not run: it runs as the players' next turn starts, past the turns a simulation covers | AfterSideTurnEnd: read
 relic BeatingRemnant: AfterDamageReceived: read | AfterModifyingHpLostAfterOsty: read | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers | ModifyHpLostAfterOsty: read
 relic BiiigHug: AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterShuffle: gap: makes a Soot
@@ -277,7 +277,7 @@ relic Tingsha: AfterCardDiscarded: read
 relic ToughBandages: AfterCardDiscarded: read
 relic TungstenRod: AfterModifyingHpLostAfterOsty: read | ModifyHpLostAfterOsty: read
 relic TuningFork: AfterCardPlayed: read
-relic Twine: AfterArrowDislodged: gap: compares the owner with arrow.owner()
+relic Twine: AfterArrowDislodged: read
 relic UnceasingTop: AfterHandEmptied: gap: the simulator runs no read model's AfterHandEmptied
 relic UnsettlingLamp: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeCombatStart: not run: before the fight: the state is read after it | BeforePowerAmountChanged: gap: the simulator runs no read model's BeforePowerAmountChanged | ModifyPowerAmountGivenMultiplicative: gap: the simulator runs no read model's ModifyPowerAmountGivenMultiplicative
 relic Vambrace: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingBlockAmount: gap: the simulator runs no read model's AfterModifyingBlockAmount | BeforeCombatStart: not run: before the fight: the state is read after it | ModifyBlockMultiplicative: gap: the value cardSource

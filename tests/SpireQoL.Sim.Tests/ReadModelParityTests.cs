@@ -146,6 +146,13 @@ public class ReadModelParityTests
     /// </summary>
     private static readonly HashSet<string> KeptAttackData = new(StringComparer.Ordinal) { PowerId.Vigor.Name, PowerId.Gigantification.Name, PowerId.Aim.Name };
 
+    /// <summary>
+    /// The powers whose hand-written model kept a once-a-turn flag in its Data (PowerUse.UsedThisTurn) where the read model keeps its own data's
+    /// field (Yah's triggeredThisTurn): two ways of keeping one thing, left out of the key; what each does with it is compared (a second arrow
+    /// knocked loose gives nothing).
+    /// </summary>
+    private static readonly HashSet<string> FlagInData = new(StringComparer.Ordinal) { PowerId.Yah.Name };
+
     public static TheoryData<string> Models() => new(HandWritten.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
     [Fact]
@@ -694,13 +701,13 @@ public class ReadModelParityTests
             foreach (var relic in player.Relics.Items) player.Relics = player.Relics.With(relic.Name, amount: 0, data: 0);
             player.Fields = NamedCounts.Empty;
             // A hand-written counter's count in its power's Data (the read model keeps it in its fields).
-            foreach (var power in player.Powers.Items.Where(power => CounterFields.ContainsKey(power.Name.Name) || KeptAttackData.Contains(power.Name.Name)))
+            foreach (var power in player.Powers.Items.Where(power => CounterFields.ContainsKey(power.Name.Name) || KeptAttackData.Contains(power.Name.Name) || FlagInData.Contains(power.Name.Name)))
                 player.Powers = player.Powers.With(power.Name, power.Amount, data: 0);
         }
         foreach (var enemy in copy.Enemies)
         {
             enemy.Fields = NamedCounts.Empty;
-            foreach (var power in enemy.Powers.Items.Where(power => CounterFields.ContainsKey(power.Name.Name) || KeptAttackData.Contains(power.Name.Name)))
+            foreach (var power in enemy.Powers.Items.Where(power => CounterFields.ContainsKey(power.Name.Name) || KeptAttackData.Contains(power.Name.Name) || FlagInData.Contains(power.Name.Name)))
                 enemy.Powers = enemy.Powers.With(power.Name, power.Amount, data: 0);
         }
         return copy;

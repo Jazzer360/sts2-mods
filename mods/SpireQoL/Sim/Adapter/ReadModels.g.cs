@@ -180,6 +180,7 @@ public static partial class ReadModels
         PowerId.Tune.Name,
         RelicId.TungstenRod.Name,
         RelicId.TuningFork.Name,
+        RelicId.Twine.Name,
         PowerId.Underworld.Name,
         PowerId.Vicious.Name,
         PowerId.Vigor.Name,
@@ -188,5 +189,6 @@ public static partial class ReadModels
         PowerId.Weak.Name,
         RelicId.WhittlingKnife.Name,
         PowerId.WraithForm.Name,
+        PowerId.Yah.Name,
     };
 }

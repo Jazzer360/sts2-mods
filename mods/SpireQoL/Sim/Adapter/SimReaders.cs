@@ -91,8 +91,6 @@ public static class SimReaders
             // Feral: its zeroCostAttacksPlayed (its own count: the model compares it with its amount, which more Feral raises).
             case nameof(FeralPower): data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } feral ? Sts2State.Private(feral, "zeroCostAttacksPlayed", fallback: 0) : Math.Max(0, power.Amount - power.DisplayAmount); break;
             case nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)); break;
-            // Once a turn (PowerUse.UsedThisTurn: already this turn).
-            case nameof(YahPower): data = Internal(power, "triggeredThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
             // Bound to the attack under way (BeforeAttack set commandToModify): every other card's damage gets nothing from it.
             case nameof(QuietusPower):
                 data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } bound && Sts2State.Private<object?>(bound, "commandToModify", fallback: null) != null

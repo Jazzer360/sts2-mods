@@ -1,13 +1,13 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by the capability the reader names.
-# 86 hand-written models.
+# 84 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
 read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 9 classes, 9 alone: ArtOfWar*, ConquerorPower*, DemonTongue*, EmotionChip*, MonarchsGazePower*, ParryingShield*, RippleBasin*, SelfFormingClay*, SlipperyPower*
 its own data: a card or a play kept, a field used directly: 10 classes, 7 alone: BlackHolePower, CalamityPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, PaelsLegion, RupturePower*, SerpentFormPower*, StretchPower*, WitheringPresencePower*
-arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd): 6 classes, 5 alone: CoveringFirePower*, ExplosiveArrowsPower*, ImpaledPower, QuietusPower*, Twine*, YahPower*
 a monster's own state set (its flag, its next move): 10 classes, 4 alone: AsleepPower, CurlUpPower, FlutterPower*, ImbalancedPower*, InfestedPower, PlowPower*, RavenousPower*, SlumberPower, SteamEruptionPower, StockPower
 a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 4 classes, 3 alone: InsatiableDominionPower*, PlatingPower, ShadowmeldPower*, SkittishPower*
+arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd): 4 classes, 3 alone: CoveringFirePower*, ExplosiveArrowsPower*, ImpaledPower, QuietusPower*
 commands: a card made (AddGeneratedCardToCombat, a made card): 3 classes, 3 alone: BiiigHug*, BurningSticks*, PersonalHivePower*
 the fight's log (the history ledger, decision #191): 3 classes, 3 alone: SongPathPower*, UnmovablePower*, ViolentChordPower*
 the simulator's own model (no game class by its name): 3 classes, 3 alone: ImpaledPowerOther*, Regret*, Void*
@@ -120,7 +120,6 @@ TagTeamPower: [queries: the card's facts (its pile, tags, keywords, class; an au
 TheGambitPower: [outcomes: a stun or a kill (outcome tabs)] AfterDamageReceived: gap: CreatureCmd.Kill isn't translated
 ThornsPower: [hooks: BeforeDamageReceived] BeforeDamageReceived: gap: the simulator runs no read model's BeforeDamageReceived
 TrashToTreasurePower: [orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first)] AfterCardGeneratedForCombat: gap: an orb made first
-Twine: [arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd)] AfterArrowDislodged: gap: compares the owner with arrow.owner()
 UnceasingTop: [hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...)] AfterHandEmptied: gap: the simulator runs no read model's AfterHandEmptied
 UnmovablePower: [the fight's log (the history ledger, decision #191)] ModifyBlockMultiplicative: gap: the fight's log (one card play: e.CardPlay != cardPlay): Count(OfType(Instance.History.Entries), e => e.HappenedThisTurn(this.CombatState) and e.CardPla...
 UnsettlingLamp: [hooks: the power amount given] BeforePowerAmountChanged: gap: the simulator runs no read model's BeforePowerAmountChanged | [hooks: the power amount given] ModifyPowerAmountGivenMultiplicative: gap: the simulator runs no read model's ModifyPowerAmountGivenMultiplicative
@@ -128,4 +127,3 @@ Vambrace: [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlock
 ViolentChordPower: [the fight's log (the history ledger, decision #191)] AfterCardPlayed: gap: tests FirstOrDefault(Instance.History.CardPlaysStarted, e => e.HappenedThisTurn(cardPlay.Player.Creature.CombatState) and Contains(e.CardPlay.Card.Tags,...
 Void: [the simulator's own model (no game class by its name)] no game class
 WitheringPresencePower: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: the value cardPlay.Card.Owner
-YahPower: [arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd)] AfterArrowDislodged: gap: compares the owner with arrow.owner().Creature

@@ -1692,3 +1692,25 @@ public sealed class AimPower : AttackBoundPower
         return One(state);
     }
 }
+
+// ---- an arrow's owner (round fourteen: Sim/Models/ProcPowerModels.cs, ProcRelicModels.cs, deleted 2026-11-24)
+
+/// <summary>YahPower.AfterArrowDislodged: energy the first time each turn (Data 1: already) one of your arrows comes loose.</summary>
+public sealed class YahPower : ProcModel
+{
+    public override TabKind? Tab => TabKind.Energy;
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
+    {
+        if (cardEvent != CardEvent.ArrowDislodged || player != owner || UsedThisTurn(state, owner)) return One(state);
+        MarkUsedThisTurn(state, owner);
+        return Cause(Fire(state, owner), CardEvent.EnergyGained, Amount(state, owner), owner);
+    }
+}
+
+/// <summary>Twine.AfterArrowDislodged: block for each of your arrows that comes loose.</summary>
+public sealed class Twine : RelicProc
+{
+    public override TabKind? Tab => TabKind.Block;
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
+        cardEvent == CardEvent.ArrowDislodged && player == owner ? RelicBlock(state, owner) : One(state);
+}

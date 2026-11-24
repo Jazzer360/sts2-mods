@@ -2056,6 +2056,9 @@ public static class HookReader
                     : throw new Gap(ReaderCapabilities.OfValue(other, otherwise: ReaderCapability.CreatureSide), $"gap: compares the owner with {other}");
             if (IsDead(other)) return new HookFactValue(HookFact.DeadIsOwner);
             if (IsCreator(other)) return new HookFactValue(HookFact.EventIsOwners);
+            // The owner of the arrow knocked loose (AfterArrowDislodged's arrow.owner, a player, or its Creature): the event's player, the one the
+            // engine raises it for (the arrow comes back to its owner: ArrowCmd.DislodgeArrow).
+            if (_hook == "AfterArrowDislodged" && IsArrowOwner(other)) return new HookFactValue(HookFact.EventIsOwners);
             if (IsDealer(other)) return new HookFactValue(HookFact.DealerIsOwner);
             if (other is ParameterValue { Name: "target" } or NamedValue { Name: "target" }) return new HookFactValue(HookFact.TargetIsOwner);
             if (other is NamedValue { Name: "applier" } or ParameterValue { Name: "applier" }) return new HookFactValue(HookFact.ApplierIsOwner);
@@ -2691,6 +2694,11 @@ public static class HookReader
         private bool IsEventCard(ProgramValue value) => value is NamedValue { Name: "card" } or ParameterValue { Name: "card" } && _hook != "AfterCardPlayed" && !PlayShapeHooks.Contains(_hook);
 
         private static bool IsSourceCard(ProgramValue value) => value is ParameterValue { Name: "cardSource" } or NamedValue { Name: "cardSource" };
+
+        /// <summary>An arrow's owner (arrow.owner: its player), or that player's creature (arrow.owner.Creature).</summary>
+        private static bool IsArrowOwner(ProgramValue value) =>
+            value is QueryValue { Name: "owner", Of: ParameterValue { Name: "arrow" } or NamedValue { Name: "arrow" } }
+            || value is QueryValue { Type: "Player", Name: "Creature", Of: { } player } && IsArrowOwner(player);
 
         /// <summary>The player a card event happened to, as its hook names it: a made card's creator, the player who shuffled or spent stars.</summary>
         private static bool IsCreator(ProgramValue value) =>

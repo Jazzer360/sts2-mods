@@ -154,14 +154,6 @@ public sealed class ChemicalX : RelicProc
         Mine(play, owner) && play.PlayIndex == 0 && (play.Card.CostsX || play.Card.StarCostX) ? Fire(state, owner) : One(state);
 }
 
-/// <summary>Twine.AfterArrowDislodged: block for each of your arrows that comes loose.</summary>
-public sealed class Twine : RelicProc
-{
-    public override TabKind? Tab => TabKind.Block;
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.ArrowDislodged && player == owner ? RelicBlock(state, owner) : One(state);
-}
-
 /// <summary>
 /// UnceasingTop.AfterHandEmptied: a draw (CardPileCmd.Draw) when a play leaves your hand empty. The game checks once the card has
 /// resolved (CardModel: CombatManager.CheckForEmptyHand after it reaches its pile) and only while no other card's effect is running,

@@ -351,18 +351,6 @@ public sealed class ImpaledPower : SimModel
     }
 }
 
-/// <summary>YahPower.AfterArrowDislodged: energy the first time each turn (Data 1: already) one of your arrows comes loose.</summary>
-public sealed class YahPower : ProcModel
-{
-    public override TabKind? Tab => TabKind.Energy;
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
-    {
-        if (cardEvent != CardEvent.ArrowDislodged || player != owner || UsedThisTurn(state, owner)) return One(state);
-        MarkUsedThisTurn(state, owner);
-        return Cause(Fire(state, owner), CardEvent.EnergyGained, Amount(state, owner), owner);
-    }
-}
-
 // ---- Sovereign Blade's buffs (the card text lists them, but it's easy to miss)
 
 /// <summary>A buff that changes what Sovereign Blade does (Seeking Edge: every enemy; Parry: block; Sword Sage: replays).</summary>
