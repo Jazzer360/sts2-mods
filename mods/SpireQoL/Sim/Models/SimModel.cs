@@ -524,6 +524,8 @@ public static class SimModels
                 catch (InvalidOperationException exception) { unread[spec.Name] = $"{spec.Name}'s code couldn't be compiled ({exception.Message}): what it does isn't simulated"; }
                 continue;
             }
+            // An affliction (decision #225): a fact of its card, nothing to run; only an unread one (above) changes a simulation.
+            if (spec.Kind == ModelKind.Affliction) continue;
             // An enchantment (decision #217): its programs run where its card plays, never as a listener.
             if (spec.Kind == ModelKind.Enchantment)
             {

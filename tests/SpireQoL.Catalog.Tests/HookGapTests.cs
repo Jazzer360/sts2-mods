@@ -135,13 +135,20 @@ public class HookGapTests
                     }
                 }
                 // An enchantment is read from its code too (decision #217): read whole with a program, the engine runs it on its card's plays.
-                if (kind == "enchantment" && HookReader.ReadEnchantment(type, code.Read) is { Whole: true, Spec.Hooks.Count: > 0 } enchantmentReading)
+                if (kind == "enchantment" && HookReader.ReadEnchantment(type, code.Read) is { Whole: true } enchantmentReading && (enchantmentReading.Spec.Hooks.Count > 0 || enchantmentReading.Spec.OnTopWhenShuffled))
                 {
                     handled["read from its code"] = handled.GetValueOrDefault("read from its code") + 1;
                     lines.Add($"{name} ({branches}; read from its code (ReadModel); {how}): {string.Join(" | ", enchantmentReading.Hooks.Select(hook => CalledLive(hook.Hook, sources) ? $"{hook.Hook}: called live (the adapter runs the game's own code)" : hook.NotRun != null ? $"{hook.Hook}: not run ({hook.NotRun})" : $"{hook.Hook}: read"))}");
                     continue;
                 }
-                var readings = kind == "orb" ? HookReader.ReadOrb(type, code.Read).Hooks : kind == "enchantment" ? HookReader.ReadEnchantment(type, code.Read).Hooks : HookReader.ReadEffects(type, code.Read);
+                // An affliction is read from its code too (decision #225): read whole, it's a fact of its card with nothing the engine runs.
+                if (kind == "affliction" && HookReader.ReadAffliction(type, code.Read) is { Whole: true } afflictionReading)
+                {
+                    handled["read from its code"] = handled.GetValueOrDefault("read from its code") + 1;
+                    lines.Add($"{name} ({branches}; read from its code (nothing to run); {how}): {(afflictionReading.Hooks.Count == 0 ? "no hooks" : string.Join(" | ", afflictionReading.Hooks.Select(hook => hook.NotRun != null ? $"{hook.Hook}: not run ({hook.NotRun})" : $"{hook.Hook}: read")))}");
+                    continue;
+                }
+                var readings = kind == "orb" ? HookReader.ReadOrb(type, code.Read).Hooks : kind == "enchantment" ? HookReader.ReadEnchantment(type, code.Read).Hooks : kind == "affliction" ? HookReader.ReadAffliction(type, code.Read).Hooks : HookReader.ReadEffects(type, code.Read);
                 var gaps = new List<(string Capability, string Gap)>();
                 var parts = new List<string>();
                 foreach (var reading in readings)
@@ -207,7 +214,7 @@ public class HookGapTests
         }
         if (kind == "affliction" && Enum.TryParse<SimAffliction>(name, out var affliction) && affliction != SimAffliction.Other)
         {
-            how.Add($"SimAffliction.{affliction}, tested by the models");
+            how.Add($"SimAffliction.{affliction}, a fact of its card");
             category = "a simulator kind of its own";
         }
         // Named as a class: nameof, a type pattern or a switch arm on it, its namespace's name, or its name as a text.

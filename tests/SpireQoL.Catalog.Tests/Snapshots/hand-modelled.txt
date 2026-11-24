@@ -70,9 +70,9 @@ The listeners: who hears a hook, in the game's order, a dead enemy's powers left
 Enchantments' damage and block math on a replay (the game's own math, called live, for the first play): Momentum, Goopy, Vigorous
   game: Momentum.OnPlay, Goopy.AfterCardPlayed, Vigorous.AfterCardPlayed, EnchantmentModel.EnchantDamageAdditive, EnchantmentModel.EnchantBlockAdditive
   simulator: PlayGrowth.Of
-Afflictions on a card, by kind (SimAffliction): Hexed's Ethereal, Tainted and Galvanized tested by the powers that read them
-  game: Hexed.AfterCardEnteredCombat, Tainted.CanAfflictCardType
-  simulator: SimReaders.Card, SimAdapter.EtherealOnlyFromHex, SimEngine.Exhausting
+Hexed's Ethereal, granted by Hex while it lasts and gone when its applier dies, read by the affliction's name (the afflictions themselves are read from their code: decision #225)
+  game: HexPower.TryModifyKeywordsInCombat, HexPower.AfterDeath
+  simulator: SimAdapter.EtherealOnlyFromHex, SimEngine.Exhausting
 Fairy in a Bottle and Lizard Tail: a death held back, healed from 0
   game: FairyInABottle.ShouldDie, FairyInABottle.AfterPreventingDeath, LizardTail.ShouldDieLate, LizardTail.AfterPreventingDeath
   simulator: SimEngine.Lose

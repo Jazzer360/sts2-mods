@@ -392,7 +392,7 @@ internal static partial class CoverageLedger
         // v0.113.0: OnPlay acts on every play of the card (replays too) until AfterCardPlayed disables it
         ["Sown"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay energy while Normal, after the card's own; AfterCardPlayed (beta) or OnPlay (main) disables it",
         ["Swift"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay draws its amount while Normal; AfterCardPlayed (beta) or OnPlay (main) disables it; the Return tags count it from its OnPlay (ReadModel.DrawsOnPlay)",
-        ["Hexed"] = "ignore: clears itself",
+        ["Hexed"] = "covered: read from its code (ReadModel, an affliction: decision #225): AfterCardEnteredCombat clears it from its own card entering without Hex, which no simulated play plays; its Ethereal is HexPower's (SimAdapter.EtherealOnlyFromHex)",
     };
 
     private static readonly string[] Folders = { "Relics", "Powers", "Cards", "Monsters", "Orbs", "Potions", "Enchantments", "Afflictions" };

@@ -119,6 +119,10 @@ public static partial class SimEngine
         foreach (var action in body) Run(branches, action);
         // Its enchantment's OnPlay, after the card's own (CardModel.OnPlayWrapper), read from its code (decision #217).
         RunEnchantment(branches, play.Card, HookName.OnPlay);
+        // Then its affliction's (CardModel.OnPlayWrapper: Affliction.OnPlay after the enchantment's): none has one to run (decision #225); one whose
+        // code a game update made unreadable makes the play unknown.
+        if (play.Card.Affliction is not (SimAffliction.None or SimAffliction.Other) && SimModels.UnreadReason(play.Card.Affliction.ToString()) is { } afflictionUnread)
+            branches.Do(branch => branch.Unmodelled ??= afflictionUnread);
         branches.Do(branch => Count(branch, branch.CurrentPlay!, PlayStage.Finished));
         HookStep(branches, nameof(SimModel.AfterCardPlayed), (model, owner, branch) => model.AfterCardPlayed(branch, owner, branch.CurrentPlay!));
         // Its enchantment hears its own card's play (Swift and Sown turn themselves off): it's a listener among its card's pile's cards, after

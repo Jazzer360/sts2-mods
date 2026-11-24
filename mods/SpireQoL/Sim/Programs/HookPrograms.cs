@@ -548,6 +548,11 @@ public enum ModelKind
     /// play's listeners, never a listener of its own (decision #217).
     /// </summary>
     Enchantment,
+    /// <summary>
+    /// An affliction on a card (SimCard.Affliction): a fact of its card the powers' code tests; read whole, it has nothing the engine runs (decision #225),
+    /// and one that doesn't read whole makes its card's plays unknown.
+    /// </summary>
+    Affliction,
 }
 
 /// <summary>

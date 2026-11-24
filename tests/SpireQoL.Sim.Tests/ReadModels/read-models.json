@@ -557,6 +557,12 @@
     "HelpsOwner": false
   },
   {
+    "Name": "Bound",
+    "Kind": "Affliction",
+    "Hooks": [],
+    "HelpsOwner": false
+  },
+  {
     "Name": "BurstPower",
     "Kind": "Power",
     "Hooks": [
@@ -3477,6 +3483,12 @@
     "HelpsOwner": true
   },
   {
+    "Name": "Entangled",
+    "Kind": "Affliction",
+    "Hooks": [],
+    "HelpsOwner": false
+  },
+  {
     "Name": "EnvenomPower",
     "Kind": "Power",
     "Hooks": [
@@ -4514,6 +4526,12 @@
     "HurtsPlayOwner": true
   },
   {
+    "Name": "Galvanized",
+    "Kind": "Affliction",
+    "Hooks": [],
+    "HelpsOwner": false
+  },
+  {
     "Name": "GamePiece",
     "Kind": "Relic",
     "Hooks": [
@@ -5401,6 +5419,12 @@
       }
     ],
     "Tab": "Trigger",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "Hexed",
+    "Kind": "Affliction",
+    "Hooks": [],
     "HelpsOwner": false
   },
   {
@@ -15160,6 +15184,12 @@
     "HelpsOwner": false
   },
   {
+    "Name": "Ringing",
+    "Kind": "Affliction",
+    "Hooks": [],
+    "HelpsOwner": false
+  },
+  {
     "Name": "RitualPower",
     "Kind": "Power",
     "Hooks": [
@@ -16279,6 +16309,12 @@
     "HelpsOwner": false
   },
   {
+    "Name": "Smog",
+    "Kind": "Affliction",
+    "Hooks": [],
+    "HelpsOwner": false
+  },
+  {
     "Name": "SmokestackPower",
     "Kind": "Power",
     "Hooks": [
@@ -17330,6 +17366,12 @@
         ]
       }
     ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "Tainted",
+    "Kind": "Affliction",
+    "Hooks": [],
     "HelpsOwner": false
   },
   {

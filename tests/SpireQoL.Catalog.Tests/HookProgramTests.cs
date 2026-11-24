@@ -88,8 +88,8 @@ public class HookProgramTests
         using var beta = new BranchCode(BranchCode.BetaPath);
         using var main = new BranchCode(BranchCode.MainPath);
         var (betaRead, mainRead) = (ReadOn(beta), ReadOn(main));
-        var betaClasses = HookReader.Powers(beta.Assembly.GetTypes()).Concat(HookReader.Relics(beta.Assembly.GetTypes())).Concat(HookReader.Orbs(beta.Assembly.GetTypes())).Concat(HookReader.Enchantments(beta.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
-        var mainClasses = HookReader.Powers(main.Assembly.GetTypes()).Concat(HookReader.Relics(main.Assembly.GetTypes())).Concat(HookReader.Orbs(main.Assembly.GetTypes())).Concat(HookReader.Enchantments(main.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
+        var betaClasses = HookReader.Powers(beta.Assembly.GetTypes()).Concat(HookReader.Relics(beta.Assembly.GetTypes())).Concat(HookReader.Orbs(beta.Assembly.GetTypes())).Concat(HookReader.Enchantments(beta.Assembly.GetTypes())).Concat(HookReader.Afflictions(beta.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
+        var mainClasses = HookReader.Powers(main.Assembly.GetTypes()).Concat(HookReader.Relics(main.Assembly.GetTypes())).Concat(HookReader.Orbs(main.Assembly.GetTypes())).Concat(HookReader.Enchantments(main.Assembly.GetTypes())).Concat(HookReader.Afflictions(main.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
         // A class whose code on the other branch has nothing the simulator runs (it reads whole with no program: main's Byrdpip counts no Swoops)
         // differs in the game's code, not in the reader.
         static HashSet<string> Nothing(BranchCode code) => HookReader.Powers(code.Assembly.GetTypes()).Concat(HookReader.Relics(code.Assembly.GetTypes()))
@@ -123,6 +123,9 @@ public class HookProgramTests
             // An enchantment class (no typed name of its own): the game's class by nameof (every one is on both branches: model-kinds.txt).
             if (typeof(MegaCrit.Sts2.Core.Models.EnchantmentModel).Assembly.GetType("MegaCrit.Sts2.Core.Models.Enchantments." + name) != null)
                 return $"nameof(MegaCrit.Sts2.Core.Models.Enchantments.{name})";
+            // An affliction class (decision #225): the game's class by nameof (every one is on both branches: model-kinds.txt).
+            if (typeof(MegaCrit.Sts2.Core.Models.EnchantmentModel).Assembly.GetType("MegaCrit.Sts2.Core.Models.Afflictions." + name) != null)
+                return $"nameof(MegaCrit.Sts2.Core.Models.Afflictions.{name})";
             throw new InvalidOperationException($"{name} has no typed name: run scripts/game-names.mjs");
         }
         var text = new StringBuilder();

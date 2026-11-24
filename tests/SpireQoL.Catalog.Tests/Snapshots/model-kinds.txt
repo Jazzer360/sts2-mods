@@ -8,7 +8,7 @@ beta relics: 316 classes, 310 with hooks; read from code 49, hand-written 23, ne
 main powers: 265 classes, 235 with hooks; read from code 84, hand-written 59, neither 94 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 42, hand-written 22, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
 
-## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 7, the game's own code, called live 6, read from its code 5, a per-name rule 3, no hooks 2
+## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 6, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 2
 
 Adroit (both; read from its code (ReadModel); not modelled by name; ledger: covered): OnPlay: read | RecalculateValues: read
 Clone (both; not modelled by name; ledger: no review): no hooks
@@ -21,7 +21,7 @@ Inky (both; read from its code (ReadModel); not modelled by name; ledger: covere
 Instinct (both; not modelled by name; ledger: no review): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageMultiplicative: called live (the adapter runs the game's own code)
 Momentum (both; not modelled by name; ledger: covered): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageAdditive: called live (the adapter runs the game's own code) | OnPlay: read
 Nimble (both; named in Data/CardAffinity.cs; ledger: no review): CanEnchant: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantBlockAdditive: called live (the adapter runs the game's own code)
-PerfectFit (both; not modelled by name; ledger: no review): ModifyShuffleOrder: read
+PerfectFit (both; read from its code (ReadModel); not modelled by name; ledger: no review): ModifyShuffleOrder: read
 RoyallyApproved (both; not modelled by name; ledger: no review): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | OnEnchant: not run (it changes its card as it's enchanted (EnchantmentModel.ModifyCard): the card the adapter reads already shows it; a card enchanted in a fight is its command's (CardCmd.Enchant))
 Sharp (both; not modelled by name; ledger: no review): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageAdditive: called live (the adapter runs the game's own code)
 Slither (both; named in Sim/Adapter/SimAdapter.cs; ledger: ignore): AfterCardDrawn: [the engine runs no read enchantment (its bodies read whole but for that)] gap: the engine runs no read EnchantmentModel's AfterCardDrawn | CanEnchant: not run (it decides which cards it can enchant, as a card is enchanted)
@@ -34,15 +34,15 @@ Swift (both; read from its code (ReadModel); not modelled by name; ledger: cover
 TezcatarasEmber (both; not modelled by name; ledger: no review): EnchantDamageAdditive: called live (the adapter runs the game's own code) | OnEnchant: not run (it changes its card as it's enchanted (EnchantmentModel.ModifyCard): the card the adapter reads already shows it; a card enchanted in a fight is its command's (CardCmd.Enchant))
 Vigorous (both; not modelled by name; ledger: covered): AfterCardPlayed: read | CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageAdditive: called live (the adapter runs the game's own code)
 
-## Afflictions: 7 classes (beta 7, main 7); handled: a simulator kind of its own 7
+## Afflictions: 7 classes (beta 7, main 7); handled: read from its code 7
 
-Bound (both; SimAffliction.Bound, tested by the models and named in Diagnostics/ModelAmountCheck.cs; ledger: no review): no hooks
-Entangled (both; SimAffliction.Entangled, tested by the models; ledger: no review): no hooks
-Galvanized (both; SimAffliction.Galvanized, tested by the models; ledger: no review): no hooks
-Hexed (both; SimAffliction.Hexed, tested by the models and named in Sim/Adapter/SimAdapter.cs; ledger: ignore): AfterCardEnteredCombat: [commands: another command (no translation)] gap: CardCmd.ClearAffliction isn't translated
-Ringing (both; SimAffliction.Ringing, tested by the models; ledger: no review): no hooks
-Smog (both; SimAffliction.Smog, tested by the models; ledger: no review): no hooks
-Tainted (both; SimAffliction.Tainted, tested by the models; ledger: no review): CanAfflictCardType: [a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)] gap: the value cardType
+Bound (both; read from its code (nothing to run); SimAffliction.Bound, a fact of its card and named in Diagnostics/ModelAmountCheck.cs; ledger: no review): no hooks
+Entangled (both; read from its code (nothing to run); SimAffliction.Entangled, a fact of its card; ledger: no review): no hooks
+Galvanized (both; read from its code (nothing to run); SimAffliction.Galvanized, a fact of its card; ledger: no review): no hooks
+Hexed (both; read from its code (nothing to run); SimAffliction.Hexed, a fact of its card and named in Sim/Adapter/SimAdapter.cs; ledger: covered): AfterCardEnteredCombat: not run (it acts on its own card as it enters the fight, which no simulated play plays)
+Ringing (both; read from its code (nothing to run); SimAffliction.Ringing, a fact of its card; ledger: no review): no hooks
+Smog (both; read from its code (nothing to run); SimAffliction.Smog, a fact of its card; ledger: no review): no hooks
+Tainted (both; read from its code (nothing to run); SimAffliction.Tainted, a fact of its card; ledger: no review): CanAfflictCardType: not run (it decides which cards it can afflict, as a card is afflicted)
 
 ## Potions: 68 classes (beta 68, main 65); handled: not modelled by name 66, a per-name rule 1, no hooks 1
 
@@ -207,13 +207,12 @@ commands: a card made (AddGeneratedCardToCombat, a made card): 6 classes, 6 alon
 a loop over items (creatures, cards): 8 classes, 5 alone: CompostPower*, ImpaledPower, PaelsEye, SmoggyPower, BlessingOfTheForge (potion)*, CosmicConcoction (potion)*, EntropicBrew (potion)*, GlowwaterPotion (potion)*
 a monster's own state set (its flag, its next move): 10 classes, 4 alone: AsleepPower, CurlUpPower, FlutterPower*, ImbalancedPower*, InfestedPower, PlowPower*, RavenousPower*, SlumberPower, SteamEruptionPower, StockPower
 arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd): 6 classes, 4 alone: CoveringFirePower*, ExplosiveArrowsPower*, ImpaledPower, QuietusPower, Twine*, YahPower*
-commands: another command (no translation): 4 classes, 4 alone: Hexed (affliction)*, BottledPotential (potion)*, FruitJuice (potion)*, KingsCourage (potion)*
 the engine runs no read enchantment (its bodies read whole but for that): 4 classes, 4 alone: Glam (enchantment)*, Imbued (enchantment)*, Slither (enchantment)*, Spiral (enchantment)*
 hooks: BeforeAttack and AfterAttack: 6 classes, 3 alone: AimPower, BoneFlute*, GigantificationPower*, QuietusPower, SkittishPower, VigorPower*
 another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 5 classes, 3 alone: CoveredPower, HardenedShellPower*, SurprisePower, Goopy (enchantment)*, FoulPotion (potion)*
 a pick: 3 classes, 3 alone: StratagemPower*, DropletOfPrecognition (potion)*, GamblersBrew (potion)*
-a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 3 classes, 3 alone: InsatiableDominionPower*, ShadowmeldPower*, Tainted (affliction)*
 commands: OstyCmd.Summon: 3 classes, 3 alone: DevourLifePower*, SicEmPower*, BoneBrew (potion)*
+commands: another command (no translation): 3 classes, 3 alone: BottledPotential (potion)*, FruitJuice (potion)*, KingsCourage (potion)*
 orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first): 3 classes, 3 alone: ConsumingShadowPower*, TrashToTreasurePower*, PotionOfCapacity (potion)*
 the damage cap and AfterModifyingDamageAmount: 3 classes, 3 alone: HardToKillPower*, IntangiblePower*, SlowPower*
 the fight's log (the history ledger, decision #191): 3 classes, 3 alone: SongPathPower*, UnmovablePower*, ViolentChordPower*
@@ -222,6 +221,7 @@ queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Eth
 hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount): 4 classes, 2 alone: BurrowedPower*, HandDrill*, PaelsLegion, Vambrace
 multiplayer scaling (GetScaledAmountForMultiplayer, the players' count): 4 classes, 2 alone: BufferPower*, PlatingPower, SkittishPower, SlipperyPower*
 the play's result location (ModifyCardPlayResultLocation): 4 classes, 2 alone: CorruptionPower, FeralPower, NostalgiaPower*, ReboundPower*
+a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 2 classes, 2 alone: InsatiableDominionPower*, ShadowmeldPower*
 commands: AutoPlayFromDrawPile: 2 classes, 2 alone: LostLutePower*, DistilledChaos (potion)*
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
 outcomes: a stun or a kill (outcome tabs): 2 classes, 2 alone: ShriekPower*, TheGambitPower*

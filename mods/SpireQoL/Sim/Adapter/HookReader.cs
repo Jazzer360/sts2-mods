@@ -187,6 +187,43 @@ public static class HookReader
         return Hooks(type).OrderBy(method => method.Name, StringComparer.Ordinal).Select(reader.Effect).ToList();
     }
 
+    /// <summary>The game's affliction classes among <paramref name="types"/>, but the game's own test mocks (IsMock: never on a card in a run).</summary>
+    public static IEnumerable<Type> Afflictions(IEnumerable<Type> types) =>
+        types.Where(type => type.Namespace == "MegaCrit.Sts2.Core.Models.Afflictions" && !type.IsNested && !type.IsAbstract && Derives(type, "AfflictionModel"));
+
+    /// <summary>
+    /// An affliction's hooks that act as it's put on or taken off its card, or decide which cards it can afflict (AfflictionModel's): the card the
+    /// adapter reads shows it afflicted or not (SimCard.Affliction), and a card afflicted in a fight is its command's (CardCmd.Afflict).
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, string> AfflictionNotRun = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["CanAfflict"] = "it decides which cards it can afflict, as a card is afflicted",
+        ["CanAfflictCardType"] = "it decides which cards it can afflict, as a card is afflicted",
+        ["AfterApplied"] = "it acts as it's put on its card: the card the adapter reads shows it",
+        ["BeforeRemoved"] = "it acts as it's taken off its card: the card the adapter reads shows it",
+    };
+
+    /// <summary>
+    /// An affliction's code read (decision #225): what it does to its card is a fact of the card (SimCard.Affliction, which the powers' code tests:
+    /// Galvanic's cardPlay.Card.Affliction is Galvanized); its hooks that act as it's put on or taken off (AfflictionNotRun) and its
+    /// AfterCardEnteredCombat on its own card entering (Hexed's: no simulated play plays a card that entered during the simulation) aren't run. Any
+    /// other hook (an OnPlay: CardModel.OnPlayWrapper runs it after the enchantment's) is a gap: the engine runs no affliction's program yet, so an
+    /// affliction a game update gives one doesn't read whole, and a card with it plays unknown.
+    /// </summary>
+    public static ModelReading ReadAffliction(Type type, Func<MethodBase, List<CodeOp>> read)
+    {
+        var reader = new Translation(type, ModelKind.Affliction, read);
+        var readings = new List<HookReading>();
+        foreach (var hook in Hooks(type).OrderBy(method => method.Name, StringComparer.Ordinal))
+        {
+            if (AfflictionNotRun.TryGetValue(hook.Name, out var notRun)) readings.Add(new HookReading(hook.Name, null) { NotRun = notRun });
+            else if (hook.Name == "AfterCardEnteredCombat" && reader.ActsOnItsOwnCardOnly(hook))
+                readings.Add(new HookReading(hook.Name, null) { NotRun = "it acts on its own card as it enters the fight, which no simulated play plays" });
+            else readings.Add(new HookReading(hook.Name, $"gap: the engine runs no read AfflictionModel's {hook.Name}") { Capability = ReaderCapability.EffectNotRun });
+        }
+        return new ModelReading(new ModelSpec(type.Name, ModelKind.Affliction, Array.Empty<HookProgram>()), readings);
+    }
+
     /// <summary>The game's orb classes among <paramref name="types"/>.</summary>
     public static IEnumerable<Type> Orbs(IEnumerable<Type> types) => types.Where(type => type.Namespace == "MegaCrit.Sts2.Core.Models.Orbs" && !type.IsNested && !type.IsAbstract && Derives(type, "OrbModel"));
 
@@ -800,6 +837,23 @@ public static class HookReader
                 _ => false,
             };
             return new[] { remove, insert }.All(step => step.Condition is not { } condition || condition.Terms.All(term => term.All(Expected)));
+        }
+
+        /// <summary>
+        /// Every step of the hook's code runs only for its own card (AfterCardEnteredCombat's card == base.Card: Hexed's
+        /// if (card != base.Card) return), and it changes nothing but by commands (no store, no change to its data). Read whole to tell.
+        /// </summary>
+        internal bool ActsOnItsOwnCardOnly(MethodInfo hook)
+        {
+            ModelProgram program;
+            try { program = ProgramReader.Read(_type, _read, hook.Name); }
+            catch (InvalidOperationException) { return false; }
+            if (program.Unknowns.Any() || OwnData(hook, program) != null) return false;
+            static bool OwnCard(ConditionLiteral literal) => literal.Test is CompareValue { Op: Comparison.Equal or Comparison.NotEqual } compare
+                && (compare.Op == Comparison.Equal) == literal.Holds
+                && (compare.Left is ParameterValue { Name: "card" } && IsModelCard(compare.Right) || compare.Right is ParameterValue { Name: "card" } && IsModelCard(compare.Left));
+            var steps = program.All().ToList();
+            return steps.Count > 0 && steps.All(step => step is not (StoreStep or DataStep) && step.Condition is { } condition && condition.Terms.All(term => term.Any(OwnCard)));
         }
 
         /// <summary>While a hand pick's step is read: its condition's tests of the pick hold (Test).</summary>
@@ -2285,7 +2339,7 @@ public static class HookReader
         }
 
         /// <summary>An enchantment's own card (base.Card).</summary>
-        private static bool IsModelCard(ProgramValue value) => Unstored(value) is QueryValue { Name: "Card", Of: NamedValue { Name: "this" }, Type: "EnchantmentModel" };
+        private static bool IsModelCard(ProgramValue value) => Unstored(value) is QueryValue { Name: "Card", Of: NamedValue { Name: "this" }, Type: "EnchantmentModel" or "AfflictionModel" };
 
         /// <summary>Whom an enchantment's own card is aimed at (base.Card.TargetType).</summary>
         private static bool IsModelCardTargets(ProgramValue value) => Unstored(value) is QueryValue { Name: "TargetType", Of: { } card } && IsModelCard(card);
