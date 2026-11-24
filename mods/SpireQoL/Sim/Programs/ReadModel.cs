@@ -460,6 +460,9 @@ public sealed class ReadModel : SimModel
 
     // ---- values
 
+    /// <summary>The owners a value's key is made for once: the players (-1 to -4) and the enemies a fight can have.</summary>
+    private const int FirstKeyedOwner = -4, KeyedOwners = 24;
+
     private Evaluate Compile(HookValue value)
     {
         switch (value)
@@ -473,7 +476,10 @@ public sealed class ReadModel : SimModel
             {
                 var key = variable.Key;
                 var canonical = variable.Canonical;
-                return (in HookArgs args) => SimEngine.VarValue(args.State, args.Owner, Name, key, canonical);
+                // Its key for each owner made once (a damage's math asks it on every hit: no string made per ask).
+                var keys = Enumerable.Range(FirstKeyedOwner, KeyedOwners).Select(owner => $"{owner}:{Name}:{key}").ToArray();
+                return (in HookArgs args) => SimEngine.VarValue(args.State,
+                    args.Owner - FirstKeyedOwner is var at && at >= 0 && at < keys.Length ? keys[at] : $"{args.Owner}:{Name}:{key}", canonical);
             }
             case HookNot not:
             {

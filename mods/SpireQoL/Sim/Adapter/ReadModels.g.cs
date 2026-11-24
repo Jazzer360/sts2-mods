@@ -89,6 +89,8 @@ public static partial class ReadModels
         PowerId.Tracking.Name,
         RelicId.TuningFork.Name,
         PowerId.Vicious.Name,
+        PowerId.Vulnerable.Name,
+        PowerId.Weak.Name,
         RelicId.WhittlingKnife.Name,
     };
 }

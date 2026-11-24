@@ -302,8 +302,8 @@ internal static partial class CoverageLedger
         ["VigorPower"] = "covered: its bonus is in the game's damage math (card preview); AfterAttack takes it all (tab on attacks that spend it; a replay's later plays without it)",
         ["VitalSparkPower"] = "covered: Tainted cards (crossed proc tab)",
         ["VoidFormPower"] = "ignore: costs (read live)",
-        ["VulnerablePower"] = "ignore: AfterSideTurnEnd ticks down (damage math)",
-        ["WeakPower"] = "ignore: AfterSideTurnEnd ticks down (damage math; Weak you apply: simulator intents)",
+        ["VulnerablePower"] = "covered: read from its code (ReadModel, decision #195): ModifyDamageMultiplicative with the dealer's Paper Phrog and Cruelty and its owner's Debilitate, each read from the method it calls; AfterSideTurnEnd ticks down as the enemies' turn ends (never simulated)",
+        ["WeakPower"] = "covered: read from its code (ReadModel, decision #195): ModifyDamageMultiplicative with the target's Paper Krane and its owner's Debilitate, each read from the method it calls; AfterSideTurnEnd ticks down as the enemies' turn ends (never simulated)",
         ["WitheringPresencePower"] = "covered: AfterCardPlayed Wither every N of its Target's cards (crossed proc tab, tracker); the Aeonglass has one per player, and the simulator reads only yours",
         // v0.113.0
         ["AimPower"] = "ignore: ModifyDamageAdditive adds to your arrow attacks (read through the game's damage hooks); BeforeAttack/AfterAttack spend it after that attack",

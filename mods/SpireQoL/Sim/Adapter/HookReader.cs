@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Reflection;
 using SpireQoL.Procs.Programs;
 
@@ -202,7 +203,7 @@ public static class HookReader
                     return PastTheHorizon(hook) is { } turnStartGap ? (null, turnStartGap, null) : (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers");
                 if (!Enum.TryParse<HookName>(hook.Name, out var name)) return (null, $"gap: the simulator runs no read model's {hook.Name}", null);
                 if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name == HookName.ModifyCardPlayCount)
-                    return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Ways(ProgramReader.ReadReturnedWays(_type, hook, _read)) }, null, null);
+                    return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(Ways(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
                 var program = ProgramReader.Read(_type, _read, hook.Name);
                 if (program.Unknowns.FirstOrDefault() is { } unknown) return (null, "gap: the reader can't follow it: " + unknown, null);
                 if (OwnData(hook, program) is { } data) return (null, data, null);
@@ -688,6 +689,8 @@ public static class HookReader
             if (value is QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } } && _hook == "AfterPowerAmountChanged") return new HookCreature(HookWho.PowerOwner);
             if (value is QueryValue { Name: "Player" or "Creature", Of: { } of }) return CreatureOf(of);
             if (value is QueryValue { Name: "PetOwner", Of: { } pet } && CreatureOf(pet) is { PetOwner: false } owned) return owned with { PetOwner = true };
+            // The owner of a model got from a creature (a called model's base.Owner): that creature.
+            if (value is QueryValue { Name: "Owner", Of: { } ownerOf } && Getter(ownerOf) is { } got) return got.Holder;
             return null;
         }
 
@@ -864,7 +867,61 @@ public static class HookReader
             }
             if (VarKey(value) is { } key) return Var(key);
             if (value is QueryValue { Name: "Props", Of: { } propsOf } && VarKey(propsOf) is { } propsKey) return Var(propsKey + ".Props");
+            // A power's amount on a creature the code names (X.GetPower<T>().Amount: a called power's base.Amount, Cruelty's).
+            if (value is QueryValue { Name: "Amount", Of: { } amountOf } && Getter(amountOf) is { Relic: false } amountGetter)
+                return CreatureFact(HookFact.CreaturePowerAmount, amountGetter.Holder) with { Of = amountGetter.Model };
+            // A value of several ways (a local set on each branch: Vulnerable's num after Paper Phrog, then Cruelty): the first way that holds.
+            if (value is WaysValue ways)
+                return new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), Value(way.Value))).ToList());
+            if (value is QueryValue { Of: { } receiver } call && ModelCall(call, receiver) is { } called) return called;
             throw new Gap($"gap: the value {value}");
+        }
+
+        /// <summary>
+        /// A model got from a creature the code names: X.GetPower&lt;T&gt;() (a power on it), X.Player.GetRelic&lt;T&gt;() (a relic of its player):
+        /// the creature and the class.
+        /// </summary>
+        private (HookCreature Holder, string Model, bool Relic)? Getter(ProgramValue value)
+        {
+            if (value is StoredValue stored) return Getter(stored.Value);
+            if (value is not QueryValue { Name: "GetPower" or "GetRelic", GenericArguments: [var model], Of: { } of } query || CreatureOf(of) is not { } holder) return null;
+            return query.Name == "GetPower" ? (holder, PowerClass(model), false) : (holder, RelicClass(model), true);
+        }
+
+        /// <summary>
+        /// A call into another model's own method on a model got from a creature (paperPhrog.ModifyVulnerableMultiplier(target, num, ...), on
+        /// dealer.Player?.GetRelic&lt;PaperPhrog&gt;(); debilitate.ModifyWeakMultiplier(dealer, num, ...)): the method's returned value read from its
+        /// code, its parameters the caller's arguments and its base.Owner the creature it was got from (its base.Amount that power's amount there),
+        /// on each way the receiver is got (a ?? is one way each). Null for a call that isn't one; a gap where its code can't be read.
+        /// </summary>
+        private HookValue? ModelCall(QueryValue call, ProgramValue receiver)
+        {
+            var receivers = (receiver is StoredValue stored ? stored.Value : receiver) is WaysValue receiverWays
+                ? receiverWays.Ways.Where(way => way.Value is not NullValue).Select(way => (When: (ProgramCondition?)way.When, Getter: way.Value)).ToList()
+                : new List<(ProgramCondition? When, ProgramValue Getter)> { (null, receiver) };
+            if (receivers.Count == 0 || receivers.Any(way => Getter(way.Getter) == null)) return null;
+            var ways = new List<HookWay>();
+            foreach (var (when, getter) in receivers)
+            {
+                var (_, model, relic) = Getter(getter)!.Value;
+                var calleeType = _type.Assembly.GetType((relic ? "MegaCrit.Sts2.Core.Models.Relics." : "MegaCrit.Sts2.Core.Models.Powers.") + model) ?? throw new Gap($"gap: no class {model}");
+                var method = calleeType.GetMethods(Declared).FirstOrDefault(candidate => candidate.Name == call.Name && candidate.GetParameters().Length == call.Arguments.Count)
+                    ?? throw new Gap($"gap: {model}.{call.Name} not found");
+                if (method.ReturnType.Name != "Decimal") throw new Gap($"gap: {model}.{call.Name} gives a {method.ReturnType.Name}");
+                var returned = ProgramReader.ReadReturnedWays(calleeType, method, _read);
+                // Its parameters are the caller's arguments, its own model (this) the one got from the creature: one map, so neither is read as the other.
+                var parameters = method.GetParameters().Select((parameter, index) => (parameter.Name!, call.Arguments[index])).ToDictionary(pair => pair.Item1, pair => pair.Item2, StringComparer.Ordinal);
+                var mapped = (WaysValue)returned.Map(part => part switch
+                {
+                    NamedValue { Name: "this" } => getter,
+                    ParameterValue { Name: var name } when parameters.TryGetValue(name, out var argument) => argument,
+                    NamedValue { Name: var name } when parameters.TryGetValue(name, out var argument) => argument,
+                    _ => null,
+                });
+                if (mapped.Parts().Any(part => part is QueryValue { Name: "DynamicVars", Of: var varsOf } && Equals(varsOf, getter))) throw new Gap($"gap: {model}.{call.Name} reads its own values");
+                ways.Add(new HookWay(when == null ? new HookConstant(1m) : Condition(when) ?? new HookConstant(1m), Ways(mapped)));
+            }
+            return ways.Count == 1 && ways[0].When is HookConstant { Value: 1m } ? ways[0].Value : new HookWays(ways);
         }
 
         private Dictionary<string, decimal>? _canonical;
@@ -933,6 +990,91 @@ public static class HookReader
         {
             if (ways.Ways.Count == 0) throw new Gap("gap: no return read");
             return new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), Value(way.Value))).ToList());
+        }
+
+        /// <summary>
+        /// A returned value with what its ways already decide left out: inside a way, a test its way's test needs is known to hold; after a way,
+        /// what its failing tells; the right side of an and knows its left side held, of an or that it failed; a way that can't hold goes, and
+        /// one that always does ends the list. The code's own ways (Vulnerable's num after Paper Phrog, then Cruelty, then Debilitate: each a
+        /// value of every way before it) nest every test again, so this is what keeps a read model's value near the size of its code. A test is
+        /// known by what it tests, wherever the code made it: a Modify hook's value changes nothing, so one test has one answer in a run. It
+        /// changes no answer.
+        /// </summary>
+        internal static HookValue Pruned(HookValue value) => Pruned(value, ImmutableHashSet<HookValue>.Empty, ImmutableHashSet<HookValue>.Empty);
+
+        private static HookValue Pruned(HookValue value, ImmutableHashSet<HookValue> holds, ImmutableHashSet<HookValue> fails)
+        {
+            switch (value)
+            {
+                case HookTest test:
+                {
+                    var inner = Pruned(test.Test, holds, fails);
+                    return inner is HookConstant ? inner : test with { Test = inner };
+                }
+                case HookFactValue when holds.Contains(value): return new HookConstant(1m);
+                case HookFactValue when fails.Contains(value): return new HookConstant(0m);
+                case HookNot not:
+                    return Not(Pruned(not.Inner, holds, fails));
+                case HookMath { Operation: HookOperation.And } both:
+                {
+                    var left = Pruned(both.Left, holds, fails);
+                    var (leftHolds, leftFails) = Known(left, holds, fails, truth: true);
+                    return Simplified(both with { Left = left, Right = Pruned(both.Right, leftHolds, leftFails) });
+                }
+                case HookMath { Operation: HookOperation.Or } either:
+                {
+                    var left = Pruned(either.Left, holds, fails);
+                    var (leftHolds, leftFails) = Known(left, holds, fails, truth: false);
+                    return Simplified(either with { Left = left, Right = Pruned(either.Right, leftHolds, leftFails) });
+                }
+                case HookMath math:
+                    return math with { Left = Pruned(math.Left, holds, fails), Right = Pruned(math.Right, holds, fails) };
+                case HookWays ways:
+                {
+                    var kept = new List<HookWay>();
+                    foreach (var way in ways.Ways)
+                    {
+                        var when = Pruned(way.When, holds, fails);
+                        if (when is HookConstant { Value: 0m }) continue;
+                        var (wayHolds, wayFails) = Known(when, holds, fails, truth: true);
+                        var wayValue = Pruned(way.Value, wayHolds, wayFails);
+                        if (when is HookConstant)
+                        {
+                            kept.Add(new HookWay(new HookConstant(1m), wayValue));
+                            break;
+                        }
+                        kept.Add(new HookWay(when, wayValue));
+                        // A later way is taken only where this one wasn't.
+                        (holds, fails) = Known(when, holds, fails, truth: false);
+                    }
+                    if (kept.Count == 0) return new HookConstant(0m);
+                    return kept[0].When is HookConstant ? kept[0].Value : new HookWays(kept);
+                }
+                default:
+                    return value;
+            }
+        }
+
+        /// <summary>
+        /// What a condition's answer tells of its facts: held, an and's every part held (a not's part failed); failed, a single fact (or an or's
+        /// every part) failed. Added to those known.
+        /// </summary>
+        private static (ImmutableHashSet<HookValue> Holds, ImmutableHashSet<HookValue> Fails) Known(HookValue when, ImmutableHashSet<HookValue> holds, ImmutableHashSet<HookValue> fails, bool truth)
+        {
+            switch (when)
+            {
+                case HookTest test: return Known(test.Test, holds, fails, truth);
+                case HookNot not: return Known(not.Inner, holds, fails, !truth);
+                case HookFactValue: return truth ? (holds.Add(when), fails) : (holds, fails.Add(when));
+                case HookMath { Operation: HookOperation.And } when truth:
+                case HookMath { Operation: HookOperation.Or } when !truth:
+                {
+                    var math = (HookMath)when;
+                    var (leftHolds, leftFails) = Known(math.Left, holds, fails, truth);
+                    return Known(math.Right, leftHolds, leftFails, truth);
+                }
+                default: return (holds, fails);
+            }
         }
 
         /// <summary>

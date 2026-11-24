@@ -40,6 +40,7 @@ public class ReadModelParityTests
         ["SneakyPower.AfterCardPlayed"] = "cardPlay.Card.Owner.Creature != base.Owner && cardPlay.Card.Type == Attack, with no test of its owner's side: on a player it gives them block on another's Attack (the hand-written model wanted an enemy). Only enemies have it in the game: no prediction changes",
         ["ConcoctPower.AfterSideTurnEnd"] = "base.Owner.Side != side: PowerCmd.Remove(this) as the other side's turn ends, which for the players' turn the simulator ends is an enemy owner. The engine runs the turn's end for players' models only (SimEngine.EndOfTurn), and only players have it: no prediction changes",
         ["SerratedArrowsPower.ModifyDamageMultiplicative"] = "target.HasPower<ImpaledPower>(), with no test of the target's side: a player with Impaled would count (the hand-written model wanted an enemy). Only enemies are impaled (ArrowCmd.ImpaleTarget: an arrow in the shot's target, an enemy): no prediction changes",
+        ["VulnerablePower.ModifyDamageMultiplicative"] = "dealer.Player?.GetRelic<PaperPhrog>(), and PaperPhrog's and CrueltyPower's own `target == base.Owner` returns: Osty's hits get no Paper Phrog (a pet's creature has no Player; the hand-written model gave him his player's), a fix where Osty hits a Vulnerable enemy with Paper Phrog; and a creature's own Phrog and Cruelty don't raise a powered attack on itself (none happens today)",
         ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
     };
 
@@ -62,7 +63,7 @@ public class ReadModelParityTests
     /// "Model.Var": values the hand-written model wrote as a constant (Colossus' 0.5) that the read model reads from its values: the board gives
     /// the game's value (its canonical one), so the two read the same number.
     /// </summary>
-    private static readonly HashSet<string> HandWrittenConstants = new(StringComparer.Ordinal) { $"{PowerId.Colossus.Name}.DamageDecrease" };
+    private static readonly HashSet<string> HandWrittenConstants = new(StringComparer.Ordinal) { $"{PowerId.Colossus.Name}.DamageDecrease", $"{PowerId.Vulnerable.Name}.DamageIncrease", $"{PowerId.Weak.Name}.DamageDecrease" };
 
     public static TheoryData<string> Models() => new(HandWritten.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
@@ -165,7 +166,7 @@ public class ReadModelParityTests
             if (value != (int)value) state.Fractions[key] = value;
         }
         // The powers and relics its code asks other creatures about (creature.HasPower<T>(), Player.GetRelic<T>()), on enemy 1 and the teammate
-        // (a dealer, a target), so each question is asked of a creature with it and of one without; Impaled also as a teammate's arrows (the
+        // (a dealer, a target; a relic on both players), so each question is asked of a creature with it and of one without; Impaled also as a teammate's arrows (the
         // simulator's ImpaledPowerOther) on enemy 0.
         foreach (var fact in model.Spec.Values().OfType<HookFactValue>())
         {
@@ -175,7 +176,7 @@ public class ReadModelParityTests
                 if (power == PowerId.Impaled.Name) SimEngine.SetPowers(state, 0, SimEngine.PowersOf(state, 0).With(SimEngine.ImpaledOther, amount: 1, data: 0));
             }
             if (fact is { Fact: HookFact.CreatureHasRelic, Of: { } relic })
-                SimEngine.SetRelics(state, Who.Teammate(0), SimEngine.RelicsOf(state, Who.Teammate(0)).With(new RelicId(relic), amount: 0, data: 0));
+                foreach (var holder in new[] { Who.You, Who.Teammate(0) }) SimEngine.SetRelics(state, holder, SimEngine.RelicsOf(state, holder).With(new RelicId(relic), amount: 0, data: 0));
         }
         // A power whose code asks who applied it keeps its applier as its Data (DataCreature), as the adapter reads it: you, for one that asks
         // whether its applier is a player or played the card; else enemy 0 (one that asks whether its applier died).

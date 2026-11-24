@@ -902,8 +902,11 @@ public static class ProgramReader
             if (jumps.All(jump => Ops[jump].OpCode.FlowControl == FlowControl.Cond_Branch && jump > 0 && Ops[jump - 1].OpCode == OpCodes.Dup)
                 && at > 0 && Ops[at - 1].OpCode.FlowControl is FlowControl.Branch or FlowControl.Return or FlowControl.Throw)
                 return ReadBack(jumps[0] - 1, depth + 1);
-            // A conditional jump carrying a value keeps the one it tested a copy of (dup; brtrue: a cached lambda, x ?? y): read as before.
-            if (jumps.Any(jump => Ops[jump].OpCode.FlowControl != FlowControl.Branch)) return null;
+            // A conditional jump carrying the value it tested a copy of (x ?? y: dup; brtrue) is a way with that value, on the test that made it
+            // jump. A cached lambda (ldsfld <>9__x; dup; brtrue) is the same lambda either way: read as before, and so is any other.
+            var carried = jumps.Where(jump => Ops[jump].OpCode.FlowControl != FlowControl.Branch).ToList();
+            if (carried.Any(jump => jump < 2 || Ops[jump - 1].OpCode != OpCodes.Dup || Ops[jump - 2].OpCode == OpCodes.Ldsfld && Ops[jump - 2].Member?.Name.StartsWith("<>9__", StringComparison.Ordinal) == true))
+                return null;
             foreach (var jump in jumps)
             {
                 if (jump > at) return (new UnknownValue("merge"), -1);
@@ -918,8 +921,11 @@ public static class ProgramReader
             foreach (var (source, jump) in ways)
             {
                 if (source >= _reached.Length || _reached[source] is not { IsNever: false } reached) continue;
+                // A conditional jump's value is the copy it tested, on the test that made it jump (x ?? y: x, when it isn't null).
+                var conditional = jump && Ops[source].OpCode.FlowControl == FlowControl.Cond_Branch;
+                if (conditional) reached = reached.And(Taken(source));
                 // A jump's value is the one before it; a fall-through's is the instruction's own.
-                var value = jump ? ReadBack(source, depth + 1) : ReadBack(at, depth + 1, merge: false);
+                var value = conditional ? ReadBack(source - 1, depth + 1) : jump ? ReadBack(source, depth + 1) : ReadBack(at, depth + 1, merge: false);
                 if (value.Start < 0) return (new UnknownValue("merge"), -1);
                 start = Math.Min(start, value.Start);
                 each.Add((reached, value.Value));

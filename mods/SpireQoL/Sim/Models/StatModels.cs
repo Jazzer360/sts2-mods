@@ -6,43 +6,6 @@ namespace SpireQoL.Sim.Models;
 // Strength, Dexterity, Frail and Double Damage are read from their code (ReadModel, decision #195).
 
 /// <summary>
-/// VulnerablePower.ModifyDamageMultiplicative: 1.5 on powered attacks on its owner; the dealer's Paper Phrog adds 0.25, the
-/// dealer's Cruelty its amount / 100; Debilitate on the owner doubles the bonus (num + (num - 1)).
-/// </summary>
-public sealed class VulnerablePower : SimModel
-{
-    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage)
-    {
-        if (damage.Target != owner || !damage.Props.IsPoweredAttack()) return 1m;
-        var num = 1.5m;
-        if (damage.Dealer is { } dealer)
-        {
-            var player = dealer == Who.YourOsty ? Who.You : dealer;
-            if (Who.IsPlayer(player) && SimEngine.RelicsOf(state, player).Has(RelicId.PaperPhrog)) num += 0.25m;
-            if (Who.IsPlayer(player) && SimEngine.PowerOn(state, player, PowerId.Cruelty) is var cruelty and not 0) num += cruelty / 100m;
-        }
-        if (SimEngine.PowersOf(state, owner).Has(PowerId.Debilitate)) num += num - 1m;
-        return num;
-    }
-}
-
-/// <summary>
-/// WeakPower.ModifyDamageMultiplicative: 0.75 on its owner's powered attacks; Paper Krane on the target takes 0.15 more off;
-/// Debilitate on the owner doubles the reduction (num - (1 - num)).
-/// </summary>
-public sealed class WeakPower : SimModel
-{
-    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage)
-    {
-        if (damage.Dealer != owner || !damage.Props.IsPoweredAttack()) return 1m;
-        var num = 0.75m;
-        if (Who.IsPlayer(damage.Target) && SimEngine.RelicsOf(state, damage.Target).Has(RelicId.PaperKrane)) num -= 0.15m;
-        if (SimEngine.PowersOf(state, owner).Has(PowerId.Debilitate)) num -= 1m - num;
-        return num;
-    }
-}
-
-/// <summary>
 /// Powers bound to one attack (BeforeAttack binds the first attack that qualifies, AfterAttack spends them). Data is the bound
 /// attack's id and the amount when it started: (id &lt;&lt; 16) | amount.
 /// </summary>
