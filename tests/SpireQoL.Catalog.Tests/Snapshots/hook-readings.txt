@@ -239,7 +239,7 @@ relic LostWisp: AfterCardPlayed: read
 relic LuckyFysh: AfterCardChangedPiles: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic LunarPastry: AfterSideTurnEnd: read
 relic MeatOnTheBone: AfterCombatVictoryEarly: not run: after the fight: no prediction reaches it | AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged | BeforeCombatStart: not run: before the fight: the state is read after it
-relic Metronome: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterOrbChanneled: gap: the simulator runs no read model's AfterOrbChanneled | AfterRoomEntered: not run: entering a room: outside the fight's turns
+relic Metronome: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterOrbChanneled: read | AfterRoomEntered: not run: entering a room: outside the fight's turns
 relic MightyWings: AfterDamageGiven: read
 relic MiniRegent: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterStarsSpent: read | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers
 relic MummifiedHand: AfterCardPlayed: gap: changes a game object outside a command (CardModel.SetToFreeThisTurn)

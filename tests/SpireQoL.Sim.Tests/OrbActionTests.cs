@@ -55,7 +55,8 @@ public class OrbActionTests
     {
         var state = Defect();
         state.You.Powers = state.You.Powers.With(PowerId.Storm, amount: 2);
-        state.You.Relics = state.You.Relics.With(RelicId.Metronome, amount: 6, data: 1);
+        state.You.Relics = state.You.Relics.With(RelicId.Metronome, amount: 0, data: 0);
+        state.You.Fields = state.You.Fields.With($"{RelicId.Metronome.Name}.OrbsChanneled", 6); // its own count, read from its code (as the adapter seeds it)
         state.Vars[$"{Who.You}:Metronome:OrbCount"] = 7;
         state.Vars[$"{Who.You}:Metronome:Damage"] = 30;
         var after = Assert.Single(After(state, Play(Card("Defragment", SimCardType.Power), target: Who.None, plays: 1)));

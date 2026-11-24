@@ -212,7 +212,6 @@ public static class SimReaders
                 case nameof(BeatingRemnant): data = (int)Sts2State.Private(relic, "DamageReceivedThisTurn", fallback: 0m); break;
                 // Counters the models keep counting (their tray number, or the private count behind it).
                 case nameof(JossPaper): amount = Sts2State.Private(relic, "CardsExhausted", fallback: 0); break;
-                case nameof(Metronome): amount = Sts2State.Private(relic, "OrbsChanneled", int.MaxValue / 2); break;
                 // Once a turn: armed until used, used this turn (RelicUse).
                 case nameof(MiniRegent) or nameof(Regalite): data = Sts2State.Private(relic, "UsedThisTurn", fallback: true) ? 0 : (int)RelicUse.Armed; break;
                 case nameof(RainbowRing): data = Sts2State.Private(relic, "ActivationCountThisTurn", fallback: 0) >= 1 ? (int)RelicUse.UsedThisTurn : 0; break;

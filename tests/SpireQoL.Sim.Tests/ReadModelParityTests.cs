@@ -197,7 +197,7 @@ public class ReadModelParityTests
         nameof(SimModel.BeforeSideTurnEndVeryEarly), nameof(SimModel.BeforeSideTurnEndEarly), nameof(SimModel.BeforeSideTurnEnd), nameof(SimModel.AfterSideTurnEnd),
         nameof(SimModel.AfterSideTurnEndLate), nameof(SimModel.ModifyCardPlayCount), nameof(SimModel.AfterModifyingCardPlayCount),
         nameof(SimModel.AfterDamageGiven), nameof(SimModel.AfterDamageReceived), nameof(SimModel.AfterDeath), nameof(SimModel.AfterApplied),
-        nameof(SimModel.BeforeSideTurnStart), nameof(SimModel.AfterSideTurnStart), nameof(SimModel.AfterSideTurnStartLate),
+        nameof(SimModel.BeforeSideTurnStart), nameof(SimModel.AfterSideTurnStart), nameof(SimModel.AfterSideTurnStartLate), nameof(SimModel.AfterOrbChanneled),
     };
 
     [Fact]
@@ -435,6 +435,13 @@ public class ReadModelParityTests
                     var attacks = string.Join(", ", new[] { 0, Who.You }.Select(dealer => model.ModifyDamageMultiplicative(state, owner, new DamageCtx(dealer, owner, SimProps.Move, Card: null, Play: null))));
                     return after + " // attacks on its owner × " + attacks;
                 });
+                break;
+            case nameof(SimModel.AfterOrbChanneled):
+                // Twelve orbs channeled for its owner in turn (a counter's count), and one for each other player.
+                if (Who.IsPlayer(owner))
+                    yield return ($"twelve orbs channeled for {owner} in turn", (model, state) => Sequence(state, Enumerable.Repeat(0, 12), (branch, _) => model.AfterOrbChanneled(branch, owner, owner)));
+                foreach (var player in others.Where(Who.IsPlayer))
+                    yield return ($"an orb channeled for {player}", (model, state) => Branches(model.AfterOrbChanneled(state, owner, player)));
                 break;
         }
     }

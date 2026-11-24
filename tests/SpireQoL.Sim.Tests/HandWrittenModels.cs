@@ -1283,3 +1283,20 @@ public sealed class ReaperFormPower : ProcModel
         if (hit.Dealer == owner && hit.Props.IsPoweredAttack() && hit.Unblocked > 0 && hit.Target >= 0) state.LogFired(Name, amount: 0, owner);
     }
 }
+
+// ---- orbs (round seven: Sim/Models/ProcRelicModels.cs, deleted 2026-11-24)
+
+/// <summary>Metronome.AfterOrbChanneled: damage to every hittable enemy once its OrbCount orbs are channeled this combat (Amount: OrbsChanneled).</summary>
+public sealed class Metronome : RelicProc
+{
+    public override TabKind? Tab => TabKind.Damage;
+    public override IEnumerable<SimState> AfterOrbChanneled(SimState state, int owner, int player)
+    {
+        if (player != owner) return One(state);
+        var needed = Var(state, owner, "OrbCount", fallback: 7);
+        var count = Amount(state, owner);
+        if (count >= needed) return One(state);
+        Set(state, owner, count + 1, Data(state, owner));
+        return count + 1 == needed ? RelicDamageAll(state, owner) : One(state);
+    }
+}

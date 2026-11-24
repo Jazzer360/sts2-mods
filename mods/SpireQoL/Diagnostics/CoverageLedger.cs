@@ -85,7 +85,7 @@ internal static partial class CoverageLedger
         ["LuckyFysh"] = "ignore: AfterCardChangedPiles gold when cards join your deck (deck, not combat)",
         ["LunarPastry"] = "covered: read from its code (ReadModel, decision #195): AfterSideTurnEnd gives you stars (one stars-gained event); Black Hole's model reacts, in relic order with Parrying Shield",
         ["MeatOnTheBone"] = "ignore: AfterCurrentHpChanged only sets its status (heals after combat)",
-        ["Metronome"] = "covered: AfterOrbChanneled damages all enemies at its count (proc damage, second pass, tracker)",
+        ["Metronome"] = "covered: read from its code (ReadModel, decision #195): AfterOrbChanneled counts your orbs channeled (its own OrbsChanneled) and damages all enemies at its count (proc damage, second pass, tracker)",
         ["MiniRegent"] = "covered: read from its code (ReadModel, decision #195): AfterStarsSpent Strength once per turn (proc tab)",
         ["MummifiedHand"] = "covered: AfterCardPlayed frees a random hand card on a Power (proc tab; costs read live)",
         ["MusicBox"] = "covered: Before/AfterCardPlayed clones the first attack as Ethereal (proc tab, created card)",

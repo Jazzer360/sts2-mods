@@ -162,6 +162,7 @@ public sealed class ReadModel : SimModel
         HookName.BeforeSideTurnStart => nameof(BeforeSideTurnStart),
         HookName.AfterSideTurnStart => nameof(AfterSideTurnStart),
         HookName.AfterSideTurnStartLate => nameof(AfterSideTurnStartLate),
+        HookName.AfterOrbChanneled => nameof(AfterOrbChanneled),
         _ => nameof(AfterCardEvent),
     };
 
@@ -205,6 +206,10 @@ public sealed class ReadModel : SimModel
     public override IEnumerable<SimState> BeforeSideTurnStart(SimState state, int owner) => TurnEnd(HookName.BeforeSideTurnStart, state, owner);
     public override IEnumerable<SimState> AfterSideTurnStart(SimState state, int owner) => TurnEnd(HookName.AfterSideTurnStart, state, owner);
     public override IEnumerable<SimState> AfterSideTurnStartLate(SimState state, int owner) => TurnEnd(HookName.AfterSideTurnStartLate, state, owner);
+
+    /// <summary>Hook.AfterOrbChanneled: an orb was channeled for <paramref name="player"/> (the hook's player, EventIsOwners).</summary>
+    public override IEnumerable<SimState> AfterOrbChanneled(SimState state, int owner, int player) =>
+        Run(HookName.AfterOrbChanneled, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Player = player });
 
     /// <summary>Hook.ModifyCardPlayCount: the value of its code's first way that holds (playCount, playCount + 1...), decided once before the plays.</summary>
     public override int ModifyCardPlayCount(SimState state, int owner, SimCardPlay play, int count)

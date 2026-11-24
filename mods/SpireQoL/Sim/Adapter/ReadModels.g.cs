@@ -74,6 +74,7 @@ public static partial class ReadModels
         RelicId.LostWisp.Name,
         PowerId.Lullaby.Name,
         RelicId.LunarPastry.Name,
+        RelicId.Metronome.Name,
         RelicId.MightyWings.Name,
         RelicId.MiniRegent.Name,
         PowerId.Monologue.Name,

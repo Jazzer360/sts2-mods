@@ -6290,6 +6290,125 @@
     "HelpsOwner": false
   },
   {
+    "Name": "Metronome",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterOrbChanneled",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "OrbsChanneled",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "OrbsChanneled"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterOrbChanneled\u003Ed__18.MoveNext:0020",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterOrbChanneled\u003Ed__18.MoveNext:0020",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterOrbChanneled\u003Ed__18.MoveNext:0052",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "OrbsChanneled"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "OrbCount",
+                      "Canonical": 7
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Damage",
+              "Canonical": 30
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Damage.Props",
+              "Canonical": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterOrbChanneled\u003Ed__18.MoveNext:0020",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterOrbChanneled\u003Ed__18.MoveNext:0052",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "OrbsChanneled"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "OrbCount",
+                      "Canonical": 7
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage",
+    "HelpsOwner": false
+  },
+  {
     "Name": "MightyWings",
     "Kind": "Relic",
     "Hooks": [

@@ -245,21 +245,6 @@ public sealed class JossPaper : RelicProc
     }
 }
 
-/// <summary>Metronome.AfterOrbChanneled: damage to every hittable enemy once its OrbCount orbs are channeled this combat (Amount: OrbsChanneled).</summary>
-public sealed class Metronome : RelicProc
-{
-    public override TabKind? Tab => TabKind.Damage;
-    public override IEnumerable<SimState> AfterOrbChanneled(SimState state, int owner, int player)
-    {
-        if (player != owner) return One(state);
-        var needed = Var(state, owner, "OrbCount", fallback: 7);
-        var count = Amount(state, owner);
-        if (count >= needed) return One(state);
-        Set(state, owner, count + 1, Data(state, owner));
-        return count + 1 == needed ? RelicDamageAll(state, owner) : One(state);
-    }
-}
-
 /// <summary>BoneFlute.AfterAttack: block for each attack your Osty makes.</summary>
 public sealed class BoneFlute : RelicProc
 {

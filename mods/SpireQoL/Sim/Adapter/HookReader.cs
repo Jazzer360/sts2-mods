@@ -1015,6 +1015,9 @@ public static class HookReader
             if (IsDealer(other)) return new HookFactValue(HookFact.DealerIsOwner);
             if (other is ParameterValue { Name: "target" } or NamedValue { Name: "target" }) return new HookFactValue(HookFact.TargetIsOwner);
             if (other is NamedValue { Name: "applier" } or ParameterValue { Name: "applier" }) return new HookFactValue(HookFact.ApplierIsOwner);
+            // The player an event happened to (AfterOrbChanneled's player, AfterShuffle's): the event's player is its owner.
+            if (other is NamedValue { Name: "player" or "shuffler" } or ParameterValue { Name: "player" or "shuffler" } && _hook is "AfterOrbChanneled" or "AfterShuffle")
+                return new HookFactValue(HookFact.EventIsOwners);
             // Another creature the code names (a pet's player, a creature's player): the creatures' comparison (CreatureCompare).
             if (CreatureOf(other) != null) return null;
             throw new Gap($"gap: compares the owner with {other}");

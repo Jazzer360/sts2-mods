@@ -43,6 +43,8 @@ public enum HookName
     AfterSideTurnStart,
     /// <summary>Hook.AfterSideTurnStart's second pass (AfterSideTurnStartLate) as the enemies' turn starts.</summary>
     AfterSideTurnStartLate,
+    /// <summary>Hook.AfterOrbChanneled: an orb was channeled for a player (its player the hook's).</summary>
+    AfterOrbChanneled,
 }
 
 /// <summary>
