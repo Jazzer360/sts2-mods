@@ -19,7 +19,7 @@ power BurstPower: AfterModifyingCardPlayCount: read | AfterSideTurnEnd: read | M
 power CacophonyPower: AfterCardDrawn: gap: each copy acts on its own (PowerInstanceType.Instanced): the simulator keeps their sum
 power CalamityPower: AfterCardPlayed: gap: changes a collection (Enumerator.get_Current) where the reader reads no step | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power ChainsOfBindingPower: AfterCardDrawn: gap: CardCmd.AfflictAndPreview<Bound> isn't translated | BeforeCardPlayed: gap: tests cardPlay.Card.IsDupe | BeforeSideTurnEnd: gap: changes a collection (IEnumerator`1.get_Current) where the reader reads no step | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
-power ChildOfTheStarsPower: AfterStarsSpent: gap: the value amount
+power ChildOfTheStarsPower: AfterStarsSpent: read
 power ColossusPower: AfterSideTurnEnd: not run: its commands wait on the enemies' side's turn ending, which no simulation reaches | ModifyDamageMultiplicative: read
 power CompostPower: AfterDeath: gap: a loop
 power ConcoctPower: AfterDamageGiven: read | AfterSideTurnEnd: read
@@ -217,7 +217,7 @@ relic Fertilizer: AfterCardGeneratedForCombat: read
 relic Fiddle: AfterPreventingDraw: gap: the simulator runs no read model's AfterPreventingDraw | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw | ShouldDraw: gap: the simulator runs no read model's ShouldDraw
 relic ForgottenSoul: AfterCardExhausted: read
 relic FurCoat: AfterCreatureAddedToCombat: gap: the simulator runs no read model's AfterCreatureAddedToCombat | AfterObtained: not run: when the relic is obtained: outside the fight's turns | BeforeCombatStart: not run: before the fight: the state is read after it | ModifyGeneratedMapLate: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
-relic GalacticDust: AfterStarsSpent: gap: the value amount
+relic GalacticDust: AfterStarsSpent: read
 relic GamePiece: AfterCardPlayed: read
 relic GhostSeed: AfterCardEnteredCombat: gap: the simulator runs no read model's AfterCardEnteredCombat | AfterRoomEntered: not run: entering a room: outside the fight's turns
 relic GremlinHorn: AfterDeath: read

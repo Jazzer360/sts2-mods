@@ -1,5 +1,5 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by capability.
-# 130 hand-written models.
+# 128 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
@@ -25,7 +25,6 @@ a command on another creature (the players, a card's owner, a roll's list): 3 cl
 commands: OstyCmd.Summon: 2 classes, 2 alone: DevourLifePower*, SicEmPower*
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
 outcomes: a stun or a kill (outcome tabs): 2 classes, 2 alone: ShriekPower*, TheGambitPower*
-queries: the hook's amount (AfterStarsSpent's): 2 classes, 2 alone: ChildOfTheStarsPower*, GalacticDust*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*
 instanced copies (each copy its own amount and data): 11 classes, 1 alone: AutomationPower, CacophonyPower, CoveredPower, ImitationLearningPower, MagicBombPower, MonologuePower, OrbitPower, PanachePower, TagTeamPower, TheBombPower*, WitheringPresencePower
 hooks: AfterCardEnteredCombat: 4 classes, 1 alone: GalvanicPower, SmoggyPower, SwordSagePower*, VitalSparkPower
@@ -68,7 +67,6 @@ CacophonyPower: [instanced copies (each copy its own amount and data)] (the clas
 CalamityPower: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: changes a collection (Enumerator.get_Current) where the reader reads no step
 CentennialPuzzle: [a loop over items (creatures, cards)] AfterDamageReceived: gap: a loop
 ChemicalX: [card costs and keywords (cards' own hooks, Part B3)] ModifyXValue: gap: the simulator runs no read model's ModifyXValue
-ChildOfTheStarsPower: [queries: the hook's amount (AfterStarsSpent's)] AfterStarsSpent: gap: the value amount
 CompostPower: [a loop over items (creatures, cards)] AfterDeath: gap: a loop
 ConductorsBaton: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: uses its own field (_triggeredThisTurn) directly: what a call on it changes isn't read
 ConductorsBatonPower: [a turn's start (the enemies' turn start, an extra turn)] AfterSideTurnStart: gap: AfterSideTurnStart acts as a side's turn starts (the enemies' turn start runs no read model)
@@ -87,7 +85,6 @@ ExplosiveArrowsPower: [arrows (AfterArrowShot, AfterArrowImpaled, an arrow's own
 ExplosivePower: [a command on another creature (the players, a card's owner, a roll's list)] AfterDeath: gap: acts on ToList(Where(this.CombatState.PlayerCreatures, c => c.IsAlive))
 FeralPower: [hooks: AfterApplied] AfterApplied: gap: the simulator runs no read model's AfterApplied | [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [a turn's start (the enemies' turn start, an extra turn)] AfterSideTurnStart: gap: AfterSideTurnStart acts as a side's turn starts (the enemies' turn start runs no read model) | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
 FlutterPower: [a monster's own state set (its flag, its next move)] AfterDamageReceived: gap: sets ThievingHopper.IsHovering where the reader reads no store
-GalacticDust: [queries: the hook's amount (AfterStarsSpent's)] AfterStarsSpent: gap: the value amount
 GalvanicPower: [hooks: AfterCardEnteredCombat] AfterCardEnteredCombat: gap: the simulator runs no read model's AfterCardEnteredCombat | [a command on another creature (the players, a card's owner, a roll's list)] AfterCardPlayed: gap: acts on cardPlay.Card.Owner.Creature
 GigantificationPower: [hooks: BeforeAttack and AfterAttack] AfterAttack: gap: the simulator runs no read model's AfterAttack | [hooks: BeforeAttack and AfterAttack] BeforeAttack: gap: the simulator runs no read model's BeforeAttack | [hooks: BeforeAttack and AfterAttack] ModifyDamageMultiplicative: gap: tests this.GetInternalData<Data>().commandToModify()
 HandDrill: [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount)] AfterBlockBroken: gap: the simulator runs no read model's AfterBlockBroken

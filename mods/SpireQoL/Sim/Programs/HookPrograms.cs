@@ -71,6 +71,8 @@ public enum HookFact
     PowerAmount,
     /// <summary>The power landing is a debuff for its amount (power.GetTypeForAmount(amount) == Debuff).</summary>
     PowerIsDebuff,
+    /// <summary>The stars a spend took (AfterStarsSpent's amount): the stars of the play spending them, as the simulator spends stars (one event a play).</summary>
+    StarsSpent,
     /// <summary>The power landed on an enemy (power.Owner.IsEnemy).</summary>
     PowerOnEnemy,
     /// <summary>The damage's dealer is the owner (dealer == base.Owner).</summary>

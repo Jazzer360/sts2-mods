@@ -892,3 +892,27 @@ public sealed class TheSealedThronePower : ProcModel
     public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play) =>
         Mine(play, owner) && Amount(state, owner) > 0 ? Cause(Fire(state, owner), CardEvent.StarsGained, count: 1, owner) : One(state);
 }
+/// <summary>ChildOfTheStarsPower.AfterStarsSpent: its amount of block per star spent (one gain).</summary>
+public sealed class ChildOfTheStarsPower : ProcModel
+{
+    public override TabKind? Tab => TabKind.Block;
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
+        cardEvent == CardEvent.StarsSpent && player == owner && state.CurrentPlay?.Card.Stars is > 0 and var stars
+            ? Block(state, owner, Amount(state, owner) * stars) : One(state);
+}
+
+/// <summary>GalacticDust.AfterStarsSpent: block for every Stars value of stars spent (Amount: StarsSpent so far, kept below it).</summary>
+public sealed class GalacticDust : RelicProc
+{
+    public override TabKind? Tab => TabKind.Block;
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
+    {
+        var stars = state.CurrentPlay?.Card.Stars ?? 0;
+        if (cardEvent != CardEvent.StarsSpent || player != owner || stars <= 0) return One(state);
+        var per = Var(state, owner, "Stars", fallback: 10);
+        if (per <= 0) return One(state);
+        var spent = Amount(state, owner) + stars;
+        Set(state, owner, spent % per, Data(state, owner));
+        return spent >= per ? Block(state, owner, spent / per * Var(state, owner, "Block", fallback: 0), Unpowered) : One(state);
+    }
+}

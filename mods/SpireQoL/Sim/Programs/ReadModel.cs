@@ -608,6 +608,7 @@ public sealed class ReadModel : SimModel
             }
             case HookFact.PowerAmount: return (in HookArgs args) => args.PowerAmount;
             case HookFact.PowerIsDebuff: return (in HookArgs args) => args.Debuff ? 1m : 0m;
+            case HookFact.StarsSpent: return (in HookArgs args) => args.Event == CardEvent.StarsSpent ? args.Play?.Card.Stars ?? 0 : 0;
             case HookFact.PowerOnEnemy: return (in HookArgs args) => Who.IsEnemy(args.Target) ? 1m : 0m;
             case HookFact.DealerIsOwner: return (in HookArgs args) => (args.Damage?.Dealer ?? args.Hit?.Dealer) == args.Owner ? 1m : 0m;
             case HookFact.DealerIsOwnersPet: return (in HookArgs args) => args.Owner == Who.You && args.Damage?.Dealer == Who.YourOsty ? 1m : 0m;

@@ -504,15 +504,6 @@ public sealed class DarkEmbracePower : ProcModel
         cardEvent == CardEvent.Exhausted && player == owner ? Cause(Fire(state, owner), CardEvent.Drawn, count: Amount(state, owner), owner) : One(state);
 }
 
-/// <summary>ChildOfTheStarsPower.AfterStarsSpent: its amount of block per star spent (one gain).</summary>
-public sealed class ChildOfTheStarsPower : ProcModel
-{
-    public override TabKind? Tab => TabKind.Block;
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.StarsSpent && player == owner && state.CurrentPlay?.Card.Stars is > 0 and var stars
-            ? Block(state, owner, Amount(state, owner) * stars) : One(state);
-}
-
 /// <summary>A power counting card events down (its DisplayAmount, Data) that fires when the count runs out.</summary>
 public abstract class EventCountdownPower : CounterPower
 {

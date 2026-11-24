@@ -59,10 +59,6 @@ internal static class ModelAmountCheck
         ["OrbitPower Energy: game mul(Amount, sub(div(?field energySpent, 4), ?field triggerCount)); model ?Enumerator.get_Current"] =
             "each copy's own amount (CounterPower.Copies) each time its count of 4 energy spent runs out; the game gives base.Amount × the times it passed 4",
         // The same arithmetic, over something a hook's parameter or a count holds in the game and the simulation holds elsewhere.
-        ["ChildOfTheStarsPower Block: game mul(Amount, ?parameter amount); model mul(Amount, ?)"] =
-            "its amount × the stars spent: AfterStarsSpent's amount in the game, the play's Stars in the model",
-        ["GalacticDust Block: game mul(?Mathf.FloorToInt, Var Block); model mul(div(add(Amount, ?), Var Stars), Var Block)"] =
-            "floor((stars spent so far + this spend) / Stars) × Block in both: the spend is AfterStarsSpent's amount in the game, the play's Stars in the model",
         ["NecroMasteryPower Damage: game mul(-?parameter delta, Amount); model mul(?parameter lost, Amount)"] =
             "its amount × the HP Osty lost: AfterCurrentHpChanged's -delta in the game, AfterOstyHpLost's lost in the model",
         ["DarkEmbracePower Draw: game Amount | mul(Amount, ?field etherealCount); model Amount"] =

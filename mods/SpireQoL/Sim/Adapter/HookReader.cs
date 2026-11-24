@@ -855,6 +855,14 @@ public static class HookReader
                 case NamedValue { Name: "Decimal.One" }: return new HookConstant(1m);
                 case NamedValue { Name: "Decimal.MinusOne" }: return new HookConstant(-1m);
                 case NamedValue { Name: "amount" } when _hook == "AfterPowerAmountChanged": return new HookFactValue(HookFact.PowerAmount);
+                // The stars a spend took (AfterStarsSpent's amount): the play's stars, as the simulator spends them (one event a play).
+                case NamedValue { Name: "amount" } or ParameterValue { Name: "amount" } when _hook == "AfterStarsSpent": return new HookFactValue(HookFact.StarsSpent);
+                // The floor of a quotient (Mathf.FloorToInt((float)a / (float)b): Galactic Dust's blocks per Stars spent): (a - a rem b) / b, for counts.
+                case QueryValue { Type: "Mathf", Name: "FloorToInt", Arguments: [ArithmeticValue { Op: "div" } quotient] }:
+                {
+                    var (dividend, divisor) = (Value(quotient.Left), Value(quotient.Right));
+                    return new HookMath(HookOperation.Divide, new HookMath(HookOperation.Subtract, dividend, new HookMath(HookOperation.Remainder, dividend, divisor)), divisor);
+                }
                 // The HP a hit took past block (result.UnblockedDamage).
                 case QueryValue { Name: "UnblockedDamage", Of: ParameterValue { Name: "result" } or NamedValue { Name: "result" } } when _hook is "AfterDamageGiven" or "AfterDamageReceived":
                     return new HookFactValue(HookFact.HitUnblocked);

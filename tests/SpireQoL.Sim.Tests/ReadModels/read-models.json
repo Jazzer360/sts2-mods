@@ -308,6 +308,66 @@
     "Harmful": false
   },
   {
+    "Name": "ChildOfTheStarsPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterStarsSpent",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "StarsSpent"
+              }
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterStarsSpent\u003Ed__4.MoveNext:0018",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Greater",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "StarsSpent"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterStarsSpent\u003Ed__4.MoveNext:0030",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block",
+    "Harmful": false
+  },
+  {
     "Name": "CloakClasp",
     "Kind": "Relic",
     "Hooks": [
@@ -1947,6 +2007,170 @@
         }
       }
     ],
+    "Harmful": false
+  },
+  {
+    "Name": "GalacticDust",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterStarsSpent",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "StarsSpent",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "StarsSpent"
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "StarsSpent"
+              }
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterStarsSpent\u003Ed__19.MoveNext:0020",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          },
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Divide",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "Subtract",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "StarsSpent"
+                  },
+                  "Right": {
+                    "$kind": "HookMath",
+                    "Operation": "Remainder",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "StarsSpent"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "Stars",
+                      "Canonical": 10
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookVar",
+                  "Key": "Stars",
+                  "Canonical": 10
+                }
+              },
+              "Right": {
+                "$kind": "HookVar",
+                "Key": "Block",
+                "Canonical": 10
+              }
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterStarsSpent\u003Ed__19.MoveNext:0020",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterStarsSpent\u003Ed__19.MoveNext:0050",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "StarsSpent"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "Stars",
+                      "Canonical": 10
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "StarsSpent",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Remainder",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "StarsSpent"
+              },
+              "Right": {
+                "$kind": "HookVar",
+                "Key": "Stars",
+                "Canonical": 10
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterStarsSpent\u003Ed__19.MoveNext:0020",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterStarsSpent\u003Ed__19.MoveNext:0050",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "StarsSpent"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "Stars",
+                      "Canonical": 10
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block",
     "Harmful": false
   },
   {

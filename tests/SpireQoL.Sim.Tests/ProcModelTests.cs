@@ -553,11 +553,14 @@ public class ProcModelTests
     public void ChildOfTheStarsAndGalacticDustCountStarsSpent()
     {
         var state = Power(State(), PowerId.ChildOfTheStars, amount: 2);
-        Relic(state, RelicId.GalacticDust, amount: 8, vars: new[] { ("Stars", 10), ("Block", 5) });
+        Relic(state, RelicId.GalacticDust, amount: 0, vars: new[] { ("Stars", 10), ("Block", 5) });
+        // Galactic Dust's count is its own StarsSpent (read from its code: a field of its own, seeded from the game).
+        var starsSpent = Assert.IsType<ReadModel>(SimModels.Get(RelicId.GalacticDust.Name)).FieldKey("StarsSpent");
+        state.You.Fields = state.You.Fields.With(starsSpent, 8);
         var spender = new SimCard("Stardust", SimCardType.Skill) { Stars = 3 };
         var after = One(state, Events(spender, plays: 2, new CardEventAction(CardEvent.StarsSpent, Count: 1) { FirstPlayOnly = true }));
         Assert.Equal(6 + 5, after.You.Block);
-        Assert.Equal(1, after.You.Relics[RelicId.GalacticDust]);
+        Assert.Equal(1, after.You.Fields[starsSpent]);
     }
 
     [Fact]

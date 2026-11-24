@@ -272,22 +272,6 @@ public sealed class JossPaper : RelicProc
     }
 }
 
-/// <summary>GalacticDust.AfterStarsSpent: block for every Stars value of stars spent (Amount: StarsSpent so far, kept below it).</summary>
-public sealed class GalacticDust : RelicProc
-{
-    public override TabKind? Tab => TabKind.Block;
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
-    {
-        var stars = state.CurrentPlay?.Card.Stars ?? 0;
-        if (cardEvent != CardEvent.StarsSpent || player != owner || stars <= 0) return One(state);
-        var per = Var(state, owner, "Stars", fallback: 10);
-        if (per <= 0) return One(state);
-        var spent = Amount(state, owner) + stars;
-        Set(state, owner, spent % per, Data(state, owner));
-        return spent >= per ? Block(state, owner, spent / per * Var(state, owner, "Block", fallback: 0), Unpowered) : One(state);
-    }
-}
-
 /// <summary>Metronome.AfterOrbChanneled: damage to every hittable enemy once its OrbCount orbs are channeled this combat (Amount: OrbsChanneled).</summary>
 public sealed class Metronome : RelicProc
 {
