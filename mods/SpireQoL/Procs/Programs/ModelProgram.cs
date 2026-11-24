@@ -186,6 +186,21 @@ public static class CardPrograms
         catch { return ModelProgram.Empty; }
     });
 
+    /// <summary>
+    /// Reads every given card's program into the cache: the game does it on a worker as the mod loads, so a fight never reads one on the game's
+    /// thread (a card not read yet when a fight asks is read then, as before). Returns how many it read.
+    /// </summary>
+    public static int ReadAll(IEnumerable<Type> cardTypes)
+    {
+        var count = 0;
+        foreach (var cardType in cardTypes)
+        {
+            Of(cardType);
+            count++;
+        }
+        return count;
+    }
+
     /// <summary>The program's first command whose name starts with <paramref name="first"/> comes before its first <paramref name="second"/>.</summary>
     internal static bool Before(ModelProgram program, string first, string second)
     {

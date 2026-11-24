@@ -465,12 +465,18 @@ public static class SimModels
     /// a second, which the game's thread shouldn't spend). An ask before it's done waits for it (a search on a worker); the frame doesn't ask
     /// until it is (<see cref="Loaded"/>, SimWait.Models: a prediction is pending until then, never made without the models).
     /// </summary>
-    public static void StartReading(Func<IEnumerable<ModelSpec>> read, Func<IEnumerable<PowerRule>> readRules)
+    /// <returns>The read, so the caller can say when it's done (the dev log's load times).</returns>
+    public static Task StartReading(Func<IEnumerable<ModelSpec>> read, Func<IEnumerable<PowerRule>> readRules)
     {
         Read = read;
         ReadRules = readRules;
-        _reading = Task.Run(Load);
+        var reading = Task.Run(Load);
+        _reading = reading;
+        return reading;
     }
+
+    /// <summary>How many models are known (hand-written and read), for the dev log's load times; waits for the read.</summary>
+    public static int Count => ByName.Count;
 
     /// <summary>The models are read (or are read on the first ask, as in the tests): asking for one doesn't wait.</summary>
     public static bool Loaded => _reading?.IsCompleted ?? true;

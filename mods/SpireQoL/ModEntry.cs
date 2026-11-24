@@ -48,12 +48,10 @@ public static class ModEntry
         MigrateSettings(settings, hadSettings);
         Sim.SimAdapter.IncludeTeammates = settings.MultiplayerPredictions;
         Combat.TurnEndModel.CountTeammateHands = settings.TeammateHands;
-        // The powers and relics modelled from their code (decision #195): read from the running game on a worker, so the game's thread doesn't
-        // spend the few tenths of a second; a prediction waits for them (SimWait.Models).
-        Sim.SimModels.StartReading(Sim.ReadModels.Specs, Sim.ReadModels.PowerRules);
         DevMode = settings.DevMode ?? File.Exists(Path.Combine(Path.GetDirectoryName(typeof(ModEntry).Assembly.Location) ?? "", DevMarker));
         Log.DetailsToGameLog = DevMode;
         if (DevMode) Log.Info($"dev mode on ({(settings.DevMode == true ? "DevMode in the settings file" : DevMarker + " beside the DLL")})");
+        StartReadingCode();
 
         var host = new OverlayHost(Id, Log)
         {
@@ -221,6 +219,34 @@ public static class ModEntry
         // Dev mode (decision #108): the dev dashboard's files. Nothing at all for players.
         Telemetry.DevDashboard.Start(host, settings.DevFolder, features.ToDictionary(feature => feature.Id, feature => feature.DisplayName));
         host.Start();
+    }
+
+    /// <summary>
+    /// Reads the game's code the simulator needs, once a launch, on workers so neither the launch nor a fight waits on the game's thread: the
+    /// powers, relics and the other models read from their code (decision #195; a prediction waits for them: SimWait.Models), and every card's
+    /// program (decision #182; a card a fight asks for before its turn is read then). How long each took goes to the dev log.
+    /// </summary>
+    private static void StartReadingCode()
+    {
+        var modelsWatch = System.Diagnostics.Stopwatch.StartNew();
+        Sim.SimModels.StartReading(Sim.ReadModels.Specs, Sim.ReadModels.PowerRules).ContinueWith(reading =>
+        {
+            if (reading.IsCompletedSuccessfully) Log.Detail($"[load] {Sim.SimModels.Count} models read from the game's code in {modelsWatch.ElapsedMilliseconds} ms");
+        }, TaskScheduler.Default);
+        Task.Run(() =>
+        {
+            var cardsWatch = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                var count = Procs.Programs.CardPrograms.ReadAll(Diagnostics.CoverageLedger.ModelTypes().Where(type => typeof(MegaCrit.Sts2.Core.Models.CardModel).IsAssignableFrom(type)));
+                Log.Detail($"[load] {count} card programs read from the game's code in {cardsWatch.ElapsedMilliseconds} ms");
+            }
+            catch (Exception ex)
+            {
+                // Each card's read already falls back to an empty program; this is the listing failing. Fights read their cards as they ask.
+                Log.Warn($"reading the card programs at load failed: {ex.GetType().Name}: {ex.Message}");
+            }
+        });
     }
 
     /// <summary>Resets saved positions whose defaults changed, so players get the new defaults.</summary>
