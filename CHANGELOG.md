@@ -59,6 +59,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Flak Cannon hits once for each status it exhausts, read as it runs: it was predicted to hit for nothing, and a replay's later play finds none left. A card made into a full hand (Blade Dance's Shivs, Sorrowful Strike's Sadness...) goes to your discard pile in the predictions, so a shuffle later in the turn has it.
 - A calculated value on what happened in the fight (Murder's and Death March's draws, Gold Axe's plays, Supermassive's and Anguish's made cards, Finisher's, Lunar Blast's, Tear Asunder's and Pull From Below's hits) follows what the plays before it did: a replayed Finisher hits once on its second play after its first, a replayed Gold Axe hits harder.
 - Every card that makes cards is read from its own code: how many each make makes, which card, whose pile and who makes it. Mourning Blow's Sadness is the card itself turned into one after its play, no longer one more card in your hand (two when replayed). In multiplayer, Largesse's card, Self-Deprecate's Joy and Blade Symphony's Shivs go into each teammate's hand; Largesse with no teammate to aim at makes nothing. Brighten Up and Severance make their cards in their code's order.
+- Fisticuffs gains the block its attack really dealt (the block it took off and any overkill), Entrench doubles the block you have as it plays (replayed, it doubles the block its first play left), and Mimic copies its teammate's block as it plays, each read from their own code.
 
 ### Main Saves 1.0.27
 #### Changed

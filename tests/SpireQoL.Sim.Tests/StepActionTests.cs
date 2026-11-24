@@ -72,6 +72,42 @@ public class StepActionTests
     }
 
     [Fact]
+    public void FisticuffsGainsTheBlockItsAttackDealtAsItRuns()
+    {
+        // Fisticuffs.OnPlay: its attack, then GainBlock(you, the attack's results' TotalDamage + OverkillDamage, Move). What lands is what
+        // it dealt (block taken and HP, overkill too), with Dexterity on it: 7 into 3 block and 4 HP, plus 2 Dexterity.
+        var fisticuffs = Play(Card("Fisticuffs"), target: 0, plays: 2, Attack(baseDamage: 7),
+            new GainBlockAction(Times: 1, Base: 0, SimProps.Move) { BaseFrom = SimBlockBase.AttackDealt });
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 50) } };
+        state.Enemies[0].Block = 3;
+        state.You.Powers = state.You.Powers.With(PowerId.Dexterity, amount: 2);
+        // Two plays: each gains what its own attack dealt.
+        Assert.Equal(2 * (7 + 2), Assert.Single(After(state, fisticuffs)).You.Block);
+    }
+
+    [Fact]
+    public void EntrenchDoublesTheBlockYouHaveAsItRuns()
+    {
+        // Entrench.OnPlay: GainBlock(you, your block, Unpowered | Move): a replay doubles the block the first play left.
+        var entrench = Play(Card("Entrench", SimCardType.Skill), target: Who.None, plays: 2,
+            new GainBlockAction(Times: 1, Base: 0, SimProps.Unpowered | SimProps.Move) { BaseFrom = SimBlockBase.OwnBlock });
+        var state = new SimState();
+        state.You.Block = 5;
+        Assert.Equal(20, Assert.Single(After(state, entrench)).You.Block);
+    }
+
+    [Fact]
+    public void MimicGainsItsTargetsBlockAsItRuns()
+    {
+        // Mimic.OnPlay: GainBlock(you, CalculatedBlock on its target: CalculationBase + CalculationExtra × the target's block).
+        var mimic = Play(Card("Mimic", SimCardType.Skill), target: Who.Teammate(teammateIndex: 0), plays: 1,
+            new GainBlockAction(Times: 1, Base: 0, SimProps.Move) { BaseFrom = SimBlockBase.TargetBlock, PerBlock = 1 });
+        var state = new SimState();
+        state.Teammates.Add(new SimPlayer { Hp = 50, MaxHp = 50, Block = 9 });
+        Assert.Equal(9, Assert.Single(After(state, mimic)).You.Block);
+    }
+
+    [Fact]
     public void ACardMadeIntoAFullHandGoesToTheDiscardPile()
     {
         // CardPileCmd.Add to the hand: a full hand sends the card to the discard pile, where a shuffle later in the turn finds it.

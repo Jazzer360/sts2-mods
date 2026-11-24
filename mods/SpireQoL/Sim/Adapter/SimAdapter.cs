@@ -58,9 +58,6 @@ public static partial class SimAdapter
         return 0;
     }
 
-    /// <summary>Cards whose hit on every enemy repeats once per kill (Echoing Slash: attackCount += WasTargetKilled).</summary>
-    internal static readonly HashSet<string> RepeatPerKillCards = new() { nameof(EchoingSlash) };
-
 
 
     /// <summary>

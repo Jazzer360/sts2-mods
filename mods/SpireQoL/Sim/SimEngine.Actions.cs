@@ -533,7 +533,7 @@ public static partial class SimEngine
         if (!state.TakesPart(gainBlockAction.To)) return new[] { state };
         var mods = gainBlockAction.Fixed ? null : new List<(SimModel Model, int Owner)>();
         // A replay's block has what the card gained from its plays before it (decision #160).
-        var baseBlock = gainBlockAction.Base + gainBlockAction.GrowsEachPlay * (state.CurrentPlay?.PlayIndex ?? 0);
+        var baseBlock = gainBlockAction.Base + BlockBaseNow(state, gainBlockAction) + gainBlockAction.GrowsEachPlay * (state.CurrentPlay?.PlayIndex ?? 0);
         var blockTerms = gainBlockAction.Captured;
         if (blockTerms != null && gainBlockAction.EnchantFirstPlayOnly && state.CurrentPlay?.PlayIndex > 0) blockTerms = WithoutEnchantment(blockTerms);
         var amount = gainBlockAction.Fixed ? Math.Max(0, (int)baseBlock)
@@ -545,6 +545,27 @@ public static partial class SimEngine
         if (amount > 0 && state.CurrentPlay != null && gainBlockAction.Props.IsCardOrMonsterMove())
             states = states.Select(branch => { branch.PlayCardBlockGains++; if (branch.CurrentPlay!.Owner == Who.You) branch.You.Turn = branch.You.Turn.Add(SimKeys.CardBlock, delta: 1); return branch; }).ToList();
         return Then(states, branch => Hook(branch, nameof(SimModel.AfterBlockGained), (model, owner, copy) => model.AfterBlockGained(copy, owner, gainBlockAction.To, amount, copy.CurrentPlay?.Card)));
+    }
+
+    /// <summary>
+    /// What a block gain's amount reads as it runs (SimBlockBase): the play's last attack's dealt damage (Fisticuffs), the gainer's block
+    /// (Entrench), the play's target's block times its multiplier (Mimic); 0 for an amount given whole.
+    /// </summary>
+    private static decimal BlockBaseNow(SimState state, GainBlockAction gainBlockAction)
+    {
+        switch (gainBlockAction.BaseFrom)
+        {
+            case SimBlockBase.AttackDealt:
+                return state.AttackDealt;
+            case SimBlockBase.OwnBlock:
+                return state.Player(gainBlockAction.To)?.Block ?? 0;
+            case SimBlockBase.TargetBlock:
+                var target = state.CurrentPlay?.Target ?? Who.None;
+                var block = state.Player(target)?.Block ?? (target >= 0 ? state.Enemy(target)?.Block ?? 0 : 0);
+                return gainBlockAction.PerBlock * block;
+            default:
+                return 0;
+        }
     }
 
     /// <summary>

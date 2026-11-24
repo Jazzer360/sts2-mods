@@ -118,11 +118,22 @@ public sealed record DrawnCardAction(int Count) : SimAction
     public bool DiscardUnlessFree { get; init; }
 }
 
+/// <summary>
+/// What a block gain's amount adds to its Base as it runs (CreatureCmd.GainBlock's amount, read from the card's code: decision #194): nothing,
+/// what the play's last attack dealt (Fisticuffs: its results' TotalDamage + OverkillDamage), the gainer's own block (Entrench), or the play's
+/// target's block times PerBlock (Mimic's calculated block on its target).
+/// </summary>
+public enum SimBlockBase { Given, AttackDealt, OwnBlock, TargetBlock }
+
 /// <summary>Block (CreatureCmd.GainBlock) through the block pipeline, Times times; to you or the play's targeted teammate.</summary>
 public sealed record GainBlockAction(int Times, decimal Base, SimProps Props) : SimAction
 {
     /// <summary>Where its number of gains comes from (decision #189): Times, or what the simulator reads as it runs.</summary>
     public SimCount TimesFrom { get; init; }
+    /// <summary>What its amount adds to Base as it runs (SimBlockBase).</summary>
+    public SimBlockBase BaseFrom { get; init; }
+    /// <summary>For SimBlockBase.TargetBlock: the block per block the target has (a calculated value's multiplier: its CalculationExtra).</summary>
+    public decimal PerBlock { get; init; }
     public CapturedTerms? Captured { get; init; }
     /// <summary>Fixed: the amount is final (no modelled terms).</summary>
     public bool Fixed { get; init; }

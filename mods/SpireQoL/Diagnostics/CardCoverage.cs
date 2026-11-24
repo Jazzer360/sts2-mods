@@ -172,7 +172,7 @@ internal static class CardCoverage
             issues.Add("sets off poison now (the simulator only ticks it at the start of the enemies' turn)");
         // A card that reacts to its own kills: a step on the kill is guarded by it (decision #190: Timber's attack on every enemy,
         // Sunder's energy), checked with every condition below; one that counts its kills (Echoing Slash's repeats) is RepeatPerKill.
-        if (Calls("DamageResult", "get_WasTargetKilled") && !SimAdapter.RepeatPerKillCards.Contains(name)
+        if (Calls("DamageResult", "get_WasTargetKilled") && !Procs.Programs.CardEffects.RepeatsPerKill(card.GetType())
             && !Procs.Programs.CardEffects.Find(Procs.Programs.CardPrograms.Of(card.GetType()), _ => true).Any(found => found.Condition.Literals.Any(literal => literal.Test.Parts().Any(part => part is Procs.Programs.QueryValue { Name: "WasTargetKilled" }))))
             issues.Add("reacts to its own kills outside a step's condition (not simulated)");
         // Every step on a condition the simulator acts on (decision #190): its condition translated, decided before the play, or a gap of
@@ -207,6 +207,11 @@ internal static class CardCoverage
         if (card.GainsBlock && Fool.BlockProps(card) == null
             && !Procs.Programs.CardEffects.BlockGains(card.GetType()).Any(gain => gain.Command.Values.Count > 2 && gain.Command.Values[2] is Procs.Programs.ConstantValue))
             issues.Add("gains block without a Block value (whether it spends Stretch isn't known: Stretch tab)");
+        // A block gain's amount is a card value, a constant, or what its code reads as the gain runs (CardEffects.BlockBaseOf: the attack's dealt
+        // damage, the gainer's block, the target's block): any other amount its code works out isn't followed.
+        if (Procs.Programs.CardEffects.BlockGains(card.GetType()).Any(gain => Procs.Programs.CardEffects.BlockBaseOf(gain.Command, card.GetType()) == SimBlockBase.Given
+                                                                             && gain.Command.Values.Count > 1 && !BlockAmountGiven(gain.Command.Values[1])))
+            issues.Add("gains block of an amount its code works out that the simulator doesn't read (a card value, the attack's dealt damage, your block or the target's)");
         // A card that isn't an attack but damages its target (Capture Spirit), read from its program: one damaging anything else isn't modelled.
         if (card.Type != CardType.Attack && Calls("CreatureCmd", "Damage") && card.DynamicVars.ContainsKey("Damage") && !Procs.Programs.CardEffects.DamagesTargetWithoutAttacking(card.GetType()))
             issues.Add("damages an enemy without attacking (not in the simulator: kills, lethal, Slippery)");
@@ -253,9 +258,9 @@ internal static class CardCoverage
         // your hand on something you do, which only ReturnToHand models (the return tabs, your hand size after).
         if (HookCalls(card.GetType()).Contains("CardPileCmd.Add") && !ReturnToHand.Modelled.Contains(name) && !ReturnToHand.NextTurn.Contains(name))
             issues.Add("moves a card from its own hooks (comes back to your hand? not counted: return tabs, hand size)");
-        // A card that reads a hit's overkill: to deal it again to the other enemies (Rain Shot, Omnislice: damage, lethal) or for
-        // something else, reviewed.
-        if (Calls("DamageResult", "get_OverkillDamage") && !PlayFacts.SplashCards.Contains(name) && !PlayFacts.OverkillReaders.ContainsKey(name))
+        // A card that reads a hit's overkill: to deal it again to the other enemies (Rain Shot, Omnislice: damage, lethal), or as block or
+        // Stretch from what its attack dealt (Fisticuffs, Blossom Shot), each read from the command its code gives it to.
+        if (Calls("DamageResult", "get_OverkillDamage") && !Procs.Programs.CardEffects.OverkillReadsFollowed(card.GetType()))
             issues.Add("reads a hit's overkill (deals it again to the other enemies? not counted: damage, lethal)");
         // A card whose own play moves cards (CardPileCmd.Add): into your hand (Hologram, Wish: your hand size after), back out of it
         // onto your draw pile (Glimmer), or somewhere your hand doesn't see. Each is counted or reviewed by where it moves them.
@@ -305,6 +310,12 @@ internal static class CardCoverage
             issues.Add("gains stars (not counted for Black Hole)");
         return issues;
     }
+
+    /// <summary>A block gain's amount the adapter reads whole: a card value (DynamicVars.Block, a calculated block), or a constant.</summary>
+    private static bool BlockAmountGiven(Procs.Programs.ProgramValue amount) =>
+        amount.Parts().All(part => part is Procs.Programs.CardValue or Procs.Programs.ConstantValue or Procs.Programs.StoredValue or Procs.Programs.NamedValue { Name: "this" or "each" }
+                                   || part is Procs.Programs.QueryValue { Name: "DynamicVars" or "op_Implicit" or "BaseValue" or "IntValue" or "Calculate" }
+                                   || part is Procs.Programs.QueryValue { Of: Procs.Programs.QueryValue { Name: "DynamicVars" } });
 
     /// <summary>
     /// An attack or a damage of the card's play deals this damage value: its step names it (decision #193: Timber's OnKillDamage on its

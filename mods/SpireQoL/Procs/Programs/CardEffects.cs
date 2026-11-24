@@ -528,6 +528,66 @@ public static class CardEffects
     public static bool GainsForEachOfLoop(CommandStep gain) => gain.Values.Count > 0 && Unstored(gain.Values[0]) is NamedValue { Name: "each" };
 
     /// <summary>
+    /// What a block gain's amount (CreatureCmd.GainBlock's second argument) reads as it runs: the results of the play's attack summed
+    /// (Fisticuffs: TotalDamage + OverkillDamage of AttackCommand.Execute's results), the gainer's own block (Entrench), a calculated block whose
+    /// multiplier is its target's block (Mimic: CalculatedBlockVar.WithMultiplier((card, target) =&gt; target?.Block)); else an amount given whole.
+    /// </summary>
+    public static SpireQoL.Sim.SimBlockBase BlockBaseOf(CommandStep gain, Type cardType)
+    {
+        if (gain.Values.Count < 2 || Unstored(gain.Values[1]) is not { } amount) return SpireQoL.Sim.SimBlockBase.Given;
+        if (ReadsAttackResults(amount)) return SpireQoL.Sim.SimBlockBase.AttackDealt;
+        if (amount is QueryValue { Name: "Block", Of: { } whose } && Unstored(gain.Values[0])?.ToString() == Unstored(whose)?.ToString()) return SpireQoL.Sim.SimBlockBase.OwnBlock;
+        if (amount is CardValue { Key: var key } && CardProgramReader.CalculatedMultipliers(cardType, RuntimeCode.Read).TryGetValue(key, out var multiplier)
+            && multiplier.Parts().Any(part => part is QueryValue { Name: "Block", Of: { } of } && of.Parts().Any(inner => inner is ParameterValue { Name: "target" } or NamedValue { Name: "target" })))
+            return SpireQoL.Sim.SimBlockBase.TargetBlock;
+        return SpireQoL.Sim.SimBlockBase.Given;
+    }
+
+    /// <summary>The value sums what an attack of the play dealt (its results' TotalDamage and OverkillDamage: Fisticuffs' block, Blossom Shot's Stretch).</summary>
+    public static bool ReadsAttackResults(ProgramValue value) =>
+        value.Parts().Any(part => part is ResultValue { Command: var command } && command.StartsWith("AttackCommand.", StringComparison.Ordinal)
+                                  || part is QueryValue { Name: "Results" })
+        && value.Parts().Any(part => part is QueryValue { Name: "TotalDamage" or "OverkillDamage" });
+
+    /// <summary>
+    /// The play deals a hit's damage again to the target's other side (Rain Shot, Omnislice: CreatureCmd.Damage of the first damage's
+    /// TotalDamage + OverkillDamage to every other hittable creature on the receiver's side, its caps only): the attack's splash.
+    /// </summary>
+    public static bool SplashesDamage(Type cardType) => SplashesDamage(CardPrograms.Of(cardType));
+
+    public static bool SplashesDamage(CardProgram program) => program.Commands.Any(SplashOf);
+
+    /// <summary>A CreatureCmd.Damage of what an earlier CreatureCmd.Damage dealt, to the others of its receiver's side (a splash).</summary>
+    public static bool SplashOf(CommandStep command) =>
+        Is(command, "CreatureCmd", "Damage") && command.Values.Count > 2
+        && command.Values[2].Parts().Any(part => part is ResultValue { Command: "CreatureCmd.Damage" }) && command.Values[2].Parts().Any(part => part is QueryValue { Name: "TotalDamage" })
+        && command.Values[1].Parts().Any(part => part is QueryValue { Name: "Except" });
+
+    /// <summary>
+    /// The play's damage to every enemy goes round again for each kill (Echoing Slash: a loop while a count stays above 0 around a
+    /// CreatureCmd.Damage of every enemy, its code counting its results' kills, DamageResult.WasTargetKilled): AttackAction.RepeatPerKill.
+    /// </summary>
+    public static bool RepeatsPerKill(Type cardType) =>
+        CardCode.Calls(cardType, "DamageResult", "get_WasTargetKilled")
+        && CardPrograms.Of(cardType).All().OfType<LoopStep>().Any(loop =>
+            loop.While is { Terms: [[{ Holds: true, Test: CompareValue { Op: Comparison.Greater, Right: ConstantValue { Value: 0 } } }]] }
+            && new CardProgram("", loop.Body).Commands.Any(command => Is(command, "CreatureCmd", "Damage") && command.Values.Count > 1
+                                                                      && command.Values[1].Parts().Any(part => part is QueryValue { Name: "HittableEnemies" })));
+
+    /// <summary>
+    /// Every command of the play reading a hit's overkill (DamageResult.OverkillDamage) is one the simulator follows: a splash (SplashOf), a
+    /// block gain of what the attack dealt (BlockBaseOf: Fisticuffs) or Stretch from it (Blossom Shot); the card scan flags any other.
+    /// </summary>
+    public static bool OverkillReadsFollowed(Type cardType)
+    {
+        var readers = CardPrograms.Of(cardType).Commands.Where(command => command.Values.Any(value => value.Parts().Any(part => part is QueryValue { Name: "OverkillDamage" }))).ToList();
+        return readers.Count > 0 && readers.All(command => SplashOf(command)
+                                                           || Is(command, "CreatureCmd", "GainBlock") && BlockBaseOf(command, cardType) == SpireQoL.Sim.SimBlockBase.AttackDealt
+                                                           || command.Command is { DeclaringType: "PowerCmd", Name: "Apply", GenericArguments: [nameof(MegaCrit.Sts2.Core.Models.Powers.StretchPower)] }
+                                                              && command.Values.Count > 2 && ReadsAttackResults(command.Values[2]));
+    }
+
+    /// <summary>
     /// How many rounds a loop goes can be read from its code: a foreach over a collection read whole, or a counter below a bound read
     /// whole (i &lt; Repeat, i &lt; blockGains). The card scan holds a loop doing something the predictions count to it.
     /// </summary>

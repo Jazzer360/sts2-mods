@@ -507,8 +507,8 @@ public static partial class SimAdapter
         })
         {
             ByOsty = byOsty,
-            Splash = PlayFacts.SplashCards.Contains(card.GetType().Name), // the target's damage to every other enemy
-            RepeatPerKill = RepeatPerKillCards.Contains(card.GetType().Name),
+            Splash = CardEffects.SplashesDamage(card.GetType()), // the target's damage to every other enemy (its code's next CreatureCmd.Damage)
+            RepeatPerKill = CardEffects.RepeatsPerKill(card.GetType()),
         };
     }
 
@@ -623,22 +623,31 @@ public static partial class SimAdapter
         var card = play.Card;
         var combat = play.Combat;
         var me = play.Me;
-        var name = play.Name;
-        if (name == nameof(MegaCrit.Sts2.Core.Models.Cards.Fisticuffs))
+        // What its amount reads as it runs, from its code (CardEffects.BlockBaseOf), through the block pipeline with the props its code gives.
+        var props = BlockPropsOf(found.Command, card);
+        switch (CardEffects.BlockBaseOf(found.Command, play.Type))
         {
-            // Fisticuffs.OnPlay: CreatureCmd.GainBlock(the damage dealt, ValueProp.Move), so Dexterity and Frail apply.
-            var dealt = play.Aimed != null ? play.Facts.TotalDamage(play.Aimed) : 0;
-            return new GainBlockAction(gains, dealt, SimProps.Move) { Captured = SimReaders.Block(combat, card, me.Creature, dealt, ValueProp.Move), To = to };
+            // Fisticuffs: the damage its attack dealt (its results' TotalDamage + OverkillDamage), so Dexterity and Frail apply.
+            case SimBlockBase.AttackDealt:
+                return new GainBlockAction(gains, Base: 0, SimReaders.Props(props))
+                    { BaseFrom = SimBlockBase.AttackDealt, Captured = SimReaders.Block(combat, card, gainer, Sts2State.Var(card, "Damage"), props), To = to };
+            // Entrench: the gainer's block as the gain runs.
+            case SimBlockBase.OwnBlock:
+                return new GainBlockAction(gains, Base: 0, SimReaders.Props(props)) { BaseFrom = SimBlockBase.OwnBlock, Captured = SimReaders.Block(combat, card, gainer, gainer.Block, props), To = to };
+            // Mimic: its calculated block on its target (CalculationBase + CalculationExtra × the target's block), as the gain runs.
+            case SimBlockBase.TargetBlock when play.Ally != null || play.Aimed != null:
+            {
+                var target = play.Ally ?? play.Aimed!;
+                var perBlock = (decimal)Sts2State.Var(card, "CalculationExtra", fallback: 1);
+                var atStart = Sts2State.Var(card, "CalculationBase") + perBlock * target.Block;
+                return new GainBlockAction(gains, Sts2State.Var(card, "CalculationBase"), SimReaders.Props(props))
+                    { BaseFrom = SimBlockBase.TargetBlock, PerBlock = perBlock, Captured = SimReaders.Block(combat, card, gainer, atStart, props), To = to };
+            }
+            case SimBlockBase.TargetBlock:
+                return null;
         }
         var toAlly = to != Who.You && to != play.Owner;
-        int? fixedEach = name switch
-        {
-            nameof(MegaCrit.Sts2.Core.Models.Cards.Entrench) => me.Creature.Block,
-            _ when toAlly && card.DynamicVars.ContainsKey("CalculatedBlock") => CardBlock(card, combat, me, gainer, gainer),
-            nameof(MegaCrit.Sts2.Core.Models.Cards.Mimic) when play.Ally != null => CardBlock(card, combat, me, me.Creature, play.Ally),
-            _ => null,
-        };
-        if (fixedEach is { } each) return new GainBlockAction(gains, each, SimProps.Move) { Fixed = true, To = to };
+        if (toAlly && card.DynamicVars.ContainsKey("CalculatedBlock")) return new GainBlockAction(gains, CardBlock(card, combat, me, gainer, gainer), SimProps.Move) { Fixed = true, To = to };
         decimal baseValue;
         var key = ValueKey(ValueAt(found.Command, 1));
         if (key != null && card.DynamicVars.TryGetValue(key, out var named) && named is not CalculatedVar) baseValue = named.BaseValue;
@@ -652,6 +661,14 @@ public static partial class SimAdapter
             EnchantFirstPlayOnly = growth.EnchantFirstPlayOnly,
         };
     }
+
+    /// <summary>The props a block gain's code gives it (its third argument: a constant, or a card value's Props); Move when it can't be read.</summary>
+    private static ValueProp BlockPropsOf(CommandStep gain, CardModel card) => ValueAt(gain, 2) switch
+    {
+        ConstantValue { Value: var flags } => (ValueProp)(int)flags,
+        QueryValue { Name: "Props", Of: QueryValue { Name: var key } } when card.DynamicVars.TryGetValue(key, out var named) && named is CalculatedBlockVar calculated => calculated.Props,
+        _ => ValueProp.Move,
+    };
 
     // ---------------------------------------------------------------- powers
 

@@ -992,20 +992,6 @@ public sealed class PlayFacts
         return (type, (compare.Op == Programs.Comparison.Equal) == literal.Holds);
     }
 
-    /// <summary>
-    /// Cards that hit their target, then deal that hit's damage (overkill included: DamageResult.TotalDamage + OverkillDamage) to
-    /// every other hittable enemy, with only the damage caps applied (ModifyDamageHookType.Cap): RainShot.OnPlay, Omnislice.OnPlay.
-    /// The card scan holds every card reading a hit's overkill to this list or OverkillReaders.
-    /// </summary>
-    internal static readonly HashSet<string> SplashCards = new() { nameof(RainShot), nameof(Omnislice) };
-
-    /// <summary>Cards that read a hit's overkill for something else, and what.</summary>
-    internal static readonly Dictionary<string, string> OverkillReaders = new()
-    {
-        [nameof(Fisticuffs)] = "block equal to the damage it dealt (SimAdapter: Fisticuffs)",
-        [nameof(BlossomShot)] = "Stretch equal to the damage it dealt (AttackAction.StretchFromDamage): for block later in the turn (I Am Invincible at its end)",
-    };
-
     private static List<CardModel> PileCards(Player me, PileType pile)
     {
         try { return pile.GetPile(me).Cards.ToList(); } catch { return new List<CardModel>(); }
