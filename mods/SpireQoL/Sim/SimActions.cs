@@ -162,6 +162,24 @@ public sealed record ApplyPowerAction(PowerId Power, int Amount) : SimAction
     public int Times { get; init; } = 1;
 }
 
+/// <summary>
+/// An enemy's move's attack (DamageCmd.Attack, decision #195): its intent's hits from <paramref name="FirstHit"/>, <paramref name="Hits"/> of
+/// them (SimEnemy.Intent, or Hits), each through the damage pipeline as it lands, run by the enemy turn at its place in the move.
+/// </summary>
+public sealed record MoveAttackAction(int FirstHit, int Hits) : SimAction;
+
+/// <summary>
+/// A power an enemy's move applies (PowerCmd.Apply, decision #195): on each creature of <paramref name="To"/> (an enemy's id, Who.You,
+/// Who.Teammate(k)) that's alive when it runs, its applier the enemy, Artifact taking a debuff.
+/// </summary>
+public sealed record MovePowerAction(PowerId Power, int Amount, IReadOnlyList<int> To, bool Debuff) : SimAction;
+
+/// <summary>
+/// Block an enemy's move gives (CreatureCmd.GainBlock, decision #195): on each enemy of <paramref name="To"/> alive when it runs, its amount
+/// through the game's block math when the adapter read it.
+/// </summary>
+public sealed record MoveBlockAction(int Amount, IReadOnlyList<int> To) : SimAction;
+
 /// <summary>HP the card costs you (CreatureCmd.Damage on you, Unblockable and Unpowered), through the HP-loss pipeline.</summary>
 public sealed record LoseHpAction(int Amount) : SimAction;
 

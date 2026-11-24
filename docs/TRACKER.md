@@ -478,6 +478,10 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 
 - [x] The reader reads any game method (`ProgramReader`, `ModelProgram`, `ModelPrograms`): a monster's moves and hooks, found by shape (`MonsterCode`). Stores to the model's own state are steps (`StoreStep`), a monster's calls into MonsterModel that change it too (`SetMoveImmediate`), `base.` hook calls are their base code.
 - [x] The scan: every move and hook body of every monster on both branches read, each command translated or a named gap (`MonsterProgramTests`: 318 moves, 93 hook bodies).
+- [x] The enemy turn runs each enemy's move program in turn order (`SimEnemy.Move`, `SimAdapter.MoveOf`): attacks as the intent's hits at their place (every move's attacks placed against its intent: `EnemyMoveTests`), powers on the creatures named (Vulnerable on you before a later enemy's hit: Mawler, Ovicopter, Queen, Flyconid, Soul Fysh, Soul Nexus, Terror Eel, Test Subject, Owl Magistrate, Infested Prism; Strength to its side: The Obscura, Queen), block on an ally (Guardbot).
+- [ ] Moves the enemy turn doesn't follow yet (named gaps, `MoveCommandsNotTranslated`): summons (`CreatureCmd.Add`: the summoned creature isn't in the enemy turn's state), heals, a monster's own death or escape after its attack, max HP set, cards into your piles (your next turn's), Queen's switch to Enrage. Steps on a condition and powers made first (`MoveStepGaps`, reviewed in `EnemyMoveTests`: none comes before a later hit and changes it).
+- [ ] A power on an enemy the game scales for the players (`ShouldScaleInMultiplayer`) in a multiplayer fight: not followed (its scaled amount isn't read).
+- [ ] Test in game: a fight where an enemy's Vulnerable lands before another enemy's attack (Queen and the Amalgam; Mawler with company), and The Obscura's Wail with Parafrights: the forecast audit's HP lost.
 
 ## 20. Replays (decision #160, 2026-11-21)
 

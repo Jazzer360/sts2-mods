@@ -78,7 +78,8 @@ Non-goals:
 - **End of turn** (`CombatManager.DoTurnEnd`): auto-play phase; `BeforeSideTurnEndEarly`; `BeforeSideTurnEnd`; orb passives
   per player; Ethereal exhausts and cards acting in hand; `AfterSideTurnEnd` (Constrict, Magic Bomb, Demise with the other
   powers and relics); `AfterSideTurnEndLate` (Disintegration, Insatiable Dominion); then
-  the enemy turn (poison tick, block cleared, each enemy's move, hit by hit).
+  the enemy turn (poison tick, block cleared, each enemy's move as its code runs it: hit by hit, with the powers and block it gives in
+  their place).
 
 ## Architecture
 
@@ -159,6 +160,19 @@ replay's later play asks it on the board the earlier plays left. A test of the c
 (its `At`): the answer is kept for the rest of the play (an else, a later step under the same if), and a local the code stores before
 later steps is asked there (`AskAction`: Ki Hop's `wasImpaled`). Any condition guards any effect, so a new card's combination needs no
 code.
+
+### Enemy moves (decision #195)
+An enemy's move is read from the game's code like a card's play: the method its `MoveState` performs (`_onPerform`) is read into a
+program (`ModelPrograms`), and `SimAdapter.MoveOf` translates its steps into the enemy turn's actions, in order (`SimEnemy.Move`): its
+attack as its intent's hits (`MoveAttackAction`: one attack step for each attack intent, so the hits stay the game's numbers, run through
+the damage pipeline as each lands), a power on the creatures its target argument names (`MovePowerAction`: `targets` are the living
+players, `this.Creature` itself, `GetTeammatesOf` its side, a loop's items each), block on an enemy (`MoveBlockAction`, through the game's
+block math when read). The enemy turn runs each enemy's move in turn order (CombatManager.ExecuteEnemyTurn), to its end even when your
+Thorns killed it mid-attack (MonsterModel.PerformMove has no check; PowerCmd.Apply asks only that the fight isn't ending), so Vulnerable an
+earlier enemy puts on you raises a later enemy's hit, and Strength given to an ally raises its hits. A move behind a hidden intent, one whose
+attacks can't be placed against its intent, or one the reader couldn't follow is its intent's hits alone, as before. A command with no
+action yet is a named gap (`SimAdapter.MoveCommandsNotTranslated`), and a power or block step that can't be built (on a condition, a power
+made first) is reviewed in `EnemyMoveTests` as unable to change a later hit.
 
 ### Outputs
 `SimOutcome` keeps every field consumers read today (kills, block breaks, stuns, HP, taken, Death Skull chances...). New:

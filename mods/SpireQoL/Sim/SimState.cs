@@ -105,6 +105,14 @@ public sealed class SimEnemy
     /// </summary>
     public List<IntentHit>? Intent;
     /// <summary>
+    /// Its move this turn as its code runs it (decision #195: the move's program, read by the adapter), in order: its attack (MoveAttackAction:
+    /// the intent's hits), the powers it applies (MovePowerAction) and the block it gives (MoveBlockAction), so what it does before a later hit
+    /// (Vulnerable on you, Strength to an ally) changes that hit. Null: its intent's hits alone (a move not read whole). Fixed during a run.
+    /// </summary>
+    public IReadOnlyList<SimAction>? Move;
+    /// <summary>Block its side's moves gave it this enemy turn (MoveBlockAction), on top of what it kept from before (Barricade).</summary>
+    public int MoveBlock;
+    /// <summary>
     /// The creatures its death adds to the fight (Surprise: the Gremlin Merc's Sneaky and Fat Gremlin), in the order the game adds them:
     /// SimEngine.Spawn. Null: none.
     /// </summary>
@@ -238,7 +246,7 @@ public sealed class SimEnemy
     {
         add(Id); add(Hp); add(Block); add(UnblockedInstances); add(FirstHitFullyBlocked ? 1 : 0); add(Poison); add(DiedBeforeActing ? 1 : 0);
         add(PoisonStacks); add(Stunned ? 1 : 0); add(IntendsToAttack ? 1 : 0); add(ReactedWithBlock ? 1 : 0); add(BlockBroken ? 1 : 0); add(GambitTriggered ? 1 : 0);
-        add(SlipperyTriggered ? 1 : 0); add(Exploded ? 1 : 0);
+        add(SlipperyTriggered ? 1 : 0); add(Exploded ? 1 : 0); add(MoveBlock);
         Powers.Hash(add); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         add(Hits.Count); foreach (var hit in Hits) add(hit);
         add(HitsAfterAllyDies?.Count ?? -1); if (HitsAfterAllyDies != null) foreach (var hit in HitsAfterAllyDies) add(hit);

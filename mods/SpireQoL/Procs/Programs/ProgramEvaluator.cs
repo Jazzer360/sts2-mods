@@ -16,6 +16,12 @@ public sealed record ProgramBoard(CardModel Card, Creature? Target = null, int P
 {
     /// <summary>The model whose code is evaluated, when it isn't the card (a power or a relic asking the fight's log: decision #191); null: the card.</summary>
     public object? Self { get; init; }
+
+    /// <summary>
+    /// The board of a model that isn't a card (a monster's move: decision #195): "this" is <paramref name="model"/>, and there's no card, no
+    /// card value and no play (what asks one of them is unknown).
+    /// </summary>
+    public static ProgramBoard Of(object model) => new(Card: null!) { Self = model };
 }
 
 /// <summary>
@@ -305,6 +311,8 @@ public static class ProgramEvaluator
             arguments[i] = Evaluate(query.Arguments[i], context);
             if (arguments[i] == Unknown) return Unknown;
         }
+        // A decimal the code makes from a number (new decimal(2): a monster's 2m).
+        if (query is { Of: null, Name: ".ctor", Type: nameof(Decimal) } && arguments is [var whole] && ToNumber(whole) is { } made) return made;
         // Osty.CheckMissingWithAnim: Osty missing or dead (it plays an animation besides; never called).
         if (query.Of == null && query.Name == "CheckMissingWithAnim" && arguments is [Player player]) return player.IsOstyMissing;
         // The card's X (ResolveEnergyXValue, ResolveStarXValue: what the play spends, through the X hooks): what playing it now would

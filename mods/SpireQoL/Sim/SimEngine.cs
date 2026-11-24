@@ -1279,6 +1279,19 @@ public static partial class SimEngine
         }
     }
 
+    /// <summary>
+    /// A power an enemy's move applies (PowerCmd.Apply: CanReceivePowers, then Artifact), on each creature it names that's alive now. Its
+    /// AfterPowerApplied listeners in the simulator all react to their own owner's applications, never an enemy's.
+    /// </summary>
+    private static void MovePowers(SimState state, int enemy, MovePowerAction movePowerAction)
+    {
+        foreach (var to in movePowerAction.To)
+        {
+            var alive = Who.IsPlayer(to) ? state.Player(to) is { Hp: > 0, Died: false } : state.Enemy(to) is { Alive: true };
+            if (alive) ApplyPower(state, enemy, to, movePowerAction.Power, movePowerAction.Amount, movePowerAction.Debuff);
+        }
+    }
+
     private static void EnemyTurn(SimState state)
     {
         AllyDeaths(state); // deaths at your end of turn
@@ -1311,8 +1324,8 @@ public static partial class SimEngine
                 if (HitCount(enemy) > 0) state.SkippedEndOfTurn++;
                 continue;
             }
-            if (enemy.Stunned || HitCount(enemy) == 0) continue; // a stunned enemy skips its move
-            var enemyBlock = enemy.Barricade ? enemy.Block : 0;
+            if (enemy.Stunned || HitCount(enemy) == 0 && enemy.Move == null) continue; // a stunned enemy skips its move
+            var enemyBlock = (enemy.Barricade ? enemy.Block : 0) + enemy.MoveBlock;
 
             var landed = 0;
             var hitsLanded = 0;
@@ -1391,19 +1404,45 @@ public static partial class SimEngine
                 TakesHit(Who.Teammate(teammateIndex), amount);
             }
             var players = state.PlayerIds;
-            for (var hit = 0; hit < HitCount(enemy); hit++)
+            void Attack(int firstHit, int hits)
             {
-                // The hit on you: the intent through the damage pipeline as it lands, or the final number.
-                var perHit = enemy.Intent != null ? IntentDamage(state, enemy, hit, Who.You) : enemy.Hits[hit];
-                if (dead)
+                for (var hit = firstHit; hit < Math.Min(firstHit + hits, HitCount(enemy)); hit++)
                 {
-                    state.CancelledHits++;
-                    continue;
+                    // The hit on you: the intent through the damage pipeline as it lands, or the final number.
+                    var perHit = enemy.Intent != null ? IntentDamage(state, enemy, hit, Who.You) : enemy.Hits[hit];
+                    if (dead)
+                    {
+                        state.CancelledHits++;
+                        continue;
+                    }
+                    foreach (var player in players)
+                    {
+                        if (player == Who.You) TakesHit(player, perHit);
+                        else TeammateTakesHit(Who.TeammateIndex(player), hit, perHit);
+                    }
                 }
-                foreach (var player in players)
+            }
+            if (enemy.Move == null) Attack(firstHit: 0, HitCount(enemy));
+            else
+            {
+                // Its move as its code runs it (decision #195, MonsterModel.PerformMove): each step in turn, to the move's end even when your
+                // Thorns killed it during its attack (nothing in PerformMove or PowerCmd.Apply stops there), while the fight goes on.
+                foreach (var action in enemy.Move)
                 {
-                    if (player == Who.You) TakesHit(player, perHit);
-                    else TeammateTakesHit(Who.TeammateIndex(player), hit, perHit);
+                    if (!state.Enemies.Any(simEnemy => simEnemy.Alive)) break; // the fight is ending (PowerCmd.Apply: CombatManager.IsEnding)
+                    switch (action)
+                    {
+                        case MoveAttackAction moveAttackAction: Attack(moveAttackAction.FirstHit, moveAttackAction.Hits); break;
+                        case MovePowerAction movePowerAction: MovePowers(state, enemy.Id, movePowerAction); break;
+                        case MoveBlockAction moveBlockAction:
+                            foreach (var to in moveBlockAction.To)
+                            {
+                                if (state.Enemy(to) is not { Alive: true } gainer) continue;
+                                gainer.MoveBlock += moveBlockAction.Amount;
+                                if (gainer == enemy) enemyBlock += moveBlockAction.Amount;
+                            }
+                            break;
+                    }
                 }
             }
             if (landed > 0) if (state.Log) state.Blockable.Add((hitsLanded > 1 ? $"{enemy.Name} ({hitsLanded} hits)" : enemy.Name, landed));

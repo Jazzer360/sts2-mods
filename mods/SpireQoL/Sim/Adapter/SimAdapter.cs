@@ -97,6 +97,7 @@ public static partial class SimAdapter
         var targets = combat.Players.Select(player => player.Creature).ToList();
 
         var nextEnemyId = 0;
+        var moves = new List<(SimEnemy Enemy, MonsterModel Monster, List<int> HitsPerAttack)>();
         foreach (var creature in combat.Enemies)
         {
             var id = nextEnemyId++;
@@ -137,9 +138,11 @@ public static partial class SimAdapter
                 try
                 {
                     var intent = new List<IntentHit>();
+                    var hitsPerAttack = new List<int>();
                     foreach (var attack in creature.Monster.NextMove.Intents.OfType<AttackIntent>())
                     {
                         var perHit = attack.GetSingleDamage(targets, creature);
+                        hitsPerAttack.Add(Math.Max(1, attack.Repeats));
                         for (var i = 0; i < Math.Max(1, attack.Repeats); i++) enemy.Hits.Add(perHit);
                         // the hit's base and the captured terms on each player; the models (its Strength and Weak, your Vulnerable,
                         // Intangible...) apply as it lands, so what your cards change shows.
@@ -151,6 +154,7 @@ public static partial class SimAdapter
                         for (var i = 0; i < Math.Max(1, attack.Repeats); i++) intent.Add(new IntentHit(damageCalc) { Captured = terms });
                     }
                     if (intent is { Count: > 0 }) enemy.Intent = intent;
+                    moves.Add((enemy, creature.Monster, hitsPerAttack));
                 }
                 catch
                 {
@@ -159,6 +163,9 @@ public static partial class SimAdapter
             }
             state.Enemies.Add(enemy);
         }
+        // Each enemy's move as its code runs it (decision #195): what it does before a later hit (Vulnerable on you, Strength to an ally),
+        // read once every enemy has its id.
+        foreach (var (enemy, monster, hitsPerAttack) in moves) enemy.Move = MoveOf(monster, hitsPerAttack, IdOf, combat);
 
         // The history ledger (decision #191): the questions this board's models ask of the fight's log, each player's counts seeded here, once.
         state.History = HistoryLedger.QueriesFor(combat);
