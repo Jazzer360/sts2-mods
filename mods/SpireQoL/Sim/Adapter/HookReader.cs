@@ -1555,6 +1555,11 @@ public static class HookReader
                     return new HookFactValue(HookFact.DealerIsOwnersPet);
                 case QueryValue { Name: "IsPoweredAttack", Arguments: [var props] } when IsProps(props):
                     return new HookFactValue(HookFact.PoweredAttack);
+                // A flag of the props (props.HasFlag(ValueProp.Unpowered)): the simulator's props keep the game's flags, read by the flag's name.
+                case QueryValue { Name: "HasFlag", Of: { } flagsOf, Arguments: [ConstantValue flag] } when IsProps(flagsOf):
+                    return EnumName(_type.Assembly, "ValueProp", flag.Value) is { } flagName && Enum.TryParse<SimProps>(flagName, out var simFlag) && simFlag != SimProps.None
+                        && (int)simFlag == (int)flag.Value
+                        ? new HookFactValue(HookFact.PropsHave) { Of = flagName } : throw new Gap(ReaderCapability.DamageProps, $"gap: tests the props' flag {flag.Value}");
                 case QueryValue { Name: "IsPoweredCardOrMonsterMoveBlock", Arguments: [var props] } when IsProps(props):
                     return new HookFactValue(HookFact.PoweredBlock);
                 case QueryValue { Name: "IsCardOrMonsterMove", Arguments: [var props] } when IsProps(props):

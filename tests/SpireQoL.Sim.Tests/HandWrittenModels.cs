@@ -1501,3 +1501,12 @@ public sealed class MusicBox : RelicProc
         return MakeInHand(Fire(state, owner), play.Card, count: 1, owner, ethereal: true); // a clone of the Attack played
     }
 }
+
+// ---- a flag of the props (Sim/Models/BlockModels.cs, deleted 2026-11-24)
+
+/// <summary>NoBlockPower.ModifyBlockMultiplicative: its owner gains no block from cards (anything not Unpowered).</summary>
+public sealed class NoBlockPower : SimModel
+{
+    public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block) =>
+        block.Target == owner && !block.Props.HasFlag(SimProps.Unpowered) && block.Card != null ? 0m : 1m;
+}

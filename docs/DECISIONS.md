@@ -1243,3 +1243,8 @@ A store of the card played to a field or property of a model's own class that ho
 Read so, with its parity proof (the hand-written model frozen in the tests): Music Box (MusicBox.BeforeCardPlayed, AfterCardPlayed; its WasUsedThisTurn its state, read from the game's object). The made card's event now carries the copy's Ethereal, as the game's clone has it (the hand-written model told the card played's facts).
 *Why:* by classes unlocked: a card changed (Music Box the last of its class with Mummified Hand, decision #223) and a card made (the first, for the copy of the card played).
 *Replaced:* the hand-written MusicBox model. The single-player golden and the card snapshots are unchanged.
+
+### 227. A flag of the props is a fact of the code — active (2026-11-24)
+A read hook's test of a flag of its damage's or block's props (`props.HasFlag(ValueProp.Unpowered)`, `HasFlag(ValueProp.FromArrow)`) is `HookFact.PropsHave`, the game's flag by its name (`SimProps` keeps the game's flags, each by the same name and number; a flag the simulator doesn't carry is a gap). Read so, with its parity proof (its hand-written model frozen in the tests): No Block. Newly read by the rule: Dislike You and Honing (a powered arrow attack on or by their owner raised by their amount in percent), which the adapter captured as fixed terms of the turn; the simulator works them out as the play runs now.
+*Why:* by classes unlocked (round twelve's measurement): "queries: the damage's or block's props" (No Block alone, part of Aim and Quietus).
+*What changed:* the single-player golden and card-outcomes.txt are unchanged; card-plays.txt shows Honing's card applying the power the simulator models (it applied nothing it kept before).

@@ -2984,6 +2984,112 @@
     "HelpsOwner": false
   },
   {
+    "Name": "DislikeYouPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookConstant",
+              "Value": 1
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "DislikeYouPower.ModifyDamageMultiplicative:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "DislikeYouPower.ModifyDamageMultiplicative:0015",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "DislikeYouPower.ModifyDamageMultiplicative:002F",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PropsHave",
+                    "Of": "FromArrow"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Add",
+                "Left": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "Divide",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 100
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "DoubleDamagePower",
     "Kind": "Power",
     "Hooks": [
@@ -5506,6 +5612,100 @@
             }
           }
         ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "HoningPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "HoningPower.ModifyDamageMultiplicative:0008",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "DealerIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "HoningPower.ModifyDamageMultiplicative:0016",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "HoningPower.ModifyDamageMultiplicative:0030",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PropsHave",
+                    "Of": "FromArrow"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Add",
+                "Left": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "Divide",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 100
+                  }
+                }
+              }
+            }
+          ]
+        }
       }
     ],
     "HelpsOwner": false
@@ -11909,6 +12109,81 @@
             }
           }
         ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "NoBlockPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ModifyBlockMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "NoBlockPower.ModifyBlockMultiplicative:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "NoBlockPower.ModifyBlockMultiplicative:0020",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PropsHave",
+                  "Of": "Unpowered"
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "NoBlockPower.ModifyBlockMultiplicative:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "FromCard"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        }
       }
     ],
     "HelpsOwner": false

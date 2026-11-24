@@ -1,6 +1,6 @@
 power AdaptablePower: AfterDeath: gap: changes a game object outside a command (TestSubject.TriggerDeadState) | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ShouldAllowHitting: gap: the simulator runs no read model's ShouldAllowHitting | ShouldCreatureBeRemovedFromCombatAfterDeath: gap: the simulator runs no read model's ShouldCreatureBeRemovedFromCombatAfterDeath | ShouldPowerBeRemovedAfterOwnerDeath: gap: the simulator runs no read model's ShouldPowerBeRemovedAfterOwnerDeath | ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding
 power AfterimagePower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
-power AimPower: AfterAttack: gap: the simulator runs no read model's AfterAttack | BeforeAttack: gap: the simulator runs no read model's BeforeAttack | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyDamageAdditive: gap: tests props.HasFlag(32)
+power AimPower: AfterAttack: gap: the simulator runs no read model's AfterAttack | BeforeAttack: gap: the simulator runs no read model's BeforeAttack | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyDamageAdditive: gap: tests this.GetInternalData<Data>().commandToModify()
 power AllIsWellPower: AfterCardGeneratedForCombat: read
 power AmnesiaPower: AfterPlayerTurnStart: not run: it runs as the players' next turn starts, past the turns a simulation covers | AfterSideTurnEnd: read | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 power ArsenalPower: AfterCardGeneratedForCombat: read
@@ -41,7 +41,7 @@ power DemisePower: AfterSideTurnEnd: read
 power DevourLifePower: AfterCardPlayed: gap: OstyCmd.Summon isn't translated
 power DieForYouPower: ModifyUnblockedDamageTarget: gap: the simulator runs no read model's ModifyUnblockedDamageTarget | ShouldAllowHitting: gap: the simulator runs no read model's ShouldAllowHitting | ShouldCreatureBeRemovedFromCombatAfterDeath: gap: the simulator runs no read model's ShouldCreatureBeRemovedFromCombatAfterDeath | ShouldPowerBeRemovedAfterOwnerDeath: gap: the simulator runs no read model's ShouldPowerBeRemovedAfterOwnerDeath
 power DisintegrationPower: AfterSideTurnEndLate: read
-power DislikeYouPower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: gap: tests props.HasFlag(32)
+power DislikeYouPower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power DoomPower: AfterSideTurnEnd: gap: the reader can't follow it: commands in a callback | BeforeSideTurnEnd: gap: the reader can't follow it: commands in a callback
 power DoubleDamagePower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power DuplicationPower: AfterModifyingCardPlayCount: read | AfterSideTurnEnd: read | ModifyCardPlayCount: read
@@ -102,7 +102,7 @@ power MonologuePower: AfterCardPlayed: read | AfterSideTurnEnd: read | BeforeCar
 power MotifPower: AfterCardPlayed: read
 power NecroMasteryPower: AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged
 power NemesisPower: AfterSideTurnEnd: gap: PowerCmd.Remove of another power
-power NoBlockPower: AfterSideTurnEnd: not run: its commands wait on the enemies' side's turn ending, which no simulation reaches | ModifyBlockMultiplicative: gap: tests props.HasFlag(4)
+power NoBlockPower: AfterSideTurnEnd: not run: its commands wait on the enemies' side's turn ending, which no simulation reaches | ModifyBlockMultiplicative: read
 power NoDrawPower: AfterSideTurnEnd: read | ShouldDraw: gap: the simulator runs no read model's ShouldDraw
 power NoEnergyGainPower: AfterModifyingEnergyGain: gap: the simulator runs no read model's AfterModifyingEnergyGain | AfterSideTurnEnd: read | ModifyEnergyGain: gap: the simulator runs no read model's ModifyEnergyGain
 power NostalgiaPower: AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
@@ -120,7 +120,7 @@ power PlatingPower: AfterApplied: gap: the value this.Owner.CombatState.RunState
 power PlowPower: AfterDamageReceived: gap: changes a game object outside a command (CeremonialBeast.SetStunned)
 power PossessSpeedPower: AfterDeath: gap: a loop | AfterPowerAmountChanged: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power PossessStrengthPower: AfterDeath: gap: a loop | AfterPowerAmountChanged: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
-power QuietusPower: AfterArrowShot: gap: the simulator runs no read model's AfterArrowShot | AfterAttack: gap: the simulator runs no read model's AfterAttack | AfterSideTurnEnd: read | BeforeAttack: gap: the simulator runs no read model's BeforeAttack | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyDamageMultiplicative: gap: tests props.HasFlag(32)
+power QuietusPower: AfterArrowShot: gap: the simulator runs no read model's AfterArrowShot | AfterAttack: gap: the simulator runs no read model's AfterAttack | AfterSideTurnEnd: read | BeforeAttack: gap: the simulator runs no read model's BeforeAttack | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyDamageMultiplicative: gap: tests this.GetInternalData<Data>().commandToModify()
 power RagePower: AfterCardPlayed: read | AfterSideTurnEnd: read
 power RavenousPower: AfterDeath: gap: sets CorpseSlug.IsRavenous where the reader reads no store
 power ReaperFormPower: AfterApplied: read | AfterDamageGiven: read | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)

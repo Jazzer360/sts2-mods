@@ -134,10 +134,3 @@ public sealed class ShadowmeldPower : SimModel
     public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block) =>
         block.Target == owner ? (decimal)Math.Pow(2.0, SimEngine.PowerOn(state, owner, ThisPower)) : 1m;
 }
-
-/// <summary>NoBlockPower.ModifyBlockMultiplicative: its owner gains no block from cards (anything not Unpowered).</summary>
-public sealed class NoBlockPower : SimModel
-{
-    public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block) =>
-        block.Target == owner && !block.Props.HasFlag(SimProps.Unpowered) && block.Card != null ? 0m : 1m;
-}

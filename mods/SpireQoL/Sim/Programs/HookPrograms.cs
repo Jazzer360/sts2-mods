@@ -252,6 +252,11 @@ public enum HookFact
     PlayIsModelCard,
     /// <summary>Whom the model's own card is aimed at (base.Card.TargetType), as SimPlay.Target's number (an enchantment's card: Inky's every enemy).</summary>
     ModelCardTargets,
+    /// <summary>
+    /// The damage's or block's props have the flag named in Of (props.HasFlag(ValueProp.Unpowered): a SimProps name, the game's flag by its name),
+    /// or an attack's (command.DamageProps.HasFlag(ValueProp.FromArrow)).
+    /// </summary>
+    PropsHave,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>

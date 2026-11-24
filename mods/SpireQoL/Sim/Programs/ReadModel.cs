@@ -1409,6 +1409,12 @@ public sealed class ReadModel : SimModel
                 var kind = Enum.Parse<OrbKind>(named!);
                 return (in HookArgs args) => args.Orb.Kind == kind ? 1m : 0m;
             }
+            case HookFact.PropsHave:
+            {
+                // The game's flag by its name (ValueProp's and SimProps' numbers are the same, but the name is what the reader checked).
+                var flag = Enum.TryParse<SimProps>(named, out var parsedFlag) && parsedFlag != SimProps.None ? parsedFlag : throw new InvalidOperationException($"{Name}: no props flag {named}");
+                return (in HookArgs args) => (args.Damage?.Props ?? args.Block?.Props ?? args.Hit?.Props)?.HasFlag(flag) == true ? 1m : 0m;
+            }
             case HookFact.OrbValueSoFar: return (in HookArgs args) => args.OrbValue;
             case HookFact.TriggerCountSoFar: return (in HookArgs args) => args.TriggerCount;
             case HookFact.OrbIsFront: return (in HookArgs args) => args.Orb.Index == 0 ? 1m : 0m;
