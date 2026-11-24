@@ -54,6 +54,24 @@ internal static class SimWait
         return jobs.All(job => job.Ready.IsCompleted);
     }
 
+    private static bool _modelsSeen;
+
+    /// <summary>
+    /// The simulator's models are read (they're read on a worker as the mod loads: SimModels.StartReading), waiting for them out of this frame's
+    /// budget (or one of its own) at most. False: every prediction this frame is pending (none is made without the models). The first time
+    /// they're seen read, what the read couldn't read is reported (ReadModels.Report).
+    /// </summary>
+    public static bool Models(bool ownBudget = false)
+    {
+        if (!SimModels.Loaded && !SimModels.WaitLoaded(ownBudget ? FrameMs : Left())) return false;
+        if (!_modelsSeen)
+        {
+            _modelsSeen = true;
+            ReadModels.Report();
+        }
+        return true;
+    }
+
     /// <summary>What's left of this frame's budget, in milliseconds.</summary>
     private static int Left()
     {

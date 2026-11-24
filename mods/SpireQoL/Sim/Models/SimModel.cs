@@ -390,18 +390,50 @@ public abstract class CardListener : SimModel
 
 /// <summary>
 /// The models the simulator knows, by the game's class name: the hand-written ones (a class of this assembly each) and the ones read from the
-/// game's code (ReadModel, decision #195), which <see cref="Read"/> gives once, before the first model is asked for: in the game the adapter
-/// reads them from the running game's code, in the simulator's tests they come from the file the catalog tests write. A name not here isn't
-/// modelled.
+/// game's code (ReadModel, decision #195), which <see cref="Read"/> gives once: in the game the adapter reads them from the running game's
+/// code on a worker as the mod loads (StartReading), in the simulator's tests they come from the file the catalog tests write, read on the first
+/// ask. Made once and never changed after, so every search's thread shares them. A name not here isn't modelled.
 /// </summary>
 public static class SimModels
 {
     /// <summary>
-    /// Where the read models come from (set once, before any simulation: the mod's entry, the tests' module initializers). Null: none.
+    /// Where the read models come from (set once, before any simulation: the tests' module initializers, read on the first ask; the game
+    /// starts them on a worker instead: <see cref="StartReading"/>). Null: none.
     /// </summary>
     public static Func<IEnumerable<ModelSpec>>? Read { get; set; }
 
-    private static readonly Lazy<Dictionary<string, SimModel>> ByName = new(Load, LazyThreadSafetyMode.ExecutionAndPublication);
+    /// <summary>The read started on a worker (StartReading), or null: the models are read on the first ask, on its thread.</summary>
+    private static volatile Task<LoadedModels>? _reading;
+
+    /// <summary>
+    /// Starts reading the models on a worker thread (the game, at the mod's load: reading every power's and relic's code takes a few tenths of
+    /// a second, which the game's thread shouldn't spend). An ask before it's done waits for it (a search on a worker); the frame doesn't ask
+    /// until it is (<see cref="Loaded"/>, SimWait.Models: a prediction is pending until then, never made without the models).
+    /// </summary>
+    public static void StartReading(Func<IEnumerable<ModelSpec>> read)
+    {
+        Read = read;
+        _reading = Task.Run(Load);
+    }
+
+    /// <summary>The models are read (or are read on the first ask, as in the tests): asking for one doesn't wait.</summary>
+    public static bool Loaded => _reading?.IsCompleted ?? true;
+
+    /// <summary>Waits up to <paramref name="milliseconds"/> for the models: true once they're read.</summary>
+    public static bool WaitLoaded(int milliseconds)
+    {
+        if (_reading is not { } reading || reading.IsCompleted) return true;
+        if (milliseconds <= 0) return false;
+        try { return reading.Wait(milliseconds); }
+        catch (AggregateException) { return true; } // a failed read is rethrown by the first ask
+    }
+
+    /// <summary>The models and the classes whose hooks couldn't be read, made once and never changed after (shared by every thread).</summary>
+    private sealed record LoadedModels(IReadOnlyDictionary<string, SimModel> ByName, IReadOnlyDictionary<string, string> Unread);
+
+    private static readonly Lazy<LoadedModels> Models = new(() => _reading?.GetAwaiter().GetResult() ?? Load(), LazyThreadSafetyMode.ExecutionAndPublication);
+
+    private static IReadOnlyDictionary<string, SimModel> ByName => Models.Value.ByName;
 
     private static readonly Lazy<Dictionary<string, SimModel>> HandWrittenByName = new(() =>
     {
@@ -415,23 +447,25 @@ public static class SimModels
         return byName;
     }, LazyThreadSafetyMode.ExecutionAndPublication);
 
-    /// <summary>The classes whose hooks a game update made unreadable (ModelSpec.Unread), with why: filled once, with the models.</summary>
-    private static readonly Dictionary<string, string> UnreadClasses = new(StringComparer.Ordinal);
-
-    private static Dictionary<string, SimModel> Load()
+    /// <summary>
+    /// Reads the models once: the hand-written ones and the read ones, with the classes whose hooks a game update made unreadable
+    /// (ModelSpec.Unread) and why. Everything it makes is its own until it's published, and never changed after.
+    /// </summary>
+    private static LoadedModels Load()
     {
         var byName = new Dictionary<string, SimModel>(HandWrittenByName.Value, StringComparer.Ordinal);
+        var unread = new Dictionary<string, string>(StringComparer.Ordinal);
         // A read model never stands in for a hand-written one: a class is one or the other (the reader skips a hand-written class: ReadModels).
         foreach (var spec in Read?.Invoke() ?? Enumerable.Empty<ModelSpec>())
         {
             if (byName.ContainsKey(spec.Name)) continue;
-            if (spec.Unread != null) { UnreadClasses[spec.Name] = spec.Unread; continue; }
+            if (spec.Unread != null) { unread[spec.Name] = spec.Unread; continue; }
             // A program the simulator can't compile (a command on a creature its engine functions don't name) is the class unread, never a
             // failure of every model (decision #92).
             try { byName.Add(spec.Name, new ReadModel(spec)); }
-            catch (InvalidOperationException exception) { UnreadClasses[spec.Name] = $"{spec.Name}'s hooks couldn't be compiled ({exception.Message}): what it does isn't simulated"; }
+            catch (InvalidOperationException exception) { unread[spec.Name] = $"{spec.Name}'s hooks couldn't be compiled ({exception.Message}): what it does isn't simulated"; }
         }
-        return byName;
+        return new LoadedModels(byName, unread);
     }
 
     /// <summary>The class has a hand-written model (Sim/Models): it keeps it until a parity proof converts it (decision #195), so it isn't read.</summary>
@@ -441,18 +475,14 @@ public static class SimModels
     /// Why a class's hooks couldn't be read, when they read whole at the reviewed builds and don't now (a game update): a simulation it's in
     /// is unknown (SimState.Unmodelled), never exact without it (decision #92). Null: read, hand-written, or never modelled.
     /// </summary>
-    public static string? UnreadReason(string name)
-    {
-        _ = ByName.Value;
-        return UnreadClasses.GetValueOrDefault(name);
-    }
+    public static string? UnreadReason(string name) => Models.Value.Unread.GetValueOrDefault(name);
 
-    public static SimModel? Get(string name) => ByName.Value.GetValueOrDefault(name);
+    public static SimModel? Get(string name) => ByName.GetValueOrDefault(name);
 
-    public static bool Has(string name) => ByName.Value.ContainsKey(name);
+    public static bool Has(string name) => ByName.ContainsKey(name);
 
     /// <summary>The model decides a card play's count itself (it overrides ModifyCardPlayCount: Echo Form): the adapter leaves its part out (CardPlays.ModelledReplays).</summary>
     public static bool DecidesPlayCount(string name) => Get(name) is { } model && model.Overrides(nameof(SimModel.ModifyCardPlayCount));
 
-    public static IEnumerable<string> Names => ByName.Value.Keys;
+    public static IEnumerable<string> Names => ByName.Keys;
 }

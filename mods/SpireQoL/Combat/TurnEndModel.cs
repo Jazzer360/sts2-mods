@@ -374,6 +374,8 @@ public sealed class TurnEndModel
         var me = Sts2State.Me;
         var combat = Sts2State.Combat;
         if (me?.PlayerCombatState == null || combat == null) return null;
+        // The models are still being read (the mod just loaded): the forecast is pending, never made without them.
+        if (!SimWait.Models(ownBudget)) return null;
 
         // Nothing a prediction reads changed since last frame, and its search is over (decision #130): last frame's model,
         // without reading the board again. Dev mode works it out anyway on such a frame once a second and logs it if the key differs.

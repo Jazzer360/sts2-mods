@@ -48,9 +48,9 @@ public static class ModEntry
         MigrateSettings(settings, hadSettings);
         Sim.SimAdapter.IncludeTeammates = settings.MultiplayerPredictions;
         Combat.TurnEndModel.CountTeammateHands = settings.TeammateHands;
-        // The powers and relics modelled from their code: read from the running game when the simulator first asks (decision #195).
-        Sim.SimModels.Read = Sim.ReadModels.Specs;
-        _ = Sim.SimModels.Has(Sim.PowerId.Strength.Name); // read them now, on the game's thread, not in a search on a worker
+        // The powers and relics modelled from their code (decision #195): read from the running game on a worker, so the game's thread doesn't
+        // spend the few tenths of a second; a prediction waits for them (SimWait.Models).
+        Sim.SimModels.StartReading(Sim.ReadModels.Specs);
         DevMode = settings.DevMode ?? File.Exists(Path.Combine(Path.GetDirectoryName(typeof(ModEntry).Assembly.Location) ?? "", DevMarker));
         Log.DetailsToGameLog = DevMode;
         if (DevMode) Log.Info($"dev mode on ({(settings.DevMode == true ? "DevMode in the settings file" : DevMarker + " beside the DLL")})");
@@ -115,7 +115,7 @@ public static class ModEntry
                 ? $"{why}, and {mod}'s code is in the crash"
                 : null;
         AppDomain.CurrentDomain.ProcessExit += (_, _) => reporter.Flush();
-        // A model read at the reviewed builds whose hooks this game's code no longer reads (read above, before the reporter): reported once.
+        // A model read at the reviewed builds whose hooks this game's code no longer reads: reported once the read is over (now, or SimWait.Models).
         Sim.ReadModels.Report();
         Sts2State.Init(Log);
         // A private member a rule reads is gone (a game update renamed it): the rule silently uses its

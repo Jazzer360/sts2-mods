@@ -10,8 +10,8 @@ namespace SpireQoL.Sim;
 public static partial class ReadModels
 {
     /// <summary>
-    /// The read models of the running game's classes, for SimModels. A class whose hooks read whole at the reviewed builds and don't now (a
-    /// game update) is reported once, here: SimModels reads them once a launch.
+    /// The read models of the running game's classes, for SimModels (on a worker: SimModels.StartReading). A class whose hooks read whole at
+    /// the reviewed builds and don't now (a game update) is kept for Report: SimModels reads them once a launch.
     /// </summary>
     public static IEnumerable<ModelSpec> Specs() => Specs(Diagnostics.CoverageLedger.ModelTypes(), RuntimeCode.Read, unread: Unread);
 
@@ -65,22 +65,28 @@ public static partial class ReadModels
     /// <summary>A Proc Tags row exists for the class (SettingsCatalog.Sources): a read model gets its commands' tab only then.</summary>
     internal static bool HasTabRow(string name) => Menu.SettingsCatalog.Sources.Any(source => source.Type == name && source.Tag != null && source.TagPrefix == "proc:");
 
-    /// <summary>A class that read whole at the reviewed builds and doesn't now: logged, and reported once (the reporter keeps one per class).</summary>
-    private static void Unread(string name, string why)
-    {
-        ModEntry.Log.Warn($"[sim] {why}");
-        _unread.Add((name, why));
-        Report();
-    }
+    /// <summary>
+    /// A class that read whole at the reviewed builds and doesn't now: kept for Report, on the game's thread (the models are read on a worker:
+    /// SimModels.StartReading). Written once, by the read, before the models are published.
+    /// </summary>
+    private static void Unread(string name, string why) => _unread.Enqueue((name, why));
 
-    private static readonly List<(string Name, string Why)> _unread = new();
+    private static readonly System.Collections.Concurrent.ConcurrentQueue<(string Name, string Why)> _unread = new();
+    private static bool _logged;
 
     /// <summary>
     /// Reports each class read at the reviewed builds whose hooks the running game's code no longer reads (once a launch: the models are read
-    /// once, and the reporter keeps one report per class). Called again once the reporter exists, for a read made before it.
+    /// once, and the reporter keeps one report per class), logged once. On the game's thread: at the mod's load, once the reporter starts, and
+    /// once the read is over (SimWait.Models); nothing before the read is over.
     /// </summary>
     public static void Report()
     {
+        if (!SimModels.Loaded) return;
+        if (!_logged)
+        {
+            _logged = true;
+            foreach (var (_, why) in _unread) ModEntry.Log.Warn($"[sim] {why}");
+        }
         if (Sts2Mods.Core.Diagnostics.ErrorReporter.Instance is not { } reporter) return;
         foreach (var (name, why) in _unread)
             reporter.Mismatch("read-models", $"Model not read from the game's code: {name}", new[] { "read-models", name },

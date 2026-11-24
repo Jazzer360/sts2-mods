@@ -83,6 +83,8 @@ public sealed class CardPredictions
         var hand = Sts2State.Hand(me);
         FreeCards.Observe(me, hand);
         if (hand.Count == 0) return null;
+        // The models are still being read (the mod just loaded): every card's tabs are pending, never worked out without them.
+        if (!SimWait.Models()) return null;
 
         _me = me;
         _cs = combat;
