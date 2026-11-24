@@ -485,7 +485,7 @@ public static partial class SimEngine
         var amount = spec.Fixed ? Math.Max(0, (int)baseDamage) : ModifiedDamage(state, baseDamage, ctx, terms);
         // The first hit on each enemy, for the damage-formula audit (not after Mighty Wings gave Strength mid-attack: the preview
         // can't know that).
-        if (card != null && !at.ByOsty && !state.FirstHits.ContainsKey(target) && !state.Fired.Has(nameof(Models.MightyWings))) state.FirstHits = state.FirstHits.Add(target, amount);
+        if (card != null && !at.ByOsty && !state.FirstHits.ContainsKey(target) && !state.Fired.Has(RelicId.MightyWings.Name)) state.FirstHits = state.FirstHits.Add(target, amount);
         if (amount <= 0) return new[] { state };
         if (state.Enemy(target) is { Alive: true } enemy)
         {

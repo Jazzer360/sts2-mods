@@ -21,7 +21,7 @@ public class HookGapTests
     {
         (@"ModifyVulnerableMultiplier|ModifyWeakMultiplier", "a call into another model's method, its owner rebound (Paper Phrog, Paper Krane, Cruelty, Debilitate)"),
         (@"Instance\.History|the fight's log", "the fight's log (the history ledger, decision #191)"),
-        (@"the value \{", "a value of several ways (a local set on each branch, merged)"),
+        (@"the value \{|compares the owner with \{", "a value of several ways (a local set on each branch, merged)"),
         (@"read model's (AfterAttack|BeforeAttack)\b", "hooks: BeforeAttack and AfterAttack"),
         (@"commandToModify", "hooks: BeforeAttack and AfterAttack"),
         (@"read model's (ModifyHpLost\w*|AfterModifyingHpLost\w*)", "the HP-loss pipeline"),

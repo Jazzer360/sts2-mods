@@ -172,7 +172,6 @@ public static class SimReaders
     /// </summary>
     internal static readonly Dictionary<string, (string Var, int Fallback)> RelicAmountVars = new()
     {
-        [nameof(MightyWings)] = Var("StrengthPower", fallback: 2),
         [nameof(TungstenRod)] = Var("HpLossReduction", fallback: 1),
         [nameof(BeatingRemnant)] = Var("MaxHpLoss", fallback: int.MaxValue),
         [nameof(TheBoot)] = Var("DamageMinimum", fallback: 5),
@@ -201,7 +200,6 @@ public static class SimReaders
                     amount = Sts2State.Private(relic, "AttacksPlayed", fallback: 0);
                     data = Sts2State.Private<object?>(relic, "AttackToDouble", fallback: null) != null ? Models.PenNib.GameCardBound : 0;
                     break;
-                case nameof(MightyWings): data = Sts2State.Var(relic, "DamageThreshold", fallback: 30); break;
                 case nameof(Vambrace):
                     data = (Sts2State.Private<object?>(relic, "TriggeringCard", fallback: null) != null ? Models.Vambrace.Bound : 0) | (Sts2State.Private(relic, "BlockGainedThisCombat", fallback: false) ? Models.Vambrace.GainedThisCombat : 0);
                     break;

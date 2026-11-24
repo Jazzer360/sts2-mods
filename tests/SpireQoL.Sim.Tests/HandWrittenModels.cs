@@ -1255,3 +1255,22 @@ public sealed class TenderPower : SimModel
         return One(state);
     }
 }
+
+// ---- the hit's result (round seven: Sim/Models/StatModels.cs, deleted 2026-11-24)
+
+/// <summary>
+/// Mighty Wings (relic): Amount is its Strength, Data its damage threshold. AfterDamageGiven: a powered hit by its owner (or
+/// their Osty) whose TotalDamage is at least the threshold flashes and gives the owner that much Strength.
+/// </summary>
+public sealed class MightyWings : SimModel
+{
+    public override TabKind? Tab => TabKind.Trigger;
+    public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit)
+    {
+        if (!hit.Props.IsPoweredAttack() || !(hit.Dealer == owner || (owner == Who.You && hit.Dealer == Who.YourOsty))) return;
+        var relics = SimEngine.RelicsOf(state, owner);
+        if (hit.Total < relics.DataOf(ThisRelic)) return;
+        state.LogFired(Name, amount: 0, owner);
+        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, relics[ThisRelic], debuff: false);
+    }
+}

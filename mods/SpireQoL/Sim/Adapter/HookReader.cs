@@ -929,6 +929,9 @@ public static class HookReader
             }
             else if (compare.Right is QueryValue { Name: "Side" } && compare.Left is not QueryValue { Name: "Side" })
                 return CreatureCompare(compare with { Left = compare.Right, Right = compare.Left });
+            // The dealer is its owner's pet (dealer == base.Owner.Osty: Mighty Wings').
+            else if (IsDealer(compare.Left) && IsOwnersOsty(compare.Right) || IsDealer(compare.Right) && IsOwnersOsty(compare.Left))
+                holds = new HookFactValue(HookFact.DealerIsOwnersPet);
             else if (CreatureOf(compare.Left) is { } left)
             {
                 if (compare.Right is NullValue) holds = Not(CreatureFact(HookFact.CreatureThere, left));
@@ -1048,6 +1051,9 @@ public static class HookReader
                 // The HP a hit took past block (result.UnblockedDamage).
                 case QueryValue { Name: "UnblockedDamage", Of: ParameterValue { Name: "result" } or NamedValue { Name: "result" } } when _hook is "AfterDamageGiven" or "AfterDamageReceived":
                     return new HookFactValue(HookFact.HitUnblocked);
+                // What a hit dealt, its block included (result.TotalDamage: DamageResult's blocked plus unblocked).
+                case QueryValue { Name: "TotalDamage", Of: ParameterValue { Name: "result" } or NamedValue { Name: "result" } } when _hook is "AfterDamageGiven" or "AfterDamageReceived":
+                    return new HookFactValue(HookFact.HitTotal);
                 // The play count the listeners before it gave (ModifyCardPlayCount's playCount).
                 case ParameterValue { Name: "playCount" } or NamedValue { Name: "playCount" } when _hook == "ModifyCardPlayCount": return new HookFactValue(HookFact.PlayCountSoFar);
                 case QueryValue { Type: "Decimal", Name: ".ctor", Arguments: var parts } when parts.All(part => part is ConstantValue):
@@ -1400,6 +1406,9 @@ public static class HookReader
         private static bool IsOwnersOrbs(ProgramValue value) =>
             (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Orbs", Of: QueryValue { Name: "OrbQueue", Of: QueryValue { Name: "PlayerCombatState", Of: { } player } } }
             && IsOwner(player);
+
+        /// <summary>Its owner's Osty (base.Owner.Osty: its player's pet).</summary>
+        private static bool IsOwnersOsty(ProgramValue value) => (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Osty", Of: { } ostyOf } && IsOwner(ostyOf);
 
         /// <summary>The owner's living opponents (Where(CombatState.GetOpponentsOf(base.Owner), c => c.IsAlive)), kept in a local or not.</summary>
         private static bool LivingOpponents(ProgramValue value) =>

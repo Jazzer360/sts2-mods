@@ -65,7 +65,14 @@ public class ReadModelParityTests
     private static readonly Dictionary<string, string> RelicAmountVars = new(StringComparer.Ordinal) {
         [RelicId.CharonsAshes.Name] = "Damage", [RelicId.ForgottenSoul.Name] = "Damage", [RelicId.Orichalcum.Name] = "Block", [RelicId.FakeOrichalcum.Name] = "Block",
         [RelicId.ScreamingFlagon.Name] = "Damage", [RelicId.CloakClasp.Name] = "Block", [RelicId.ObsidianVice.Name] = "Damage", [RelicId.LunarPastry.Name] = "Stars", [RelicId.StoneCalendar.Name] = "Damage",
+        [RelicId.MightyWings.Name] = "StrengthPower",
     };
+
+    /// <summary>
+    /// The relics whose hand-written model's Data the adapter read from one of their values (SimReaders.Relics), by that value's key: the board
+    /// gives the Data as the adapter did (Mighty Wings' DamageThreshold).
+    /// </summary>
+    private static readonly Dictionary<string, string> RelicDataVars = new(StringComparer.Ordinal) { [RelicId.MightyWings.Name] = "DamageThreshold" };
 
     /// <summary>
     /// The powers whose hand-written model's Data the adapter read from one of their values (SimReaders.Powers), by that value's key: the board
@@ -273,7 +280,7 @@ public class ReadModelParityTests
         if (model.Spec.Kind == ModelKind.Power) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).With(new PowerId(model.Name), amount: PowerAmountVars.TryGetValue(model.Name, out var amountKey) ? state.Vars[$"{owner}:{model.Name}:{amountKey}"] : 3, data: powerData));
         var amount = RelicAmountVars.TryGetValue(model.Name, out var amountVar) ? state.Vars[$"{owner}:{model.Name}:{amountVar}"] : 0;
         // A relic whose amount is its value keeps no flag (SimReaders.Relics); any other starts armed.
-        var data = RelicAmountVars.ContainsKey(model.Name) ? 0 : (int)RelicUse.Armed;
+        var data = RelicDataVars.TryGetValue(model.Name, out var relicDataVar) ? state.Vars[$"{owner}:{model.Name}:{relicDataVar}"] : RelicAmountVars.ContainsKey(model.Name) ? 0 : (int)RelicUse.Armed;
         if (model.Spec.Kind == ModelKind.Relic) SimEngine.SetRelics(state, owner, SimEngine.RelicsOf(state, owner).With(new RelicId(model.Name), amount, data));
         return state;
     }

@@ -168,6 +168,8 @@ public enum HookFact
     OpponentsPowerAmount,
     /// <summary>The card a damage or block comes from is the class named in Of (`cardSource is SovereignBlade`: Conqueror's).</summary>
     SourceCardIs,
+    /// <summary>What the hit dealt, its block included (result.TotalDamage: Mighty Wings' threshold, Reaper Form's Doom).</summary>
+    HitTotal,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>

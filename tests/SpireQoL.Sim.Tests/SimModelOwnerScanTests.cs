@@ -31,7 +31,6 @@ public class SimModelOwnerScanTests
         ["if (owner != Who.You) return null;"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
         ["var hp = start.You.Hp;"] = "Red Skull's outcome tab is yours only (the line before returns for anyone else): your HP",
         ["(owner == Who.You && damage.Dealer == Who.YourOsty)"] = "your Osty's attacks count as yours for your powers",
-        ["(owner == Who.You && hit.Dealer == Who.YourOsty)"] = "your Osty's attacks count as yours for your powers",
     };
 
     private static string ModelsDir()
