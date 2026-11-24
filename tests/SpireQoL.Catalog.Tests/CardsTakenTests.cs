@@ -2,7 +2,6 @@ using SpireQoL.Procs.Programs;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
-using SpireQoL.Procs;
 using SpireQoL.Sim;
 using Xunit;
 
@@ -19,7 +18,16 @@ public class CardsTakenTests
     private static List<CardModel> Others(GameFight gameFight, CardModel card) =>
         PileType.Hand.GetPile(gameFight.Me).Cards.Where(other => !ReferenceEquals(other, card)).ToList();
 
-    private static PlayFacts Facts(GameFight gameFight, CardModel card, int plays = 1) => PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays);
+    /// <summary>The card's takes counted on the board before its play (BoardCounts), as the step translators and the card scan read them.</summary>
+    private sealed record Counted(int Discards, bool MayDiscardSly, int TakenToHand, bool HandTakeChosen, int Transforms, bool TransformsChosen);
+
+    private static Counted Facts(GameFight gameFight, CardModel card)
+    {
+        var others = Others(gameFight, card);
+        var drawPile = PileType.Draw.GetPile(gameFight.Me).Cards.Count;
+        return new Counted(BoardCounts.DiscardCount(card, others, BoardCounts.CardsDrawn(card, others.Count + 1)), BoardCounts.DiscardsSlyWithoutPick(card),
+            BoardCounts.TakenToHandCount(card), BoardCounts.HandTakeChosenOf(card, others.Count + 1), BoardCounts.TransformCount(card, others, drawPile), BoardCounts.TransformsChosen(card));
+    }
 
     private static void DrawPile(GameFight gameFight, int count)
     {
@@ -86,8 +94,7 @@ public class CardsTakenTests
         var card = gameFight.Add<Scrape>();
         gameFight.Add<StrikeIronclad>();
         Assert.Equal(4, BoardCounts.DiscardCount(card, Others(gameFight, card), draws: 4));
-        // Not from the hand it found: the simulator follows them (DrawnCardAction).
-        Assert.Equal(0, Facts(gameFight, card).LeavesHand);
+
     }
 
     [Fact]
@@ -100,7 +107,6 @@ public class CardsTakenTests
         var facts = Facts(gameFight, card); // one play's (decision #189)
         Assert.Equal(2, facts.Discards);
         Assert.Equal(1, facts.TakenToHand);
-        Assert.Equal(0, facts.LeavesHand);
         // An empty draw pile with cards in the discard pile: the shuffle first, then the same.
         var empty = new GameFight();
         var chant = empty.Add<KiChant>();
@@ -136,7 +142,7 @@ public class CardsTakenTests
         var guards = gameFight.Add<Guards>();
         var facts = Facts(gameFight, guards);
         Assert.Equal(Others(gameFight, guards).Count, facts.Transforms);
-        Assert.Equal(0, facts.TransformsCertain);
+        Assert.True(facts.TransformsChosen);
     }
 
     [Fact]

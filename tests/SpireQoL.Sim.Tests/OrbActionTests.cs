@@ -36,6 +36,21 @@ public class OrbActionTests
     }
 
     [Fact]
+    public void APlaysChannelsAndItsEvokesDamageAreInItsLog()
+    {
+        // The play audit counts the game's OrbChanneledEntry and the damage with no card a play's evokes deal: the simulation logs each
+        // channel of the play (SimKeys.PlayOrbChanneled) and what each evoke dealt the enemies, block and HP (SimKeys.OrbEvokeDamage).
+        var state = Defect(slots: 1);
+        state.Enemies[0].Block = 3;
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Dark, Passive = 6, Evoke = 10 } };
+        var after = Assert.Single(After(state, Play(Card("Zap", SimCardType.Skill), target: Who.None, plays: 2, new OrbAction(OrbAction.Op.Channel) { Orb = OrbKind.Frost })));
+        Assert.Equal(2, after.Fired[SimKeys.PlayOrbChanneled]);
+        // The Dark orb pushed out by the first channel deals 10 (3 into block); the Frost one pushed out by the second blocks.
+        Assert.Equal(10, after.Fired.DataOf(SimKeys.OrbEvokeDamage));
+        Assert.Equal(100 - (10 - 3), after.Enemy(id: 0)!.Hp);
+    }
+
+    [Fact]
     public void StormChannelsLightningOnPowerCardsAndMetronomeCountsIt()
     {
         var state = Defect();

@@ -9,7 +9,6 @@ using MegaCrit.Sts2.Core.Models.Characters;
 using MegaCrit.Sts2.Core.Models.Monsters;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Runs;
-using SpireQoL.Procs;
 using SpireQoL.Sim;
 using Xunit;
 
@@ -52,9 +51,7 @@ public class InstancedPowerTests
             copy.DynamicVars.Strength.BaseValue = 1;
         var card = gameFight.Add<DefendIronclad>();
         var start = SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
-        var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
-        Assert.NotNull(facts);
-        SimEngine.ApplyPlayTo(start, SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, Who.None, plays: facts!.Plays), out var branches, out var truncated);
+        SimEngine.ApplyPlayTo(start, SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, Who.None, plays: 1), out var branches, out var truncated);
         Assert.False(truncated);
         Assert.Equal(2, Assert.Single(branches).You.Powers[PowerId.Strength]);
     }

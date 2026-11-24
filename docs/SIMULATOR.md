@@ -132,8 +132,10 @@ machinery.)
 ### Card scripts (`Sim/Scripts` + `Procs/ScriptBuilder.cs`)
 The adapter turns a card into a script: generic actions from its dynamic values (Damage/HitCount → attack; Block → gain
 block; PowerVar<T> → apply power; Cards → draw...) checked against the commands its `OnPlay` calls (the card coverage scan
-already reads them), with per-card scripts where the code does something else (today's per-card switches in `PlayFacts`
-and `SimAdapter`, moved). A card whose script isn't known gets the facts it has now and is listed by the coverage check.
+already reads them), with per-card scripts where the code does something else. Since decisions #182 and #193 the script is the card's
+program's steps, each translated into its action (`SimAdapter.Steps`); since decision #194 nothing is decided about a card before its play
+beside them: the program's counts on the board are `BoardCounts` (Programs), the card's prediction `CardPrediction`, and the play check's
+counts its simulation's log (`SimKeys.PlayEvent`, `PlayOrbChanneled`, `FrostEvokeBlock`, `OrbEvokeDamage`).
 The script runs once per play (play count from the game: `ModifyCardPlayCount`), with `BeforeCardPlayed` and
 `AfterCardPlayed` around each play, then the enchantment's and affliction's scripts. A card play's shape is decided once before its first play, as
 `OnPlayWrapper` does (decision #192): where the card goes after, from its own result pile (`ModifyCardPlayResultLocation`: Feral, Nostalgia,
@@ -162,7 +164,8 @@ code.
 `SimOutcome` keeps every field consumers read today (kills, block breaks, stuns, HP, taken, Death Skull chances...). New:
 the play's **event log** per branch (model flashes with their damage, block, summons; cards drawn, exhausted, created;
 energy and stars), merged into "in every branch" and "in some branch" sets. Proc Indicators builds tabs from it; the play
-check compares it with what the game did.
+check compares it with what the game did: every count it holds a play to (draws, exhausts, discards, made cards, orbs channeled, the
+Frost block and the damage the play's evokes deal) is this log's, at the target the card was played at (decision #194).
 
 ## The adapter (`Sim/Adapter/SimAdapter.cs`)
 Reads state only (CLAUDE.md: rules live in the simulator):

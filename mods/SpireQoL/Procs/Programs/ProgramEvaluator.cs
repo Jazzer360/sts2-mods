@@ -308,7 +308,7 @@ public static class ProgramEvaluator
         // Osty.CheckMissingWithAnim: Osty missing or dead (it plays an animation besides; never called).
         if (query.Of == null && query.Name == "CheckMissingWithAnim" && arguments is [Player player]) return player.IsOstyMissing;
         // The card's X (ResolveEnergyXValue, ResolveStarXValue: what the play spends, through the X hooks): what playing it now would
-        // spend, as the play's facts read it (PlayFacts' energy and stars), the play itself not yet made.
+        // spend, as the card play reads it (CardPlays.EnergyOf, StarsOf), the play itself not yet made.
         if (query is { Name: "ResolveEnergyXValue" or "ResolveStarXValue", Arguments.Count: 0 } && ReferenceEquals(asked, board.Card))
             return XValue(board.Card, stars: query.Name == "ResolveStarXValue");
         if (board.PlaysBefore > 0 && LaterPlay(query, asked, arguments, context) is var later && later != Unknown) return later;

@@ -9,7 +9,7 @@ namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
 /// A fight built from the installed game's own objects, outside the game, for checking what the mod reads from a card in a
-/// known state (PlayFacts: step 1 of every prediction). Uses the game's test factories (RunState.CreateForTest, the Deprived
+/// known state (BoardCounts and the adapter: step 1 of every prediction). Uses the game's test factories (RunState.CreateForTest, the Deprived
 /// test character) and its combat state (CombatState.AddPlayer, CreateCard, the piles' AddInternal); nothing is played.
 /// </summary>
 internal sealed class GameFight

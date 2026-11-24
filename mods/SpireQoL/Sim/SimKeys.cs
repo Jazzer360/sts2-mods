@@ -46,6 +46,12 @@ public static class SimKeys
     /// <summary>Block a play gave its player from evoking Frost orbs (the log's amount), for the play audit's block check.</summary>
     public const string FrostEvokeBlock = "FrostOrb";
 
+    /// <summary>Damage a play's orb evokes dealt the enemies (block and HP: the log's amount), for the play audit's damage with no card.</summary>
+    public const string OrbEvokeDamage = "OrbEvokeDamage";
+
+    /// <summary>Orbs channeled during a play (OrbChanneledEntry, every player's), for the play audit's channel count.</summary>
+    public const string PlayOrbChanneled = "OrbChanneled";
+
     private static readonly string[] EventNames = Enum.GetValues<CardEvent>().Select(cardEvent => "event:" + cardEvent).ToArray();
 
     /// <summary>

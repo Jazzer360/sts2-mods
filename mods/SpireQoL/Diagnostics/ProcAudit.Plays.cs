@@ -55,19 +55,19 @@ public sealed partial class ProcAudit
         /// <summary>The play ended the fight: the enemies it was simulated against that were dead as it ended (it killed them).</summary>
         public HashSet<Creature>? DeadAtFightEnd;
         /// <summary>
-        /// A hand choice whose pick is auto-played (Decisions, Decisions): each card's tabs and facts on
+        /// A hand choice whose pick is auto-played (Decisions, Decisions): each card's tabs and prediction on
         /// the last frame of the choice, when they described the auto-plays.
         /// </summary>
-        public Dictionary<CardModel, (IReadOnlyList<TabSpec> Tabs, PlayFacts? Facts)>? Choice;
+        public Dictionary<CardModel, (IReadOnlyList<TabSpec> Tabs, CardPrediction? Prediction)>? Choice;
         /// <summary>
         /// The card and what was predicted for it, taken when its action starts: a card that comes
-        /// back to your hand during its play (Feral) gets new tabs and facts before the check runs.
+        /// back to your hand during its play (Feral) gets new tabs and prediction before the check runs.
         /// </summary>
         public CardModel? Card;
         /// <summary>The played card's upgrade level as the play began (Razor Tooth's check).</summary>
         public int UpgradeBefore = -1;
         public IReadOnlyList<TabSpec>? Predicted;
-        public PlayFacts? Facts;
+        public CardPrediction? Prediction;
         public long Lag = -1;
         public string? StaleBecause;
         public List<string>? ShownDiff;
@@ -131,15 +131,15 @@ public sealed partial class ProcAudit
             return;
         }
 
-        // While a hand choice's pick will be auto-played, keep each hand card's tabs and facts on the play
+        // While a hand choice's pick will be auto-played, keep each hand card's tabs and prediction on the play
         // that opened it (they describe the auto-plays; once the choice closes they're back to one play).
         if (CardPlays.ChoiceAutoPlays(me) > 0
             && _running.Values.FirstOrDefault(playRecord => playRecord.Card is DecisionsDecisions) is { } choosing)
         {
-            var hand = new Dictionary<CardModel, (IReadOnlyList<TabSpec>, PlayFacts?)>(ReferenceEqualityComparer.Instance);
+            var hand = new Dictionary<CardModel, (IReadOnlyList<TabSpec>, CardPrediction?)>(ReferenceEqualityComparer.Instance);
             foreach (var card in Sts2State.Hand(me))
                 hand[card] = (_ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs.ToList() : new List<TabSpec>(),
-                           _ctx.Predictions.LastFacts.TryGetValue(card, out var facts) ? facts : null);
+                           _ctx.Predictions.LastPredictions.TryGetValue(card, out var prediction) ? prediction : null);
             choosing.Choice = hand;
         }
 
@@ -208,9 +208,9 @@ public sealed partial class ProcAudit
                     if (_ctx.Predictions.PredictNow(card) is { } now)
                     {
                         rec.Predicted = now.Tabs;
-                        rec.Facts = now.Facts;
+                        rec.Prediction = now.Prediction;
                         rec.Lag = 0;
-                        (rec.ShownDiff, rec.ShownSkip) = ShownCheck(card, now.Tabs, now.Facts);
+                        (rec.ShownDiff, rec.ShownSkip) = ShownCheck(card, now.Tabs, now.Prediction);
                     }
                     else
                     {
@@ -218,7 +218,7 @@ public sealed partial class ProcAudit
                         _fromHand++;
                         rec.ShownSkip = "no prediction as the play began";
                         rec.Predicted = _ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs.ToList() : null;
-                        rec.Facts = _ctx.Predictions.LastFacts.TryGetValue(card, out var facts) ? facts : null;
+                        rec.Prediction = _ctx.Predictions.LastPredictions.TryGetValue(card, out var prediction) ? prediction : null;
                         rec.Lag = _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1;
                         if (_history != null) rec.StaleBecause = StaleBecause(_history.Entries.ToList(), card, _history.Entries.Count(), play.Player);
                     }
@@ -300,7 +300,7 @@ public sealed partial class ProcAudit
                 rec.AfterSkipped = FightEndedSkip;
                 rec.FightEnded = true;
                 // Who it killed is still known (the lethal check reads it): the creatures are there, dead or not.
-                rec.DeadAtFightEnd = rec.Facts?.Sim?.Ids.Keys.Where(creature => creature.IsDead).ToHashSet();
+                rec.DeadAtFightEnd = rec.Prediction?.Sim?.Ids.Keys.Where(creature => creature.IsDead).ToHashSet();
             }
             else if (me != null && combat != null && combat.CurrentSide != MegaCrit.Sts2.Core.Combat.CombatSide.Player)
             {
@@ -397,15 +397,15 @@ public sealed partial class ProcAudit
     /// difference is a tab drawn stale (a cache keyed on too little, a frame that didn't refresh), which checking only the
     /// outcome can't see. Returns the differences, or why the check was skipped.
     /// </summary>
-    private (List<string>? Diff, string? Skip) ShownCheck(CardModel card, List<TabSpec> now, PlayFacts nowFacts)
+    private (List<string>? Diff, string? Skip) ShownCheck(CardModel card, List<TabSpec> now, CardPrediction nowPrediction)
     {
-        if (!_ctx.Predictions.LastTabs.TryGetValue(card, out var last) || !_ctx.Predictions.LastFacts.TryGetValue(card, out var shownFacts))
+        if (!_ctx.Predictions.LastTabs.TryGetValue(card, out var last) || !_ctx.Predictions.LastPredictions.TryGetValue(card, out var shownPrediction))
             return (null, "none recorded in hand");
         // Drawn on the last frame the card was in hand: not held from an earlier board while its simulation ran (decision #105), nor
         // from a frame the feature skipped.
         if (!_ctx.Decor.LastSeenFrame.TryGetValue(card, out var seenAt) || last.Frame != seenAt) return (null, "held from an earlier board, or not drawn on its last frame in hand");
         var shown = last.Tabs;
-        if (shownFacts.SimPending || shownFacts.SimIncomplete || nowFacts.SimPending || nowFacts.SimIncomplete)
+        if (shownPrediction.SimPending || shownPrediction.SimIncomplete || nowPrediction.SimPending || nowPrediction.SimIncomplete)
             return (null, "a simulation not finished in time, or stopped at a cap");
         if (_history == null || !_ctx.Decor.LastSeenFrame.TryGetValue(card, out var frame) || !_countAtFrame.TryGetValue(frame, out var drawnAt))
             return (null, "no history position for them");
@@ -567,8 +567,8 @@ public sealed partial class ProcAudit
         var captured = ReferenceEquals(rec.Card, card);
         var predicted = captured && rec.Predicted != null ? rec.Predicted
             : _ctx.Decor.LastInHand.TryGetValue(card, out var tabs) ? tabs : Array.Empty<TabSpec>();
-        var facts = captured ? rec.Facts : _ctx.Predictions.LastFacts.TryGetValue(card, out var otherFacts) ? otherFacts : null;
-        // A hand choice's pick, auto-played: its tabs and facts from the choice join the card's own.
+        var prediction = captured ? rec.Prediction : _ctx.Predictions.LastPredictions.TryGetValue(card, out var otherPrediction) ? otherPrediction : null;
+        // A hand choice's pick, auto-played: its tabs and prediction from the choice join the card's own.
         var autoPlays = indices.Select(index => hist[index]).OfType<CardPlayStartedEntry>().Where(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && cardPlayStartedEntry.CardPlay.Card.Owner == me).ToList();
         CardModel? chosen = null;
         var target = rec.Target;
@@ -577,7 +577,7 @@ public sealed partial class ProcAudit
         {
             chosen = autoPlays[0].CardPlay.Card;
             predicted = predicted.Concat(pick.Tabs).ToList();
-            facts = facts != null && pick.Facts != null ? facts.Then(pick.Facts) : pick.Facts ?? facts;
+            prediction = prediction != null && pick.Prediction != null ? prediction.Then(pick.Prediction) : pick.Prediction ?? prediction;
             // Its simulated plays share one target; a single-target pick gets a random one each time.
             var targets = autoPlays.Select(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.Target).Distinct().ToList();
             target = targets.Count == 1 ? targets[0] : null;
@@ -585,7 +585,7 @@ public sealed partial class ProcAudit
         var window = new Window
         {
             Chosen = chosen,
-            Card = card, CardName = SafeTitle(card), Predicted = predicted, Facts = facts,
+            Card = card, CardName = SafeTitle(card), Predicted = predicted, Prediction = prediction,
             Start = start, From = indices.Min(), To = indices.Max() + 1, Indices = indices,
             Flashes = rec.Flashes, Shuffles = rec.Shuffles,
             Lag = captured ? rec.Lag : _ctx.Decor.LastSeenFrame.TryGetValue(card, out var seen) ? _ctx.Decor.Frame - seen : -1,

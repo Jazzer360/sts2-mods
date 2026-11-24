@@ -26,16 +26,6 @@ public class CardCodeTests
     }
 
     [Fact]
-    public void FtlDrawsOnThePlaysUnderItsLimit()
-    {
-        // Ftl.CanDrawCard: fewer than PlayMax plays finished this turn. Claw played twice, then FTL twice under Echo Form: only the
-        // first FTL draws (a report predicted 2 draws, the game drew 1).
-        Assert.Equal(1, BoardCounts.PlaysUnder(finishedBefore: 2, max: 3, plays: 2));
-        Assert.Equal(2, BoardCounts.PlaysUnder(finishedBefore: 0, max: 3, plays: 2));
-        Assert.Equal(0, BoardCounts.PlaysUnder(finishedBefore: 3, max: 3, plays: 2));
-    }
-
-    [Fact]
     public void EveryCardThatDrawsInItsPlayIsCounted()
     {
         // Every card whose play calls the game's draw command, apart from the ones that draw for a teammate and the ones whose count

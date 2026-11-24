@@ -35,7 +35,7 @@ public sealed record SimDrawCard(string Key)
     /// </summary>
     public SimHandCard? FromPile { get; init; }
     public SimHandCard? FromPileUpgraded { get; init; }
-    /// <summary>Its play exhausts it (PlayFacts.ExhaustsSelf): played from the pile, it goes to the exhaust pile, not the discard pile.</summary>
+    /// <summary>Its play exhausts it (SimAdapter.ExhaustsAfterPlay): played from the pile, it goes to the exhaust pile, not the discard pile.</summary>
     public bool ExhaustsWhenPlayed { get; init; }
     /// <summary>Enchanted with Perfect Fit: a shuffle puts it on top (PerfectFit.ModifyShuffleOrder).</summary>
     public bool PerfectFit { get; init; }

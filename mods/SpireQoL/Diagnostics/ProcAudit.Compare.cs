@@ -22,7 +22,7 @@ public sealed partial class ProcAudit
         // Random outcomes (several enemies): only effects the history shows a random hit caused are
         // excused. Random hits = damage to enemies with no card source (procs, orbs) or from this card
         // when it targets a random enemy.
-        var random = window.Facts?.RandomOutcome == true;
+        var random = window.Prediction?.RandomOutcome == true;
         var randomHits = !random
             ? new List<DamageReceivedEntry>()
             : entries.OfType<DamageReceivedEntry>()
@@ -88,8 +88,9 @@ public sealed partial class ProcAudit
                 modelLines.Add($"{otherModel.GetType().Name} fired on this play, but your end of turn sets it off anyway (no tab by design)");
                 continue;
             }
-            // No Draw flashes as it stops a draw (NoDrawPower.ShouldDraw): the play's draws were predicted blocked (none counted).
-            if (otherModel is NoDrawPower && window.Facts is { DrawsBlocked: true })
+            // No Draw flashes as it stops a draw (NoDrawPower.ShouldDraw): its simulation stopped one there too (SimEngine.DrawPrevented logs
+            // the flash at the target it was played at).
+            if (otherModel is NoDrawPower && window.Prediction?.Logged(nameof(NoDrawPower), window.Target) is { Most: > 0 })
             {
                 modelLines.Add("NoDrawPower stopped the play's draws (predicted: none)");
                 continue;
@@ -144,8 +145,8 @@ public sealed partial class ProcAudit
             // every outcome there sets it off, none where no outcome does.
             if (otherTab.Aimed)
             {
-                if (CheckedAim(window) is not { } aim || window.Facts?.FiresEveryByAim?.TryGetValue(aim, out var everyHere) != true
-                    || window.Facts.FiresAnyByAim?.TryGetValue(aim, out var anyHere) != true)
+                if (CheckedAim(window) is not { } aim || window.Prediction?.FiresEveryByAim?.TryGetValue(aim, out var everyHere) != true
+                    || window.Prediction.FiresAnyByAim?.TryGetValue(aim, out var anyHere) != true)
                 {
                     modelLines.Skip("didn't fire", "an aimed tab, with no complete simulation of the target played at", name);
                     continue;
@@ -184,7 +185,7 @@ public sealed partial class ProcAudit
 
         // ---- Tabbed sources every outcome of the play sets off (decision #95): powers included, crossed or not, when their code
         // flashes. Relics are checked above (their plain tabs); a source that changes nothing visible doesn't flash.
-        if (!window.FightEnded && CheckedAim(window) is { } everyAim && window.Facts?.FiresEveryByAim?.TryGetValue(everyAim, out var every) == true)
+        if (!window.FightEnded && CheckedAim(window) is { } everyAim && window.Prediction?.FiresEveryByAim?.TryGetValue(everyAim, out var every) == true)
         {
             foreach (var type in every!)
             {
@@ -237,20 +238,23 @@ public sealed partial class ProcAudit
         var procBlock = entries.OfType<BlockGainedEntry>()
             .Where(blockGainedEntry => blockGainedEntry.Actor == me.Creature && blockGainedEntry.CardPlay == null)
             .Sum(blockGainedEntry => blockGainedEntry.Amount);
-        // Frost evokes: the simulator's block for the target played at (every orb the play evokes, the ones it channels too); the
-        // card's own count of the orbs it evokes without a complete simulation.
-        var frostBlock = window.Facts?.OrbBlock ?? 0;
+        // Frost evokes: the simulator's block for the target played at (every orb the play evokes, the ones it channels too: its log). A card
+        // whose code channels or evokes orbs with no finished simulation there can't be held to it: not checked, counted.
+        var frostBlock = 0;
         var frostSpread = 0; // more Frost block some outcomes give (a random evoke deciding which orb goes)
-        if (CheckedAim(window) is { } blockAim && window.Facts?.FrostBlockByAim?.TryGetValue(blockAim, out var frost) == true)
+        var evokes = Procs.Programs.CardEffects.TouchesOrbs(window.Card.GetType());
+        var orbsUnread = evokes && window.Prediction?.OutcomeAt(window.Target) == null;
+        if (window.Prediction?.LoggedAmount(SimKeys.FrostEvokeBlock, window.Target) is { } frost)
         {
-            frostBlock = frost.Min;
-            frostSpread = frost.Max - frost.Min;
+            frostBlock = frost.Least;
+            frostSpread = frost.Most - frost.Least;
         }
         var predictedBlock = window.Predicted.Where(tab => tab.Kind == TabAmount.Block).Sum(tab => tab.Amount) + frostBlock;
         // The play ended the fight: the history stops at the killing hit, so less than predicted is expected.
         void Shortfall(string what, string predicted, int actual) =>
             modelLines.Skip(what, FightEndedSkip + ": the game logs nothing from the killing hit on", $"predicted {predicted}, actual {actual}");
-        if (procBlock < predictedBlock && window.FightEnded) Shortfall("block", predictedBlock.ToString(), procBlock);
+        if (orbsUnread && procBlock != predictedBlock) modelLines.Skip("block", "its orbs' evokes are its simulation's, and it has no finished outcome at the target it was played at", $"predicted {predictedBlock}, actual {procBlock}");
+        else if (procBlock < predictedBlock && window.FightEnded) Shortfall("block", predictedBlock.ToString(), procBlock);
         else if (frostSpread > 0 && procBlock >= predictedBlock && procBlock <= predictedBlock + frostSpread)
             modelLines.Add($"block {procBlock}: Frost evokes give {frostBlock} to {frostBlock + frostSpread} by outcome");
         // Cards auto-played at random (Lost Lute, The Fool) set off block procs of their own (Song Path on a Cho it played).
@@ -269,16 +273,20 @@ public sealed partial class ProcAudit
         var enemyTabs = window.Predicted.Where(tab => tab.Kind == TabAmount.Damage && !tab.Crossed).ToList();
         var meTabs = window.Predicted.Where(tab => tab.Kind == TabAmount.Damage && tab.Crossed).ToList();
         var (eMin, eMax) = (enemyTabs.Sum(tab => tab.AuditMin), enemyTabs.Sum(tab => tab.AuditMax));
-        // Orbs the card itself evokes (Dualcast, channelling into full slots) deal unsourced damage too.
-        eMin += window.Facts?.OrbDamageMin ?? 0;
-        eMax += window.Facts?.OrbDamageMax ?? 0;
+        // Orbs the play evokes (Dualcast, channelling into full slots) deal unsourced damage too: what its simulation's evokes dealt (its log).
+        if (window.Prediction?.LoggedAmount(SimKeys.OrbEvokeDamage, window.Target) is { } evoked)
+        {
+            eMin += evoked.Least;
+            eMax += evoked.Most;
+        }
         var (mMin, mMax) = (meTabs.Sum(tab => tab.AuditMin), meTabs.Sum(tab => tab.AuditMax));
         // A damage cap outside the game's damage math stopped some of it, seen by its flash: Hardened Shell (HardenedShellPower caps HP
         // lost per turn in ModifyHpLostBeforeOstyLate, which the damage hooks don't reach), Slippery (SlipperyPower.ModifyHpLostAfterOsty: at
         // most 1 HP a hit; Vantom).
         static bool Caps(AbstractModel otherModel) => otherModel is PowerModel { Owner.IsEnemy: true } && (Modifiers.Contains(otherModel.GetType().Name) || otherModel.GetType().Name == nameof(SlipperyPower));
         var capped = flashed.Any(Caps);
-        if (toEnemies < eMin && capped) modelLines.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}, capped by {string.Join(", ", flashed.Where(Caps).Select(otherModel => otherModel.GetType().Name).Distinct())}");
+        if (orbsUnread && (toEnemies < eMin || toEnemies > eMax)) modelLines.Skip("damage to enemies", "its orbs' evokes are its simulation's, and it has no finished outcome at the target it was played at", $"predicted {Range(eMin, eMax)}, actual {toEnemies}");
+        else if (toEnemies < eMin && capped) modelLines.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}, capped by {string.Join(", ", flashed.Where(Caps).Select(otherModel => otherModel.GetType().Name).Distinct())}");
         else if (toEnemies < eMin && window.FightEnded) Shortfall("damage to enemies", Range(eMin, eMax), toEnemies);
         else if (toEnemies > eMax && UnpredictedAutoPlay(window, entries, me)) modelLines.Skip("damage to enemies", AutoPlayReason(window, entries, "random auto-plays"), $"predicted {Range(eMin, eMax)}, actual {toEnemies}");
         else if (toEnemies < eMin || toEnemies > eMax) issues.Add($"damage to enemies: predicted {Range(eMin, eMax)}, actual {toEnemies}");
@@ -288,7 +296,7 @@ public sealed partial class ProcAudit
         // ---- budget: everything else the play caused
         var autoPlayed = UnpredictedAutoPlay(window, entries, me);
         if (autoPlayed) modelLines.Skip("budget", AutoPlayReason(window, entries, "random auto-plays"));
-        var facts = autoPlayed ? null : window.Facts;
+        var prediction = autoPlayed ? null : window.Prediction;
         bool Explained(Effect effect) => sourceOf.Keys.Any(key => SourceEffects.TryGetValue(key, out var effects) && effects.Contains(effect));
         void Budget(Effect effect, string what, int actual, int own)
         {
@@ -299,9 +307,7 @@ public sealed partial class ProcAudit
             else if (actual < own) modelLines.Add($"expected {own} {what}, saw {actual}");
         }
         var draws = entries.OfType<CardDrawnEntry>().Count(cardDrawnEntry => !cardDrawnEntry.FromHandDraw && cardDrawnEntry.Card.Owner == me);
-        // Its draws are its simulation's (the ones it sets off included, up to a full hand), at the target it was played at: its log's
-        // fewest and most over its outcomes (decision #193).
-        SimOutcome? simulated = facts?.Sim?.AimFor(window.Target) is { } simulatedAim && facts.OutcomeByAim?.TryGetValue(simulatedAim, out var aimOutcome) == true && !aimOutcome.Truncated ? aimOutcome : null;
+
         var exhausts = entries.OfType<CardExhaustedEntry>().Count(cardExhaustedEntry => cardExhaustedEntry.Card.Owner == me);
         var discards = entries.OfType<CardDiscardedEntry>().Count(cardDiscardedEntry => cardDiscardedEntry.Card.Owner == me);
         var generated = entries.OfType<CardGeneratedEntry>().Count(cardGeneratedEntry => cardGeneratedEntry.Creator == me || cardGeneratedEntry.Card.Owner == me);
@@ -330,49 +336,34 @@ public sealed partial class ProcAudit
                 else issues.Add(what);
             }
         }
-        // A replay (decision #189): its facts are one play's; what all its plays do together is the simulation's (each play on the board the
-        // one before it left), its card events over its outcomes at the target it was played at.
-        if (facts is { Plays: > 1 })
+        // What the card does is its simulation's (decision #194): every play of it, each on the board the one before it left (decision #189), and
+        // what it sets off, at the target it was played at: its log's fewest and most over its outcomes (SimKeys.PlayEvent, PlayOrbChanneled).
+        // With no finished outcome there, none of these can be held to it: not checked, counted.
+        if (prediction != null)
         {
-            if (facts.Sim?.AimFor(window.Target) is { } aim && facts.OutcomeByAim?.TryGetValue(aim, out var replay) == true && !replay.Truncated)
+            if (prediction.Logged(SimKeys.PlayEvent(CardEvent.Drawn), window.Target) is { } predictedDraws
+                && prediction.Logged(SimKeys.PlayEvent(CardEvent.Exhausted), window.Target) is { } predictedExhausts
+                && prediction.Logged(SimKeys.PlayEvent(CardEvent.Discarded), window.Target) is { } predictedDiscards
+                && prediction.Logged(SimKeys.PlayOrbChanneled, window.Target) is { } predictedOrbs)
             {
-                int Most(CardEvent cardEvent) => replay.PlayFiredAny[SimKeys.PlayEvent(cardEvent)];
-                var leastDraws = replay.PlayFiredEvery[SimKeys.PlayEvent(CardEvent.Drawn)];
-                if (draws < leastDraws && !window.FightEnded) issues.Add($"draws: predicted {leastDraws}, actual {draws}");
-                Budget(Effect.Draw, "draws", draws, Math.Max(Most(CardEvent.Drawn), facts.DrawsAtMost));
-                Budget(Effect.Exhaust, "exhausts", exhausts, Most(CardEvent.Exhausted));
-                Budget(Effect.Discard, "discards", discards, Most(CardEvent.Discarded));
-                var made = Most(CardEvent.Generated) + Most(CardEvent.GeneratedStatus) + Most(CardEvent.GeneratedSadness) + (Procs.Programs.BoardCounts.TransformsChosen(window.Card) ? facts.Transforms : 0);
+                int Most(CardEvent cardEvent) => prediction.Logged(SimKeys.PlayEvent(cardEvent), window.Target)?.Most ?? 0;
+                // Draws and channels aren't a choice: fewer than predicted is a model gap (FTL's play limit), unless the fight ended (nothing
+                // more runs), fewer cards were exhausted than the most it could (Dark Embrace and Joss Paper draw per exhaust), or you have no
+                // orb slots left (the channel fails).
+                if (draws < predictedDraws.Least && !window.FightEnded && exhausts >= predictedExhausts.Most) issues.Add($"draws: predicted {predictedDraws.Least}, actual {draws}");
+                Budget(Effect.Draw, "draws", draws, predictedDraws.Most);
+                if (orbs < predictedOrbs.Least && !window.FightEnded && window.After?.You.OrbCapacity != 0) issues.Add($"orbs channeled: predicted {predictedOrbs.Least}, actual {orbs}");
+                Budget(Effect.Exhaust, "exhausts", exhausts, predictedExhausts.Most);
+                Budget(Effect.Discard, "discards", discards, predictedDiscards.Most);
+                // Transformed cards are logged as created too (CardCmd.Transform); the ones you choose how many of aren't simulated (Guards).
+                var made = Most(CardEvent.Generated) + Most(CardEvent.GeneratedStatus) + Most(CardEvent.GeneratedSadness) + prediction.ChosenTransformsAtMost;
                 Budget(Effect.Generate, "created cards", generated, made);
                 MadeByTabs(made);
+                Budget(Effect.Orb, "orbs channeled", orbs, predictedOrbs.Most);
             }
-            else modelLines.Skip("budget", "a replay's counts are its simulation's, and it has none for the target it was played at");
-            modelLines.Skip("orbs channeled", "a replay's channels aren't in its simulation's play log yet (tracker)");
-            facts = null;
+            else modelLines.Skip("budget", "the card's counts are its simulation's, and it has no finished outcome at the target it was played at");
+            Budget(Effect.Summon, "summons", summons, window.Card.DynamicVars.ContainsKey("Summon") ? prediction.Plays : 0);
         }
-        if (facts != null)
-        {
-            // Draws and channels aren't a choice: fewer than predicted is a model gap (FTL's play limit), unless the fight ended (nothing
-            // more runs), fewer cards were exhausted than the upper bound (Dark Embrace and Joss Paper draw per exhaust), or you have no orb
-            // slots left (the channel fails).
-            if (simulated != null)
-            {
-                var leastDraws = simulated.PlayFiredEvery[SimKeys.PlayEvent(CardEvent.Drawn)];
-                if (draws < leastDraws && !window.FightEnded && exhausts >= facts.TotalExhausts) issues.Add($"draws: predicted {leastDraws}, actual {draws}");
-                // A card whose draws depend on what it draws (Pillage) may draw up to its most (decision #118).
-                Budget(Effect.Draw, "draws", draws, Math.Max(simulated.PlayFiredAny[SimKeys.PlayEvent(CardEvent.Drawn)], facts.DrawsAtMost));
-            }
-            else modelLines.Skip("draws", "its simulation has no finished outcome at the target it was played at");
-            if (orbs < facts.Channels && !window.FightEnded && window.After?.You.OrbCapacity != 0) issues.Add($"orbs channeled: predicted {facts.Channels}, actual {orbs}");
-            Budget(Effect.Exhaust, "exhausts", exhausts, facts.TotalExhausts);
-            Budget(Effect.Discard, "discards", discards, facts.Discards);
-            // Transformed cards are logged as created too (CardCmd.Transform), up to what the card can transform.
-            Budget(Effect.Generate, "created cards", generated, facts.Generated + facts.Transforms);
-            MadeByTabs(facts.Generated + facts.Transforms);
-            Budget(Effect.Orb, "orbs channeled", orbs, facts.Channels);
-            Budget(Effect.Summon, "summons", summons, window.Card.DynamicVars.ContainsKey("Summon") ? facts.Plays : 0);
-        }
-
         // Powers applied: types the card doesn't carry itself (its PowerVar<T> values), with no tab
         // whose source applies powers. Strength/Dexterity changes from Vigor-style consumption and
         // temporary powers expiring are excluded.

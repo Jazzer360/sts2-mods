@@ -298,8 +298,7 @@ public class PlayBehaviourTests
         var card = gameFight.Add<Acrobatics>();
         gameFight.Add<Reflex>();
         Cards<DefendIronclad>(gameFight, count: 5, PileType.Draw);
-        var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
-        Assert.False(facts.MayDiscardSly);
+        Assert.False(SpireQoL.Procs.Programs.BoardCounts.DiscardsSlyWithoutPick(card));
         var after = Only(PlayOut(gameFight, card));
         Assert.Null(after.Unmodelled);
         Assert.Equal(3, after.PlayEvents[CardEvent.Drawn]);
@@ -315,7 +314,7 @@ public class PlayBehaviourTests
         Enemy(gameFight);
         var card = gameFight.Add<StormOfSteel>();
         gameFight.Add<Reflex>();
-        Assert.True(PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).MayDiscardSly);
+        Assert.True(SpireQoL.Procs.Programs.BoardCounts.DiscardsSlyWithoutPick(card));
     }
 
     // ---- the cards' own hooks: they listen from your piles, after your powers and relics

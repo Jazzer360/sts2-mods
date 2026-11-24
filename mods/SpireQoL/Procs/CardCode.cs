@@ -6,7 +6,7 @@ namespace SpireQoL.Procs;
 
 /// <summary>
 /// What a game card's own play calls (its OnPlay, the async state machine and local functions in it), read from the installed game's
-/// code once per card class. Rules read a card's effects from it (PlayFacts: it draws, gives energy, gains stars), so a card added in a
+/// code once per card class. Rules read a card's effects from it (BoardCounts: it draws, gives energy, gains stars), so a card added in a
 /// game update, or a card that differs between the game's branches, is read as it is there; the card scan (CardCoverage) reads the same.
 /// </summary>
 internal static class CardCode

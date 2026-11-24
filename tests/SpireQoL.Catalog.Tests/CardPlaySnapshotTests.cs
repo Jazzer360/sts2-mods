@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using MegaCrit.Sts2.Core.Combat;
@@ -8,16 +6,15 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Monsters;
-using SpireQoL.Procs;
 using SpireQoL.Sim;
 using Xunit;
 
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// Every card in the installed game on a few standard boards built from the game's own objects (GameFight): what PlayFacts reads
-/// from it and the play the adapter builds (SimAdapter.Play), written as text and compared with Snapshots/card-plays.txt. The safety
-/// net under moving per-card tables onto the card programs (decision #182, docs/CARD_PROGRAMS.md): a change that should only move
+/// Every card in the installed game on a few standard boards built from the game's own objects (GameFight): the play the adapter builds
+/// from its program (SimAdapter.Play), written as text and compared with Snapshots/card-plays.txt. The safety net under moving per-card
+/// tables onto the card programs (decision #182, docs/CARD_PROGRAMS.md): a change that should only move
 /// where a value comes from leaves it unchanged. A difference that is a real fix regenerates it (SPIREQOL_UPDATE_SNAPSHOT=1), with
 /// the card and why in the commit. A game update regenerates it too.
 /// </summary>
@@ -53,7 +50,7 @@ public class CardPlaySnapshotTests
     private static readonly Board[] PlayBoards = { Board.Standard, Board.Upgraded, Board.Crowded, Board.Replayed, Board.Teammate };
 
     [Fact]
-    public void EveryCardsFactsAndPlayAreUnchanged()
+    public void EveryCardsPlayIsUnchanged()
     {
         GameModels.EnsureLoaded();
         var actual = new List<string>();
@@ -116,7 +113,7 @@ public class CardPlaySnapshotTests
         return folder?.FullName ?? throw new InvalidOperationException("test project folder not found");
     }
 
-    /// <summary>The card's facts and play on a board, and what the play results in, each as one line.</summary>
+    /// <summary>The card's play on a board, and what the play results in, each as one line.</summary>
     private sealed record Reading(string Play, string Outcome);
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type, Board), Reading> Readings = new();
@@ -176,15 +173,15 @@ public class CardPlaySnapshotTests
             gameFight.Add<DefendIronclad>(PileType.Discard);
 
             var start = SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
-            var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: board == Board.Replayed ? 2 : 1);
+
             var targetId = card.TargetType switch
             {
                 TargetType.AnyEnemy => ids[enemies[0]],
                 TargetType.AnyAlly when gameFight.Teammates.Count > 0 => Who.Teammate(teammateIndex: 0),
                 _ => Who.None,
             };
-            var play = SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, targetId, plays: facts.Plays);
-            return new Reading(FactsText(facts, enemies) + " play " + PlayText(play, gameFight), OutcomeText(start, play));
+            var play = SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, targetId, plays: board == Board.Replayed ? 2 : 1);
+            return new Reading("play " + PlayText(play, gameFight), OutcomeText(start, play));
         }
         catch (Exception ex)
         {
@@ -227,46 +224,6 @@ public class CardPlaySnapshotTests
         enemy.SetCurrentHpInternal(hp);
         return enemy;
     }
-
-    /// <summary>What the proc check and the simulation's own results set (none of it is read from the card).</summary>
-    private static readonly HashSet<string> SetLater = new()
-    {
-        nameof(PlayFacts.Card), nameof(PlayFacts.Me), nameof(PlayFacts.Combat), nameof(PlayFacts.Sim), nameof(PlayFacts.Drawn),
-        nameof(PlayFacts.DeathByAim), nameof(PlayFacts.OutcomeByAim), nameof(PlayFacts.FrostBlockByAim), nameof(PlayFacts.FiresEveryByAim),
-        nameof(PlayFacts.FiresAnyByAim), nameof(PlayFacts.Unmodelled), nameof(PlayFacts.SimPending), nameof(PlayFacts.SimIncomplete),
-    };
-
-    /// <summary>Every fact PlayFacts reads from the card and the board, by name, the ones at their default left out; then hits and damage per enemy.</summary>
-    private static string FactsText(PlayFacts facts, List<Creature> enemies)
-    {
-        var parts = new List<string>();
-        foreach (var property in typeof(PlayFacts).GetProperties(BindingFlags.Instance | BindingFlags.Public).OrderBy(property => property.Name, StringComparer.Ordinal))
-        {
-            if (SetLater.Contains(property.Name)) continue;
-            var value = ValueText(property.GetValue(facts), enemies);
-            if (value is "0" or "False" or "" or null) continue;
-            parts.Add(property.Name + "=" + value);
-        }
-        for (var i = 0; i < enemies.Count; i++)
-        {
-            var hits = facts.HitsOn(enemies[i]);
-            if (hits > 0) parts.Add($"enemy{i}={hits}x{facts.DamagePerHit(enemies[i])}");
-        }
-        return "{" + string.Join(" ", parts) + "}";
-    }
-
-    private static string? ValueText(object? value, List<Creature> enemies) => value switch
-    {
-        null => null,
-        Enum enumValue when Convert.ToInt32(enumValue) == 0 => null,
-        Type type => type.Name,
-        CardModel card => card.GetType().Name,
-        IDictionary dictionary => string.Join(",", dictionary.Keys.Cast<object>()
-            .Select(key => (key is Creature creature ? "enemy" + enemies.IndexOf(creature) : key.ToString()) + ":" + dictionary[key])),
-        string text => text,
-        IEnumerable items => string.Join(",", items.Cast<object?>().Select(item => ValueText(item, enemies))),
-        _ => value.ToString(),
-    };
 
     /// <summary>The simulator's JSON (SimJson), without the members at their default: shorter lines, the same differences.</summary>
     private static readonly JsonSerializerOptions PlayJson = new(SimJson.Options) { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault };

@@ -45,7 +45,7 @@ public sealed partial class ProcAudit
                 model.Skip("", "its tabs were computed before another play finished", $"{window.StaleBecause} finished first ({string.Join("; ", issues)})");
                 issues.Clear();
             }
-            if (window.Facts?.SimPending == true)
+            if (window.Prediction?.SimPending == true)
             {
                 // Its simulation was still running when the frame stopped waiting: every tab the simulator gives may be missing (every
                 // proc tab can come from a model's log, its block and damage too: SimDependent, as for a capped search below), so none
@@ -54,7 +54,7 @@ public sealed partial class ProcAudit
                 foreach (var issue in simOnly) model.Skip("", "simulation pending", issue);
                 issues.RemoveAll(simOnly.Contains);
             }
-            if (window.Facts is { Sim: null, SimPending: false } && issues.Any(SimDependent))
+            if (window.Prediction is { Sim: null, SimPending: false } && issues.Any(SimDependent))
             {
                 // The card's simulation couldn't be built (it threw: reported as a crash on its own): every tab the simulator gives
                 // is missing, so those checks would only repeat that crash. Counted, not reported (decision #92).
@@ -62,17 +62,17 @@ public sealed partial class ProcAudit
                 foreach (var issue in fromSim) model.Skip("", "no simulation for this card", issue);
                 issues.RemoveAll(fromSim.Contains);
             }
-            if (window.Facts is { } facts && (facts.SimIncomplete || facts.Unmodelled.Count > 0))
+            if (window.Prediction is { } prediction && (prediction.SimIncomplete || prediction.Unmodelled.Count > 0))
             {
                 // Its tabs came from simulations stopped at the memory cap, or not modelled (decisions #107, #92): what's shown
                 // carries the ?, and what happened may be one of those. Every proc tab can come from the simulator (each model's log),
                 // so their checks aren't reported; the snapshot checks run their own simulation and stay.
-                var why = facts.Unmodelled.Count > 0 ? "a branch of its simulation not modelled" : "its simulation stopped at the memory cap";
+                var why = prediction.Unmodelled.Count > 0 ? "a branch of its simulation not modelled" : "its simulation stopped at the memory cap";
                 var fromSim = issues.Where(SimDependent).ToList();
                 foreach (var issue in fromSim) model.Skip("", why, issue);
                 issues.RemoveAll(fromSim.Contains);
             }
-            if (issues.Count > 0 && window.Facts?.Sim is { FullStart: not null } handSim
+            if (issues.Count > 0 && window.Prediction?.Sim is { FullStart: not null } handSim
                 && handSim.AimFor(window.Target) is { } handAim
                 && handSim.HandChangesThePlay(handSim.PlayByTarget[handAim]))
             {
@@ -100,7 +100,7 @@ public sealed partial class ProcAudit
                 var expected = window.FightEnded && skip.Expected;
                 Telemetry.DevEvents.Post(new Telemetry.CheckSkipped(Telemetry.Audits.Play, turn, reason, window.CardName, expected));
             }
-            foreach (var reason in window.Facts?.Unmodelled ?? Array.Empty<string>())
+            foreach (var reason in window.Prediction?.Unmodelled ?? Array.Empty<string>())
                 _gapCounts[reason] = (_gapCounts.TryGetValue(reason, out var gapCount) ? gapCount : 0) + 1;
             _checked++;
             if (issues.Count == 0) _matched++;
@@ -182,9 +182,9 @@ public sealed partial class ProcAudit
                 foreach (var key in new[] { "player", "player_powers", "relics", "orbs", "enemies", "hand" })
                     if (otherWindow.Before.TryGetValue(key, out var before)) extra["before_" + key] = before;
             }
-            if (kind.StartsWith("after play", StringComparison.Ordinal) && otherWindow.Facts?.Sim != null)
+            if (kind.StartsWith("after play", StringComparison.Ordinal) && otherWindow.Prediction?.Sim != null)
             {
-                extra["sim_state"] = otherWindow.Facts.Sim.Start.ToJson();
+                extra["sim_state"] = otherWindow.Prediction.Sim.Start.ToJson();
                 if (otherWindow.After != null) extra["sim_state_after"] = otherWindow.After.ToJson();
             }
             var lag = otherWindow.Lag < 0 ? "never seen in hand" : $"{otherWindow.Lag} frame(s)";
@@ -198,7 +198,7 @@ public sealed partial class ProcAudit
             reporter.Mismatch("proc", $"Proc audit: {issue} (played {card})", fp,
                 $"Played {otherWindow.CardName} ({card}).\nIssue: {issue}\nAll issues this play: {string.Join("; ", issues)}\nTabs before the play: {tabs}" +
                 $"\nFrom the card's last frame in hand to its play starting: {lag}" +
-                $"\nExpected from the card itself: {(otherWindow.Facts != null ? Snapshot.FactsLine(otherWindow.Facts) : "no facts")}" +
+                $"\nExpected from the card itself: {(otherWindow.Prediction != null ? Snapshot.PredictionLine(otherWindow.Prediction, otherWindow.Target) : "no prediction")}" +
                 $"\nTabs hidden by settings: {Hidden(otherWindow)}" +
                 $"\nPlay: {windowSize} history entries from its action (span {otherWindow.From}..{otherWindow.To}), play started at {otherWindow.Start}; shuffles {otherWindow.Shuffles}",
                 extra, tags);

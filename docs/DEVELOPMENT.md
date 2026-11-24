@@ -204,7 +204,7 @@ Working a report:
 ## Repo layout
 
 - `core/`: shared code compiled into each mod (feature host, overlay, widgets, game-state helpers, error reporter).
-- `mods/SpireQoL/`: the mod. `Features/` (one per feature), `Procs/PlayFacts.cs` (what playing a card does), `Sim/` (the outcome simulator: `SimState`/`SimEngine` are pure C#, `SimAdapter` reads the game), `Combat/TurnEndModel.cs` (Incoming Damage view over the simulator), `Diagnostics/` (audits, snapshots), `Menu/` (settings menu and catalog), `Cards/` (on-card tab rendering).
+- `mods/SpireQoL/`: the mod. `Features/` (one per feature), `Procs/Programs/` (each card's program read from its code, and what it gives on the board: `BoardCounts`, `MadeCards`), `Combat/CardPrediction.cs` (a card's prediction: its simulation's inputs and results), `Sim/` (the outcome simulator: `SimState`/`SimEngine` are pure C#, `SimAdapter` reads the game), `Combat/TurnEndModel.cs` (Incoming Damage view over the simulator), `Diagnostics/` (audits, snapshots), `Menu/` (settings menu and catalog), `Cards/` (on-card tab rendering).
 - `docs/`: FEATURES (complete list of what the mod does and touches), TRACKER (work log and open items), MODDING_NOTES (loader facts), ROADMAP, this file.
 - `scripts/`: `release.ps1`, `decompile.ps1`, `game.ps1`, `coverage-ledger.mjs` (the coverage ledger from the decompile), `dead-code.mjs` (members nothing references, then unused usings; `--fix-usings` removes them), `check.ps1` (the release's bar), `coverage.ps1`, `mutation.ps1` and `inspect.ps1` (see above).
 - `mods/SpireQoL/Telemetry/`: the event stream, the session counter and its summary (pure C#, tested with the simulator), and `SessionWatch` (reads the game).

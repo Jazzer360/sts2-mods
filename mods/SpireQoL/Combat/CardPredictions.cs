@@ -12,7 +12,7 @@ using Sts2Mods.Core.Game;
 namespace SpireQoL.Combat;
 
 /// <summary>
-/// The prediction for every card in your hand (decision #48, docs/SIMULATOR.md): each card's facts (PlayFacts), its play simulated
+/// The prediction for every card in your hand (decision #48, docs/SIMULATOR.md): each card's prediction (CardPrediction), its play simulated
 /// once per target against ending the turn now, and the proc tabs that come from it, with everything kept between frames (the
 /// simulations, reused results while nothing changes: decision #114, held tabs while a result is on its way: decision #105). Proc
 /// Indicators draws the tabs; the play check (ProcAudit), the error reports and Shuffle Warning read the same predictions here. Its tab
@@ -35,33 +35,33 @@ public sealed class CardPredictions
 
     /// <summary>The card being finished: for each proc tab, which of its targets (simulations) give it (the aim marker).</summary>
     private readonly Dictionary<string, bool[]> _firesAt = new();
-    /// <summary>Per tabbed source this frame's card: whether each aim sets it off in every outcome and in some (PlayFacts.FiresEveryByAim).</summary>
+    /// <summary>Per tabbed source this frame's card: whether each aim sets it off in every outcome and in some (CardPrediction.FiresEveryByAim).</summary>
     private readonly Dictionary<string, (Type T, bool[] Every, bool[] Any)> _firesBy = new();
 
-    /// <summary>Each card's facts from the last frame it was in hand (kept after it leaves; ProcAudit).</summary>
-    public IReadOnlyDictionary<CardModel, PlayFacts> LastFacts => _lastFacts;
+    /// <summary>Each card's prediction from the last frame it was in hand (kept after it leaves; ProcAudit).</summary>
+    public IReadOnlyDictionary<CardModel, CardPrediction> LastPredictions => _lastPredictions;
 
-    private readonly Dictionary<CardModel, PlayFacts> _lastFacts = new(ReferenceEqualityComparer.Instance);
+    private readonly Dictionary<CardModel, CardPrediction> _lastPredictions = new(ReferenceEqualityComparer.Instance);
 
-    public IReadOnlyDictionary<CardModel, PlayFacts> PreviousFacts => _previousFacts;
+    public IReadOnlyDictionary<CardModel, CardPrediction> PreviousPredictions => _previousPredictions;
 
-    /// <summary>Last frame's facts and this frame's swap places every frame: two dictionaries, none made per frame.</summary>
-    private Dictionary<CardModel, PlayFacts> _previousFacts = new(ReferenceEqualityComparer.Instance);
+    /// <summary>Last frame's prediction and this frame's swap places every frame: two dictionaries, none made per frame.</summary>
+    private Dictionary<CardModel, CardPrediction> _previousPredictions = new(ReferenceEqualityComparer.Instance);
 
-    private Dictionary<CardModel, PlayFacts> _facts = new(ReferenceEqualityComparer.Instance);
-    /// <summary>The frame _facts were filled on (worked out or reused).</summary>
-    private ulong _factsFrame = ulong.MaxValue;
+    private Dictionary<CardModel, CardPrediction> _predictions = new(ReferenceEqualityComparer.Instance);
+    /// <summary>The frame _predictions were filled on (worked out or reused).</summary>
+    private ulong _predictionsFrame = ulong.MaxValue;
     /// <summary>Last frame's FrameKey, kept while the board probe sees nothing change.</summary>
     private long _lastFrameKey;
     /// <summary>The board probe _lastFrameKey was worked out from.</summary>
     private int _lastFrameKeyProbe;
 
     /// <summary>
-    /// This frame's facts for a card in your hand, when they've been worked out (or reused) this frame: Shuffle Warning, which runs
+    /// This frame's prediction for a card in your hand, when they've been worked out (or reused) this frame: Shuffle Warning, which runs
     /// after Proc Indicators, reads them instead of building them again. Null otherwise.
     /// </summary>
-    internal PlayFacts? FactsThisFrame(CardModel card) =>
-        _factsFrame == Godot.Engine.GetProcessFrames() && _facts.TryGetValue(card, out var facts) ? facts : null;
+    internal CardPrediction? PredictionThisFrame(CardModel card) =>
+        _predictionsFrame == Godot.Engine.GetProcessFrames() && _predictions.TryGetValue(card, out var prediction) ? prediction : null;
 
     /// <summary>
     /// This frame's predictions for your hand: each card's tabs (every one, before the settings hide any), or null when there's no
@@ -69,12 +69,12 @@ public sealed class CardPredictions
     /// </summary>
     public IReadOnlyList<(CardModel Card, List<TabSpec> Tabs)>? Update()
     {
-        // Keep last frame's facts for the audit, even on frames where nothing is computed (the
+        // Keep last frame's prediction for the audit, even on frames where nothing is computed (the
         // hand just emptied, the turn is ending).
-        if (_facts.Count > 0 || _previousFacts.Count > 0)
+        if (_predictions.Count > 0 || _previousPredictions.Count > 0)
         {
-            (_previousFacts, _facts) = (_facts, _previousFacts);
-            _facts.Clear();
+            (_previousPredictions, _predictions) = (_predictions, _previousPredictions);
+            _predictions.Clear();
         }
 
         var me = Sts2State.Me;
@@ -88,7 +88,7 @@ public sealed class CardPredictions
         _cs = combat;
         _indirect = _ctx.Settings.ProcIndirect;
 
-        // Nothing changed since a frame whose every result was final: its facts and tabs again, without reading each card again
+        // Nothing changed since a frame whose every result was final: its prediction and tabs again, without reading each card again
         // (decision #114). In dev mode once a second such a frame is worked out anyway and checked against what would have been reused.
         // The forecast's start, not its result (decision #166): every card's search starts from it alongside the forecast's own.
         var begun = Start();
@@ -193,11 +193,11 @@ public sealed class CardPredictions
         return key == 0 ? 1 : key;
     }
 
-    /// <summary>Last frame's facts and tabs again: kept for the audits (PreviousFacts, LastTabs) as a frame of their own.</summary>
+    /// <summary>Last frame's prediction and tabs again: kept for the audits (PreviousPredictions, LastTabs) as a frame of their own.</summary>
     private List<(CardModel Card, List<TabSpec> Tabs)> Reuse(ICombatState combat)
     {
-        foreach (var entry in _previousFacts) _facts[entry.Key] = entry.Value;
-        _factsFrame = Godot.Engine.GetProcessFrames();
+        foreach (var entry in _previousPredictions) _predictions[entry.Key] = entry.Value;
+        _predictionsFrame = Godot.Engine.GetProcessFrames();
         foreach (var (card, tabs) in _reuseTabs) _lastTabs[card] = (_ctx.Decor.Frame, tabs, combat, Sts2State.TurnNumber);
         return _reuseTabs;
     }
@@ -235,8 +235,8 @@ public sealed class CardPredictions
 
     private readonly Dictionary<CardModel, (long Frame, List<TabSpec> Tabs, ICombatState Combat, int Turn)> _lastTabs = new(ReferenceEqualityComparer.Instance);
 
-    /// <summary>A card's facts, the proc sources this frame, and its running simulations.</summary>
-    private sealed record Prepared(PlayFacts F, List<AbstractModel> Sources, SimBatch? Sim);
+    /// <summary>A card's prediction, the proc sources this frame, and its running simulations.</summary>
+    private sealed record Prepared(CardPrediction F, List<AbstractModel> Sources, SimBatch? Sim);
 
 
     /// <summary>The player whose Power cards a teammate's Imitation Learning copies (ImitationLearningPower.PlayerTarget).</summary>
@@ -287,42 +287,42 @@ public sealed class CardPredictions
 
     /// <summary>
     /// One card's prediction, up to its simulations (started, not awaited): the same code for the tabs on screen and for the
-    /// audit's prediction at resolution (PredictNow). record: keep its facts for the audit and the play queue.
+    /// audit's prediction at resolution (PredictNow). record: keep its prediction for the audit and the play queue.
     /// </summary>
     private Prepared? Prepare(CardModel card, List<AbstractModel> sources, bool record)
     {
-        PlayFacts facts;
+        CardPrediction prediction;
         try
         {
-            facts = PlayFacts.For(card, _me, _cs, CardPlays.Count(card));
+            prediction = CardPrediction.For(card, _me, CardPlays.Count(card));
         }
         catch (Exception ex)
         {
             if (_warned.Add(card.GetType().Name))
             {
-                ModEntry.Log.Warn($"proc facts failed for {card.GetType().Name}: {ex.Message}");
-                Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "play-facts:" + card.GetType().Name);
+                ModEntry.Log.Warn($"proc prediction failed for {card.GetType().Name}: {ex.Message}");
+                Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "play-prediction:" + card.GetType().Name);
             }
             return null;
         }
 
         if (record)
         {
-            _facts[card] = facts;
-            _factsFrame = Godot.Engine.GetProcessFrames();
-            _lastFacts[card] = facts;
-            if (_lastFacts.Count > 300) _lastFacts.Clear();
+            _predictions[card] = prediction;
+            _predictionsFrame = Godot.Engine.GetProcessFrames();
+            _lastPredictions[card] = prediction;
+            if (_lastPredictions.Count > 300) _lastPredictions.Clear();
         }
         SimBatch? sim = null;
         try
         {
-            sim = StartSim(card, facts);
+            sim = StartSim(card, prediction);
         }
         catch (Exception ex)
         {
             SimFailed(card, ex);
         }
-        return new Prepared(facts, WithOwnPowers(card, sources), sim);
+        return new Prepared(prediction, WithOwnPowers(card, sources), sim);
     }
 
     /// <summary>
@@ -384,9 +384,9 @@ public sealed class CardPredictions
     /// <summary>
     /// The audit's prediction for a card as its play begins to resolve (decision #28): from the board right
     /// now, with nothing pending ahead of it, through the same code as the tabs, simulations run inline.
-    /// Null when it can't be built (outside your turn, the card's facts failed).
+    /// Null when it can't be built (outside your turn, the card's prediction failed).
     /// </summary>
-    public (List<TabSpec> Tabs, PlayFacts Facts)? PredictNow(CardModel card)
+    public (List<TabSpec> Tabs, CardPrediction Prediction)? PredictNow(CardModel card)
     {
         var self = this;
         var me = Sts2State.Me;
@@ -439,7 +439,7 @@ public sealed class CardPredictions
     private readonly List<SimBatch> _uncached = new();
 
     /// <summary>Runs the outcome simulator for this card (once per possible target for single-target cards) against "end your turn now".</summary>
-    private SimBatch? StartSim(CardModel card, PlayFacts facts)
+    private SimBatch? StartSim(CardModel card, CardPrediction prediction)
     {
         var forecast = Start();
         if (forecast == null) return null;
@@ -463,15 +463,15 @@ public sealed class CardPredictions
         }
         // The card's own numbers too: upgrading it in hand (Blessing of the Forge, Armaments) or a value that grows (Claw)
         // changes its play without changing the board.
-        var cacheKey = $"{card.GetHashCode()}|{facts.Plays}|{facts.Energy}|{facts.AttackHits}|{facts.BlockGains}|{facts.OwnDraws}|{facts.Generated}|{CardNumbers(card)}";
+        var cacheKey = $"{card.GetHashCode()}|{prediction.Plays}|{prediction.Energy}|{BoardCountsKey(card)}|{CardNumbers(card)}";
         // The plays are built here (they read the game); only the simulation runs off the main thread.
         var inputs = new SimInputs
         {
             Start = forecast.State, Ids = forecast.Ids, Allies = forecast.Teammates.Select(player => player.Creature).ToList(),
             FullStart = ReferenceEquals(forecast.FullState, forecast.State) ? null : forecast.FullState,
         };
-        foreach (var target in targets) inputs.PlayByTarget[target] = SimAdapter.Play(card, _me, _cs, forecast.Ids, target, plays: facts.Plays);
-        facts.Sim = inputs;
+        foreach (var target in targets) inputs.PlayByTarget[target] = SimAdapter.Play(card, _me, _cs, forecast.Ids, target, plays: prediction.Plays);
+        prediction.Sim = inputs;
         if (_noCache || !_simCache.TryGetValue(cacheKey, out var task))
         {
             var start = forecast.State;
@@ -481,6 +481,24 @@ public sealed class CardPredictions
             else _uncached.Add(task);
         }
         return task;
+    }
+
+    /// <summary>
+    /// What the card's program gives on the board that the board's key may not show (its draws, hits, block gains, made cards: BoardCounts),
+    /// for the simulation cache: a play built differently is simulated again.
+    /// </summary>
+    private static string BoardCountsKey(CardModel card)
+    {
+        try
+        {
+            var hand = Sts2State.Hand(card.Owner).Count;
+            return $"{Procs.Programs.BoardCounts.CardsDrawn(card, hand)}|{Procs.Programs.BoardCounts.HitsPerPlay(card, card.CombatState!, target: null)}|"
+                   + $"{Procs.Programs.BoardCounts.BlockGainCount(card)}|{Procs.Programs.MadeCards.Summary(card).Made}";
+        }
+        catch
+        {
+            return "?";
+        }
     }
 
     /// <summary>CardNumbers as a hash, for the key worked out every frame: the same numbers, no string built.</summary>
@@ -520,11 +538,11 @@ public sealed class CardPredictions
     /// stopped at a cap or met something not modelled), and for Pillage and Scrape the most likely number above the chance (Attacks drawn,
     /// cards drawn that cost 0; a tie goes to the higher). From the first aim's outcomes: what a draw gives doesn't depend on the aim.
     /// </summary>
-    private static void DrawnTab(PlayFacts facts, SimOutcome[] outcomes, Dictionary<string, TabSpec> tabs)
+    private static void DrawnTab(CardPrediction prediction, SimOutcome[] outcomes, Dictionary<string, TabSpec> tabs)
     {
-        if (outcomes.Length == 0 || SimAdapter.DrawnCardReaderOf(facts.Card.GetType()) is not { } reader) return;
+        if (outcomes.Length == 0 || SimAdapter.DrawnCardReaderOf(prediction.Card.GetType()) is not { } reader) return;
         if (DrawnChance.Distribution(outcomes[0]) is not { } distribution) return;
-        facts.Drawn = distribution;
+        prediction.Drawn = distribution;
         var unsure = outcomes[0].Truncated || outcomes[0].AnyUnmodelled;
         string Pct(double share) => new SimChance(share, share, share > 0).Text() + (unsure ? "?" : "");
         if (!reader.Counts)
@@ -541,7 +559,7 @@ public sealed class CardPredictions
     /// before it acts than ending the turn now does: decision #87), in <paramref name="lethalAimed"/> whether only some aims are,
     /// and in <paramref name="lethalChance"/> the chance ("40%", "40–55%" while exploring; null when certain).
     /// </summary>
-    private bool FinishSim(PlayFacts facts, List<AbstractModel> sources, SimBatch task, Dictionary<string, TabSpec> tabs, out bool lethalAimed,
+    private bool FinishSim(CardPrediction prediction, List<AbstractModel> sources, SimBatch task, Dictionary<string, TabSpec> tabs, out bool lethalAimed,
         out string? lethalChance)
     {
         lethalAimed = false;
@@ -550,7 +568,7 @@ public sealed class CardPredictions
         if (forecast == null) return false;
         if (!task.IsCompleted)
         {
-            facts.SimPending = true;
+            prediction.SimPending = true;
             return false;
         }
         if (task.Fault is { } fault) throw fault;
@@ -558,11 +576,11 @@ public sealed class CardPredictions
         _firesAt.Clear();
         _firesBy.Clear();
         var baseline = forecast.Outcome;
-        if (outcomes.Any(outcome => outcome.Truncated || outcome.Branches.Count > 1)) facts.RandomOutcome = true;
-        facts.SimIncomplete = outcomes.Any(outcome => outcome.Truncated);
-        facts.Unmodelled = outcomes.SelectMany(outcome => outcome.UnmodelledReasons).Distinct().ToList();
-        if (!_noCache) Diagnostics.DamageFormulaAudit.Check(facts.Card, facts, forecast.Ids, outcomes);
-        DrawnTab(facts, outcomes, tabs);
+        if (outcomes.Any(outcome => outcome.Truncated || outcome.Branches.Count > 1)) prediction.RandomOutcome = true;
+        prediction.SimIncomplete = outcomes.Any(outcome => outcome.Truncated);
+        prediction.Unmodelled = outcomes.SelectMany(outcome => outcome.UnmodelledReasons).Distinct().ToList();
+        if (!_noCache) Diagnostics.DamageFormulaAudit.Check(prediction.Card, prediction, forecast.Ids, outcomes);
+        DrawnTab(prediction, outcomes, tabs);
 
         // ---- the play log: each source whose model fired during the play
         // A source's owner in the simulation: an enemy's id for its powers, a teammate's for theirs; null for yours (or an enemy no
@@ -612,7 +630,7 @@ public sealed class CardPredictions
             tabs[key] = new TabSpec(key, IconOf(src), harmful, NumberText: chance, Aimed: firesAt.Length > 1 && !firesAt.All(fires => fires));
         }
         // The sources' own rules (SimModel.OutcomeTab), enemies' powers first, then relics, then players' powers.
-        var start = facts.Sim!.Start;
+        var start = prediction.Sim!.Start;
         foreach (var src in sources.OrderBy(model => model is PowerModel power && OwnerOf(power) is { IsEnemy: true } ? 0 : model is RelicModel ? 1 : 2))
         {
             if (SimModels.Get(SimReaders.ModelName(src)) is not { JudgedOnOutcome: true } model || !SimOwner(src, out var owner)) continue;
@@ -621,18 +639,17 @@ public sealed class CardPredictions
 
         // What the audits hold the play to, per aim (decisions #87, #95): the tabbed sources it sets off in every outcome and in
         // some, and each enemy's chance of dying before it acts.
-        if (facts.Sim?.PlayByTarget.Keys.ToList() is { } aims && aims.Count == outcomes.Length)
+        if (prediction.Sim?.PlayByTarget.Keys.ToList() is { } aims && aims.Count == outcomes.Length)
         {
             IReadOnlyDictionary<int, IReadOnlyCollection<Type>> By(Func<(Type T, bool[] Every, bool[] Any), bool[]> at) =>
                 aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim, aimed => (IReadOnlyCollection<Type>)_firesBy.Values.Where(value => at(value)[aimed.index]).Select(value => value.T).Distinct().ToList());
-            facts.FiresEveryByAim = By(fired => fired.Every);
-            facts.FiresAnyByAim = By(fired => fired.Any);
+            prediction.FiresEveryByAim = By(fired => fired.Every);
+            prediction.FiresAnyByAim = By(fired => fired.Any);
             var enemies = forecast.Ids.Values.Distinct().ToList();
-            facts.DeathByAim = aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim,
+            prediction.DeathByAim = aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim,
                 aimed => (IReadOnlyDictionary<int, SimChance>)enemies.ToDictionary(id => id, id => outcomes[aimed.index].DeadChanceRange(id)));
-            facts.OutcomeByAim = aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim, aimed => outcomes[aimed.index]);
-            facts.FrostBlockByAim = aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim,
-                aimed => (outcomes[aimed.index].PlayFiredEvery.DataOf(SimKeys.FrostEvokeBlock), outcomes[aimed.index].PlayFiredAny.DataOf(SimKeys.FrostEvokeBlock)));
+            prediction.OutcomeByAim = aims.Select((aim, index) => (aim, index)).ToDictionary(aimed => aimed.aim, aimed => outcomes[aimed.index]);
+
         }
 
 

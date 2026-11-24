@@ -1,6 +1,5 @@
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Models.Cards;
-using SpireQoL.Procs;
 using SpireQoL.Sim;
 using Xunit;
 
@@ -20,9 +19,7 @@ public class HandLeavingOrderTests
         var gameFight = new GameFight();
         var card = gameFight.Add<FiendFire>();
         for (var i = 0; i < 9; i++) gameFight.Add<StrikeIronclad>();
-        var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
-        Assert.NotNull(facts);
-        var play = SimAdapter.Play(card, gameFight.Me, gameFight.Combat, new Dictionary<Creature, int>(), targetId: 0, plays: facts!.Plays);
+        var play = SimAdapter.Play(card, gameFight.Me, gameFight.Combat, new Dictionary<Creature, int>(), targetId: 0, plays: 1);
         // One action takes the hand (decision #189: TakeFromHandAction), the cards leaving before their exhausts set anything off.
         var exhausts = play.Body.FindIndex(simAction => simAction is TakeFromHandAction { Way: HandTakeWay.Each, Filter: null, Event: CardEvent.Exhausted });
         Assert.True(exhausts >= 0, string.Join(", ", play.Body.Select(simAction => simAction.GetType().Name)));

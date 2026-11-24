@@ -71,6 +71,8 @@ public static partial class SimEngine
             var nextPlayer = branch.MutablePlayer(player);
             if (nextPlayer.OrbCapacity <= 0) return new[] { branch };
             nextPlayer.OwnOrbs().Add(orb.Clone());
+            // During a play: one more orb channeled, for the play audit (it counts the game's OrbChanneledEntry, every player's).
+            if (branch.CurrentPlay != null && !branch.EndOfTurnNow) branch.LogFired(SimKeys.PlayOrbChanneled);
             // OrbChanneledEntry, before AfterOrbChanneled (decision #191: Voltaic counts your Lightning).
             if (branch.History.Count > 0) Record(branch, new HistoryEvent(HistoryKind.OrbChanneled, player) { Orb = orb.Kind });
             return Hook(branch, nameof(SimModel.AfterOrbChanneled), (model, owner, copy) => model.AfterOrbChanneled(copy, owner, player));

@@ -637,12 +637,24 @@ public static partial class SimEngine
         // An evoke at your end of turn (Consuming Shadow) is in the breakdown with the orbs' passives: its block is what the forecast
         // check compares with the block the game gave, its damage what the forecast log lists.
         var listed = state.Log && state.EndOfTurnNow && player == Who.You;
+        // During a play: what its damage dealt the enemies (block and HP), for the play audit's damage with no card (SimKeys.OrbEvokeDamage).
+        var inPlay = state.CurrentPlay != null && !state.EndOfTurnNow;
+        var dealtBefore = state.AttackDealt;
+        void LogDealt(SimState branch)
+        {
+            if (inPlay && branch.AttackDealt > dealtBefore) branch.LogFired(SimKeys.OrbEvokeDamage, branch.AttackDealt - dealtBefore);
+        }
         switch (orb.Kind)
         {
             // Thunder hits the evoke's target again if it's still alive.
             case OrbKind.Lightning:
                 if (listed && state.Targetable.Any()) state.EndOfTurnDamage.Add(("Lightning (evoked)", orb.Evoke));
-                return HitRandom(state, _ => orb.Evoke, then: (branch, enemy) => { var thunder = branch.Player(player)!.Thunder; if (thunder > 0 && enemy.Alive) { Damage(branch, enemy, thunder); branch.LogFired(PowerId.Thunder.Name, thunder, player); } });
+                return HitRandom(state, _ => orb.Evoke, then: (branch, enemy) =>
+                {
+                    LogDealt(branch);
+                    var thunder = branch.Player(player)!.Thunder;
+                    if (thunder > 0 && enemy.Alive) { Damage(branch, enemy, thunder); branch.LogFired(PowerId.Thunder.Name, thunder, player); }
+                });
             case OrbKind.Frost:
                 // During a play: its block, for the play audit (an orb the play channels and pushes out too: Chill into full slots).
                 if (state.CurrentPlay != null && !state.EndOfTurnNow && orb.Evoke > 0) state.LogFired(SimKeys.FrostEvokeBlock, orb.Evoke, player);
@@ -652,11 +664,13 @@ public static partial class SimEngine
                 var weakest = state.Targetable.OrderBy(enemy => enemy.Hp).FirstOrDefault();
                 if (listed && weakest != null) state.EndOfTurnDamage.Add(("Dark (evoked)", orb.Evoke));
                 if (weakest != null) Damage(state, weakest, orb.Evoke);
+                LogDealt(state);
                 return new[] { state };
             }
             case OrbKind.Glass:
                 if (listed && state.Targetable.Any()) state.EndOfTurnDamage.Add(("Glass (evoked, all)", orb.Evoke));
                 HitAll(state, _ => orb.Evoke);
+                LogDealt(state);
                 return new[] { state };
             default:
                 return new[] { state };

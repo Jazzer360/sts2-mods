@@ -44,7 +44,7 @@ public sealed partial class ProcAudit
         var acted = flashed.Select(otherModel => otherModel.GetType().Name).ToHashSet();
         var tabbed = window.Predicted.Select(tab => tab.Key.Contains(':') ? tab.Key[(tab.Key.IndexOf(':') + 1)..] : tab.Key).ToHashSet();
         // Artifact blocks any debuff, temporary ones included (Dark Shackles).
-        var debuffs = window.Facts?.EnemyDebuffs.Count > 0 || own.Any(typeName => PowerTypeNamed(typeName) is { } type && SimReaders.IsDebuffType(type));
+        var debuffs = own.Any(typeName => PowerTypeNamed(typeName) is { } type && SimReaders.IsDebuffType(type));
         var died = DiedInPlay(entries);
         foreach (var ((creature, type), before) in window.PowersBefore)
         {
@@ -92,7 +92,7 @@ public sealed partial class ProcAudit
     /// </summary>
     private static bool BaselineHasIt(Window window, string power, Creature enemy)
     {
-        if (!SimTabSources.Contains(power) || window.Facts?.Sim is not { } sim || !sim.Ids.TryGetValue(enemy, out var id)) return false;
+        if (!SimTabSources.Contains(power) || window.Prediction?.Sim is not { } sim || !sim.Ids.TryGetValue(enemy, out var id)) return false;
         try
         {
             var baseline = SimEngine.Run(sim.Start);
@@ -178,14 +178,14 @@ public sealed partial class ProcAudit
     {
         var name = window.Card.GetType().Name;
         if (SimAdapter.DrawnCardReaderOf(window.Card.GetType()) is not { } reader) return; // a card that doesn't act on what it draws
-        if (window.Facts?.Drawn is not { } distribution)
+        if (window.Prediction?.Drawn is not { } distribution)
         {
             model.Skip("drawn", "no chances worked out for what it draws (its simulation didn't finish)", name);
             return;
         }
         if (window.FightEnded) { model.Skip("drawn", FightEndedSkip, name); return; }
         if (UnpredictedAutoPlay(window, entries, me)) { model.Skip("drawn", AutoPlayReason(window, entries, "random auto-plays"), name); return; }
-        if (window.Facts.SimIncomplete || window.Facts.Unmodelled.Count > 0) { model.Skip("drawn", "its simulation stopped at a cap or met something not modelled", name); return; }
+        if (window.Prediction.SimIncomplete || window.Prediction.Unmodelled.Count > 0) { model.Skip("drawn", "its simulation stopped at a cap or met something not modelled", name); return; }
         var drawn = entries.OfType<CardDrawnEntry>().Where(cardDrawnEntry => !cardDrawnEntry.FromHandDraw && cardDrawnEntry.Card.Owner == me).Select(cardDrawnEntry => cardDrawnEntry.Card).ToList();
         static bool Free(CardModel card)
         {
@@ -246,7 +246,7 @@ public sealed partial class ProcAudit
 
     /// <summary>A Strike drawn in the play while you have Hellraiser, with a simulation that modelled everything (decision #121).</summary>
     private static bool HellraiserDrew(Window window, List<CombatHistoryEntry> entries, Player me, CardModel card)
-        => window.Facts is { Unmodelled.Count: 0 } && me.Creature.HasPower<HellraiserPower>() && card.Tags.Contains(CardTag.Strike)
+        => window.Prediction is { Unmodelled.Count: 0 } && me.Creature.HasPower<HellraiserPower>() && card.Tags.Contains(CardTag.Strike)
            && entries.OfType<CardDrawnEntry>().Any(cardDrawnEntry => ReferenceEquals(cardDrawnEntry.Card, card));
 
     private static readonly string[] DeathHooks = { "AfterDeath", "BeforeDeath" };

@@ -103,9 +103,9 @@ public sealed partial class ProcAudit
     /// </summary>
     private static void ShuffleIssues(Window window, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, List<string> issues, ModelLines model)
     {
-        var facts = window.Facts;
-        if (facts == null) return;
-        if (facts.Sim?.AimFor(window.Target) is not { } aim || facts.OutcomeByAim is not { } outcomes || !outcomes.TryGetValue(aim, out var outcome) || outcome.Truncated)
+        var prediction = window.Prediction;
+        if (prediction == null) return;
+        if (prediction.Sim?.AimFor(window.Target) is not { } aim || prediction.OutcomeByAim is not { } outcomes || !outcomes.TryGetValue(aim, out var outcome) || outcome.Truncated)
         {
             model.Skip("shuffle", "its simulation has no finished outcome at the target it was played at");
             return;
@@ -116,7 +116,7 @@ public sealed partial class ProcAudit
         var autoPlayed = UnpredictedAutoPlay(window, entries, me);
         var drawReactive = flashed.Any(otherModel => DrawReactive.Contains(otherModel.GetType().Name) || otherModel.GetType().Name is nameof(GremlinHorn) or nameof(UnceasingTop));
         var draws = entries.OfType<CardDrawnEntry>().Count(cardDrawnEntry => !cardDrawnEntry.FromHandDraw && cardDrawnEntry.Card.Owner == me);
-        var why = $"(draws: predicted {outcome.PlayFiredEvery[SpireQoL.Sim.SimKeys.PlayEvent(SpireQoL.Sim.CardEvent.Drawn)]}-{outcome.PlayFiredAny[SpireQoL.Sim.SimKeys.PlayEvent(SpireQoL.Sim.CardEvent.Drawn)]}{(facts.DrawsBlocked ? ", blocked" : "")}, actual {draws})";
+        var why = $"(draws: predicted {outcome.PlayFiredEvery[SpireQoL.Sim.SimKeys.PlayEvent(SpireQoL.Sim.CardEvent.Drawn)]}-{outcome.PlayFiredAny[SpireQoL.Sim.SimKeys.PlayEvent(SpireQoL.Sim.CardEvent.Drawn)]}{(prediction.Logged(nameof(MegaCrit.Sts2.Core.Models.Powers.NoDrawPower), window.Target) is { Most: > 0 } ? ", blocked" : "")}, actual {draws})";
         if (!shuffled && window.FightEnded)
         {
             // The play's hit ended the fight (Compile Driver on the last enemy): its draws, and their shuffle, never came.

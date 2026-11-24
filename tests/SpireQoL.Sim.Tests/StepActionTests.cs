@@ -72,6 +72,19 @@ public class StepActionTests
     }
 
     [Fact]
+    public void WrestDrawsOnlyOnThePlayThatFindsYourArrowsIn()
+    {
+        // Wrest.OnPlay: if your arrow Impales the target, pull them all out (ArrowCmd.DislodgeArrow while it does), then draw. Replayed, its
+        // second play asks the test on the board the first left: no arrow of yours, no draw.
+        var yoursIn = new TargetImpaledCondition(ByOwner: true);
+        var wrest = Play(Card("Wrest", SimCardType.Skill), target: 0, plays: 2,
+            new WhenAction(yoursIn, new SimAction[] { new DislodgeAllAction(), new CardEventAction(CardEvent.Drawn, Count: 2) { Indirect = true, JoinsHand = true } }));
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 50) } };
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Impaled, amount: 1, data: 3);
+        Assert.Equal(2, Assert.Single(After(state, wrest)).Fired[SimKeys.PlayEvent(CardEvent.Drawn)]);
+    }
+
+    [Fact]
     public void FisticuffsGainsTheBlockItsAttackDealtAsItRuns()
     {
         // Fisticuffs.OnPlay: its attack, then GainBlock(you, the attack's results' TotalDamage + OverkillDamage, Move). What lands is what

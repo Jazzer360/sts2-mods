@@ -60,6 +60,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - A calculated value on what happened in the fight (Murder's and Death March's draws, Gold Axe's plays, Supermassive's and Anguish's made cards, Finisher's, Lunar Blast's, Tear Asunder's and Pull From Below's hits) follows what the plays before it did: a replayed Finisher hits once on its second play after its first, a replayed Gold Axe hits harder.
 - Every card that makes cards is read from its own code: how many each make makes, which card, whose pile and who makes it. Mourning Blow's Sadness is the card itself turned into one after its play, no longer one more card in your hand (two when replayed). In multiplayer, Largesse's card, Self-Deprecate's Joy and Blade Symphony's Shivs go into each teammate's hand; Largesse with no teammate to aim at makes nothing. Brighten Up and Severance make their cards in their code's order.
 - Fisticuffs gains the block its attack really dealt (the block it took off and any overkill), Entrench doubles the block you have as it plays (replayed, it doubles the block its first play left), and Mimic copies its teammate's block as it plays, each read from their own code.
+- The play check holds what a card did (its draws, exhausts, discards, made cards, orbs channeled, Frost block and the damage its evokes deal) to its prediction's own simulation at the target it was played at, for a replayed card too (a replay's orbs channeled weren't checked); error reports list a play's prediction by those counts.
 
 ### Main Saves 1.0.27
 #### Changed

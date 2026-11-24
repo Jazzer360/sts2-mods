@@ -1,7 +1,7 @@
+using SpireQoL.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Combat.History;
 using MegaCrit.Sts2.Core.Combat.History.Entries;
-using SpireQoL.Procs;
 using SpireQoL.Sim;
 using MegaCrit.Sts2.Core.Models.Cards;
 
@@ -21,8 +21,8 @@ public sealed partial class ProcAudit
     /// </summary>
     private static void LethalIssues(Window window, List<CombatHistoryEntry> entries, List<string> issues, ModelLines model)
     {
-        var sim = window.Facts?.Sim;
-        var deaths = window.Facts?.DeathByAim;
+        var sim = window.Prediction?.Sim;
+        var deaths = window.Prediction?.DeathByAim;
         if (sim == null || deaths == null)
         {
             model.Skip("lethal", sim == null ? "no simulation for this card" : "no death chances for this play (its simulations didn't finish)");
@@ -120,7 +120,7 @@ public sealed partial class ProcAudit
     /// </summary>
     private static void AfterPlayIssues(Window window, List<CombatHistoryEntry> entries, List<string> issues, ModelLines model)
     {
-        var sim = window.Facts?.Sim;
+        var sim = window.Prediction?.Sim;
         if (sim == null)
         {
             model.Skip("state after the play", "no simulation for this card");

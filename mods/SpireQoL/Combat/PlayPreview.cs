@@ -51,7 +51,7 @@ internal static class PlayPreview
         // (NMouseCardPlay.IsCardInPlayZone: above the play zone's line). A controller's (or keyboard's) play is ready from the
         // start: NControllerCardPlay.MultiCreatureTargeting plays it on Confirmed, and a card that can't be played cancels at once.
         else if (Sts2State.CurrentCardPlay() is not { } play || !(play is NMouseCardPlay mouse ? InPlayZone?.Invoke(mouse) == true : play is NControllerCardPlay)) return null;
-        if (!ctx.Predictions.LastFacts.TryGetValue(card, out var facts) || facts.Sim is not { } inputs || facts.OutcomeByAim is not { } outcomes) return null;
+        if (!ctx.Predictions.LastPredictions.TryGetValue(card, out var prediction) || prediction.Sim is not { } inputs || prediction.OutcomeByAim is not { } outcomes) return null;
         if (inputs.AimFor(target) is not { } aim || !outcomes.TryGetValue(aim, out var outcome)) return null;
         // Its outcome must be for the board now: the forecast's start this frame is the one the card's search started from.
         if (TurnEndModel.Begin() is not { } start || !ReferenceEquals(start.State, inputs.Start)) return null;

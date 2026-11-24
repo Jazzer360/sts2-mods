@@ -38,22 +38,6 @@ public static class BoardCounts
     }
 
     /// <summary>
-    /// The cards a play puts back on your draw pile from your hand: the most its pick from your hand takes (CardPileCmd.Add to the draw pile
-    /// after CardSelectCmd.FromHand, its selector's most: Glimmer's and Photon Cut's PutBack, Thinking Ahead's one), read on the board.
-    /// </summary>
-    internal static int PutBackCount(CardModel card)
-    {
-        var program = CardPrograms.Of(card.GetType());
-        foreach (var found in CardEffects.Find(program, command => command.Command is { DeclaringType: "CardPileCmd", Name: "Add" }))
-            if (found.Pick is { Command.Name: "FromHand" } pick && found.Command.Values.Count > 1 && found.Command.Values[1] is ConstantValue { Value: (int)PileType.Draw })
-                return ProgramEvaluator.Number(new CardEffects.CardsTaken(found.Command, found.Condition, CardEffects.TakeWay.Picked, Items: null, pick).PerPick, new ProgramBoard(card), program) is { } most
-                    ? (int)most : 1;
-        return 0;
-    }
-
-    // ------------------------------------------------------------------ draws
-
-    /// <summary>
     /// How many cards one play of this card draws right now (0 if it doesn't draw), read from its program (decision #182): each draw
     /// for you its code makes (CardPileCmd.Draw to its owner, CardCmd.DiscardAndDraw), on the condition its code puts it on, evaluated
     /// against the board (ProgramEvaluator: Impatience's hand, Restlessness alone in your hand, FTL's plays this turn, Fetch's Osty,
@@ -100,20 +84,6 @@ public static class BoardCounts
     }
 
     /// <summary>
-    /// Draws of all <paramref name="plays"/> plays aimed at <paramref name="target"/>, when one of the card's draws asks its target; null
-    /// for other cards. Each play's condition is evaluated after the plays before it: Ki Hop draws on each play that starts with the target
-    /// Impaled, its own hit loosening the last arrow (SimEngine.PlaysStartingImpaled); Wrest pulls every arrow of yours out on its first
-    /// play, so only that one draws. The audit takes it with the play's actual target as the play starts.
-    /// </summary>
-    public static int? TargetDraws(CardModel card, Creature target, int plays)
-    {
-        if (!Programs.CardEffects.DrawsForYou(card.GetType()).Any(draw => Programs.ProgramEvaluator.AsksTarget(draw.Condition))) return null;
-        var total = 0;
-        for (var playIndex = 0; playIndex < Math.Max(1, plays); playIndex++) total += DrawsOnPlay(card, target, playIndex);
-        return total;
-    }
-
-    /// <summary>
     /// How many cards all <paramref name="plays"/> plays of this card draw right now, each play's conditions after the plays before it
     /// (FTL draws while fewer than PlayMax plays have finished this turn, a replay's earlier plays included; Fetch only on its first),
     /// a draw that asks the target at the worst target it could be aimed at.
@@ -139,8 +109,6 @@ public static class BoardCounts
         return Math.Max(0, count);
     }
 
-    /// <summary>How many of <paramref name="plays"/> plays in a row start with fewer than <paramref name="max"/> plays finished, <paramref name="finishedBefore"/> before the first.</summary>
-    internal static int PlaysUnder(int finishedBefore, int max, int plays) => Math.Clamp(max - finishedBefore, 0, Math.Max(1, plays));
 
     // ------------------------------------------------------------------ cards taken: exhausted, discarded, transformed, moved into your hand
 
@@ -155,10 +123,6 @@ public static class BoardCounts
     /// </summary>
     internal static int ExhaustOthers(CardModel card, List<CardModel> others, int drawPile) =>
         Taken(card, Programs.CardEffects.ExhaustsOfOthers(card.GetType()), others, drawPile, draws: 0, fromHandOnly: false);
-
-    /// <summary>Of those, the ones that leave your hand: not Cleanse's (your draw pile); of a collection from every pile, the ones in your hand.</summary>
-    private static int ExhaustedFromHand(CardModel card, List<CardModel> others, int drawPile) =>
-        Taken(card, Programs.CardEffects.ExhaustsOfOthers(card.GetType()), others, drawPile, draws: 0, fromHandOnly: true);
 
     /// <summary>
     /// Cards the play discards, read from its program (CardEffects.Discards: CardCmd.Discard and DiscardAndDraw), counted on the board
@@ -405,21 +369,6 @@ public static class BoardCounts
         try { return pile.GetPile(me).Cards.ToList(); } catch { return new List<CardModel>(); }
     }
 
-    /// <summary>
-    /// Cards of yours, other than this one, its play takes out of your hand: what it discards from there (not the cards it looked at on
-    /// your draw pile, Ki Chant's; nor the ones it drew, Scrape's, the simulator's) and what it exhausts from there (not Cleanse's, from
-    /// the draw pile; of Florescence's and Flak Cannon's, from every pile, the ones in your hand).
-    /// </summary>
-    internal static int LeavingHand(CardModel card, List<CardModel> others, int drawPile, int draws)
-    {
-        var exhausts = ExhaustedFromHand(card, others, drawPile);
-        var discards = DiscardedFromHand(card, others, draws);
-        // Put back on your draw pile after the draws, from the cards in hand then (you choose which).
-        var putBack = Programs.CardEffects.PutsBackFromHand(card.GetType())
-            ? Math.Min(PutBackCount(card), others.Count + draws) : 0;
-        return exhausts + discards + putBack;
-    }
-
     // ------------------------------------------------------------------ block
 
     /// <summary>
@@ -500,15 +449,6 @@ public static class BoardCounts
         var each = ways.Ways.Select(way => Programs.ProgramEvaluator.Number(way.Value, board, program)).ToList();
         return each.All(number => number != null) && each.Count > 0 ? (int)each.Min()!.Value : null;
     }
-    /// <summary>An attack card aimed at enemies (Osty's attacks use OstyDamage or CalculatedDamage).</summary>
-    internal static bool IsAttackOnEnemies(CardModel card)
-        => card.Type == CardType.Attack && card.TargetType is TargetType.AnyEnemy or TargetType.AllEnemies or TargetType.RandomEnemy;
-
-    internal static bool IsPlayerAttack(CardModel card)
-        => card.Type == CardType.Attack
-           && (card.DynamicVars.ContainsKey("Damage") || card.DynamicVars.ContainsKey("CalculatedDamage"))
-           && card.TargetType is TargetType.AnyEnemy or TargetType.AllEnemies or TargetType.RandomEnemy;
-
     // ------------------------------------------------------------------ orbs, stars, Osty
 
     /// <summary>Orbs one play channels (Metronome), read from its program (OrbsOf).</summary>

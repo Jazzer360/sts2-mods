@@ -41,7 +41,7 @@ internal static partial class CoverageLedger
         // ======== relics
         ["ArtOfWar"] = "covered: AfterCardPlayed/AfterSideTurnEnd track attacks per turn; crossed tab on the first attack (proc rule)",
         ["BeatingRemnant"] = "covered: ModifyHpLostAfterOsty caps HP lost per turn; simulator (RemnantCap, carries over from your turn)",
-        ["BiiigHug"] = "covered: AfterShuffle adds a Soot to the draw pile; crossed shuffle tab, counted as a created status (PlayFacts)",
+        ["BiiigHug"] = "covered: AfterShuffle adds a Soot to the draw pile; crossed shuffle tab, counted as a created status (its model's GeneratedStatus)",
         ["BingBong"] = "ignore: AfterCardChangedPiles copies cards added to your deck (deck, not combat piles)",
         ["BoneFlute"] = "covered: AfterAttack by Osty gains block; block tab for Osty-attack cards (proc rule, simulator block)",
         ["BookOfFiveRings"] = "ignore: AfterCardChangedPiles heals when cards are added to your deck (deck, not combat)",
@@ -124,7 +124,7 @@ internal static partial class CoverageLedger
         // v0.113.0
         ["Byrdpip"] = "ignore: AfterCardPlayed counts Byrd Swoop plays toward its rest-site evolve option (out of combat)",
         ["ConductorsBaton"] = "covered: AfterCardPlayed applies Conductor's Baton (powered attacks on you deal 75% until your next turn) on the card that brings you to three melodies this turn (proc tab); once applied, intents read it through the game's damage hooks",
-        ["Fertilizer"] = "covered: AfterCardGeneratedForCombat gives Strength when you create a Sadness: proc tab on cards that create one (PlayFacts.SadnessCreated)",
+        ["Fertilizer"] = "covered: AfterCardGeneratedForCombat gives Strength when you create a Sadness: proc tab on cards that create one (MadeCards: a made Sadness, the simulator's GeneratedSadness)",
         ["MightyWings"] = "covered: AfterDamageGiven gives 2 Strength when your (or Osty's) powered attack hit deals 30 or more (blocked plus HP lost): proc tab when the simulator's biggest hit of the play reaches it in every branch; the simulator gives the attack's later hits the Strength",
         ["ObsidianVice"] = "covered: BeforeSideTurnEnd deals its damage per card in your hand to a random enemy (model ObsidianVice, yours and teammates')",
         ["Storyteller"] = "ignore: BeforeSideTurnEnd gives Aim, which only adds to your arrow attacks (read through the game's damage hooks on your next turn); AfterRoomEntered gives it at the start of combat",
@@ -160,7 +160,7 @@ internal static partial class CoverageLedger
         ["ConstrictPower"] = "covered: model on AfterSideTurnEnd (its amount to its owner, blockable); AfterDeath of its applier removes it (the model checks the applier)",
         ["ConsumingShadowPower"] = "covered: AfterSideTurnEnd evokes your last orb (model ConsumingShadowPower)",
         ["CorrosiveWavePower"] = "covered: AfterCardDrawn poisons all enemies per draw (proc tab)",
-        ["CorruptionPower"] = "covered: ModifyCardPlayResultLocation exhausts played Skills (in the simulator its model, decided once before a card play's plays: decision #192; PlayFacts.ExhaustsSelf for the tags)",
+        ["CorruptionPower"] = "covered: ModifyCardPlayResultLocation exhausts played Skills (in the simulator its model, decided once before a card play's plays: decision #192; SimAdapter.ExhaustsAfterPlay for the tags)",
         ["CoveredPower"] = "covered: ModifyDamageMultiplicative zeroes powered attacks on the covered player: the intent's damage to you is read through the game's damage hooks; AfterDeath/AfterSideTurnEnd remove it",
         ["CrabRagePower"] = "covered: AfterDeath of an ally gives Strength and block (simulator; crossed kill tab)",
         ["CurlUpPower"] = "covered: block after a card's attack hits it (simulator; crossed tab)",
@@ -305,7 +305,7 @@ internal static partial class CoverageLedger
         ["WitheringPresencePower"] = "covered: AfterCardPlayed Wither every N of its Target's cards (crossed proc tab, tracker); the Aeonglass has one per player, and the simulator reads only yours",
         // v0.113.0
         ["AimPower"] = "ignore: ModifyDamageAdditive adds to your arrow attacks (read through the game's damage hooks); BeforeAttack/AfterAttack spend it after that attack",
-        ["AllIsWellPower"] = "covered: AfterCardGeneratedForCombat gains block for each Sadness you create: proc tab with the block on cards that create one (PlayFacts.SadnessCreated; the simulator lands it)",
+        ["AllIsWellPower"] = "covered: AfterCardGeneratedForCombat gains block for each Sadness you create: proc tab with the block on cards that create one (MadeCards: a made Sadness; the simulator lands it)",
         ["AmnesiaPower"] = "ignore: AfterPlayerTurnStart energy loss and ModifyHandDraw at the start of your turn; AfterSideTurnEnd removes it",
         ["CompostPower"] = "covered: AfterDeath gives every player on your side energy when an enemy dies: proc tab (yours or a teammate's) when the play kills in every branch",
         ["CoveringFirePower"] = "covered: AfterArrowShot gives every other living player its block on each shot of yours from a card (with no arrow too): model CoveringFirePower on the simulator's ShootAction; no tab by design (teammate-only, decision #25's ally-card rule)",
@@ -387,7 +387,7 @@ internal static partial class CoverageLedger
         ["Slither"] = "ignore: AfterCardDrawn random cost on draw (costs read live)",
         ["Vigorous"] = "covered: AfterCardPlayed disables it after the first play (its bonus is read through the game on later turns), so a replay in the same play loses the bonus (PlayGrowth: EnchantFirstPlayOnly, decision #160)",
         // v0.113.0: OnPlay acts on every play of the card (replays too) until AfterCardPlayed disables it
-        ["Sown"] = "covered: OnPlay energy on the card's first play (Normal status): the card's own enchantment text; Pael's Tears counts it (PlayFacts.EnergyBack)",
+        ["Sown"] = "covered: OnPlay energy on the card's first play (Normal status): the card's own enchantment text; Pael's Tears counts it (SimAdapter.SownEnergy)",
         ["Swift"] = "covered: OnPlay draws its amount the first time the card is played (AfterCardPlayed disables it): counted in the card's own draws",
         ["Hexed"] = "ignore: clears itself",
     };
@@ -396,7 +396,7 @@ internal static partial class CoverageLedger
 
     /// <summary>
     /// What an enchantment or affliction does on every play of its card, after the card (CardModel: EnchantmentModel.OnPlay,
-    /// AfflictionModel.OnPlay): reviewed like a hook (a card's own OnPlay is what PlayFacts reads). Kept in step with
+    /// AfflictionModel.OnPlay): reviewed like a hook (a card's own OnPlay is what its program reads). Kept in step with
     /// scripts/coverage-ledger.mjs.
     /// </summary>
     private static readonly string[] OnCardHooks = { "OnPlay" };

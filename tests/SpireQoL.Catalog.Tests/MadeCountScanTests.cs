@@ -8,7 +8,7 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// The cards a play makes (PlayFacts.Generated) come from a per-card rule (PlayFacts.GeneratedCount). A card whose play reads one of
+/// The cards a play makes come from its make steps (MadeCards, decision #194: each make's count read from its arguments). A card whose play reads one of
 /// its own card counts (DynamicVars["Shivs"] or DynamicVars.Cards, a CardsVar) makes that many: a rule that says otherwise is out of date (Leading
 /// Strike's 1 when the game made it 2, a dev review). Each card the scan flags is fixed in the rule, or reviewed here with why. A card
 /// that makes cards with no rule at all is the card scan's (CardCoverage).
@@ -53,12 +53,12 @@ public class MadeCountScanTests
             gameFight.Add<MegaCrit.Sts2.Core.Models.Cards.DefendIronclad>();
             var card = gameFight.Combat.CreateCard(canon, gameFight.Me);
             PileType.Hand.GetPile(gameFight.Me).AddInternal(card);
-            PlayFacts facts;
-            try { facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1); }
+            SpireQoL.Procs.Programs.MadeCards.OnBoard made;
+            try { made = SpireQoL.Procs.Programs.MadeCards.Summary(card); }
             catch { continue; }
             var expected = card.DynamicVars[read.Single()].IntValue;
             // Only a card the rule says makes cards: one that makes cards with no rule is the card scan's (CardCoverage).
-            if (facts.Generated > 0 && facts.Generated != expected) wrong.Add($"{type.Name}: counted {facts.Generated}, its play reads {read.Single()} = {expected}");
+            if (made.Made > 0 && made.Made != expected) wrong.Add($"{type.Name}: counted {made.Made}, its play reads {read.Single()} = {expected}");
         }
         Assert.True(wrong.Count == 0, string.Join("\n", wrong));
     }

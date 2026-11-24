@@ -8,7 +8,7 @@ namespace SpireQoL.Diagnostics;
 /// <summary>
 /// The game state attached to every error report (ErrorReporter.ContextProvider), so a report
 /// can be understood without reproducing it: the combat, you, every enemy, your hand with the
-/// tabs and play facts the mod computed, and the recent combat history. No personal data.
+/// tabs and play prediction the mod computed, and the recent combat history. No personal data.
 /// Each value is plain text (one Sentry "extra" per key).
 /// </summary>
 public static class Snapshot
@@ -72,12 +72,12 @@ public static class Snapshot
             var tabs = ctx.Decor.Previous.TryGetValue(card, out var otherTabs)
                 ? string.Join(", ", otherTabs.Select(tab => tab.Text ?? (tab.Amount > 0 ? $"{tab.Key} {tab.Amount}{(tab.AuditMax > 0 ? $" [{tab.AuditMin}-{tab.AuditMax}]" : "")}" : tab.Key) + (tab.Crossed ? " (crossed)" : "")))
                 : "none";
-            var facts = ctx.Predictions.PreviousFacts.TryGetValue(card, out var otherFacts) ? FactsLine(otherFacts) : "no facts";
+            var prediction = ctx.Predictions.PreviousPredictions.TryGetValue(card, out var otherPrediction) ? PredictionLine(otherPrediction) : "no prediction";
             string cost;
             try { cost = card.EnergyCost.CostsX ? "X" : card.EnergyCost.GetAmountToSpend().ToString(); } catch { cost = "?"; }
             return $"{card.GetType().Name}{(card.IsUpgraded ? "+" : "")} ({card.Type}, cost {cost}, keywords {string.Join("/", card.Keywords)}" +
                    $"{(card.Enchantment != null ? $", enchant {card.Enchantment.GetType().Name}" : "")}{(card.Affliction != null ? $", affliction {card.Affliction.GetType().Name}" : "")})" +
-                   $" | tabs: {tabs} | facts: {facts}";
+                   $" | tabs: {tabs} | prediction: {prediction}";
         })));
 
         Try(fields, "combat_history", () => string.Join("\n",
@@ -85,11 +85,23 @@ public static class Snapshot
         return fields;
     }
 
-    /// <summary>What the mod expects one play of a card to do (PlayFacts), for reports.</summary>
-    public static string FactsLine(SpireQoL.Procs.PlayFacts facts) =>
-        $"plays {facts.Plays}, energy {facts.Energy}, stars {facts.Stars}, exhausts {facts.TotalExhausts}, discards {facts.Discards}, own draws {facts.OwnDraws}, created {facts.Generated}, " +
-        $"orbs channeled {facts.Channels}, hits {facts.AttackHits}, block gains {facts.BlockGains}, debuffs {string.Join("/", facts.EnemyDebuffs.Select(type => type.Name))}, " +
-        $"orb evoke damage {facts.OrbDamageMin}-{facts.OrbDamageMax}, orb evoke block {facts.OrbBlock}, random outcome {facts.RandomOutcome}";
+    /// <summary>
+    /// What the mod expects a play of a card to do (CardPrediction), for reports: the card play it simulated, and at the target given (none: its
+    /// first aim) its simulation's counts over its outcomes, fewest-most (SimKeys.PlayEvent, PlayOrbChanneled, FrostEvokeBlock, OrbEvokeDamage).
+    /// </summary>
+    public static string PredictionLine(SpireQoL.Combat.CardPrediction prediction, Creature? target = null)
+    {
+        var line = $"plays {prediction.Plays}, energy {prediction.Energy}, stars {prediction.Stars}, random outcome {prediction.RandomOutcome}";
+        string Range(string what, (int Least, int Most)? counted) => counted is { } range ? $", {what} {range.Least}-{range.Most}" : "";
+        if (prediction.OutcomeAt(target) == null) return line + (prediction.SimPending ? ", simulation pending" : ", no finished simulation");
+        return line + Range("draws", prediction.Logged(SpireQoL.Sim.SimKeys.PlayEvent(SpireQoL.Sim.CardEvent.Drawn), target))
+                    + Range("exhausts", prediction.Logged(SpireQoL.Sim.SimKeys.PlayEvent(SpireQoL.Sim.CardEvent.Exhausted), target))
+                    + Range("discards", prediction.Logged(SpireQoL.Sim.SimKeys.PlayEvent(SpireQoL.Sim.CardEvent.Discarded), target))
+                    + Range("created", prediction.Logged(SpireQoL.Sim.SimKeys.PlayEvent(SpireQoL.Sim.CardEvent.Generated), target))
+                    + Range("orbs channeled", prediction.Logged(SpireQoL.Sim.SimKeys.PlayOrbChanneled, target))
+                    + Range("orb evoke damage", prediction.LoggedAmount(SpireQoL.Sim.SimKeys.OrbEvokeDamage, target))
+                    + Range("orb evoke block", prediction.LoggedAmount(SpireQoL.Sim.SimKeys.FrostEvokeBlock, target));
+    }
 
     private static string Powers(Creature creature) => creature.Powers.Count == 0 ? "none" : string.Join(", ", creature.Powers.Select(power => $"{power.GetType().Name} {power.Amount}"));
 

@@ -330,8 +330,9 @@ hooks.
 
 A table stays only for what code can't say. Each one keeps its scan and gets a line in this doc saying why.
 
-`PlayFacts` keeps the counts that tabs and checks read (draws, exhausts, energy), worked out from the program where it can be.
-One source for both the tabs and the simulator.
+Since decision #194 nothing about a card is decided before its play beside the simulator: the program's counts on the board are
+`BoardCounts` and `MadeCards` (Programs: the step translators', the card scan's and the Shuffle Tag's), a card's prediction is
+`CardPrediction`, and the counts the play check holds a play to are its simulation's log. One source for both the tabs and the checks.
 
 ### A4. Checks
 
@@ -359,7 +360,7 @@ One source for both the tabs and the simulator.
   six cards to draw and three in the discard pile; the same upgraded; two enemies, a full hand and an empty draw pile; the first
   board with the card played twice, as Echo Form or Burst gives; the first board with a teammate in the fight, a card aimed at an
   ally aimed at them), with
-  every `PlayFacts` field and the adapter's play (`SimAdapter.Play`) written as text. Moving a table onto the program must leave
+  the adapter's play (`SimAdapter.Play`) written as text (until decision #194 every PlayFacts field beside it). Moving a table onto the program must leave
   it unchanged; a difference that is a real fix regenerates it (`SPIREQOL_UPDATE_SNAPSHOT=1`), named in the commit with the card
   and why. A game update regenerates it too.
   - **Outcomes** (`Snapshots/card-outcomes.txt`, 2026-11-23): what each play results in, on the same boards and a sixth, the card
@@ -398,8 +399,8 @@ it stands (2026-11-23, after round three): the count tables (`DiscardCount`, `Tr
 `ChannelCount` with `Channels`, `RepeatChannels` and `SlotChange`, `RepeatedBlockCards`, `HitsPerPlay`'s cases), `DrawnCardReaders`,
 `EnemyStrengthCards`, `TriggerPoisonCards`, the glow tables, Fool's `BlockWithoutVar` and the auto-plays' counts read from the program;
 card-name references (`nameof`, `case`, `is` of a card class) in `Procs/` and `Sim/Adapter/` went from 286 to 106 (344 before
-round two). What's left, by file: `PlayFacts` 62 (`GeneratedCount` and the forged blade 57, the splash and overkill tables 4, Thinking Ahead 1), `CardEnergy` 23, `SimAdapter` 8, `ReturnToHand` 5,
-`SimAdapter.Play` 4, `BranchRules` 4.
+round two). Round five (decision #194) deleted PlayFacts and its 62 (`GeneratedCount` and the forged blade 57, the splash and overkill tables 4,
+Thinking Ahead 1), with `SimAdapter`'s `RepeatPerKillCards` and `BlockFor`'s Fisticuffs, Entrench and Mimic. What's left is listed below.
 
 | Table (where) | Cards | What the program doesn't say yet |
 |---|---|---|

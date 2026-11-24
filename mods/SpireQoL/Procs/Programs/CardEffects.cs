@@ -626,6 +626,9 @@ public static class CardEffects
         return channel.Values.Any(value => value.Parts().Any(part => part is QueryValue { Name: "GetRandomOrb" })) ? SpireQoL.Sim.OrbKind.Random : null;
     }
 
+    /// <summary>The play channels or evokes orbs (OrbCmd.Channel, EvokeNext): its orbs' evokes are its simulation's.</summary>
+    public static bool TouchesOrbs(Type cardType) => OrbChannels(cardType).Count > 0 || OrbEvokes(cardType).Count > 0;
+
     /// <summary>The simulator channels every orb the card does (each channel's orb is a kind it knows, or a random one).</summary>
     public static bool ChannelsKnownOrbs(Type cardType) => OrbChannels(cardType) is { Count: > 0 } channels && channels.All(channel => OrbOf(channel.Command) != null);
 

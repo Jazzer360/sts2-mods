@@ -6,6 +6,7 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Monsters;
 using MegaCrit.Sts2.Core.Models.Powers;
+using SpireQoL.Sim;
 using Xunit;
 
 namespace SpireQoL.Catalog.Tests;
@@ -88,11 +89,12 @@ public class ConditionalDrawTests
         var gameFight = Fight();
         var enemy = Enemy(gameFight);
         var card = gameFight.Add<Wrest>();
-        Assert.Equal(0, BoardCounts.TargetDraws(card, enemy, plays: 1));
+        Assert.Equal(0, DrawnAt(gameFight, card, enemy, plays: 1));
         Impale(enemy, gameFight.Me.Creature);
         var cards = card.DynamicVars["Cards"].IntValue;
-        Assert.Equal(cards, BoardCounts.TargetDraws(card, enemy, plays: 1));
-        Assert.Equal(cards, BoardCounts.TargetDraws(card, enemy, plays: 2));
+        Assert.Equal(cards, DrawnAt(gameFight, card, enemy, plays: 1));
+        // A replay's later play finds none of your arrows left: its test is asked on the board the first play left (the simulator's own
+        // test: StepActionTests.WrestDrawsOnlyOnThePlayThatFindsYourArrowsIn; this fight's Impaled holds no arrows to pull out).
         Assert.Equal(cards, BoardCounts.CardsDrawnTotal(card, handCount: 1, plays: 2));
     }
 
@@ -107,15 +109,16 @@ public class ConditionalDrawTests
         Impale(enemy, enemy);
         var cards = card.DynamicVars["Cards"].IntValue;
         Assert.Equal(cards, BoardCounts.CardsDrawn(card, handCount: 1));
-        Assert.Equal(cards * 2, BoardCounts.TargetDraws(card, enemy, plays: 2));
+        Assert.Equal(cards * 2, DrawnAt(gameFight, card, enemy, plays: 2));
     }
 
-    [Fact]
-    public void ACardThatDoesNotAskItsTargetHasNoTargetDraws()
+    /// <summary>What the card's plays aimed at <paramref name="enemy"/> draw in its simulation (each play asking its test as it runs), the most over its outcomes.</summary>
+    private static int DrawnAt(GameFight gameFight, CardModel card, Creature enemy, int plays)
     {
-        var gameFight = Fight();
-        var enemy = Enemy(gameFight);
-        Assert.Null(BoardCounts.TargetDraws(gameFight.Add<Impatience>(), enemy, plays: 1));
+        for (var i = PileType.Draw.GetPile(gameFight.Me).Cards.Count; i < 10; i++) gameFight.Add<StrikeIronclad>(PileType.Draw);
+        var start = SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
+        SimEngine.ApplyPlayTo(start, SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, ids[enemy], plays: plays), out var branches, out _);
+        return branches.Max(branch => branch.You.Drawn);
     }
 }
 

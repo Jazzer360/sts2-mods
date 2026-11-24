@@ -13,7 +13,7 @@ namespace SpireQoL.Diagnostics;
 /// <summary>
 /// Card code against what the mod counts for it: reads every card's OnPlay from the compiled game
 /// (its async state machine included) and checks each effect the mod predicts from per-card tables
-/// against those tables, through the same functions the predictions use (PlayFacts, SimAdapter) on
+/// against those tables, through the same functions the predictions use (the program's board counts BoardCounts, MadeCards and CardEffects, and SimAdapter) on
 /// the game's own card instances (ModelDb.AllCards). A card that draws but isn't counted as drawing,
 /// channels orbs the simulator doesn't add, gains block without a Block value, and so on, is listed;
 /// CoverageWatch reports it when the card shows up in a fight. New cards and changed cards in a game
@@ -49,7 +49,7 @@ internal static class CardCoverage
     }
 
     /// <summary>
-    /// Cards whose counts are calculated from the fight (orbs, statuses, history): handled in PlayFacts,
+    /// Cards whose counts are calculated from the fight (orbs, statuses, history): handled in BoardCounts,
     /// but they read 0 on the game's template card, so the scan can't test them by value.
     /// Steady Cadence draws one per melody played this turn (MelodyCmd.MelodiesThisTurn of its owner).
     /// </summary>
@@ -97,7 +97,7 @@ internal static class CardCoverage
         [nameof(Soulbound)] = "SoulboundPower on the teammate: acts on cards generated later",
         [nameof(Tutor)] = "the teammate picks a card from their draw pile into their hand",
         // SelfDeprecate.OnPlay (AllAllies): Sadness into your hand, Joy into every other living player's hand, all created by
-        // you (AddGeneratedCardsToCombat creator = you: your created-card procs, counted in PlayFacts.GeneratedCount).
+        // you (AddGeneratedCardsToCombat creator = you: your created-card procs, counted from its make step: MadeCards).
         // Joy has no hooks (energy and a draw when they play it), and the generated-card hooks only react to their creator.
         [nameof(SelfDeprecate)] = "Joy cards into each teammate's hand, created by you: their plays (energy and a draw); your Sadness and created-card procs are counted",
         // Modelled: Covered zeroes powered attacks on the teammate and your InterceptPower multiplies those on you by covered players
@@ -298,7 +298,7 @@ internal static class CardCoverage
             issues.Add("turns into another card after the play (not counted: created-card procs)");
         if (Calls("CardPileCmd", "Shuffle") && !Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType()) && !Procs.Programs.CardEffects.ShufflesWhenShort(card.GetType()))
             issues.Add("shuffles your discard pile (not counted: shuffle procs, Biiig Hug)");
-        // The Fool (v0.113.0): a shot does nothing without an arrow, which PlayFacts knows by the Shoot tag; arrows
+        // The Fool (v0.113.0): a shot does nothing without an arrow, which the adapter knows by the Shoot tag; arrows
         // pulled out by the card itself count for Twine and Yah only for the cards listed.
         if ((Calls("ArrowCmd", "ShootArrowAtTarget") || Calls("ArrowCmd", "TryShootArrow")) && !Procs.Fool.IsShot(card))
             issues.Add("shoots an arrow without the Shoot tag (its damage is counted even with no arrow to shoot)");

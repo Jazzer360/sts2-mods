@@ -2,20 +2,25 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using SpireQoL.Procs;
+using SpireQoL.Procs.Programs;
 using Xunit;
 
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// Step 1 of every prediction (PlayFacts: what a card does if played right now), checked on the installed game's own cards
-/// in a fight built outside the game (GameFight). The sweeps run every card in the game; the other tests are cards whose
-/// count depends on the state, from their decompiled OnPlay. A bug in step 1 reported from players' games gets a test here.
+/// What a card's program gives on the board before its play (BoardCounts, MadeCards: what the step translators, the card scan and the
+/// Shuffle Tag read) and the card play the adapter builds from it, checked on the installed game's own cards in a fight built outside the
+/// game (GameFight). The sweeps run every card in the game; the other tests are cards whose count depends on the state, from their
+/// decompiled OnPlay. A bug in what the adapter reads, reported from players' games, gets a test here.
 /// </summary>
 [Collection(GameFightCollection.Name)]
-public class PlayFactsTests
+public class BoardCountsTests
 {
-    /// <summary>Every card in the game, in a fresh fight with a Defend beside it in hand, with its facts.</summary>
-    private static IEnumerable<(CardModel Card, PlayFacts? Facts, Exception? Error)> EveryCard()
+    /// <summary>The card's block gains on the board, and its play as the adapter builds it.</summary>
+    private sealed record Read(int BlockGains, SpireQoL.Sim.SimPlay Play);
+
+    /// <summary>Every card in the game, in a fresh fight with a Defend beside it in hand, with what the board gives it.</summary>
+    private static IEnumerable<(CardModel Card, Read? Facts, Exception? Error)> EveryCard()
     {
         GameModels.EnsureLoaded();
         foreach (var canon in ModelDb.AllCards.ToList())
@@ -23,13 +28,14 @@ public class PlayFactsTests
             var gameFight = new GameFight();
             gameFight.Add<DefendIronclad>();
             CardModel card;
-            PlayFacts? facts = null;
+            Read? facts = null;
             Exception? error = null;
             try
             {
                 card = gameFight.Combat.CreateCard(canon, gameFight.Me);
                 PileType.Hand.GetPile(gameFight.Me).AddInternal(card);
-                facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
+                var start = SpireQoL.Sim.SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
+                facts = new Read(BoardCounts.BlockGainCount(card), SpireQoL.Sim.SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, SpireQoL.Sim.Who.None, plays: 1));
             }
             catch (Exception ex)
             {
@@ -41,7 +47,7 @@ public class PlayFactsTests
     }
 
     [Fact]
-    public void EveryCardInTheGameHasFacts()
+    public void EveryCardInTheGameHasAPlay()
     {
         var failed = EveryCard().Where(cardFacts => cardFacts.Error != null)
             .Select(cardFacts => $"{cardFacts.Card.GetType().Name}: {cardFacts.Error!.GetType().Name} {cardFacts.Error.Message.Split('\n')[0]}").ToList();
@@ -71,17 +77,16 @@ public class PlayFactsTests
         var gameFight = new GameFight();
         var card = gameFight.Add<Impatience>();
         gameFight.Add<DefendIronclad>();
-        Assert.Equal(2, PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).OwnDraws);
+        Assert.Equal(2, BoardCounts.CardsDrawn(card, handCount: 2));
         gameFight.Add<StrikeIronclad>();
-        Assert.Equal(0, PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).OwnDraws);
+        Assert.Equal(0, BoardCounts.CardsDrawn(card, handCount: 3));
     }
 
     /// <summary>The card played in the fight as it is, through the adapter and the simulator: the branches it ends in.</summary>
     private static List<SpireQoL.Sim.SimState> Simulated(GameFight gameFight, CardModel card)
     {
         var start = SpireQoL.Sim.SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
-        var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
-        var play = SpireQoL.Sim.SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, SpireQoL.Sim.Who.None, plays: facts.Plays);
+        var play = SpireQoL.Sim.SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, SpireQoL.Sim.Who.None, plays: 1);
         SpireQoL.Sim.SimEngine.ApplyPlayTo(start, play, out var branches, out _);
         return branches;
     }
@@ -128,11 +133,11 @@ public class PlayFactsTests
         // (GetCreaturesOnSide gives the Allies list). Alone, you draw, get your Shivs and your Souls (1.14.9 had left you out).
         var gameFight = new GameFight();
         var huddle = gameFight.Add<HuddleUp>();
-        Assert.Equal(Sts2Mods.Core.Game.Sts2State.Var(huddle, "Cards"), PlayFacts.For(huddle, gameFight.Me, gameFight.Combat, plays: 1).OwnDraws);
+        Assert.Equal(Sts2Mods.Core.Game.Sts2State.Var(huddle, "Cards"), BoardCounts.CardsDrawn(huddle, handCount: 1));
         var symphony = gameFight.Add<BladeSymphony>();
-        Assert.Equal(Sts2Mods.Core.Game.Sts2State.Var(symphony, "Cards"), PlayFacts.For(symphony, gameFight.Me, gameFight.Combat, plays: 1).Generated);
+        Assert.Equal(Sts2Mods.Core.Game.Sts2State.Var(symphony, "Cards"), MadeCards.Summary(symphony).Made);
         var glimpse = gameFight.Add<GlimpseBeyond>();
-        Assert.Equal(Sts2Mods.Core.Game.Sts2State.Var(glimpse, "Cards"), PlayFacts.For(glimpse, gameFight.Me, gameFight.Combat, plays: 1).Generated);
+        Assert.Equal(Sts2Mods.Core.Game.Sts2State.Var(glimpse, "Cards"), MadeCards.Summary(glimpse).Made);
     }
 
     [Fact]
@@ -140,9 +145,9 @@ public class PlayFactsTests
     {
         var gameFight = new GameFight();
         var card = gameFight.Add<Restlessness>();
-        Assert.True(PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).OwnDraws > 0);
+        Assert.True(BoardCounts.CardsDrawn(card, handCount: 1) > 0);
         gameFight.Add<DefendIronclad>();
-        Assert.Equal(0, PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).OwnDraws);
+        Assert.Equal(0, BoardCounts.CardsDrawn(card, handCount: 3));
     }
 
     [Fact]
@@ -151,7 +156,7 @@ public class PlayFactsTests
         // A report from 1.11.4: block predicted 1, the game gained none (SovereignBlade.OnPlay: only while you have Parry).
         var gameFight = new GameFight();
         var card = gameFight.Add<SovereignBlade>();
-        Assert.Equal(0, PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1).BlockGains);
+        Assert.Equal(0, BoardCounts.BlockGainCount(card));
     }
 
     [Fact]
@@ -164,8 +169,8 @@ public class PlayFactsTests
         var makeItSo = gameFight.Add<MakeItSo>(PileType.Draw);
         makeItSo.DynamicVars["Cards"].BaseValue = 1;
         for (var i = 0; i < 5; i++) gameFight.Add<DefendIronclad>();
-        Assert.Single(PlayFacts.For(bundle, gameFight.Me, gameFight.Combat, plays: 1).CardsBack);
+        Assert.Single(ReturnToHand.Back(bundle, gameFight.Me, plays: 1));
         gameFight.Add<DefendIronclad>();
-        Assert.Empty(PlayFacts.For(bundle, gameFight.Me, gameFight.Combat, plays: 1).CardsBack);
+        Assert.Empty(ReturnToHand.Back(bundle, gameFight.Me, plays: 1));
     }
 }

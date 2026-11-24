@@ -6,7 +6,7 @@ namespace SpireQoL.Sim.Tests;
 /// <summary>
 /// The replay rule (decision #189): the adapter describes one play of a card, and the simulator's loop repeats it, each play reading the
 /// board the one before it left. A count worked out once before the play and multiplied or shared out by the play count is the shortcut
-/// that rule replaced (a replayed Fiend Fire hit for a hand it no longer had), so PlayFacts and the adapter never multiply or divide by
+/// that rule replaced (a replayed Fiend Fire hit for a hand it no longer had), so the program's board counts and the adapter never multiply or divide by
 /// the play count. And the room in your hand is one game rule (CardPileCmd.Add, CardPileCmd.Draw), held in one place in the engine
 /// (SimEngine.RoomIn); anywhere else that compares with the hand's most is a reviewed exception below.
 /// </summary>
@@ -18,7 +18,7 @@ public class PerPlayRuleTests
 
     /// <summary>The files the replay rule holds: what the adapter builds a play from, and the adapter.</summary>
     private static IEnumerable<(string Path, string[] Lines)> AdapterSources() =>
-        RepoFiles.Sources("mods/SpireQoL/Sim/Adapter").Concat(RepoFiles.Sources("mods/SpireQoL/Procs").Where(file => file.Path.EndsWith("PlayFacts.cs", StringComparison.Ordinal)));
+        RepoFiles.Sources("mods/SpireQoL/Sim/Adapter").Concat(RepoFiles.Sources("mods/SpireQoL/Procs/Programs"));
 
     private static bool IsComment(string line) => line.TrimStart().StartsWith("//", StringComparison.Ordinal);
 
@@ -38,7 +38,7 @@ public class PerPlayRuleTests
         ["mods/SpireQoL/Sim/SimEngine.Draws.cs: internal static int RoomIn(SimPlayer player) => Math.Max(0, MaxHand - (player.HandCount - player.PlayingFromHand));"] = "the one rule",
         ["mods/SpireQoL/Sim/SimEngine.Plays.cs: player.HandCount = Math.Clamp(player.HandCount + handDelta, 0, player.Draw != null ? MaxHand + player.PlayingFromHand : int.MaxValue);"] =
             "the card leaving and the cards its own hooks bring back after its plays (HandDelta: Make It So, Whistling Arrows): a tracker item to make them adds",
-        ["mods/SpireQoL/Procs/PlayFacts.cs: ? Math.Max(draws, CardPile.MaxCardsInHand - (hand.Count - 1)) + swiftDraws : 0,"] = "the play check's bound on Pillage's draws (DrawsAtMost), not the simulation",
+
         ["mods/SpireQoL/Procs/ReturnToHand.cs: return Returning(card, me, plays, Math.Min(MegaCrit.Sts2.Core.Entities.Cards.CardPile.MaxCardsInHand, hand - 1 + made) + draws, Fool.Shoots(card, me) ? 1 : 0);"] =
             "cards' own hooks after the play (ReturnToHand, docs/CARD_PROGRAMS.md A5): a tracker item with HandDelta's",
         ["mods/SpireQoL/Procs/Programs/BoardCounts.cs: if (chosen.Count == 0 || handCount - 1 >= CardPile.MaxCardsInHand) return false;"] = "whether Neow's Fury's how-many is a choice at all (its NotModelledAction)",

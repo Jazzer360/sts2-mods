@@ -175,7 +175,7 @@ public sealed record UnreadAction(string Member) : SimAction;
 public sealed record NotModelledAction(string Reason) : SimAction;
 
 /// <summary>
-/// Cards of the playing player's leaving their hand mid-play: the ones it discards and exhausts from there (PlayFacts.LeavesHand),
+/// Cards of the playing player's leaving their hand mid-play: the ones it discards and exhausts from there (its takes: TakeFromHandAction),
 /// right after they go. Count: how many (Whole: every card in the hand now, whatever they were).
 /// </summary>
 public sealed record LeaveHandAction(int Count) : SimAction
@@ -301,7 +301,7 @@ public sealed record ExhaustFromHandAction(ExhaustPick Pick) : SimAction
 }
 
 /// <summary>
-/// Card events of a play (from what the card does: PlayFacts' counts), each card's hooks in turn. Indirect: an exhaust, discard,
+/// Card events of a play (from what the card does: its program's steps), each card's hooks in turn. Indirect: an exhaust, discard,
 /// draw, creation or shuffle the card causes (the Indirect procs setting shows their tabs); the card's own exhaust is direct.
 /// </summary>
 public sealed record CardEventAction(CardEvent Event, int Count) : SimAction

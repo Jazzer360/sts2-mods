@@ -1,20 +1,24 @@
+using SpireQoL.Procs.Programs;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
-using SpireQoL.Procs;
 using Xunit;
 
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// Cards whose own play moves cards into or out of your hand (CardPileCmd.Add: PlayFacts.TakenToHand, CardEffects.PutsBackFromHand), on the
+/// Cards whose own play moves cards into or out of your hand (CardPileCmd.Add: BoardCounts.TakenToHandCount, CardEffects.PutsBackFromHand), on the
 /// installed game's cards and piles (GameFight). Reports: after Wish your hand had a card more than predicted.
 /// </summary>
 [Collection(GameFightCollection.Name)]
 public class TakenToHandTests
 {
-    private static PlayFacts FactsOf<T>(GameFight gameFight) where T : CardModel =>
-        PlayFacts.For(gameFight.Add<T>(), gameFight.Me, gameFight.Combat, plays: 1);
+    /// <summary>The card's takes into your hand counted on the board before its play (BoardCounts), and whether you choose how many.</summary>
+    private static (int TakenToHand, bool HandTakeChosen) FactsOf<T>(GameFight gameFight) where T : CardModel
+    {
+        var card = gameFight.Add<T>();
+        return (BoardCounts.TakenToHandCount(card), BoardCounts.HandTakeChosenOf(card, PileType.Hand.GetPile(gameFight.Me).Cards.Count));
+    }
 
     [Fact]
     public void WishTakesACardFromYourDrawPile()
@@ -59,12 +63,15 @@ public class TakenToHandTests
     [Fact]
     public void ThinkingAheadPutsOneCardBack()
     {
-        // It draws, then puts one card from your hand on your draw pile: one card leaves the hand.
+        // It draws, then puts one card from your hand on your draw pile (its pick's most: one): one card leaves the hand.
         var gameFight = new GameFight();
         gameFight.Add<DefendIronclad>();
         for (var i = 0; i < 5; i++) gameFight.Add<StrikeIronclad>(PileType.Draw);
-        var facts = FactsOf<ThinkingAhead>(gameFight);
-        Assert.Equal(1, facts.LeavesHand);
+        var card = gameFight.Add<ThinkingAhead>();
+        var start = SpireQoL.Sim.SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
+        SpireQoL.Sim.SimEngine.ApplyPlayTo(start, SpireQoL.Sim.SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, SpireQoL.Sim.Who.None), out var branches, out _);
+        var draws = Sts2Mods.Core.Game.Sts2State.Var(card, "Cards");
+        Assert.All(branches, branch => Assert.Equal(1 + draws - 1, branch.You.HandCount));
     }
 
     [Fact]

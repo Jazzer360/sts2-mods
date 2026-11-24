@@ -1,3 +1,4 @@
+using SpireQoL.Combat;
 using System.Reflection;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat.History;
@@ -6,7 +7,6 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Cards;
-using SpireQoL.Procs;
 using SpireQoL.Sim;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.GameActions.Multiplayer;
@@ -35,7 +35,7 @@ namespace SpireQoL.Diagnostics;
 ///  - Proc damage: damage with no card source vs the damage tabs' audit range (each target's own
 ///    modifiers applied), separately for damage to enemies and to you.
 ///  - Budget: draws, exhausts, discards, created cards, orbs, summons and powers applied, actual vs
-///    what the card itself does (PlayFacts) plus what predicted tabs can add. More than that with no
+///    what the card itself does (CardPrediction) plus what predicted tabs can add. More than that with no
 ///    tab that explains it = "unexplained" (a missing tag). Less than the card's own = a "[model]"
 ///    line (our model of the card is off; often fine, e.g. an empty draw pile).
 ///  - Shuffle: whether the play shuffled your discard pile into your draw pile (seen from the piles'
@@ -78,7 +78,7 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
         public required CardModel Card;
         public required string CardName;
         public required IReadOnlyList<TabSpec> Predicted;
-        public required PlayFacts? Facts;
+        public required CardPrediction? Prediction;
         /// <summary>History entries the play's action added (see PlayRecord), and their span for reports.</summary>
         public required List<int> Indices;
         public required int From;
@@ -146,7 +146,7 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
     /// <summary>The aim the play took (its simulation key), when its simulations were complete and fully modelled; null otherwise.</summary>
     private static int? CheckedAim(Window window)
     {
-        if (window.Facts is not { Sim: { } sim } facts || facts.SimIncomplete || facts.SimPending || facts.Unmodelled.Count > 0) return null;
+        if (window.Prediction is not { Sim: { } sim } prediction || prediction.SimIncomplete || prediction.SimPending || prediction.Unmodelled.Count > 0) return null;
         return sim.AimFor(window.Target);
     }
 
@@ -156,7 +156,7 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
     /// </summary>
     private static bool? SimHadIt(Window window, AbstractModel model)
     {
-        if (CheckedAim(window) is not { } aim || window.Facts?.FiresAnyByAim?.TryGetValue(aim, out var any) != true) return null;
+        if (CheckedAim(window) is not { } aim || window.Prediction?.FiresAnyByAim?.TryGetValue(aim, out var any) != true) return null;
         if (SimModels.Get(SimReaders.ModelName(model))?.Tab == null) return null;
         return any!.Contains(model.GetType());
     }

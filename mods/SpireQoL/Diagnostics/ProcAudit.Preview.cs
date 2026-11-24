@@ -13,8 +13,8 @@ public sealed partial class ProcAudit
     /// </summary>
     private static void PreviewIssues(Window window, List<CombatHistoryEntry> entries, List<string> issues, ModelLines model)
     {
-        var sim = window.Facts?.Sim;
-        if (sim == null || window.Facts?.OutcomeByAim is not { } outcomes || sim.AimFor(window.Target) is not { } aim || !outcomes.TryGetValue(aim, out var preview))
+        var sim = window.Prediction?.Sim;
+        if (sim == null || window.Prediction?.OutcomeByAim is not { } outcomes || sim.AimFor(window.Target) is not { } aim || !outcomes.TryGetValue(aim, out var preview))
         {
             model.Skip("preview", "no outcome for the target it was played at");
             return;
@@ -55,7 +55,7 @@ public sealed partial class ProcAudit
     /// The end of turn from the board the play left (as shown: teammates' hands left out when the setting is off), searched once for
     /// the lethal and preview checks; null when that search stopped at a cap or met something not modelled.
     /// </summary>
-    private static SimOutcome? PostPlay(Window window, Procs.SimInputs sim)
+    private static SimOutcome? PostPlay(Window window, Combat.SimInputs sim)
     {
         if (window.PostPlay == null && window.After != null)
             window.PostPlay = SimEngine.Run(sim.FullStart != null ? window.After.WithoutTeammateHands() : window.After);

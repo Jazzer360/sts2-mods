@@ -54,7 +54,7 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
         if (combat == null) return;
         var hand = Sts2State.Hand(me);
         // Each card's answer is kept while the board probe stays the same (decision #130): worked out from the game, it was garbage on every
-        // frame, most of all for a card Proc Indicators has no facts for (a Dazed in hand: a dev review).
+        // frame, most of all for a card Proc Indicators has no prediction for (a Dazed in hand: a dev review).
         var probe = BoardProbe.Hash(me, combat);
         if (_kept.Count > 64) _kept.Clear();
         foreach (var card in hand)
@@ -76,8 +76,8 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
             bool shuffles;
             try
             {
-                // Proc Indicators' facts for this frame (it runs first), with the simulation's outcomes.
-                if (_ctx.Predictions.FactsThisFrame(card) is not { OutcomeByAim: { Count: > 0 } outcomes })
+                // Proc Indicators' prediction for this frame (it runs first), with the simulation's outcomes.
+                if (_ctx.Predictions.PredictionThisFrame(card) is not { OutcomeByAim: { Count: > 0 } outcomes })
                 {
                     // No finished simulation yet (it's still running, or Proc Tags is off): the card's own draws against the draw pile, not
                     // kept, so the simulation's answer replaces it when it's there.
