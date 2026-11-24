@@ -263,7 +263,8 @@ public class ProcModelTests
         var dot = Power(State(), PowerId.PaleBlueDot, amount: 1);
         dot.You.Turn = dot.You.Turn.Add("Finished", delta: 4);
         Assert.True(One(dot, Events(Card("A", SimCardType.Skill), plays: 1)).Fired.Has("PaleBlueDotPower"));
-        dot.You.Powers = dot.You.Powers.With(PowerId.PaleBlueDot, amount: 1, data: 1);
+        // Already this turn: its own data's alreadyActivatedThisTurn (read from its code: a field of its own, seeded from the game).
+        dot.You.Fields = dot.You.Fields.With(Assert.IsType<ReadModel>(SimModels.Get(PowerId.PaleBlueDot.Name)).FieldKey("Data.alreadyActivatedThisTurn"), 1);
         Assert.False(One(dot, Events(Card("A", SimCardType.Skill), plays: 1)).Fired.Has("PaleBlueDotPower"));
     }
 

@@ -788,3 +788,52 @@ public sealed class WeakPower : SimModel
         return num;
     }
 }
+
+// ---- the fight's log (round four: Sim/Models/ProcPowerModels.cs, deleted 2026-11-24)
+
+/// <summary>
+/// MotifPower.AfterCardPlayed: its amount of draws for each melody (Wah, Cho, Ki) the card is the first this turn to play
+/// (CardPileCmd.Draw(num * Amount)).
+/// </summary>
+public sealed class MotifPower : ProcModel
+{
+    public override TabKind? Tab => TabKind.Draw;
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
+        Mine(play, owner) && Melodies.Tags.Count(simCardTag => Melodies.First(state, play, simCardTag)) is var tagCount and > 0
+            ? Cause(Fire(state, owner), CardEvent.Drawn, tagCount * Amount(state, owner), owner)
+            : One(state);
+}
+
+/// <summary>
+/// PaleBlueDotPower.AfterCardPlayed: once a turn (Data 1: already), when its owner has finished 5 card plays this turn, draws next
+/// turn.
+/// </summary>
+public sealed class PaleBlueDotPower : ProcModel
+{
+    /// <summary>The card plays it waits for (PaleBlueDotPower.cardPlayThresholdValue; the game's AttacksPlayedThisTurn counts every play).</summary>
+    private const int PlaysNeeded = 5;
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (!Mine(play, owner) || UsedThisTurn(state, owner) || SimEngine.TurnOf(state, owner)[SimKeys.Plays(PlayStage.Finished)] < PlaysNeeded) return One(state);
+        MarkUsedThisTurn(state, owner);
+        return Fire(state, owner);
+    }
+}
+
+/// <summary>
+/// IterationPower.AfterCardDrawn: the first Status its owner draws this turn (the turn's CardDrawnEntry count, this one included:
+/// SimPlayer.StatusDrawn) draws its amount more, in its place among the listeners (before relics and Void's own energy loss). No tab.
+/// </summary>
+public sealed class IterationPower : SimModel
+{
+    // Frozen with one change: SimPlayer.StatusDrawn, the count it read, is gone; the turn's Status draws are a question to the fight's log now
+    // (the read model's), read here as that count.
+    private static int StatusDrawn(SimState state, int owner) =>
+        SimModels.Get(PowerId.Iteration.Name) is ReadModel read && read.Spec.Values().OfType<HookHistory>().FirstOrDefault() is { } history ? SimEngine.HistoryCount(state, owner, history.Query) ?? 0 : 0;
+
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
+    {
+        if (cardEvent != CardEvent.Drawn || player != owner || state.DrawnCard is not { Status: true } || StatusDrawn(state, owner) > 1) return One(state);
+        return SimEngine.ProcCardEvent(state, CardEvent.Drawn, count: SimEngine.PowerOn(state, owner, ThisPower), owner, indirect: true);
+    }
+}

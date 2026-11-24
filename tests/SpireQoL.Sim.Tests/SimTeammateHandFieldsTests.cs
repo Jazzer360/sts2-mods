@@ -33,7 +33,7 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.HexFrom),         // who cast Hex on them (its power is on screen)
         nameof(SimPlayer.Counters),        // their counter powers' copies: each on screen with its count
         nameof(SimPlayer.Fields),          // what their powers and relics read from code keep (a count, a flag): theirs, not their hand's
-        nameof(SimPlayer.Drawn), nameof(SimPlayer.StatusDrawn), // cards drawn: you watch them draw (the simulation's own count)
+        nameof(SimPlayer.Drawn),           // cards drawn: you watch them draw (the simulation's own count)
         nameof(SimPlayer.TakenToHand),     // cards taken from their piles into their hand in the simulation: its own count
         nameof(SimPlayer.HandCount),       // the size is on screen (Cloak Clasp, Screaming Flagon, Obsidian Vice, Regret's amount)
         nameof(SimPlayer.PlayingFromHand), // their cards being played: on screen as they play (the simulation's own count)

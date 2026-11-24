@@ -415,10 +415,6 @@ public static partial class SimAdapter
                 }
             if (me.Relics.Any(relic => relic.GetType().Name == nameof(MegaCrit.Sts2.Core.Models.Relics.BiiigHug))) Made<Soot>();
             player.MadeCards = made.Count > 0 ? made : null;
-            // Iteration counts the Status cards drawn this turn (CardDrawnEntry: you watched them come).
-            if (iteration)
-                player.StatusDrawn = CombatManager.Instance.History.Entries.OfType<MegaCrit.Sts2.Core.Combat.History.Entries.CardDrawnEntry>()
-                    .Count(cardDrawnEntry => cardDrawnEntry.HappenedThisTurn(combat) && cardDrawnEntry.Actor == me.Creature && cardDrawnEntry.Card.Type == CardType.Status);
         }
         catch
         {

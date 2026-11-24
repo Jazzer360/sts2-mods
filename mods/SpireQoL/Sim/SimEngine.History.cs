@@ -64,7 +64,7 @@ public static partial class SimEngine
         if (state.History.Count == 0 || !Who.IsPlayer(player)) return;
         var entry = cardEvent switch
         {
-            CardEvent.Drawn => new HistoryEvent(HistoryKind.CardDrawn, player) { Details = HistoryDetail.NotHandDraw, CardType = state.DrawnCard?.Type ?? SimCardType.None, CardKnown = state.DrawnCard != null },
+            CardEvent.Drawn => new HistoryEvent(HistoryKind.CardDrawn, player) { Details = HistoryDetail.NotHandDraw, CardType = DrawnType(state), CardKnown = state.DrawnCard != null },
             CardEvent.Exhausted => new HistoryEvent(HistoryKind.CardExhausted, player),
             CardEvent.Discarded => new HistoryEvent(HistoryKind.CardDiscarded, player),
             CardEvent.Generated => new HistoryEvent(HistoryKind.CardGenerated, player),
@@ -76,6 +76,12 @@ public static partial class SimEngine
         };
         if (entry is { } logged) Record(state, logged);
     }
+
+    /// <summary>
+    /// The type of the card drawn as its profile has it: a Status when its profile says so (SimDrawCard.Status: the adapter marks the Status cards
+    /// when something on the board reads them), else the type it read (none when nothing reads it).
+    /// </summary>
+    private static SimCardType DrawnType(SimState state) => state.DrawnCard is { Status: true } ? SimCardType.Status : state.DrawnCard?.Type ?? SimCardType.None;
 
     /// <summary>DamageReceivedEntry for a player: the HP they lost (Result.UnblockedDamage) and the damage's props.</summary>
     private static void RecordDamageReceived(SimState state, int player, SimProps props, int lost)

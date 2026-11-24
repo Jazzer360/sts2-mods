@@ -339,22 +339,6 @@ public sealed class NostalgiaPower : ProcModel
     public override void AfterModifyingCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location) => Fire(state, owner);
 }
 
-/// <summary>
-/// PaleBlueDotPower.AfterCardPlayed: once a turn (Data 1: already), when its owner has finished 5 card plays this turn, draws next
-/// turn.
-/// </summary>
-public sealed class PaleBlueDotPower : ProcModel
-{
-    /// <summary>The card plays it waits for (PaleBlueDotPower.cardPlayThresholdValue; the game's AttacksPlayedThisTurn counts every play).</summary>
-    private const int PlaysNeeded = 5;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (!Mine(play, owner) || UsedThisTurn(state, owner) || SimEngine.TurnOf(state, owner)[SimKeys.Plays(PlayStage.Finished)] < PlaysNeeded) return One(state);
-        MarkUsedThisTurn(state, owner);
-        return Fire(state, owner);
-    }
-}
-
 /// <summary>ImitationLearningPower (a teammate's, Data = the player it copies + 100): a Power card that player plays is copied and played for its owner.</summary>
 public sealed class ImitationLearningPower : ProcModel
 {
@@ -414,19 +398,6 @@ public sealed class LullabyPower : ProcModel
         MarkUsedThisTurn(state, owner);
         return Block(state, owner, Amount(state, owner));
     }
-}
-
-/// <summary>
-/// MotifPower.AfterCardPlayed: its amount of draws for each melody (Wah, Cho, Ki) the card is the first this turn to play
-/// (CardPileCmd.Draw(num * Amount)).
-/// </summary>
-public sealed class MotifPower : ProcModel
-{
-    public override TabKind? Tab => TabKind.Draw;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && Melodies.Tags.Count(simCardTag => Melodies.First(state, play, simCardTag)) is var tagCount and > 0
-            ? Cause(Fire(state, owner), CardEvent.Drawn, tagCount * Amount(state, owner), owner)
-            : One(state);
 }
 
 /// <summary>
@@ -663,19 +634,6 @@ public sealed class CacophonyPower : EventCountdownPower
     protected override CardEvent Event => CardEvent.Drawn;
     protected override int Period => 33;
     protected override IEnumerable<SimState> OnZero(SimState state, int owner, int amount) => DamageRandom(state, owner, amount);
-}
-
-/// <summary>
-/// IterationPower.AfterCardDrawn: the first Status its owner draws this turn (the turn's CardDrawnEntry count, this one included:
-/// SimPlayer.StatusDrawn) draws its amount more, in its place among the listeners (before relics and Void's own energy loss). No tab.
-/// </summary>
-public sealed class IterationPower : SimModel
-{
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
-    {
-        if (cardEvent != CardEvent.Drawn || player != owner || state.DrawnCard is not { Status: true } || state.Player(owner) is not { StatusDrawn: <= 1 }) return One(state);
-        return SimEngine.ProcCardEvent(state, CardEvent.Drawn, count: SimEngine.PowerOn(state, owner, ThisPower), owner, indirect: true);
-    }
 }
 
 /// <summary>PagestormPower.AfterCardDrawn: each Ethereal card its owner draws draws its amount more, in its place among the listeners. No tab.</summary>

@@ -384,8 +384,6 @@ public sealed class SimPlayer
     public int Drawn;
     /// <summary>Cards taken from your draw pile into your hand in this simulation (each one's id in AutoHand: TakenId).</summary>
     public int TakenToHand;
-    /// <summary>Status cards drawn this turn, the simulation's included (Iteration draws on the first).</summary>
-    public int StatusDrawn;
     /// <summary>
     /// Of those, the ones Ethereal only through Hex (HexPower.TryModifyKeywordsInCombat on its Hexed cards), and the enemy that
     /// cast it (Who.None: none). Hex is removed when its caster dies (HexPower.AfterDeath), and those cards stop being Ethereal: they
@@ -543,7 +541,7 @@ public sealed class SimPlayer
     {
         add(Block); add(Hp); add(MaxHp); add(Taken); add(Through); add(OstyTaken); add(UnblockableTaken); add(Incoming); add(BlockGained);
         add(WuppyHp); add(WuppyTaken); add(OstyHp); add(Died ? 1 : 0); add(LizardTailUsed ? 1 : 0); add(LizardTailHeal); add(FairiesUsed); add(Fairies);
-        add(BlockGains); add(Energy); add(HandCount); add(PlayingFromHand); add(Arrows); add(Fading); add(HexFading); add(HexFrom); add(Drawn); add(ExhaustPile); add(TakenToHand); add(StatusDrawn);
+        add(BlockGains); add(Energy); add(HandCount); add(PlayingFromHand); add(Arrows); add(Fading); add(HexFading); add(HexFrom); add(Drawn); add(ExhaustPile); add(TakenToHand);
         add(AttacksThisTurn); add(Focus); add(Thunder); add(OrbCapacity); add(BeaconGiving ? 1 : 0); add(InvincibleBlock); add(InvincibleDrawPile);
         Draw?.Hash(add);
         add(TurnEndCards.Count);

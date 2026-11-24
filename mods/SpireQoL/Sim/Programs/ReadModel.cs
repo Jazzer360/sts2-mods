@@ -516,6 +516,22 @@ public sealed class ReadModel : SimModel
                 var key = FieldKey(field.Field);
                 return (in HookArgs args) => SimEngine.FieldsOf(args.State, args.Owner)[key];
             }
+            case HookHistory history:
+            {
+                var query = history.Query;
+                var any = history.Any;
+                return (in HookArgs args) =>
+                {
+                    // The owner's player's ledger (a player's model); anyone's entries are in every player's.
+                    var player = Who.IsPlayer(args.Owner) ? args.Owner : query.Whose == HistoryWhose.Anyone ? Who.You : Who.None;
+                    if (player == Who.None || SimEngine.HistoryCount(args.State, player, query) is not { } count)
+                    {
+                        args.State.Unmodelled ??= SimEngine.HistoryUnknown;
+                        return 0m;
+                    }
+                    return any ? count > 0 ? 1m : 0m : count;
+                };
+            }
             default:
                 throw new InvalidOperationException($"{Name}: no value {value.GetType().Name}");
         }

@@ -489,7 +489,6 @@ public static partial class SimEngine
         simPlayer.Drawn++;
         // The draw a card acts on (RunDrawnCard): this card, and its id in AutoHand. Copied, not added to: branches share the list.
         if (record && state.DrawRecord != null) state.DrawRecord = new List<(SimDrawCard, int)>(state.DrawRecord) { (card, -1000 - simPlayer.Drawn) };
-        if (card.Status) simPlayer.StatusDrawn++;
         JoinHand(state, simPlayer, card, -1000 - simPlayer.Drawn);
         // Hellraiser auto-plays a drawn Strike (AfterCardDrawnEarly: before the other draw reactions).
         return card.Strike && simPlayer.Powers[PowerId.Hellraiser] > 0

@@ -112,14 +112,18 @@ public class SimDrawTests
     [Fact]
     public void IterationDrawsOnTheFirstStatusOnly()
     {
-        // Iteration 2: the first Status drawn this turn draws 2 more (a pile of Statuses: three in all). A second Status doesn't.
+        // Iteration 2: the first Status drawn this turn draws 2 more (a pile of Statuses: three in all). A second Status doesn't. Read from its
+        // code: the Status cards drawn this turn are its question to the fight's log, seeded by the adapter (the history ledger, decision #191).
         var status = new SimDrawCard("status") { Status = true };
         var state = You();
         state.You.Powers = state.You.Powers.With(PowerId.Iteration, amount: 2, data: 0);
+        var question = Assert.Single(Assert.IsType<ReadModel>(SimModels.Get(PowerId.Iteration.Name)).Spec.Values().OfType<HookHistory>()).Query;
+        state.History = new[] { question };
         state.You.Draw = Pile((status, 6));
         var outcome = SimEngine.Run(state, Draws(cards: 1));
         Assert.All(outcome.Branches, branch => Assert.Equal(3, branch.You.Drawn));
-        state.You.StatusDrawn = 1; // one already drawn this turn
+        Assert.All(outcome.Branches, branch => Assert.Null(branch.Unmodelled));
+        state.You.Turn = state.You.Turn.Add(question.Key, delta: 1); // one already drawn this turn
         Assert.All(SimEngine.Run(state, Draws(cards: 1)).Branches, branch => Assert.Equal(1, branch.You.Drawn));
     }
 

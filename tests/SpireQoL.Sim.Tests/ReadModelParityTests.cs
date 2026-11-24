@@ -39,6 +39,8 @@ public class ReadModelParityTests
         ["StranglePower.AfterCardPlayed"] = "CreatureCmd.Damage(base.Owner, ...), with no test of its owner's side: on a player it hurts them for their own plays (the hand-written model dealt damage to enemies only). Only enemies have it in the game (Strangle the card applies it to one): no prediction changes",
         ["SneakyPower.AfterCardPlayed"] = "cardPlay.Card.Owner.Creature != base.Owner && cardPlay.Card.Type == Attack, with no test of its owner's side: on a player it gives them block on another's Attack (the hand-written model wanted an enemy). Only enemies have it in the game: no prediction changes",
         ["ConcoctPower.AfterSideTurnEnd"] = "base.Owner.Side != side: PowerCmd.Remove(this) as the other side's turn ends, which for the players' turn the simulator ends is an enemy owner. The engine runs the turn's end for players' models only (SimEngine.EndOfTurn), and only players have it: no prediction changes",
+        ["IterationPower.AfterCardEvent"] = "Flash(), then CardPileCmd.Draw: the read model logs its firing (the game's Flash) where the hand-written model logged none. It has no tab (no Proc Tags row): what's shown doesn't change; the play check now holds its flash to the game's",
+        ["PaleBlueDotPower.AfterCardPlayed"] = "PowerCmd.Apply<DrawCardsNextTurnPower>(base.Owner, base.Amount): the read model puts Draw Cards Next Turn on its owner where the hand-written model only fired. It acts as its owner's next turn starts, outside a simulation: no prediction changes",
         ["SerratedArrowsPower.ModifyDamageMultiplicative"] = "target.HasPower<ImpaledPower>(), with no test of the target's side: a player with Impaled would count (the hand-written model wanted an enemy). Only enemies are impaled (ArrowCmd.ImpaleTarget: an arrow in the shot's target, an enemy): no prediction changes",
         ["VulnerablePower.ModifyDamageMultiplicative"] = "dealer.Player?.GetRelic<PaperPhrog>(), and PaperPhrog's and CrueltyPower's own `target == base.Owner` returns: Osty's hits get no Paper Phrog (a pet's creature has no Player; the hand-written model gave him his player's), a fix where Osty hits a Vulnerable enemy with Paper Phrog; and a creature's own Phrog and Cruelty don't raise a powered attack on itself (none happens today)",
         ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
@@ -180,6 +182,9 @@ public class ReadModelParityTests
         }
         // A power whose code asks who applied it keeps its applier as its Data (DataCreature), as the adapter reads it: you, for one that asks
         // whether its applier is a player or played the card; else enemy 0 (one that asks whether its applier died).
+        // The questions its code asks of the fight's log, seeded as the adapter seeds the board's (HistoryLedger.Seed): none happened yet.
+        var questions = model.Spec.Values().OfType<HookHistory>().Select(history => history.Query).Distinct().ToList();
+        if (questions.Count > 0) state.History = questions;
         var playersApplier = model.Spec.Values().Any(value => value is HookFactValue { Fact: HookFact.ApplierIsPlayer or HookFact.PlayIsAppliers });
         var powerData = PowerDataVars.TryGetValue(model.Name, out var dataVar) ? state.Vars[$"{owner}:{model.Name}:{dataVar}"]
             : model.UsesApplier ? DataCreature.Of(playersApplier ? Who.You : 0) : 0;

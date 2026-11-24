@@ -65,8 +65,6 @@ internal static class ModelAmountCheck
             "floor((stars spent so far + this spend) / Stars) × Block in both: the spend is AfterStarsSpent's amount in the game, the play's Stars in the model",
         ["NecroMasteryPower Damage: game mul(-?parameter delta, Amount); model mul(?parameter lost, Amount)"] =
             "its amount × the HP Osty lost: AfterCurrentHpChanged's -delta in the game, AfterOstyHpLost's lost in the model",
-        ["MotifPower Draw: game mul(?local, Amount); model mul(?Enumerable.Count, Amount)"] =
-            "its amount × the melodies (Wah, Cho, Ki) the card is the first this turn to play, counted from the turn's plays in both (Melodies.First)",
         ["DarkEmbracePower Draw: game Amount | mul(Amount, ?field etherealCount); model Amount"] =
             "its amount per card exhausted; the Ethereal ones exhausted as the turn ends draw together at AfterSideTurnEnd (amount × etherealCount), the same number",
         ["TheBombPower Damage: game Var Damage; model ?CounterCopy.get_Amount"] =

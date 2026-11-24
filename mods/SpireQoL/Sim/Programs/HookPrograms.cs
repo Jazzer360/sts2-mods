@@ -204,6 +204,16 @@ public sealed record HookVar(string Key) : HookValue
 /// </summary>
 public sealed record HookField(string Field) : HookValue;
 
+/// <summary>
+/// A question to the game's log of the fight (CombatManager.Instance.History: Count or Any of its entries, decision #191), as the history
+/// ledger counts it for the owner's player (SimEngine.HistoryCount): its count, or 1 when there's any (Any). A count the ledger doesn't know
+/// makes the simulation unknown, never 0.
+/// </summary>
+public sealed record HookHistory(HistoryQuery Query) : HookValue
+{
+    public bool Any { get; init; }
+}
+
 /// <summary>Two values the code combines or compares.</summary>
 public sealed record HookMath(HookOperation Operation, HookValue Left, HookValue Right) : HookValue;
 

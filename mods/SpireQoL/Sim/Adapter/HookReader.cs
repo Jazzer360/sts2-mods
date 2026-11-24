@@ -552,6 +552,9 @@ public static class HookReader
             {
                 case CompareValue compare:
                     return Compare(compare);
+                // A question to the fight's log tested: there's any (Any), or its count isn't 0.
+                case QueryValue { Name: "Count" or "Any" } logged when ProgramReader.ReadsHistory(logged):
+                    return logged.Name == "Any" ? History(logged) : new HookMath(HookOperation.NotEqual, History(logged), new HookConstant(0m));
                 // The owner's hand is empty (GetPile(Hand, owner).IsEmpty), or has cards (its Count tested as true or false).
                 case QueryValue { Name: "IsEmpty", Of: { } emptyPile } when IsOwnersHand(emptyPile):
                     return new HookMath(HookOperation.Equal, new HookFactValue(HookFact.OwnerHandCount), new HookConstant(0m));
@@ -806,6 +809,9 @@ public static class HookReader
         {
             switch (value)
             {
+                // A question to the fight's log (Count or Any of its entries): the history ledger's count (decision #191).
+                case QueryValue { Name: "Count" or "Any" } logged when ProgramReader.ReadsHistory(logged):
+                    return History(logged);
                 case ConstantValue constant: return new HookConstant(constant.Value);
                 case NamedValue { Name: "Decimal.Zero" }: return new HookConstant(0m);
                 case NamedValue { Name: "Decimal.One" }: return new HookConstant(1m);
@@ -875,6 +881,17 @@ public static class HookReader
                 return new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), Value(way.Value))).ToList());
             if (value is QueryValue { Of: { } receiver } call && ModelCall(call, receiver) is { } called) return called;
             throw new Gap($"gap: the value {value}");
+        }
+
+        /// <summary>
+        /// A question to the fight's log, as the history ledger counts it (HistoryQueryReader, the one translation every card, power and relic
+        /// shares); a gap of the kind the reader names when the ledger doesn't count it.
+        /// </summary>
+        private HookValue History(QueryValue code)
+        {
+            var reading = HistoryQueryReader.Read(code, (enumType, number) => EnumName(_type.Assembly, enumType, number));
+            if (reading.Query is not { } query) throw new Gap($"gap: the fight's log ({reading.Gap}: {reading.Why}): {code}");
+            return new HookHistory(query) { Any = reading.AsksAny };
         }
 
         /// <summary>

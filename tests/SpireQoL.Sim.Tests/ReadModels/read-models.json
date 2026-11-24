@@ -2242,6 +2242,80 @@
     "Harmful": false
   },
   {
+    "Name": "IterationPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardDrawn",
+        "Steps": [
+          {
+            "$kind": "DrawStep",
+            "Count": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardDrawn\u003Ed__4.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardDrawn\u003Ed__4.MoveNext:003D",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 4
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDrawn\u003Ed__4.MoveNext:006C",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookHistory",
+                    "Query": {
+                      "Kind": "CardDrawn",
+                      "Scope": "ThisTurn",
+                      "Whose": "Owner",
+                      "Details": "None",
+                      "CardType": "Status"
+                    },
+                    "Any": false
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Harmful": false
+  },
+  {
     "Name": "IvoryTile",
     "Kind": "Relic",
     "Hooks": [
@@ -3099,6 +3173,1363 @@
     "Harmful": false
   },
   {
+    "Name": "MotifPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "DrawStep",
+            "Count": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookWays",
+                "Ways": [
+                  {
+                    "When": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "PlayIsOwners"
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardTag",
+                                "Of": "Wah"
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardTag",
+                              "Of": "Cho"
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:00D6",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardTag",
+                            "Of": "Ki"
+                          }
+                        }
+                      }
+                    },
+                    "Value": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  },
+                  {
+                    "When": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "PlayIsOwners"
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardTag",
+                              "Of": "Wah"
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardTag",
+                              "Of": "Cho"
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:00D6",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardTag",
+                            "Of": "Ki"
+                          }
+                        }
+                      }
+                    },
+                    "Value": {
+                      "$kind": "HookMath",
+                      "Operation": "Add",
+                      "Left": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "Greater",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookHistory",
+                            "Query": {
+                              "Kind": "CardPlayStarted",
+                              "Scope": "ThisTurn",
+                              "Whose": "Owner",
+                              "Details": "None",
+                              "CardType": "None",
+                              "CardTag": "Wah"
+                            },
+                            "Any": false
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "When": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PlayIsOwners"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardTag",
+                            "Of": "Cho"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:00D6",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardTag",
+                            "Of": "Ki"
+                          }
+                        }
+                      }
+                    },
+                    "Value": {
+                      "$kind": "HookMath",
+                      "Operation": "Add",
+                      "Left": {
+                        "$kind": "HookWays",
+                        "Ways": [
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "PlayIsOwners"
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardTag",
+                                    "Of": "Wah"
+                                  }
+                                }
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "PlayIsOwners"
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardTag",
+                                  "Of": "Wah"
+                                }
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookMath",
+                              "Operation": "Add",
+                              "Left": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              },
+                              "Right": {
+                                "$kind": "HookMath",
+                                "Operation": "Greater",
+                                "Left": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookHistory",
+                                    "Query": {
+                                      "Kind": "CardPlayStarted",
+                                      "Scope": "ThisTurn",
+                                      "Whose": "Owner",
+                                      "Details": "None",
+                                      "CardType": "None",
+                                      "CardTag": "Wah"
+                                    },
+                                    "Any": false
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "Greater",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookHistory",
+                            "Query": {
+                              "Kind": "CardPlayStarted",
+                              "Scope": "ThisTurn",
+                              "Whose": "Owner",
+                              "Details": "None",
+                              "CardType": "None",
+                              "CardTag": "Cho"
+                            },
+                            "Any": false
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "When": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PlayIsOwners"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:00D6",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CardTag",
+                          "Of": "Ki"
+                        }
+                      }
+                    },
+                    "Value": {
+                      "$kind": "HookMath",
+                      "Operation": "Add",
+                      "Left": {
+                        "$kind": "HookWays",
+                        "Ways": [
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "PlayIsOwners"
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                    "Test": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardTag",
+                                      "Of": "Wah"
+                                    }
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardTag",
+                                    "Of": "Cho"
+                                  }
+                                }
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "PlayIsOwners"
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardTag",
+                                    "Of": "Wah"
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardTag",
+                                    "Of": "Cho"
+                                  }
+                                }
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookMath",
+                              "Operation": "Add",
+                              "Left": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              },
+                              "Right": {
+                                "$kind": "HookMath",
+                                "Operation": "Greater",
+                                "Left": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookHistory",
+                                    "Query": {
+                                      "Kind": "CardPlayStarted",
+                                      "Scope": "ThisTurn",
+                                      "Whose": "Owner",
+                                      "Details": "None",
+                                      "CardType": "None",
+                                      "CardTag": "Wah"
+                                    },
+                                    "Any": false
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "PlayIsOwners"
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardTag",
+                                  "Of": "Cho"
+                                }
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookMath",
+                              "Operation": "Add",
+                              "Left": {
+                                "$kind": "HookWays",
+                                "Ways": [
+                                  {
+                                    "When": {
+                                      "$kind": "HookMath",
+                                      "Operation": "And",
+                                      "Left": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "PlayIsOwners"
+                                        }
+                                      },
+                                      "Right": {
+                                        "$kind": "HookNot",
+                                        "Inner": {
+                                          "$kind": "HookTest",
+                                          "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                          "Test": {
+                                            "$kind": "HookFactValue",
+                                            "Fact": "CardTag",
+                                            "Of": "Wah"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "Value": {
+                                      "$kind": "HookConstant",
+                                      "Value": 0
+                                    }
+                                  },
+                                  {
+                                    "When": {
+                                      "$kind": "HookMath",
+                                      "Operation": "And",
+                                      "Left": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "PlayIsOwners"
+                                        }
+                                      },
+                                      "Right": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CardTag",
+                                          "Of": "Wah"
+                                        }
+                                      }
+                                    },
+                                    "Value": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Add",
+                                      "Left": {
+                                        "$kind": "HookConstant",
+                                        "Value": 0
+                                      },
+                                      "Right": {
+                                        "$kind": "HookMath",
+                                        "Operation": "Greater",
+                                        "Left": {
+                                          "$kind": "HookMath",
+                                          "Operation": "Equal",
+                                          "Left": {
+                                            "$kind": "HookHistory",
+                                            "Query": {
+                                              "Kind": "CardPlayStarted",
+                                              "Scope": "ThisTurn",
+                                              "Whose": "Owner",
+                                              "Details": "None",
+                                              "CardType": "None",
+                                              "CardTag": "Wah"
+                                            },
+                                            "Any": false
+                                          },
+                                          "Right": {
+                                            "$kind": "HookConstant",
+                                            "Value": 1
+                                          }
+                                        },
+                                        "Right": {
+                                          "$kind": "HookConstant",
+                                          "Value": 0
+                                        }
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              "Right": {
+                                "$kind": "HookMath",
+                                "Operation": "Greater",
+                                "Left": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookHistory",
+                                    "Query": {
+                                      "Kind": "CardPlayStarted",
+                                      "Scope": "ThisTurn",
+                                      "Whose": "Owner",
+                                      "Details": "None",
+                                      "CardType": "None",
+                                      "CardTag": "Cho"
+                                    },
+                                    "Any": false
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "Greater",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookHistory",
+                            "Query": {
+                              "Kind": "CardPlayStarted",
+                              "Scope": "ThisTurn",
+                              "Whose": "Owner",
+                              "Details": "None",
+                              "CardType": "None",
+                              "CardTag": "Ki"
+                            },
+                            "Any": false
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0107",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookWays",
+                      "Ways": [
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "PlayIsOwners"
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                    "Test": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardTag",
+                                      "Of": "Wah"
+                                    }
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardTag",
+                                    "Of": "Cho"
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:00D6",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardTag",
+                                  "Of": "Ki"
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "PlayIsOwners"
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardTag",
+                                    "Of": "Wah"
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardTag",
+                                    "Of": "Cho"
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:00D6",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardTag",
+                                  "Of": "Ki"
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookMath",
+                            "Operation": "Add",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "Greater",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookHistory",
+                                  "Query": {
+                                    "Kind": "CardPlayStarted",
+                                    "Scope": "ThisTurn",
+                                    "Whose": "Owner",
+                                    "Details": "None",
+                                    "CardType": "None",
+                                    "CardTag": "Wah"
+                                  },
+                                  "Any": false
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 1
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "PlayIsOwners"
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardTag",
+                                  "Of": "Cho"
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:00D6",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardTag",
+                                  "Of": "Ki"
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookMath",
+                            "Operation": "Add",
+                            "Left": {
+                              "$kind": "HookWays",
+                              "Ways": [
+                                {
+                                  "When": {
+                                    "$kind": "HookMath",
+                                    "Operation": "And",
+                                    "Left": {
+                                      "$kind": "HookTest",
+                                      "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                      "Test": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "PlayIsOwners"
+                                      }
+                                    },
+                                    "Right": {
+                                      "$kind": "HookNot",
+                                      "Inner": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CardTag",
+                                          "Of": "Wah"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "Value": {
+                                    "$kind": "HookConstant",
+                                    "Value": 0
+                                  }
+                                },
+                                {
+                                  "When": {
+                                    "$kind": "HookMath",
+                                    "Operation": "And",
+                                    "Left": {
+                                      "$kind": "HookTest",
+                                      "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                      "Test": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "PlayIsOwners"
+                                      }
+                                    },
+                                    "Right": {
+                                      "$kind": "HookTest",
+                                      "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                      "Test": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardTag",
+                                        "Of": "Wah"
+                                      }
+                                    }
+                                  },
+                                  "Value": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Add",
+                                    "Left": {
+                                      "$kind": "HookConstant",
+                                      "Value": 0
+                                    },
+                                    "Right": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Greater",
+                                      "Left": {
+                                        "$kind": "HookMath",
+                                        "Operation": "Equal",
+                                        "Left": {
+                                          "$kind": "HookHistory",
+                                          "Query": {
+                                            "Kind": "CardPlayStarted",
+                                            "Scope": "ThisTurn",
+                                            "Whose": "Owner",
+                                            "Details": "None",
+                                            "CardType": "None",
+                                            "CardTag": "Wah"
+                                          },
+                                          "Any": false
+                                        },
+                                        "Right": {
+                                          "$kind": "HookConstant",
+                                          "Value": 1
+                                        }
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 0
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "Greater",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookHistory",
+                                  "Query": {
+                                    "Kind": "CardPlayStarted",
+                                    "Scope": "ThisTurn",
+                                    "Whose": "Owner",
+                                    "Details": "None",
+                                    "CardType": "None",
+                                    "CardTag": "Cho"
+                                  },
+                                  "Any": false
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 1
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "PlayIsOwners"
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:00D6",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardTag",
+                                "Of": "Ki"
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookMath",
+                            "Operation": "Add",
+                            "Left": {
+                              "$kind": "HookWays",
+                              "Ways": [
+                                {
+                                  "When": {
+                                    "$kind": "HookMath",
+                                    "Operation": "And",
+                                    "Left": {
+                                      "$kind": "HookMath",
+                                      "Operation": "And",
+                                      "Left": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "PlayIsOwners"
+                                        }
+                                      },
+                                      "Right": {
+                                        "$kind": "HookNot",
+                                        "Inner": {
+                                          "$kind": "HookTest",
+                                          "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                          "Test": {
+                                            "$kind": "HookFactValue",
+                                            "Fact": "CardTag",
+                                            "Of": "Wah"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "Right": {
+                                      "$kind": "HookNot",
+                                      "Inner": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CardTag",
+                                          "Of": "Cho"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "Value": {
+                                    "$kind": "HookConstant",
+                                    "Value": 0
+                                  }
+                                },
+                                {
+                                  "When": {
+                                    "$kind": "HookMath",
+                                    "Operation": "And",
+                                    "Left": {
+                                      "$kind": "HookMath",
+                                      "Operation": "And",
+                                      "Left": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "PlayIsOwners"
+                                        }
+                                      },
+                                      "Right": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CardTag",
+                                          "Of": "Wah"
+                                        }
+                                      }
+                                    },
+                                    "Right": {
+                                      "$kind": "HookNot",
+                                      "Inner": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CardTag",
+                                          "Of": "Cho"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "Value": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Add",
+                                    "Left": {
+                                      "$kind": "HookConstant",
+                                      "Value": 0
+                                    },
+                                    "Right": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Greater",
+                                      "Left": {
+                                        "$kind": "HookMath",
+                                        "Operation": "Equal",
+                                        "Left": {
+                                          "$kind": "HookHistory",
+                                          "Query": {
+                                            "Kind": "CardPlayStarted",
+                                            "Scope": "ThisTurn",
+                                            "Whose": "Owner",
+                                            "Details": "None",
+                                            "CardType": "None",
+                                            "CardTag": "Wah"
+                                          },
+                                          "Any": false
+                                        },
+                                        "Right": {
+                                          "$kind": "HookConstant",
+                                          "Value": 1
+                                        }
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 0
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "When": {
+                                    "$kind": "HookMath",
+                                    "Operation": "And",
+                                    "Left": {
+                                      "$kind": "HookTest",
+                                      "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                      "Test": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "PlayIsOwners"
+                                      }
+                                    },
+                                    "Right": {
+                                      "$kind": "HookTest",
+                                      "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                      "Test": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardTag",
+                                        "Of": "Cho"
+                                      }
+                                    }
+                                  },
+                                  "Value": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Add",
+                                    "Left": {
+                                      "$kind": "HookWays",
+                                      "Ways": [
+                                        {
+                                          "When": {
+                                            "$kind": "HookMath",
+                                            "Operation": "And",
+                                            "Left": {
+                                              "$kind": "HookTest",
+                                              "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                              "Test": {
+                                                "$kind": "HookFactValue",
+                                                "Fact": "PlayIsOwners"
+                                              }
+                                            },
+                                            "Right": {
+                                              "$kind": "HookNot",
+                                              "Inner": {
+                                                "$kind": "HookTest",
+                                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                                "Test": {
+                                                  "$kind": "HookFactValue",
+                                                  "Fact": "CardTag",
+                                                  "Of": "Wah"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "Value": {
+                                            "$kind": "HookConstant",
+                                            "Value": 0
+                                          }
+                                        },
+                                        {
+                                          "When": {
+                                            "$kind": "HookMath",
+                                            "Operation": "And",
+                                            "Left": {
+                                              "$kind": "HookTest",
+                                              "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                              "Test": {
+                                                "$kind": "HookFactValue",
+                                                "Fact": "PlayIsOwners"
+                                              }
+                                            },
+                                            "Right": {
+                                              "$kind": "HookTest",
+                                              "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                              "Test": {
+                                                "$kind": "HookFactValue",
+                                                "Fact": "CardTag",
+                                                "Of": "Wah"
+                                              }
+                                            }
+                                          },
+                                          "Value": {
+                                            "$kind": "HookMath",
+                                            "Operation": "Add",
+                                            "Left": {
+                                              "$kind": "HookConstant",
+                                              "Value": 0
+                                            },
+                                            "Right": {
+                                              "$kind": "HookMath",
+                                              "Operation": "Greater",
+                                              "Left": {
+                                                "$kind": "HookMath",
+                                                "Operation": "Equal",
+                                                "Left": {
+                                                  "$kind": "HookHistory",
+                                                  "Query": {
+                                                    "Kind": "CardPlayStarted",
+                                                    "Scope": "ThisTurn",
+                                                    "Whose": "Owner",
+                                                    "Details": "None",
+                                                    "CardType": "None",
+                                                    "CardTag": "Wah"
+                                                  },
+                                                  "Any": false
+                                                },
+                                                "Right": {
+                                                  "$kind": "HookConstant",
+                                                  "Value": 1
+                                                }
+                                              },
+                                              "Right": {
+                                                "$kind": "HookConstant",
+                                                "Value": 0
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    "Right": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Greater",
+                                      "Left": {
+                                        "$kind": "HookMath",
+                                        "Operation": "Equal",
+                                        "Left": {
+                                          "$kind": "HookHistory",
+                                          "Query": {
+                                            "Kind": "CardPlayStarted",
+                                            "Scope": "ThisTurn",
+                                            "Whose": "Owner",
+                                            "Details": "None",
+                                            "CardType": "None",
+                                            "CardTag": "Cho"
+                                          },
+                                          "Any": false
+                                        },
+                                        "Right": {
+                                          "$kind": "HookConstant",
+                                          "Value": 1
+                                        }
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 0
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "Greater",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookHistory",
+                                  "Query": {
+                                    "Kind": "CardPlayStarted",
+                                    "Scope": "ThisTurn",
+                                    "Whose": "Owner",
+                                    "Details": "None",
+                                    "CardType": "None",
+                                    "CardTag": "Ki"
+                                  },
+                                  "Any": false
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 1
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Draw",
+    "Harmful": false
+  },
+  {
     "Name": "Nunchaku",
     "Kind": "Relic",
     "Hooks": [
@@ -3631,6 +5062,180 @@
       }
     ],
     "Tab": "Block",
+    "Harmful": false
+  },
+  {
+    "Name": "PaleBlueDotPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.alreadyActivatedThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:0036",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:004A",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.alreadyActivatedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:005E",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookHistory",
+                      "Query": {
+                        "Kind": "CardPlayFinished",
+                        "Scope": "ThisTurn",
+                        "Whose": "Owner",
+                        "Details": "None",
+                        "CardType": "None"
+                      },
+                      "Any": false
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 5
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DrawCardsNextTurnPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:0036",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:004A",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.alreadyActivatedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:005E",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookHistory",
+                      "Query": {
+                        "Kind": "CardPlayFinished",
+                        "Scope": "ThisTurn",
+                        "Whose": "Owner",
+                        "Details": "None",
+                        "CardType": "None"
+                      },
+                      "Any": false
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 5
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.alreadyActivatedThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "PaleBlueDotPower.AfterSideTurnEnd:000C",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger",
     "Harmful": false
   },
   {
@@ -6589,6 +8194,44 @@
             }
           ]
         }
+      }
+    ],
+    "Harmful": false
+  },
+  {
+    "Name": "TunePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "FreeCardPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:002F",
+              "Test": {
+                "$kind": "HookHistory",
+                "Query": {
+                  "Kind": "CardPlayFinished",
+                  "Scope": "ThisTurn",
+                  "Whose": "Owner",
+                  "Details": "None",
+                  "CardType": "None",
+                  "CardTag": "Ki"
+                },
+                "Any": true
+              }
+            }
+          }
+        ]
       }
     ],
     "Harmful": false
