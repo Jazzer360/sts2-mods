@@ -14,6 +14,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Changed
 - Dev mode checks a reused result every 5 seconds in a fight instead of every second, so an idle fight makes a fifth of the dev checks' garbage.
+- Thorns, Flame Barrier and Reflect are worked out from their own code, and every damage to a player (an enemy's attack, a card's HP cost, a power's) lands the same way. What's shown is unchanged but for the fixes below.
 - Art of War, Ripple Basin and Parrying Shield are worked out from their own code: the tab that says a card gives up (or sets up) their bonus comes from the condition each pays out on, as the play leaves it. What's shown is unchanged.
 - Self-Forming Clay, Emotion Chip, Demon Tongue and an enemy's Slippery are worked out from their own code (what each does when its owner loses HP, and the tab that says a card makes it act). What's shown is unchanged.
 - Monarch's Gaze is worked out from its own code (the temporary Strength loss each of your powered hits gives its target). What's shown is unchanged.
@@ -55,6 +56,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Play Preview: Incoming Damage, Teammate Incoming Damage and the Death Skull show the held card's turn instead of disappearing (they now read the totals the card's own search keeps, not the breakdown by source only the turn forecast keeps), and the line through an enemy's damage and the new number above it sit on the game's number wherever its label puts it.
 - Play Preview: a held card's prediction counts as for the board now when it was worked out from the same board, not only from the same read of it, so the board read again (as dev mode does once a second) no longer hides the preview. Dev mode logs why a card ready to play shows no preview.
 - The update notice on the main menu no longer builds its text again on every frame, and a card shown as a tiny card (tabs, Relic Counters, the map's reminders, the settings menu) stops re-fitting once it's in place: neither makes garbage on a frame where nothing changed.
+- Flame Barrier and Reflect hit an attacker back in the order they landed on you, as in the game: Flame Barrier always went first, which could change who dies to the last hit back.
+- Your Flame Barrier hits back an attack your Wuppy takes whole, as in the game (the hit is still on you); it didn't.
+- An enemy's Thorns hitting your Osty is worked out for Osty, as in the game: your own Intangible capped it.
+- An enemy killed by your Thorns, Flame Barrier or Reflect partway through its attack sets off its death's reactions right away, as in the game, before the rest of the hit lands.
 - In multiplayer, a power an enemy gets that the game scales for the players (Plating, Artifact, Slippery, Plow, Curl Up and the rest) is scaled in the predictions as in the game, each by its own code's rule: the powers a creature joining the fight starts with, and what an enemy's move gives an enemy (those moves were left out of Incoming Damage before).
 - A power taken back to nothing (a Strength brought to 0) is gone in the predictions, as in the game, where it stayed at 0.
 - An enemy's Vigor raises only the first attack of its move in Incoming Damage, as in the game (its attack spends it): it raised every attack of a move that attacks twice.

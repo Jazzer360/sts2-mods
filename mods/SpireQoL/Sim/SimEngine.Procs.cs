@@ -137,6 +137,27 @@ public static partial class SimEngine
         return new[] { state };
     }
 
+    /// <summary>
+    /// Damage to <paramref name="player"/>'s Osty from a creature's proc (an enemy's Thorns as Osty attacks it), while he lives: CreatureCmd.Damage of
+    /// him, so the damage math with him as its target, BeforeDamageReceived, the HP-loss pipeline on him (he keeps no block), his HP
+    /// (SimEngine.OstyLoses: Necro Mastery hears it). Logged with the damage, as every proc's is.
+    /// </summary>
+    public static IEnumerable<SimState> ProcDamageOsty(SimState state, int owner, string name, int player, decimal baseDamage, SimProps props, bool noDealer = false)
+    {
+        if (player != Who.You || state.Player(player) is not { OstyHp: > 0 }) return new[] { state };
+        var dealer = noDealer ? (int?)null : owner;
+        var damage = new DamageCtx(dealer, Who.YourOsty, props, Card: null, Play: null);
+        var modifiers = Listeners(state).Count == 0 ? null : new List<(SimModel Model, int Owner)>();
+        var amount = CalcDamage(state, baseDamage, damage, captured: null, modifiers);
+        state.LogFired(name, amount, owner);
+        if (modifiers != null) foreach (var (model, listener) in modifiers) model.AfterModifyingDamageAmount(state, listener, card: null);
+        if (amount <= 0) return new[] { state };
+        foreach (var (model, listener) in Listeners(state)) model.BeforeDamageReceived(state, listener, damage, amount);
+        var lost = Listeners(state).Count == 0 ? amount : Math.Max(0, (int)HpLossPipeline(state, damage, amount));
+        OstyLoses(state, player, lost);
+        return new[] { state };
+    }
+
     /// <summary>Card events a proc causes (Dark Embrace's draw...): each through every listener, as an indirect event.</summary>
     /// <param name="onEach">Called for each event that happens (each card drawn: a full hand or empty piles give fewer), before
     /// its listeners: a draw or energy tab counting its source's (decision #132).</param>

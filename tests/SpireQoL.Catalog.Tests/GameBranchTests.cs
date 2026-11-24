@@ -279,6 +279,20 @@ public class GameBranchTests
         }
     }
 
+    /// <summary>
+    /// Thorns is read from its code on each branch (decision #240): main's ThornsPower answers Omnislice's unpowered splash (cardSource is Omnislice),
+    /// beta's answers powered attacks alone, and the reading has it so on each, where the hand-written model asked MainRule.SplashIsUnpowered.
+    /// </summary>
+    [Fact]
+    public void ThornsAnswersOmnislicesSplashOnMainByItsOwnCode()
+    {
+        if (!File.Exists(BranchCode.BetaPath) || !File.Exists(BranchCode.MainPath)) return;
+        static bool AsksForOmnislice(BranchCode code) => code.Specs().Single(spec => spec.Name == PowerId.Thorns.Name).Values()
+            .Any(value => value is HookFactValue { Fact: HookFact.SourceCardIs } fact && fact.Of == CardId.Omnislice.Name);
+        Assert.False(AsksForOmnislice(BranchCode.Of(BranchCode.BetaPath)));
+        Assert.True(AsksForOmnislice(BranchCode.Of(BranchCode.MainPath)));
+    }
+
     /// <summary>Every simulator flag for main's way (MainRule) is set by a branch rule.</summary>
     [Fact]
     public void EveryMainRuleFlagHasItsBranchRule()

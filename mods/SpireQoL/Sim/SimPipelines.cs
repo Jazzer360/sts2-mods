@@ -35,10 +35,10 @@ public static class SimPipelines
             "AfterDamageReceived",
             "AfterDeath",                       // AllyDeaths, in the caller
         }),
-        new("CreatureCmd.Damage on a player", "CreatureCmd.Damage", "SimEngine.EnemyTurn (TakesHit: an enemy's hit on a player)", new[]
+        new("CreatureCmd.Damage on a player", "CreatureCmd.Damage", "SimEngine.Lands (every damage to a player: DamagePlayer, an enemy's hit in SimEngine.EnemyTurn)", new[]
         {
             "ModifyDamage",                     // IntentDamage, or the game's final numbers
-            "BeforeDamageReceived",             // the player's Thorns
+            "BeforeDamageReceived",             // every listener's (the player's Thorns, read from its code)
             "ModifyPreBlockDamageTarget",       // Wuppy takes it before block
             "ModifyUnblockedDamageTarget",      // Osty takes what gets through (Die For You)...
             "AfterCurrentHpChanged",            // ...and loses that HP (OstyLoses: Necro Mastery)
@@ -48,7 +48,7 @@ public static class SimPipelines
             "ShouldDie",                        // Lose: Fairy in a Bottle, Lizard Tail...
             "AfterPreventingDeath",             // ...heal from 0
             "AfterDamageGiven",                 // PlayerDamaged
-            "AfterDamageReceived",              // then Flame Barrier and Reflect
+            "AfterDamageReceived",              // every listener's in order (Flame Barrier and Reflect, read from their code)
         }),
         new("AttackCommand.Execute", "AttackCommand.Execute", "SimEngine.RunAttack", new[]
         {

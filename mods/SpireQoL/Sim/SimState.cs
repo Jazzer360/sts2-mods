@@ -325,7 +325,6 @@ public sealed class SimPlayer
     [JsonIgnore] public int ConsumingShadow { get => Powers[PowerId.ConsumingShadow]; set => Set(PowerId.ConsumingShadow, value); }
     [JsonIgnore] public int Thorns { get => Powers[PowerId.Thorns]; set => Set(PowerId.Thorns, value); }
     [JsonIgnore] public int FlameBarrier { get => Powers[PowerId.FlameBarrier]; set => Set(PowerId.FlameBarrier, value); }
-    public bool Reflect;
     /// <summary>
     /// Inferno: each time you lose HP on your turn, this much damage to every enemy (InfernoPower.AfterDamageReceived:
     /// UnblockedDamage &gt; 0 while it's their side's turn; unpowered). Any player's (the model is the owner's).
@@ -450,7 +449,7 @@ public sealed class SimPlayer
     // ---- results, for every player (decision #93: one engine; yours are read through SimState too: Taken, Died...)
     /// <summary>HP lost (after block and the HP-loss modifiers, overkill included), damage through block, and lost by Osty.</summary>
     public int Taken, Through, OstyTaken;
-    /// <summary>The part of Taken no block could stop (Regret, Beckon, Bad Luck: SimEngine.LandUnblockable).</summary>
+    /// <summary>The part of Taken no block could stop (Regret, Beckon, Bad Luck: an Unblockable damage, SimEngine.Lands).</summary>
     public int UnblockableTaken;
     /// <summary>Blockable damage landing on the player (before block): their Incoming Damage. Block a teammate gained.</summary>
     public int Incoming, BlockGained;
@@ -625,7 +624,7 @@ public sealed class SimState
 
     // ---- results (per branch). Yours are on your SimPlayer like every player's (decision #93); these read them.
     [JsonIgnore] public int Taken { get => You.Taken; set => You.Taken = value; }
-    /// <summary>The part of Taken that no block could stop (Regret, Beckon, Bad Luck: SimEngine.LandUnblockable), after the HP-loss modifiers.</summary>
+    /// <summary>The part of Taken that no block could stop (Regret, Beckon, Bad Luck: an Unblockable damage, SimEngine.Lands), after the HP-loss modifiers.</summary>
     [JsonIgnore] public int UnblockableTaken { get => You.UnblockableTaken; set => You.UnblockableTaken = value; }
     /// <summary>You reach 0 HP with nothing left to prevent death (your HP tracked: SimPlayer.Hp).</summary>
     [JsonIgnore] public bool Died { get => You.Died; set => You.Died = value; }

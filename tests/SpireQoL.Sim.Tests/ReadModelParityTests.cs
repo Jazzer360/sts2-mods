@@ -66,6 +66,7 @@ public class ReadModelParityTests
         ["ArtOfWar.BeforeCardPlayed"] = "its code has no BeforeCardPlayed: the hand-written model logged its crossed tab's firing on the turn's first Attack there; the read model logs it where its payout (AfterEnergyReset's energy on !AnyAttacksPlayedLastTurn, which AfterSideTurnEnd sets from AnyAttacksPlayedThisTurn) goes off: AfterCardPlayed's store (decision #239). The play's log is the same over the play (BonusTabParityTests); this board's turn is 0, before any the game numbers, where the payout is never on",
         ["ArtOfWar.AfterCardPlayed"] = "AnyAttacksPlayedThisTurn = true on its owner's Attack while !AnyAttacksPlayedLastTurn: the store that gives its payout up logs the crossed tab's firing (decision #239), as ArtOfWar.BeforeCardPlayed's review says",
         ["RippleBasin.BeforeCardPlayed"] = "its code has no BeforeCardPlayed: the hand-written model logged its crossed tab's firing on the turn's first Attack there; the read model's is logged where the fight's log counts the play that turns its payout off (BeforeSideTurnEnd's block on no Attack of its owner's this turn: SimEngine.Count, decision #239). The play's log is the same over the play (BonusTabParityTests)",
+        ["ThornsPower.BeforeDamageReceived"] = "target == base.Owner && dealer != null && props.IsPoweredAttack(): CreatureCmd.Damage(dealer, base.Amount, Unpowered | SkipHurtAnim, base.Owner), whoever owns it. On a player (your Thorns, a teammate's) it hits back the enemy whose attack is landing: the engine's enemy turn did that by hand (TakesHit), and the hand-written model left players' Thorns to it, so the two differ there by design (the enemy turn's tests and the single-player golden hold the read model to it). On an enemy, the only difference is a powered attack of its own on itself (dealer == target == its owner), which it now hits back as its code says: no card or move makes one",
         ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
     };
 
@@ -247,6 +248,7 @@ public class ReadModelParityTests
         nameof(SimModel.AfterModifyingHpLost),
         nameof(SimModel.ModifyOrbValue), nameof(SimModel.ModifyOrbPassiveTriggerCounts), nameof(SimModel.AfterModifyingOrbPassiveTriggerCount), nameof(SimModel.AfterOrbEvoked),
         nameof(SimModel.BeforeAttack), nameof(SimModel.AfterAttack), nameof(SimModel.ModifyDamageCap), nameof(SimModel.AfterModifyingDamageAmount),
+        nameof(SimModel.BeforeDamageReceived),
     };
 
     [Fact]
@@ -359,6 +361,18 @@ public class ReadModelParityTests
                         nameof(SimModel.ModifyDamageMultiplicative) => model.ModifyDamageMultiplicative(state, owner, damage),
                         _ => model.ModifyDamageMultiplicativeLate(state, owner, damage),
                     }));
+                break;
+            case nameof(SimModel.BeforeDamageReceived):
+                // A damage of every dealer, target, kind and card about to land (none, some), inside the damage: the state it's given changes
+                // (Thorns hitting the dealer back: your Osty alive, as a dealer is).
+                foreach (var damage in Damages(owner))
+                    foreach (var amount in new[] { 0, 4 })
+                        yield return ($"{damage}, {amount} about to land", (model, state) =>
+                        {
+                            state.You.OstyHp = 10;
+                            model.BeforeDamageReceived(state, owner, damage, amount);
+                            return Branches(new[] { state }) + $" // Osty {state.You.OstyHp}";
+                        });
                 break;
             case nameof(SimModel.ModifyDamageCap):
                 // The most a damage of every dealer, target, kind and card can be (Hook.ModifyDamage's cap).

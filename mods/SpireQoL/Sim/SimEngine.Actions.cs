@@ -939,9 +939,3 @@ public static partial class SimEngine
         return CalcDamage(state, otherHit.Base, new DamageCtx(enemy.Id, player, SimProps.Move, Card: null, Play: null), otherHit.TermsOn(player));
     }
 }
-
-public static partial class SimEngine
-{
-    /// <summary>Blockable damage to a player (Who.You, Who.Teammate(k)): Thorns hitting back at whoever attacked.</summary>
-    internal static void LandOnPlayer(SimState state, string name, int amount, int player) => LandBlockable(state, name, amount, player);
-}

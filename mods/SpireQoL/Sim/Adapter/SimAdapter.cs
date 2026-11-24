@@ -645,7 +645,6 @@ public static partial class SimAdapter
         player.Fields = SimReaders.Fields(creature.Powers.Cast<AbstractModel>().Concat(me.Relics.Where(relic => !relic.IsMelted)), idOf);
         player.Cards = SimReaders.Cards(me);
         player.Turn = SimReaders.Turn(me, combat);
-        player.Reflect = creature.Powers.Any(power => power is ReflectPower);
         foreach (var relic in me.Relics)
         {
             switch (relic.GetType().Name)

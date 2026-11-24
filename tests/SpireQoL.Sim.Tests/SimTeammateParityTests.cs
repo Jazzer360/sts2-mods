@@ -63,7 +63,7 @@ public class SimTeammateParityTests
             case "Ethereal and Forgotten Soul": player.Fading = 2; state.WithRelic(id, RelicId.ForgottenSoul, "Damage", value: 1); player.HandCount = 2; break;
             case "Thorns": player.Thorns = 3; break;
             case "Flame Barrier": player.FlameBarrier = 4; break;
-            case "Reflect": player.Block = 6; player.Reflect = true; break;
+            case "Reflect": player.Block = 6; player.Powers = player.Powers.With(PowerId.Reflect, amount: 1); break;
         }
     }
 

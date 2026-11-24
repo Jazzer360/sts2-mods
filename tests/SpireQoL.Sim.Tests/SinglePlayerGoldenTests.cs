@@ -70,7 +70,7 @@ public class SinglePlayerGoldenTests
         if (random.Next(8) == 0) player.Buffer = 1;
         if (random.Next(8) == 0) player.TungstenRod = 1;
         if (random.Next(8) == 0) player.FeelNoPain = random.Next(2, 5);
-        if (random.Next(10) == 0) player.Reflect = true;
+        if (random.Next(10) == 0) player.Powers = player.Powers.With(PowerId.Reflect, amount: 1);
         if (random.Next(2) == 0)
         {
             player.OrbCapacity = random.Next(1, 6);

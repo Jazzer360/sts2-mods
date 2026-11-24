@@ -80,6 +80,11 @@ public enum HookName
     ModifyDamageCap,
     /// <summary>Hook.AfterModifyingDamageAmount: told to the listeners whose term changed a damage (a flash).</summary>
     AfterModifyingDamageAmount,
+    /// <summary>
+    /// Hook.BeforeDamageReceived: a damage worked out, about to meet its target's block (CreatureCmd.Damage, after Hook.ModifyDamage), on any creature:
+    /// its dealer, target, props and card (Thorns hits the dealer back).
+    /// </summary>
+    BeforeDamageReceived,
 }
 
 /// <summary>When an orb's passive goes off: the OrbModel trigger hook its class overrides with a call of TriggerPassive (OrbQueue calls them).</summary>
@@ -185,6 +190,8 @@ public enum HookFact
     PlayCountSoFar,
     /// <summary>The HP a hit took past block (AfterDamageGiven's and AfterDamageReceived's result.UnblockedDamage).</summary>
     HitUnblocked,
+    /// <summary>What a hit's block took (AfterDamageGiven's and AfterDamageReceived's result.BlockedDamage: Reflect's damage back).</summary>
+    HitBlocked,
     /// <summary>The owner's block (base.Owner.Creature.Block).</summary>
     OwnerBlock,
     /// <summary>The cards in the owner's hand (PileType.Hand.GetPile(base.Owner).Cards.Count; IsEmpty is this at 0).</summary>
@@ -455,6 +462,11 @@ public enum HookTarget
     LivingPlayers,
     /// <summary>The player who played the card (cardPlay.Card.Owner.Creature: Galvanic's damage to whoever plays a Galvanized card).</summary>
     PlayOwner,
+    /// <summary>
+    /// The damage's dealer (BeforeDamageReceived's and a hit's dealer: Thorns, Flame Barrier and Reflect hit it back), whoever it is: a player, a
+    /// player's pet (Osty), an enemy.
+    /// </summary>
+    Dealer,
 }
 
 /// <summary>One command of a hook's code, on the condition its code runs it on (null: always).</summary>

@@ -49,4 +49,61 @@ public class EnemyTurnHitBackTests
         state.You.Hp = 50;
         Assert.Equal(18, HpAfter(state));
     }
+
+    [Fact]
+    public void ReflectAndFlameBarrierHitBackInTheOrderTheyLanded()
+    {
+        // Hook.AfterDamageReceived tells the listeners in their order (your powers in the order they landed): Reflect on you before Flame Barrier
+        // hits back first, and its 10 kills the 7-HP enemy before Flame Barrier's 5 (CreatureCmd.Damage skips a dead target): -3. Flame Barrier
+        // first: 5, then Reflect's 10: -8.
+        SimState Board(params PowerId[] order)
+        {
+            var state = new SimState { Enemies = { Enemy(id: 0, hp: 7, hits: [10]) } };
+            state.You.Block = 20;
+            state.You.Hp = 50;
+            foreach (var power in order) state.You.Powers = state.You.Powers.With(power, amount: power == PowerId.FlameBarrier ? 5 : 1);
+            return state;
+        }
+        Assert.Equal(-3, HpAfter(Board(PowerId.Reflect, PowerId.FlameBarrier)));
+        Assert.Equal(-8, HpAfter(Board(PowerId.FlameBarrier, PowerId.Reflect)));
+    }
+
+    [Fact]
+    public void AnAttackerKilledByThornsExplodesBeforeTheHitLands()
+    {
+        // Your Thorns kills the 2-HP attacker in BeforeDamageReceived; its CreatureCmd.Damage ends in CreatureCmd.Kill, so ExplosivePower.AfterDeath
+        // hits you there and then (6, which your Buffer stops), and the hit itself (5) lands after: you take 5, not 6.
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 2, hits: [5]) } };
+        state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.Explosive, amount: 6);
+        state.You.Hp = 50;
+        state.You.Thorns = 3;
+        state.You.Powers = state.You.Powers.With(PowerId.Buffer, amount: 1);
+        Assert.Equal(5, Assert.Single(SimEngine.Run(state).Branches).Taken);
+    }
+
+    [Fact]
+    public void FlameBarrierHitsBackWhenWuppyTakesTheWholeHit()
+    {
+        // WuppysLoyaltyPower.ModifyPreBlockDamageTarget: Wuppy takes the 6 before your block. CreatureCmd.Damage still tells Hook.AfterDamageReceived
+        // of your result (0 taken), so Flame Barrier hits back its 4.
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 30, hits: [6]) } };
+        state.You.Hp = 50;
+        state.You.WuppyHp = 20;
+        state.You.FlameBarrier = 4;
+        Assert.Equal(26, HpAfter(state));
+    }
+
+    [Fact]
+    public void ThornsOnOstyIsWorkedOutWithOstyAsItsTarget()
+    {
+        // ThornsPower.BeforeDamageReceived: CreatureCmd.Damage(dealer, ...) with Osty the dealer, so the damage math's target is Osty: your own
+        // Intangible (IntangiblePower.ModifyDamageCap: target == base.Owner) doesn't cap what he takes. Thorns 4 on his Poke: he loses 4, not 1.
+        var state = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 30 } } };
+        state.Enemies[0].Thorns = 4;
+        state.You.OstyHp = 10;
+        state.You.Powers = state.You.Powers.With(PowerId.Intangible, amount: 1);
+        var poke = new SimPlay { Name = "Poke", HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 1, HitDamage = { [1] = 6 }, ByOsty = true };
+        SimEngine.ApplyPlayTo(state, poke, out var branches, out _);
+        Assert.All(branches, branch => Assert.Equal(6, branch.You.OstyHp));
+    }
 }

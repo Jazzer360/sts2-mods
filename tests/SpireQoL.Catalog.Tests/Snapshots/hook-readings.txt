@@ -56,7 +56,7 @@ power ExplosivePower: AfterDeath: read
 power ExtraTurnPower: AfterTakingExtraTurn: gap: the simulator runs no read model's AfterTakingExtraTurn | ShouldTakeExtraTurn: gap: the simulator runs no read model's ShouldTakeExtraTurn
 power FeelNoPainPower: AfterCardExhausted: read
 power FeralPower: AfterApplied: gap: the value value | AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | AfterSideTurnStart: gap: the value value | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
-power FlameBarrierPower: AfterDamageReceived: gap: acts on dealer | AfterSideTurnEnd: read
+power FlameBarrierPower: AfterDamageReceived: read | AfterSideTurnEnd: read
 power FlankingPower: AfterApplied: read | AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power FlutterPower: AfterDamageReceived: gap: sets ThievingHopper.IsHovering where the reader reads no store | ModifyDamageMultiplicative: read
 power FocusPower: ModifyOrbValue: read
@@ -126,7 +126,7 @@ power RavenousPower: AfterDeath: gap: sets CorpseSlug.IsRavenous where the reade
 power ReaperFormPower: AfterApplied: read | AfterDamageGiven: read | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 power ReattachPower: AfterDeath: gap: changes a game object outside a command (MonsterModel.SetMoveImmediate) | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ShouldAllowHitting: gap: the simulator runs no read model's ShouldAllowHitting | ShouldCreatureBeRemovedFromCombatAfterDeath: gap: the simulator runs no read model's ShouldCreatureBeRemovedFromCombatAfterDeath | ShouldOwnerDeathTriggerFatal: gap: the simulator runs no read model's ShouldOwnerDeathTriggerFatal | ShouldPowerBeRemovedAfterOwnerDeath: gap: the simulator runs no read model's ShouldPowerBeRemovedAfterOwnerDeath
 power ReboundPower: AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | AfterSideTurnEnd: read | ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
-power ReflectPower: AfterDamageReceived: gap: the value result.BlockedDamage | AfterSideTurnStart: read
+power ReflectPower: AfterDamageReceived: read | AfterSideTurnStart: read
 power RegenPower: BeforeSideTurnEndEarly: read
 power RetainHandPower: AfterSideTurnEnd: read | ShouldFlush: gap: the simulator runs no read model's ShouldFlush
 power RingingPower: AfterApplied: gap: a loop | AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | AfterSideTurnEnd: read | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
@@ -175,7 +175,7 @@ power TerritorialPower: AfterSideTurnEnd: read
 power TheBombPower: BeforeSideTurnEnd: read
 power TheGambitPower: AfterDamageReceived: gap: CreatureCmd.Kill isn't translated
 power TheSealedThronePower: BeforeCardPlayed: read
-power ThornsPower: BeforeDamageReceived: gap: the simulator runs no read model's BeforeDamageReceived
+power ThornsPower: BeforeDamageReceived: read
 power ThunderPower: AfterOrbEvoked: read
 power ToricToughnessPower: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
 power TrashToTreasurePower: AfterCardGeneratedForCombat: gap: an orb made first

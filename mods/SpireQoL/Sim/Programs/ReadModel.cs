@@ -452,6 +452,7 @@ public sealed class ReadModel : SimModel
         HookName.AfterAttack => nameof(AfterAttack),
         HookName.ModifyDamageCap => nameof(ModifyDamageCap),
         HookName.AfterModifyingDamageAmount => nameof(AfterModifyingDamageAmount),
+        HookName.BeforeDamageReceived => nameof(BeforeDamageReceived),
         // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook; an enchantment's OnPlay
         // where its card plays (RunEnchantment).
         HookName.Passive or HookName.Evoke or HookName.OnPlay => "",
@@ -585,8 +586,18 @@ public sealed class ReadModel : SimModel
     public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit) => InDamage(HookName.AfterDamageGiven, state, owner, hit);
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit) => InDamage(HookName.AfterDamageReceived, state, owner, hit);
 
+    /// <summary>
+    /// A damage worked out, about to meet its target's block (Hook.BeforeDamageReceived: Thorns hits the dealer back), on any creature, inside the
+    /// damage: deterministic, on the state given.
+    /// </summary>
+    public override void BeforeDamageReceived(SimState state, int owner, DamageCtx damage, int amount)
+    {
+        foreach (var branch in Run(HookName.BeforeDamageReceived, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Damage = damage, Target = damage.Target }))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: BeforeDamageReceived branched inside a hit");
+    }
+
     /// <summary>A hook told inside a hit or a death (on the state given: its run can't branch).</summary>
-    private static bool InHit(HookName hook) => hook is HookName.AfterDamageGiven or HookName.AfterDamageReceived or HookName.AfterDeath;
+    private static bool InHit(HookName hook) => hook is HookName.AfterDamageGiven or HookName.AfterDamageReceived or HookName.AfterDeath or HookName.BeforeDamageReceived;
 
     private void InDamage(HookName hook, SimState state, int owner, DamageEvent hit)
     {
@@ -1151,6 +1162,18 @@ public sealed class ReadModel : SimModel
                     HookTarget.PlayOwner => args => args.Play is { } played && args.State.Player(played.Owner) is { Hp: > 0 }
                         ? SimEngine.ProcDamagePlayer(args.State, args.Owner, Name, played.Owner, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer)
                         : One(args.State),
+                    // The damage's dealer (Thorns', Flame Barrier's and Reflect's damage back), while it lives: a player through the damage on a player
+                    // (Incoming Damage's breakdown names it by its owner and its title), your Osty through the damage on him, an enemy as any.
+                    HookTarget.Dealer => args =>
+                    {
+                        if ((args.Damage?.Dealer ?? args.Hit?.Dealer) is not { } dealer) return One(args.State);
+                        if (dealer == Who.YourOsty) return SimEngine.ProcDamageOsty(args.State, args.Owner, Name, Who.You, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer);
+                        if (Who.IsPlayer(dealer))
+                            return args.State.Player(dealer) is { Hp: > 0, Died: false }
+                                ? SimEngine.ProcDamagePlayer(args.State, args.Owner, Name, dealer, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer, label: OwnerLabel(in args))
+                                : One(args.State);
+                        return SimEngine.ProcDamageOn(args.State, args.Owner, Name, dealer, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer);
+                    },
                     // A loop's enemy (the item each round).
                     HookTarget.Each => args => Who.IsEnemy(args.Each) ? SimEngine.ProcDamageOn(args.State, args.Owner, Name, args.Each, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer) : One(args.State),
                     // The living creatures an evoke acted on (AfterOrbEvoked's targets.Where(c => c.IsAlive): Thunder), each in turn.
@@ -1691,6 +1714,7 @@ public sealed class ReadModel : SimModel
             case HookFact.BoundTaken: return (in HookArgs args) => args.Taken?[0] ?? 0;
             case HookFact.BoundHeld: return (in HookArgs args) => args.State.Bound.Has(BoundKey(in args)) ? 1m : 0m;
             case HookFact.HitUnblocked: return (in HookArgs args) => args.Hit?.Unblocked ?? 0;
+            case HookFact.HitBlocked: return (in HookArgs args) => args.Hit?.Blocked ?? 0;
             case HookFact.HitTotal: return (in HookArgs args) => args.Hit?.Total ?? 0;
             case HookFact.PlayCountSoFar: return (in HookArgs args) => args.PlayCount;
             case HookFact.OwnerBlock: return (in HookArgs args) => args.State.Player(args.Owner)?.Block ?? args.State.Enemy(args.Owner)?.Block ?? 0;

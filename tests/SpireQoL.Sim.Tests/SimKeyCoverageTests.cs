@@ -28,7 +28,7 @@ public class SimKeyCoverageTests
         ["SimEnemy.Name"] = Constant, ["SimEnemy.Hittable"] = Constant, ["SimEnemy.Imbalanced"] = Constant, ["SimEnemy.Intent"] = Constant,
         ["SimEnemy.TeammateHits"] = Constant, ["SimEnemy.StartedAlive"] = Constant,
         ["SimEnemy.PoisonTriggers"] = Constant,
-        ["SimPlayer.Reflect"] = Constant, ["SimPlayer.SlotOnFirstChannel"] = Constant,
+        ["SimPlayer.SlotOnFirstChannel"] = Constant,
         ["SimPlayer.OstyShields"] = Constant, ["SimPlayer.FairyHeal"] = Constant, ["SimPlayer.BeaconOfHope"] = Constant,
         ["SimPlayer.Stampede"] = Constant, ["SimPlayer.Simpleton"] = Constant, ["SimPlayer.ExhaustAutoPlays"] = Constant,
         ["SimPlayer.MadeCards"] = Constant, ["SimEnemy.Spawns"] = Constant, ["SimEnemy.Move"] = Constant, ["SimPlayer.Cards"] = Constant,

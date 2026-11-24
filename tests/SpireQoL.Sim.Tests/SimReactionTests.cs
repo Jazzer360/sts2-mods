@@ -140,11 +140,11 @@ public class SimReactionTests
 [Fact]
     public void FullKeyChangesWithAnythingTheBranchKeyLeavesOut()
     {
-        // Card simulations are cached by FullKey: a change in something read from the game once must invalidate them (Reflect),
+        // Card simulations are cached by FullKey: a change in something read from the game once must invalidate them (an orb slot on the first channel),
         // though branches of one run never differ in it (the branch key leaves it out: SimKeyCoverageTests).
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 30, block: 0, hits: 12) } };
         var branch = new SimState { Enemies = { Enemy(id: 1, hp: 30, block: 0, hits: 12) } };
-        branch.You.Reflect = true;
+        branch.You.SlotOnFirstChannel = true;
         Assert.Equal(state.Key(), branch.Key());
         Assert.NotEqual(state.FullKey(), branch.FullKey());
         // Intents are in both (Crab Rage can change them in one branch).

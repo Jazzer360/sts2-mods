@@ -3,9 +3,9 @@
 
 ## Powers and relics
 
-beta powers: 304 classes, 273 with hooks; read from code 110, hand-written 59, neither 106 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 304 classes, 273 with hooks; read from code 113, hand-written 58, neither 104 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 58, hand-written 14, neither 238 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 95, hand-written 49, neither 93 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 98, hand-written 48, neither 91 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 50, hand-written 14, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 6, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 2
@@ -158,7 +158,7 @@ name gate: ConfusedPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a
 name gate: CorrosiveWavePower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
 name gate: DampenPower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule
 name gate: FeelNoPainPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
-name gate: FlameBarrierPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a gate to replace by a rule
+name gate: FlameBarrierPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
 name gate: FreeAttackPower in Procs/FreeCards.cs: not modelled from code: a gate to replace by a rule
 name gate: FreeCardPower in Procs/FreeCards.cs: not modelled from code: a gate to replace by a rule
 name gate: FreePowerPower in Procs/FreeCards.cs: not modelled from code: a gate to replace by a rule
@@ -184,7 +184,7 @@ name gate: SpeedsterPower in Sim/Adapter/SimAdapter.cs: read from code: a gate i
 name gate: StrengthPower in Sim/Adapter/MoveBranches.cs: read from code: a gate its reading could replace
 name gate: StretchPower in Procs/Fool.cs, Sim/Adapter/SimAdapter.Steps.cs: hand-written: goes with its model
 name gate: SwipePower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule
-name gate: ThornsPower in Sim/Adapter/SimAdapter.cs: hand-written: goes with its model
+name gate: ThornsPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
 name gate: WuppysLoyaltyPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a gate to replace by a rule
 
 ## Capabilities across every kind, by the classes each blocks on beta (alone: the classes it's the last one for; hand-written powers and relics and every other kind's class with a body to read)
@@ -220,7 +220,6 @@ hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...): 3 classes, 1 a
 queries: a creature's side or presence: 3 classes, 1 alone: PlatingPower, EssenceOfDarkness (potion)*, FairyInABottle (potion)
 commands: GainStars: 1 classes, 1 alone: StarPotion (potion)*
 hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*
-hooks: BeforeDamageReceived: 1 classes, 1 alone: ThornsPower*
 hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
 queries: the power's applier (alive, its side): 1 classes, 1 alone: MagicBombPower*
 read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 1 classes, 1 alone: ConquerorPower*

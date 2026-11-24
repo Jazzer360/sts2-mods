@@ -666,7 +666,12 @@ public static class HookReader
     internal static bool HurtsPlayOwnerOf(IReadOnlyList<HookProgram> programs) =>
         programs.Where(program => program.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed)
             .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps())
-            .Any(step => step is DamageStep { Target: HookTarget.PlayOwner } or ApplyPowerStep { Target: HookTarget.PlayOwner, Debuff: true });
+            .Any(step => step is DamageStep { Target: HookTarget.PlayOwner } or ApplyPowerStep { Target: HookTarget.PlayOwner, Debuff: true })
+        // A hit that sets off damage back to its dealer (Thorns' BeforeDamageReceived, Flame Barrier's and Reflect's AfterDamageReceived): the play's
+        // attack hurts the player who made it (or their pet).
+        || programs.Where(program => program.Hook is HookName.BeforeDamageReceived or HookName.AfterDamageReceived)
+            .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps())
+            .Any(step => step is DamageStep { Target: HookTarget.Dealer });
 
     /// <summary>The condition holds only when the fact does (it's one of the condition's ands, not under a not).</summary>
     private static bool Needs(HookValue? when, HookFact fact) => when switch
@@ -1496,7 +1501,7 @@ public static class HookReader
                     if (!noDealer && !IsOwner(values[dealerAt])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: damage dealt by {values[dealerAt]}");
                     // Damage the simulator's procs deal: to every hittable enemy, a roll over them, the creature a power landed on, or its owner.
                     var damaged = Targets(values[targetAt]);
-                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.PowerOwner or HookTarget.Owner or HookTarget.WeakestEnemy or HookTarget.EvokeTargets or HookTarget.Each or HookTarget.LivingPlayers or HookTarget.PlayOwner))
+                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.PowerOwner or HookTarget.Owner or HookTarget.WeakestEnemy or HookTarget.EvokeTargets or HookTarget.Each or HookTarget.LivingPlayers or HookTarget.PlayOwner or HookTarget.Dealer))
                         throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: damage to {values[targetAt]}");
                     return new DamageStep(damaged, amount, props) { NoDealer = noDealer };
                 }
@@ -1711,7 +1716,9 @@ public static class HookReader
             if (_hook == "AfterOrbEvoked" && Unstored(value) is QueryValue { Name: "ToList", Arguments: [QueryValue { Type: "Enumerable", Name: "Where", Arguments: [ParameterValue { Name: "targets" } or NamedValue { Name: "targets" }, LambdaValue alive] }] }
                 && LambdaReads(alive, "IsAlive")) return HookTarget.EvokeTargets;
             // The creature a hit landed on (AfterDamageGiven's, AfterDamageReceived's target).
-            if (value is ParameterValue { Name: "target" } or NamedValue { Name: "target" } && _hook is "AfterDamageGiven" or "AfterDamageReceived") return HookTarget.HitTarget;
+            if (value is ParameterValue { Name: "target" } or NamedValue { Name: "target" } && _hook is "AfterDamageGiven" or "AfterDamageReceived" or "BeforeDamageReceived") return HookTarget.HitTarget;
+            // The damage's dealer (BeforeDamageReceived's, a hit's: Thorns, Flame Barrier and Reflect hit it back).
+            if (IsDealer(value) && _hook is "AfterDamageGiven" or "AfterDamageReceived" or "BeforeDamageReceived") return HookTarget.Dealer;
             // The card play's target (an enchantment's OnPlay: Inky's Weak on cardPlay.Target).
             if (IsPlayTarget(value)) return HookTarget.PlayTarget;
             if (IsOwner(value)) return HookTarget.Owner;
@@ -2067,6 +2074,7 @@ public static class HookReader
         private static readonly HashSet<string> DamageHooks = new(StringComparer.Ordinal)
         {
             "ModifyDamageAdditive", "ModifyDamageMultiplicative", "ModifyDamageMultiplicativeLate", "ModifyBlockAdditive", "ModifyBlockMultiplicative", "AfterDamageGiven", "AfterDamageReceived",
+            "BeforeDamageReceived",
         };
 
         /// <summary>
@@ -2318,6 +2326,9 @@ public static class HookReader
                 // The HP a hit took past block (result.UnblockedDamage).
                 case QueryValue { Name: "UnblockedDamage", Of: ParameterValue { Name: "result" } or NamedValue { Name: "result" } } when _hook is "AfterDamageGiven" or "AfterDamageReceived":
                     return new HookFactValue(HookFact.HitUnblocked);
+                // What a hit's block took (result.BlockedDamage: Reflect's damage back).
+                case QueryValue { Name: "BlockedDamage", Of: ParameterValue { Name: "result" } or NamedValue { Name: "result" } } when _hook is "AfterDamageGiven" or "AfterDamageReceived":
+                    return new HookFactValue(HookFact.HitBlocked);
                 // What a hit dealt, its block included (result.TotalDamage: DamageResult's blocked plus unblocked).
                 case QueryValue { Name: "TotalDamage", Of: ParameterValue { Name: "result" } or NamedValue { Name: "result" } } when _hook is "AfterDamageGiven" or "AfterDamageReceived":
                     return new HookFactValue(HookFact.HitTotal);

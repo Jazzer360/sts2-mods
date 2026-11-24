@@ -652,10 +652,13 @@ public static partial class SimEngine
         return Math.Max(0, (int)HpLossPipeline(state, new DamageCtx(dealer, player, props, card, card == null ? null : state.CurrentPlay), amount));
     }
 
-    /// <summary>After a player took damage (their HP already lower): AfterDamageGiven and AfterDamageReceived (Beating Remnant counts, Inferno...).</summary>
+    /// <summary>
+    /// After a damage landed on a player (their HP already lower): AfterDamageGiven and AfterDamageReceived (Beating Remnant counts, Flame Barrier and
+    /// Reflect hit back...), told of the player's result whatever it came to: CreatureCmd.Damage records and tells every result, one Wuppy, Osty or the
+    /// HP-loss pipeline left at 0 included (its results loop).
+    /// </summary>
     private static void PlayerDamaged(SimState state, int player, int? dealer, SimProps props, int blocked, int lost, SimCard? card)
     {
-        if (blocked <= 0 && lost <= 0) return;
         RecordDamageReceived(state, player, props, lost); // DamageReceivedEntry, before the damage hooks (decision #191)
         var listeners = Listeners(state);
         if (listeners.Count == 0) return;
@@ -674,28 +677,69 @@ public static partial class SimEngine
         state.PlayHpLost += lost;
     }
 
+    /// <summary>What a damage did as it landed on a player (CreatureCmd.Damage's results for them): its amount past Wuppy, their block's, Osty's and their HP's.</summary>
+    internal readonly record struct PlayerHit(int Amount, int Blocked, int ToOsty, int Lost);
+
     /// <summary>
-    /// Blockable damage to a player: their block, then HP loss; Unpowered unless said. The same for every player (decision #93);
-    /// yours also feeds the breakdown, Imbalanced's threshold and your play's HP-loss tabs.
+    /// CreatureCmd.Damage landing on a player once its amount is worked out, for every damage to a player (decision #219), in the game's order:
+    /// Hook.BeforeDamageReceived (Thorns hits the dealer back, read from its code; the damage still lands), Wuppy first for a powered attack while it
+    /// lives (WuppysLoyaltyPower.ModifyPreBlockDamageTarget: only what it doesn't take goes on), their block unless it's Unblockable
+    /// (Creature.DamageBlockInternal), Osty for what a powered attack gets past it while he lives (DieForYouPower.ModifyUnblockedDamageTarget), the
+    /// HP-loss pipeline, their HP, then the hit's reactions (Flame Barrier and Reflect hit back, read from their code). The same for every player
+    /// (decision #93). <paramref name="label"/> names it in Incoming Damage's breakdown, and yours feeds your play's HP-loss tabs; null for an enemy's
+    /// attack in the enemy turn, which names its hits by its enemy.
     /// </summary>
-    private static void LandBlockable(SimState state, string name, int amount, int player = Who.You, int? dealer = null, SimProps props = SimProps.Unpowered, SimCard? card = null)
+    internal static PlayerHit Lands(SimState state, string? label, int player, int amount, SimProps props, int? dealer, SimCard? card)
     {
-        if (amount <= 0) return;
+        var listeners = Listeners(state);
+        if (listeners.Count > 0)
+        {
+            var damage = new DamageCtx(dealer, player, props, card, card == null ? null : state.CurrentPlay);
+            foreach (var (model, owner) in listeners) model.BeforeDamageReceived(state, owner, damage, amount);
+        }
         var simPlayer = state.MutablePlayer(player);
         var yours = player == Who.You;
-        simPlayer.Incoming += amount;
-        if (yours)
+        var powered = props.IsPoweredAttack();
+        if (powered && simPlayer.WuppyHp > 0 && amount > 0)
         {
-            state.BlockDemand += amount;
-            if (state.Log) state.Blockable.Add((name, amount));
+            var toWuppy = Math.Min(simPlayer.WuppyHp, amount);
+            simPlayer.WuppyHp -= toWuppy;
+            simPlayer.WuppyTaken += toWuppy; // not their Incoming Damage: it never reaches them
+            amount -= toWuppy;
         }
-        var blocked = Math.Min(simPlayer.Block, amount);
+        var unblockable = props.HasFlag(SimProps.Unblockable);
+        if (unblockable)
+        {
+            if (yours && label != null && state.Log) state.Unblockable.Add((label, amount));
+        }
+        else
+        {
+            simPlayer.Incoming += amount;
+            if (yours)
+            {
+                state.BlockDemand += amount;
+                if (label != null && state.Log) state.Blockable.Add((label, amount));
+            }
+        }
+        var blocked = unblockable ? 0 : Math.Min(simPlayer.Block, amount);
         simPlayer.Block -= blocked;
-        simPlayer.Through += amount - blocked;
-        var lost = HpLoss(state, player, amount - blocked, dealer, props, card);
+        var through = amount - blocked;
+        var toOsty = powered && simPlayer.OstyShields ? OstyLoses(state, player, through) : 0;
+        simPlayer = state.MutablePlayer(player);
+        simPlayer.OstyTaken += toOsty;
+        if (!unblockable) simPlayer.Through += through - toOsty;
+        var lost = HpLoss(state, player, through - toOsty, dealer, props, card);
         Lose(state, player, lost);
-        if (yours) PlayHp(state, amount - blocked, lost);
+        if (unblockable) state.MutablePlayer(player).UnblockableTaken += lost;
+        if (yours && label != null) PlayHp(state, through - toOsty, lost);
         PlayerDamaged(state, player, dealer, props, blocked, lost, card);
+        return new PlayerHit(amount, blocked, toOsty, lost);
+    }
+
+    /// <summary>Blockable damage to a player from no one (a card's damage to you: SimPlay.DamageToYou), Unpowered.</summary>
+    private static void LandBlockable(SimState state, string name, int amount)
+    {
+        if (amount > 0) Lands(state, name, Who.You, amount, SimProps.Unpowered, dealer: null, card: null);
     }
 
     /// <summary>
@@ -748,26 +792,13 @@ public static partial class SimEngine
         }
     }
 
-    /// <summary>Damage no block can stop, to a player (Regret, Beckon, Bad Luck): straight to the HP-loss pipeline.</summary>
-    private static void LandUnblockable(SimState state, string name, int amount, int player = Who.You, int? dealer = null, SimProps props = SimProps.Unblockable | SimProps.Unpowered, SimCard? card = null)
-    {
-        if (amount <= 0) return;
-        var yours = player == Who.You;
-        if (yours && state.Log) state.Unblockable.Add((name, amount));
-        var lost = HpLoss(state, player, amount, dealer, props, card);
-        Lose(state, player, lost);
-        state.MutablePlayer(player).UnblockableTaken += lost;
-        if (yours) PlayHp(state, amount, lost);
-        PlayerDamaged(state, player, dealer, props, blocked: 0, lost, card);
-    }
-
     /// <summary>
     /// CreatureCmd.Damage of a player, the one path for every such command a card's or a model's code runs (decision #219): Hook.ModifyDamage with
     /// its caps (CalcDamage), Hook.AfterModifyingDamageAmount for each modelled source that changed the amount, then their block unless it's
     /// Unblockable (Creature.DamageBlockInternal), the HP-loss pipeline and the hit's reactions, each told the command's own dealer, props and card
-    /// (its cardSource: the card for an HP cost, none for a hook's). <paramref name="fired"/>: the model whose command it is, logged with the amount
-    /// before the sources that changed it are told (its hook acts, then the command runs). <paramref name="label"/> names it in Incoming Damage's
-    /// breakdown. Returns the damage after the math.
+    /// (its cardSource: the card for an HP cost, none for a hook's): Lands. <paramref name="fired"/>: the model whose command it is, logged with the
+    /// amount before the sources that changed it are told (its hook acts, then the command runs). <paramref name="label"/> names it in Incoming
+    /// Damage's breakdown. Returns the damage after the math.
     /// </summary>
     internal static int DamagePlayer(SimState state, string label, int player, decimal baseDamage, SimProps props, int? dealer, SimCard? card, (string Name, int Owner)? fired = null)
     {
@@ -777,8 +808,7 @@ public static partial class SimEngine
         if (fired is { } source) state.LogFired(source.Name, amount, source.Owner);
         if (modifiers != null) foreach (var (model, owner) in modifiers) model.AfterModifyingDamageAmount(state, owner, card);
         if (amount <= 0) return amount;
-        if (props.HasFlag(SimProps.Unblockable)) LandUnblockable(state, label, amount, player, dealer, props, card);
-        else LandBlockable(state, label, amount, player, dealer, props, card);
+        Lands(state, label, player, amount, props, dealer, card);
         return amount;
     }
 
@@ -1247,6 +1277,16 @@ public static partial class SimEngine
             enemy.DiedBeforeActing = true;
             if (HitCount(enemy) > 0) state.SkippedPoisoned++;
         }
+        // Each enemy's block this turn (CombatManager.StartTurn clears it unless it has Barricade; its moves' block adds to it): what the damage
+        // hitting it back during the turn meets. What your turn left them (the outcome reads it) comes back once the turn is over; its count of
+        // hits through block goes on through the turn, as the wake rules want (SimEnemy.UnblockedInstances).
+        var turnEnd = new (int Block, bool BlockBroken)[state.Enemies.Count];
+        for (var i = 0; i < state.Enemies.Count; i++)
+        {
+            var enemy = state.Enemies[i];
+            turnEnd[i] = (enemy.Block, enemy.BlockBroken);
+            enemy.Block = (enemy.Barricade ? enemy.Block : 0) + enemy.MoveBlock;
+        }
         foreach (var enemy in state.Enemies)
         {
             if (poisoned?.Contains(enemy.Id) == true) continue;
@@ -1257,77 +1297,23 @@ public static partial class SimEngine
                 continue;
             }
             if (enemy.Stunned || HitCount(enemy) == 0 && enemy.Move == null) continue; // a stunned enemy skips its move
-            var enemyBlock = (enemy.Barricade ? enemy.Block : 0) + enemy.MoveBlock;
 
             var landed = 0;
             var hitsLanded = 0;
-            var dead = false;
-            // A player's power hitting it back (ThornsPower.BeforeDamageReceived, FlameBarrierPower and ReflectPower.AfterDamageReceived): each is
-            // CreatureCmd.Damage(dealer, amount, Unpowered, owner), so the damage math (the read caps: Intangible, Hard to Kill), its block this
-            // turn, the HP-loss pipeline (Hardened Shell, Slippery, Intangible) and its damage hooks apply as to any damage. The enemy's Block
-            // stays its block at your turn's end (what the outcome reads); this turn's block is the move's, kept here.
-            void Retaliate(int dealer, int amount)
-            {
-                if (amount <= 0 || !enemy.Alive) return;
-                var (blockAtTurnEnd, unblockedAtTurnEnd, blockBrokenAtTurnEnd) = (enemy.Block, enemy.UnblockedInstances, enemy.BlockBroken);
-                enemy.Block = enemyBlock;
-                ProcHitOn(state, dealer, enemy, amount, SimProps.Unpowered);
-                enemyBlock = enemy.Block;
-                (enemy.Block, enemy.UnblockedInstances, enemy.BlockBroken) = (blockAtTurnEnd, unblockedAtTurnEnd, blockBrokenAtTurnEnd);
-                if (enemy.Hp <= 0) dead = true;
-            }
-
-            // One player takes one hit, the same for every player (decision #93): Thorns before it
-            // lands (BeforeDamageReceived; the hit still lands if that kills), Wuppy first while it lives (WuppysLoyaltyPower.
-            // ModifyPreBlockDamageTarget: before block; only the overkill goes on), block, Osty (Die For You), HP, then Flame
-            // Barrier and Reflect. Yours also decides Imbalanced and feeds the breakdown.
+            // One player takes one hit (CreatureCmd.Damage of each living player: decision #93), through the one damage on a player (Lands):
+            // Thorns before it lands, Wuppy, block, Osty, HP, then Flame Barrier and Reflect, each read from its code, hitting the enemy back
+            // through the damage on it (its block this turn, the read caps, the HP-loss pipeline, its damage hooks). Yours also decides
+            // Imbalanced and feeds the breakdown.
             void TakesHit(int player, int amount)
             {
-                var yours = player == Who.You;
-                var simPlayer = state.MutablePlayer(player);
-                if (simPlayer.Thorns > 0) Retaliate(player, simPlayer.Thorns);
-                if (simPlayer.WuppyHp > 0 && amount > 0)
-                {
-                    var toWuppy = Math.Min(simPlayer.WuppyHp, amount);
-                    simPlayer.WuppyHp -= toWuppy;
-                    simPlayer.WuppyTaken += toWuppy; // not their Incoming Damage (landed): it never reaches them
-                    amount -= toWuppy;
-                    if (amount == 0)
-                    {
-                        if (!yours) return;
-                        // DamageResult.WasFullyBlocked: no HP lost and you had block (untouched).
-                        if (hitsLanded == 0) enemy.FirstHitFullyBlocked = state.You.Block > 0;
-                        hitsLanded++;
-                        return;
-                    }
-                }
-                if (yours)
-                {
-                    state.BlockDemand += amount;
-                }
-                var blockBefore = simPlayer.Block;
-                simPlayer.Incoming += amount;
-                var blocked = Math.Min(simPlayer.Block, amount);
-                simPlayer.Block -= blocked;
-                var through = amount - blocked;
-                var toOsty = simPlayer.OstyShields ? OstyLoses(state, player, through) : 0;
-                simPlayer = state.MutablePlayer(player);
-                simPlayer.OstyTaken += toOsty;
-                simPlayer.Through += through - toOsty;
-                var lost = HpLoss(state, player, through - toOsty, enemy.Id, SimProps.Move, card: null);
-                Lose(state, player, lost);
-                PlayerDamaged(state, player, enemy.Id, SimProps.Move, blocked, lost, card: null);
-                if (yours)
-                {
-                    // DamageResult.WasFullyBlocked: you had block and no damage got through after the AfterOsty modifiers (Tungsten
-                    // Rod, Buffer...). Block only drops during an attack, so the first hit decides it.
-                    if (hitsLanded == 0) enemy.FirstHitFullyBlocked = amount > 0 && (blocked > 0 || blockBefore > 0) && toOsty == 0 && lost == 0;
-                    landed += amount;
-                    hitsLanded++;
-                }
-                simPlayer = state.MutablePlayer(player);
-                if (!dead && simPlayer.FlameBarrier > 0) Retaliate(player, simPlayer.FlameBarrier);
-                if (!dead && simPlayer.Reflect && blocked > 0) Retaliate(player, blocked);
+                var blockBefore = state.Player(player)!.Block;
+                var hit = Lands(state, label: null, player, amount, SimProps.Move, enemy.Id, card: null);
+                if (player != Who.You) return;
+                // DamageResult.WasFullyBlocked: you had block and no damage got through after the AfterOsty modifiers (Tungsten Rod, Buffer...),
+                // Wuppy's share left out. Block only drops during an attack, so the first hit decides it.
+                if (hitsLanded == 0) enemy.FirstHitFullyBlocked = amount > 0 && (hit.Blocked > 0 || blockBefore > 0) && hit.ToOsty == 0 && hit.Lost == 0;
+                landed += hit.Amount;
+                hitsLanded++;
             }
             // A teammate takes each hit in their turn order (CreatureCmd.Damage over every living player: a hit still reaches
             // everyone even if one player's Thorns kills the attacker during it), through the game's damage math for them.
@@ -1339,12 +1325,13 @@ public static partial class SimEngine
                 TakesHit(Who.Teammate(teammateIndex), amount);
             }
             var players = state.PlayerIds;
-            // Its attack (AttackCommand.Execute): none at all once it's dead; else Hook.BeforeAttack, its hits until it dies, Hook.AfterAttack
-            // (an enemy's Vigor keeps the attack and is spent by it). A monster's attack has no card (no ModelSource) and its props are a Move.
+            // Its attack (AttackCommand.Execute): none at all once it's dead; else Hook.BeforeAttack, its hits until it dies (CreatureCmd.Damage
+            // of a dead dealer deals nothing), Hook.AfterAttack (an enemy's Vigor keeps the attack and is spent by it). A monster's attack has no
+            // card (no ModelSource) and its props are a Move.
             void Attack(int firstHit, int hits)
             {
                 AttackInfo? attack = null;
-                if (!dead)
+                if (enemy.Alive)
                 {
                     state.AttackSerial++;
                     state.CurrentAttack = state.AttackSerial;
@@ -1355,7 +1342,7 @@ public static partial class SimEngine
                 {
                     // The hit on you: the intent through the damage pipeline as it lands, or the final number.
                     var perHit = enemy.Intent != null ? IntentDamage(state, enemy, hit, Who.You) : enemy.Hits[hit];
-                    if (dead)
+                    if (!enemy.Alive)
                     {
                         state.CancelledHits++;
                         continue;
@@ -1387,17 +1374,19 @@ public static partial class SimEngine
                             {
                                 if (state.Enemy(to) is not { Alive: true } gainer) continue;
                                 gainer.MoveBlock += moveBlockAction.Amount;
-                                if (gainer == enemy) enemyBlock += moveBlockAction.Amount;
+                                gainer.Block += moveBlockAction.Amount;
                             }
                             break;
                     }
                 }
             }
             if (landed > 0) if (state.Log) state.Blockable.Add((hitsLanded > 1 ? $"{enemy.Name} ({hitsLanded} hits)" : enemy.Name, landed));
-            // An enemy killed during the enemy turn (your Thorns, Flame Barrier or Reflect hitting back during its attack): its death
-            // hooks run before the next enemy moves (ExplosivePower and RavenousPower.AfterDeath: the other Corpse Slug is stunned,
-            // Crab Rage hits harder). Poison deaths run theirs at the turn's start, above.
+            // An enemy killed during the enemy turn (your Thorns, Flame Barrier or Reflect hitting back during its attack): its death hooks ran
+            // as it died (the damage on it ends in CreatureCmd.Kill); any left run before the next enemy moves. Poison deaths ran theirs at the
+            // turn's start, above.
             if (state.Enemies.Any(simEnemy => simEnemy.StartedAlive && !simEnemy.Alive && !simEnemy.DeathHandled)) AllyDeaths(state);
         }
+        for (var i = 0; i < state.Enemies.Count && i < turnEnd.Length; i++)
+            (state.Enemies[i].Block, state.Enemies[i].BlockBroken) = turnEnd[i];
     }
 }

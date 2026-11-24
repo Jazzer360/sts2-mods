@@ -1821,3 +1821,33 @@ public sealed class ParryingShield : EndOfTurnRelic
         return DamageRandom(state, owner, Amount(state, owner));
     }
 }
+
+// ---- a hit's reaction before it lands (round sixteen: Sim/Models/ReactionModels.cs, deleted 2026-11-24). SimEngine.LandOnPlayer, its
+// landing, went with it: the same landing is SimEngine.Lands with no dealer and Unpowered, as LandOnPlayer's LandBlockable called it.
+
+/// <summary>
+/// ThornsPower.BeforeDamageReceived: a powered attack on its owner (with a dealer) hits the dealer back for its amount
+/// (Unpowered | SkipHurtAnim, through the damage math), before the hit lands. You and your teammates take it on block; Osty
+/// on his HP. (Your Thorns against an enemy's attack is the enemy turn's.)
+/// </summary>
+public sealed class ThornsPower : SimModel
+{
+    public override TabKind? Tab => TabKind.Damage;
+    public override bool Harmful => true;
+    public override void BeforeDamageReceived(SimState state, int owner, DamageCtx damage, int amount)
+    {
+        // Main's Thorns answers Omnislice's unpowered splash too (cardSource is Omnislice: MainRule.SplashIsUnpowered).
+        var answers = damage.Props.IsPoweredAttack() || state.MainRules.HasFlag(MainRule.SplashIsUnpowered) && damage.Card?.Name == CardId.Omnislice.Name;
+        if (damage.Target != owner || owner < 0 || damage.Dealer is not { } dealer || !answers) return;
+        var thorns = SimEngine.PowerOn(state, owner, ThisPower);
+        if (thorns <= 0) return;
+        var name = (state.Enemy(owner)?.Name ?? "Enemy") + " Thorns";
+        var hit = SimEngine.CalcDamage(state, thorns, new DamageCtx(owner, dealer == Who.YourOsty ? Who.You : dealer, SimProps.Unpowered | SimProps.SkipHurtAnim, Card: null, Play: null));
+        state.LogFired(Name, hit, owner);
+        if (dealer == Who.YourOsty)
+        {
+            SimEngine.OstyLoses(state, Who.You, hit);
+        }
+        else if (Who.IsPlayer(dealer) && hit > 0) SimEngine.Lands(state, name, dealer, hit, SimProps.Unpowered, dealer: null, card: null);
+    }
+}

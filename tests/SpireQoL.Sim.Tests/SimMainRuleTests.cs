@@ -20,7 +20,8 @@ public class SimMainRuleTests
     public void OmnislicesSplashIsPoweredOnBetaAndUnpoweredOnMain()
     {
         // Omnislice's 8 splashes onto the second enemy. Beta: a powered hit (ValueProp.Move), so your Envenom poisons it; main: unpowered,
-        // so it doesn't. Thorns answers it on both (main: ThornsPower's case for Omnislice).
+        // so it doesn't. Thorns answers the powered splash on beta; main's ThornsPower answers the unpowered one by its own code (cardSource is
+        // Omnislice), read from main's code in the game (GameBranchTests holds main's reading), not from these tests' beta models.
         SimScript Omnislice() => Play(Card("Omnislice"), target: 1, plays: 1, Attack(baseDamage: 8) with { Splash = true });
         SimState WithEnvenomAndThorns(MainRule rules)
         {
@@ -35,7 +36,6 @@ public class SimMainRuleTests
         var main = Assert.Single(After(WithEnvenomAndThorns(MainRule.SplashIsUnpowered), Omnislice()));
         Assert.Equal(42, main.Enemy(id: 2)!.Hp);
         Assert.Equal(0, main.Enemy(id: 2)!.PoisonStacks);
-        Assert.Equal(3, main.You.Taken);
     }
 
     [Fact]

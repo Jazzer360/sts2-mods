@@ -29,7 +29,7 @@ public class SimTeammateHandFieldsTests
     /// <summary>On screen (their powers, relics, orbs, block, HP, hand size, cards they played) or the simulation's own bookkeeping.</summary>
     private static readonly HashSet<string> Known = new()
     {
-        nameof(SimPlayer.Block), nameof(SimPlayer.Reflect),
+        nameof(SimPlayer.Block),
         nameof(SimPlayer.HexFrom),         // who cast Hex on them (its power is on screen)
         nameof(SimPlayer.Fields),          // what their powers and relics read from code keep (a count, a flag): theirs, not their hand's
         nameof(SimPlayer.Drawn),           // cards drawn: you watch them draw (the simulation's own count)
