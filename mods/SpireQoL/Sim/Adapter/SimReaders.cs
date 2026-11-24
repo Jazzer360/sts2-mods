@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Combat;
@@ -344,13 +345,13 @@ public static class SimReaders
     };
 
     /// <summary>The card as models see it, with what its play does that models ask about (stars, exhaust, a shot with an arrow, the rest of your hand).</summary>
-    public static SimCard Card(CardModel card, SpireQoL.Procs.PlayFacts facts, Player me)
+    public static SimCard Card(CardModel card, Player me)
     {
-        var simCard = Card(card, facts.Energy);
+        var simCard = Card(card, SpireQoL.Procs.CardPlays.EnergyOf(card));
         bool Safe(Func<bool> read) { try { return read(); } catch { return false; } }
         return simCard with
         {
-            Stars = facts.Stars,
+            Stars = SpireQoL.Procs.CardPlays.StarsOf(card),
             StarCostX = Safe(() => card.HasStarCostX),
             // Its own exhaust (the Exhaust keyword, added ones included; not a Power or a copy): a model that sends it there (Corruption) is
             // the simulator's (decision #192).
@@ -476,4 +477,31 @@ public static class SimReaders
     public static string ModelName(AbstractModel model) => model is PowerModel ? SimAdapter.SimPowerName(model.GetType()) : model.GetType().Name;
 
     public static SimProps Props(ValueProp valueProp) => (SimProps)(int)valueProp;
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> DebuffCache = new();
+
+    public static bool IsDebuff(Type powerType) => !typeof(ITemporaryPower).IsAssignableFrom(powerType) && IsDebuffType(powerType);
+
+    public static bool IsTemporaryDebuff(Type powerType) => typeof(ITemporaryPower).IsAssignableFrom(powerType) && IsDebuffType(powerType);
+
+    /// <summary>
+    /// The power is a debuff by type (PowerModel.Type), temporary ones included (Dark Shackles):
+    /// what Artifact blocks (ArtifactPower.TryModifyPowerAmountReceived).
+    /// </summary>
+    public static bool IsDebuffType(Type powerType)
+    {
+        if (DebuffCache.TryGetValue(powerType, out var isDebuff)) return isDebuff;
+        isDebuff = false;
+        try
+        {
+            var canonical = typeof(ModelDb).GetMethod(nameof(ModelDb.Power))!.MakeGenericMethod(powerType).Invoke(null, null) as PowerModel;
+            isDebuff = canonical?.Type == PowerType.Debuff;
+        }
+        catch
+        {
+            // unknown: not a debuff
+        }
+        DebuffCache[powerType] = isDebuff;
+        return isDebuff;
+    }
 }

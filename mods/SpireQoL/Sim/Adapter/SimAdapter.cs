@@ -8,7 +8,6 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Orbs;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
-using SpireQoL.Procs;
 using Sts2Mods.Core.Game;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Relics;
@@ -306,7 +305,7 @@ public static partial class SimAdapter
             var handCards = PileType.Hand.GetPile(me).Cards;
             var topPlays = handCards.Any(card => Procs.Programs.CardEffects.AutoPlaysFromDrawPile(card.GetType()) || card.GetType().Name == nameof(LostLute))
                            || me.Creature.Powers.Any(power => power.GetType().Name == nameof(LostLutePower));
-            var topUpgrades = handCards.Any(card => AutoPlaysOf(card) is { Upgrade: true });
+            var topUpgrades = handCards.Any(card => Procs.Programs.BoardCounts.AutoPlaysOf(card) is { Upgrade: true });
             var fromPileByKey = new Dictionary<string, (SimHandCard? Plain, SimHandCard? Upgraded, bool Exhausts)>();
             // The filtered takes of the cards in your hand (decision #189): a card drawn or taken into your hand during a play counts for
             // the ones it would be taken by (Second Wind's non-Attacks, The Hermit's Curse).
@@ -524,8 +523,7 @@ public static partial class SimAdapter
         exhausts = false;
         try
         {
-            var facts = PlayFacts.For(played, me, combat, CardPlays.Count(played));
-            exhausts = facts.ExhaustsSelf;
+            exhausts = ExhaustsAfterPlay(played, me);
             var plays = played.Keywords.Contains(CardKeyword.Unplayable) ? new List<SimPlay>() : AutoPlays(played, me, combat, ids);
             // Built for a card leaving your hand unless it's in your draw pile (SimPlay's HandDelta): it isn't in your hand.
             if (played.Pile?.Type != PileType.Draw) foreach (var play in plays) play.HandDelta += 1;
@@ -566,10 +564,9 @@ public static partial class SimAdapter
     /// </summary>
     private static List<SimPlay> AutoPlays(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, int owner = Who.You)
     {
-        var facts = PlayFacts.For(card, me, combat, CardPlays.Count(card));
         if (card.TargetType == TargetType.AnyAlly) return new List<SimPlay>();
-        if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, combat, ids, target: Who.None, facts, owner) };
-        return ids.Where(entry => entry.Key.IsAlive && entry.Key.IsHittable).Select(entry => AutoPlay(card, me, combat, ids, entry.Value, facts, owner)).ToList();
+        if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, combat, ids, target: Who.None, owner) };
+        return ids.Where(entry => entry.Key.IsAlive && entry.Key.IsHittable).Select(entry => AutoPlay(card, me, combat, ids, entry.Value, owner)).ToList();
     }
 
     /// <summary>
@@ -600,10 +597,19 @@ public static partial class SimAdapter
         }
     }
 
-    private static SimPlay AutoPlay(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, int target, PlayFacts? facts = null,
-        int owner = Who.You)
+    /// <summary>
+    /// Where the card goes after its last play is the exhaust pile (CardModel.GetResultLocationForCardPlay, once however many plays): not a
+    /// Power or a dupe (History Course's copy); the Exhaust keyword (added Exhaust included) or ExhaustOnNextPlay; then Corruption sends a
+    /// played Skill there whatever it was (CorruptionPower.ModifyCardPlayResultLocation).
+    /// </summary>
+    internal static bool ExhaustsAfterPlay(CardModel card, Player me) =>
+        card.Type != CardType.Power
+        && ((!card.IsDupe && (card.Keywords.Contains(CardKeyword.Exhaust) || card.ExhaustOnNextPlay))
+            || (card.Type == CardType.Skill && me.Creature.Powers.Any(power => power is CorruptionPower)));
+
+    private static SimPlay AutoPlay(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, int target, int owner = Who.You)
     {
-        var play = Play(card, facts ?? PlayFacts.For(card, me, combat, CardPlays.Count(card)), me, combat, ids, target, owner);
+        var play = Play(card, me, combat, ids, target, owner);
         play.AutoPlay = true;
         if (play.Card != null) play.Card = play.Card with { AutoPlay = true };
         return play;

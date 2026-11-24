@@ -2,7 +2,6 @@ using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Enchantments;
-using SpireQoL.Procs;
 using SpireQoL.Sim;
 using Xunit;
 
@@ -17,7 +16,7 @@ namespace SpireQoL.Catalog.Tests;
 public class EnchantmentPlayTests
 {
     private static SimPlay PlayOf(GameFight gameFight, MegaCrit.Sts2.Core.Models.CardModel card) =>
-        SimAdapter.Play(card, PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1), gameFight.Me, gameFight.Combat,
+        SimAdapter.Play(card, gameFight.Me, gameFight.Combat,
             new Dictionary<Creature, int>(), targetId: Who.None);
 
     [Fact]

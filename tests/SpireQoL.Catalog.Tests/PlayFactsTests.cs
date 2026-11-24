@@ -81,7 +81,7 @@ public class PlayFactsTests
     {
         var start = SpireQoL.Sim.SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
         var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1);
-        var play = SpireQoL.Sim.SimAdapter.Play(card, facts, gameFight.Me, gameFight.Combat, ids, SpireQoL.Sim.Who.None);
+        var play = SpireQoL.Sim.SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, SpireQoL.Sim.Who.None, plays: facts.Plays);
         SpireQoL.Sim.SimEngine.ApplyPlayTo(start, play, out var branches, out _);
         return branches;
     }

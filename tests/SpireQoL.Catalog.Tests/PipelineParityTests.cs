@@ -51,7 +51,7 @@ public class PipelineParityTests
         [("CreatureCmd.Damage on a player", Difference.Order, "AfterPreventingDeath")] = "gap: the heal from 0 comes with the death check (Lose), before AfterDamageGiven and AfterDamageReceived; the game heals after them",
 
         // ---- AttackCommand.Execute
-        [("AttackCommand.Execute", Difference.Missing, "ModifyAttackHitCount")] = "no model: the adapter's hit count already went through the game's own Hook.ModifyAttackHitCount (PlayFacts.HitsPerPlay: Thumbscrew)",
+        [("AttackCommand.Execute", Difference.Missing, "ModifyAttackHitCount")] = "no model: the adapter's hit count already went through the game's own Hook.ModifyAttackHitCount (BoardCounts.HitsPerPlay: Thumbscrew)",
 
         // ---- PowerCmd.Apply
         [("PowerCmd.Apply", Difference.Missing, "BeforePowerAmountChanged")] = "no model: Unsettling Lamp's binding (its BeforePowerAmountChanged) is in its ModifyPowerAmountGiven, the step after; Void Form's only hides a cost visual",

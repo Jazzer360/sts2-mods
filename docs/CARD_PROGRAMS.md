@@ -251,7 +251,7 @@ hooks.
     pick's pile, its filter and its selector: how many, and whether you choose how many: Guards, Neow's Fury), a roll (`NextItem`,
     `TakeRandom` with its count), each card of a collection (a loop's, or one given whole: your hand, a `Where`, a list the play
     filled in a loop, the first of one), the cards a draw gave (Scrape) or the top of your draw pile looked at, less the ones picked
-    (Ki Chant's `Except(Take(drawPile, count), picked)`). `PlayFacts.Taken` counts them on the board (a pick from your hand has the
+    (Ki Chant's `Except(Take(drawPile, count), picked)`). `BoardCounts.Taken` counts them on the board (a pick from your hand has the
     cards the play drew before it; one from your draw pile the discard pile its play shuffles in first; a transform only what
     `CardCmd.Transform` can take). They replaced `DiscardCount`, `TransformCount`, `TakenToHandCount` and the adapter's `HandTakes` table
     (`SimAdapter.HandTakeOf`: which piles, which cards, a roll or a pick, one a play or all), and the name checks on Guards, Neow's Fury, Ki
@@ -259,7 +259,7 @@ hooks.
     Curses in hand no longer counts a discard.
   - Orbs (2026-11-23, round three): `PlayFacts.OrbsOf` reads what a play does to your orbs from its program
     (`CardEffects.OrbChannels`, `OrbEvokes`, `OrbSlotChanges`, all found with `CardEffects.Find`: a command with its condition and
-    loops): each channel's orb (its class, or random: a `GetRandomOrb` orb) and its loops' rounds on the board (`PlayFacts.Rounds`:
+    loops): each channel's orb (its class, or random: a `GetRandomOrb` orb) and its loops' rounds on the board (`ProgramEvaluator.Rounds`:
     a foreach's collection, a counter's bound, the card value it's over), the evokes of your front orb or of every orb (a loop over
     your orbs: Shatter), the slots added or removed. An X is the card's X (`ResolveEnergyXValue`: what playing it now spends, through
     the X hooks). They replaced the adapter's `Channels`, `RepeatChannels`, `SlotChange`, `ChannelKind`, `HandlesChannel`, the evoke cards'
@@ -407,7 +407,6 @@ round two). What's left, by file: `PlayFacts` 62 (`GeneratedCount` and the forge
 | (no table) a made card's pile in a game helper | Shiv.CreateInHand's Shivs (Blade Dance, Storm of Steel, The Moon...) | Read since decision #194: every make is its step's (`MadeCards`: its count, card, owner, creator and pile; a game helper's parameters bound to what the call passes). What the reader can't read yet is the pile a helper passes after a `??` (`creator ?? owner` leaves the stack unread at the join): such a make goes where every pile the card's own code writes goes (`CardCode.MadeInto`), the hand for every card that calls the helper today. |
 | (no table) a loop's count the code adds a command's kills to | Echoing Slash | Read since decision #194 from what the code shows (`CardEffects.RepeatsPerKill`: a loop while a count stays above 0 around a damage to every enemy, in a card whose code counts its results' kills); the reader doesn't keep the count's `+=` itself, so the rule reads the loop's shape, not its arithmetic. What a hit's result feeds otherwise is the command it's given to: the next damage (`CardEffects.SplashOf`: Rain Shot, Omnislice), a block gain (`CardEffects.BlockBaseOf`: Fisticuffs) or Stretch (Blossom Shot). |
 | `CardEnergy.Rules` (Sim/Adapter) | Epic Retrieval, Drum of Battle | Their hooks, not their plays (AfterArrowDislodged, AfterCardExhausted). Every gain in a play is its step's (decision #193: `SimAdapter.EnergyFrom`): Double Energy's your own energy, Mad Science's rider decided before the play, Believe in You's and Constellation's teammate, Energy Surge's each player of your side. |
-| `PutBackCount` (PlayFacts) | Thinking Ahead | The facts' count only (the play check's hand): the simulator reads the put-back pick's selector (decision #193). Goes with PlayFacts. |
 | (no table) an argument a translator can't read | Malaise | Its first `PowerCmd.Apply` (the target's Strength loss) has arguments the reader leaves unread (`?argument`): no action (it gave you 1 Strength before decision #193). The step scan holds the command; an argument it can't read is a reader gap. |
 | (no table) damage that isn't an attack, from an attack card | Rain Shot, Omnislice, Echoing Slash | `CreatureCmd.Damage` on the target or every enemy is simulated as the card's attack (with the splash or the repeats its code shows: `CardEffects.SplashesDamage`, `RepeatsPerKill`), as before: the game runs no BeforeAttack or AfterAttack for it. |
 | Cards' own hooks, not plays | Make It So, Right Hand Hand, Whistling Arrows, Bolas, Bounce, Thrumming Hatchet (`ReturnToHand`); Howl from Beyond, I Am Invincible (end-of-turn auto-plays); Kingly Kick, Kingly Punch (their cost on draw) | A card's hooks (After*, Before*) aren't its play: reading them as programs is Part B3's next step. Each is reviewed by its scan. |

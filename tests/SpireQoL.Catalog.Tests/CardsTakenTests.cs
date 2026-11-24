@@ -1,3 +1,4 @@
+using SpireQoL.Procs.Programs;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
@@ -34,8 +35,8 @@ public class CardsTakenTests
         var gameFight = new GameFight();
         var card = gameFight.Add<Acrobatics>();
         DrawPile(gameFight, count: 5);
-        Assert.Equal(1, PlayFacts.DiscardCount(card, Others(gameFight, card), draws: 3));
-        Assert.Equal(0, PlayFacts.DiscardCount(card, Others(gameFight, card), draws: 0));
+        Assert.Equal(1, BoardCounts.DiscardCount(card, Others(gameFight, card), draws: 3));
+        Assert.Equal(0, BoardCounts.DiscardCount(card, Others(gameFight, card), draws: 0));
     }
 
     [Fact]
@@ -43,9 +44,9 @@ public class CardsTakenTests
     {
         var gameFight = new GameFight();
         var card = gameFight.Add<Survivor>();
-        Assert.Equal(0, PlayFacts.DiscardCount(card, Others(gameFight, card), draws: 0));
+        Assert.Equal(0, BoardCounts.DiscardCount(card, Others(gameFight, card), draws: 0));
         gameFight.Add<DefendIronclad>();
-        Assert.Equal(1, PlayFacts.DiscardCount(card, Others(gameFight, card), draws: 0));
+        Assert.Equal(1, BoardCounts.DiscardCount(card, Others(gameFight, card), draws: 0));
     }
 
     [Fact]
@@ -56,9 +57,9 @@ public class CardsTakenTests
         var gameFight = new GameFight();
         var card = gameFight.Add<TheHermit>();
         gameFight.Add<Normality>();
-        Assert.Equal(0, PlayFacts.DiscardCount(card, Others(gameFight, card), draws: 0));
+        Assert.Equal(0, BoardCounts.DiscardCount(card, Others(gameFight, card), draws: 0));
         gameFight.Add<StrikeIronclad>();
-        Assert.Equal(1, PlayFacts.DiscardCount(card, Others(gameFight, card), draws: 0));
+        Assert.Equal(1, BoardCounts.DiscardCount(card, Others(gameFight, card), draws: 0));
     }
 
     [Fact]
@@ -84,7 +85,7 @@ public class CardsTakenTests
         var gameFight = new GameFight();
         var card = gameFight.Add<Scrape>();
         gameFight.Add<StrikeIronclad>();
-        Assert.Equal(4, PlayFacts.DiscardCount(card, Others(gameFight, card), draws: 4));
+        Assert.Equal(4, BoardCounts.DiscardCount(card, Others(gameFight, card), draws: 4));
         // Not from the hand it found: the simulator follows them (DrawnCardAction).
         Assert.Equal(0, Facts(gameFight, card).LeavesHand);
     }
@@ -116,10 +117,10 @@ public class CardsTakenTests
         var gameFight = new GameFight();
         var card = gameFight.Add<PunchOfJoy>();
         gameFight.Add<StrikeIronclad>();
-        Assert.Equal(0, PlayFacts.TransformCount(card, Others(gameFight, card), drawPile: 0));
+        Assert.Equal(0, BoardCounts.TransformCount(card, Others(gameFight, card), drawPile: 0));
         gameFight.Add<Sadness>();
         gameFight.Add<Sadness>();
-        Assert.Equal(1, PlayFacts.TransformCount(card, Others(gameFight, card), drawPile: 0));
+        Assert.Equal(1, BoardCounts.TransformCount(card, Others(gameFight, card), drawPile: 0));
     }
 
     [Fact]
@@ -130,7 +131,7 @@ public class CardsTakenTests
         gameFight.Add<Dazed>();
         gameFight.Add<Dazed>();
         gameFight.Add<StrikeIronclad>();
-        Assert.Equal(2, PlayFacts.TransformCount(compact, Others(gameFight, compact), drawPile: 0));
+        Assert.Equal(2, BoardCounts.TransformCount(compact, Others(gameFight, compact), drawPile: 0));
         // Guards: you pick how many (0 or more): at most your hand, none certainly.
         var guards = gameFight.Add<Guards>();
         var facts = Facts(gameFight, guards);
@@ -195,11 +196,11 @@ public class CardsTakenTests
         // Cascade its X and one more upgraded, The Devil your hand's cards, upgraded when it is).
         var gameFight = new GameFight();
         gameFight.Me.PlayerCombatState!.Energy = 2;
-        Assert.Equal((1, true, false), SimAdapter.AutoPlaysOf(gameFight.Add<Havoc>()));
-        Assert.Equal((3, false, false), SimAdapter.AutoPlaysOf(gameFight.Add<Cascade>(upgraded: true)));
+        Assert.Equal((1, true, false), BoardCounts.AutoPlaysOf(gameFight.Add<Havoc>()));
+        Assert.Equal((3, false, false), BoardCounts.AutoPlaysOf(gameFight.Add<Cascade>(upgraded: true)));
         var devil = gameFight.Add<TheDevil>(upgraded: true);
-        Assert.Equal((Others(gameFight, devil).Count, false, true), SimAdapter.AutoPlaysOf(devil));
-        Assert.Null(SimAdapter.AutoPlaysOf(gameFight.Add<StrikeIronclad>()));
+        Assert.Equal((Others(gameFight, devil).Count, false, true), BoardCounts.AutoPlaysOf(devil));
+        Assert.Null(BoardCounts.AutoPlaysOf(gameFight.Add<StrikeIronclad>()));
     }
 
     [Fact]

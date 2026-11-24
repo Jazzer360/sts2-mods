@@ -335,7 +335,7 @@ public sealed class CardPredictions
         List<AbstractModel>? result = null;
         foreach (var type in Diagnostics.CardCoverage.PowersApplied(card.GetType()))
         {
-            if (!typeof(PowerModel).IsAssignableFrom(type) || PlayFacts.IsDebuffType(type)) continue;
+            if (!typeof(PowerModel).IsAssignableFrom(type) || SimReaders.IsDebuffType(type)) continue;
             if (SimModels.Get(SimAdapter.SimPowerName(type))?.Tab == null) continue;
             if (card.Owner?.Creature.Powers.Any(power => power.GetType() == type) != false) continue;
             if (ModelDb.GetById<PowerModel>(ModelDb.GetId(type)) is not { } canon) continue;
@@ -470,7 +470,7 @@ public sealed class CardPredictions
             Start = forecast.State, Ids = forecast.Ids, Allies = forecast.Teammates.Select(player => player.Creature).ToList(),
             FullStart = ReferenceEquals(forecast.FullState, forecast.State) ? null : forecast.FullState,
         };
-        foreach (var target in targets) inputs.PlayByTarget[target] = SimAdapter.Play(card, facts, _me, _cs, forecast.Ids, target);
+        foreach (var target in targets) inputs.PlayByTarget[target] = SimAdapter.Play(card, _me, _cs, forecast.Ids, target, plays: facts.Plays);
         facts.Sim = inputs;
         if (_noCache || !_simCache.TryGetValue(cacheKey, out var task))
         {

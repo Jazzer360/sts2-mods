@@ -1,7 +1,7 @@
+using SpireQoL.Procs.Programs;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
-using SpireQoL.Procs;
 using Xunit;
 
 namespace SpireQoL.Catalog.Tests;
@@ -16,7 +16,7 @@ public class ExhaustCountTests
     private static int Exhausts(GameFight gameFight, CardModel card)
     {
         var others = PileType.Hand.GetPile(gameFight.Me).Cards.Where(other => !ReferenceEquals(other, card)).ToList();
-        return PlayFacts.ExhaustOthers(card, others, drawPile: PileType.Draw.GetPile(gameFight.Me).Cards.Count);
+        return BoardCounts.ExhaustOthers(card, others, drawPile: PileType.Draw.GetPile(gameFight.Me).Cards.Count);
     }
 
     [Fact]

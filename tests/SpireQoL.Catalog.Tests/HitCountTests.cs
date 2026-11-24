@@ -1,3 +1,4 @@
+using SpireQoL.Procs.Programs;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
@@ -5,14 +6,13 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Monsters;
 using MegaCrit.Sts2.Core.Models.Powers;
-using SpireQoL.Procs;
 using Sts2Mods.Core.Game;
 using Xunit;
 
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// Hits per play, read from the attack in the card's program (decision #182: PlayFacts.HitsPerPlay): its condition and its hit count's
+/// Hits per play, read from the attack in the card's program (decision #182: BoardCounts.HitsPerPlay): its condition and its hit count's
 /// value evaluated on the board, at a target or at none.
 /// </summary>
 [Collection(GameFightCollection.Name)]
@@ -27,7 +27,7 @@ public class HitCountTests
         return enemy;
     }
 
-    private static int Hits(GameFight gameFight, CardModel card, Creature? target) => PlayFacts.HitsPerPlay(card, gameFight.Combat, target);
+    private static int Hits(GameFight gameFight, CardModel card, Creature? target) => BoardCounts.HitsPerPlay(card, gameFight.Combat, target);
 
     [Fact]
     public void DismantleHitsAVulnerableTargetItsHitCount()

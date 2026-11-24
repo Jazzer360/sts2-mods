@@ -39,9 +39,9 @@ public class PerPlayRuleTests
         ["mods/SpireQoL/Sim/SimEngine.Plays.cs: player.HandCount = Math.Clamp(player.HandCount + handDelta, 0, player.Draw != null ? MaxHand + player.PlayingFromHand : int.MaxValue);"] =
             "the card leaving and the cards its own hooks bring back after its plays (HandDelta: Make It So, Whistling Arrows): a tracker item to make them adds",
         ["mods/SpireQoL/Procs/PlayFacts.cs: ? Math.Max(draws, CardPile.MaxCardsInHand - (hand.Count - 1)) + swiftDraws : 0,"] = "the play check's bound on Pillage's draws (DrawsAtMost), not the simulation",
-        ["mods/SpireQoL/Procs/PlayFacts.cs: CardsBack = ReturnToHand.Returning(card, me, plays, Math.Min(CardPile.MaxCardsInHand, hand.Count - 1 + createdInHand) + draws + swiftDraws,"] =
+        ["mods/SpireQoL/Procs/ReturnToHand.cs: return Returning(card, me, plays, Math.Min(MegaCrit.Sts2.Core.Entities.Cards.CardPile.MaxCardsInHand, hand - 1 + made) + draws, Fool.Shoots(card, me) ? 1 : 0);"] =
             "cards' own hooks after the play (ReturnToHand, docs/CARD_PROGRAMS.md A5): a tracker item with HandDelta's",
-        ["mods/SpireQoL/Procs/PlayFacts.cs: if (chosen.Count == 0 || handCount - 1 >= CardPile.MaxCardsInHand) return false;"] = "whether Neow's Fury's how-many is a choice at all (its NotModelledAction)",
+        ["mods/SpireQoL/Procs/Programs/BoardCounts.cs: if (chosen.Count == 0 || handCount - 1 >= CardPile.MaxCardsInHand) return false;"] = "whether Neow's Fury's how-many is a choice at all (its NotModelledAction)",
         ["mods/SpireQoL/Procs/Programs/CardEffects.cs: value != null && value.Parts().Any(part => part is QueryValue { Name: \"MaxCardsInHand\" } or NamedValue { Name: \"MaxCardsInHand\" });"] =
             "reads the game's own name in a card's code (a count of your hand's room: SimCount.HandRoom), compares nothing",
         ["mods/SpireQoL/Procs/Programs/ConditionReader.cs: QueryValue { Type: \"CardPile\", Name: \"MaxCardsInHand\", Of: null, IsProperty: true } => true,"] =

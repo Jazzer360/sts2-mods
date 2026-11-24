@@ -99,6 +99,6 @@ public sealed class ShuffleWarningFeature : IFeature, IFrameFeature
 
     /// <summary>The card's own draws, every play's, run past your draw pile (with a discard pile to shuffle in): before its simulation's answer.</summary>
     private static bool CardDrawsPastTheDrawPile(CardModel card, int handCount, MegaCrit.Sts2.Core.Entities.Players.Player me) =>
-        PlayFacts.CardsDrawnTotal(card, handCount, CardPlays.Count(card)) > Sts2State.DrawPileCount(me);
+        Procs.Programs.BoardCounts.CardsDrawnTotal(card, handCount, CardPlays.Count(card)) > Sts2State.DrawPileCount(me);
 
 }

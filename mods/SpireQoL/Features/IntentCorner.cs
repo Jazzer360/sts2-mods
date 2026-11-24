@@ -2,7 +2,6 @@ using Godot;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using SpireQoL.Cards;
-using SpireQoL.Procs;
 using SpireQoL.Sim;
 using Sts2Mods.Core.Ui;
 
@@ -29,7 +28,7 @@ internal static class IntentCorner
         var debuff = Index(intents, abstractIntent => abstractIntent is DebuffIntent);
         foreach (var applied in powers)
         {
-            var corner = PlayFacts.IsDebuffType(applied.Power) ? debuff ?? buff : buff ?? debuff;
+            var corner = SimReaders.IsDebuffType(applied.Power) ? debuff ?? buff : buff ?? debuff;
             corner ??= intents.Count - 1;
             if (!at.TryGetValue(corner.Value, out var list)) at[corner.Value] = list = new List<MovePowers.Applied>();
             list.Add(applied);

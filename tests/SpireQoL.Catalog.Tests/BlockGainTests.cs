@@ -1,12 +1,11 @@
 using MegaCrit.Sts2.Core.Models.Cards;
-using SpireQoL.Procs;
 using SpireQoL.Procs.Programs;
 using Xunit;
 
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// Separate times a play gains you block, read from its program (decision #182: PlayFacts.BlockGainCount over CardEffects.BlockGains):
+/// Separate times a play gains you block, read from its program (decision #182: BoardCounts.BlockGainCount over CardEffects.BlockGains):
 /// each gain on its condition, times its loops' rounds on the board.
 /// </summary>
 [Collection(GameFightCollection.Name)]
@@ -16,11 +15,11 @@ public class BlockGainTests
     public void LoopsGiveTheirRounds()
     {
         var gameFight = new GameFight();
-        Assert.Equal(2, PlayFacts.BlockGainCount(gameFight.Add<ChoLimbs>()));
+        Assert.Equal(2, BoardCounts.BlockGainCount(gameFight.Add<ChoLimbs>()));
         // Evil Eye: twice after an exhaust this turn (none yet).
-        Assert.Equal(1, PlayFacts.BlockGainCount(gameFight.Add<EvilEye>()));
+        Assert.Equal(1, BoardCounts.BlockGainCount(gameFight.Add<EvilEye>()));
         // Rally: each living player's block in one loop, yours once.
-        Assert.Equal(1, PlayFacts.BlockGainCount(gameFight.Add<Rally>()));
+        Assert.Equal(1, BoardCounts.BlockGainCount(gameFight.Add<Rally>()));
     }
 
     [Fact]
@@ -29,10 +28,10 @@ public class BlockGainTests
         var gameFight = new GameFight();
         var card = gameFight.Add<SecondWind>();
         gameFight.Add<StrikeIronclad>();
-        Assert.Equal(0, PlayFacts.BlockGainCount(card));
+        Assert.Equal(0, BoardCounts.BlockGainCount(card));
         gameFight.Add<DefendIronclad>();
         gameFight.Add<Dazed>();
-        Assert.Equal(2, PlayFacts.BlockGainCount(card));
+        Assert.Equal(2, BoardCounts.BlockGainCount(card));
     }
 
     [Fact]
@@ -42,8 +41,8 @@ public class BlockGainTests
         // doesn't say so (the old count predicted their block).
         var gameFight = new GameFight();
         Assert.True(gameFight.Me.IsOstyMissing);
-        Assert.Equal(0, PlayFacts.BlockGainCount(gameFight.Add<BoneShards>()));
-        Assert.Equal(0, PlayFacts.BlockGainCount(gameFight.Add<Sacrifice>()));
+        Assert.Equal(0, BoardCounts.BlockGainCount(gameFight.Add<BoneShards>()));
+        Assert.Equal(0, BoardCounts.BlockGainCount(gameFight.Add<Sacrifice>()));
     }
 
     [Theory]

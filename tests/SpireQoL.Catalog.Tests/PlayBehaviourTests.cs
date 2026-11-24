@@ -67,9 +67,7 @@ public class PlayBehaviourTests
     private static List<SimState> PlayOut(GameFight gameFight, CardModel card, Creature? target = null, int plays = 1)
     {
         var start = SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
-        var facts = PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays);
-        Assert.NotNull(facts);
-        var play = SimAdapter.Play(card, facts!, gameFight.Me, gameFight.Combat, ids, target == null ? Who.None : ids[target]);
+        var play = SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, target == null ? Who.None : ids[target], plays: plays);
         SimEngine.ApplyPlayTo(start, play, out var branches, out var truncated);
         Assert.False(truncated);
         Assert.NotEmpty(branches);
@@ -482,7 +480,7 @@ public class PlayBehaviourTests
         gameFight.Add<StrikeIronclad>();
         var start = SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
         var mateHand = start.Teammates[0].HandCount;
-        var play = SimAdapter.Play(card, PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1), gameFight.Me, gameFight.Combat, ids, Who.Teammate(teammateIndex: 0));
+        var play = SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, Who.Teammate(teammateIndex: 0));
         SimEngine.ApplyPlayTo(start, play, out var branches, out _);
         var after = Only(branches);
         Assert.Equal(1, after.You.HandCount);

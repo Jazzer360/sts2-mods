@@ -342,7 +342,7 @@ public sealed partial class ProcAudit
                 Budget(Effect.Draw, "draws", draws, Math.Max(Most(CardEvent.Drawn), facts.DrawsAtMost));
                 Budget(Effect.Exhaust, "exhausts", exhausts, Most(CardEvent.Exhausted));
                 Budget(Effect.Discard, "discards", discards, Most(CardEvent.Discarded));
-                var made = Most(CardEvent.Generated) + Most(CardEvent.GeneratedStatus) + Most(CardEvent.GeneratedSadness) + (Procs.PlayFacts.TransformsChosen(window.Card) ? facts.Transforms : 0);
+                var made = Most(CardEvent.Generated) + Most(CardEvent.GeneratedStatus) + Most(CardEvent.GeneratedSadness) + (Procs.Programs.BoardCounts.TransformsChosen(window.Card) ? facts.Transforms : 0);
                 Budget(Effect.Generate, "created cards", generated, made);
                 MadeByTabs(made);
             }

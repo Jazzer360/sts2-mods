@@ -1,3 +1,4 @@
+using SpireQoL.Procs.Programs;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using SpireQoL.Procs;
@@ -17,11 +18,11 @@ public class CardCodeTests
     {
         GameModels.EnsureLoaded();
         // Shrug It Off draws its Cards; Dagger Throw has no Cards value and draws one; a Strike doesn't draw.
-        Assert.Equal(ModelDb.Card<ShrugItOff>().DynamicVars["Cards"].IntValue, PlayFacts.CardsDrawn(ModelDb.Card<ShrugItOff>(), handCount: 5));
-        Assert.Equal(1, PlayFacts.CardsDrawn(ModelDb.Card<DaggerThrow>(), handCount: 5));
-        Assert.Equal(0, PlayFacts.CardsDrawn(ModelDb.Card<StrikeIronclad>(), handCount: 5));
+        Assert.Equal(ModelDb.Card<ShrugItOff>().DynamicVars["Cards"].IntValue, BoardCounts.CardsDrawn(ModelDb.Card<ShrugItOff>(), handCount: 5));
+        Assert.Equal(1, BoardCounts.CardsDrawn(ModelDb.Card<DaggerThrow>(), handCount: 5));
+        Assert.Equal(0, BoardCounts.CardsDrawn(ModelDb.Card<StrikeIronclad>(), handCount: 5));
         // Constellation makes the teammate draw, not you.
-        Assert.Equal(0, PlayFacts.CardsDrawn(ModelDb.Card<Constellation>(), handCount: 5));
+        Assert.Equal(0, BoardCounts.CardsDrawn(ModelDb.Card<Constellation>(), handCount: 5));
     }
 
     [Fact]
@@ -29,9 +30,9 @@ public class CardCodeTests
     {
         // Ftl.CanDrawCard: fewer than PlayMax plays finished this turn. Claw played twice, then FTL twice under Echo Form: only the
         // first FTL draws (a report predicted 2 draws, the game drew 1).
-        Assert.Equal(1, PlayFacts.PlaysUnder(finishedBefore: 2, max: 3, plays: 2));
-        Assert.Equal(2, PlayFacts.PlaysUnder(finishedBefore: 0, max: 3, plays: 2));
-        Assert.Equal(0, PlayFacts.PlaysUnder(finishedBefore: 3, max: 3, plays: 2));
+        Assert.Equal(1, BoardCounts.PlaysUnder(finishedBefore: 2, max: 3, plays: 2));
+        Assert.Equal(2, BoardCounts.PlaysUnder(finishedBefore: 0, max: 3, plays: 2));
+        Assert.Equal(0, BoardCounts.PlaysUnder(finishedBefore: 3, max: 3, plays: 2));
     }
 
     [Fact]
@@ -45,7 +46,7 @@ public class CardCodeTests
             .Where(card => CardCode.Calls(card.GetType(), "CardPileCmd", "Draw"))
             .Where(card => !SpireQoL.Procs.Programs.CardEffects.DrawsForTarget(card.GetType())
                            && !card.DynamicVars.ContainsKey("CalculatedCards")) // a count from the fight: none on the template card
-            .Where(card => PlayFacts.CardsDrawn(card, handCount: 5) + PlayFacts.CardsDrawn(card, handCount: 1) == 0)
+            .Where(card => BoardCounts.CardsDrawn(card, handCount: 5) + BoardCounts.CardsDrawn(card, handCount: 1) == 0)
             .Select(card => card.GetType().Name).ToList();
         Assert.True(notCounted.Count == 0, "draw in their play, counted as none: " + string.Join(", ", notCounted));
     }
@@ -55,8 +56,8 @@ public class CardCodeTests
     {
         GameModels.EnsureLoaded();
         // Gather Light gains stars on every play; Knockout Blow only when its attack kills (the attack's, not the play's).
-        Assert.Equal(1, PlayFacts.StarGainsOf(ModelDb.Card<GatherLight>()));
-        Assert.Equal(0, PlayFacts.StarGainsOf(ModelDb.Card<KnockoutBlow>()));
+        Assert.Equal(1, BoardCounts.StarGainsOf(ModelDb.Card<GatherLight>()));
+        Assert.Equal(0, BoardCounts.StarGainsOf(ModelDb.Card<KnockoutBlow>()));
         // Its gain is guarded by its attack's kill (decision #190: ConditionTranslationTests).
         Assert.Contains(SpireQoL.Procs.Programs.CardEffects.Find(SpireQoL.Procs.Programs.CardPrograms.Of(typeof(KnockoutBlow)), command => command.Command.Name == "GainStars"),
             gain => SpireQoL.Sim.PlayConditions.CodeReading(typeof(KnockoutBlow), gain.Condition).Condition is SpireQoL.Sim.AttackKilledCondition);

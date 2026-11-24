@@ -162,7 +162,7 @@ internal static class CardCoverage
             issues.Add(TeammatesOnly + "acts on every player (the simulator applies its effects to you only)");
 
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
-            && None(otherCard => PlayFacts.CardsDrawn(otherCard, handCount: 5) + PlayFacts.CardsDrawn(otherCard, handCount: 1)) && !Procs.Programs.CardEffects.DrawsForTarget(card.GetType()))
+            && None(otherCard => Procs.Programs.BoardCounts.CardsDrawn(otherCard, handCount: 5) + Procs.Programs.BoardCounts.CardsDrawn(otherCard, handCount: 1)) && !Procs.Programs.CardEffects.DrawsForTarget(card.GetType()))
             issues.Add("draws cards (not counted: Shuffle Warning, draw procs)");
         // A card that takes block away: the simulator models a card taking its target's (Expose), read from its program.
         if (Calls("CreatureCmd", "LoseBlock") && !Procs.Programs.CardEffects.TakesTargetsBlock(card.GetType()))
@@ -178,27 +178,27 @@ internal static class CardCoverage
         // Every step on a condition the simulator acts on (decision #190): its condition translated, decided before the play, or a gap of
         // a reviewed kind (ConditionGapKinds).
         issues.AddRange(ConditionGaps(card.GetType()));
-        // A draw on a condition (Impatience: no Attack in hand) is counted when its condition holds on the board (PlayFacts.CardsDrawn,
+        // A draw on a condition (Impatience: no Attack in hand) is counted when its condition holds on the board (Procs.Programs.BoardCounts.CardsDrawn,
         // evaluated from its program): one the evaluator can't read (a test of something the play itself gives) isn't checked.
         if (Procs.Programs.CardEffects.DrawsForYou(card.GetType()).Any(draw => !Procs.Programs.ProgramEvaluator.CanEvaluate(draw.Condition)))
-            issues.Add("draws only on a condition its program's evaluator can't read (not checked in PlayFacts.CardsDrawn)");
+            issues.Add("draws only on a condition its program's evaluator can't read (not checked in Procs.Programs.BoardCounts.CardsDrawn)");
         // An attack on a condition, on a card that glows gold: is the glow that condition (Pact's End)? Its hits must say.
-        // Its attack's hits are its program's (PlayFacts.HitsPerPlay): the attack's condition and hit count, evaluated on the board.
+        // Its attack's hits are its program's (Procs.Programs.BoardCounts.HitsPerPlay): the attack's condition and hit count, evaluated on the board.
         if (Procs.Programs.CardEffects.Attacks(card.GetType()) is [var attack, ..]
             && (!Procs.Programs.ProgramEvaluator.CanEvaluate(attack.Condition)
                 || attack.Command.HitCountValue is { } hitCount && hitCount.Parts().Any(part => part is Procs.Programs.UnknownValue or Procs.Programs.ResultValue)))
-            issues.Add("attacks on a condition or with a hit count its program's evaluator can't read (its hits: PlayFacts.HitsPerPlay)");
+            issues.Add("attacks on a condition or with a hit count its program's evaluator can't read (its hits: Procs.Programs.BoardCounts.HitsPerPlay)");
         if (Calls("OrbCmd", "Channel") && !Procs.Programs.CardEffects.ChannelsKnownOrbs(card.GetType()))
             issues.Add("channels orbs (the simulator doesn't add them)");
-        if (Calls("OrbCmd", "Channel") && None(PlayFacts.ChannelCount))
+        if (Calls("OrbCmd", "Channel") && None(Procs.Programs.BoardCounts.ChannelCount))
             issues.Add("channels orbs (not counted for Metronome)");
         if (Calls("CreatureCmd", "GainBlock") && Procs.Programs.CardEffects.BlockGains(card.GetType()).Count == 0)
             issues.Add("gains block its program doesn't show (not in the simulator or Juggernaut)");
         // Block more than once in one play (Evil Eye twice after an exhaust): each gain sets off Juggernaut and block reactions, counted
-        // by its loops' rounds (PlayFacts.BlockGainCount), which must be readable.
+        // by its loops' rounds (Procs.Programs.BoardCounts.BlockGainCount), which must be readable.
         if (Procs.Programs.CardEffects.BlockGains(card.GetType()).Any(gain => gain.Loops.Any(loop => !Procs.Programs.CardEffects.RoundsReadable(loop))
                                                                               && !Procs.Programs.CardEffects.GainsForEachOfLoop(gain.Command)))
-            issues.Add("gains block in a loop whose rounds can't be read (counted once: PlayFacts.BlockGainCount)");
+            issues.Add("gains block in a loop whose rounds can't be read (counted once: Procs.Programs.BoardCounts.BlockGainCount)");
         // A block card that applies Stretch keeps it for a replay's later plays (Cho Ki); the simulator spends it otherwise.
         if (Calls("CreatureCmd", "GainBlock") && calls.Contains("PowerCmd.Apply<StretchPower>") && !Procs.Programs.CardEffects.KeepsStretchForReplays(card.GetType()))
             issues.Add("gains block and applies Stretch (a replay's later plays keep it: not in the simulator)");
@@ -240,13 +240,13 @@ internal static class CardCoverage
         if (Applies<PoisonPower>() && !HasPowerVar<PoisonPower>())
             issues.Add("applies poison outside its power value (not in the simulator)");
         // Every game card as the hand, so any filter (attacks, Sadness, Shoot cards) finds something to exhaust.
-        if (Calls("CardCmd", "Exhaust") && None(otherCard => PlayFacts.ExhaustOthers(otherCard, all, drawPile: 5)))
+        if (Calls("CardCmd", "Exhaust") && None(otherCard => Procs.Programs.BoardCounts.ExhaustOthers(otherCard, all, drawPile: 5)))
             issues.Add("exhausts cards (not counted: Feel No Pain, Dark Embrace...)");
         // How it picks them decides whether a card that acts when exhausted goes (Drum of Battle's energy).
-        if (Calls("CardCmd", "Exhaust") && !None(otherCard => PlayFacts.ExhaustOthers(otherCard, all, drawPile: 5))
-            && PlayFacts.ExhaustPickOf(card) == null && PlayFacts.ExhaustFilterTakesActingCard(card, all))
+        if (Calls("CardCmd", "Exhaust") && !None(otherCard => Procs.Programs.BoardCounts.ExhaustOthers(otherCard, all, drawPile: 5))
+            && SimAdapter.ExhaustPickOf(card) == null && Procs.Programs.BoardCounts.ExhaustFilterTakesActingCard(card, all))
             issues.Add("exhausts other cards with a filter a card that acts when exhausted passes (Drum of Battle's energy when exhausted isn't followed)");
-        if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && None(otherCard => PlayFacts.DiscardCount(otherCard, others, PlayFacts.CardsDrawn(otherCard, handCount: 5))))
+        if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && None(otherCard => Procs.Programs.BoardCounts.DiscardCount(otherCard, others, Procs.Programs.BoardCounts.CardsDrawn(otherCard, handCount: 5))))
             issues.Add("discards cards (not counted: Tingsha, Tough Bandages...)");
         // The cards it makes are its makes' (MadeCards, from its program): each make's count must be readable on the board.
         if ((Calls("CardPileCmd", "AddGeneratedCardToCombat") || Calls("CardPileCmd", "AddGeneratedCardsToCombat") || Calls("CardPileCmd", "AddToCombatAndPreview"))
@@ -281,16 +281,16 @@ internal static class CardCoverage
             issues.Add("forges (its Sovereign Blade isn't counted: created-card procs)");
         // Every game card as the hand, so any filter (statuses, attacks) finds something to transform.
         if ((Calls("CardCmd", "Transform") || Calls("CardCmd", "TransformTo") || Calls("CardCmd", "TransformToRandom"))
-            && None(otherCard => PlayFacts.TransformCount(otherCard, all, drawPile: 5)))
+            && None(otherCard => Procs.Programs.BoardCounts.TransformCount(otherCard, all, drawPile: 5)))
             issues.Add("transforms cards (not counted: the proc check's created-card budget)");
-        if ((Calls("OrbCmd", "AddSlots") || Calls("OrbCmd", "RemoveSlots")) && None(otherCard => Math.Abs(PlayFacts.OrbsOf(otherCard).Slots)))
+        if ((Calls("OrbCmd", "AddSlots") || Calls("OrbCmd", "RemoveSlots")) && None(otherCard => Math.Abs(Procs.Programs.BoardCounts.OrbsOf(otherCard).Slots)))
             issues.Add("changes your orb slots (the simulator doesn't change them)");
         foreach (var applied in PowersApplied(card.GetType()))
             if (SimAdapter.PlainSelfPowerAmount(card, applied) == 0)
                 issues.Add($"applies {applied.Name} with no amount the simulator reads");
-        // Osty attacks are read from the game's tag (PlayFacts.IsOstyAttack): a card attacking from Osty without it wouldn't be simulated.
-        if (Calls("AttackCommand", "FromOsty") && !PlayFacts.IsOstyAttack(card))
-            issues.Add("attacks from Osty without the OstyAttack tag (its hit isn't simulated: PlayFacts.IsOstyAttack)");
+        // Osty attacks are read from the game's tag (Procs.Programs.BoardCounts.IsOstyAttack): a card attacking from Osty without it wouldn't be simulated.
+        if (Calls("AttackCommand", "FromOsty") && !Procs.Programs.BoardCounts.IsOstyAttack(card))
+            issues.Add("attacks from Osty without the OstyAttack tag (its hit isn't simulated: Procs.Programs.BoardCounts.IsOstyAttack)");
         if (Calls("CreatureCmd", "Kill") && !Procs.Programs.CardEffects.KillsOsty(card.GetType()))
             issues.Add("kills a creature (not in the simulator)");
         // A card that becomes another card once played (Mourning Blow into a Sadness): a created card.
@@ -304,7 +304,7 @@ internal static class CardCoverage
             issues.Add("shoots an arrow without the Shoot tag (its damage is counted even with no arrow to shoot)");
         if (Calls("ArrowCmd", "DislodgeArrow") && !Procs.Programs.CardEffects.DislodgesArrows(card.GetType()))
             issues.Add("knocks arrows loose (not counted: Twine, Yah)");
-        if (Calls("PlayerCmd", "GainStars") && PlayFacts.StarGainsOf(card) == 0
+        if (Calls("PlayerCmd", "GainStars") && Procs.Programs.BoardCounts.StarGainsOf(card) == 0
             && !Procs.Programs.CardEffects.Find(program, command => command.Command is { DeclaringType: "PlayerCmd", Name: "GainStars" })
                 .Any(gain => PlayConditions.CodeReading(card.GetType(), gain.Condition).Way == Procs.Programs.ConditionWay.Simulated))
             issues.Add("gains stars (not counted for Black Hole)");

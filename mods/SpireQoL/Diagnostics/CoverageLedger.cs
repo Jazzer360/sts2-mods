@@ -128,7 +128,7 @@ internal static partial class CoverageLedger
         ["MightyWings"] = "covered: AfterDamageGiven gives 2 Strength when your (or Osty's) powered attack hit deals 30 or more (blocked plus HP lost): proc tab when the simulator's biggest hit of the play reaches it in every branch; the simulator gives the attack's later hits the Strength",
         ["ObsidianVice"] = "covered: BeforeSideTurnEnd deals its damage per card in your hand to a random enemy (model ObsidianVice, yours and teammates')",
         ["Storyteller"] = "ignore: BeforeSideTurnEnd gives Aim, which only adds to your arrow attacks (read through the game's damage hooks on your next turn); AfterRoomEntered gives it at the start of combat",
-        ["Thumbscrew"] = "covered: ModifyAttackHitCount adds a hit to your multi-hit attacks (applied through Hook.ModifyAttackHitCount in PlayFacts.HitsPerPlay, as the card preview does)",
+        ["Thumbscrew"] = "covered: ModifyAttackHitCount adds a hit to your multi-hit attacks (applied through Hook.ModifyAttackHitCount in BoardCounts.HitsPerPlay, as the card preview does)",
         ["Twine"] = "covered: AfterArrowDislodged gains block per arrow of yours dislodged (model Twine; the simulator dislodges arrows: ImpaledPower model, Recall, Uproot, Wrest)",
         ["WhittlingKnife"] = "covered: AfterShuffle gives Aim: proc tab on cards whose draws or own code shuffle (the simulation's shuffle event)",
         ["Wuppy"] = "covered: AfterCurrentHpChanged/BeforeCombatStart keep a pet Wuppy that takes the powered attacks aimed at its owner while it lives (WuppysLoyaltyPower: simulator, yours and teammates')",

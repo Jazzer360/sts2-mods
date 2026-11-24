@@ -183,7 +183,7 @@ public class CardPlaySnapshotTests
                 TargetType.AnyAlly when gameFight.Teammates.Count > 0 => Who.Teammate(teammateIndex: 0),
                 _ => Who.None,
             };
-            var play = SimAdapter.Play(card, facts, gameFight.Me, gameFight.Combat, ids, targetId);
+            var play = SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, targetId, plays: facts.Plays);
             return new Reading(FactsText(facts, enemies) + " play " + PlayText(play, gameFight), OutcomeText(start, play));
         }
         catch (Exception ex)

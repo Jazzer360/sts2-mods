@@ -35,6 +35,26 @@ public static class CardPlays
         }
     }
 
+    /// <summary>Energy spent to play it (X-cost: all your energy): the game's CardEnergyCost.GetAmountToSpend; 0 when it can't be read.</summary>
+    public static int EnergyOf(CardModel card)
+    {
+        try { return card.EnergyCost.GetAmountToSpend(); } catch { return 0; }
+    }
+
+    /// <summary>Energy the play spends: its cost, or none when an open hand choice auto-plays it (CardCmd.AutoPlay: EnergySpent 0).</summary>
+    public static int EnergySpentOn(CardModel card) => ChoiceAutoPlayed(card) ? 0 : EnergyOf(card);
+
+    /// <summary>Stars spent to play it (CardModel.GetStarCostWithModifiers); 0 when it has no star cost or it can't be read.</summary>
+    public static int StarsOf(CardModel card)
+    {
+        try
+        {
+            if (!card.HasStarCostX && card.CurrentStarCost < 0) return 0;
+            return Math.Max(0, card.GetStarCostWithModifiers());
+        }
+        catch { return 0; }
+    }
+
     /// <summary>How many times the card would play right now (best case over targets), an open hand choice's auto-plays included.</summary>
     public static int Count(CardModel card)
     {

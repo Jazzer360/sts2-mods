@@ -1,3 +1,4 @@
+using SpireQoL.Procs.Programs;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
@@ -5,7 +6,6 @@ using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Monsters;
 using MegaCrit.Sts2.Core.Models.Powers;
-using SpireQoL.Procs;
 using Xunit;
 
 namespace SpireQoL.Catalog.Tests;
@@ -51,10 +51,10 @@ public class ConditionalDrawTests
         var card = gameFight.Add<Impatience>();
         gameFight.Add<DefendIronclad>();
         var cards = card.DynamicVars["Cards"].IntValue;
-        Assert.Equal(cards, PlayFacts.CardsDrawn(card, handCount: 2));
-        Assert.Equal(cards * 2, PlayFacts.CardsDrawnTotal(card, handCount: 2, plays: 2));
+        Assert.Equal(cards, BoardCounts.CardsDrawn(card, handCount: 2));
+        Assert.Equal(cards * 2, BoardCounts.CardsDrawnTotal(card, handCount: 2, plays: 2));
         gameFight.Add<StrikeIronclad>();
-        Assert.Equal(0, PlayFacts.CardsDrawn(card, handCount: 3));
+        Assert.Equal(0, BoardCounts.CardsDrawn(card, handCount: 3));
     }
 
     [Fact]
@@ -64,9 +64,9 @@ public class ConditionalDrawTests
         var gameFight = Fight();
         Enemy(gameFight);
         var card = gameFight.Add<Restlessness>();
-        Assert.Equal(card.DynamicVars["Cards"].IntValue, PlayFacts.CardsDrawn(card, handCount: 1));
+        Assert.Equal(card.DynamicVars["Cards"].IntValue, BoardCounts.CardsDrawn(card, handCount: 1));
         gameFight.Add<DefendIronclad>();
-        Assert.Equal(0, PlayFacts.CardsDrawn(card, handCount: 2));
+        Assert.Equal(0, BoardCounts.CardsDrawn(card, handCount: 2));
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class ConditionalDrawTests
         var gameFight = Fight();
         Enemy(gameFight);
         var card = gameFight.Add<Ftl>();
-        Assert.Equal(card.DynamicVars["Cards"].IntValue * 3, PlayFacts.CardsDrawnTotal(card, handCount: 1, plays: 4));
+        Assert.Equal(card.DynamicVars["Cards"].IntValue * 3, BoardCounts.CardsDrawnTotal(card, handCount: 1, plays: 4));
     }
 
     [Fact]
@@ -88,12 +88,12 @@ public class ConditionalDrawTests
         var gameFight = Fight();
         var enemy = Enemy(gameFight);
         var card = gameFight.Add<Wrest>();
-        Assert.Equal(0, PlayFacts.TargetDraws(card, enemy, plays: 1));
+        Assert.Equal(0, BoardCounts.TargetDraws(card, enemy, plays: 1));
         Impale(enemy, gameFight.Me.Creature);
         var cards = card.DynamicVars["Cards"].IntValue;
-        Assert.Equal(cards, PlayFacts.TargetDraws(card, enemy, plays: 1));
-        Assert.Equal(cards, PlayFacts.TargetDraws(card, enemy, plays: 2));
-        Assert.Equal(cards, PlayFacts.CardsDrawnTotal(card, handCount: 1, plays: 2));
+        Assert.Equal(cards, BoardCounts.TargetDraws(card, enemy, plays: 1));
+        Assert.Equal(cards, BoardCounts.TargetDraws(card, enemy, plays: 2));
+        Assert.Equal(cards, BoardCounts.CardsDrawnTotal(card, handCount: 1, plays: 2));
     }
 
     [Fact]
@@ -103,11 +103,11 @@ public class ConditionalDrawTests
         var gameFight = Fight();
         var enemy = Enemy(gameFight);
         var card = gameFight.Add<KiHop>();
-        Assert.Equal(0, PlayFacts.CardsDrawn(card, handCount: 1));
+        Assert.Equal(0, BoardCounts.CardsDrawn(card, handCount: 1));
         Impale(enemy, enemy);
         var cards = card.DynamicVars["Cards"].IntValue;
-        Assert.Equal(cards, PlayFacts.CardsDrawn(card, handCount: 1));
-        Assert.Equal(cards * 2, PlayFacts.TargetDraws(card, enemy, plays: 2));
+        Assert.Equal(cards, BoardCounts.CardsDrawn(card, handCount: 1));
+        Assert.Equal(cards * 2, BoardCounts.TargetDraws(card, enemy, plays: 2));
     }
 
     [Fact]
@@ -115,7 +115,7 @@ public class ConditionalDrawTests
     {
         var gameFight = Fight();
         var enemy = Enemy(gameFight);
-        Assert.Null(PlayFacts.TargetDraws(gameFight.Add<Impatience>(), enemy, plays: 1));
+        Assert.Null(BoardCounts.TargetDraws(gameFight.Add<Impatience>(), enemy, plays: 1));
     }
 }
 

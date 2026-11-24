@@ -5,7 +5,6 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Cards;
-using SpireQoL.Procs;
 using SpireQoL.Sim;
 using Sts2Mods.Core.Game;
 using MegaCrit.Sts2.Core.Models.Powers;
@@ -45,7 +44,7 @@ public sealed partial class ProcAudit
         var acted = flashed.Select(otherModel => otherModel.GetType().Name).ToHashSet();
         var tabbed = window.Predicted.Select(tab => tab.Key.Contains(':') ? tab.Key[(tab.Key.IndexOf(':') + 1)..] : tab.Key).ToHashSet();
         // Artifact blocks any debuff, temporary ones included (Dark Shackles).
-        var debuffs = window.Facts?.EnemyDebuffs.Count > 0 || own.Any(typeName => PowerTypeNamed(typeName) is { } type && PlayFacts.IsDebuffType(type));
+        var debuffs = window.Facts?.EnemyDebuffs.Count > 0 || own.Any(typeName => PowerTypeNamed(typeName) is { } type && SimReaders.IsDebuffType(type));
         var died = DiedInPlay(entries);
         foreach (var ((creature, type), before) in window.PowersBefore)
         {

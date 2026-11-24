@@ -132,12 +132,6 @@ public static class CardPrograms
         catch { return CardProgram.Empty; }
     });
 
-    /// <summary>
-    /// The card discards before it draws (The Hermit, Calculated Gamble's DiscardAndDraw), so its draws have the discarded cards'
-    /// room; Acrobatics draws first.
-    /// </summary>
-    public static bool DiscardsBeforeDraws(Type cardType) => Before(Of(cardType), "Discard", "Draw");
-
     /// <summary>The program's first command whose name starts with <paramref name="first"/> comes before its first <paramref name="second"/>.</summary>
     internal static bool Before(CardProgram program, string first, string second)
     {

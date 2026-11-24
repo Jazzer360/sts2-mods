@@ -81,7 +81,7 @@ public class CardEffectsTests
         Exactly(nameof(CardEffects.DislodgesArrows), CardEffects.DislodgesArrows, Tables.DislodgeCards);
         Exactly(nameof(CardEffects.KeepsStretchForReplays), CardEffects.KeepsStretchForReplays, Tables.KeepsStretchCards);
         Exactly(nameof(CardEffects.TakesWholeHand), CardEffects.TakesWholeHand, Tables.WholeHandCards);
-        // Other cards exhausted (PlayFacts.ExhaustOthers' cases), and how each takes them (ExhaustPickOf, ExhaustTakesNoActingCard).
+        // Other cards exhausted (BoardCounts.ExhaustOthers' cases), and how each takes them (ExhaustPickOf, ExhaustTakesNoActingCard).
         Exactly(nameof(CardEffects.ExhaustsOthers), CardEffects.ExhaustsOthers, Tables.ExhaustOthersCards);
         foreach (var (card, ways) in Tables.ExhaustWays)
         {
@@ -90,7 +90,7 @@ public class CardEffectsTests
                 exhaust.Way + (exhaust.FromDrawPile ? " from the draw pile" : "") + (exhaust.Filter != null || !exhaust.ItemTest.IsAlways ? " filtered" : "")));
             if (read != ways) failures.Add($"{card} ({branch}) exhausts: {read}; the table: {ways}");
         }
-        // Cards discarded, transformed and moved into your hand (PlayFacts.DiscardCount's, TransformCount's and TakenToHandCount's cases,
+        // Cards discarded, transformed and moved into your hand (BoardCounts.DiscardCount's, TransformCount's and TakenToHandCount's cases,
         // SimAdapter.HandTakes), and how each takes them.
         Exactly(nameof(CardEffects.Discards), program => CardEffects.Discards(program).Count > 0, Tables.DiscardCards.Keys.ToArray());
         Exactly(nameof(CardEffects.Transforms), program => CardEffects.Transforms(program).Count > 0, Tables.TransformCards.Keys.ToArray());
@@ -107,7 +107,7 @@ public class CardEffectsTests
         Ways("discards", CardEffects.Discards, Tables.DiscardCards);
         Ways("transforms", CardEffects.Transforms, Tables.TransformCards);
         Ways("takes into hand", CardEffects.TakesIntoHandOf, Tables.HandTakes);
-        // Orbs (SimAdapter.Channels, RepeatChannels, SlotChange, the evoke cards in OrbsOf and EvokedOrbs; PlayFacts.ChannelCount):
+        // Orbs (SimAdapter.Channels, RepeatChannels, SlotChange, the evoke cards in OrbsOf and EvokedOrbs; BoardCounts.ChannelCount):
         // each channel's orb, in order, "each round" inside a loop.
         Exactly(nameof(CardEffects.OrbChannels), program => CardEffects.OrbChannels(program).Count > 0, Tables.ChannelCards.Keys.ToArray());
         foreach (var (card, orbs) in Tables.ChannelCards)
@@ -165,7 +165,7 @@ public class CardEffectsTests
         public static readonly string[] KeepsStretchCards = { "ChoKi" };
         // The whole hand (PlayFacts.WholeHandCards).
         public static readonly string[] WholeHandCards = { "FiendFire", "Stoke", "TheDevil", "CalculatedGamble", "ShadowStep", "StormOfSteel", "WheelOfFortune", "Reboot" };
-        // Other cards exhausted (PlayFacts.ExhaustOthers), and how (ExhaustPickOf: Chosen, Random, All; ExhaustTakesNoActingCard: a filter).
+        // Other cards exhausted (BoardCounts.ExhaustOthers), and how (ExhaustPickOf: Chosen, Random, All; ExhaustTakesNoActingCard: a filter).
         public static readonly string[] ExhaustOthersCards =
         {
             "Brand", "BurningPact", "TrueGrit", "Scavenge", "Cinder", "Thrash", "Cleanse", "FiendFire", "Stoke", "SecondWind", "TheDevil", "Growth",
@@ -202,7 +202,7 @@ public class CardEffectsTests
             ["IceLance"] = "Frost each round", ["Refract"] = "Glass each round", ["Chaos"] = "Random each round", ["TheMagician"] = "Random each round",
             ["Tempest"] = "Lightning each round", ["Voltaic"] = "Lightning each round",
         };
-        // Discards (PlayFacts.DiscardCount), with how each takes them: a pick from your hand (one, or its Cards), your whole hand, the
+        // Discards (BoardCounts.DiscardCount), with how each takes them: a pick from your hand (one, or its Cards), your whole hand, the
         // cards it drew (Scrape), the ones looked at on top of your draw pile (Ki Chant).
         public static readonly Dictionary<string, string> DiscardCards = new()
         {
@@ -212,13 +212,13 @@ public class CardEffectsTests
             // The Hermit: the pick is discarded when it isn't a Curse; Ki Chant: what it looked at, less the card it took.
             ["TheHermit"] = "Picked from Hand filtered", ["KiChant"] = "LookedAt from Draw filtered", ["Scrape"] = "Drawn filtered",
         };
-        // Transforms (PlayFacts.TransformCount).
+        // Transforms (BoardCounts.TransformCount).
         public static readonly Dictionary<string, string> TransformCards = new()
         {
             ["Begone"] = "Picked from Hand", ["Guards"] = "Picked from Hand several how many chosen", ["Charge"] = "Picked from Draw several",
             ["Seance"] = "Picked from Draw several", ["Compact"] = "Each from Hand filtered", ["PrimalForce"] = "Each from Hand filtered", ["PunchOfJoy"] = "Each from Hand one",
         };
-        // Moved into your hand (PlayFacts.TakenToHandCount, SimAdapter.HandTakes: FromDiscard, Eligible, Random, AllAtOnce).
+        // Moved into your hand (BoardCounts.TakenToHandCount, SimAdapter.HandTakes: FromDiscard, Eligible, Random, AllAtOnce).
         public static readonly Dictionary<string, string> HandTakes = new()
         {
             ["Anointed"] = "Random from Draw filtered", ["Wish"] = "Picked from Draw", ["SeekerStrike"] = "Picked from Draw filtered", ["KiChant"] = "Picked from Draw filtered",

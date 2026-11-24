@@ -93,7 +93,6 @@ public static partial class SimAdapter
         public required CardModel Card { get; init; }
         public required CardProgram Program { get; init; }
         public required ProgramBoard Board { get; init; }
-        public required PlayFacts Facts { get; init; }
         public required Player Me { get; init; }
         public required ICombatState Combat { get; init; }
         public required IReadOnlyDictionary<Creature, int> Ids { get; init; }
@@ -243,13 +242,13 @@ public static partial class SimAdapter
     // ---------------------------------------------------------------- the play's context
 
     /// <summary>The play's steps found once, the shots' attacks, the takes and the steps another stands for.</summary>
-    private static StepPlay StepPlayOf(CardModel card, PlayFacts facts, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, SimPlay play,
+    private static StepPlay StepPlayOf(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, SimPlay play,
         Creature? aimed, int owner, Creature? ally, int allyId, int plays)
     {
         var program = CardPrograms.Of(card.GetType());
         var stepPlay = new StepPlay
         {
-            Card = card, Program = program, Board = new ProgramBoard(card), Facts = facts, Me = me, Combat = combat, Ids = ids, Play = play,
+            Card = card, Program = program, Board = new ProgramBoard(card), Me = me, Combat = combat, Ids = ids, Play = play,
             Aimed = aimed, Owner = owner, Ally = ally, AllyId = allyId, Plays = plays,
             Found = CardEffects.Find(program, _ => true).ToDictionary(found => found.Command, found => found, ReferenceEqualityComparer.Instance as IEqualityComparer<CommandStep>),
         };
@@ -365,10 +364,10 @@ public static partial class SimAdapter
         if (mode == SimPlay.Target.None) return new List<SimAction>();
         var byOsty = command.Builder.Contains("FromOsty");
         var aimed = mode == SimPlay.Target.Single ? play.Aimed : null;
-        var hits = HitsOf(command, play, aimed) * RoundsOf(found, play);
+        var hits = BoardCounts.HitsOf(command, play.Board with { Target = aimed }, play.Program) * RoundsOf(found, play);
         hits = WithHitCountHooks(card, play.Combat, hits);
         var takes = CardEffects.ExhaustsOfOthers(play.Type).Concat(CardEffects.Discards(play.Type)).ToList();
-        var hitsTaken = takes.Any(take => CardEffects.CountsTaken(command.HitCountValue, take) || CountsTakenByItsValue(card, command.HitCountValue, take));
+        var hitsTaken = takes.Any(take => CardEffects.CountsTaken(command.HitCountValue, take) || BoardCounts.CountsTakenByItsValue(card, command.HitCountValue, take));
         var hitsLogged = command.HitCountValue?.Parts().Any(part => part is CardValue { Key: "CalculatedHits" }) == true
             ? HistoryLedger.LoggedOf(card, "CalculatedHits", play.Combat) : null;
         if (hits <= 0 && !hitsTaken && hitsLogged == null) return new List<SimAction>();
@@ -407,33 +406,6 @@ public static partial class SimAdapter
         if (command.Builder.Contains("TargetingRandomOpponents")) ways.Add(SimPlay.Target.Random);
         if (command.Builder.Contains("Targeting")) ways.Add(byCard == SimPlay.Target.Random ? SimPlay.Target.Random : SimPlay.Target.Single);
         return ways.Count == 1 ? ways[0] : byCard;
-    }
-
-    /// <summary>
-    /// The value is a card value calculated as the count of a take's collection and nothing more (Flak Cannon's CalculatedHits: its
-    /// multiplier counts the statuses its loop exhausts, its base 0 and extra 1): what that take took, read as it runs (SimCount.CardsTaken).
-    /// </summary>
-    private static bool CountsTakenByItsValue(CardModel card, ProgramValue? value, CardEffects.CardsTaken take)
-    {
-        if (value == null || take.Items == null || value.Parts().OfType<CardValue>().FirstOrDefault() is not { } cardValue) return false;
-        if (Sts2State.Var(card, "CalculationBase", fallback: -1) != 0 || Sts2State.Var(card, "CalculationExtra", fallback: -1) != 1) return false;
-        var multipliers = CardProgramReader.CalculatedMultipliers(card.GetType(), RuntimeCode.Read);
-        if (!multipliers.TryGetValue(cardValue.Key, out var multiplier) || multiplier is not QueryValue { Name: "Count", Arguments: [var counted] }) return false;
-        // The multiplier's lambda names the card "card" where its play names it "this".
-        static string Collection(ProgramValue items) => (items is QueryValue { Name: "ToList" or "ToArray", Arguments: [var inner] } ? inner : items).ToString()!;
-        return Collection(counted).Replace("card.", "this.", StringComparison.Ordinal) == Collection(Unstored(take.Items));
-    }
-    /// <summary>The attack's hits on the board (WithHitCount's argument at the target; with none aimed at, its least): one with no hit count.</summary>
-    private static int HitsOf(CommandStep command, StepPlay play, Creature? target)
-    {
-        if (command.HitCountValue is not { } count) return 1;
-        var board = play.Board with { Target = target };
-        if (ProgramEvaluator.Number(count, board, play.Program) is { } read) return Math.Max(0, (int)read);
-        var value = count;
-        while (value is StoredValue stored) value = stored.Value;
-        if (value is WaysValue ways && ways.Ways.Select(way => ProgramEvaluator.Number(way.Value, board, play.Program)).ToList() is var each && each.Count > 0 && each.All(number => number != null))
-            return (int)each.Min()!.Value;
-        return Math.Max(1, Sts2State.Var(play.Card, "HitCount", Sts2State.Var(play.Card, "Repeat", fallback: 1)));
     }
 
     /// <summary>The game's hit-count modifiers on an attack card's hits (Thumbscrew), the way its card preview applies them.</summary>
@@ -724,13 +696,13 @@ public static partial class SimAdapter
         var toEnemies = to is ApplyPowerAction.Where.Target or ApplyPowerAction.Where.AllEnemies or ApplyPowerAction.Where.RandomEnemy;
         if (toEnemies && (type == typeof(StrengthPower) || typeof(TemporaryStrengthPower).IsAssignableFrom(type)))
         {
-            var sign = typeof(TemporaryStrengthPower).IsAssignableFrom(type) && PlayFacts.IsDebuffType(type) ? -1 : 1;
+            var sign = typeof(TemporaryStrengthPower).IsAssignableFrom(type) && SimReaders.IsDebuffType(type) ? -1 : 1;
             return new ApplyPowerAction(PowerId.Strength, sign * amount) { To = to, Debuff = sign * amount < 0 };
         }
         if (to == ApplyPowerAction.Where.You && FocusSignOf(type) is var focusSign && focusSign != 0)
             return amount != 0 ? new FocusAction(focusSign * amount) : null;
         var simulated = SimModels.Has(simPowerName) || SelfPowers.Contains(simPowerName) || simPowerName == nameof(PoisonPower) || simPowerName == nameof(ArtifactPower);
-        var debuff = PlayFacts.IsDebuffType(type);
+        var debuff = SimReaders.IsDebuffType(type);
         if (debuff ? !toEnemies && !simulated : !simulated) return null;
         if (simPowerName == nameof(StretchPower) && to == ApplyPowerAction.Where.You && CardEffects.KeepsStretchForReplays(card.GetType()))
             return new ApplyPowerAction(new PowerId(simPowerName), Amount: 0) { To = to, CopiesOwn = true };
@@ -822,7 +794,7 @@ public static partial class SimAdapter
             yield return new CardEventAction(CardEvent.Drawn, int.MaxValue) { Indirect = true, JoinsHand = true, CountFrom = SimCount.HandRoom };
             yield break;
         }
-        var drawn = PlayFacts.DrawCount(play.Card, draw);
+        var drawn = BoardCounts.DrawCount(play.Card, draw);
         if (drawn > 0) yield return new CardEventAction(CardEvent.Drawn, drawn) { Indirect = true, JoinsHand = true };
     }
 
@@ -914,15 +886,15 @@ public static partial class SimAdapter
             .FirstOrDefault(candidate => ReferenceEquals(candidate.Command, command));
         var card = play.Card;
         // The cards it discards that aren't in your hand: the ones it looked at on top of your draw pile (Ki Chant), on the board.
-        if (take is { Way: CardEffects.TakeWay.LookedAt } && command.Command.Name == "Discard" && PlayFacts.DiscardedOutsideHand(card) is > 0 and var looked)
+        if (take is { Way: CardEffects.TakeWay.LookedAt } && command.Command.Name == "Discard" && BoardCounts.DiscardedOutsideHand(card) is > 0 and var looked)
             actions.Add(new CardEventAction(CardEvent.Discarded, looked) { Indirect = true });
         // Transformed outside your hand (Charge, Seance: your draw pile): a created card each, in place; none certain when you choose how many.
         if (take is { PickPile: not (null or PileType.Hand) } && command.Command.Name.StartsWith("Transform", StringComparison.Ordinal) && !take.ChoosesHowMany
-            && PlayFacts.TransformsOutsideHand(card) is > 0 and var transformed)
+            && BoardCounts.TransformsOutsideHand(card) is > 0 and var transformed)
             actions.Add(new CardEventAction(CardEvent.Generated, transformed) { Indirect = true });
         // A Sly card it discards without a choice (the whole hand: CardCmd.Discard's AutoPlay) plays itself: not simulated yet (tracker). One
         // you pick is a card, never a particular one (decision #188).
-        if (take is { Way: CardEffects.TakeWay.Each } && command.Command.Name is "Discard" or "DiscardAndDraw" && play.Facts.MayDiscardSly)
+        if (take is { Way: CardEffects.TakeWay.Each } && command.Command.Name is "Discard" or "DiscardAndDraw" && BoardCounts.DiscardsSlyWithoutPick(play.Card))
             actions.Add(new NotModelledAction("a Sly card in your hand it discards plays itself"));
         return (actions, take?.PlayTest ?? found.Condition);
     }
@@ -952,7 +924,7 @@ public static partial class SimAdapter
             {
                 case CardEffects.TakeWay.Picked when take.PickPile is PileType.Draw:
                     if (cardEvent == CardEvent.Exhausted)
-                        actions.Add(new TakeFromHandAction(HandTakeWay.Pick) { Event = cardEvent, FromDrawPile = true, Most = Count(take.PerPick), Matching = PlayFacts.ExhaustOthers(card, new List<CardModel>(), DrawPileOfCard(card)) });
+                        actions.Add(new TakeFromHandAction(HandTakeWay.Pick) { Event = cardEvent, FromDrawPile = true, Most = Count(take.PerPick), Matching = BoardCounts.ExhaustOthers(card, new List<CardModel>(), DrawPileOfCard(card)) });
                     break;
                 case CardEffects.TakeWay.Picked when take.PickPile is null or PileType.Hand:
                 {
@@ -960,7 +932,7 @@ public static partial class SimAdapter
                     actions.Add(new TakeFromHandAction(HandTakeWay.Pick)
                     {
                         Event = cardEvent, EventIfNot = eventIfNot, Leaves = leaves, Most = Count(take.PerPick),
-                        Filter = filtered ? key : null, Matching = filtered ? PlayFacts.MatchingAtStart(card, take, everyPile: false) : 0,
+                        Filter = filtered ? key : null, Matching = filtered ? BoardCounts.MatchingAtStart(card, take, everyPile: false) : 0,
                     });
                     break;
                 }
@@ -970,23 +942,23 @@ public static partial class SimAdapter
                     var most = take.Way == CardEffects.TakeWay.Random ? Count(take.RollCount) : 1;
                     if (CardEffects.IsYourWholeHand(take.Items) && take.ItemTest.IsAlways)
                         actions.Add(new TakeFromHandAction(way) { Event = cardEvent, Leaves = leaves, Most = most, EachCard = EachCardOf(take, play) });
-                    else if (PlayFacts.TakesFromEveryPile(card, take))
+                    else if (BoardCounts.TakesFromEveryPile(card, take))
                     {
                         // Every pile's (Flak Cannon): its hand's share leaves first, then each card of every pile sets off its event.
-                        actions.Add(new TakeFromHandAction(way) { Leaves = leaves, Most = most, Filter = key, Matching = PlayFacts.MatchingAtStart(card, take, everyPile: false) });
-                        actions.Add(new TakeFromHandAction(way) { Event = cardEvent, Leaves = false, Most = most, Filter = "all:" + key, Matching = PlayFacts.MatchingAtStart(card, take, everyPile: true), EachCard = EachCardOf(take, play) });
+                        actions.Add(new TakeFromHandAction(way) { Leaves = leaves, Most = most, Filter = key, Matching = BoardCounts.MatchingAtStart(card, take, everyPile: false) });
+                        actions.Add(new TakeFromHandAction(way) { Event = cardEvent, Leaves = false, Most = most, Filter = "all:" + key, Matching = BoardCounts.MatchingAtStart(card, take, everyPile: true), EachCard = EachCardOf(take, play) });
                     }
                     else
                         actions.Add(new TakeFromHandAction(way)
                         {
-                            Event = cardEvent, Leaves = leaves, Most = most, Filter = key, Matching = PlayFacts.MatchingAtStart(card, take, everyPile: false), EachCard = EachCardOf(take, play),
+                            Event = cardEvent, Leaves = leaves, Most = most, Filter = key, Matching = BoardCounts.MatchingAtStart(card, take, everyPile: false), EachCard = EachCardOf(take, play),
                         });
                     break;
                 }
             }
         }
         // What acts when exhausted among the cards the play's exhausts take from your hand (Drum of Battle), before the first.
-        if (exhausts.Select(exhaust => result.GetValueOrDefault(exhaust.Command)).FirstOrDefault(actions => actions is { Count: > 0 }) is { } firstActions && PlayFacts.ExhaustPickOf(card) is { FromDrawPile: false } exhaustPick)
+        if (exhausts.Select(exhaust => result.GetValueOrDefault(exhaust.Command)).FirstOrDefault(actions => actions is { Count: > 0 }) is { } firstActions && ExhaustPickOf(card) is { FromDrawPile: false } exhaustPick)
             firstActions.Insert(0, exhaustPick);
         return result;
     }
@@ -1047,10 +1019,10 @@ public static partial class SimAdapter
         {
             if (intoHand.ChoosesHowMany)
             {
-                if (play.Facts.HandTakeChosen) actions.Add(new NotModelledAction("you choose how many cards it takes into your hand"));
+                if (BoardCounts.HandTakeChosenOf(play.Card, Sts2State.Hand(play.Me).Count)) actions.Add(new NotModelledAction("you choose how many cards it takes into your hand"));
                 return (actions, intoHand.PlayTest);
             }
-            if (ReferenceEquals(CardEffects.TakesIntoHandOf(play.Type)[0].Command, command)) actions.AddRange(TakesToHand(play.Facts, play.Me));
+            if (ReferenceEquals(CardEffects.TakesIntoHandOf(play.Type)[0].Command, command)) actions.AddRange(TakesToHand(play.Card, play.Me));
             return (actions, intoHand.PlayTest);
         }
         var pile = Argument(command, 1);
@@ -1102,27 +1074,40 @@ public static partial class SimAdapter
     /// </summary>
     private static List<SimAction> AutoPlayFrom(CardEffects.Found found, StepPlay play)
     {
-        var (count, exhausts, upgrades) = AutoPlayOf(found.Command, play.Card);
+        var (count, exhausts, upgrades) = BoardCounts.AutoPlayOf(found.Command, play.Card);
         var countsTaken = found.Command.Values.Count > 2 && CardEffects.ExhaustsOfOthers(play.Type).Any(take => CardEffects.CountsTaken(found.Command.Values[2], take));
         return new List<SimAction> { new AutoPlayFromDrawAction(count) { ForceExhaust = exhausts, Upgrade = upgrades, CountFrom = countsTaken ? SimCount.CardsTaken : SimCount.Given } };
     }
 
-    /// <summary>An auto-play step's count on the board, its exhaust argument and whether its callback upgrades the cards (on its condition).</summary>
-    private static (int Count, bool ForceExhaust, bool Upgrade) AutoPlayOf(CommandStep command, CardModel card)
+    /// <summary>
+    /// How a card that exhausts others takes them (ExhaustFromHandAction: what a card that acts when exhausted, Drum of Battle, does
+    /// then), read from its program: a pick is Chosen (from your draw pile for Cleanse), a roll Random, a loop over a collection All;
+    /// a filter by type (Second Wind's non-Attacks, Thrash's Attacks, The Hermit's Curse) is its Only or Except. A filter that isn't a
+    /// type (Growth's Sadness, Florescence's Shoot cards, Flak Cannon's statuses outside the exhaust pile) takes no card in your hand
+    /// that acts when exhausted unless one passes it, evaluated on the board: then none is followed. Null for a card that exhausts no
+    /// other card.
+    /// </summary>
+    internal static ExhaustFromHandAction? ExhaustPickOf(CardModel card)
     {
         var program = CardPrograms.Of(card.GetType());
         var board = new ProgramBoard(card);
-        var count = command.Values.Count > 2 && ProgramEvaluator.Number(command.Values[2], board, program) is { } read ? (int)read : 1;
-        var exhausts = ValueAt(command, 4) is ConstantValue { Value: not 0 };
-        var upgrades = command.Inner.OfType<CommandStep>().Any(inner => inner.Command is { DeclaringType: "CardCmd", Name: "Upgrade" }
-                                                                         && ProgramEvaluator.Holds(inner.Condition ?? ProgramCondition.Always, board, program) != false);
-        return (Math.Max(0, count), exhausts, upgrades);
+        foreach (var exhaust in CardEffects.ExhaustsOfOthers(card.GetType()))
+        {
+            if (ProgramEvaluator.Holds(exhaust.PlayTest, board, program) == false) continue;
+            var pick = exhaust.Way switch
+            {
+                CardEffects.TakeWay.Picked => ExhaustPick.Chosen,
+                CardEffects.TakeWay.Random => ExhaustPick.Random,
+                _ => ExhaustPick.All,
+            };
+            var filter = exhaust.Way == CardEffects.TakeWay.Picked ? exhaust.ItemTest : exhaust.Filter?.Body ?? ProgramCondition.Always;
+            if (filter.IsAlways) return new ExhaustFromHandAction(pick) { FromDrawPile = exhaust.FromDrawPile };
+            if (BoardCounts.TypeTest(filter) is var (type, holds))
+                return holds ? new ExhaustFromHandAction(pick) { Only = type, FromDrawPile = exhaust.FromDrawPile } : new ExhaustFromHandAction(pick) { Except = type, FromDrawPile = exhaust.FromDrawPile };
+            return null;
+        }
+        return null;
     }
-
-    /// <summary>The first auto-play of the card's play (AutoPlayOf); null for a card that auto-plays none.</summary>
-    internal static (int Count, bool ForceExhaust, bool Upgrade)? AutoPlaysOf(CardModel card) =>
-        CardPrograms.Of(card.GetType()).Commands.FirstOrDefault(command => command.Command is { DeclaringType: "CardPileCmd", Name: "AutoPlayFromDrawPile" }) is { } autoPlay
-            ? AutoPlayOf(autoPlay, card) : null;
 
     // ---------------------------------------------------------------- made cards
 
