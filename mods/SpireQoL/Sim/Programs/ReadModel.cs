@@ -38,6 +38,9 @@ internal readonly struct HookArgs
     /// <summary>What this hook run took back of the amount its model bound to the play (HookFact.TakeBound, UnbindStep); null: it takes none.</summary>
     public int[]? Taken { get; init; }
 
+    /// <summary>The copy of an instanced power this run is (ReadModel: its id among its owner's copies, from 1); 0 for a model kept as one.</summary>
+    public int Copy { get; init; }
+
     /// <summary>The same hook on another branch (its answers so far its own).</summary>
     public HookArgs On(SimState branch) => this with { State = branch, Asked = (int[]?)Asked?.Clone(), Taken = (int[]?)Taken?.Clone() };
 }
@@ -71,9 +74,16 @@ public sealed class ReadModel : SimModel
     /// <summary>The hooks whose program takes back what the model bound to the play: each run gets a slot for it (HookArgs.Taken).</summary>
     private readonly bool[] _takes = new bool[Enum.GetValues<HookName>().Length];
 
+    /// <summary>Its applications are copies, each with its own amount, state and applier (ModelSpec.Copies): each runs its hooks on its own.</summary>
+    public bool HasCopies { get; }
+
+    public override bool Instanced => Spec.Copies == PowerCopies.EachApplication;
+
     public ReadModel(ModelSpec spec) : base(spec.Name, spec.Hooks.Select(program => SimHookOf(program.Hook)).Append(spec.Outcome != null ? nameof(OutcomeTab) : "").Where(hook => hook.Length > 0).Distinct())
     {
         Spec = spec;
+        HasCopies = spec.Kind == ModelKind.Power && spec.Copies != PowerCopies.One;
+        _copyPrefix = spec.Name + "@";
         foreach (var test in spec.Values().OfType<HookTest>()) _testSlots.TryAdd(test.At, _testSlots.Count);
         foreach (var program in spec.Hooks)
         {
@@ -143,6 +153,7 @@ public sealed class ReadModel : SimModel
         HookName.ModifyDamageMultiplicativeLate => nameof(ModifyDamageMultiplicativeLate),
         HookName.ModifyBlockAdditive => nameof(ModifyBlockAdditive),
         HookName.ModifyBlockMultiplicative => nameof(ModifyBlockMultiplicative),
+        HookName.AfterApplied => nameof(AfterApplied),
         _ => nameof(AfterCardEvent),
     };
 
@@ -188,8 +199,28 @@ public sealed class ReadModel : SimModel
     public override int ModifyCardPlayCount(SimState state, int owner, SimCardPlay play, int count)
     {
         if (_returns[(int)HookName.ModifyCardPlayCount] is not { } returns) return count;
-        var args = new HookArgs { State = state, Owner = owner, Hook = HookName.ModifyCardPlayCount, Play = play, PlayCount = count };
-        return (int)returns(in args);
+        // Each copy in turn on what the one before it gave (each is a listener of its own in the game).
+        foreach (var copy in CopiesOrOne(state, owner))
+        {
+            var args = new HookArgs { State = state, Owner = owner, Hook = HookName.ModifyCardPlayCount, Play = play, PlayCount = count, Copy = copy };
+            count = (int)returns(in args);
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// A new instance of it landed on its owner (PowerModel.AfterApplied, once it's on: SimEngine.ApplyPower): deterministic, on the state
+    /// given; for a power kept in copies, the copy that landed (<see cref="Land"/>).
+    /// </summary>
+    public override void AfterApplied(SimState state, int owner, int applier, int amount) => AfterApplied(state, owner, applier, amount, copy: 0);
+
+    public void AfterApplied(SimState state, int owner, int applier, int amount, int copy)
+    {
+        if (_steps[(int)HookName.AfterApplied] is not { } steps) return;
+        var args = new HookArgs { State = state, Owner = owner, Hook = HookName.AfterApplied, Play = state.CurrentPlay, Applier = applier, PowerAmount = amount, Copy = copy };
+        args = args with { Asked = _asksOnce[(int)HookName.AfterApplied] ? new int[_testSlots.Count] : null, Taken = _takes[(int)HookName.AfterApplied] ? new int[1] : null };
+        foreach (var branch in RunSteps(steps, args))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterApplied branched");
     }
 
     /// <summary>After it changed a card play's count (a stack used: PowerCmd.Decrement; Throwing Axe's UsedThisCombat): deterministic, on the state given.</summary>
@@ -243,15 +274,36 @@ public sealed class ReadModel : SimModel
     private decimal Returned(HookName hook, SimState state, int owner, DamageCtx damage, decimal otherwise)
     {
         if (_returns[(int)hook] is not { } returns) return otherwise;
-        var args = new HookArgs { State = state, Owner = owner, Damage = damage, Play = damage.Play };
-        return returns(in args);
+        if (!HasCopies)
+        {
+            var args = new HookArgs { State = state, Owner = owner, Damage = damage, Play = damage.Play };
+            return returns(in args);
+        }
+        // Each copy a listener of its own: their terms added (an additive hook) or multiplied (a multiplicative one), as the game's pipeline does.
+        var total = otherwise;
+        foreach (var copy in CopiesOrOne(state, owner))
+        {
+            var args = new HookArgs { State = state, Owner = owner, Damage = damage, Play = damage.Play, Copy = copy };
+            total = hook == HookName.ModifyDamageAdditive ? total + returns(in args) : total * returns(in args);
+        }
+        return total;
     }
 
     private decimal Returned(HookName hook, SimState state, int owner, BlockCtx block, decimal otherwise)
     {
         if (_returns[(int)hook] is not { } returns) return otherwise;
-        var args = new HookArgs { State = state, Owner = owner, Block = block, Play = block.Play };
-        return returns(in args);
+        if (!HasCopies)
+        {
+            var args = new HookArgs { State = state, Owner = owner, Block = block, Play = block.Play };
+            return returns(in args);
+        }
+        var total = otherwise;
+        foreach (var copy in CopiesOrOne(state, owner))
+        {
+            var args = new HookArgs { State = state, Owner = owner, Block = block, Play = block.Play, Copy = copy };
+            total = hook == HookName.ModifyBlockAdditive ? total + returns(in args) : total * returns(in args);
+        }
+        return total;
     }
 
     /// <summary>
@@ -262,7 +314,132 @@ public sealed class ReadModel : SimModel
     {
         if (_steps[(int)hook] is not { } steps) return One(args.State);
         args = args with { Hook = hook, Asked = _asksOnce[(int)hook] ? new int[_testSlots.Count] : null, Taken = _takes[(int)hook] ? new int[1] : null };
-        return RunSteps(steps, args);
+        if (!HasCopies) return RunSteps(steps, args);
+        // Each copy runs the hook on its own, in the order they landed (each a listener of its own in the game), on every branch the one before
+        // it left; a copy a branch no longer has (it went) runs nothing there.
+        var copies = CopiesOrOne(args.State, args.Owner);
+        IEnumerable<SimState> states = One(args.State);
+        foreach (var copy in copies)
+        {
+            var start = args;
+            states = SimEngine.Then(states, branch => HasCopy(branch, start.Owner, copy)
+                ? RunSteps(steps, start with { State = branch, Copy = copy, Asked = start.Asked == null ? null : new int[start.Asked.Length], Taken = start.Taken == null ? null : new int[1] })
+                : One(branch));
+        }
+        return states;
+    }
+
+    // ---- copies (an instanced power: SimPlayer.Fields / SimEnemy.Fields hold each one as "Name@id", its amount and its applier as Data, and its own
+    // state as "Name@id.field"; none listed: the power's entry is the one copy, id 1)
+
+    private readonly string _copyPrefix;
+
+    /// <summary>The ids of its owner's copies, in the order they landed (the power's entry alone: one, id 1); none when the owner has no such power.</summary>
+    public IReadOnlyList<int> CopiesOrOne(SimState state, int owner)
+    {
+        if (!HasCopies) return AsOne;
+        var listed = ListedCopies(SimEngine.FieldsOf(state, owner));
+        return listed.Count > 0 ? listed : SimEngine.PowersOf(state, owner).Has(ThisPower) ? OneCopy : Array.Empty<int>();
+    }
+
+    private static readonly int[] OneCopy = { 1 };
+
+    /// <summary>A model kept as one: its single run, copy 0.</summary>
+    private static readonly int[] AsOne = { 0 };
+
+    private List<int> ListedCopies(NamedCounts fields)
+    {
+        var ids = new List<int>();
+        foreach (var entry in fields.Items)
+            if (entry.Name.StartsWith(_copyPrefix, StringComparison.Ordinal) && entry.Name.IndexOf('.', _copyPrefix.Length) < 0
+                && int.TryParse(entry.Name.AsSpan(_copyPrefix.Length), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var id))
+                ids.Add(id);
+        return ids;
+    }
+
+    private string CopyKey(int copy) => _copyPrefix + copy.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    private bool HasCopy(SimState state, int owner, int copy) =>
+        SimEngine.FieldsOf(state, owner).Has(CopyKey(copy)) || copy == 1 && ListedCopies(SimEngine.FieldsOf(state, owner)).Count == 0 && SimEngine.PowersOf(state, owner).Has(ThisPower);
+
+    /// <summary>A copy's amount and applier (its entry; the power's own entry when none is listed).</summary>
+    private (int Amount, int Data) CopyOf(SimState state, int owner, int copy)
+    {
+        var fields = SimEngine.FieldsOf(state, owner);
+        var key = CopyKey(copy);
+        if (fields.Has(key)) return (fields[key], fields.DataOf(key));
+        var powers = SimEngine.PowersOf(state, owner);
+        return copy == 1 && powers.Has(ThisPower) ? (powers[ThisPower], powers.DataOf(ThisPower)) : (0, 0);
+    }
+
+    /// <summary>Its copies listed in its owner's fields (the power's entry as copy 1 when none were), so one can change on its own.</summary>
+    private void ListCopies(SimState state, int owner)
+    {
+        var fields = SimEngine.FieldsOf(state, owner);
+        if (ListedCopies(fields).Count > 0) return;
+        var powers = SimEngine.PowersOf(state, owner);
+        if (powers.Has(ThisPower)) SimEngine.SetFields(state, owner, fields.With(CopyKey(1), powers[ThisPower], powers.DataOf(ThisPower)));
+    }
+
+    /// <summary>A copy's amount changed by <paramref name="delta"/>: gone at 0, with its state; the power's entry holds their total, gone with the last.</summary>
+    private void ChangeCopy(SimState state, int owner, int copy, int? delta)
+    {
+        ListCopies(state, owner);
+        var fields = SimEngine.FieldsOf(state, owner);
+        var key = CopyKey(copy);
+        if (!fields.Has(key)) return;
+        var amount = fields[key];
+        var left = delta is { } change ? amount + change : 0;
+        fields = left > 0 ? fields.With(key, left) : WithoutCopy(fields, copy);
+        SimEngine.SetFields(state, owner, fields);
+        var powers = SimEngine.PowersOf(state, owner);
+        var total = powers[ThisPower] - (amount - Math.Max(0, left));
+        SimEngine.SetPowers(state, owner, total > 0 && ListedCopies(fields).Count > 0 ? powers.With(ThisPower, total, powers.DataOf(ThisPower)) : powers.Without(ThisPower));
+    }
+
+    private NamedCounts WithoutCopy(NamedCounts fields, int copy)
+    {
+        var key = CopyKey(copy);
+        foreach (var entry in fields.Items)
+            if (entry.Name == key || entry.Name.StartsWith(key + ".", StringComparison.Ordinal)) fields = fields.Without(entry.Name);
+        return fields;
+    }
+
+    /// <summary>
+    /// An application landed on its owner (SimEngine.ApplyPower, its amount already in the power's entry): a new copy of its own (Instanced), or
+    /// more of its applier's copy (InstancedPerApplier: PowerCmd.FindExistingInstanceForStacking); a new instance's own state starts afresh. The
+    /// new copy's id, for its AfterApplied; 0 when it stacked onto one.
+    /// </summary>
+    public int Land(SimState state, int owner, int applier, int amount, bool had)
+    {
+        var fields = SimEngine.FieldsOf(state, owner);
+        if (!had)
+        {
+            // A new instance: what an earlier one kept is gone with it (its fields, its copies).
+            foreach (var entry in fields.Items)
+                if (entry.Name.StartsWith(_copyPrefix, StringComparison.Ordinal) || entry.Name.StartsWith(Name + ".", StringComparison.Ordinal)) fields = fields.Without(entry.Name);
+            SimEngine.SetFields(state, owner, fields);
+            if (!HasCopies) return 0;
+            SimEngine.SetFields(state, owner, fields.With(CopyKey(1), amount, DataCreature.Of(applier)));
+            return 1;
+        }
+        if (!HasCopies) return 0;
+        // The copies before this one: listed, or the entry (less what just landed) as copy 1.
+        if (ListedCopies(fields).Count == 0)
+        {
+            var powers = SimEngine.PowersOf(state, owner);
+            fields = fields.With(CopyKey(1), powers[ThisPower] - amount, powers.DataOf(ThisPower));
+        }
+        if (Spec.Copies == PowerCopies.PerApplier)
+            foreach (var copy in ListedCopies(fields))
+                if (fields.DataOf(CopyKey(copy)) == DataCreature.Of(applier))
+                {
+                    SimEngine.SetFields(state, owner, fields.With(CopyKey(copy), fields[CopyKey(copy)] + amount));
+                    return 0;
+                }
+        var next = ListedCopies(fields).DefaultIfEmpty(0).Max() + 1;
+        SimEngine.SetFields(state, owner, fields.With(CopyKey(next), amount, DataCreature.Of(applier)));
+        return next;
     }
 
     /// <summary>Compiled steps in order on one branch (see Run).</summary>
@@ -303,7 +480,7 @@ public sealed class ReadModel : SimModel
                 var value = Compile(bind.Value);
                 return args =>
                 {
-                    args.State.Bound = args.State.Bound.With(SimKeys.Owned(Name, args.Owner), (int)value(in args));
+                    args.State.Bound = args.State.Bound.With(BoundKey(in args), (int)value(in args));
                     return One(args.State);
                 };
             }
@@ -416,22 +593,28 @@ public sealed class ReadModel : SimModel
             {
                 var value = Compile(store.Value);
                 var key = FieldKey(store.Field);
+                var field = store.Field;
                 return args =>
                 {
-                    SimEngine.SetField(args.State, args.Owner, key, (int)value(in args));
+                    var stored = (int)value(in args);
+                    if (args.Copy > 0) ListCopies(args.State, args.Owner);
+                    SimEngine.SetField(args.State, args.Owner, args.Copy > 0 ? CopyFieldKey(args.Copy, field) : key, stored);
                     return One(args.State);
                 };
             }
+            // PowerCmd.Remove(this), PowerCmd.Decrement(this): the power, or the copy running the hook.
             case RemovePowerStep:
                 return args =>
                 {
-                    SimEngine.SetPowers(args.State, args.Owner, SimEngine.PowersOf(args.State, args.Owner).Without(ThisPower));
+                    if (args.Copy > 0) ChangeCopy(args.State, args.Owner, args.Copy, delta: null);
+                    else SimEngine.SetPowers(args.State, args.Owner, SimEngine.PowersOf(args.State, args.Owner).Without(ThisPower));
                     return One(args.State);
                 };
             case DecrementPowerStep:
                 return args =>
                 {
-                    SimEngine.DecrementPower(args.State, args.Owner, ThisPower);
+                    if (args.Copy > 0) ChangeCopy(args.State, args.Owner, args.Copy, delta: -1);
+                    else SimEngine.DecrementPower(args.State, args.Owner, ThisPower);
                     return One(args.State);
                 };
             default:
@@ -455,7 +638,7 @@ public sealed class ReadModel : SimModel
     /// </summary>
     private bool Take(in HookArgs args)
     {
-        var key = SimKeys.Owned(Name, args.Owner);
+        var key = BoundKey(in args);
         var state = args.State;
         var bound = state.Bound.Has(key);
         if (args.Taken is { } taken) taken[0] = bound ? state.Bound[key] : 0;
@@ -465,6 +648,12 @@ public sealed class ReadModel : SimModel
 
     /// <summary>One of its own fields' key among its owner's (SimPlayer.Fields, SimEnemy.Fields): "Model.Field".</summary>
     public string FieldKey(string field) => Name + "." + field;
+
+    /// <summary>One copy's own field's key among its owner's: "Model@copy.Field".</summary>
+    public string CopyFieldKey(int copy, string field) => CopyKey(copy) + "." + field;
+
+    /// <summary>What it binds to the play in progress, by its owner (and the copy binding it).</summary>
+    private string BoundKey(in HookArgs args) => args.Copy > 0 ? SimKeys.Owned(CopyKey(args.Copy), args.Owner) : SimKeys.Owned(Name, args.Owner);
 
     /// <summary>Card events it causes (draws, energy), each through every listener; a draw or energy tab counts what they gave (decision #132).</summary>
     private IEnumerable<SimState> Cause(HookArgs args, CardEvent cardEvent, int count, bool fires)
@@ -535,8 +724,16 @@ public sealed class ReadModel : SimModel
             }
             case HookField field:
             {
+                // Its state, or a copy's; one never stored is where a new instance starts (0, or a value's canonical one).
                 var key = FieldKey(field.Field);
-                return (in HookArgs args) => SimEngine.FieldsOf(args.State, args.Owner)[key];
+                var name = field.Field;
+                var canonical = field.Canonical;
+                return (in HookArgs args) =>
+                {
+                    var fields = SimEngine.FieldsOf(args.State, args.Owner);
+                    var at = args.Copy > 0 ? CopyFieldKey(args.Copy, name) : key;
+                    return fields.Has(at) ? fields[at] : canonical;
+                };
             }
             case HookHistory history:
             {
@@ -583,7 +780,7 @@ public sealed class ReadModel : SimModel
         {
             case HookFact.Amount:
                 return Spec.Kind == ModelKind.Power
-                    ? (in HookArgs args) => SimEngine.PowerOn(args.State, args.Owner, ThisPower)
+                    ? (in HookArgs args) => args.Copy > 0 ? CopyOf(args.State, args.Owner, args.Copy).Amount : SimEngine.PowerOn(args.State, args.Owner, ThisPower)
                     : (in HookArgs args) => SimEngine.RelicsOf(args.State, args.Owner)[ThisRelic];
             case HookFact.PlayIsOwners: return (in HookArgs args) => args.Play?.Owner == args.Owner ? 1m : 0m;
             case HookFact.CardType: return (in HookArgs args) => (int)CardTypeOf(in args);
@@ -599,6 +796,7 @@ public sealed class ReadModel : SimModel
                 return (in HookArgs args) => named == CardId.Sadness.Name && args.Event == CardEvent.GeneratedSadness
                     || args.State.EventCard?.Name == named ? 1m : 0m;
             case HookFact.OwnersTurn: return (in HookArgs args) => Who.IsPlayer(args.Owner) != args.State.EnemyTurnNow ? 1m : 0m;
+            case HookFact.EnemiesTurn: return (in HookArgs args) => args.State.EnemyTurnNow ? 1m : 0m;
             case HookFact.ApplierIsOwner: return (in HookArgs args) => args.Applier == args.Owner ? 1m : 0m;
             case HookFact.PowerIs: return (in HookArgs args) => args.Power.Name == named ? 1m : 0m;
             case HookFact.PowerIn:
@@ -635,7 +833,7 @@ public sealed class ReadModel : SimModel
                     return count;
                 };
             }
-            case HookFact.DeadIsApplier: return (in HookArgs args) => DataCreature.In(SimEngine.PowersOf(args.State, args.Owner).DataOf(ThisPower)) is var applier && applier != Who.None && applier == args.Target ? 1m : 0m;
+            case HookFact.DeadIsApplier: return (in HookArgs args) => ApplierOf(in args) is var applier && applier != Who.None && applier == args.Target ? 1m : 0m;
             case HookFact.DeadIsOwner: return (in HookArgs args) => args.Target == args.Owner ? 1m : 0m;
             case HookFact.HasApplier: return (in HookArgs args) => ApplierOf(in args) != Who.None ? 1m : 0m;
             case HookFact.ApplierIsPlayer: return (in HookArgs args) => Who.IsPlayer(ApplierOf(in args)) ? 1m : 0m;
@@ -718,7 +916,8 @@ public sealed class ReadModel : SimModel
     }
 
     /// <summary>Who applied this power: its Data (DataCreature), as a read power that asks keeps it (ModelSpec.UsesApplier); Who.None when no one.</summary>
-    private int ApplierOf(in HookArgs args) => DataCreature.In(SimEngine.PowersOf(args.State, args.Owner).DataOf(ThisPower));
+    private int ApplierOf(in HookArgs args) =>
+        DataCreature.In(args.Copy > 0 ? CopyOf(args.State, args.Owner, args.Copy).Data : SimEngine.PowersOf(args.State, args.Owner).DataOf(ThisPower));
 
     /// <summary>The type of the hook's card: the card played, or the event's card (a made Status or Sadness by its event; one drawn as its profile says).</summary>
     private static SimCardType CardTypeOf(in HookArgs args)

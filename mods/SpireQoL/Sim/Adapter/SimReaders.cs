@@ -465,26 +465,41 @@ public static class SimReaders
     /// What the models read from their code keep of their own (SimPlayer.Fields, SimEnemy.Fields, decision #195): each field or property a read
     /// model's programs read or store, read from the game's object (a count or a flag a player could keep: Kunai's attacks this turn).
     /// </summary>
-    public static NamedCounts Fields(IEnumerable<AbstractModel> models)
+    public static NamedCounts Fields(IEnumerable<AbstractModel> models, Func<Creature, int?>? idOf = null)
     {
         var fields = NamedCounts.Empty;
+        var copies = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var model in models)
-            if (SimModels.Get(ModelName(model)) is ReadModel read)
-                foreach (var field in read.Spec.Fields())
-                    fields = fields.With(read.FieldKey(field), FieldOf(model, field) switch
-                    {
-                        int number => number,
-                        bool flag => flag ? 1 : 0,
-                        decimal number => (int)number,
-                        _ => 0,
-                    });
+        {
+            if (SimModels.Get(ModelName(model)) is not ReadModel read) continue;
+            // A power kept in copies: each instance on the creature, in the game's order, is a copy of its own (its amount, its applier, its state).
+            var copy = 0;
+            if (read.HasCopies && model is PowerModel power)
+            {
+                copy = copies[read.Name] = copies.GetValueOrDefault(read.Name) + 1;
+                var applier = power.Applier is { } applierCreature && idOf?.Invoke(applierCreature) is { } applierId ? applierId : Who.None;
+                fields = fields.With(read.Name + "@" + copy.ToString(System.Globalization.CultureInfo.InvariantCulture), power.Amount, DataCreature.Of(applier));
+            }
+            foreach (var field in read.Spec.Fields())
+                fields = fields.With(copy > 0 ? read.CopyFieldKey(copy, field) : read.FieldKey(field), FieldOf(model, field) switch
+                {
+                    int number => number,
+                    bool flag => flag ? 1 : 0,
+                    decimal number => (int)number,
+                    _ => 0,
+                });
+        }
         return fields;
     }
 
-    /// <summary>A read model's field on the game's object: its own, or a plain field of its own data ("Data.etherealCount": its _internalData's).</summary>
+    /// <summary>
+    /// A read model's field on the game's object: its own, a plain field of its own data ("Data.etherealCount": its _internalData's), or one of
+    /// its own values its code stores ("Var.CardsLeft": DynamicVars["CardsLeft"]).
+    /// </summary>
     private static object? FieldOf(AbstractModel model, string field) =>
         field.StartsWith(Procs.Programs.ProgramReader.OwnDataPrefix, StringComparison.Ordinal)
             ? Sts2State.Private<object?>(model, "_internalData", fallback: null) is { } data ? Sts2State.Private<object?>(data, field[Procs.Programs.ProgramReader.OwnDataPrefix.Length..], fallback: null) : null
+            : field.StartsWith(HookReader.VarFieldPrefix, StringComparison.Ordinal) ? Sts2State.Var(model, field[HookReader.VarFieldPrefix.Length..])
             : Sts2State.Private<object?>(model, field, fallback: null);
 
     /// <summary>The name a game model has in the simulator (temporary Thorns is Thorns).</summary>

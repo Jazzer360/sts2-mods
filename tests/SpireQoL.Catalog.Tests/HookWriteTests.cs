@@ -84,18 +84,23 @@ public class HookWriteTests
     }
 
     /// <summary>
-    /// The scan sees a write the program has no step for: Panache's AfterCardPlayed counts down a value of its own
-    /// (DynamicVars["CardsLeft"].BaseValue--), a property set on one of the game's objects that no store step reads (the reader names it a gap).
+    /// The scan sees a write the program has no step for: Vital Spark's AfterPowerAmountChanged sets each Tainted card's affliction amount
+    /// (item.Affliction.Amount = base.Amount), a property set on another of the game's objects that no store step reads (the reader names it a
+    /// gap); Panache's count of its own (DynamicVars["CardsLeft"].BaseValue--) is a store step of its state.
     /// </summary>
     [Fact]
     public void TheScanFindsAWriteWithNoStep()
     {
         if (!File.Exists(BranchCode.BetaPath)) return;
         using var code = new BranchCode(BranchCode.BetaPath);
+        var vitalSpark = code.Assembly.GetTypes().Single(type => type.Name == PowerId.VitalSpark.Name);
+        var hook = HookReader.Hooks(vitalSpark).Single(method => method.Name == nameof(HookName.AfterPowerAmountChanged));
+        var steps = ProgramReader.Read(vitalSpark, code.Read, hook.Name).All().ToList();
+        Assert.Contains(Writes(vitalSpark, ProgramReader.BodyOf(hook), code.Read), write => write == new Write("store", "Amount") && !Maps(write, steps));
         var panache = code.Assembly.GetTypes().Single(type => type.Name == PowerId.Panache.Name);
-        var hook = HookReader.Hooks(panache).Single(method => method.Name == nameof(HookName.AfterCardPlayed));
-        var steps = ProgramReader.Read(panache, code.Read, hook.Name).All().ToList();
-        Assert.Contains(Writes(panache, ProgramReader.BodyOf(hook), code.Read), write => write == new Write("store", "BaseValue") && !Maps(write, steps));
+        var counted = HookReader.Hooks(panache).Single(method => method.Name == nameof(HookName.AfterCardPlayed));
+        var panacheSteps = ProgramReader.Read(panache, code.Read, counted.Name).All().ToList();
+        Assert.All(Writes(panache, ProgramReader.BodyOf(counted), code.Read).Where(write => write.Kind == "store"), write => Assert.True(Maps(write, panacheSteps), write.ToString()));
     }
 
     /// <summary>A write the code makes: what kind and what it names.</summary>
@@ -106,7 +111,9 @@ public class HookWriteTests
 
     private static bool Maps(Write write, List<ProgramStep> steps) => write.Kind switch
     {
-        "store" => steps.OfType<StoreStep>().Any(step => step.Field == write.Name || step.Field == ProgramReader.OwnDataPrefix + write.Name),
+        // A store to a field or property of its own, a plain field of its data, or the BaseValue of one of its own values (DynamicVars["CardsLeft"]).
+        "store" => steps.OfType<StoreStep>().Any(step => step.Field == write.Name || step.Field == ProgramReader.OwnDataPrefix + write.Name
+            || write.Name == "BaseValue" && step.Field.StartsWith(ProgramReader.OwnVarPrefix, StringComparison.Ordinal)),
         "data" => steps.OfType<DataStep>().Any(step => step.Operation == write.Name),
         _ => steps.OfType<CommandStep>().Any(step => step.Command.FullName == write.Name) || steps.OfType<ChoiceStep>().Any(step => step.Command.FullName == write.Name),
     };
@@ -159,6 +166,8 @@ public class HookWriteTests
             return member.DeclaringType.StartsWith('<') || member.Name.StartsWith('<') ? null : new Write("store", member.Name);
         if (!instruction.IsCall || member.Kind != CodeMemberKind.Method || member.Name == ".ctor" || member.Name.StartsWith('<') || ShowsOnly.Contains(member.Name)) return null;
         if (member.Namespace.Contains(".Nodes", StringComparison.Ordinal) || member.DeclaringType.StartsWith('<') || Helpers.Contains(member.DeclaringType)) return null;
+        // A text set (a StringVar's StringValue: words a tooltip shows) only shows.
+        if (member.Name.StartsWith("set_", StringComparison.Ordinal) && member.HasThis && member.ParameterTypes is ["String"]) return null;
         if (member.Name.StartsWith("set_", StringComparison.Ordinal) && member.HasThis)
             return member.Namespace.StartsWith("System.Collections", StringComparison.Ordinal) ? new Write("data", member.Name)
                 : member.Namespace.StartsWith("MegaCrit", StringComparison.Ordinal) ? new Write("store", member.Name[4..]) : null;

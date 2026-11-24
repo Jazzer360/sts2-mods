@@ -608,6 +608,14 @@ public static partial class SimEngine
         if (powerModel is Models.CounterPower counter) counter.NewCopy(state, target, amount, had);
         // A read power whose code asks who applied it (base.Applier) keeps its applier as its Data, as the adapter reads it (decision #195).
         if (!had && powerModel is ReadModel { UsesApplier: true }) SetPowers(state, target, PowersOf(state, target).With(power, PowersOf(state, target)[power], DataCreature.Of(applier)));
+        // A read power lands as the game's PowerCmd.Apply lands it: a new instance starts its own state afresh, a power kept in copies gets a copy
+        // of its own or more of its applier's (decision #195), and a new instance (or copy) runs its AfterApplied.
+        if (powerModel is ReadModel read)
+        {
+            var copy = read.Land(state, target, applier, amount, had);
+            if (!had || copy > 0) read.AfterApplied(state, target, applier, amount, copy);
+            return true;
+        }
         // Each copy of an instanced power is applied on its own (a second Intercept on a covered teammate: a Covered of its own).
         if (!had || powerModel is { Instanced: true }) powerModel?.AfterApplied(state, target, applier, amount);
         return true;

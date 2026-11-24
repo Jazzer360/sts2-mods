@@ -35,7 +35,15 @@ public enum HookName
     ModifyDamageMultiplicativeLate,
     ModifyBlockAdditive,
     ModifyBlockMultiplicative,
+    /// <summary>PowerModel.AfterApplied: a new instance of the power landed (a copy of an instanced one: each application).</summary>
+    AfterApplied,
 }
+
+/// <summary>
+/// How a power's applications are kept (the game's PowerInstanceType): one instance its amounts stack into, a copy of its own per application
+/// (Instanced: each The Bomb played counts down on its own), or a copy per applier (InstancedPerApplier: each player's Strangle).
+/// </summary>
+public enum PowerCopies { One, EachApplication, PerApplier }
 
 /// <summary>
 /// What a hook's code asks of its parameters and its model, each one game query (or a small family of them) translated once for every
@@ -145,6 +153,8 @@ public enum HookFact
     SameSide,
     /// <summary>The creature named in Creature is on the players' side (its Side is the side whose turn ends: the simulator ends the players').</summary>
     CreatureOnPlayersSide,
+    /// <summary>It's the enemies' turn (CombatState.CurrentSide == CombatSide.Enemy): from the enemy turn's start.</summary>
+    EnemiesTurn,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>
@@ -206,7 +216,15 @@ public sealed record HookVar(string Key) : HookValue
 /// One of the model's own fields or properties (Kunai's AttacksPlayedThisTurn): simulator state (SimPlayer.Fields, SimEnemy.Fields), seeded from
 /// the game and changed by its programs' stores.
 /// </summary>
-public sealed record HookField(string Field) : HookValue;
+public sealed record HookField(string Field) : HookValue
+{
+    /// <summary>
+    /// What it is before anything stores it (a new instance's: one of its own values its code stores, "Var.CardsLeft", starts at the canonical
+    /// value its CanonicalVars give it; any other field at 0).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public decimal Canonical { get; init; }
+}
 
 /// <summary>
 /// A question to the game's log of the fight (CombatManager.Instance.History: Count or Any of its entries, decision #191), as the history
@@ -349,6 +367,13 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     public HookOutcome? Outcome { get; init; }
 
     /// <summary>
+    /// How its applications are kept (a power's InstanceType): each copy, with its own amount, its own state and its applier, runs its hooks on
+    /// its own, in the order they landed (ReadModel). One: none of its own.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public PowerCopies Copies { get; init; }
+
+    /// <summary>
     /// Why its hooks weren't read, for a class whose hooks read whole at the reviewed builds and no longer do (a game update): no program, and
     /// every simulation it's in is unknown (SimState.Unmodelled, decision #92). Null: read.
     /// </summary>
@@ -391,7 +416,8 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     }
 
     /// <summary>Its code asks who applied it (base.Applier): it keeps its applier as its Data (DataCreature), read and landed so.</summary>
-    public bool UsesApplier() => Values().Any(value => value is HookFactValue { Fact: HookFact.DeadIsApplier or HookFact.HasApplier or HookFact.ApplierIsPlayer or HookFact.PlayIsAppliers });
+    public bool UsesApplier() => Values().Any(value => value is HookFactValue { Fact: HookFact.DeadIsApplier or HookFact.HasApplier or HookFact.ApplierIsPlayer or HookFact.PlayIsAppliers }
+        || value is HookFactValue fact && (fact.Creature?.Who == HookWho.Applier || fact.Other?.Who == HookWho.Applier));
 
     /// <summary>Its own fields and properties its programs read or store (the adapter seeds them from the game: SimReaders.Fields).</summary>
     public IEnumerable<string> Fields() =>

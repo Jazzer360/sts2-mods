@@ -17,11 +17,8 @@ public class HookGapTests
     /// A gap's capability, by what the reader says it couldn't follow: the first pattern that matches, in order (the specific before the general).
     /// A gap no pattern names fails the test, so a new kind of gap gets a name before it's counted.
     /// </summary>
-    private const string InstancedCopies = "instanced copies (each copy its own amount and data)";
-
     private static readonly (string Pattern, string Capability)[] Capabilities =
     {
-        (@"each copy acts on its own", InstancedCopies),
         (@"ModifyVulnerableMultiplier|ModifyWeakMultiplier", "a call into another model's method, its owner rebound (Paper Phrog, Paper Krane, Cruelty, Debilitate)"),
         (@"Instance\.History|the fight's log", "the fight's log (the history ledger, decision #191)"),
         (@"the value \{", "a value of several ways (a local set on each branch, merged)"),
@@ -41,7 +38,7 @@ public class HookGapTests
         (@"read model's (TryModifyEnergyCost\w*|TryModifyStarCost|TryModifyKeywordsInCombat|ModifyXValue)", "card costs and keywords (cards' own hooks, Part B3)"),
         (@"read model's (ModifyHandDraw|AfterModifyingHandDraw)", "hooks: the hand draw"),
         (@"read model's (AfterTakingExtraTurn|ShouldTakeExtraTurn\w*)|acts as a side's turn starts", "a turn's start (the enemies' turn start, an extra turn)"),
-        (@"read model's GetScaledAmountForMultiplayer", "multiplayer scaling (GetScaledAmountForMultiplayer)"),
+        (@"read model's GetScaledAmountForMultiplayer|Players.Count", "multiplayer scaling (GetScaledAmountForMultiplayer)"),
         (@"read model's (ShouldStopCombatFromEnding|ShouldCreatureBeRemovedFromCombatAfterDeath|ShouldPowerBeRemovedAfterOwnerDeath)", "a death the game holds back (ShouldStopCombatFromEnding and the like)"),
         (@"read model's (AfterHandEmptied|ShouldPlay|BeforePotionUsed)", "hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed)"),
         (@"PlayerCmd\.GainStars", "commands: GainStars"),
@@ -50,7 +47,8 @@ public class HookGapTests
         (@"AutoPlayFromDrawPile", "commands: AutoPlayFromDrawPile"),
         (@"OstyCmd\.", "commands: OstyCmd.Summon"),
         (@"CreatureCmd\.Stun|CreatureCmd\.Kill|SetStunned", "outcomes: a stun or a kill (outcome tabs)"),
-        (@"(\w+)\.\w+ isn't translated", "a model's own method (its body read where it's called)"),
+        (@"(\w+)\.\w+ isn't translated|the value value$", "a model's own method (its body read where it's called)"),
+        (@"the value \?\w", "a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)"),
         (@"applied by someone else", "a power applied by someone other than its owner"),
         (@"PowerCmd\.\w+ of another power", "a command on another power (PowerCmd.Remove of another)"),
         (@"TurnNumber", "the turn number"),
@@ -103,10 +101,6 @@ public class HookGapTests
             }
             var reading = HookReader.Read(type, code.Read);
             var gaps = reading.Hooks.Where(hook => !hook.Read).Select(hook => (CapabilityOf(hook.Gap!, monsters.Contains), $"{hook.Hook}: {Shortened(hook.Gap!)}")).ToList();
-            // An instanced power's bodies are behind its copies' gap: read past it, so what else each body needs is counted too.
-            if (gaps.Any(gap => gap.Item1 == InstancedCopies))
-                gaps = gaps.Where(gap => gap.Item1 == InstancedCopies).Take(1).Select(gap => (gap.Item1, "(the class): copies"))
-                    .Concat(HookReader.Read(type, code.Read, pastCopies: true).Hooks.Where(hook => !hook.Read).Select(hook => (CapabilityOf(hook.Gap!, monsters.Contains), $"{hook.Hook}: {Shortened(hook.Gap!)}"))).ToList();
             // A class with no hook of its own: what it does is in another class's code (Sovereign Blade's plays read Parry, Seeking Edge).
             if (gaps.Count == 0 && reading.Hooks.Count == 0) gaps.Add(("the simulator's own model (its game class has no hooks: another class's code reads it)", "no hooks"));
             if (gaps.Count == 0) gaps.Add(("read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule)", "read whole"));

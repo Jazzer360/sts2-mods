@@ -150,7 +150,7 @@ public class ReadModelParityTests
         nameof(SimModel.BeforeCardPlayed), nameof(SimModel.AfterCardPlayed), nameof(SimModel.AfterCardEvent), nameof(SimModel.AfterPowerApplied),
         nameof(SimModel.BeforeSideTurnEndVeryEarly), nameof(SimModel.BeforeSideTurnEndEarly), nameof(SimModel.BeforeSideTurnEnd), nameof(SimModel.AfterSideTurnEnd),
         nameof(SimModel.AfterSideTurnEndLate), nameof(SimModel.ModifyCardPlayCount), nameof(SimModel.AfterModifyingCardPlayCount),
-        nameof(SimModel.AfterDamageGiven), nameof(SimModel.AfterDamageReceived), nameof(SimModel.AfterDeath),
+        nameof(SimModel.AfterDamageGiven), nameof(SimModel.AfterDamageReceived), nameof(SimModel.AfterDeath), nameof(SimModel.AfterApplied),
     };
 
     [Fact]
@@ -325,6 +325,19 @@ public class ReadModelParityTests
                         return Branches(new[] { state }) + " // " + Sequence(state, TurnEndHooks, (branch, turnEndHook) => turnEndHook(model, branch, owner));
                     });
                 break;
+            case nameof(SimModel.AfterApplied):
+                // The power lands on its owner (new, or on top of the one there), by each applier, as SimEngine.ApplyPower lands it; then the
+                // players' turn ends, where what it set up shows.
+                foreach (var applier in others)
+                    foreach (var fresh in new[] { true, false })
+                        yield return ($"applied by {applier}, {(fresh ? "new" : "on top")}, then the players' turn ends", (model, state) =>
+                        {
+                            var power = new PowerId(model.Name);
+                            if (fresh) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).Without(power));
+                            Land(model, state, owner, applier, power, amount: 2, had: !fresh);
+                            return Branches(new[] { state }) + " // " + Sequence(state, TurnEndHooks, (branch, turnEndHook) => turnEndHook(model, branch, owner));
+                        });
+                break;
             case nameof(SimModel.ModifyCardPlayCount) or nameof(SimModel.AfterModifyingCardPlayCount):
                 // Each play's shape decided four times in turn, as the engine decides it (DecideCardPlay): the count from 1 and from 2, and
                 // AfterModifyingCardPlayCount when it changed it (a stack used each time); each count and each step's outcome compared.
@@ -355,6 +368,23 @@ public class ReadModelParityTests
                     });
                 break;
         }
+    }
+
+    /// <summary>
+    /// A power landing on its owner as SimEngine.ApplyPower lands it, with the model given in place of the one registered: its amount added, then a
+    /// read model's landing (its applier, a copy of its own) and AfterApplied for a new instance or copy; a hand-written one's AfterApplied for a
+    /// new instance, or for every copy of an instanced one.
+    /// </summary>
+    private static void Land(SimModel model, SimState state, int owner, int applier, PowerId power, int amount, bool had)
+    {
+        SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).Add(power, amount));
+        if (model is ReadModel read)
+        {
+            if (!had && read.UsesApplier) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).With(power, SimEngine.PowersOf(state, owner)[power], DataCreature.Of(applier)));
+            var copy = read.Land(state, owner, applier, amount, had);
+            if (!had || copy > 0) read.AfterApplied(state, owner, applier, amount, copy);
+        }
+        else if (!had || model.Instanced) model.AfterApplied(state, owner, applier, amount);
     }
 
     /// <summary>The hooks of the players' side's turn ending, in the game's order (decision #51).</summary>

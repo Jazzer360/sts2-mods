@@ -335,6 +335,21 @@ public static class ProgramReader
     /// <summary>The prefix of a model's own data's plain fields among its state ("Data.etherealCount").</summary>
     public const string OwnDataPrefix = "Data.";
 
+    /// <summary>The prefix of a store to one of the model's own values ("DynamicVars.Damage", "DynamicVars.\"CardsLeft\"").</summary>
+    public const string OwnVarPrefix = "DynamicVars.";
+
+    /// <summary>
+    /// One of the model's own values a value names (base.DynamicVars.Damage, base.DynamicVars["CardsLeft"], kept in a local or not): the
+    /// property, or the key as the code writes it ("\"CardsLeft\""); null for anything else.
+    /// </summary>
+    public static string? OwnVarName(ProgramValue? value) => value switch
+    {
+        StoredValue stored => OwnVarName(stored.Value),
+        QueryValue { Type: "DynamicVarSet", Name: "Item", Arguments: [NamedValue key], Of: QueryValue { Name: "DynamicVars", Of: NamedValue { Name: "this" } } } => key.Name,
+        QueryValue { Type: "DynamicVarSet", Name: var property, Arguments.Count: 0, Of: QueryValue { Name: "DynamicVars", Of: NamedValue { Name: "this" } } } => property,
+        _ => null,
+    };
+
     /// <summary>The model's own data: what its GetInternalData gives (this.GetInternalData&lt;Data&gt;(), or a local it's kept in).</summary>
     public static bool IsOwnData(ProgramValue? value) => value switch
     {
@@ -555,6 +570,13 @@ public static class ProgramReader
                     into.Add(new StoreStep(instruction.Offset, property, flow.ArgumentValues(i, member)[0]) { Condition = condition });
                     continue;
                 }
+                // One of the model's own values set (base.DynamicVars["CardsLeft"].BaseValue = 5m, base.DynamicVars.Damage.BaseValue--): a store to
+                // its state, "DynamicVars." and the value's property or its key as the code writes it.
+                if (member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1, Name: "set_BaseValue" } && IsPowerOrRelic && OwnVarName(flow.StoreReceiver(i)) is { } ownVar)
+                {
+                    into.Add(new StoreStep(instruction.Offset, OwnVarPrefix + ownVar, flow.ArgumentValues(i, member)[0]) { Condition = condition });
+                    continue;
+                }
                 // base.AfterAddedToRoom(): the base class's own code of the hook (a non-virtual call to an instance method of a base model
                 // class), its steps run here.
                 if (instruction.OpCode == OpCodes.Call && member.HasThis && BaseImplementation(member) is { } implementation)
@@ -736,11 +758,23 @@ public static class ProgramReader
             return null;
         }
 
+        /// <summary>The model read is a power or a relic (its own values are state its hooks keep; a card's are its play's numbers, read apart).</summary>
+        private bool IsPowerOrRelic
+        {
+            get
+            {
+                for (var type = _card.BaseType; type != null; type = type.BaseType)
+                    if (type.Name is "PowerModel" or "RelicModel") return true;
+                return false;
+            }
+        }
+
         /// <summary>
         /// The name of the model's own state a store sets (a field, or a property by its setter, of its class or of a base class of the
         /// game's: an auto-property's backing field by the property's name); null for anything else (a state machine's locals, another
         /// object's).
         /// </summary>
+
         private string? OwnState(CodeMember member)
         {
             if (member.Name.StartsWith("<>", StringComparison.Ordinal)) return null;
@@ -1106,10 +1140,14 @@ public static class ProgramReader
         /// </summary>
         public ProgramValue StoreReceiver(int at)
         {
-            if (Ops[at].Member is { } field)
-                for (var back = at - 1; back >= 1 && back >= at - 12 && Ops[back].OpCode != OpCodes.Stfld; back--)
-                    if (Ops[back].OpCode == OpCodes.Ldfld && Ops[back].Member?.Name == field.Name && Ops[back].Member?.DeclaringType == field.DeclaringType && Ops[back - 1].OpCode == OpCodes.Dup)
+            // A field's increment reads it with ldfld f; a property's (x.P--: a setter) with its getter.
+            if (Ops[at].Member is { } stored)
+            {
+                var (load, name) = Ops[at].OpCode == OpCodes.Stfld ? (OpCodes.Ldfld, stored.Name) : (OpCodes.Callvirt, stored.Name.StartsWith("set_", StringComparison.Ordinal) ? "get_" + stored.Name[4..] : "");
+                for (var back = at - 1; back >= 1 && back >= at - 12 && Ops[back].OpCode != OpCodes.Stfld && !(Ops[back].IsCall && Ops[back].Member?.Name == stored.Name); back--)
+                    if ((Ops[back].OpCode == load || load == OpCodes.Callvirt && Ops[back].OpCode == OpCodes.Call) && Ops[back].Member?.Name == name && Ops[back].Member?.DeclaringType == stored.DeclaringType && Ops[back - 1].OpCode == OpCodes.Dup)
                         return ReadBack(back - 1, depth: 0).Value;
+            }
             return ReceiverValue(at, arguments: 1);
         }
 

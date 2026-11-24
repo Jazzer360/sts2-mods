@@ -261,10 +261,13 @@ public static partial class SimEngine
     public static NamedCounts FieldsOf(SimState state, int id) => Who.IsEnemy(id) ? state.Enemy(id)?.Fields ?? NamedCounts.Empty : state.Player(id)?.Fields ?? NamedCounts.Empty;
 
     /// <summary>Sets one of them (a teammate shared between branches is copied first).</summary>
-    public static void SetField(SimState state, int id, string key, int value)
+    public static void SetField(SimState state, int id, string key, int value) => SetFields(state, id, FieldsOf(state, id).With(key, value));
+
+    /// <summary>Sets them all (a teammate shared between branches is copied first).</summary>
+    public static void SetFields(SimState state, int id, NamedCounts fields)
     {
-        if (Who.IsEnemy(id)) { if (state.Enemy(id) is { } enemy) enemy.Fields = enemy.Fields.With(key, value); }
-        else if (state.Player(id) != null) state.MutablePlayer(id).Fields = state.Player(id)!.Fields.With(key, value);
+        if (Who.IsEnemy(id)) { if (state.Enemy(id) is { } enemy) enemy.Fields = fields; }
+        else if (state.Player(id) != null) state.MutablePlayer(id).Fields = fields;
     }
 
     /// <summary>

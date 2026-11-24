@@ -98,11 +98,10 @@ public static class HookReader
         .Where(method => method.IsVirtual && !method.Attributes.HasFlag(MethodAttributes.NewSlot) && !method.IsSpecialName && !NotHooks.Contains(method.Name));
 
     /// <summary>Reads a power's or a relic's hooks with <paramref name="read"/> (the loaded game's code, or an assembly file's).</summary>
-    /// <param name="pastCopies">Reads an instanced power's bodies as if one copy (the measurement of what else they need: HookGapTests), never for a model.</param>
-    public static ModelReading Read(Type type, Func<MethodBase, List<CodeOp>> read, bool pastCopies = false)
+    public static ModelReading Read(Type type, Func<MethodBase, List<CodeOp>> read)
     {
         var kind = Derives(type, "RelicModel") ? ModelKind.Relic : ModelKind.Power;
-        var reader = new Translation(type, kind, read) { PastCopies = pastCopies };
+        var reader = new Translation(type, kind, read);
         var programs = new List<HookProgram>();
         var readings = new List<HookReading>();
         foreach (var hook in Hooks(type).OrderBy(method => method.Name, StringComparer.Ordinal))
@@ -111,6 +110,11 @@ public static class HookReader
             readings.Add(new HookReading(hook.Name, gap) { NotRun = notRun });
             if (program != null) programs.Add(program);
         }
+        // One of its own values its code stores (DynamicVars["CardsLeft"].BaseValue--: Panache's count) is its state: every read of it reads
+        // the state, from the canonical value for a new instance.
+        var storedVars = new ModelSpec(type.Name, kind, programs).Steps().OfType<StoreFieldStep>().Select(store => store.Field)
+            .Where(field => field.StartsWith(VarFieldPrefix, StringComparison.Ordinal)).ToHashSet(StringComparer.Ordinal);
+        if (storedVars.Count > 0) programs = programs.Select(program => VarsAsState(program, storedVars)).ToList();
         // A store to a field no program reads changes only what the game shows (Kunai's IsActivating): left out.
         var fieldsRead = new ModelSpec(type.Name, kind, programs).Values().OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
         programs = programs.Select(program => program with { Steps = program.Steps.Where(step => step is not StoreFieldStep store || fieldsRead.Contains(store.Field)).ToList() })
@@ -122,8 +126,42 @@ public static class HookReader
         var spec = new ModelSpec(type.Name, kind, programs)
         {
             Tab = outcome != null ? null : harmful && TabOf(programs) != null ? TabKind.Trigger : TabOf(programs), Harmful = harmful, Outcome = outcome,
+            Copies = kind == ModelKind.Power ? reader.Copies() : PowerCopies.One,
         };
         return new ModelReading(spec, readings);
+    }
+
+    /// <summary>The prefix of one of a model's own values kept as its state ("Var.CardsLeft"), where its code stores it.</summary>
+    public const string VarFieldPrefix = "Var.";
+
+    /// <summary>A program with each read of a value its model stores (HookVar) read as that state (HookField "Var.key", from its canonical value).</summary>
+    private static HookProgram VarsAsState(HookProgram program, IReadOnlySet<string> stored)
+    {
+        HookValue? Map(HookValue? value) => value switch
+        {
+            null => null,
+            HookVar variable when stored.Contains(VarFieldPrefix + variable.Key) => new HookField(VarFieldPrefix + variable.Key) { Canonical = variable.Canonical },
+            HookMath math => math with { Left = Map(math.Left)!, Right = Map(math.Right)! },
+            HookNot not => not with { Inner = Map(not.Inner)! },
+            HookTest test => test with { Test = Map(test.Test)! },
+            HookWays ways => ways with { Ways = ways.Ways.Select(way => new HookWay(Map(way.When)!, Map(way.Value)!)).ToList() },
+            _ => value,
+        };
+        HookStep Step(HookStep step) => (step switch
+        {
+            GainBlockStep gain => gain with { Amount = Map(gain.Amount)!, Props = Map(gain.Props)! },
+            DamageStep damage => damage with { Amount = Map(damage.Amount)!, Props = Map(damage.Props)! },
+            DrawStep draw => draw with { Count = Map(draw.Count)! },
+            GainEnergyStep energy => energy with { Amount = Map(energy.Amount)! },
+            GainStarsStep stars => stars with { Amount = Map(stars.Amount)! },
+            HealStep heal => heal with { Amount = Map(heal.Amount)! },
+            ApplyPowerStep apply => apply with { Amount = Map(apply.Amount)! },
+            StoreFieldStep store => store with { Value = Map(store.Value)! },
+            BindStep bind => bind with { Value = Map(bind.Value)! },
+            RepeatStep repeat => repeat with { Times = Map(repeat.Times)!, Steps = repeat.Steps.Select(Step).ToList() },
+            _ => step,
+        }) with { When = Map(step.When) };
+        return program with { Steps = program.Steps.Select(Step).ToList(), Returns = Map(program.Returns) };
     }
 
     /// <summary>
@@ -214,8 +252,14 @@ public static class HookReader
         private readonly Func<MethodBase, List<CodeOp>> _read;
         private string _hook = "";
 
-        /// <summary>An instanced power's bodies are read as one copy's (the measurement only).</summary>
-        public bool PastCopies { get; init; }
+        /// <summary>How the power's applications are kept: its InstanceType, read from its code.</summary>
+        public PowerCopies Copies() =>
+            Returned(_type, "get_InstanceType") is ConstantValue instance ? EnumName(_type.Assembly, "PowerInstanceType", instance.Value) switch
+            {
+                "Instanced" => PowerCopies.EachApplication,
+                "InstancedPerApplier" => PowerCopies.PerApplier,
+                _ => PowerCopies.One,
+            } : PowerCopies.One;
 
         public Translation(Type type, ModelKind kind, Func<MethodBase, List<CodeOp>> read)
         {
@@ -231,9 +275,6 @@ public static class HookReader
             if (Diagnostics.CoverageLedger.OutOfCombatHooks.Contains(hook.Name)) return (null, null, "it acts outside fights (Diagnostics/OutOfCombatHooks.txt)");
             try
             {
-                // Each copy of an instanced power acts on its own amount and data; the simulator keeps their sum (decision #195: not read yet).
-                if (!PastCopies && _kind == ModelKind.Power && Returned(_type, "get_InstanceType") is ConstantValue instance && EnumName(_type.Assembly, "PowerInstanceType", instance.Value) == "Instanced")
-                    return (null, "gap: each copy acts on its own (PowerInstanceType.Instanced): the simulator keeps their sum", null);
                 if (TurnStartHooks.Contains(hook.Name))
                     return PastTheHorizon(hook) is { } turnStartGap ? (null, turnStartGap, null) : (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers");
                 if (!Enum.TryParse<HookName>(hook.Name, out var name)) return (null, $"gap: the simulator runs no read model's {hook.Name}", null);
@@ -284,8 +325,10 @@ public static class HookReader
                     return $"gap: changes a collection ({call.FullName}) where the reader reads no step";
                 if (instruction.IsCall && ChangesAGameObject(instruction.Member)) return $"gap: changes a game object outside a command ({instruction.Member!.FullName})";
                 // A property set on one of the game's objects the reader reads no store for (Panache's DynamicVars["CardsLeft"].BaseValue--).
+                // A text set (a StringVar's StringValue: words its tooltip shows) is what's shown, never a number anything reads.
                 if (instruction.IsCall && instruction.Member is { Kind: CodeMemberKind.Method, HasThis: true } setter && setter.Name.StartsWith("set_", StringComparison.Ordinal)
-                    && setter.Namespace.StartsWith("MegaCrit", StringComparison.Ordinal) && !setter.Namespace.Contains(".Nodes", StringComparison.Ordinal) && !stepsAt.Contains(instruction.Offset))
+                    && setter.Namespace.StartsWith("MegaCrit", StringComparison.Ordinal) && !setter.Namespace.Contains(".Nodes", StringComparison.Ordinal) && !stepsAt.Contains(instruction.Offset)
+                    && setter.ParameterTypes is not ["String"])
                     return $"gap: sets {setter.DeclaringType}.{setter.Name[4..]} where the reader reads no store";
                 // A field stored on one of the game's objects (not the hook's own locals) the reader reads no store for.
                 if (instruction.OpCode == System.Reflection.Emit.OpCodes.Stfld && instruction.Member is { } storedField && !storedField.DeclaringType.StartsWith('<') && !storedField.Name.StartsWith('<')
@@ -329,7 +372,11 @@ public static class HookReader
                     return translated == null ? Array.Empty<HookStep>() : new[] { translated with { When = Condition(step.Condition) } };
                 case StoreStep store:
                     // A store to its own state (a field or property of its class, a plain field of its data): simulator state its programs read (HookField).
-                    return new[] { new StoreFieldStep(store.Field, Value(store.Value)) { When = Condition(step.Condition) } };
+                    // One of its own values set (DynamicVars["CardsLeft"].BaseValue = ...): its state too, under the value's key.
+                    var field = store.Field.StartsWith(ProgramReader.OwnVarPrefix, StringComparison.Ordinal) ? VarFieldPrefix + OwnVarKey(store.Field[ProgramReader.OwnVarPrefix.Length..]) : store.Field;
+                    // One of its own fields or properties that holds a node (Echo Form's Vfx: how it looks) is what's shown, never read by a hook.
+                    if (OwnMemberType(store.Field) is { } memberType && (memberType.Namespace ?? "").Contains(".Nodes", StringComparison.Ordinal)) return Array.Empty<HookStep>();
+                    return new[] { new StoreFieldStep(field, Value(store.Value)) { When = Condition(step.Condition) } };
                 case DataStep data:
                     return new[] { Data(data) with { When = Condition(step.Condition) } };
                 case LoopStep loop:
@@ -351,6 +398,9 @@ public static class HookReader
                     throw new Gap($"gap: {step}");
             }
         }
+
+        /// <summary>The key of one of its own values a store names (a DynamicVarSet property's own key, or an indexed key as written).</summary>
+        private string OwnVarKey(string named) => named.StartsWith('"') ? named.Trim('"') : KeyOfProperty(named);
 
         /// <summary>
         /// A change to its own data: a value bound to the play in progress (Add(cardPlay.Card, value)), or taken back for its out value
@@ -473,6 +523,14 @@ public static class HookReader
             if (property.GetMethod is not { } getter || !_inlining.Add(name)) throw new Gap($"gap: the property {name}");
             try { return Value(ProgramReader.ReadReturnedValue(_type, getter, _read) ?? throw new Gap($"gap: the property {name}")); }
             finally { _inlining.Remove(name); }
+        }
+
+        /// <summary>The type of one of its own fields or properties (null: not one of its own, or its data's).</summary>
+        private Type? OwnMemberType(string name)
+        {
+            for (var type = _type; type != null && type.Namespace?.StartsWith("MegaCrit", StringComparison.Ordinal) == true; type = type.BaseType)
+                if ((type.GetProperty(name, Declared)?.PropertyType ?? type.GetField(name, Declared)?.FieldType) is { } found) return found;
+            return null;
         }
 
         /// <summary>A plain field of its own class (a flag, a count: bool, int, decimal), whose loads and stores are all there is to it.</summary>
@@ -645,6 +703,9 @@ public static class HookReader
                 }
                 case NullValue:
                     return new HookConstant(0m);
+                // A true-or-false the code worked out on several ways and kept (bool flag = a && b && c): its condition.
+                case ConditionValue kept:
+                    return Condition(kept.Condition) ?? new HookConstant(1m);
                 // Who applied this power: there is one (base.Applier), a player (base.Applier.Player).
                 case var applier when IsApplier(applier):
                     return new HookFactValue(HookFact.HasApplier);
@@ -825,6 +886,14 @@ public static class HookReader
                 return new HookConstant((compare.Op == Comparison.Equal) == players ? 1m : 0m);
             }
             if (CreatureCompare(compare) is { } creatures) return creatures;
+            // The side whose turn it is against a side named (CombatState.CurrentSide == CombatSide.Enemy): the enemies' turn, or not.
+            var sideConstant = compare.Left is QueryValue { Name: "CurrentSide" } ? compare.Right as ConstantValue : compare.Right is QueryValue { Name: "CurrentSide" } ? compare.Left as ConstantValue : null;
+            if (compare.Op is Comparison.Equal or Comparison.NotEqual && sideConstant != null && EnumName(_type.Assembly, "CombatSide", sideConstant.Value) is { } sideNamed)
+            {
+                var enemies = new HookFactValue(HookFact.EnemiesTurn);
+                var holds = sideNamed == "Enemy" ? (HookValue)enemies : Not(enemies);
+                return compare.Op == Comparison.Equal ? holds : Not(holds);
+            }
             return new HookMath(OperationOf(compare.Op), Value(compare.Left), Value(compare.Right));
         }
 
@@ -868,6 +937,10 @@ public static class HookReader
                 case QueryValue { Name: "Count" or "Any" } logged when ProgramReader.ReadsHistory(logged):
                     return History(logged);
                 case ConstantValue constant: return new HookConstant(constant.Value);
+                // A null compared (an object against null: 0) and the owner's fight (there: 1).
+                case NullValue: return new HookConstant(0m);
+                case QueryValue { Name: "CombatState", Of: var fightOf } when fightOf is NamedValue { Name: "this" } || fightOf != null && IsOwner(fightOf):
+                    return new HookConstant(1m);
                 case NamedValue { Name: "Decimal.Zero" }: return new HookConstant(0m);
                 case NamedValue { Name: "Decimal.One" }: return new HookConstant(1m);
                 case NamedValue { Name: "Decimal.MinusOne" }: return new HookConstant(-1m);
@@ -900,6 +973,9 @@ public static class HookReader
                 // One of its own properties (Kunai's AttacksPlayedThisTurn): simulator state, seeded from the game.
                 case QueryValue { Of: NamedValue { Name: "this" }, IsProperty: true, Name: var property, Type: var declaring } when declaring == _type.Name && IsOwnMember(property):
                     return OwnProperty(property);
+                // A base class's property its class overrides with a getter of its own (Insatiable Dominion's DisplayAmount): what its getter works out.
+                case QueryValue { Of: NamedValue { Name: "this" }, IsProperty: true, Name: var overridden } when _type.GetProperty(overridden, Declared) is { GetMethod: not null, SetMethod: null }:
+                    return OwnProperty(overridden);
                 // One of its own plain fields (a count it keeps): simulator state, seeded from the game.
                 case var ownField when OwnPlainField(ownField) is { } fieldName:
                     return new HookField(fieldName);
@@ -917,6 +993,12 @@ public static class HookReader
                     return new HookMath(operation, Value(left), Value(right));
                 case QueryValue { Type: "Decimal", Name: "op_Implicit", Arguments: [var inner] }:
                     return Value(inner);
+                // x-- and x++ on a decimal (Panache's DynamicVars["CardsLeft"].BaseValue--).
+                case QueryValue { Type: "Decimal", Name: "op_Decrement" or "op_Increment", Arguments: [var stepped] } step:
+                    return new HookMath(step.Name == "op_Decrement" ? HookOperation.Subtract : HookOperation.Add, Value(stepped), new HookConstant(1m));
+                // -x on a decimal (Monologue's -StrengthApplied).
+                case QueryValue { Type: "Decimal", Name: "op_UnaryNegation", Arguments: [var negated] }:
+                    return new HookMath(HookOperation.Multiply, Value(negated), new HookConstant(-1m));
                 case StoredValue stored:
                     return Value(stored.Value);
                 case CompareValue compare:
