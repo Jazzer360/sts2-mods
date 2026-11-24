@@ -370,8 +370,7 @@ internal static class ModelAmountCheck
             if (member.DeclaringType == "Decimal" && Arithmetic(member.Name) is { } operation)
                 return $"{operation}({Describe(Operand(at, 1), depth + 1)}, {Describe(Operand(at, 0), depth + 1)})";
             // The game's: base.Amount, base.DynamicVars.Name(.BaseValue / .IntValue), base.DynamicVars["Name"].
-            // (Not a copy's amount on the model's side: CounterCopy.Amount is what that copy gives, read below as unread.)
-            if (member.Name == "get_Amount" && member.DeclaringType != nameof(CounterCopy)) return "Amount";
+            if (member.Name == "get_Amount") return "Amount";
             if (member.Name is "get_BaseValue" or "get_IntValue") return VarName(Operand(at, 0)) ?? "?" + member.Name;
             if (member.DeclaringType == "DynamicVarSet") return VarName(at) ?? "?" + member.Name;
             // The model's: Amount(state, owner), PowerOn(state, owner, ThisPower), RelicsOf(...)[ThisRelic], Var(..., "Name", ...),

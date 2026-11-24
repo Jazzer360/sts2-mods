@@ -49,6 +49,7 @@ public class SimKeyCoverageTests
         ["SimEnemy.HpAtTurnEnd"] = "a copy of Hp taken once your end of turn is over (Hp is in the key)",
         ["SimEnemy.UnblockedAtTurnEnd"] = "a copy of UnblockedInstances taken once your end of turn is over (that is in the key)",
         ["SimEnemy.DeathHandled"] = "follows Hp: a dead enemy's death is handled in the same step",
+        ["SimEnemy.ReactedWithBlock"] = "follows its block and its reacting power's state, which are in the key (decision #197 let it leave the key)",
         ["SimEnemy.StunnedThisTurn"] = "follows Stunned, which is in the key",
     };
 
@@ -83,7 +84,6 @@ public class SimKeyCoverageTests
         if (type == typeof(List<SimPick>)) return new List<SimPick>((List<SimPick>)v!) { new(Card: new HandCardKey("Probe", Digest: 1), Target: 0) };
         if (type == typeof(List<ExhaustingCard>)) return new List<ExhaustingCard>((List<ExhaustingCard>)v!) { new(HandCard: 7, Energy: 2, SimCardType.Skill) };
         if (type == typeof(List<TurnEndCard>)) return new List<TurnEndCard>((List<TurnEndCard>)v!) { new("Burn", "Burn", Amount: 2) };
-        if (type == typeof(List<CounterCopy>)) return new List<CounterCopy>((List<CounterCopy>)v!) { new(PowerId.Orbit, Left: 2, Amount: 1) };
         if (type == typeof(List<SimHandCard>)) return new List<SimHandCard> { new() { Id = 5, Name = "Probe" } }; // another card (another copy of the same is the same hand)
         if (type == typeof(List<SimOrb>)) return new List<SimOrb> { new() { Kind = OrbKind.Dark, Passive = 6, Evoke = 6 } };
         if (type == typeof(SimDrawPile)) return new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("probe"), Count: 2) } };

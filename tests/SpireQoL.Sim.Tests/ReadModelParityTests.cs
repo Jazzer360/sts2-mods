@@ -513,7 +513,7 @@ public class ReadModelParityTests
 
     /// <summary>
     /// A copy without what models keep of their own: every relic entry's counter and flag, every read model's fields (its copies' amounts
-    /// included), the hand-written models' copies (SimPlayer.Counters). The power's entry holds the copies' total either way.
+    /// included, and the frozen counter models' lists of copies kept there). The power's entry holds the copies' total either way.
     /// </summary>
     private static SimState Stripped(SimState state)
     {
@@ -523,7 +523,6 @@ public class ReadModelParityTests
             var player = copy.MutablePlayer(id);
             foreach (var relic in player.Relics.Items) player.Relics = player.Relics.With(relic.Name, amount: 0, data: 0);
             player.Fields = NamedCounts.Empty;
-            player.Counters = new();
             // A hand-written counter's count in its power's Data (the read model keeps it in its fields).
             foreach (var power in player.Powers.Items.Where(power => CounterFields.ContainsKey(power.Name.Name)))
                 player.Powers = player.Powers.With(power.Name, power.Amount, data: 0);

@@ -149,7 +149,10 @@ public sealed class SimEnemy
     [JsonIgnore] public int Sneaky { get => Powers[PowerId.Sneaky]; set => Set(PowerId.Sneaky, value); }
     /// <summary>Skittish: block it gains after a card's attack gets damage through its block (once per turn; 0 once used).</summary>
     [JsonIgnore] public int Skittish { get => Powers[PowerId.Skittish]; set => Set(PowerId.Skittish, value); }
-    /// <summary>It gained block from Curl Up, Sneaky or Skittish because of the play.</summary>
+    /// <summary>
+    /// It gained block because of the play (Curl Up, Skittish, a read model's block for its enemy owner: SimEngine.EnemyBlock), for the tests and the
+    /// single-player golden's fingerprint. Not in the branch key: it follows the enemy's block and its reacting power's state, which are.
+    /// </summary>
     public bool ReactedWithBlock;
 
     // Being hit (decompile v0.111.0):
@@ -247,7 +250,7 @@ public sealed class SimEnemy
     internal void Hash(Action<long> add)
     {
         add(Id); add(Hp); add(Block); add(UnblockedInstances); add(FirstHitFullyBlocked ? 1 : 0); add(Poison); add(DiedBeforeActing ? 1 : 0);
-        add(PoisonStacks); add(Stunned ? 1 : 0); add(IntendsToAttack ? 1 : 0); add(ReactedWithBlock ? 1 : 0); add(BlockBroken ? 1 : 0); add(GambitTriggered ? 1 : 0);
+        add(PoisonStacks); add(Stunned ? 1 : 0); add(IntendsToAttack ? 1 : 0); add(BlockBroken ? 1 : 0); add(GambitTriggered ? 1 : 0);
         add(SlipperyTriggered ? 1 : 0); add(Exploded ? 1 : 0); add(MoveBlock);
         Powers.Hash(add); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         Fields.Hash(add);
@@ -268,9 +271,6 @@ public sealed record SimSpawn(string Name, IReadOnlyList<int> Hp)
     /// <summary>The powers it starts with (its AfterAddedToRoom's, read from its code: decision #195).</summary>
     public PowerSet Powers { get; init; } = PowerSet.Empty;
 }
-
-/// <summary>One copy of a counter power (SimPlayer.Counters): what it still has to count, and what it gives when it gets there.</summary>
-public sealed record CounterCopy(PowerId Power, int Left, int Amount);
 
 public sealed class SimPlayer
 {
@@ -390,12 +390,6 @@ public sealed class SimPlayer
     /// (SimEngine.HandAtTurnEnd). Never changed in place (shared between clones).
     /// </summary>
     public List<TurnEndCard> TurnEndCards = new();
-    /// <summary>
-    /// Their counter powers' copies, each with its own count (CounterPower: two Orbit cards played make two OrbitPowers, each
-    /// counting its own 4 energy; an upgraded Cacophony's copy deals more). A power with none listed here is one copy, its entry in
-    /// Powers (amount, Data: what's left). Never changed in place (shared between clones).
-    /// </summary>
-    public List<CounterCopy> Counters = new();
     /// <summary>
     /// Cards in their hand that act when they're exhausted (their own AfterCardExhausted: Drum of Battle's energy), each with its
     /// id in the hand (SimPlay.HandCard; drawn: -1000 - Drawn). A play exhausting from the hand sets them off (ExhaustFromHandAction);
@@ -538,8 +532,6 @@ public sealed class SimPlayer
         Draw?.Hash(add);
         add(TurnEndCards.Count);
         foreach (var turnEndCard in TurnEndCards) { add(turnEndCard.Card.GetHashCode()); add(turnEndCard.Amount); }
-        add(Counters.Count);
-        foreach (var copy in Counters) { add(copy.Power.GetHashCode()); add(copy.Left); add(copy.Amount); }
         // By what each one does, in any order (copies that act the same are the same hand, as for AutoHand).
         add(ExhaustingInHand.Count);
         foreach (var exhausting in ExhaustingInHand.OrderBy(card => card.Energy).ThenBy(card => card.Type)) { add(exhausting.Energy); add((int)exhausting.Type); }

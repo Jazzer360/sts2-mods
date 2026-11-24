@@ -31,7 +31,6 @@ public class SimTeammateHandFieldsTests
     {
         nameof(SimPlayer.Block), nameof(SimPlayer.Reflect),
         nameof(SimPlayer.HexFrom),         // who cast Hex on them (its power is on screen)
-        nameof(SimPlayer.Counters),        // their counter powers' copies: each on screen with its count
         nameof(SimPlayer.Fields),          // what their powers and relics read from code keep (a count, a flag): theirs, not their hand's
         nameof(SimPlayer.Drawn),           // cards drawn: you watch them draw (the simulation's own count)
         nameof(SimPlayer.TakenToHand),     // cards taken from their piles into their hand in the simulation: its own count
@@ -102,7 +101,6 @@ public class SimTeammateHandFieldsTests
         else if (type == typeof(bool)) field.SetValue(player, true);
         else if (type == typeof(List<(string, int)>)) field.SetValue(player, new List<(string, int)> { ("X", 3) });
         else if (type == typeof(List<TurnEndCard>)) field.SetValue(player, new List<TurnEndCard> { new("Burn", "Burn", Amount: 2) });
-        else if (type == typeof(List<CounterCopy>)) field.SetValue(player, new List<CounterCopy> { new(PowerId.Orbit, Left: 2, Amount: 1) });
         else if (type == typeof(List<ExhaustingCard>)) field.SetValue(player, new List<ExhaustingCard> { new(HandCard: 7, Energy: 2, SimCardType.Skill) });
         else if (type == typeof(List<SimHandCard>)) field.SetValue(player, new List<SimHandCard> { new() { Id = 3, Name = "Strike", IsAttack = true } });
         else if (type == typeof(List<SimPlay>)) field.SetValue(player, new List<SimPlay> { new() { Name = "HowlFromBeyond" } });

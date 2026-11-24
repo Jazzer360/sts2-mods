@@ -1133,39 +1133,42 @@ public abstract class CounterPower : ProcModel
         Set(state, owner, copies[0].Amount, copies[0].Left);
     }
 
-    /// <summary>
-    /// A copy applied (an Orbit card played): its own count from StartCount. Its entry in Powers already holds every copy's amount
-    /// added (ApplyPower); a first copy is that entry, a later one goes into Counters beside the ones before it.
-    /// </summary>
-    internal void NewCopy(SimState state, int target, int amount, bool had)
-    {
-        if (!had)
-        {
-            Set(state, target, Amount(state, target), StartCount);
-            return;
-        }
-        if (state.Player(target) is not { } player) return;
-        var before = player.Counters.Any(copy => copy.Power == ThisPower)
-            ? player.Counters.Where(copy => copy.Power == ThisPower).ToList()
-            : new List<CounterCopy> { new(ThisPower, Data(state, target), Amount(state, target) - amount) };
-        state.MutablePlayer(target).Counters = player.Counters.Where(copy => copy.Power != ThisPower).Concat(before).Append(new CounterCopy(ThisPower, StartCount, amount)).ToList();
-    }
 }
 
+/// <summary>One copy of a counter power (it was SimPlayer.Counters'): what it still has to count, and what it gives when it gets there.</summary>
+public sealed record CounterCopy(PowerId Power, int Left, int Amount);
+
 /// <summary>
-/// The copies of an instanced power listed in its player's SimPlayer.Counters (SimReaders.Counters reads every copy there), each
-/// with its own count and amount; none listed: its Powers entry is the one copy.
+/// The copies of an instanced power the frozen counter models list beside its Powers entry, each with its own count and amount; none
+/// listed: its Powers entry is the one copy. The simulator keeps a read power's copies in its owner's fields (decision #196), so these
+/// frozen models keep their list in the owner's fields too ("Power#count", "Power#i.Left", "Power#i.Amount"), which the parity test leaves
+/// out of the branch key as it leaves out every model's fields. (They were SimPlayer.Counters, which only these models used.)
 /// </summary>
 internal static class CounterCopies
 {
-    public static List<CounterCopy>? Listed(SimState state, int owner, PowerId power) =>
-        state.Player(owner) is { } player && player.Counters.Any(copy => copy.Power == power) ? player.Counters.Where(copy => copy.Power == power).ToList() : null;
+    private static string Count(PowerId power) => power.Name + "#count";
+    private static string Left(PowerId power, int index) => $"{power.Name}#{index}.Left";
+    private static string Amount(PowerId power, int index) => $"{power.Name}#{index}.Amount";
+
+    public static List<CounterCopy>? Listed(SimState state, int owner, PowerId power)
+    {
+        if (state.Player(owner) is not { } player || !player.Fields.Has(Count(power))) return null;
+        return Enumerable.Range(0, player.Fields[Count(power)]).Select(index => new CounterCopy(power, player.Fields[Left(power, index)], player.Fields[Amount(power, index)])).ToList();
+    }
 
     /// <summary>Its copies now (none: it's gone), in place of the ones listed.</summary>
     public static void SetListed(SimState state, int owner, PowerId power, IEnumerable<CounterCopy> copies)
     {
-        if (state.Player(owner) is not { } player) return;
-        state.MutablePlayer(owner).Counters = player.Counters.Where(copy => copy.Power != power).Concat(copies).ToList();
+        if (state.Player(owner) is null) return;
+        var list = copies.ToList();
+        var fields = SimEngine.FieldsOf(state, owner);
+        foreach (var key in fields.Items.Select(item => item.Name).Where(name => name.StartsWith(power.Name + "#", StringComparison.Ordinal)).ToList()) fields = fields.Without(key);
+        if (list.Count > 0)
+        {
+            fields = fields.With(Count(power), list.Count);
+            for (var index = 0; index < list.Count; index++) fields = fields.With(Left(power, index), list[index].Left).With(Amount(power, index), list[index].Amount);
+        }
+        SimEngine.SetFields(state, owner, fields);
     }
 }
 

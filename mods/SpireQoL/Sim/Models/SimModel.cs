@@ -207,7 +207,7 @@ public abstract class SimModel
     /// <summary>
     /// A power each application of which is a copy of its own, with its own amount and values (PowerInstanceType.Instanced: each
     /// Monologue or The Bomb played). Its Powers entry holds them merged (amounts added), so its model must say how its copies act:
-    /// each on its own counter (SimPlayer.Counters), on their values' total (VarTotal), or all the same. Its AfterApplied runs for
+    /// each on its own counter (the frozen counter models' list), on their values' total (VarTotal), or all the same. Its AfterApplied runs for
     /// every copy. InstancedPowerTests holds this to the game's InstanceType.
     /// </summary>
     public virtual bool Instanced => false;
