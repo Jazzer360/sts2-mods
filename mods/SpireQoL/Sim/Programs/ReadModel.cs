@@ -31,8 +31,11 @@ internal readonly struct HookArgs
     /// </summary>
     public int[]? Asked { get; init; }
 
+    /// <summary>What this hook run took back of the amount its model bound to the play (HookFact.TakeBound, UnbindStep); null: it takes none.</summary>
+    public int[]? Taken { get; init; }
+
     /// <summary>The same hook on another branch (its answers so far its own).</summary>
-    public HookArgs On(SimState branch) => this with { State = branch, Asked = (int[]?)Asked?.Clone() };
+    public HookArgs On(SimState branch) => this with { State = branch, Asked = (int[]?)Asked?.Clone(), Taken = (int[]?)Taken?.Clone() };
 }
 
 /// <summary>
@@ -59,25 +62,39 @@ public sealed class ReadModel : SimModel
     private readonly Dictionary<string, int> _testSlots = new(StringComparer.Ordinal);
     private readonly Evaluate?[] _returns = new Evaluate?[Enum.GetValues<HookName>().Length];
 
+    /// <summary>The hooks whose program takes back what the model bound to the play: each run gets a slot for it (HookArgs.Taken).</summary>
+    private readonly bool[] _takes = new bool[Enum.GetValues<HookName>().Length];
+
     public ReadModel(ModelSpec spec) : base(spec.Name, spec.Hooks.Select(program => SimHookOf(program.Hook)).Distinct())
     {
         Spec = spec;
         foreach (var test in spec.Values().OfType<HookTest>()) _testSlots.TryAdd(test.At, _testSlots.Count);
         foreach (var program in spec.Hooks)
         {
-            _asksOnce[(int)program.Hook] = program.Steps.Any(step => step is StoreFieldStep);
+            var one = new ModelSpec(spec.Name, spec.Kind, new[] { program });
+            // A take of what it bound is a test with an effect: asked once a run, as a store's tests are.
+            _takes[(int)program.Hook] = one.Steps().Any(step => step is UnbindStep) || one.Values().Any(value => value is HookFactValue { Fact: HookFact.TakeBound or HookFact.BoundTaken });
+            _asksOnce[(int)program.Hook] = one.Steps().Any(step => step is StoreFieldStep) || _takes[(int)program.Hook];
             if (program.Returns != null) _returns[(int)program.Hook] = Compile(program.Returns);
-            var firing = new List<HookStep>();
-            var compiled = new List<CompiledStep>();
-            foreach (var step in program.Steps)
-            {
-                // A hook that acts logs one firing (the hand-written models' Fire): a draw, energy or a power, once for the steps on one condition.
-                var fires = step is DrawStep or GainEnergyStep or ApplyPowerStep && !firing.Any(earlier => Equals(earlier.When, step.When));
-                if (step is DrawStep or GainEnergyStep or ApplyPowerStep) firing.Add(step);
-                compiled.Add(new CompiledStep(step.When == null ? null : Compile(step.When), Runner(step, fires)));
-            }
-            _steps[(int)program.Hook] = compiled.ToArray();
+            _steps[(int)program.Hook] = CompileSteps(program.Steps, new List<HookStep>(), firstRound: true);
         }
+    }
+
+    /// <summary>
+    /// Steps compiled in order. A hook that acts logs one firing (the hand-written models' Fire): a draw, energy, a power or an orb, once for the
+    /// steps on one condition (<paramref name="firing"/>: the ones before); a counter loop's later rounds log none (<paramref name="firstRound"/>).
+    /// </summary>
+    private CompiledStep[] CompileSteps(IReadOnlyList<HookStep> steps, List<HookStep> firing, bool firstRound)
+    {
+        var compiled = new List<CompiledStep>();
+        foreach (var step in steps)
+        {
+            var acts = step is DrawStep or GainEnergyStep or ApplyPowerStep or ChannelStep;
+            var fires = firstRound && acts && !firing.Any(earlier => Equals(earlier.When, step.When));
+            if (acts) firing.Add(step);
+            compiled.Add(new CompiledStep(step.When == null ? null : Compile(step.When), Runner(step, fires, firing)));
+        }
+        return compiled.ToArray();
     }
 
     /// <summary>The SimModel method a game hook is answered in (the card events' in AfterCardEvent, a power landing in AfterPowerApplied).</summary>
@@ -157,7 +174,13 @@ public sealed class ReadModel : SimModel
     private IEnumerable<SimState> Run(HookName hook, HookArgs args)
     {
         if (_steps[(int)hook] is not { } steps) return One(args.State);
-        args = args with { Hook = hook, Asked = _asksOnce[(int)hook] ? new int[_testSlots.Count] : null };
+        args = args with { Hook = hook, Asked = _asksOnce[(int)hook] ? new int[_testSlots.Count] : null, Taken = _takes[(int)hook] ? new int[1] : null };
+        return RunSteps(steps, args);
+    }
+
+    /// <summary>Compiled steps in order on one branch (see Run).</summary>
+    private static IEnumerable<SimState> RunSteps(CompiledStep[] steps, HookArgs args)
+    {
         IEnumerable<SimState>? states = null;
         foreach (var step in steps)
         {
@@ -184,10 +207,52 @@ public sealed class ReadModel : SimModel
 
     // ---- commands
 
-    private Func<HookArgs, IEnumerable<SimState>> Runner(HookStep step, bool fires)
+    private Func<HookArgs, IEnumerable<SimState>> Runner(HookStep step, bool fires, List<HookStep> firing)
     {
         switch (step)
         {
+            case BindStep bind:
+            {
+                var value = Compile(bind.Value);
+                return args =>
+                {
+                    args.State.Bound = args.State.Bound.With(SimKeys.Owned(Name, args.Owner), (int)value(in args));
+                    return One(args.State);
+                };
+            }
+            case UnbindStep:
+                return args =>
+                {
+                    Take(in args);
+                    return One(args.State);
+                };
+            case ChannelStep channel:
+            {
+                var orb = channel.Orb;
+                return args =>
+                {
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                    return SimEngine.ChannelKind(args.State, orb, args.Owner);
+                };
+            }
+            case RepeatStep repeat:
+            {
+                var times = Compile(repeat.Times);
+                var first = CompileSteps(repeat.Steps, new List<HookStep>(), firstRound: true);
+                var later = CompileSteps(repeat.Steps, new List<HookStep>(), firstRound: false);
+                return args =>
+                {
+                    var rounds = (int)times(in args);
+                    IEnumerable<SimState> states = One(args.State);
+                    for (var round = 0; round < rounds; round++)
+                    {
+                        var body = round == 0 ? first : later;
+                        var current = args;
+                        states = SimEngine.Then(states, branch => RunSteps(body, current.On(branch)));
+                    }
+                    return states;
+                };
+            }
             case GainBlockStep gain:
             {
                 var amount = Compile(gain.Amount);
@@ -265,6 +330,20 @@ public sealed class ReadModel : SimModel
             default:
                 throw new InvalidOperationException($"{Name}: no command for {step.GetType().Name}");
         }
+    }
+
+    /// <summary>
+    /// What it bound to the play in progress (its own data's Remove(cardPlay.Card, out amount)): taken out of the state into this run's slot;
+    /// false (and 0) when nothing was bound.
+    /// </summary>
+    private bool Take(in HookArgs args)
+    {
+        var key = SimKeys.Owned(Name, args.Owner);
+        var state = args.State;
+        var bound = state.Bound.Has(key);
+        if (args.Taken is { } taken) taken[0] = bound ? state.Bound[key] : 0;
+        if (bound) state.Bound = state.Bound.Without(key);
+        return bound;
     }
 
     /// <summary>One of its own fields' key among its owner's (SimPlayer.Fields, SimEnemy.Fields): "Model.Field".</summary>
@@ -392,6 +471,8 @@ public sealed class ReadModel : SimModel
             case HookFact.FromCard: return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card) != null ? 1m : 0m;
             case HookFact.CardIsOwners: return (in HookArgs args) => (args.Damage?.Play ?? args.Block?.Play)?.Owner == args.Owner ? 1m : 0m;
             case HookFact.TakesPart: return (in HookArgs args) => args.State.TakesPart(args.Owner) ? 1m : 0m;
+            case HookFact.TakeBound: return (in HookArgs args) => Take(in args) ? 1m : 0m;
+            case HookFact.BoundTaken: return (in HookArgs args) => args.Taken?[0] ?? 0;
             default: throw new InvalidOperationException($"{Name}: no fact {fact.Fact}");
         }
     }

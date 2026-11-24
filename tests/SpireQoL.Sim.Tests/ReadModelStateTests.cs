@@ -45,6 +45,55 @@ public class ReadModelStateTests
         Assert.Equal(1, after.Fired["Kunai"]);
     }
 
+    /// <summary>A board with a power of yours at an amount.</summary>
+    private static SimState WithPower(PowerId power, int amount)
+    {
+        var state = new SimState { You = new SimPlayer { Hp = 50, HandCount = 3, Energy = 3 } };
+        state.Enemies.Add(new SimEnemy { Id = 0, Name = "E0", Hp = 40 });
+        state.You.Powers = state.You.Powers.With(power, amount);
+        return state;
+    }
+
+    private static IEnumerable<SimState> BothHooks(SimModel model, SimState state, SimCardPlay play, Action<SimState>? between = null)
+    {
+        state.CurrentPlay = play;
+        return model.BeforeCardPlayed(state, Who.You, play).SelectMany(branch =>
+        {
+            between?.Invoke(branch);
+            return model.AfterCardPlayed(branch, Who.You, play);
+        }).ToList();
+    }
+
+    [Fact]
+    public void AfterimageBindsItsAmountToThePlayAsItBegins()
+    {
+        // AfterimagePower: BeforeCardPlayed amountsForPlayedCards.Add(card, Amount); AfterCardPlayed Remove(card, out value) and value > 0: block
+        // of what was bound, not of what it is after the play (more Afterimage from the play itself gives none on that play).
+        var afterimage = Assert.IsType<ReadModel>(SimModels.Get(PowerId.Afterimage.Name));
+        var after = Assert.Single(BothHooks(afterimage, WithPower(PowerId.Afterimage, amount: 1), Played(SimCardType.Skill),
+            between: branch => branch.You.Powers = branch.You.Powers.Add(PowerId.Afterimage, 2)));
+        Assert.Equal(1, after.You.Block);
+        Assert.False(after.Bound.Has(SimKeys.Owned(PowerId.Afterimage.Name, Who.You)));
+        // Played before it was there: nothing bound, nothing taken.
+        var none = Assert.Single(BothHooks(afterimage, new SimState { You = new SimPlayer { Hp = 50 } }, Played(SimCardType.Skill),
+            between: branch => branch.You.Powers = branch.You.Powers.With(PowerId.Afterimage, 3)));
+        Assert.Equal(0, none.You.Block);
+    }
+
+    [Fact]
+    public void StormChannelsWhatItBoundOneOrbARoundAndFiresOnce()
+    {
+        // StormPower.AfterCardPlayed: Flash(); for (i < lightning) OrbCmd.Channel<LightningOrb>: its bound amount of Lightning, one firing.
+        var storm = Assert.IsType<ReadModel>(SimModels.Get(PowerId.Storm.Name));
+        var state = WithPower(PowerId.Storm, amount: 2);
+        state.You.OrbCapacity = 3;
+        var after = Assert.Single(BothHooks(storm, state, Played(SimCardType.Power)));
+        Assert.Equal(2, after.You.Orbs.Count(orb => orb.Kind == OrbKind.Lightning));
+        Assert.Equal(1, after.Fired["StormPower"]);
+        var skill = Assert.Single(BothHooks(storm, WithPower(PowerId.Storm, amount: 2), Played(SimCardType.Skill)));
+        Assert.Empty(skill.You.Orbs);
+    }
+
     [Fact]
     public void MiniRegentAsksItsFlagOnceAsTheGameDoes()
     {

@@ -49,6 +49,7 @@ public static class HookReader
         ["PowerCmd.Remove"] = "RemovePowerStep: the power itself goes (PowerCmd.Remove(this))",
         ["PowerCmd.Decrement"] = "DecrementPowerStep: the power itself goes down by one (PowerCmd.Decrement(this))",
         ["PowerCmd.TickDownDuration"] = "DecrementPowerStep: the power itself goes down by one (PowerCmd.TickDownDuration(this))",
+        ["OrbCmd.Channel"] = "ChannelStep: an orb of the kind named channeled for the owner",
     };
 
     /// <summary>
@@ -73,6 +74,12 @@ public static class HookReader
     /// whose every command and store waits on its owner (a player's relic) taking part is read as running past it; any other is a gap.
     /// </summary>
     private static readonly HashSet<string> TurnStartHooks = new(StringComparer.Ordinal) { "BeforeSideTurnStart", "AfterSideTurnStart", "AfterSideTurnStartLate", "AfterPlayerTurnStartEarly", "AfterPlayerTurnStart", "AfterPlayerTurnStartLate", "AfterEnergyReset", "AfterEnergyResetLate", "BeforeHandDraw", "BeforeHandDrawLate" };
+
+    /// <summary>A collection's methods that only ask (they change nothing of the model's own data).</summary>
+    private static readonly HashSet<string> CollectionQueries = new(StringComparer.Ordinal)
+    {
+        "Contains", "ContainsKey", "ContainsValue", "TryGetValue", "get_Count", "get_Item", "get_Keys", "get_Values", "GetEnumerator", "IndexOf", "Peek", "ToArray",
+    };
 
     /// <summary>The virtual methods a class overrides that aren't hooks: how it looks, its text, its numbers' display.</summary>
     private static readonly HashSet<string> NotHooks = new(StringComparer.Ordinal) { "ToString", "Equals", "GetHashCode", "DeepCloneFields", "AfterCloned" };
@@ -114,7 +121,7 @@ public static class HookReader
     /// </summary>
     internal static TabKind? TabOf(IReadOnlyList<HookProgram> programs)
     {
-        var steps = programs.SelectMany(program => program.Steps).ToList();
+        var steps = new ModelSpec("", ModelKind.Power, programs).Steps().ToList();
         foreach (var step in steps)
             switch (step)
             {
@@ -123,7 +130,7 @@ public static class HookReader
                 case DrawStep: return TabKind.Draw;
                 case GainEnergyStep: return TabKind.Energy;
             }
-        return steps.Any(step => step is ApplyPowerStep) ? TabKind.Trigger : null;
+        return steps.Any(step => step is ApplyPowerStep or ChannelStep) ? TabKind.Trigger : null;
     }
 
     private static bool Derives(Type type, string baseName)
@@ -161,6 +168,9 @@ public static class HookReader
             if (Diagnostics.CoverageLedger.OutOfCombatHooks.Contains(hook.Name)) return (null, null, "it acts outside fights (Diagnostics/OutOfCombatHooks.txt)");
             try
             {
+                // Each copy of an instanced power acts on its own amount and data; the simulator keeps their sum (decision #195: not read yet).
+                if (_kind == ModelKind.Power && Returned(_type, "get_InstanceType") is ConstantValue instance && EnumName(_type.Assembly, "PowerInstanceType", instance.Value) == "Instanced")
+                    return (null, "gap: each copy acts on its own (PowerInstanceType.Instanced): the simulator keeps their sum", null);
                 if (TurnStartHooks.Contains(hook.Name))
                     return PastTheHorizon(hook) is { } turnStartGap ? (null, turnStartGap, null) : (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers");
                 if (!Enum.TryParse<HookName>(hook.Name, out var name)) return (null, $"gap: the simulator runs no read model's {hook.Name}", null);
@@ -168,7 +178,7 @@ public static class HookReader
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Ways(ProgramReader.ReadReturnedWays(_type, hook, _read)) }, null, null);
                 var program = ProgramReader.Read(_type, _read, hook.Name);
                 if (program.Unknowns.FirstOrDefault() is { } unknown) return (null, "gap: the reader can't follow it: " + unknown, null);
-                if (OwnData(hook) is { } data) return (null, data, null);
+                if (OwnData(hook, program) is { } data) return (null, data, null);
                 var steps = new List<HookStep>();
                 foreach (var step in program.Steps) steps.AddRange(Step(step));
                 // A step its code runs on a side the simulator never ends (AfterSideTurnEnd of the enemies' side) never runs: left out.
@@ -187,18 +197,37 @@ public static class HookReader
         }
 
         /// <summary>
-        /// The model's own data a hook's code works with beyond what the reader reads as stores (its GetInternalData, a field of its class):
-        /// a call on it (a dictionary's Add, a counter's ++) changes the model's state where the program shows no step. Null: none.
+        /// The model's own data a hook's code works with beyond what the reader reads (its GetInternalData's object, a field of its class): a
+        /// change to it the program shows no step for (a store to one of its fields, a call on one of its collections) changes the model's
+        /// state unseen. Read: a store as a StoreStep at its place, a collection's change whose result isn't used as a DataStep at its place, a
+        /// Remove whose result is tested (taken as a fact: HookFact.TakeBound); a query (Contains, Count...) changes nothing. Null: nothing unread.
         /// </summary>
-        private string? OwnData(MethodInfo hook)
+        private string? OwnData(MethodInfo hook, ModelProgram program)
         {
             List<CodeOp> ops;
             try { ops = _read(ProgramReader.BodyOf(hook)); }
             catch { return null; }
-            foreach (var instruction in ops)
+            var stepsAt = program.All().Where(step => step is DataStep or StoreStep).Select(step => step.Offset).ToHashSet();
+            var usesData = ops.Any(instruction => instruction.IsCall && instruction.Member is { Name: "GetInternalData" });
+            var nested = Procs.CardCode.NestedTypes(_type).Where(type => !type.Name.StartsWith('<')).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
+            for (var index = 0; index < ops.Count; index++)
             {
-                if (instruction.IsCall && instruction.Member is { Name: "GetInternalData" }) return "gap: uses its own data (GetInternalData): what a call on it changes isn't read";
+                var instruction = ops[index];
+                if (instruction.OpCode == System.Reflection.Emit.OpCodes.Stfld && instruction.Member is { } stored && nested.Contains(stored.DeclaringType) && !stepsAt.Contains(instruction.Offset))
+                    return $"gap: changes its own data ({stored.Name}) where the reader reads no store";
+                if (instruction.IsCall && instruction.Member is { Kind: CodeMemberKind.Method, HasThis: true } call && usesData && call.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)
+                    && !CollectionQueries.Contains(call.Name) && !stepsAt.Contains(instruction.Offset)
+                    && !(call.Name == "Remove" && call.ParameterCount == 2 && index + 1 < ops.Count && ops[index + 1].OpCode != System.Reflection.Emit.OpCodes.Pop))
+                    return $"gap: changes a collection ({call.FullName}) where the reader reads no step";
                 if (instruction.IsCall && ChangesAGameObject(instruction.Member)) return $"gap: changes a game object outside a command ({instruction.Member!.FullName})";
+                // A property set on one of the game's objects the reader reads no store for (Panache's DynamicVars["CardsLeft"].BaseValue--).
+                if (instruction.IsCall && instruction.Member is { Kind: CodeMemberKind.Method, HasThis: true } setter && setter.Name.StartsWith("set_", StringComparison.Ordinal)
+                    && setter.Namespace.StartsWith("MegaCrit", StringComparison.Ordinal) && !stepsAt.Contains(instruction.Offset))
+                    return $"gap: sets {setter.DeclaringType}.{setter.Name[4..]} where the reader reads no store";
+                // A field stored on one of the game's objects (not the hook's own locals) the reader reads no store for.
+                if (instruction.OpCode == System.Reflection.Emit.OpCodes.Stfld && instruction.Member is { } storedField && !storedField.DeclaringType.StartsWith('<') && !storedField.Name.StartsWith('<')
+                    && !stepsAt.Contains(instruction.Offset))
+                    return $"gap: stores {storedField.DeclaringType}.{storedField.Name} where the reader reads no store";
                 if (instruction.Member is { Kind: CodeMemberKind.Field } field && field.DeclaringType == _type.Name && !field.Name.StartsWith('<')) return $"gap: uses its own field ({field.Name}) directly: what a call on it changes isn't read";
             }
             return null;
@@ -233,10 +262,21 @@ public static class HookReader
                     var translated = Command(command);
                     return translated == null ? Array.Empty<HookStep>() : new[] { translated with { When = Condition(step.Condition) } };
                 case StoreStep store:
-                    // A store to its own state (a field or property of its class): simulator state its programs read (HookField).
+                    // A store to its own state (a field or property of its class, a plain field of its data): simulator state its programs read (HookField).
                     return new[] { new StoreFieldStep(store.Field, Value(store.Value)) { When = Condition(step.Condition) } };
-                case LoopStep:
-                    throw new Gap("gap: a loop");
+                case DataStep data:
+                    return new[] { Data(data) with { When = Condition(step.Condition) } };
+                case LoopStep loop:
+                {
+                    // A counter loop (for i < n): its body n times, n worked out as the loop starts (the card programs read it the same way:
+                    // ProgramEvaluator.Rounds). Any other loop is a gap.
+                    if (loop.Items != null || loop.While is not { Terms: [[{ Holds: true, Test: CompareValue { Op: Comparison.Less or Comparison.LessOrEqual } bound }]] })
+                        throw new Gap("gap: a loop");
+                    var times = Value(bound.Right);
+                    if (bound.Op == Comparison.LessOrEqual) times = new HookMath(HookOperation.Add, times, new HookConstant(1m));
+                    var body = loop.Body.SelectMany(Step).ToList();
+                    return body.Count == 0 ? Array.Empty<HookStep>() : new[] { new RepeatStep(times, body) { When = Condition(step.Condition) } };
+                }
                 case ChoiceStep:
                     throw new Gap("gap: a pick");
                 case CreateStep create:
@@ -245,6 +285,25 @@ public static class HookReader
                     throw new Gap($"gap: {step}");
             }
         }
+
+        /// <summary>
+        /// A change to its own data: a value bound to the play in progress (Add(cardPlay.Card, value)), or taken back for its out value
+        /// (Remove(cardPlay.Card, out value)); any other is a gap.
+        /// </summary>
+        private HookStep Data(DataStep data)
+        {
+            if (data.Values.Count == 0 || !IsPlayCard(data.Values[0])) throw new Gap($"gap: changes its own data ({data.Data}.{data.Operation}) by {(data.Values.Count > 0 ? data.Values[0] : "nothing")}");
+            return data.Operation switch
+            {
+                "Add" when data.Values.Count == 2 => new BindStep(Value(data.Values[1])),
+                "Remove" => new UnbindStep(),
+                _ => throw new Gap($"gap: changes its own data ({data.Data}.{data.Operation})"),
+            };
+        }
+
+        /// <summary>Its own data's Remove(cardPlay.Card, out value): what it bound to the play in progress, taken.</summary>
+        private static bool IsTakeBound(ProgramValue value) =>
+            value is QueryValue { Name: "Remove", Of: QueryValue { Of: { } dataOf }, Arguments: [var key, _] } && ProgramReader.IsOwnData(dataOf) && IsPlayCard(key);
 
         // ---- commands
 
@@ -308,6 +367,14 @@ public static class HookReader
                         return new ApplyPowerStep(underlying, Targets(values[targetAt]), negative ? new HookMath(HookOperation.Multiply, amount, new HookConstant(-1m)) : amount) { Debuff = negative };
                     }
                     return new ApplyPowerStep(power, Targets(values[targetAt]), amount) { Debuff = LandsAsDebuff(power, amount) };
+                }
+                case "OrbCmd.Channel":
+                {
+                    var playerAt = IndexOf(types, "Player");
+                    if (playerAt < 0 || !IsOwner(values[playerAt])) throw new Gap("gap: an orb channeled for someone else");
+                    var orb = member.GenericArguments.SingleOrDefault() ?? throw new Gap("gap: an orb made first");
+                    return Enum.TryParse<OrbKind>(orb.EndsWith("Orb", StringComparison.Ordinal) ? orb[..^3] : orb, out var kind) && kind is not (OrbKind.Unknown or OrbKind.Random)
+                        ? new ChannelStep(kind) : throw new Gap($"gap: channels a {orb}");
                 }
                 case "PowerCmd.Remove" or "PowerCmd.Decrement" or "PowerCmd.TickDownDuration":
                     if (values[0] is not NamedValue { Name: "this" }) throw new Gap($"gap: {member.FullName} of another power");
@@ -448,6 +515,12 @@ public static class HookReader
             {
                 case CompareValue compare:
                     return Compare(compare);
+                // Its own data's Remove(cardPlay.Card, out value): what it bound to the play is taken, 1 when there was one.
+                case var take when IsTakeBound(take):
+                    return new HookFactValue(HookFact.TakeBound);
+                // A true-or-false plain field of its own data (Yah's triggeredThisTurn): its state, 1 when set.
+                case QueryValue { Name: var dataField, Of: { } dataOf, Arguments.Count: 0, ValueType: "Int32" or "Boolean" or "Decimal" } when ProgramReader.IsOwnData(dataOf):
+                    return new HookMath(HookOperation.NotEqual, new HookField(ProgramReader.OwnDataPrefix + dataField), new HookConstant(0m));
                 // A null check of the creator of a made card: the simulator's made cards always have one (a player).
                 case NamedValue { Name: "creator" }:
                     return new HookConstant(1m);
@@ -597,6 +670,12 @@ public static class HookReader
                     return Value(stored.Value);
                 case CompareValue compare:
                     return Compare(compare);
+                // What its own data's Remove(cardPlay.Card, out value) took: the amount bound to the play.
+                case OutValue { Call: var take, Parameter: 1 } when IsTakeBound(take):
+                    return new HookFactValue(HookFact.BoundTaken);
+                // A plain field of its own data (Dark Embrace's etherealCount): simulator state, seeded from the game.
+                case QueryValue { Name: var dataField, Of: { } dataOf, Arguments.Count: 0, ValueType: "Int32" or "Boolean" or "Decimal" } when ProgramReader.IsOwnData(dataOf):
+                    return new HookField(ProgramReader.OwnDataPrefix + dataField);
             }
             if (VarKey(value) is { } key) return Var(key);
             if (value is QueryValue { Name: "Props", Of: { } propsOf } && VarKey(propsOf) is { } propsKey) return Var(propsKey + ".Props");

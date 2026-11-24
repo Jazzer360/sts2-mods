@@ -43,7 +43,6 @@ internal static class ModelAmountCheck
     {
         // The same total, a loop in the game.
         ["CentennialPuzzle Draw: game 1; model Var Cards"] = "the game draws one card Cards times (a for loop up to DynamicVars.Cards); the model draws Cards",
-        ["SubroutinePower Energy: game 1; model Bound"] = "the game gains 1 energy as many times as the bound amount (a for loop); the model gives the bound amount, one energy event each",
         // After the turn the simulator predicts: nothing predicted reads them.
         ["InfernoPower Damage: game Amount | Var SelfDamage; model Amount"] =
             "its SelfDamage hits its owner at the start of their turn (AfterPlayerTurnStart): before anything predicted, the turn is under way",

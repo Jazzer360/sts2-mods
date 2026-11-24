@@ -111,6 +111,23 @@ public sealed record StoredValue(string Name, ProgramValue Value, int Offset) : 
     public override string ToString() => Name.Length == 0 ? Value.ToString()! : Name + "=" + Value;
 }
 
+/// <summary>
+/// What a call gave back through its out parameter (Dictionary.Remove(cardPlay.Card, out var amount): the amount removed): the call (its
+/// own value, with its receiver and arguments) and which of its parameters.
+/// </summary>
+public sealed record OutValue(ProgramValue Call, int Parameter) : ProgramValue
+{
+    public override IEnumerable<ProgramValue> Parts()
+    {
+        yield return this;
+        foreach (var part in Call.Parts()) yield return part;
+    }
+
+    public override ProgramValue Map(Func<ProgramValue, ProgramValue?> replace) => replace(this) ?? this with { Call = Call.Map(replace) };
+
+    public override string ToString() => $"out {Parameter} of {Call}";
+}
+
 /// <summary>How two values compare.</summary>
 public enum Comparison { Equal, NotEqual, Less, LessOrEqual, Greater, GreaterOrEqual }
 

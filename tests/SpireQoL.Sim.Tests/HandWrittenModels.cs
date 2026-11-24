@@ -422,3 +422,51 @@ public sealed class TaintedPower : SimModel
     public override decimal ModifyDamageAdditive(SimState state, int owner, DamageCtx damage) =>
         damage.Target == owner && damage.Props.IsPoweredAttack() ? SimEngine.PowerOn(state, owner, ThisPower) : 0m;
 }
+
+// ---- powers bound to a play (Sim/Models/ProcPowerModels.cs), deleted 2026-11-24: the amount bound at BeforeCardPlayed acts at AfterCardPlayed
+
+/// <summary>A power that binds its owner's play at BeforeCardPlayed (when <see cref="Binds"/>) and acts on it at AfterCardPlayed.</summary>
+public abstract class BoundPower : ProcModel
+{
+    protected virtual bool Binds(SimCardPlay play) => true;
+    protected virtual int BoundAmount(SimState state, int owner) => Amount(state, owner);
+    protected abstract IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount);
+
+    public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (Mine(play, owner) && Binds(play)) Bind(state, owner, BoundAmount(state, owner));
+        return One(state);
+    }
+
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
+        Mine(play, owner) && TakeBound(state, owner) is { } bound ? Act(state, owner, play, bound) : One(state);
+}
+
+/// <summary>AfterimagePower: block (unpowered) for each card its owner plays.</summary>
+public sealed class AfterimagePower : BoundPower
+{
+    public override TabKind? Tab => TabKind.Block;
+    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => amount > 0 ? Block(state, owner, amount) : One(state);
+}
+
+/// <summary>GravityPower: damage (unpowered) to every hittable enemy for each card its owner plays.</summary>
+public sealed class GravityPower : BoundPower
+{
+    public override TabKind? Tab => TabKind.Damage;
+    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => amount > 0 ? DamageAll(state, owner, amount) : One(state);
+}
+
+/// <summary>StormPower: each Power card its owner plays channels its amount of Lightning (bound at BeforeCardPlayed).</summary>
+public sealed class StormPower : BoundPower
+{
+    protected override bool Binds(SimCardPlay play) => play.Card.Type == SimCardType.Power;
+    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => Channel(Fire(state, owner), owner, OrbKind.Lightning, amount);
+}
+
+/// <summary>SubroutinePower: each Power card its owner plays gives its amount of energy (bound as the play begins).</summary>
+public sealed class SubroutinePower : BoundPower
+{
+    public override TabKind? Tab => TabKind.Energy;
+    protected override bool Binds(SimCardPlay play) => play.Card.Type == SimCardType.Power;
+    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => Cause(Fire(state, owner), CardEvent.EnergyGained, amount, owner);
+}

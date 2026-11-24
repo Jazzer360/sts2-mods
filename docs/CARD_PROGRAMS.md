@@ -503,6 +503,10 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 | a Modify hook's returns (`ReadReturnedWays`) | `HookWays`: the value of the first way whose test holds |
 | a store to its own field or property (`AttacksPlayedThisTurn++`), a read of it | `StoreFieldStep`, `HookField`: per-branch state (`SimPlayer.Fields`, `SimEnemy.Fields`) seeded from the game (`SimReaders.Fields`); a store nothing reads is left out |
 | each test at its branch | `HookTest`: asked once a hook run, where a step first needs it |
+| its own data (`GetInternalData`): `amountsForPlayedCards.Add(cardPlay.Card, value)` at BeforeCardPlayed, `Remove(cardPlay.Card, out value)` at AfterCardPlayed (tested, or for its out value), a plain field stored or read (`data.etherealCount`) | `BindStep` (the play's bound amount, `SimState.Bound`), `HookFact.TakeBound` / `UnbindStep` and `HookFact.BoundTaken` (the reader's `OutValue`), `StoreFieldStep` / `HookField` on `Data.etherealCount`; any other change to it a gap (`DataStep` and every store checked at its place) |
+| a counter loop (`for (i = 0; i < n; i++)`) | `RepeatStep`: its body n times, n worked out as it starts, a firing on the first round only |
+| `OrbCmd.Channel<T>(owner)` | `ChannelStep` (`SimEngine.ChannelKind`) |
+| a power whose copies act on their own (`PowerInstanceType.Instanced`), a game object's property set or field stored where no step is read (a `DynamicVar.BaseValue--`) | a gap, so a class is never read whole while part of what it does is dropped |
 | a temporary Strength or Dexterity power applied | the Strength or Dexterity its base class's BeforeApplied applies, by its sign |
 
 What isn't read is a named gap (a store to the model's own state, its internal data, a hook no read model runs yet, a query with no fact), and a

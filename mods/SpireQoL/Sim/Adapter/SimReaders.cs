@@ -484,7 +484,7 @@ public static class SimReaders
         foreach (var model in models)
             if (SimModels.Get(ModelName(model)) is ReadModel read)
                 foreach (var field in read.Spec.Fields())
-                    fields = fields.With(read.FieldKey(field), Sts2State.Private<object?>(model, field, fallback: null) switch
+                    fields = fields.With(read.FieldKey(field), FieldOf(model, field) switch
                     {
                         int number => number,
                         bool flag => flag ? 1 : 0,
@@ -493,6 +493,12 @@ public static class SimReaders
                     });
         return fields;
     }
+
+    /// <summary>A read model's field on the game's object: its own, or a plain field of its own data ("Data.etherealCount": its _internalData's).</summary>
+    private static object? FieldOf(AbstractModel model, string field) =>
+        field.StartsWith(Procs.Programs.ProgramReader.OwnDataPrefix, StringComparison.Ordinal)
+            ? Sts2State.Private<object?>(model, "_internalData", fallback: null) is { } data ? Sts2State.Private<object?>(data, field[Procs.Programs.ProgramReader.OwnDataPrefix.Length..], fallback: null) : null
+            : Sts2State.Private<object?>(model, field, fallback: null);
 
     /// <summary>The name a game model has in the simulator (temporary Thorns is Thorns).</summary>
     public static string ModelName(AbstractModel model) => model is PowerModel ? SimAdapter.SimPowerName(model.GetType()) : model.GetType().Name;

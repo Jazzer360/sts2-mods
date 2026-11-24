@@ -101,6 +101,16 @@ public sealed record StoreStep(int Offset, string Field, ProgramValue Value) : P
     public override string ToString() => "store " + Field + " = " + Value + When;
 }
 
+/// <summary>
+/// A change to the model's own data (its GetInternalData object, decision #195): a call on one of its collections whose result the code
+/// doesn't use (amountsForPlayedCards.Add(cardPlay.Card, base.Amount), a Remove made only for its out value), with its arguments. A store
+/// to one of its plain fields is a StoreStep ("Data.etherealCount").
+/// </summary>
+public sealed record DataStep(int Offset, string Data, string Operation, IReadOnlyList<ProgramValue> Values) : ProgramStep(Offset)
+{
+    public override string ToString() => $"data {Data}.{Operation}({string.Join(", ", Values)})" + When;
+}
+
 /// <summary>Something the reader couldn't follow: the steps it holds or stands for aren't known.</summary>
 public sealed record UnknownStep(int Offset, string Reason) : ProgramStep(Offset)
 {
@@ -322,6 +332,17 @@ public static class ProgramReader
         && (member.ValueType == typeof(void).Name || member.ValueType == nameof(Task)) && !member.Name.StartsWith('<')
         && !member.Name.StartsWith("get_", StringComparison.Ordinal) && !member.Name.StartsWith("set_", StringComparison.Ordinal) && !Asks(member.Name) && !ShowsOnly(member.Name);
 
+    /// <summary>The prefix of a model's own data's plain fields among its state ("Data.etherealCount").</summary>
+    public const string OwnDataPrefix = "Data.";
+
+    /// <summary>The model's own data: what its GetInternalData gives (this.GetInternalData&lt;Data&gt;(), or a local it's kept in).</summary>
+    public static bool IsOwnData(ProgramValue? value) => value switch
+    {
+        StoredValue stored => IsOwnData(stored.Value),
+        QueryValue { Name: "GetInternalData", Of: NamedValue { Name: "this" } } => true,
+        _ => false,
+    };
+
     private static bool ShowsOnly(string name) =>
         name.StartsWith("Preview", StringComparison.Ordinal) || name.StartsWith("TriggerAnim", StringComparison.Ordinal) || name.Contains("Vfx")
         || name.Contains("Wait") || name.StartsWith("Shake", StringComparison.Ordinal) || name.StartsWith("Play", StringComparison.Ordinal) && name.EndsWith("Anim", StringComparison.Ordinal);
@@ -512,7 +533,22 @@ public static class ProgramReader
                     into.Add(new StoreStep(instruction.Offset, stored, flow.ValueBefore(i)) { Condition = condition });
                     continue;
                 }
+                // A store to a plain field of the model's own data (data.etherealCount++): its state, as "Data.etherealCount".
+                if (instruction.OpCode == OpCodes.Stfld && instruction.Member is { Kind: CodeMemberKind.Field } dataField && IsOwnDataType(dataField.DeclaringType)
+                    && IsOwnData(flow.ReceiverValue(i, arguments: 1)))
+                {
+                    into.Add(new StoreStep(instruction.Offset, OwnDataPrefix + dataField.Name, flow.ValueBefore(i)) { Condition = condition });
+                    continue;
+                }
                 if (!instruction.IsCall || instruction.Member is not { } member) continue;
+                // A change to one of the model's own data's collections whose result isn't used (an Add, a Remove for its out value).
+                if (member is { Kind: CodeMemberKind.Method, HasThis: true } && member.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)
+                    && (!member.ReturnsValue || i + 1 < ops.Count && ops[i + 1].OpCode == OpCodes.Pop)
+                    && flow.ReceiverValue(i, member.ParameterCount) is QueryValue { Of: { } dataOf, Name: var collection } && IsOwnData(dataOf))
+                {
+                    into.Add(new DataStep(instruction.Offset, collection, member.Name, flow.ArgumentValues(i, member)) { Condition = condition });
+                    continue;
+                }
                 if (member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1 } && member.Name.StartsWith("set_", StringComparison.Ordinal) && OwnState(member) is { } property
                     && flow.ReceiverValue(i, arguments: 1) is NamedValue { Name: "this" })
                 {
@@ -732,6 +768,9 @@ public static class ProgramReader
             }
             return null;
         }
+
+        /// <summary>A type nested in the model's class that isn't the compiler's (its Data class).</summary>
+        private bool IsOwnDataType(string name) => !name.StartsWith('<') && CardCode.NestedTypes(_card).Any(nested => nested.Name == name);
 
         private IEnumerable<Type> OwnTypes()
         {
@@ -1143,6 +1182,8 @@ public static class ProgramReader
                 if (instruction.Slot is { } flagSlot && FlagOf(flagSlot) is { } flag) return (new ConditionValue(flag), at);
                 if (instruction.Slot is { } lastSlot && LastStored(lastSlot, at, depth) is { } last) return (last, at);
                 if (instruction.Slot is { } builtSlot && BuiltOnce(builtSlot, depth) is { } built) return (built, at);
+                if (instruction.Slot is { } outSlot && !name.StartsWith("ldloca", StringComparison.Ordinal) && PassedOut(index => Ops[index].Slot == outSlot && Ops[index].OpCode.Name!.StartsWith("ldloca", StringComparison.Ordinal), depth) is { } given)
+                    return (given, at);
                 return (new UnknownValue("local"), at);
             }
             if (name.StartsWith("conv", StringComparison.Ordinal) || instruction.OpCode == OpCodes.Box || instruction.OpCode == OpCodes.Unbox_Any
@@ -1191,6 +1232,10 @@ public static class ProgramReader
                     // A local kept across awaits and stored on several ways (Tempest's X, one more upgraded): its last store on each way.
                     if (field.Name.Contains(">5__", StringComparison.Ordinal) && FieldLastStored(field.Name, at, depth) is { } last)
                         return (last is StoredValue lastStore ? lastStore with { Name = FieldName(field.Name) } : last, receiver.Start);
+                    // A local kept across awaits that a call fills as its out parameter (Remove(card, out lightning)): what the call gave back.
+                    if (field.Name.Contains(">5__", StringComparison.Ordinal) && instruction.OpCode == OpCodes.Ldfld
+                        && PassedOut(index => Ops[index].OpCode == OpCodes.Ldflda && Ops[index].Member?.Name == field.Name, depth) is { } givenOut)
+                        return (givenOut, receiver.Start);
                     return (new NamedValue(FieldName(field.Name)), receiver.Start);
                 }
                 return (new QueryValue(field.DeclaringType, field.Name, receiver.Value, Array.Empty<ProgramValue>(), field.ValueType), receiver.Start);
@@ -1584,6 +1629,30 @@ public static class ProgramReader
                 built = new QueryValue(constructor.DeclaringType, ".ctor", null, arguments, constructor.DeclaringType);
             }
             return depth > 8 ? null : built;
+        }
+
+        /// <summary>
+        /// A local only a call fills, by its address (out var x: ldloca, or a state machine's field by ldflda), at the one place the code
+        /// passes it: what the call gave back through that parameter (OutValue); null when it's passed more than once or not to a call.
+        /// </summary>
+        private ProgramValue? PassedOut(Func<int, bool> isAddress, int depth)
+        {
+            int? address = null;
+            for (var i = 0; i < Ops.Count; i++)
+            {
+                if (!isAddress(i)) continue;
+                if (address != null) return null;
+                address = i;
+            }
+            if (address is not { } at || depth > 8) return null;
+            for (var call = at + 1; call < Ops.Count && call <= at + 12; call++)
+            {
+                if (!Ops[call].IsCall || Ops[call].Member is not { Kind: CodeMemberKind.Method } member) continue;
+                for (var parameter = 0; parameter < member.ParameterCount; parameter++)
+                    if (CodeDecoder.Producer(Ops, call, CodeDecoder.ArgumentDepth(member, parameter), stop: index => _noise[index]) == at)
+                        return ReadBack(call + 1, depth + 1, merge: false) is { Start: >= 0 } made ? new OutValue(made.Value, parameter) : null;
+            }
+            return null;
         }
 
         /// <summary>The one instruction that stores local <paramref name="slot"/>, when only one does (else null: which value is meant isn't straight).</summary>

@@ -80,6 +80,13 @@ public enum HookFact
     CardIsOwners,
     /// <summary>The owner takes part in the side's turn ending (participants.Contains(base.Owner)).</summary>
     TakesPart,
+    /// <summary>
+    /// The amount the model bound to the play in progress is taken (its own data's Remove(cardPlay.Card, out amount), asked once a hook run):
+    /// 1 when one was bound, which is then gone; the amount is <see cref="BoundTaken"/>.
+    /// </summary>
+    TakeBound,
+    /// <summary>The amount this hook run took from what the model bound to the play (Remove's out value; 0 when none was).</summary>
+    BoundTaken,
 }
 
 /// <summary>An operation of the code on two values (decimal throughout; a true-or-false is 1 or 0).</summary>
@@ -175,6 +182,21 @@ public sealed record ApplyPowerStep(string Power, HookTarget Target, HookValue A
 /// <summary>A store to one of the model's own fields or properties a program reads (this.AttacksPlayedThisTurn = ... + 1).</summary>
 public sealed record StoreFieldStep(string Field, HookValue Value) : HookStep;
 
+/// <summary>
+/// A value bound to the play in progress, in the model's own data (amountsForPlayedCards.Add(cardPlay.Card, base.Amount) at BeforeCardPlayed):
+/// what its AfterCardPlayed takes back (HookFact.TakeBound), so a power the play itself applies doesn't act on that play.
+/// </summary>
+public sealed record BindStep(HookValue Value) : HookStep;
+
+/// <summary>What the model bound to the play in progress, taken (a Remove(cardPlay.Card, out amount) made for its out value: HookFact.BoundTaken).</summary>
+public sealed record UnbindStep : HookStep;
+
+/// <summary>A counter loop (for i &lt; Times): its commands, in order, Times times; a firing logged on the first round only (the game's one Flash).</summary>
+public sealed record RepeatStep(HookValue Times, IReadOnlyList<HookStep> Steps) : HookStep;
+
+/// <summary>OrbCmd.Channel&lt;T&gt; for the owner: one orb of the kind named (SimEngine.ChannelKind).</summary>
+public sealed record ChannelStep(OrbKind Orb) : HookStep;
+
 /// <summary>PowerCmd.Remove(this): the power itself goes from its owner.</summary>
 public sealed record RemovePowerStep : HookStep;
 
@@ -226,14 +248,23 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             GainEnergyStep energy => Inside(energy.Amount),
             ApplyPowerStep apply => Inside(apply.Amount),
             StoreFieldStep store => Inside(store.Value),
+            BindStep bind => Inside(bind.Value),
+            RepeatStep repeat => Inside(repeat.Times).Concat(repeat.Steps.SelectMany(OfStep)),
             _ => Array.Empty<HookValue>(),
         });
         return Hooks.SelectMany(program => Inside(program.Returns).Concat(program.Steps.SelectMany(OfStep)));
     }
 
+    /// <summary>Every step of its programs, a counter loop's included.</summary>
+    public IEnumerable<HookStep> Steps()
+    {
+        static IEnumerable<HookStep> All(HookStep step) => step is RepeatStep repeat ? new[] { step }.Concat(repeat.Steps.SelectMany(All)) : new[] { step };
+        return Hooks.SelectMany(program => program.Steps).SelectMany(All);
+    }
+
     /// <summary>Its own fields and properties its programs read or store (the adapter seeds them from the game: SimReaders.Fields).</summary>
     public IEnumerable<string> Fields() =>
-        Values().OfType<HookField>().Select(field => field.Field).Concat(Hooks.SelectMany(program => program.Steps).OfType<StoreFieldStep>().Select(store => store.Field))
+        Values().OfType<HookField>().Select(field => field.Field).Concat(Steps().OfType<StoreFieldStep>().Select(store => store.Field))
             .Distinct(StringComparer.Ordinal);
 
     /// <summary>The program of a hook, or null when it doesn't override it.</summary>

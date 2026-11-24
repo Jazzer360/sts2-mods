@@ -20,40 +20,11 @@ public abstract class BoundPower : ProcModel
         Mine(play, owner) && TakeBound(state, owner) is { } bound ? Act(state, owner, play, bound) : One(state);
 }
 
-/// <summary>AfterimagePower: block (unpowered) for each card its owner plays.</summary>
-public sealed class AfterimagePower : BoundPower
-{
-    public override TabKind? Tab => TabKind.Block;
-    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => amount > 0 ? Block(state, owner, amount) : One(state);
-}
-
-/// <summary>GravityPower: damage (unpowered) to every hittable enemy for each card its owner plays.</summary>
-public sealed class GravityPower : BoundPower
-{
-    public override TabKind? Tab => TabKind.Damage;
-    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => amount > 0 ? DamageAll(state, owner, amount) : One(state);
-}
-
 /// <summary>SerpentFormPower: damage (unpowered) to a random hittable enemy for each card its owner plays.</summary>
 public sealed class SerpentFormPower : BoundPower
 {
     public override TabKind? Tab => TabKind.Damage;
     protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => amount > 0 ? DamageRandom(state, owner, amount) : One(state);
-}
-
-/// <summary>StormPower: each Power card its owner plays channels its amount of Lightning (bound at BeforeCardPlayed).</summary>
-public sealed class StormPower : BoundPower
-{
-    protected override bool Binds(SimCardPlay play) => play.Card.Type == SimCardType.Power;
-    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => Channel(Fire(state, owner), owner, OrbKind.Lightning, amount);
-}
-
-/// <summary>SubroutinePower: each Power card its owner plays gives its amount of energy (bound as the play begins).</summary>
-public sealed class SubroutinePower : BoundPower
-{
-    public override TabKind? Tab => TabKind.Energy;
-    protected override bool Binds(SimCardPlay play) => play.Card.Type == SimCardType.Power;
-    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => Cause(Fire(state, owner), CardEvent.EnergyGained, amount, owner);
 }
 
 /// <summary>CalamityPower: each Attack its owner plays adds its amount of random Attacks to their hand (cards created).</summary>

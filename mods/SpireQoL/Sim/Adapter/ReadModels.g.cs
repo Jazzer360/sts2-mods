@@ -12,6 +12,7 @@ public static partial class ReadModels
     /// </summary>
     internal static readonly IReadOnlySet<string> ReadWholeAtReview = new HashSet<string>(StringComparer.Ordinal)
     {
+        PowerId.Afterimage.Name,
         PowerId.AllIsWell.Name,
         PowerId.Arsenal.Name,
         RelicId.CharonsAshes.Name,
@@ -26,6 +27,7 @@ public static partial class ReadModels
         RelicId.ForgottenSoul.Name,
         PowerId.Frail.Name,
         RelicId.GamePiece.Name,
+        PowerId.Gravity.Name,
         PowerId.Hatch.Name,
         RelicId.HelicalDart.Name,
         PowerId.HighVoltage.Name,
@@ -51,7 +53,9 @@ public static partial class ReadModels
         PowerId.Soar.Name,
         PowerId.Speedster.Name,
         PowerId.SpiritOfAsh.Name,
+        PowerId.Storm.Name,
         PowerId.Strength.Name,
+        PowerId.Subroutine.Name,
         PowerId.Tainted.Name,
         PowerId.Territorial.Name,
         RelicId.TheAbacus.Name,
