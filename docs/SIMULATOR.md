@@ -136,8 +136,9 @@ already reads them), with per-card scripts where the code does something else (t
 and `SimAdapter`, moved). A card whose script isn't known gets the facts it has now and is listed by the coverage check.
 The script runs once per play (play count from the game: `ModifyCardPlayCount`), with `BeforeCardPlayed` and
 `AfterCardPlayed` around each play, then the enchantment's and affliction's scripts. A card play's shape is decided once before its first play, as
-`OnPlayWrapper` does (decision #192): where the card goes after (`ModifyCardPlayResultLocation`: Feral, Nostalgia) and the play count the
-simulator's own models add (`ModifyCardPlayCount`: Echo Form, on the history ledger), each branch its own.
+`OnPlayWrapper` does (decision #192): where the card goes after, from its own result pile (`ModifyCardPlayResultLocation`: Feral, Nostalgia,
+Rebound, Corruption's Skills to the exhaust pile) and the play count the simulator's own models add (`ModifyCardPlayCount`: Echo Form on the history
+ledger, Burst, Duplication, One-Two Punch, Signal Boost, Ki Verse, Tag Team, Throwing Axe), each branch its own.
 
 Its actions are built from the card's own code, one command step at a time, in the order the code runs them (decisions #182,
 #193, docs/CARD_PROGRAMS.md): `CardProgramReader` reads the card's `OnPlay` (its state machine, local functions and the delegates it

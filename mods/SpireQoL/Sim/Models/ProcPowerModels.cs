@@ -303,6 +303,100 @@ public sealed class EchoFormPower : SimModel
 }
 
 /// <summary>
+/// A power that plays its owner's cards of a kind once more, a stack used each time (ModifyCardPlayCount: +1; AfterModifyingCardPlayCount:
+/// PowerCmd.Decrement, gone at 0), decided as each card play starts (decision #192): Burst, Duplication, One-Two Punch, Signal Boost, Ki
+/// Verse. Its tag is the double-play tag (CardPlays), not a proc: it logs no firing. Removed at its owner's turn's end, after the plays.
+/// </summary>
+public abstract class ExtraPlayPower : SimModel
+{
+    /// <summary>The card is of the kind it replays (its ModifyCardPlayCount's test of the card).</summary>
+    protected abstract bool Replays(SimCard card);
+
+    public override int ModifyCardPlayCount(SimState state, int owner, SimCardPlay play, int count) =>
+        play.Owner == owner && Replays(play.Card) && SimEngine.PowerOn(state, owner, ThisPower) > 0 ? count + 1 : count;
+
+    public override void AfterModifyingCardPlayCount(SimState state, int owner, SimCardPlay play) => SimEngine.DecrementPower(state, owner, ThisPower);
+}
+
+/// <summary>BurstPower: its owner's Skills.</summary>
+public sealed class BurstPower : ExtraPlayPower
+{
+    protected override bool Replays(SimCard card) => card.Type == SimCardType.Skill;
+}
+
+/// <summary>DuplicationPower: any card of its owner's.</summary>
+public sealed class DuplicationPower : ExtraPlayPower
+{
+    protected override bool Replays(SimCard card) => true;
+}
+
+/// <summary>OneTwoPunchPower: its owner's Attacks.</summary>
+public sealed class OneTwoPunchPower : ExtraPlayPower
+{
+    protected override bool Replays(SimCard card) => card.Type == SimCardType.Attack;
+}
+
+/// <summary>SignalBoostPower: its owner's Powers.</summary>
+public sealed class SignalBoostPower : ExtraPlayPower
+{
+    protected override bool Replays(SimCard card) => card.Type == SimCardType.Power;
+}
+
+/// <summary>KiVersePower: its owner's melodies (cards tagged Wah, Cho or Ki).</summary>
+public sealed class KiVersePower : ExtraPlayPower
+{
+    protected override bool Replays(SimCard card) => card.Is(SimCardTag.Wah) || card.Is(SimCardTag.Cho) || card.Is(SimCardTag.Ki);
+}
+
+/// <summary>
+/// TagTeamPower on an enemy (Data: who applied it, as Who names them). ModifyCardPlayCount: an Attack of another player's than its applier,
+/// aimed at this enemy or at every enemy (TargetType AnyEnemy at it, AllEnemies), plays its amount more times; AfterModifyingCardPlayCount
+/// removes it. Its tag is the double-play tag (CardPlays).
+/// </summary>
+public sealed class TagTeamPower : SimModel
+{
+    /// <summary>One copy per applier (the game's is instanced): a copy's amount, its applier the last read (TRACKER).</summary>
+    public override bool Instanced => true;
+
+    public override int ModifyCardPlayCount(SimState state, int owner, SimCardPlay play, int count)
+    {
+        var powers = SimEngine.PowersOf(state, owner);
+        if (play.Card.Type != SimCardType.Attack || play.Owner == powers.DataOf(ThisPower)) return count;
+        if (play.Card.Targets == SimPlay.Target.Single ? play.Target != owner : play.Card.Targets != SimPlay.Target.All) return count;
+        return count + powers[ThisPower];
+    }
+
+    public override void AfterModifyingCardPlayCount(SimState state, int owner, SimCardPlay play) =>
+        SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).Without(ThisPower));
+}
+
+/// <summary>
+/// CorruptionPower.ModifyCardPlayResultLocation, decided once before a card play's plays: its owner's Skill goes to the exhaust pile
+/// whatever its own pile was (its own exhaust then sets off what reacts to exhausts: SimEngine.RunCardPlay).
+/// </summary>
+public sealed class CorruptionPower : SimModel
+{
+    public override SimResultLocation ModifyCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location) =>
+        play.Owner == owner && play.Card.Type == SimCardType.Skill ? SimResultLocation.Exhaust : location;
+}
+
+/// <summary>
+/// ReboundPower.ModifyCardPlayResultLocation, decided once before a card play's plays: its owner's card bound for their discard pile goes on
+/// top of their draw pile; AfterModifyingCardPlayResultLocation uses a stack (PowerCmd.Decrement). Where the card lands isn't followed
+/// further, as Nostalgia's.
+/// </summary>
+public sealed class ReboundPower : SimModel
+{
+    public override SimResultLocation ModifyCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location) =>
+        play.Owner == owner && location == SimResultLocation.Default ? SimResultLocation.DrawTop : location;
+
+    public override void AfterModifyingCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location)
+    {
+        if (play.Owner == owner) SimEngine.DecrementPower(state, owner, ThisPower);
+    }
+}
+
+/// <summary>
 /// NostalgiaPower.ModifyCardPlayResultLocation, decided once before a card play's plays: its owner's Attack or Skill bound for their
 /// discard pile (not exhausting, not sent elsewhere) goes on top of their draw pile while fewer than its amount of their Attack and Skill
 /// plays started this turn; AfterModifyingCardPlayResultLocation flashes. Where the card lands isn't followed further (its tag).

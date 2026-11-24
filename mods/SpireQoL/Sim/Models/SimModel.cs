@@ -70,6 +70,10 @@ public sealed record SimCard(string Name, SimCardType Type)
     public bool ExhaustsSelf { get; init; }
     /// <summary>A copy made by a replay (CardModel.IsDupe): Feral doesn't return it.</summary>
     public bool Dupe { get; init; }
+    /// <summary>Whom it's aimed at (its TargetType: one enemy, every enemy, a random one; None for any other): Tag Team's test.</summary>
+    public SimPlay.Target Targets { get; init; }
+    /// <summary>The energy its own exhaust gives its owner (its AfterCardExhausted: Drum of Battle's), when a model sends it to the exhaust pile.</summary>
+    public int ExhaustEnergy { get; init; }
     /// <summary>It can still be upgraded (Razor Tooth).</summary>
     public bool Upgradable { get; init; }
     /// <summary>Another card in your hand still costs energy or stars (Mummified Hand has something to make free).</summary>
@@ -358,9 +362,10 @@ public abstract class SimModel
 
 /// <summary>
 /// Where a played card goes once its plays are over, as Hook.ModifyCardPlayResultLocation leaves it: its usual pile (Default), the top of
-/// its owner's hand (Feral), the top of their draw pile (Nostalgia).
+/// its owner's hand (Feral), the top of their draw pile (Nostalgia, Rebound), the exhaust pile (the Exhaust keyword, Corruption's Skills),
+/// nowhere (a Power, a copy made by a replay).
 /// </summary>
-public enum SimResultLocation { Default, HandTop, DrawTop }
+public enum SimResultLocation { Default, HandTop, DrawTop, Exhaust, Nowhere }
 
 /// <summary>
 /// A card's own hooks (its class's overrides of the game's hooks), listening from its owner's piles: the game lists every card in

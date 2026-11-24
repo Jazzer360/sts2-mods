@@ -222,6 +222,14 @@ public static partial class SimEngine
     }
 
     public static int PowerOn(SimState state, int id, PowerId power) => PowersOf(state, id)[power];
+
+    /// <summary>A power's amount down by one, gone at 0 (PowerCmd.Decrement).</summary>
+    public static void DecrementPower(SimState state, int id, PowerId power)
+    {
+        var powers = PowersOf(state, id);
+        if (!powers.Has(power)) return;
+        SetPowers(state, id, powers[power] > 1 ? powers.With(power, powers[power] - 1, powers.DataOf(power)) : powers.Without(power));
+    }
 }
 
 public static partial class SimEngine

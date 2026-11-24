@@ -157,9 +157,10 @@ public static partial class SimAdapter
         // Spent with the energy, before the card does anything (PlayCardAction: SpendResources, then OnPlay). Inside the play, as Galactic
         // Dust and Child of the Stars read its stars.
         if (facts.Stars > 0) play.Body.Insert(play.Body.TakeWhile(action => action is AskAction).Count(), new CardEventAction(CardEvent.StarsSpent, Count: 1) { FirstPlayOnly = true });
-        if (facts.ExhaustsSelf) play.After.Add(new CardEventAction(CardEvent.Exhausted, Count: 1) { Card = play.Card!.Card });
-        // Its own exhaust (Corruption: Skills exhaust) sets off its own AfterCardExhausted (Drum of Battle's energy).
-        if (facts.ExhaustsSelf && CardEnergy.WhenExhausted(facts.Card) is > 0 and var ownExhaustEnergy)
+        // Its own exhaust (a model that sends it to the exhaust pile, Corruption, is the simulator's: decision #192).
+        if (play.Card!.Card.ExhaustsSelf) play.After.Add(new CardEventAction(CardEvent.Exhausted, Count: 1) { Card = play.Card!.Card });
+        // Its own exhaust sets off its own AfterCardExhausted (Drum of Battle's energy).
+        if (play.Card!.Card.ExhaustsSelf && play.Card.Card.ExhaustEnergy is > 0 and var ownExhaustEnergy)
             play.After.Add(new CardEventAction(CardEvent.EnergyGained, ownExhaustEnergy) { Player = play.Card!.Owner });
         if (facts.Shuffles) play.After.Add(new CardEventAction(CardEvent.Shuffled, Count: 1) { Indirect = true });
     }

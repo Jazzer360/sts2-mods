@@ -58,6 +58,10 @@ public static class SimReaders
         int amount = power.Amount, data = 0;
         switch (name)
         {
+            // Who applied it (Data, as Who names them): their own Attacks don't play again (TagTeamPower.ModifyCardPlayCount).
+            case nameof(TagTeamPower):
+                data = power.Applier is { } tagger && idOf(tagger) is { } taggerId ? taggerId : 0;
+                break;
             // Your arrows in it (Amount) and its hit counter (Data); a teammate's Impaled only makes it Impaled.
             case nameof(ImpaledPower) when power.Applier is { } impaler && idOf(impaler) == Who.You:
                 amount = SpireQoL.Procs.Fool.ArrowsIn(power);
@@ -235,6 +239,7 @@ public static class SimReaders
                     data = Sts2State.Private<object?>(relic, "AffectedCardPlay", fallback: null) != null ? Models.PaelsLegion.BoundToPlay : 0;
                     break;
                 case nameof(CentennialPuzzle): amount = Sts2State.Private(relic, "UsedThisCombat", fallback: false) ? 1 : 0; break; // used up this combat
+                case nameof(ThrowingAxe): data = Sts2State.Private(relic, "UsedThisCombat", fallback: true) ? 0 : (int)RelicUse.Armed; break; // unused this combat
                 case nameof(Pocketwatch): amount = Sts2State.Private(relic, "_cardsPlayedThisTurn", fallback: 0); data = Sts2State.Var(relic, "CardThreshold", fallback: 3); break;
                 case nameof(BeatingRemnant): data = (int)Sts2State.Private(relic, "DamageReceivedThisTurn", fallback: 0m); break;
                 // Counters the models keep counting (their tray number, or the private count behind it).
@@ -347,7 +352,17 @@ public static class SimReaders
         {
             Stars = facts.Stars,
             StarCostX = Safe(() => card.HasStarCostX),
-            ExhaustsSelf = facts.ExhaustsSelf,
+            // Its own exhaust (the Exhaust keyword, added ones included; not a Power or a copy): a model that sends it there (Corruption) is
+            // the simulator's (decision #192).
+            ExhaustsSelf = Safe(() => card.Type != CardType.Power && !card.IsDupe && (card.Keywords.Contains(CardKeyword.Exhaust) || card.ExhaustOnNextPlay)),
+            ExhaustEnergy = CardEnergy.WhenExhausted(card),
+            Targets = card.TargetType switch
+            {
+                TargetType.AnyEnemy => SimPlay.Target.Single,
+                TargetType.AllEnemies => SimPlay.Target.All,
+                TargetType.RandomEnemy => SimPlay.Target.Random,
+                _ => SimPlay.Target.None,
+            },
             Dupe = Safe(() => card.IsDupe),
             Upgradable = Safe(() => card.IsUpgradable),
             OthersInHandCost = Safe(() => Sts2State.Hand(me).Any(nextCard => nextCard != card && nextCard.CostsEnergyOrStars(includeGlobalModifiers: true))),

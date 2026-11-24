@@ -114,4 +114,99 @@ public class SimPlayShapeTests
         SimEngine.RunScriptTo(played, Shaped(FreeAttack()), out var later, out _);
         Assert.Equal(500 - 3, Assert.Single(later).Enemies[0].Hp);
     }
+
+    /// <summary>A Skill from your hand that gains 5 block a play.</summary>
+    private static SimPlay BlockSkill(bool exhausts = false)
+    {
+        var play = FromHand("Defend", SimCardType.Skill, energy: 1, plays: 1, new GainBlockAction(Times: 1, Base: 5, SimProps.Move));
+        play.Card = play.Card! with { Card = play.Card.Card with { ExhaustsSelf = exhausts } };
+        return play;
+    }
+
+    [Fact]
+    public void BurstPlaysYourNextSkillsAgainAStackEach()
+    {
+        // Burst 1: the first Skill plays twice (10 block) and uses its stack; an Attack doesn't touch it; the next Skill plays once.
+        var state = Board();
+        state.You.Powers = state.You.Powers.With(PowerId.Burst, amount: 1);
+        var after = After(state, FreeAttack(), BlockSkill(), BlockSkill());
+        Assert.Equal(15, after.You.Block);
+        Assert.False(after.You.Powers.Has(PowerId.Burst));
+    }
+
+    [Fact]
+    public void DuplicationOneTwoPunchSignalBoostAndKiVerseEachReplayTheirKind()
+    {
+        // Duplication: any card. One-Two Punch: Attacks. Signal Boost: Powers. Ki Verse: Wah, Cho or Ki cards. Each a stack a play.
+        var duplication = Board();
+        duplication.You.Powers = duplication.You.Powers.With(PowerId.Duplication, amount: 2);
+        Assert.Equal(20, After(duplication, BlockSkill(), BlockSkill()).You.Block);
+        var punch = Board();
+        punch.You.Powers = punch.You.Powers.With(PowerId.OneTwoPunch, amount: 1);
+        var punched = After(punch, BlockSkill(), FreeAttack(), FreeAttack());
+        Assert.Equal(5, punched.You.Block);
+        Assert.Equal(500 - 3 * 3, punched.Enemies[0].Hp);
+        var boost = Board();
+        boost.You.Powers = boost.You.Powers.With(PowerId.SignalBoost, amount: 1);
+        Assert.Equal(2, After(boost, FeralCard()).You.Powers[PowerId.Feral]);
+        var verse = Board();
+        verse.You.Powers = verse.You.Powers.With(PowerId.KiVerse, amount: 1);
+        var melody = BlockSkill();
+        melody.Card = melody.Card! with { Card = melody.Card.Card with { Tags = new HashSet<SimCardTag> { SimCardTag.Ki } } };
+        Assert.Equal(15, After(verse, BlockSkill(), melody).You.Block);
+    }
+
+    [Fact]
+    public void TagTeamReplaysAnotherPlayersAttackAtItsEnemy()
+    {
+        // Tag Team 1 on the enemy, applied by your teammate: your Attack at it plays once more and Tag Team goes; applied by you, it doesn't.
+        var state = Board();
+        state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.TagTeam, amount: 1, data: Who.Teammate(teammateIndex: 0));
+        var attack = FreeAttack();
+        attack.Card = attack.Card! with { Card = attack.Card.Card with { Targets = SimPlay.Target.Single } };
+        var after = After(state, attack, attack);
+        Assert.Equal(500 - 3 * 3, after.Enemies[0].Hp);
+        Assert.False(after.Enemies[0].Powers.Has(PowerId.TagTeam));
+        var yours = Board();
+        yours.Enemies[0].Powers = yours.Enemies[0].Powers.With(PowerId.TagTeam, amount: 1, data: Who.You);
+        Assert.Equal(500 - 3, After(yours, attack).Enemies[0].Hp);
+    }
+
+    [Fact]
+    public void ThrowingAxePlaysTheFightsFirstCardTwice()
+    {
+        var state = Board();
+        state.You.Relics = state.You.Relics.With(RelicId.ThrowingAxe, amount: 0, data: (int)RelicUse.Armed);
+        Assert.Equal(15, After(state, BlockSkill(), BlockSkill()).You.Block);
+        var used = Board();
+        used.You.Relics = used.You.Relics.With(RelicId.ThrowingAxe, amount: 0, data: 0);
+        Assert.Equal(10, After(used, BlockSkill(), BlockSkill()).You.Block);
+    }
+
+    [Fact]
+    public void CorruptionExhaustsYourSkillsOnceTheirPlaysAreOver()
+    {
+        // Corruption: a played Skill goes to the exhaust pile (its exhaust sets off Feel No Pain), once however many times it plays. A Skill
+        // that exhausts itself has its own exhaust already (the play's After): Corruption adds none.
+        var state = Board();
+        state.You.Powers = state.You.Powers.With(PowerId.Corruption, amount: 1).With(PowerId.FeelNoPain, amount: 3);
+        var once = After(state, BlockSkill());
+        Assert.Equal(5 + 3, once.You.Block);
+        Assert.Equal(1, once.You.ExhaustPile);
+        var twice = BlockSkill();
+        twice.Plays = 2;
+        twice.Card = twice.Card! with { PlayCount = 2 };
+        Assert.Equal(10 + 3, After(state, twice).You.Block);
+        Assert.Equal(0, After(state, FreeAttack()).You.ExhaustPile);
+    }
+
+    [Fact]
+    public void ReboundSendsYourNextCardToYourDrawPileAStackEach()
+    {
+        // Rebound 1: a card bound for your discard pile goes on top of your draw pile and uses the stack; one that exhausts itself isn't.
+        var state = Board();
+        state.You.Powers = state.You.Powers.With(PowerId.Rebound, amount: 1);
+        Assert.True(After(state, BlockSkill(exhausts: true)).You.Powers.Has(PowerId.Rebound));
+        Assert.False(After(state, BlockSkill()).You.Powers.Has(PowerId.Rebound));
+    }
 }
