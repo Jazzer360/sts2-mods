@@ -267,6 +267,7 @@ public static class HookReader
         var programs = new List<HookProgram>();
         var readings = new List<HookReading>();
         var setVars = new Dictionary<string, HookValue>(StringComparer.Ordinal);
+        var onTop = false;
         foreach (var hook in Hooks(type).OrderBy(method => method.Name, StringComparer.Ordinal))
         {
             if (EnchantmentNotRun.TryGetValue(hook.Name, out var notRun)) { readings.Add(new HookReading(hook.Name, null) { NotRun = notRun }); continue; }
@@ -280,6 +281,14 @@ public static class HookReader
                     readings.Add(new HookReading(hook.Name, null));
                 }
                 else readings.Add(new HookReading(hook.Name, "gap: RecalculateValues does more than set its own values") { Capability = ReaderCapability.OtherModelValueSet });
+                continue;
+            }
+            if (reader.ChangesCostsAtFlushOnly(hook)) { readings.Add(new HookReading(hook.Name, null) { NotRun = CostsAtFlush }); continue; }
+            // Its card moved to the front of what a shuffle puts into the draw pile (Perfect Fit's): a fact of its card the engine's shuffle reads.
+            if (hook.Name == "ModifyShuffleOrder" && reader.PutsItsCardOnTop(hook))
+            {
+                onTop = true;
+                readings.Add(new HookReading(hook.Name, null));
                 continue;
             }
             if (!EnchantmentRuns.Contains(hook.Name))
@@ -309,8 +318,11 @@ public static class HookReader
             .Values().OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
         programs = programs.Select(program => program with { Steps = program.Steps.Where(step => step is not StoreFieldStep store || fieldsRead.Contains(store.Field)).ToList() })
             .Where(program => program.Steps.Count > 0).ToList();
-        return new ModelReading(new ModelSpec(type.Name, ModelKind.Enchantment, programs), readings);
+        return new ModelReading(new ModelSpec(type.Name, ModelKind.Enchantment, programs) { OnTopWhenShuffled = onTop }, readings);
     }
+
+    /// <summary>Why a hook that only changes card costs as the hand is flushed isn't run (Translation.ChangesCostsAtFlushOnly).</summary>
+    private const string CostsAtFlush = "it only changes card costs as the hand is flushed (Hook.BeforeFlush: after the turn's auto-plays and its end steps), which nothing a simulation reads after it";
 
     /// <summary>The prefix of one of a model's own values kept as its state ("Var.CardsLeft"), where its code stores it.</summary>
     public const string VarFieldPrefix = HookField.VarPrefix;
@@ -649,6 +661,7 @@ public static class HookReader
                 // entered the fight during the simulation. Any other change to the entering card (a keyword: Ghost Seed) stays a gap.
                 if (hook.Name == "AfterCardEnteredCombat" && AfflictsTheEnteringCardOnly(hook))
                     return (null, null, "it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation");
+                if (ChangesCostsAtFlushOnly(hook)) return (null, null, CostsAtFlush);
                 if (SetsShownOnly(hook)) return (null, null, "it only sets what its cards show (an affliction's amount): no code a fight runs reads it");
                 if (StartsATurn(hook.Name) && PastTheHorizon(hook) is { } horizon)
                     return horizon.Length == 0 ? (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers") : (null, new GapOf(ReaderCapability.ValueNotFollowed, horizon), null);
@@ -737,6 +750,56 @@ public static class HookReader
                     return new GapOf(ReaderCapability.OwnData, $"gap: uses its own field ({field.Name}) directly: what a call on it changes isn't read");
             }
             return null;
+        }
+
+        /// <summary>
+        /// A BeforeFlush whose code only changes card costs (CardEnergyCost's methods: Slumbering Essence's AddUntilPlayed(-1) on its card in hand):
+        /// CombatManager.EndPlayerTurnPhaseOneInternal runs Hook.BeforeFlush last, after the auto-plays (the only simulated pick that reads a cost,
+        /// Simpleton's) and the turn's end steps; the cards then leave the hand. No command, store or other change; read whole to tell.
+        /// </summary>
+        internal bool ChangesCostsAtFlushOnly(MethodInfo hook)
+        {
+            if (hook.Name != "BeforeFlush") return false;
+            ModelProgram program;
+            List<CodeOp> ops;
+            try { program = ProgramReader.Read(_type, _read, hook.Name); ops = _read(ProgramReader.BodyOf(hook)); }
+            catch (InvalidOperationException) { return false; }
+            if (program.Unknowns.Any() || program.All().Any(step => step is not (LoopStep or FlashCall))) return false;
+            var costs = 0;
+            foreach (var instruction in ops)
+            {
+                if (instruction.OpCode == System.Reflection.Emit.OpCodes.Stfld && instruction.Member is { } stored && !stored.DeclaringType.StartsWith('<') && !stored.Name.StartsWith('<')) return false;
+                if (!instruction.IsCall || instruction.Member is not { Kind: CodeMemberKind.Method } call) continue;
+                if (call.HasThis && call.Name.StartsWith("set_", StringComparison.Ordinal) && call.Namespace.StartsWith("MegaCrit", StringComparison.Ordinal)) return false;
+                if (!ChangesAGameObject(call)) continue;
+                if (call.DeclaringType != "CardEnergyCost") return false;
+                costs++;
+            }
+            return costs > 0;
+        }
+
+        /// <summary>
+        /// A ModifyShuffleOrder whose code only moves its own card to the front of the shuffled cards: Remove(base.Card), then Insert(0, base.Card),
+        /// on the list it's given, when the shuffle isn't the fight's first (!isInitialShuffle: a simulation's never is) and the card is among them
+        /// (cards.Contains(base.Card): the engine moves it only when it's shuffled). Read whole to tell.
+        /// </summary>
+        internal bool PutsItsCardOnTop(MethodInfo hook)
+        {
+            ModelProgram program;
+            try { program = ProgramReader.Read(_type, _read, hook.Name); }
+            catch (InvalidOperationException) { return false; }
+            if (program.Unknowns.Any() || OwnData(hook, program) != null) return false;
+            var steps = program.All().ToList();
+            if (steps is not [ParameterListStep { Operation: "Remove", Values: [var removed] } remove, ParameterListStep { Operation: "Insert", Values: [ConstantValue { Value: 0 }, var inserted] } insert]
+                || remove.Parameter != insert.Parameter || !IsModelCard(removed) || !IsModelCard(inserted)) return false;
+            // Each way to them: the shuffle not the first, the card among the shuffled.
+            bool Expected(ConditionLiteral literal) => literal.Test switch
+            {
+                ParameterValue { Name: "isInitialShuffle" } or NamedValue { Name: "isInitialShuffle" } => !literal.Holds,
+                QueryValue { Name: "Contains", Of: ParameterValue { Name: var list }, Arguments: [var card] } => literal.Holds && list == remove.Parameter && IsModelCard(card),
+                _ => false,
+            };
+            return new[] { remove, insert }.All(step => step.Condition is not { } condition || condition.Terms.All(term => term.All(Expected)));
         }
 
         /// <summary>While a hand pick's step is read: its condition's tests of the pick hold (Test).</summary>

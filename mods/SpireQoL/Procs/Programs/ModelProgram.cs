@@ -112,6 +112,15 @@ public sealed record DataStep(int Offset, string Data, string Operation, IReadOn
 }
 
 /// <summary>
+/// A change to a list the hook is given, by the code that runs it (ModifyShuffleOrder's cards: PerfectFit's Remove(base.Card), Insert(0,
+/// base.Card)), whose result isn't used: the parameter, the list's method and its arguments.
+/// </summary>
+public sealed record ParameterListStep(int Offset, string Parameter, string Operation, IReadOnlyList<ProgramValue> Values) : ProgramStep(Offset)
+{
+    public override string ToString() => $"{Parameter}.{Operation}({string.Join(", ", Values)})" + When;
+}
+
+/// <summary>
 /// A power's or relic's code changing a card through the card's own method, not a command (MummifiedHand's cardModel?.SetToFreeThisTurn()): the
 /// card it's called on and its arguments. Read for powers and relics only (a card's own play reads its changes apart).
 /// </summary>
@@ -600,6 +609,14 @@ public static class ProgramReader
                     && flow.ReceiverValue(i, member.ParameterCount) is QueryValue { Of: { } dataOf, Name: var collection } && IsOwnData(dataOf))
                 {
                     into.Add(new DataStep(instruction.Offset, collection, member.Name, flow.ArgumentValues(i, member)) { Condition = condition });
+                    continue;
+                }
+                // A change to a list the hook is given (ModifyShuffleOrder's cards: Perfect Fit's Remove and Insert), whose result isn't used.
+                if (member is { Kind: CodeMemberKind.Method, HasThis: true } && member.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)
+                    && (!member.ReturnsValue || i + 1 < ops.Count && ops[i + 1].OpCode == OpCodes.Pop)
+                    && flow.ReceiverValue(i, member.ParameterCount) is ParameterValue { Name: var parameter })
+                {
+                    into.Add(new ParameterListStep(instruction.Offset, parameter, member.Name, flow.ArgumentValues(i, member)) { Condition = condition });
                     continue;
                 }
                 if (member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1 } && member.Name.StartsWith("set_", StringComparison.Ordinal) && OwnState(member) is { } property

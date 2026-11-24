@@ -53,13 +53,13 @@ internal static class ReturnToHand
 
     /// <summary>
     /// The cards that come back to your hand when <paramref name="card"/> is played now, its hand after the play read from its program on the
-    /// board: your hand without it, the cards its makes put there (MadeCards) and its own draws and its enchantment's (Swift).
+    /// board: your hand without it, the cards its makes put there (MadeCards) and its own draws and its enchantment's (Swift's, read from its code).
     /// </summary>
     public static List<CardModel> Back(CardModel card, Player me, int plays)
     {
         var hand = Sts2State.Hand(me).Count;
         var made = Programs.MadeCards.Summary(card).IntoYourHand;
-        var draws = Programs.BoardCounts.CardsDrawn(card, hand) + SpireQoL.Sim.SimAdapter.SwiftDraws(card);
+        var draws = Programs.BoardCounts.CardsDrawn(card, hand) + SpireQoL.Sim.SimAdapter.EnchantmentDraws(card);
         return Returning(card, me, plays, Math.Min(MegaCrit.Sts2.Core.Entities.Cards.CardPile.MaxCardsInHand, hand - 1 + made) + draws, Fool.Shoots(card, me) ? 1 : 0);
     }
 

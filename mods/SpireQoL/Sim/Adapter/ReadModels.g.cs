@@ -112,6 +112,7 @@ public static partial class ReadModels
         PowerId.Pagestorm.Name,
         PowerId.PaleBlueDot.Name,
         PowerId.Panache.Name,
+        nameof(MegaCrit.Sts2.Core.Models.Enchantments.PerfectFit),
         RelicId.Permafrost.Name,
         PowerId.PillarOfCreation.Name,
         nameof(MegaCrit.Sts2.Core.Models.Orbs.PlasmaOrb),

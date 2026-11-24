@@ -13467,6 +13467,13 @@
     "Copies": "EachApplication"
   },
   {
+    "Name": "PerfectFit",
+    "Kind": "Enchantment",
+    "Hooks": [],
+    "HelpsOwner": false,
+    "OnTopWhenShuffled": true
+  },
+  {
     "Name": "Permafrost",
     "Kind": "Relic",
     "Hooks": [

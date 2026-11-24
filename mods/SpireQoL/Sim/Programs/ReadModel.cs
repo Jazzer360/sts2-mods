@@ -223,6 +223,29 @@ public sealed class ReadModel : SimModel
         });
     }
 
+    /// <summary>
+    /// The cards an enchantment's OnPlay draws for its card as it is now (Swift's Amount while it's on), its draws whose conditions hold on the
+    /// card's own state: for a count outside a simulation (the Return tags' hand size). Its program's top-level draws only; 0 for any other model.
+    /// </summary>
+    public int DrawsOnPlay(SimCard card)
+    {
+        if (Spec.Kind != ModelKind.Enchantment || card.Enchantment == null) return 0;
+        var draws = _drawsOnPlay ??= (Spec.Of(HookName.OnPlay)?.Steps ?? Array.Empty<HookStep>()).OfType<DrawStep>()
+            .Select(draw => (When: draw.When == null ? null : Compile(draw.When), Count: Compile(draw.Count))).ToArray();
+        if (draws.Length == 0) return 0;
+        var args = new HookArgs { State = Unchanged, Owner = Who.You, Hook = HookName.OnPlay, Card = card };
+        var total = 0;
+        foreach (var (when, count) in draws)
+            if (when == null || when(in args) != 0m) total += Math.Max(0, (int)count(in args));
+        return total;
+    }
+
+    /// <summary>An enchantment's OnPlay draws, compiled once (DrawsOnPlay).</summary>
+    private (Evaluate? When, Evaluate Count)[]? _drawsOnPlay;
+
+    /// <summary>A state nothing changes, for a program's values asked outside a simulation (DrawsOnPlay: its card's own state is the card's).</summary>
+    private static readonly SimState Unchanged = new();
+
     /// <summary>The enchantment's own field's key among its owner's: "Model#card.Field", its card's own (two cards with one enchantment keep apart).</summary>
     private string EnchantmentFieldKey(in HookArgs args, string field) =>
         _enchantmentKeys.GetOrAdd((args.Card?.HandId ?? 0, field), static (key, name) => name + "#" + key.Card.ToString(System.Globalization.CultureInfo.InvariantCulture) + "." + key.Field, Name);

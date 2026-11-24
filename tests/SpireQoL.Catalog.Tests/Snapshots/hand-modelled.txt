@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 132 game methods; 5 adapter rules; 97 hand-written models.
+# 20 engine rules naming 132 game methods; 3 adapter rules; 97 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -25,7 +25,7 @@ Block: the block math, its hooks, a power's or relic's block, block lost
 A power lands: the amount given, Artifact, its instances and copies, the listeners told; a power decremented or removed
   game: PowerCmd.Apply, PowerCmd.FindExistingInstanceForStacking, PowerCmd.Decrement, PowerCmd.Remove, PowerCmd.TickDownDuration, Hook.ModifyPowerAmountGiven, Hook.AfterModifyingPowerAmountGiven, Hook.BeforePowerAmountChanged, Hook.AfterPowerAmountChanged, Creature.ApplyPowerInternal
   simulator: SimEngine.ApplyPower, SimEngine.ApplyAndTell, SimEngine.ApplyInHit, SimEngine.Tell, SimEngine.RunApplyPower, SimEngine.ApplyPowerOf, SimEngine.AmountOf, SimEngine.MovePowers, SimEngine.DecrementPower
-Draws: a full hand, No Draw, the discard pile shuffled in, the drawn card's reactions
+Draws: a full hand, No Draw, the discard pile shuffled in (a card its enchantment puts on top, read from its code), the drawn card's reactions
   game: CardPileCmd.Draw, CardPileCmd.DrawInternal, CardPileCmd.Shuffle, CardPileCmd.ShuffleIfNecessary, Hook.ShouldDraw, Hook.AfterPreventingDraw, Hook.AfterCardDrawn, Hook.ModifyShuffleOrder, Hook.AfterShuffle
   simulator: SimEngine.DrawCards, SimEngine.DrawOne, SimEngine.DrawsStopped, SimEngine.DrawPrevented, SimEngine.Drawn, SimEngine.DrawReactions, SimEngine.DrawsFromPile, SimEngine.RoomIn, SimEngine.JoinHand, SimEngine.RunDrawnCard, SimDrawPile.Shuffled, SimDrawPile.ShuffledWithDiscard
 Cards leaving and joining piles mid-play: taken, discarded, exhausted, made; the card events and their listeners
@@ -67,15 +67,9 @@ The listeners: who hears a hook, in the game's order, a dead enemy's powers left
 
 ## The adapter's per-class rules (HandModelled.Adapter)
 
-Swift's draws counted for the cards that come back to your hand (the Return tags' hand size, outside the simulation)
-  game: Swift.OnPlay
-  simulator: SimAdapter.SwiftDraws
 Enchantments' damage and block math on a replay (the game's own math, called live, for the first play): Momentum, Goopy, Vigorous
   game: Momentum.OnPlay, Goopy.AfterCardPlayed, Vigorous.AfterCardPlayed, EnchantmentModel.EnchantDamageAdditive, EnchantmentModel.EnchantBlockAdditive
   simulator: PlayGrowth.Of
-Perfect Fit: a shuffle puts its card on top
-  game: PerfectFit.ModifyShuffleOrder
-  simulator: SimDrawPile.Shuffled
 Afflictions on a card, by kind (SimAffliction): Hexed's Ethereal, Tainted and Galvanized tested by the powers that read them
   game: Hexed.AfterCardEnteredCombat, Tainted.CanAfflictCardType
   simulator: SimReaders.Card, SimAdapter.EtherealOnlyFromHex, SimEngine.Exhausting

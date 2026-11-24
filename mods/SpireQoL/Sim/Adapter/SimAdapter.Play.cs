@@ -136,9 +136,13 @@ public static partial class SimAdapter
         return simCard with { Enchantment = enchantment with { BlockTerms = SimReaders.Block(combat, card, me.Creature, baseBlock, ValueProp.Move) } };
     }
 
-    /// <summary>Swift (an enchantment): the cards it draws when its card is played, while it's on (Swift.AfterCardPlayed turns it off).</summary>
-    internal static int SwiftDraws(CardModel card) =>
-        card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Swift { Status: MegaCrit.Sts2.Core.Entities.Enchantments.EnchantmentStatus.Normal } swift ? swift.Amount : 0;
+    /// <summary>
+    /// The cards a card's enchantment draws when the card is played now, read from its OnPlay (Swift's Amount while it's on: ReadModel.DrawsOnPlay),
+    /// for the cards that come back to your hand (the Return tags' hand size, outside the simulation). 0 before the models are read.
+    /// </summary>
+    internal static int EnchantmentDraws(CardModel card) =>
+        card.Enchantment is { } enchantment && SimModels.Loaded && SimModels.Enchantment(enchantment.GetType().Name) is { } read && SimReaders.EnchantedCard(card) is { } simCard
+            ? read.DrawsOnPlay(simCard) : 0;
 
     /// <summary>A teammate's card's block to you is theirs (an action on a condition too).</summary>
     private static SimAction ToOwner(SimAction action, int owner) => action switch

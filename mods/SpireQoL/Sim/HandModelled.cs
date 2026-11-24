@@ -47,7 +47,7 @@ public static class HandModelled
             new[] { "SimEngine.ApplyPower", "SimEngine.ApplyAndTell", "SimEngine.ApplyInHit", "SimEngine.Tell", "SimEngine.RunApplyPower", "SimEngine.ApplyPowerOf", "SimEngine.AmountOf", "SimEngine.MovePowers", "SimEngine.DecrementPower" },
             new[] { "PowerCmd.Apply", "PowerCmd.FindExistingInstanceForStacking", "PowerCmd.Decrement", "PowerCmd.Remove", "PowerCmd.TickDownDuration", "Hook.ModifyPowerAmountGiven",
                 "Hook.AfterModifyingPowerAmountGiven", "Hook.BeforePowerAmountChanged", "Hook.AfterPowerAmountChanged", "Creature.ApplyPowerInternal" }),
-        new("Draws: a full hand, No Draw, the discard pile shuffled in, the drawn card's reactions",
+        new("Draws: a full hand, No Draw, the discard pile shuffled in (a card its enchantment puts on top, read from its code), the drawn card's reactions",
             new[] { "SimEngine.DrawCards", "SimEngine.DrawOne", "SimEngine.DrawsStopped", "SimEngine.DrawPrevented", "SimEngine.Drawn", "SimEngine.DrawReactions", "SimEngine.DrawsFromPile", "SimEngine.RoomIn", "SimEngine.JoinHand", "SimEngine.RunDrawnCard", "SimDrawPile.Shuffled", "SimDrawPile.ShuffledWithDiscard" },
             new[] { "CardPileCmd.Draw", "CardPileCmd.DrawInternal", "CardPileCmd.Shuffle", "CardPileCmd.ShuffleIfNecessary", "Hook.ShouldDraw", "Hook.AfterPreventingDraw", "Hook.AfterCardDrawn", "Hook.ModifyShuffleOrder", "Hook.AfterShuffle" }),
         new("Cards leaving and joining piles mid-play: taken, discarded, exhausted, made; the card events and their listeners",
@@ -104,15 +104,9 @@ public static class HandModelled
     /// </summary>
     public static readonly IReadOnlyList<HandModelledRule> Adapter = new HandModelledRule[]
     {
-        new("Swift's draws counted for the cards that come back to your hand (the Return tags' hand size, outside the simulation)",
-            new[] { "SimAdapter.SwiftDraws" },
-            new[] { "Swift.OnPlay" }),
         new("Enchantments' damage and block math on a replay (the game's own math, called live, for the first play): Momentum, Goopy, Vigorous",
             new[] { "PlayGrowth.Of" },
             new[] { "Momentum.OnPlay", "Goopy.AfterCardPlayed", "Vigorous.AfterCardPlayed", "EnchantmentModel.EnchantDamageAdditive", "EnchantmentModel.EnchantBlockAdditive" }),
-        new("Perfect Fit: a shuffle puts its card on top",
-            new[] { "SimDrawPile.Shuffled" },
-            new[] { "PerfectFit.ModifyShuffleOrder" }),
         new("Afflictions on a card, by kind (SimAffliction): Hexed's Ethereal, Tainted and Galvanized tested by the powers that read them",
             new[] { "SimReaders.Card", "SimAdapter.EtherealOnlyFromHex", "SimEngine.Exhausting" },
             new[] { "Hexed.AfterCardEnteredCombat", "Tainted.CanAfflictCardType" }),

@@ -391,7 +391,7 @@ internal static partial class CoverageLedger
         ["Vigorous"] = "covered: AfterCardPlayed disables it after the first play (its bonus is read through the game on later turns), so a replay in the same play loses the bonus (PlayGrowth: EnchantFirstPlayOnly, decision #160)",
         // v0.113.0: OnPlay acts on every play of the card (replays too) until AfterCardPlayed disables it
         ["Sown"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay energy while Normal, after the card's own; AfterCardPlayed (beta) or OnPlay (main) disables it",
-        ["Swift"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay draws its amount while Normal; AfterCardPlayed (beta) or OnPlay (main) disables it; the Return tags count it (SimAdapter.SwiftDraws)",
+        ["Swift"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay draws its amount while Normal; AfterCardPlayed (beta) or OnPlay (main) disables it; the Return tags count it from its OnPlay (ReadModel.DrawsOnPlay)",
         ["Hexed"] = "ignore: clears itself",
     };
 

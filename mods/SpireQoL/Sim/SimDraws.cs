@@ -37,8 +37,11 @@ public sealed record SimDrawCard(string Key)
     public SimHandCard? FromPileUpgraded { get; init; }
     /// <summary>Its play exhausts it (SimAdapter.ExhaustsAfterPlay): played from the pile, it goes to the exhaust pile, not the discard pile.</summary>
     public bool ExhaustsWhenPlayed { get; init; }
-    /// <summary>Enchanted with Perfect Fit: a shuffle puts it on top (PerfectFit.ModifyShuffleOrder).</summary>
-    public bool PerfectFit { get; init; }
+    /// <summary>
+    /// A shuffle puts it on top: its enchantment's ModifyShuffleOrder moves it to the front (ModelSpec.OnTopWhenShuffled, read from its code:
+    /// Perfect Fit's).
+    /// </summary>
+    public bool OnTopWhenShuffled { get; init; }
     /// <summary>I Am Invincible: its block when it's the top card as your turn ends (it plays itself from there).</summary>
     public int InvincibleBlock { get; init; }
     /// <summary>Its type, while a card in your hand acts on the type of a card it draws (Escape Plan, Pillage: decision #118); else None.</summary>
@@ -146,18 +149,18 @@ public sealed class SimDrawPile
 
     /// <summary>
     /// The discard pile shuffled in (CardPileCmd.ShuffleIfNecessary, the draw pile being empty): all of it, order unknown, except
-    /// that a single card enchanted with Perfect Fit goes on top (with several, their order isn't known: none is).
+    /// that a single card its enchantment puts on top when shuffled goes there (Perfect Fit's) (with several, their order isn't known: none is).
     /// </summary>
     internal SimDrawPile Shuffled()
     {
-        var fits = Discard.Where(group => group.Card.PerfectFit).ToList();
+        var fits = Discard.Where(group => group.Card.OnTopWhenShuffled).ToList();
         if (fits.Count != 1 || fits[0].Count != 1) return new() { Top = new(), Rest = Discard.ToList(), Discard = new() };
-        return new() { Top = new() { fits[0].Card }, Rest = Discard.Where(group => !group.Card.PerfectFit).ToList(), Discard = new() };
+        return new() { Top = new() { fits[0].Card }, Rest = Discard.Where(group => !group.Card.OnTopWhenShuffled).ToList(), Discard = new() };
     }
 
     /// <summary>
     /// CardPileCmd.Shuffle: every card of the draw pile (its known top too) and the discard pile, with <paramref name="added"/> put
-    /// into the draw pile first (Reboot: your hand), shuffled together: order unknown, except a single Perfect Fit card on top.
+    /// into the draw pile first (Reboot: your hand), shuffled together: order unknown, except a single card its enchantment puts on top when shuffled.
     /// </summary>
     internal SimDrawPile ShuffledWithDiscard(IEnumerable<SimDrawGroup> added)
     {

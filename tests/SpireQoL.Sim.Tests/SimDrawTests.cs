@@ -271,7 +271,7 @@ public class SimDrawTests
     public void AShuffleBringsTheOnePerfectFitCardToTheTop()
     {
         // The draw pile is empty: the discard pile shuffles in, and the card enchanted with Perfect Fit goes on top.
-        var fit = new SimDrawCard("fit burn") { TurnEnd = new TurnEndCard("Burn", "Burn", Amount: 2), PerfectFit = true };
+        var fit = new SimDrawCard("fit burn") { TurnEnd = new TurnEndCard("Burn", "Burn", Amount: 2), OnTopWhenShuffled = true };
         var state = You();
         state.You.Draw = new SimDrawPile { Discard = { new SimDrawGroup(fit, Count: 1), new SimDrawGroup(Plain, Count: 9) } };
         var branch = Assert.Single(SimEngine.Run(state, Draws(cards: 1)).Branches);
@@ -282,7 +282,7 @@ public class SimDrawTests
     [Fact]
     public void TwoPerfectFitCardsLeaveTheTopUnknown()
     {
-        var fit = new SimDrawCard("fit burn") { TurnEnd = new TurnEndCard("Burn", "Burn", Amount: 2), PerfectFit = true };
+        var fit = new SimDrawCard("fit burn") { TurnEnd = new TurnEndCard("Burn", "Burn", Amount: 2), OnTopWhenShuffled = true };
         var state = You();
         state.You.Draw = new SimDrawPile { Discard = { new SimDrawGroup(fit, Count: 2), new SimDrawGroup(Plain, Count: 8) } };
         var outcome = SimEngine.Run(state, Draws(cards: 1));

@@ -584,6 +584,13 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     public HookOutcome? Outcome { get; init; }
 
     /// <summary>
+    /// An enchantment whose ModifyShuffleOrder moves its card to the front of the cards a shuffle puts into the draw pile (Perfect Fit's
+    /// Remove(base.Card), Insert(0, base.Card), on a shuffle that isn't the fight's first): its card is on top after a shuffle (SimDrawCard.OnTopWhenShuffled).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool OnTopWhenShuffled { get; init; }
+
+    /// <summary>
     /// How its applications are kept (a power's InstanceType): each copy, with its own amount, its own state and its applier, runs its hooks on
     /// its own, in the order they landed (ReadModel). One: none of its own.
     /// </summary>

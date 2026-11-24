@@ -81,7 +81,8 @@ public static partial class ReadModels
             {
                 reading = new ModelReading(new ModelSpec(type.Name, ModelKind.Enchantment, Array.Empty<HookProgram>()), new[] { new HookReading("(the class)", $"gap: not read ({exception.GetType().Name}: {exception.Message})") });
             }
-            if (reading.Whole && reading.Spec.Hooks.Count == 0) continue;
+            // One with nothing to run but a fact of its card the engine reads (Perfect Fit's card on top when shuffled) is kept for that fact.
+            if (reading.Whole && reading.Spec.Hooks.Count == 0 && !reading.Spec.OnTopWhenShuffled) continue;
             if (reading.Whole && Compiles(reading.Spec) is null)
             {
                 specs.Add(reading.Spec);

@@ -340,7 +340,7 @@ public static partial class SimAdapter
                 var who = pickable || strike || topPlays ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}" : "";
                 // I Am Invincible plays from the top of the draw pile at the end of your turn: its block.
                 var invincible = card is IAmInvincible ? CardBlock(card, combat, me) : 0;
-                var perfectFit = card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.PerfectFit;
+                var perfectFit = SimReaders.OnTopWhenShuffled(card);
                 var type = readsType ? SimReaders.TypeOf(card) : SimCardType.None;
                 bool? free = readsCost ? !card.EnergyCost.CostsX && card.EnergyCost.GetWithModifiers(CostModifiers.All) == 0 : null;
                 var sly = readsCost && card.Keywords.Contains(CardKeyword.Sly);
@@ -373,7 +373,7 @@ public static partial class SimAdapter
                     EnergyLostOnDraw = energyLost,
                     Exhausting = exhaustEnergy > 0 ? new ExhaustingCard(HandCard: 0, exhaustEnergy, SimReaders.TypeOf(card)) : null,
                     TurnEnd = turnEnd, Fading = fading, HexFading = hexFading, Status = status, Ethereal = ethereal, Strike = strike,
-                    Pickable = pickable, Auto = auto, InvincibleBlock = invincible, PerfectFit = perfectFit, Type = type, Free = free, Sly = sly, TakenBy = takenBy,
+                    Pickable = pickable, Auto = auto, InvincibleBlock = invincible, OnTopWhenShuffled = perfectFit, Type = type, Free = free, Sly = sly, TakenBy = takenBy,
                 };
             }
             var profiles = new Dictionary<CardModel, SimDrawCard>(ReferenceEqualityComparer.Instance);

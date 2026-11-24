@@ -95,15 +95,15 @@ internal static class DrawPileMemory
             _shuffling = -1;
         }
         var pile = PileType.Draw.GetPile(me);
-        // A shuffle of yours: once it's over (your discard pile emptied into the draw pile), the one card enchanted with Perfect
-        // Fit is on top (PerfectFit.ModifyShuffleOrder moves it there); with several, their order is the hook's: not known.
+        // A shuffle of yours: once it's over (your discard pile emptied into the draw pile), the one card whose enchantment puts it on top
+        // (its ModifyShuffleOrder, read from its code: Perfect Fit's) is there; with several, their order is the hook's: not known.
         if (_shuffling >= 0)
         {
             if (PileType.Discard.GetPile(me).Cards.Count == 0 || ++_shuffling > 120)
             {
                 _shuffling = -1;
                 Top.Clear();
-                var fits = pile.Cards.Where(card => card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.PerfectFit).ToList();
+                var fits = pile.Cards.Where(SpireQoL.Sim.SimReaders.OnTopWhenShuffled).ToList();
                 if (fits.Count == 1) Top.Add(fits[0]);
             }
             else return; // mid-shuffle: nothing to check yet

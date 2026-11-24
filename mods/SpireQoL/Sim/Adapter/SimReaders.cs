@@ -284,6 +284,13 @@ public static class SimReaders
 
     // ------------------------------------------------------------------ cards
 
+    /// <summary>
+    /// A shuffle puts the card on top: its enchantment's code moves it there (ModelSpec.OnTopWhenShuffled: Perfect Fit's ModifyShuffleOrder). False
+    /// before the models are read (a moment after loading): not known, never assumed.
+    /// </summary>
+    public static bool OnTopWhenShuffled(CardModel card) =>
+        card.Enchantment is { } enchantment && SimModels.Loaded && SimModels.Enchantment(enchantment.GetType().Name) is { Spec.OnTopWhenShuffled: true };
+
     public static SimCardType TypeOf(CardModel card) => card.Type switch
     {
         CardType.Attack => SimCardType.Attack,
@@ -363,6 +370,10 @@ public static class SimReaders
             Enchantment = EnchantmentOf(card),
         };
     }
+
+    /// <summary>A card with only its enchantment as the engine runs it (EnchantmentOf), for a read enchantment's values asked outside a simulation.</summary>
+    internal static SimCard? EnchantedCard(CardModel card) =>
+        EnchantmentOf(card) is { } enchantment ? new SimCard(card.GetType().Name, TypeOf(card)) { Enchantment = enchantment } : null;
 
     /// <summary>
     /// A card's enchantment as the engine runs it (decision #217): its class, its amount and its own state its read programs read or store (its

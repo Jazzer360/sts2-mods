@@ -13,6 +13,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Play Preview: while you hold a card where letting go would play it (aimed at its target, for one that needs one; above the hand's play line, or once selected with a controller or the keyboard, for one that doesn't), Incoming Damage, Teammate Incoming Damage and the Death Skull show the turn as it would go after you play it, tinted lavender, and an enemy intent the play changes gets a line through its damage and the new number above it in the same font (Weak lowering it, Strength raising it; the line alone for an enemy the play kills in every outcome). Every outcome of the play was already worked out for each card and target, so it shows at once; the card tabs don't change. A new check holds it to the board the play leaves.
 
 #### Changed
+- Perfect Fit (the card on top after a shuffle) and Swift (its draws, for the Return tags) are worked out from their own code. What's shown is unchanged.
 - An enemy's Vital Spark and Mummified Hand are worked out from their own code (the Tainted a Tainted card puts on whoever plays it; the card in your hand a Power makes free). What's shown is unchanged but for the fixes below.
 - Adroit, Corrupted, Inky, Swift and Sown are worked out from their own code (what each does when its card is played). What's shown is unchanged.
 - Razor Tooth and Master Planner are worked out from their own code (the upgrade and the Sly they give the card you play). What's shown is unchanged but for Razor Tooth's replay fix below.
