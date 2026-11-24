@@ -1,4 +1,3 @@
-using System.Reflection;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Combat.History;
 using MegaCrit.Sts2.Core.Combat.History.Entries;
@@ -94,9 +93,6 @@ public class HistoryLedgerTests
 
     // ---- the seed: the game's own answer
 
-    private static List<CombatHistoryEntry> Entries => (List<CombatHistoryEntry>)typeof(CombatHistory)
-        .GetField("_entries", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(CombatManager.Instance.History)!;
-
     private static CardPlay PlayOf(CardModel card, Player player, int energy = 1, int index = 0, bool auto = false) => new()
     {
         Card = card, Player = player, Target = null, ResultPile = PileType.Discard, IsAutoPlay = auto, PlayIndex = index, PlayCount = index + 1,
@@ -127,7 +123,7 @@ public class HistoryLedgerTests
         var side = combat.CurrentSide;
         var players = combat.Players;
         var history = CombatManager.Instance.History;
-        var entries = Entries;
+        var entries = GameFight.Log;
         entries.Clear();
         try
         {

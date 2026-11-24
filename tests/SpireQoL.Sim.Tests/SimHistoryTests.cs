@@ -183,6 +183,26 @@ public class SimHistoryTests
     }
 
     [Fact]
+    public void AQuestionTheStartStateDidntSeedIsUnknownNeverZero()
+    {
+        // Forgotten Ritual's condition on a board whose start state has no seed for it: the play is unknown, its energy not decided either way.
+        SimEngine.RunScriptTo(Board(), SimScript.Of(ForgottenRitual()), out var after, out _);
+        Assert.Equal(SimEngine.HistoryUnknown, Assert.Single(after).Unmodelled);
+    }
+
+    [Fact]
+    public void ArrowsAreCountedAsShotsSpendThem()
+    {
+        // Arrow Stab's test (ArrowCmd.PlayerHasAnyArrows): the arrows you have as the step runs.
+        var anyArrows = new CountCondition(SimCounted.ArrowsAvailable, SimCompare.Greater, Than: 0);
+        var stab = Card("ArrowStab", new WhenAction(anyArrows, new SimAction[] { new CardEventAction(CardEvent.EnergyGained, Count: 1) }));
+        var armed = Board();
+        armed.You.Arrows = 1;
+        Assert.Equal(1, Assert.Single(SimEngine.Run(armed, stab).Branches).You.Energy);
+        Assert.Equal(0, Assert.Single(SimEngine.Run(Board(), stab).Branches).You.Energy);
+    }
+
+    [Fact]
     public void TheLedgerKeepsThePlaysNamesAndReportsHoldIt()
     {
         // The plays of the turn by type keep the names replay cases already hold; the ledger and its queries go through a report's JSON.

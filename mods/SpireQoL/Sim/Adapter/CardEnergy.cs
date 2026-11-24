@@ -26,7 +26,6 @@ internal static class CardEnergy
     /// <summary>Cards whose gain a rule in <see cref="AddTo"/> works out, with what decides it (read from the decompile).</summary>
     internal static readonly Dictionary<string, string> Rules = new()
     {
-        [nameof(ForgottenRitual)] = "you exhausted a card this turn (WasCardExhaustedThisTurn, the card's gold glow)",
         [nameof(DoubleEnergy)] = "as much energy as you have once its cost is spent (GainEnergyAsHeldAction)",
         [nameof(MadScience)] = "its Energized rider (TinkerTimeRider, EnergizedEnergy)",
         [nameof(EpicRetrieval)] = "per arrow of yours its play knocks loose (AfterArrowDislodged, source this card): SimCardPlay.ArrowEnergy",
@@ -106,9 +105,6 @@ internal static class CardEnergy
         }
         switch (name)
         {
-            case nameof(ForgottenRitual):
-                if (Sts2State.Private(card, "WasCardExhaustedThisTurn", fallback: false)) Gain(energy, owner);
-                return;
             case nameof(DoubleEnergy):
                 play.Body.Add(new GainEnergyAsHeldAction());
                 return;

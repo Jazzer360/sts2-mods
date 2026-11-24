@@ -199,6 +199,31 @@ public class PlayBehaviourTests
         Assert.Equal(1, after.You.HandCount);
     }
 
+    [Fact]
+    public void ForgottenRitualGainsWhenTheFightsLogHasAnExhaustThisTurn()
+    {
+        // ForgottenRitual.OnPlay: GainEnergy only if WasCardExhaustedThisTurn (a CardExhaustedEntry of yours this turn). The ledger is seeded
+        // from the game's log with the start state (decision #191); one from an earlier turn doesn't count.
+        var log = GameFight.Log;
+        log.Clear();
+        try
+        {
+            var before = Fight();
+            var earlier = before.Add<DefendIronclad>(PileType.Exhaust);
+            log.Add(new MegaCrit.Sts2.Core.Combat.History.Entries.CardExhaustedEntry(earlier, before.Combat.RoundNumber - 1, before.Combat.CurrentSide, CombatManager.Instance.History, before.Combat.Players));
+            var none = Only(PlayOut(before, before.Add<ForgottenRitual>()));
+            var exhausted = Fight();
+            var card = exhausted.Add<DefendIronclad>(PileType.Exhaust);
+            log.Add(new MegaCrit.Sts2.Core.Combat.History.Entries.CardExhaustedEntry(card, exhausted.Combat.RoundNumber, exhausted.Combat.CurrentSide, CombatManager.Instance.History, exhausted.Combat.Players));
+            var gained = Only(PlayOut(exhausted, exhausted.Add<ForgottenRitual>()));
+            Assert.Equal(none.You.Energy + 3, gained.You.Energy);
+        }
+        finally
+        {
+            log.Clear();
+        }
+    }
+
     // ---- a pick in the middle of a play is a card, never a particular one (decision #92)
 
     [Fact]

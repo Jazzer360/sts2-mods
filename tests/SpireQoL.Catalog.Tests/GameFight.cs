@@ -37,6 +37,13 @@ internal sealed class GameFight
         }
     }
 
+    /// <summary>
+    /// The game's log of the fight (CombatManager.Instance.History's entries), shared by every fight: a test that adds to it clears it
+    /// before and after (the game only logs during a live fight).
+    /// </summary>
+    public static List<MegaCrit.Sts2.Core.Combat.History.CombatHistoryEntry> Log => (List<MegaCrit.Sts2.Core.Combat.History.CombatHistoryEntry>)typeof(MegaCrit.Sts2.Core.Combat.History.CombatHistory)
+        .GetField("_entries", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(CombatManager.Instance.History)!;
+
     /// <summary>A new card of this type, owned by <paramref name="owner"/>, put into one of their piles.</summary>
     public T AddFor<T>(Player owner, PileType pile) where T : CardModel
     {

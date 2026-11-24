@@ -209,7 +209,8 @@ public static class CardProgramReader
             .Select(entry => entry.Method.Name).ToHashSet();
         foreach (var (type, method, ops) in methods)
         {
-            if (!AsksTheLog(ops) && !ops.Any(instruction => instruction.IsCall && instruction.Member is { } member && member.DeclaringType == owner.Name && helpers.Contains(member.Name))) continue;
+            if (!AsksTheLog(ops) && !ops.Any(instruction => instruction.IsCall && instruction.Member is { } member
+                    && (member.DeclaringType == owner.Name && helpers.Contains(member.Name) || reader.IsGameHelperAskingTheLog(member)))) continue;
             var own = type == owner && helpers.Contains(method.Name) ? method.GetParameters().Select(parameter => parameter.Name).ToHashSet() : new HashSet<string?>();
             var queries = new Dictionary<string, QueryValue>();
             foreach (var value in reader.HistoryValues(method, ops))
@@ -265,15 +266,22 @@ public static class CardProgramReader
         name.StartsWith("Is", StringComparison.Ordinal) || name.StartsWith("Has", StringComparison.Ordinal) || name.StartsWith("PlayerHas", StringComparison.Ordinal)
         || name.StartsWith("CreatureIs", StringComparison.Ordinal) || name.StartsWith("Find", StringComparison.Ordinal) || name.StartsWith("Get", StringComparison.Ordinal);
 
+    /// <summary>Whether a static game helper asks the fight's log or calls another helper of its type (CardProgramReader.Reader.AsksTheLog).</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type Owner, string Name, int Parameters), bool> HelperAsks = new();
+
     private sealed class Reader
     {
         private readonly Type _card;
         private readonly Func<MethodBase, List<CodeOp>> _read;
 
-        public Reader(Type card, Func<MethodBase, List<CodeOp>> read)
+        /// <summary>How deep in game helpers this reader is (a static helper of the game's it follows for a question to the fight's log).</summary>
+        private readonly int _helperDepth;
+
+        public Reader(Type card, Func<MethodBase, List<CodeOp>> read, int helperDepth = 0)
         {
             _card = card;
             _read = read;
+            _helperDepth = helperDepth;
         }
 
         public List<ProgramStep> Steps(MethodBase method, int depth)
@@ -312,12 +320,21 @@ public static class CardProgramReader
         /// </summary>
         private ProgramValue? HelperValue(CodeMember member, IReadOnlyList<ProgramValue> passed)
         {
+            // A static helper of the game's that asks the fight's log (MelodyCmd.PlayedChoThisTurn(Owner): PlayedThisTurn(player, Cho)): what it
+            // returns, with its parameters bound to what the call passes (decision #191).
+            if (member is { Kind: CodeMemberKind.Method, ReturnsValue: true, HasThis: false } && member.DeclaringType != _card.Name && _helperDepth < 2
+                && member.Namespace.StartsWith("MegaCrit.Sts2.Core", StringComparison.Ordinal) && !member.ValueType.StartsWith("Task", StringComparison.Ordinal)
+                && _card.Assembly.GetType(member.Namespace + "." + member.DeclaringType) is { } helperOwner && IsGameHelperAskingTheLog(member))
+            {
+                var helped = new Reader(helperOwner, _read, _helperDepth + 1).HelperValue(member, passed);
+                return helped != null && ReadsHistory(helped) ? helped : null;
+            }
             if (member.Kind != CodeMemberKind.Method || !member.ReturnsValue || member.Name.StartsWith("get_", StringComparison.Ordinal) || member.DeclaringType != _card.Name) return null;
             if (_card.GetMethods(All).FirstOrDefault(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount) is not MethodInfo found
                 || BodyOf(found) != found) return null;
             try
             {
-                var returned = Flow.Of(_read(found), found, LambdaOf, helperOf: null).ReturnedValue();
+                var returned = Flow.Of(_read(found), found, LambdaOf, helperOf: _helperDepth is > 0 and < 3 ? new Reader(_card, _read, _helperDepth + 1).HelperValue : null).ReturnedValue();
                 if (returned == null) return null;
                 var names = found.GetParameters();
                 // A parameter, or a lambda's capture of it (a closure's field named after it: Spite's creature in its Any).
@@ -326,6 +343,25 @@ public static class CardProgramReader
             }
             catch { return null; }
         }
+
+        /// <summary>
+        /// The game helper's code asks the fight's log, or calls another helper of its type (that may): only those are followed, once each.
+        /// </summary>
+        public bool IsGameHelperAskingTheLog(CodeMember member) =>
+            member is { Kind: CodeMemberKind.Method, ReturnsValue: true, HasThis: false } && member.DeclaringType != _card.Name
+            && member.Namespace.StartsWith("MegaCrit.Sts2.Core", StringComparison.Ordinal) && !member.ValueType.StartsWith("Task", StringComparison.Ordinal)
+            && _card.Assembly.GetType(member.Namespace + "." + member.DeclaringType) is { } owner && AsksTheLog(owner, member);
+
+        private bool AsksTheLog(Type owner, CodeMember member) => HelperAsks.GetOrAdd((owner, member.Name, member.ParameterCount), key =>
+        {
+            if (key.Owner.GetMethods(All).FirstOrDefault(method => method.Name == key.Name && method.GetParameters().Length == key.Parameters) is not { } found) return false;
+            try
+            {
+                return _read(found).Any(instruction => instruction.IsCall && instruction.Member is { } called
+                    && (called is { Name: "get_History", DeclaringType: "CombatManager" } || called.DeclaringType == key.Owner.Name && !called.HasThis));
+            }
+            catch { return false; }
+        });
 
         /// <summary>A lambda the code makes (a predicate for Any, Where...): its parameter and what it returns.</summary>
         private LambdaValue? LambdaOf(CodeMember member)

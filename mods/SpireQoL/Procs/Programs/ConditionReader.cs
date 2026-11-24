@@ -163,6 +163,9 @@ public static class ConditionReader
             return Simulated(new OstyMissingCondition());
         if (test is QueryValue { Name: "IsOstyAlive", IsProperty: true, Of: var ostyOwner } && ostyOwner != null && IsOwner(ostyOwner))
             return Simulated(new NotCondition(new OstyMissingCondition()));
+        // Your arrows: any to shoot (ArrowCmd.PlayerHasAnyArrows(Owner)).
+        if (test is QueryValue { Name: "PlayerHasAnyArrows", Of: null, Arguments: [var archer] } && IsOwner(archer))
+            return Simulated(new CountCondition(SimCounted.ArrowsAvailable, SimCompare.Greater, Than: 0));
         // Arrows in the target: anyone's, or the card owner's.
         if (test is QueryValue { Name: "CreatureIsImpaledByArrow", Arguments: [var impaled] } && IsTarget(impaled))
             return Simulated(new TargetImpaledCondition(ByOwner: false));
@@ -186,6 +189,8 @@ public static class ConditionReader
         }
         // A count, or a test that there's any: of your hand, or of the plays finished this turn.
         if (CountedTest(test, context, at) is { } counted) return counted;
+        // A question to the fight's log (decision #191: the history ledger): whether there's any, or its count compared with a number.
+        if (LoggedTest(test, context, at) is { } logged) return logged;
         // A property of the card: its upgrade, an auto-property (set when it's made: Mad Science's rider), or a getter read from its code.
         if (test is QueryValue { IsProperty: true, Of: NamedValue { Name: "this" }, Name: var property })
         {
@@ -234,6 +239,24 @@ public static class ConditionReader
         if (test is CompareValue { Left: var left, Right: var right } compare && Unstored(left) is { } counted && IsCount(counted)
             && Number(right, context) is var number && (number != null || context.Board == null) && IsCardsOwn(right, context))
             return Count(counted, Compared(compare.Op), number ?? 0, context, at);
+        return null;
+    }
+
+    /// <summary>
+    /// A question to the fight's log as a condition on the ledger's count (decision #191): Any is the count above 0; a Count compared with a
+    /// number the card's own values give. A question the ledger doesn't count (a reviewed gap) isn't read; null when it isn't one.
+    /// </summary>
+    private static ConditionReading? LoggedTest(ProgramValue test, Context context, string? at)
+    {
+        ConditionReading Simulated(HistoryQuery query, SimCompare compare, int than) =>
+            new(ConditionWay.Simulated) { Condition = new CountCondition(SimCounted.History, compare, than) { Query = query, At = at } };
+        if (test is QueryValue { Type: "Enumerable", Name: "Any" } any && CardProgramReader.ReadsHistory(any))
+            return HistoryQueryReader.Read(any) is { Query: { } query } ? Simulated(query, SimCompare.Greater, than: 0)
+                : new ConditionReading(ConditionWay.NotRead) { Reason = "a question to the fight's log the ledger doesn't count", Unread = test };
+        if (test is CompareValue { Left: var left, Right: var right } compare && Unstored(left) is QueryValue { Type: "Enumerable", Name: "Count" } count
+            && CardProgramReader.ReadsHistory(count) && IsCardsOwn(right, context) && Number(right, context) is { } number)
+            return HistoryQueryReader.Read(count) is { Query: { } counted } ? Simulated(counted, Compared(compare.Op), number)
+                : new ConditionReading(ConditionWay.NotRead) { Reason = "a question to the fight's log the ledger doesn't count", Unread = test };
         return null;
     }
 
@@ -348,6 +371,8 @@ public static class ConditionReader
         QueryValue { Name: "op_UnaryNegation" or "op_Addition" or "op_Subtraction" or "op_Multiply", Of: null } => true,
         // The card's X: what playing it now spends, fixed for the play (Repeat Shot at X 0).
         QueryValue { Name: "ResolveEnergyXValue" or "ResolveStarXValue", Of: NamedValue { Name: "this" } } => true,
+        // The hand's limit (CardPile.MaxCardsInHand): the game's fixed number.
+        QueryValue { Type: "CardPile", Name: "MaxCardsInHand", Of: null, IsProperty: true } => true,
         _ => false,
     });
 

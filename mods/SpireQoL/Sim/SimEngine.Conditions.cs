@@ -117,6 +117,8 @@ public static partial class SimEngine
                 return state.Player(owner)?.Turn[SimKeys.Plays(PlayStage.Finished)] ?? 0;
             case SimCounted.CardPlaysFinished:
                 return counted.Before + (state.CurrentPlay?.PlayIndex ?? 0);
+            case SimCounted.ArrowsAvailable:
+                return state.Player(owner)?.Arrows ?? 0;
             case SimCounted.History:
                 if (counted.Query == null) return null;
                 var logged = HistoryCount(state, owner, counted.Query);

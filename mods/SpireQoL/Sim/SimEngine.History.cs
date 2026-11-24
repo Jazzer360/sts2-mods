@@ -30,10 +30,15 @@ public static partial class SimEngine
         }
     }
 
-    /// <summary>A player's count of a query (its ledger entry); null when an event it may count wasn't read (its card's kind).</summary>
+    /// <summary>
+    /// A player's count of a query (its ledger entry); null when an event it may count wasn't read (its card's kind), or when the start state
+    /// has no seed for it.
+    /// </summary>
     public static int? HistoryCount(SimState state, int player, HistoryQuery query)
     {
         if (state.Player(player) is not { } simPlayer) return 0;
+        // A question the adapter didn't seed has no count to go on: unknown, never 0.
+        if (!query.IsTurnPlayCount && !state.History.Contains(query)) return null;
         var counts = query.Scope == HistoryScope.ThisTurn ? simPlayer.Turn : simPlayer.Fight;
         return counts.DataOf(query.Key) != 0 && !query.IsTurnPlayCount ? null : counts[query.Key];
     }

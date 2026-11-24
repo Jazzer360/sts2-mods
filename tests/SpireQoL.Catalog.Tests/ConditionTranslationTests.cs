@@ -37,7 +37,14 @@ public class ConditionTranslationTests
         ("Sacrifice", "CreatureCmd.GainBlock", 0, "not OstyMissing", false),
         ("BoneShards", "CreatureCmd.Kill", 0, "all(not OstyMissing, not OstyMissing)", false),
         ("Fetch", "DamageCmd.Attack", 0, "not OstyMissing", false),
+        // The fight's log (decision #191): an exhaust this turn, a Cho played this turn (MelodyCmd's helper, its tag bound from the caller).
+        ("ForgottenRitual", "PlayerCmd.GainEnergy", 0, "History>0", false),
+        ("KiRest", "PowerCmd.Apply", 1, "any(History>0, History>0)", false),
+        ("ArrowStab", "CardPileCmd.Add", 0, "all(ArrowsAvailable>0, HandCards<)", false),
     };
+
+    /// <summary>Cards whose step main runs on every play (main's Forgotten Ritual gains its energy with no test).</summary>
+    private static readonly HashSet<string> OnlyBetaTests = new() { "ForgottenRitual" };
 
     /// <summary>A condition as short text: its test, a count's comparison with its number left out (the board gives it).</summary>
     private static string Text(SimCondition condition) => condition switch
@@ -67,6 +74,7 @@ public class ConditionTranslationTests
         foreach (var (card, command, skip, expected, askedFirst) in Known)
         {
             if (!cards.TryGetValue(card, out var type)) continue; // a card only the other branch has
+            if (branch == "main" && OnlyBetaTests.Contains(card)) continue;
             var program = CardProgramReader.Read(type, code.Read);
             var step = CardEffects.Find(program, candidate => candidate.Command.FullName == command)[skip];
             var reading = ConditionReader.Read(step.Condition, new ConditionReader.Context(type, code.Read, Board: null, program));

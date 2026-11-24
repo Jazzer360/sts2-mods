@@ -324,7 +324,6 @@ internal static class CardCoverage
         ["a taken card"] = "a test of each card a loop or a pick takes (The Hermit's Curse): the take's own filter (TakeFromHandAction), followed through the play",
         ["the target"] = "a test of the target the simulator doesn't ask yet (alive, its powers, its intent): decided on the board (TRACKER 20); Judgement's HP and Expose's Artifact are asked by their actions",
         ["a count of the board"] = "a count the simulator doesn't keep or doesn't ask yet (your orbs, the enemies, your exhaust, draw or discard pile, your hand's room): decided on the board (TRACKER 20); a take into your hand reads your hand's room as it runs",
-        ["this turn's history"] = "what happened this turn besides plays (a card exhausted, a melody played): decided on the board (TRACKER 20)",
         ["your powers"] = "a power of yours or a teammate's tested by the code (Cho Ki's Stretch, Sovereign Blade's Parry, Imitation Learning, Frantic Escape): decided on the board (TRACKER 20)",
         ["the reader"] = "a value the reader can't follow yet (a helper's local, an array's length): decided on the board as before (docs/CARD_PROGRAMS.md A5)",
     };
@@ -340,7 +339,6 @@ internal static class CardCoverage
         if (Names("each")) return "a taken card";
         if (parts.Any(part => part is Procs.Programs.QueryValue { Name: "Target", Of: Procs.Programs.NamedValue { Name: "cardPlay" } })) return "the target";
         if (Names("Orbs", "HittableEnemies", "GetCards", "Take") || parts.Any(part => part is Procs.Programs.QueryValue { Name: "GetPile" })) return "a count of the board";
-        if (Names("History", "PlayedChoThisTurn", "PlayedWahThisTurn", "HasWahOrChoMelody", "PlayerHasAnyArrows")) return "this turn's history";
         if (Names("Powers", "GetPowerAmount", "GetSandpitEnemy", "GetOwnerParryAmount")) return "your powers";
         if (parts.Any(part => part is Procs.Programs.UnknownValue) || Names("count", "creatures")) return "the reader";
         return null;
