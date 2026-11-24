@@ -18,6 +18,11 @@ public static class ReadModels
     {
         // The damage and block math (Modify hooks): their returns as expressions.
         PowerId.Strength.Name, PowerId.Dexterity.Name, PowerId.Frail.Name, PowerId.DoubleDamage.Name,
+        // What a card played, a card event or a power landing sets off: block, damage, draws, a power.
+        PowerId.AllIsWell.Name, PowerId.Arsenal.Name, PowerId.CorrosiveWave.Name, PowerId.DanseMacabre.Name, PowerId.FeelNoPain.Name, PowerId.PillarOfCreation.Name,
+        PowerId.Rage.Name, PowerId.Shroud.Name, PowerId.SleightOfFlesh.Name, PowerId.Smokestack.Name, PowerId.Speedster.Name, PowerId.SpiritOfAsh.Name,
+        PowerId.Vicious.Name,
+        RelicId.CharonsAshes.Name, RelicId.DaughterOfTheWind.Name, RelicId.Fertilizer.Name, RelicId.GamePiece.Name, RelicId.LostWisp.Name, RelicId.ToughBandages.Name,
     };
 
     /// <summary>The read models of the running game's classes, for SimModels.</summary>

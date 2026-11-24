@@ -206,14 +206,6 @@ public sealed class IntimidatingHelmet : RelicProc
         Mine(play, owner) && play.Card.Energy >= Var(state, owner, "Energy", fallback: 2) ? RelicBlock(state, owner) : One(state);
 }
 
-/// <summary>DaughterOfTheWind.AfterCardPlayed: block for each Attack you play.</summary>
-public sealed class DaughterOfTheWind : RelicProc
-{
-    public override TabKind? Tab => TabKind.Block;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Type == SimCardType.Attack ? RelicBlock(state, owner) : One(state);
-}
-
 /// <summary>Permafrost.AfterCardPlayed: block for the first Power you play each combat.</summary>
 public sealed class Permafrost : RelicProc
 {
@@ -224,22 +216,6 @@ public sealed class Permafrost : RelicProc
         Disarm(state, owner);
         return RelicBlock(state, owner);
     }
-}
-
-/// <summary>LostWisp.AfterCardPlayed: damage to every hittable enemy for each Power you play.</summary>
-public sealed class LostWisp : RelicProc
-{
-    public override TabKind? Tab => TabKind.Damage;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Type == SimCardType.Power ? RelicDamageAll(state, owner) : One(state);
-}
-
-/// <summary>GamePiece.AfterCardPlayed: its Cards value of draws for each Power you play (CardPileCmd.Draw(DynamicVars.Cards)).</summary>
-public sealed class GamePiece : RelicProc
-{
-    public override TabKind? Tab => TabKind.Draw;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Type == SimCardType.Power ? Cause(Fire(state, owner), CardEvent.Drawn, count: Var(state, owner, "Cards", fallback: 1), owner) : One(state);
 }
 
 /// <summary>
@@ -424,14 +400,6 @@ public sealed class IronClub : CounterRelic
 
 // ---- card events
 
-/// <summary>CharonsAshes.AfterCardExhausted: damage to every hittable enemy for each card you exhaust.</summary>
-public sealed class CharonsAshes : RelicProc
-{
-    public override TabKind? Tab => TabKind.Damage;
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.Exhausted && player == owner ? DamageAll(state, owner, Amount(state, owner), PropsOf(state, owner, "Damage")) : One(state);
-}
-
 /// <summary>ForgottenSoul.AfterCardExhausted: damage to a random hittable enemy for each card you exhaust.</summary>
 public sealed class ForgottenSoul : RelicProc
 {
@@ -461,14 +429,6 @@ public sealed class Tingsha : RelicProc
     public override TabKind? Tab => TabKind.Damage;
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
         cardEvent == CardEvent.Discarded && player == owner ? RelicDamageRandom(state, owner) : One(state);
-}
-
-/// <summary>ToughBandages.AfterCardDiscarded: block for each card you discard.</summary>
-public sealed class ToughBandages : RelicProc
-{
-    public override TabKind? Tab => TabKind.Block;
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.Discarded && player == owner ? RelicBlock(state, owner) : One(state);
 }
 
 /// <summary>MiniRegent.AfterStarsSpent: once a turn (armed), Strength when you spend stars.</summary>
@@ -526,17 +486,6 @@ public sealed class WhittlingKnife : RelicProc
     {
         if (cardEvent != CardEvent.Shuffled || player != owner) return One(state);
         SimEngine.ApplyPower(state, owner, owner, PowerId.Aim, Var(state, owner, "AimPower", fallback: 5), debuff: false);
-        return Fire(state, owner);
-    }
-}
-
-/// <summary>Fertilizer.AfterCardGeneratedForCombat: Strength (its StrengthPower value) when you create a Sadness.</summary>
-public sealed class Fertilizer : RelicProc
-{
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
-    {
-        if (cardEvent != CardEvent.GeneratedSadness || player != owner) return One(state);
-        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, Var(state, owner, "StrengthPower", fallback: 1), debuff: false);
         return Fire(state, owner);
     }
 }

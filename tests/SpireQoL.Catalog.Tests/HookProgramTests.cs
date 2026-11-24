@@ -95,6 +95,15 @@ public class HookProgramTests
         Assert.All(ReadModels.Classes, name => Assert.IsType<ReadModel>(SimModels.Get(name)));
     }
 
+    /// <summary>A read class's coverage ledger entry says it's read from its code (its hooks, translated: the scan's), and only a read class's does.</summary>
+    [Fact]
+    public void EachReadClassesLedgerEntrySaysSo()
+    {
+        var says = CoverageLedger.ReviewedEntries.Where(entry => entry.Value.Contains("read from its code (ReadModel", StringComparison.Ordinal)).Select(entry => entry.Key).ToHashSet(StringComparer.Ordinal);
+        var withEntries = ReadModels.Classes.Where(CoverageLedger.ReviewedEntries.ContainsKey).ToHashSet(StringComparer.Ordinal);
+        Assert.Equal(withEntries.OrderBy(name => name, StringComparer.Ordinal), says.OrderBy(name => name, StringComparer.Ordinal));
+    }
+
     [Fact]
     public void TheSimulatorTestsReadModelsAreTheInstalledGamesCode()
     {

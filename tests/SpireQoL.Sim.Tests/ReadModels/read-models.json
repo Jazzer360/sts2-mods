@@ -1,5 +1,225 @@
 [
   {
+    "Name": "AllIsWellPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardGeneratedForCombat",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "CardIs",
+                "Of": "Sadness"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block"
+  },
+  {
+    "Name": "ArsenalPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardGeneratedForCombat",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookFactValue",
+              "Fact": "EventIsOwners"
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger"
+  },
+  {
+    "Name": "CharonsAshes",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardExhausted",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Damage",
+              "Canonical": 3
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Damage.Props",
+              "Canonical": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookFactValue",
+              "Fact": "EventIsOwners"
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage"
+  },
+  {
+    "Name": "CorrosiveWavePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardDrawn",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "PoisonPower",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": true,
+            "When": {
+              "$kind": "HookFactValue",
+              "Fact": "EventIsOwners"
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookFactValue",
+              "Fact": "TakesPart"
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger"
+  },
+  {
+    "Name": "DanseMacabrePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "BeforeCardPlayed",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "GreaterOrEqual",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardEnergy"
+                },
+                "Right": {
+                  "$kind": "HookVar",
+                  "Key": "Energy",
+                  "Canonical": 2
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block"
+  },
+  {
+    "Name": "DaughterOfTheWind",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Block",
+              "Canonical": 1
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Block.Props",
+              "Canonical": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardType"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block"
+  },
+  {
     "Name": "DexterityPower",
     "Kind": "Power",
     "Hooks": [
@@ -369,6 +589,69 @@
     ]
   },
   {
+    "Name": "FeelNoPainPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardExhausted",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "When": {
+              "$kind": "HookFactValue",
+              "Fact": "EventIsOwners"
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block"
+  },
+  {
+    "Name": "Fertilizer",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardGeneratedForCombat",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "StrengthPower",
+              "Canonical": 1
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "CardIs",
+                "Of": "Sadness"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger"
+  },
+  {
     "Name": "FrailPower",
     "Kind": "Power",
     "Hooks": [
@@ -436,6 +719,404 @@
     ]
   },
   {
+    "Name": "GamePiece",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "DrawStep",
+            "Count": {
+              "$kind": "HookVar",
+              "Key": "Cards",
+              "Canonical": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardType"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 3
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Draw"
+  },
+  {
+    "Name": "LostWisp",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Damage",
+              "Canonical": 8
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Damage.Props",
+              "Canonical": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardType"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 3
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage"
+  },
+  {
+    "Name": "PillarOfCreationPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardGeneratedForCombat",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "When": {
+              "$kind": "HookFactValue",
+              "Fact": "EventIsOwners"
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block"
+  },
+  {
+    "Name": "RagePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardType"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookFactValue",
+              "Fact": "TakesPart"
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block"
+  },
+  {
+    "Name": "ShroudPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterPowerAmountChanged",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "ApplierIsOwner"
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "PowerIs",
+                "Of": "DoomPower"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block"
+  },
+  {
+    "Name": "SleightOfFleshPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterPowerAmountChanged",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "PowerOwner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PowerAmount"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PowerIsDebuff"
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PowerOnEnemy"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookFactValue",
+                  "Fact": "ApplierIsOwner"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PowerIn",
+                  "Of": "AnticipatePower,ChoBarbsPower,CoordinatePower,CrushUnderPower,DarkShacklesPower,DyingStarPower,EnfeeblingTouchPower,FadePower,FeedingFrenzyPower,FlexPotionPower,FocusedStrikePower,HelicalDartPower,HotfixPower,HyperbeamFocusDownPower,ManglePower,MonarchsGazeStrengthDownPower,PiercingWailPower,ReptileTrinketPower,SetupStrikePower,ShacklingPotionPower,SpeedPotionPower,SynchronizePower"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage"
+  },
+  {
+    "Name": "SmokestackPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardGeneratedForCombat",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardType"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 4
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage"
+  },
+  {
+    "Name": "SpeedsterPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardDrawn",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "OwnersTurn"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage"
+  },
+  {
+    "Name": "SpiritOfAshPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "BeforeCardPlayed",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "CardEthereal"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block"
+  },
+  {
     "Name": "StrengthPower",
     "Kind": "Power",
     "Hooks": [
@@ -501,5 +1182,93 @@
         }
       }
     ]
+  },
+  {
+    "Name": "ToughBandages",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardDiscarded",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Block",
+              "Canonical": 3
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Block.Props",
+              "Canonical": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "OwnersTurn"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block"
+  },
+  {
+    "Name": "ViciousPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterPowerAmountChanged",
+        "Steps": [
+          {
+            "$kind": "DrawStep",
+            "Count": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PowerAmount"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookFactValue",
+                  "Fact": "ApplierIsOwner"
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "PowerIs",
+                "Of": "VulnerablePower"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Draw"
   }
 ]

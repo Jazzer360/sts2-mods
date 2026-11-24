@@ -405,11 +405,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - [x] 1.20.11: 94 unused usings removed (IDE0005, which the normal build doesn't check); `scripts/dead-code.mjs` now lists them too (`--fix-usings` removes them). `TurnEndModel.Incomplete` removed (replaced by ProgressMark in 1.17.0).
 - Known gaps that could **underestimate damage to you**: none known. ~~Multiplayer Covered/Intercept~~ (0.37.4); ~~Queen and Kin Priest switching moves mid-turn~~ (reviewed for v0.113.1: neither switch changes an attack).
 <!-- gaps:start (written by scripts/coverage-ledger.mjs from the review files; don't edit by hand) -->
-- Known gaps (4; each is logged when present in a fight):
-  - [ ] BiiigHug (model's effect): a Soot shuffled into your draw pile at an unknown spot: later draws in the same simulation don't see it
-  - [ ] PersonalHivePower (model's effect): its Dazed into your draw pile when you attack it (counted on its tab): later draws in the same simulation don't see them
-  - [ ] SurprisePower (model's effect): the gremlins it calls when it dies: a later hit in the same play can't target them (the next frame reads them)
-  - [ ] UnceasingTop (model's effect): a draw when your hand empties during your turn: not simulated (your hand size, and what the draw sets off)
+- Known gaps (0; each is logged when present in a fight):
 <!-- gaps:end -->
 
 ---
@@ -480,6 +476,7 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 - [x] Modify hooks as expressions (`ReadReturnedWays` → `HookWays`).
 - [x] The scan (`HookProgramTests`): every power's and relic's hook body on both branches translated, never run (with why) or a named gap; counts pinned (beta: powers 73 read, 82 never run, 414 gaps; relics 9 read, 294 never run, 212 gaps).
 - [x] Group 1, the damage and block math: Strength, Dexterity, Frail, Double Damage (parity on every scenario: `ReadModelParityTests`; snapshots and golden unchanged).
+- [x] Group 2, what a play, a card event or a power landing sets off: Feel No Pain, Rage, Spirit of Ash, Danse Macabre, Speedster, Corrosive Wave, Arsenal, Pillar of Creation, All Is Well, Smokestack, Sleight of Flesh, Vicious, Shroud; Charon's Ashes, Daughter of the Wind, Fertilizer, Game Piece, Lost Wisp, Tough Bandages (parity, snapshots and golden unchanged). Reviewed differences, each a line of the game's code now followed: Rage's and Corrosive Wave's removal as your turn ends; Sleight of Flesh leaving out a temporary power landing (its Strength still counts); Shroud and Vicious with no test of the target. None changes a prediction today.
 - [ ] Hooks no read model runs yet (the biggest gap kind): the damage-time hooks (BeforeDamageReceived, AfterDamageGiven, AfterDamageReceived, AfterBlockBroken), AfterAttack/BeforeAttack, AfterBlockGained, AfterOrbChanneled, AfterDeath, the end-of-turn hooks other than AfterSideTurnEnd, ModifyCardPlayCount and ModifyCardPlayResultLocation, the HP-loss pipeline, ModifyHandDraw and the Try/Should hooks.
 - [ ] A model's own state as simulator state: stores to its fields and properties (Kunai's AttacksPlayedThisTurn), its internal data (`GetInternalData`: Afterimage's amounts bound to a play, Dark Embrace's Ethereal count), seeded from the game and part of the state key.
 - [ ] Turn-start hooks of powers on enemies (they act as the enemies' turn starts: the enemy turn runs no read model there yet).

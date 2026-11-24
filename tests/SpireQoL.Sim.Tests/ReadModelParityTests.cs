@@ -23,7 +23,18 @@ public class ReadModelParityTests
     private static readonly Dictionary<string, string> Reviewed = new(StringComparer.Ordinal)
     {
         ["DoubleDamagePower.AfterSideTurnEnd"] = "PowerCmd.Decrement(this) when its owner takes part: it goes down as your turn ends. After it no card of yours plays this turn (the auto-plays come before), so no damage it doubles is left: no prediction changes",
+        ["RagePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. No card of yours plays after it (the auto-plays come before): no prediction changes",
+        ["CorrosiveWavePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. You draw nothing after it this turn: no prediction changes",
+        ["SleightOfFleshPower.AfterPowerApplied"] = "!(power is ITemporaryPower): a temporary power landing (Dark Shackles) doesn't set it off, the Strength its BeforeApplied applies does. The simulator lands a temporary Strength power as that Strength (SimAdapter.PowersFrom), which both count: no prediction changes",
+        ["ShroudPower.AfterPowerApplied"] = "applier == base.Owner && power is DoomPower, with no test of the target: Doom you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Doom on a player today",
+        ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
     };
+
+    /// <summary>
+    /// The relics whose hand-written model's amount the adapter read from one of their values (SimReaders.RelicAmountVars), by that value's key:
+    /// the board gives the amount as the adapter did, so the two read the same number.
+    /// </summary>
+    private static readonly Dictionary<string, string> RelicAmountVars = new(StringComparer.Ordinal) { [RelicId.CharonsAshes.Name] = "Damage" };
 
     public static TheoryData<string> Models() => new(HandWritten.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
@@ -113,9 +124,10 @@ public class ReadModelParityTests
         state.Enemies.Add(new SimEnemy { Id = 0, Name = "E0", Hp = 30, Hits = new List<int> { 6 } });
         state.Enemies.Add(new SimEnemy { Id = 1, Name = "E1", Hp = 25, Block = 5, Hits = new List<int> { 3, 3 } });
         if (model.Spec.Kind == ModelKind.Power) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).With(new PowerId(model.Name), amount: 3));
-        else SimEngine.SetRelics(state, owner, SimEngine.RelicsOf(state, owner).With(new RelicId(model.Name), amount: 0, data: (int)RelicUse.Armed));
         foreach (var variable in VarsOf(model.Spec))
             state.Vars[$"{owner}:{model.Name}:{variable.Key}"] = variable.Key.EndsWith(".Props", StringComparison.Ordinal) ? (int)variable.Canonical : (int)variable.Canonical + 1;
+        var amount = RelicAmountVars.TryGetValue(model.Name, out var amountVar) ? state.Vars[$"{owner}:{model.Name}:{amountVar}"] : 0;
+        if (model.Spec.Kind == ModelKind.Relic) SimEngine.SetRelics(state, owner, SimEngine.RelicsOf(state, owner).With(new RelicId(model.Name), amount, data: (int)RelicUse.Armed));
         return state;
     }
 
