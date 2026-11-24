@@ -17,6 +17,8 @@ internal static class PlayOrder
     /// <summary>The game command an action stands for (a key also given to the program's commands), or null for one that stands for none.</summary>
     internal static string? KeyOf(SimAction action) => action switch
     {
+        // An action on a condition stands for the command it guards (decision #190).
+        WhenAction { Then: [var guarded, ..] } => KeyOf(guarded),
         AttackAction => "attack",
         GainBlockAction => "block",
         ApplyPowerAction apply => "power:" + apply.Power.Name,
@@ -87,10 +89,17 @@ internal static class PlayOrder
     /// <paramref name="actions"/> put in the program's order. A <see cref="LeaveHandAction"/> or an exhaust pick goes with the
     /// event that follows it (the cards leave, then their exhausts or discards set things off).
     /// </summary>
-    public static List<SimAction> Arrange(IReadOnlyList<SimAction> actions, CardProgram program)
+    public static List<SimAction> Arrange(IReadOnlyList<SimAction> actions, CardProgram program) =>
+        ArrangeWithSteps(actions, program).Select(arranged => arranged.Action).ToList();
+
+    /// <summary>
+    /// <paramref name="actions"/> in the program's order, each with the program command it stands for (null: none), so what runs it on a
+    /// condition can read that command's condition (decision #190).
+    /// </summary>
+    public static List<(SimAction Action, CommandStep? Step)> ArrangeWithSteps(IReadOnlyList<SimAction> actions, CardProgram program)
     {
         var steps = Steps(program);
-        if (steps.Count == 0 || actions.Count < 2) return actions.ToList();
+        if (steps.Count == 0) return actions.Select(action => (action, (CommandStep?)null)).ToList();
         // Each action's step: the first step of its key still free for it; actions of one key share a step only when the program
         // has fewer steps of that key than the script has actions (a power applied to every enemy is one command).
         var stepOf = new int[actions.Count];
@@ -118,7 +127,8 @@ internal static class PlayOrder
             sortKey[i] = stepOf[i] >= 0 ? (steps[stepOf[i]].Order, 0, i) : last with { Index = i };
             if (stepOf[i] >= 0) last = sortKey[i];
         }
-        var pieces = new List<(SimAction Action, (int Step, int Round, int Index) Key)>();
+        var pieces = new List<(SimAction Action, (int Step, int Round, int Index) Key, CommandStep? Command)>();
+        CommandStep? CommandOf(int index) => stepOf[index] >= 0 ? steps[stepOf[index]].Command : null;
         for (var i = 0; i < actions.Count; i++)
         {
             var loop = stepOf[i] >= 0 ? steps[stepOf[i]].Loop : null;
@@ -128,22 +138,22 @@ internal static class PlayOrder
                 // picks the cards (an exhaust pick) comes before the first round.
                 if (Split(actions[i], rounds) is not { } split)
                 {
-                    pieces.Add((actions[i], (steps[loop.First].Order, 0, i)));
+                    pieces.Add((actions[i], (steps[loop.First].Order, 0, i), CommandOf(i)));
                     continue;
                 }
                 for (var round = 0; round < rounds; round++)
-                    pieces.Add((split[round], (steps[loop.First].Order, round + 1, steps[stepOf[i]].Order * 10000 + i)));
+                    pieces.Add((split[round], (steps[loop.First].Order, round + 1, steps[stepOf[i]].Order * 10000 + i), CommandOf(i)));
                 continue;
             }
-            pieces.Add((actions[i], sortKey[i]));
+            pieces.Add((actions[i], sortKey[i], CommandOf(i)));
         }
-        return pieces.OrderBy(piece => piece.Key.Step).ThenBy(piece => piece.Key.Round).ThenBy(piece => piece.Key.Index).Select(piece => piece.Action).ToList();
+        return pieces.OrderBy(piece => piece.Key.Step).ThenBy(piece => piece.Key.Round).ThenBy(piece => piece.Key.Index).Select(piece => (piece.Action, piece.Command)).ToList();
     }
 
     /// <summary>"power:ThornsPower" → "ThornsPower".</summary>
     private static string PowerTypeName(string key) => key["power:".Length..];
 
-    private sealed record Step(int Order, HashSet<string> Keys, LoopInfo? Loop);
+    private sealed record Step(int Order, HashSet<string> Keys, LoopInfo? Loop, CommandStep Command);
 
     /// <summary>A loop's steps (their indexes in the flattened list).</summary>
     private sealed record LoopInfo(int First, int Last);
@@ -159,7 +169,7 @@ internal static class PlayOrder
                 switch (programStep)
                 {
                     case CommandStep command:
-                        steps.Add(new Step(steps.Count, KeysOf(command).ToHashSet(), loop));
+                        steps.Add(new Step(steps.Count, KeysOf(command).ToHashSet(), loop, command));
                         if (command.Inner.Count > 0) Walk(command.Inner, loop);
                         break;
                     case LoopStep inner:

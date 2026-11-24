@@ -81,6 +81,7 @@ public static partial class SimAdapter
         if (shot) play.Body.Add(new ShootAction());
         if (facts.AttackHits > 0 && AttackOf(card, facts, me, combat, ids, targetId, name) is { } attack)
             play.Body.Add((shot ? attack with { NeedsArrow = true } : attack) with { StretchFromDamage = name == nameof(BlossomShot) });
+        play.Body.AddRange(LaterAttacks(card, me, combat, ids));
         if (shot) play.Body.Add(new ImpaleAction());
         // Recall, Uproot, Wrest: every arrow of yours out of the target.
         if (Procs.Programs.CardEffects.DislodgesArrows(card.GetType())) play.Body.Add(new DislodgeAllAction());
@@ -128,10 +129,10 @@ public static partial class SimAdapter
         play.Body.AddRange(OrbsOf(card, me, combat, name, play.ChannelToAlly ? allyId : owner));
         // The card's own energy (decision #117: Production, Sunder's kill, Double Energy...), each play.
         CardEnergy.AddTo(play, card, me, combat, ids.FirstOrDefault(entry => entry.Value == targetId).Key, owner, allyId);
-        // Stars that wait on the attack's kill (Knockout Blow): the attack's, when its target dies.
-        if (Procs.Programs.CardEffects.GainsStarsOnKill(card.GetType()))
-            for (var i = 0; i < play.Body.Count; i++)
-                if (play.Body[i] is AttackAction attackAction) { play.Body[i] = attackAction with { KillRewards = attackAction.KillRewards.Append(new KillReward(CardEvent.StarsGained, Count: 1)).ToList() }; break; }
+        // A star gain on a condition the simulator asks (decision #190: Knockout Blow's kill); a certain one is the facts' (StarGains).
+        foreach (var gain in Procs.Programs.CardEffects.Find(PlayOrder.ProgramOf(card.GetType()), command => command.Command is { DeclaringType: "PlayerCmd", Name: "GainStars" }))
+            if (PlayConditions.Reading(card, gain.Condition) is { Way: Procs.Programs.ConditionWay.Simulated } reading)
+                play.Body.Add(PlayConditions.Guarded(new CardEventAction(CardEvent.StarsGained, Count: 1), reading));
         // Ki Chant shuffles your discard pile in when your draw pile is short of what it looks at (each play, as it runs), then takes.
         if (Procs.Programs.CardEffects.ShufflesWhenShort(card.GetType()) && PlayFacts.LookCount(card) is > 0 and var looks)
             play.Body.Add(new ShuffleDrawPileAction(Array.Empty<SimDrawGroup>()) { WhenShorterThan = looks });
@@ -165,7 +166,8 @@ public static partial class SimAdapter
                 { To = ApplyPowerAction.Where.RandomEnemy, Times = Math.Max(1, Sts2State.Var(card, "Repeat", fallback: 1)), Debuff = true });
         if (Procs.Programs.CardEffects.KillsOsty(card.GetType())) play.Body.Add(new KillOstyAction());
         // What the card does, in the order its code does it (decision #182: its program).
-        if (UseCardPrograms) play.Body = PlayOrder.Arrange(play.Body, PlayOrder.ProgramOf(card.GetType()));
+        // Each action the facts built on its command's condition, when the simulator can ask it (decision #190: PlayConditions).
+        if (UseCardPrograms) play.Body = PlayConditions.Guard(PlayOrder.ArrangeWithSteps(play.Body, PlayOrder.ProgramOf(card.GetType())), card);
         // The card's enchantment acts after the card itself, on every play (CardModel: EnchantmentModel.OnPlay after OnPlay). The
         // coverage ledger reviews every enchantment's OnPlay.
         switch (card.Enchantment)
@@ -190,11 +192,17 @@ public static partial class SimAdapter
                 break;
         }
         // A teammate's card: the block it gives its player is theirs.
-        if (owner != Who.You)
-            for (var i = 0; i < play.Body.Count; i++)
-                if (play.Body[i] is GainBlockAction { To: Who.You } gainBlockAction) play.Body[i] = gainBlockAction with { To = owner };
+        if (owner != Who.You) play.Body = play.Body.Select(action => ToOwner(action, owner)).ToList();
         return play;
     }
+
+    /// <summary>A teammate's card's block to you is theirs (an action on a condition too).</summary>
+    private static SimAction ToOwner(SimAction action, int owner) => action switch
+    {
+        GainBlockAction { To: Who.You } gainBlockAction => gainBlockAction with { To = owner },
+        WhenAction whenAction => whenAction with { Then = whenAction.Then.Select(guarded => ToOwner(guarded, owner)).ToList() },
+        _ => action,
+    };
 
     /// <summary>
     /// A card that acts on what its own draw gave (decision #118: DrawnCardReaderOf, read from its program): its draw and its reaction
@@ -384,6 +392,9 @@ public static partial class SimAdapter
             if (!exhausts.Any(exhaust => exhaust.Pick != null && ReferenceEquals(exhaust.Pick, discard.Pick))) Take(discard, shared: false);
         foreach (var transform in Procs.Programs.CardEffects.Transforms(type))
             if (!transform.ChoosesHowMany && transform.PickPile is null or MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand) Take(transform, shared: false);
+        // And the filters its conditions ask of your hand (decision #190: Impatience's Attacks), followed the same way.
+        foreach (var filter in Procs.Programs.ConditionReader.HandFiltersOf(type, program))
+            filters.Add((filter.Key, (other, _) => Procs.Programs.ProgramEvaluator.Passes(filter.Lambda, other, board, program)));
         return filters;
     }
 
@@ -440,12 +451,10 @@ public static partial class SimAdapter
         return new SimAction[] { block with { Times = 1 } };
     }
 
-
-
     /// <summary>
     /// One play's draws, each from its program (CardEffects.DrawsForYou), in order: a count of the cards the play took (Calculated Gamble)
-    /// or of your hand's room (Scrawl) read as it runs; else its count on each play, its condition evaluated for that play (FTL, Fetch).
-    /// Then Swift's draw, the first play's only (Swift turns itself off). With no draw pile read, the cards join the hand as they're drawn.
+    /// or of your hand's room (Scrawl) read as it runs; else its own count, on its condition (decision #190: PlayConditions). Then Swift's
+    /// draw, the first play's only (Swift turns itself off). With no draw pile read, the cards join the hand as they're drawn.
     /// </summary>
     private static IEnumerable<SimAction> DrawsOf(PlayFacts facts, Player me)
     {
@@ -464,9 +473,13 @@ public static partial class SimAdapter
                 yield return new CardEventAction(CardEvent.Drawn, int.MaxValue) { Indirect = true, JoinsHand = true, CountFrom = SimCount.HandRoom };
                 continue;
             }
-            var byPlay = PlayFacts.DrawCountsByPlay(card, draw, facts.Plays);
-            if (byPlay.All(count => count == 0)) continue;
-            yield return new CardEventAction(CardEvent.Drawn, byPlay[0]) { Indirect = true, JoinsHand = true, ByPlay = byPlay.Distinct().Count() > 1 ? byPlay : null };
+            // On its condition (decision #190): asked by the simulator as each play runs (FTL's plays this turn, Fetch's first play, Ki
+            // Hop's and Wrest's arrows, Impatience's hand), or decided on the board when nothing in the play can change it.
+            var reading = PlayConditions.Reading(card, draw.Condition);
+            var drawn = PlayFacts.DrawCount(card, draw);
+            if (drawn <= 0 || PlayConditions.Skipped(card, draw.Condition, reading)) continue;
+            foreach (var ask in PlayConditions.AsksOf(reading)) yield return ask;
+            yield return PlayConditions.Guarded(new CardEventAction(CardEvent.Drawn, drawn) { Indirect = true, JoinsHand = true }, reading);
         }
         if (facts.EnchantmentDraws > 0)
             yield return new FirstPlayOnly(new SimAction[] { new CardEventAction(CardEvent.Drawn, facts.EnchantmentDraws) { Indirect = true, JoinsHand = true } });
@@ -567,24 +580,36 @@ public static partial class SimAdapter
             baseOn[id] = baseValue;
             captured[id] = SimReaders.Damage(me.RunState, combat, card, me.Creature, creature, baseValue, props);
         }
-        DamageSpec? onKill = null;
-        if (Procs.Programs.CardEffects.HitsAllOnKill(card.GetType()) && card.DynamicVars.TryGetValue("OnKillDamage", out var kv2) && kv2 is DamageVar kdv)
-        {
-            var killTerms = new Dictionary<int, CapturedTerms>();
-            foreach (var (creature, id) in ids)
-                if (creature.IsAlive && creature.IsHittable) killTerms[id] = SimReaders.Damage(me.RunState, combat, card, me.Creature, creature, kdv.BaseValue, kdv.Props);
-            onKill = new DamageSpec(kdv.BaseValue, SimReaders.Props(kdv.Props)) { Captured = killTerms };
-        }
         var growth = facts.Plays > 1 && !fixedNumbers ? PlayGrowth.Of(card) : PlayGrowth.Growth.None;
         return new AttackAction(hits, mode, new DamageSpec(baseDamage, SimReaders.Props(props))
             { BaseOn = baseOn, Captured = captured, Fixed = fixedNumbers, GrowsEachPlay = growth.Damage, EnchantFirstPlayOnly = growth.EnchantFirstPlayOnly })
         {
             HitsFrom = hitsTaken ? SimCount.CardsTaken : SimCount.Given,
             ByOsty = facts.ByOsty, // a single target: the play's (SimPlay.TargetId)
-            OnKill = onKill,
             Splash = PlayFacts.SplashCards.Contains(name), // the target's damage to every other enemy
             RepeatPerKill = RepeatPerKillCards.Contains(name),
         };
+    }
+
+    /// <summary>
+    /// The play's later attacks at every enemy, each on its condition (decision #190: Timber's second attack when the first killed): its
+    /// damage the card value its code names, through the pipeline on each enemy, a whole attack with its hooks (DamageCmd.Attack...
+    /// TargetingAllOpponents...Execute). Only one whose condition the simulator asks: the play's first attack is AttackOf's.
+    /// </summary>
+    private static IEnumerable<SimAction> LaterAttacks(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids)
+    {
+        foreach (var later in Procs.Programs.CardEffects.Attacks(card.GetType()).Skip(1))
+        {
+            if (!later.Command.Builder.Contains("TargetingAllOpponents") || later.Command.Values.Count == 0
+                || later.Command.Values[0].Parts().OfType<Procs.Programs.CardValue>().FirstOrDefault() is not { } value
+                || !card.DynamicVars.TryGetValue(value.Key, out var dynamicVar) || dynamicVar is not DamageVar damageVar
+                || PlayConditions.Reading(card, later.Condition) is not { Way: Procs.Programs.ConditionWay.Simulated } reading) continue;
+            var captured = new Dictionary<int, CapturedTerms>();
+            foreach (var (creature, id) in ids)
+                if (creature.IsAlive && creature.IsHittable) captured[id] = SimReaders.Damage(me.RunState, combat, card, me.Creature, creature, damageVar.BaseValue, damageVar.Props);
+            var attack = new AttackAction(Hits: 1, SimPlay.Target.All, new DamageSpec(damageVar.BaseValue, SimReaders.Props(damageVar.Props)) { Captured = captured });
+            yield return PlayConditions.Guarded(attack, reading);
+        }
     }
 
     /// <summary>

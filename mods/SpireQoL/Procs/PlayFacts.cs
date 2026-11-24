@@ -868,26 +868,17 @@ public sealed class PlayFacts
     }
 
     /// <summary>
-    /// What one draw of the play (a DrawForYou) draws on each of <paramref name="plays"/> plays, its condition evaluated for that play
-    /// (decision #189: a test of the play itself, FTL's plays finished this turn, Fetch's first play, Wrest's arrows), its count its own
-    /// argument on the board, times its loops' rounds; at a target-dependent draw (Ki Hop), the worst target's. The simulator takes each
-    /// play's entry as it runs.
+    /// What one draw of the play (a DrawForYou) draws when it runs: its count its own argument on the board, times its loops' rounds. Its
+    /// condition isn't asked here: the simulator asks it of each play as it runs (decision #190: a WhenAction).
     /// </summary>
-    internal static IReadOnlyList<int> DrawCountsByPlay(CardModel card, Programs.CardEffects.DrawForYou draw, int plays)
+    internal static int DrawCount(CardModel card, Programs.CardEffects.DrawForYou draw)
     {
         var program = Programs.CardPrograms.Of(card.GetType());
-        int Count(Creature? target, int playIndex)
-        {
-            var board = new Programs.ProgramBoard(card, target, playIndex);
-            if (Programs.ProgramEvaluator.Holds(draw.Condition, board, program) == false) return 0;
-            var count = Programs.ProgramEvaluator.Number(draw.Count, board, program) is { } read ? (int)read
-                : card.DynamicVars.ContainsKey("Cards") ? Sts2State.Var(card, "Cards") : 1;
-            foreach (var loop in draw.Loops) count *= card.DynamicVars.ContainsKey(loop.Over) ? Sts2State.Var(card, loop.Over) : 1;
-            return Math.Max(0, count);
-        }
-        List<int> ByPlay(Creature? target) => Enumerable.Range(0, Math.Max(1, plays)).Select(playIndex => Count(target, playIndex)).ToList();
-        if (!Programs.ProgramEvaluator.AsksTarget(draw.Condition) || Targets(card) is not { Count: > 0 } targets) return ByPlay(target: null);
-        return targets.Select(ByPlay).MinBy(counts => counts.Sum())!;
+        var board = new Programs.ProgramBoard(card);
+        var count = Programs.ProgramEvaluator.Number(draw.Count, board, program) is { } read ? (int)read
+            : card.DynamicVars.ContainsKey("Cards") ? Sts2State.Var(card, "Cards") : 1;
+        foreach (var loop in draw.Loops) count *= card.DynamicVars.ContainsKey(loop.Over) ? Sts2State.Var(card, loop.Over) : 1;
+        return Math.Max(0, count);
     }
 
     /// <summary>How many of <paramref name="plays"/> plays in a row start with fewer than <paramref name="max"/> plays finished, <paramref name="finishedBefore"/> before the first.</summary>

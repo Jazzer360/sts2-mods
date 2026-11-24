@@ -45,10 +45,10 @@ public enum SimCounted
 /// condition can guard any effect (WhenAction), so a card's combination of the two needs no code of its own. The adapter translates the
 /// card's code's tests (ProgramCondition) into these, each translated once for every card.
 /// </summary>
-public abstract record SimCondition
+public abstract record SimCondition(SimTest Test)
 {
     /// <summary>What it tests.</summary>
-    [JsonIgnore] public abstract SimTest Test { get; }
+    [JsonIgnore] public SimTest Test { get; } = Test;
 
     /// <summary>
     /// Where the card's code asks it (its branch: ConditionLiteral.At), when it's one of the code's tests: asked there once a play, and
@@ -58,28 +58,17 @@ public abstract record SimCondition
 }
 
 /// <summary>The play's last attack killed a creature it hit (DamageResult.WasTargetKilled over the attack's results).</summary>
-public sealed record AttackKilledCondition : SimCondition
-{
-    public override SimTest Test => SimTest.AttackKilled;
-}
+public sealed record AttackKilledCondition() : SimCondition(SimTest.AttackKilled);
 
 /// <summary>The play owner's Osty is missing or dead (Osty.CheckMissingWithAnim).</summary>
-public sealed record OstyMissingCondition : SimCondition
-{
-    public override SimTest Test => SimTest.OstyMissing;
-}
+public sealed record OstyMissingCondition() : SimCondition(SimTest.OstyMissing);
 
 /// <summary>The play's target is impaled: by anyone's arrow, or with <paramref name="ByOwner"/> by the play owner's.</summary>
-public sealed record TargetImpaledCondition(bool ByOwner) : SimCondition
-{
-    public override SimTest Test => SimTest.TargetImpaled;
-}
+public sealed record TargetImpaledCondition(bool ByOwner) : SimCondition(SimTest.TargetImpaled);
 
 /// <summary>A count on the state (<paramref name="Counted"/>) compared with <paramref name="Than"/>.</summary>
-public sealed record CountCondition(SimCounted Counted, SimCompare Compare, int Than) : SimCondition
+public sealed record CountCondition(SimCounted Counted, SimCompare Compare, int Than) : SimCondition(SimTest.Count)
 {
-    public override SimTest Test => SimTest.Count;
-
     /// <summary>HandMatching: the filter's name (the card and its test), followed through the card play in SimState.TakeMatching.</summary>
     public string? Filter { get; init; }
 
@@ -91,22 +80,13 @@ public sealed record CountCondition(SimCounted Counted, SimCompare Compare, int 
 }
 
 /// <summary>The condition doesn't hold.</summary>
-public sealed record NotCondition(SimCondition Inner) : SimCondition
-{
-    public override SimTest Test => SimTest.Not;
-}
+public sealed record NotCondition(SimCondition Inner) : SimCondition(SimTest.Not);
 
 /// <summary>Every one of <paramref name="Parts"/> holds.</summary>
-public sealed record AllCondition(IReadOnlyList<SimCondition> Parts) : SimCondition
-{
-    public override SimTest Test => SimTest.All;
-}
+public sealed record AllCondition(IReadOnlyList<SimCondition> Parts) : SimCondition(SimTest.All);
 
 /// <summary>At least one of <paramref name="Parts"/> holds.</summary>
-public sealed record AnyCondition(IReadOnlyList<SimCondition> Parts) : SimCondition
-{
-    public override SimTest Test => SimTest.Any;
-}
+public sealed record AnyCondition(IReadOnlyList<SimCondition> Parts) : SimCondition(SimTest.Any);
 
 /// <summary>
 /// The actions <paramref name="Then"/> run on the branches where <paramref name="Condition"/> holds, asked as this action runs (decision

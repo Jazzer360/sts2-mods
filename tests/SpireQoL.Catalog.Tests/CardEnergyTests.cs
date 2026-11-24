@@ -56,7 +56,7 @@ public class CardEnergyTests
     {
         var missing = CardTypes()
             .Where(type => CardEnergy.CallsOf(type).Count > 0)
-            .Where(type => !CardEnergy.IsPlain(type) && !CardEnergy.Rules.ContainsKey(type.Name) && !CardEnergy.Reviewed.ContainsKey(type.Name))
+            .Where(type => !CardEnergy.IsPlain(type) && !CardEnergy.OnACondition(type) && !CardEnergy.Rules.ContainsKey(type.Name) && !CardEnergy.Reviewed.ContainsKey(type.Name))
             .Select(type => $"{type.Name}: {string.Join("; ", CardEnergy.CallsOf(type))}")
             .ToList();
         Assert.True(missing.Count == 0, "Cards that gain energy with no rule or reviewed reason (CardEnergy):\n" + string.Join("\n", missing));

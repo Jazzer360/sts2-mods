@@ -6,7 +6,6 @@ using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
-using SpireQoL.Procs;
 using Sts2Mods.Core.Game;
 
 namespace SpireQoL.Sim;
@@ -27,9 +26,6 @@ internal static class CardEnergy
     /// <summary>Cards whose gain a rule in <see cref="AddTo"/> works out, with what decides it (read from the decompile).</summary>
     internal static readonly Dictionary<string, string> Rules = new()
     {
-        [nameof(Sunder)] = "its attack killed the target (DamageCmd's results: WasTargetKilled): AttackAction.KillRewards",
-        [nameof(BowSmack)] = "the target was impaled before its hit (ArrowCmd.CreatureIsImpaledByArrow)",
-        [nameof(Restlessness)] = "it's the only card in your hand (IsOnlyCardInHand, the card's gold glow)",
         [nameof(ForgottenRitual)] = "you exhausted a card this turn (WasCardExhaustedThisTurn, the card's gold glow)",
         [nameof(DoubleEnergy)] = "as much energy as you have once its cost is spent (GainEnergyAsHeldAction)",
         [nameof(MadScience)] = "its Energized rider (TinkerTimeRider, EnergizedEnergy)",
@@ -110,16 +106,6 @@ internal static class CardEnergy
         }
         switch (name)
         {
-            case nameof(Sunder):
-                for (var i = 0; i < play.Body.Count; i++)
-                    if (play.Body[i] is AttackAction attackAction) { play.Body[i] = attackAction with { KillRewards = attackAction.KillRewards.Append(new KillReward(CardEvent.EnergyGained, energy)).ToList() }; break; }
-                return;
-            case nameof(BowSmack):
-                if (target != null && Fool.IsImpaled(target)) Gain(energy, owner);
-                return;
-            case nameof(Restlessness):
-                if (Sts2State.Private(card, "IsOnlyCardInHand", fallback: false)) Gain(energy, owner);
-                return;
             case nameof(ForgottenRitual):
                 if (Sts2State.Private(card, "WasCardExhaustedThisTurn", fallback: false)) Gain(energy, owner);
                 return;
@@ -149,5 +135,32 @@ internal static class CardEnergy
         }
         if (Reviewed.ContainsKey(name)) return;
         if (IsPlain(card.GetType())) Gain(energy, owner);
+        else if (OnACondition(card.GetType()))
+        {
+            // On a condition the simulator asks (decision #190): Sunder's kill, Bow Smack's arrow before its hit, Restlessness alone in your hand.
+            var program = Procs.Programs.CardPrograms.Of(card.GetType());
+            foreach (var gain in Procs.Programs.CardEffects.Find(program, IsGainToOwner))
+            {
+                var reading = PlayConditions.Reading(card, gain.Condition);
+                if (PlayConditions.Skipped(card, gain.Condition, reading)) continue;
+                play.Body.AddRange(PlayConditions.AsksOf(reading));
+                play.Body.Add(PlayConditions.Guarded(new CardEventAction(CardEvent.EnergyGained, energy) { Player = owner }, reading));
+            }
+        }
+    }
+
+    private static bool IsGainToOwner(Procs.Programs.CommandStep command) =>
+        command.Command is { DeclaringType: "PlayerCmd", Name: "GainEnergy" } && command.Arguments.Count > 1 && command.Arguments[1] == "Owner";
+
+    /// <summary>
+    /// Its gains are its energy value to its owner in OnPlay, each on a condition the simulator asks (decision #190: Sunder, Bow Smack,
+    /// Restlessness): read from its code, a gain guarded by that condition.
+    /// </summary>
+    internal static bool OnACondition(Type cardType)
+    {
+        var calls = CallsOf(cardType);
+        if (calls.Count == 0 || !calls.All(call => call is { Method: "OnPlay", ToOwner: true, FromEnergyVar: true })) return false;
+        var gains = Procs.Programs.CardEffects.Find(Procs.Programs.CardPrograms.Of(cardType), IsGainToOwner);
+        return gains.Count == calls.Count && gains.All(gain => PlayConditions.CodeReading(cardType, gain.Condition).Way == Procs.Programs.ConditionWay.Simulated);
     }
 }

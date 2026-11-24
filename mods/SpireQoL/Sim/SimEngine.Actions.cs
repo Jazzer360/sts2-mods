@@ -23,7 +23,7 @@ public static partial class SimEngine
             });
         // Each filtered take's cards in the hand as the card play starts (decision #189): its plays follow them from here.
         var matching = NamedCounts.Empty;
-        foreach (var take in cardPlayAction.Body.OfType<TakeFromHandAction>())
+        foreach (var take in Flattened(cardPlayAction.Body).OfType<TakeFromHandAction>())
             if (take.Filter != null && !matching.Has(take.Filter)) matching = matching.With(take.Filter, take.Matching);
         // And each condition's on the kind of cards in your hand (decision #190: Impatience's Attacks), followed the same way.
         foreach (var counted in HandFilters(cardPlayAction.Body))

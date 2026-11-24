@@ -306,7 +306,22 @@ hooks.
     the earlier plays have finished (a query over `CardPlaysFinished` counts them, through the card's own property read from its
     getter: FTL, Fetch), a test a loop ran until it failed stays failed (Wrest), and an arrow test follows your hits (Ki Hop:
     `SimEngine.PlaysStartingImpaled`). A test it can't evaluate counts as holding (the old tables' practice on the game's template
-    card), and the card scan holds every draw's condition to being readable.
+    card), and the card scan holds every draw's condition to being readable. It answers what the tabs ask ("right now"); the simulation
+    asks its own conditions (next).
+  - **Conditions apart from effects** (2026-11-23, decision #190): a step on a condition is the ordinary action for its command (a
+    draw, a gain of energy or stars, an attack, a block, Osty's death) inside a `WhenAction`, guarded by a `SimCondition` the engine asks
+    of each branch as it runs (`Sim/SimConditions.cs`). `ConditionReader` translates each test of the code once, for every card: an
+    attack's results' `WasTargetKilled` (the last attack killed), `Osty.CheckMissingWithAnim` and `IsOstyAlive`, the arrow tests on the
+    target, a count or an `Any` of your hand's cards (less the card itself; with a lambda, a filter followed through the play as a
+    filtered take's is), of `CardPlaysFinished` this turn by you or of the card, and a property of the card read from its getter. The
+    card's own values (a card value, its upgrade, a field it keeps: Mad Science's rider) and a pick's card (#188) are decided before
+    the play. A test the code asks once is asked once a play (`SimCondition.At`: an else, a later step under the same if), and a local
+    stored before the first command is asked there (`AskAction`: Ki Hop, Bow Smack). `PlayConditions` guards the draws, the conditional
+    gains of energy and stars, Timber's later attack and every action the facts build (by its command's step from `PlayOrder`). They
+    replaced the attack's kill rewards (Sunder's energy, Knockout Blow's stars) and Timber's kill attack inside its hit, a draw's count
+    for each play index worked out before the play (FTL, Fetch, Wrest, Ki Hop at the worst target), and Sunder's, Bow Smack's and
+    Restlessness' energy rules. Catalog `ConditionTranslationTests` hold each to its code on both
+    branches.
   - Each was proven to give exactly its table's cards on both branches before the table was deleted
     (`CardEffectsTests.EachRuleFindsExactlyTheTableItReplaced` keeps the tables as they were), and the catalog snapshot was
     unchanged by the swap.
@@ -386,12 +401,12 @@ round two). What's left, by file: `PlayFacts` 62 (`GeneratedCount` and the forge
 
 | Table (where) | Cards | What the program doesn't say yet |
 |---|---|---|
-| (no table) a replay's later plays: conditions | Restlessness, Impatience replayed; Sacrifice and Bone Shards' Osty; Double Energy; Spite; Pact's End | Since decision #189 the adapter describes one play and the simulator repeats it, reading what each play takes from your hand, what counts it (`SimCount.CardsTaken`) and your hand's room (`SimCount.HandRoom`) as it runs (Scrawl replayed draws into the room the first play left). A condition the evaluator reads (your hand's types, Osty, your energy, HP lost this turn, the exhaust pile) is still decided on the board before the first play, or for each play by its index (`CardEventAction.ByPlay`: FTL, Fetch, Wrest): the simulator needs its own conditions (the owner's next step). |
+| (no table) a replay's later plays: conditions with no simulator test yet | Pact's End, Forgotten Ritual, Bubble Bubble, Molten Fist, Go for the Eyes, Memento Mori | Since decision #190 a step on a condition is its ordinary action under a simulator condition (`WhenAction`), asked on each play as it runs: Osty (Sacrifice, Bone Shards, Osty's attacks), your hand's cards and their kind (Impatience, Restlessness, Wheel of Fortune), plays finished this turn (FTL, Fetch), the target's arrows (Ki Hop, Bow Smack, Wrest, Nail, Recall, Uproot), the last attack's kill (Sunder, Knockout Blow, Timber). What has no simulator test yet (the exhaust pile, an exhaust this turn, a target's power the simulator doesn't keep, the enemies' count) is decided on the board before the play, listed by the card scan. |
 | (no table) Flak Cannon's hits on a replay | Flak Cannon | Its hit count is its `CalculatedHits` var (the statuses it will exhaust), a calculated var's lambda the reader doesn't follow, so it isn't recognized as the count of what its take took. |
 | `GeneratedCount` (PlayFacts) | cards that make cards | Within reach: `CardPileCmd.AddGeneratedCard(s)ToCombat`'s cards (a `CreateStep`, a loop's rounds, a helper's count: Shiv.CreateInHand) and their pile. Not done yet. |
 | `SplashCards`, `OverkillReaders`, `RepeatPerKillCards` | Rain Shot, Omnislice, Fisticuffs, Blossom Shot, Echoing Slash | What a hit's result feeds (`TotalDamage + OverkillDamage` into the next damage, a kill into the loop's count): needs arithmetic over a command's result. |
 | `TeammatesShivCards` | Blade Symphony | The player a helper's Shivs go to (an argument inside the helper: a game helper's parameters aren't bound to its caller's arguments yet). |
-| `CardEnergy.Rules` (Sim/Adapter) | Sunder, Bow Smack, Restlessness, Forgotten Ritual, Double Energy, Mad Science, Epic Retrieval, Believe in You, Constellation, Energy Surge, Drum of Battle | Each energy gain's condition can be evaluated now (`PlayerCmd.GainEnergy`'s condition and amount, as the draws are); what's left is the kill reward (an attack's result), the arrow test before the hit, "as much as you have" (Double Energy) and whose energy it is. |
+| `CardEnergy.Rules` (Sim/Adapter) | Forgotten Ritual, Double Energy, Mad Science, Epic Retrieval, Believe in You, Constellation, Energy Surge, Drum of Battle | Sunder, Bow Smack and Restlessness left it (decision #190: their gain is guarded by its condition, `CardEnergy.OnACondition`). What's left: an exhaust this turn (no simulator test yet), "as much as you have" (Double Energy), the rider (Mad Science, decided before the play), and whose energy it is. |
 | `BlockOf`'s cases (SimAdapter.Play) | Fisticuffs, Entrench, Mimic | The gain's amount argument: the attack's result (Fisticuffs, with Blossom Shot's Stretch: arithmetic over a command's result), your block (Entrench), the teammate's (Mimic). |
 | `PutBack`'s count (PlayFacts) | Thinking Ahead | The put-back pick's selector, as the discards' picks are read. |
 | Cards' own hooks, not plays | Make It So, Right Hand Hand, Whistling Arrows, Bolas, Bounce, Thrumming Hatchet (`ReturnToHand`); Howl from Beyond, I Am Invincible (end-of-turn auto-plays); Kingly Kick, Kingly Punch (their cost on draw) | A card's hooks (After*, Before*) aren't its play: reading them as programs is Part B3's next step. Each is reviewed by its scan. |

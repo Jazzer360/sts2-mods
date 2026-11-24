@@ -138,21 +138,30 @@ public static partial class SimEngine
     /// <summary>The filters of the counted conditions in a play's actions (their cards in the hand as the card play starts), WhenActions' included.</summary>
     internal static IEnumerable<CountCondition> HandFilters(IEnumerable<SimAction> actions)
     {
-        foreach (var action in actions)
+        foreach (var action in Flattened(actions))
         {
             var condition = action switch { WhenAction guarded => guarded.Condition, AskAction ask => ask.Condition, _ => null };
             if (condition != null)
-                foreach (var counted in Parts(condition).OfType<CountCondition>())
+                foreach (var counted in ConditionParts(condition).OfType<CountCondition>())
                     if (counted is { Counted: SimCounted.HandMatching, Filter: not null })
                         yield return counted;
+        }
+    }
+
+    /// <summary>The actions and every action a WhenAction among them guards, in order.</summary>
+    internal static IEnumerable<SimAction> Flattened(IEnumerable<SimAction> actions)
+    {
+        foreach (var action in actions)
+        {
+            yield return action;
             if (action is WhenAction whenAction)
-                foreach (var inner in HandFilters(whenAction.Then))
+                foreach (var inner in Flattened(whenAction.Then))
                     yield return inner;
         }
     }
 
     /// <summary>The condition and every condition inside it.</summary>
-    private static IEnumerable<SimCondition> Parts(SimCondition condition)
+    internal static IEnumerable<SimCondition> ConditionParts(SimCondition condition)
     {
         yield return condition;
         var inner = condition switch
@@ -163,7 +172,7 @@ public static partial class SimEngine
             _ => Array.Empty<SimCondition>(),
         };
         foreach (var part in inner)
-            foreach (var nested in Parts(part))
+            foreach (var nested in ConditionParts(part))
                 yield return nested;
     }
 }
