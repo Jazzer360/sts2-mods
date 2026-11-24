@@ -168,6 +168,38 @@ public class SimHistoryTests
     }
 
     [Fact]
+    public void RattleHitsOnceMoreForEachAttackOstyMadeThisTurn()
+    {
+        // Rattle: Osty attacks with WithHitCount(CalculatedHits on its target): 1 + the attacks Osty made this turn (the log's
+        // CreatureAttackedEntry, e.Actor == Owner.Osty). Replayed, its second play counts the first's attack: two hits.
+        var ostysAttacks = new HistoryQuery(HistoryKind.CreatureAttacked, HistoryScope.ThisTurn, HistoryWhose.OwnersOsty);
+        var state = Board(queries: new[] { ostysAttacks });
+        state.You.OstyHp = 10;
+        var rattle = Card("Rattle", Hit(damage: 3, hits: 1) with { ByOsty = true, HitsLogged = new LoggedAmount(ostysAttacks, Per: 1, AtStart: 0) });
+        rattle.Plays = 2;
+        rattle.Card = new SimCardPlay(new SimCard("Rattle", SimCardType.Attack), Who.You, Target: 0, PlayIndex: 0, PlayCount: 2, AutoPlay: false);
+        SimEngine.RunScriptTo(state, SimScript.Of(rattle), out var after, out _);
+        var branch = Assert.Single(after);
+        Assert.Equal(2, branch.You.Turn[ostysAttacks.Key]);
+        Assert.Equal(50 - 3 * (1 + 2), branch.Enemies[0].Hp);
+    }
+
+    [Fact]
+    public void VoltaicChannelsALightningForEachLightningChanneledThisFight()
+    {
+        // Voltaic.OnPlay: lightningChanneledCount = CalculatedChannels (the Lightning its owner channeled this fight), stored once, then a
+        // channel each round. One on the board; replayed, its second play counts the first one's too: two more, three in all.
+        var lightning = new HistoryQuery(HistoryKind.OrbChanneled, HistoryScope.ThisFight, HistoryWhose.Owner) { Orb = OrbKind.Lightning };
+        var state = Board(queries: new[] { lightning });
+        state.You.OrbCapacity = 5;
+        var voltaic = Card("Voltaic", new OrbAction(OrbAction.Op.Channel) { Orb = OrbKind.Lightning, Times = 1, TimesLogged = new LoggedAmount(lightning, Per: 1, AtStart: 0) });
+        voltaic.Plays = 2;
+        voltaic.Card = new SimCardPlay(new SimCard("Voltaic", SimCardType.Skill), Who.You, Target: Who.None, PlayIndex: 0, PlayCount: 2, AutoPlay: false);
+        SimEngine.RunScriptTo(state, SimScript.Of(voltaic), out var after, out _);
+        Assert.Equal(3, Assert.Single(after).You.Orbs.Count(orb => orb.Kind == OrbKind.Lightning));
+    }
+
+    [Fact]
     public void ACountWhoseEventsCardWasntReadIsntKnown()
     {
         // Iteration's question: Status cards drawn this turn. A draw with no draw pile read can't say what it drew: the count isn't known,

@@ -16,6 +16,11 @@ public sealed record OrbAction(OrbAction.Op Kind) : SimAction
     public SimOrb? Values { get; init; }
     /// <summary>Channel and EvokeFront: how many times.</summary>
     public int Times { get; init; } = 1;
+    /// <summary>
+    /// Channel: its count follows a count of the fight's log as the simulation goes, read once as the action starts (Voltaic: the Lightning
+    /// channeled this fight, stored before its loop: decision #191).
+    /// </summary>
+    public LoggedAmount? TimesLogged { get; init; }
     /// <summary>EvokeFront: the orb stays after its last evoke (OrbCmd.EvokeNext with dequeue false: Dualcast's first, Shatter's).</summary>
     public bool Keeps { get; init; }
     /// <summary>Slots: gained (OrbCmd.AddSlots, up to 10) or lost (OrbCmd.RemoveSlots: orbs past the new capacity drop from the back).</summary>
@@ -103,6 +108,17 @@ public static partial class SimEngine
     {
         switch (orbAction.Kind)
         {
+            // A count that follows the log, read once as the action starts (its loop's bound is stored before it goes round): each branch its own.
+            case OrbAction.Op.Channel when orbAction.TimesLogged is { } logged:
+                branches.Each(branch =>
+                {
+                    var times = orbAction.Times + (int)logged.More(branch, branch.CurrentPlay?.Owner ?? Who.You);
+                    IEnumerable<SimState> states = new[] { branch };
+                    for (var time = 0; time < times; time++)
+                        states = Then(states, copy => orbAction.Values is { } values ? ChannelOrb(copy, values, orbAction.To) : ChannelKind(copy, orbAction.Orb, orbAction.To));
+                    return states;
+                });
+                break;
             case OrbAction.Op.Channel:
                 for (var time = 0; time < orbAction.Times; time++)
                     branches.Each(branch => orbAction.Values is { } values ? ChannelOrb(branch, values, orbAction.To) : ChannelKind(branch, orbAction.Orb, orbAction.To));

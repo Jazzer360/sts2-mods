@@ -840,7 +840,9 @@ public static partial class SimAdapter
                 var to = command.Arguments.Contains("cardPlay.Target.Player") ? play.AllyId : play.Owner;
                 if (to == Who.None) return none;
                 var times = RoundsOf(found, play);
-                return times > 0 ? (new List<SimAction> { new OrbAction(OrbAction.Op.Channel) { Orb = kind, Times = times, To = to } }, null) : none;
+                // A loop whose bound is a calculated value on the fight's log (Voltaic's Lightning channeled this fight) follows the ledger.
+                var logged = found.Loops.Select(LoopBoundKey).OfType<string>().Select(key => HistoryLedger.LoggedOf(play.Card, key, play.Combat)).FirstOrDefault(amount => amount != null);
+                return times > 0 || logged != null ? (new List<SimAction> { new OrbAction(OrbAction.Op.Channel) { Orb = kind, Times = times, To = to, TimesLogged = logged } }, null) : none;
             }
             case "EvokeNext":
             {
@@ -864,6 +866,11 @@ public static partial class SimAdapter
         }
         return none;
     }
+
+    /// <summary>The card value a counter loop goes up to (i &lt; CalculatedChannels: Voltaic's), or null.</summary>
+    private static string? LoopBoundKey(LoopStep loop) =>
+        loop.While is { Terms: [[{ Holds: true, Test: CompareValue { Op: Comparison.Less or Comparison.LessOrEqual } bound }]] } && Unstored(bound.Right) is CardValue { Key: var key }
+            ? key : null;
 
     /// <summary>The condition without its tests of your orbs (an evoke with none evokes nothing).</summary>
     private static ProgramCondition WithoutOrbTests(ProgramCondition condition)
