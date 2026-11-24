@@ -159,6 +159,9 @@ take's card is the take's filter; an evoke's test of your orbs and a shuffle's t
 A loop's body is walked once: its rounds are what its steps' actions count (hits, gains, channels, draws), and a take's loop runs its other
 steps after each card (Second Wind's block). The play order and the guard put on the facts' actions after the fact are gone with the facts' gating: whether an attack, a
 block, a power or a take happens is never decided on the board before the play.
+What a step's arguments are (whom it acts on, which card value it names, a counter loop's bound) is read by `StepValues`, and what the program gives on
+the board (a take's cards now, an attack's hits at its target, an auto-play's count) by `BoardCounts` (decision #194): the translators only build actions.
+
 Commands, by how many beta cards call them:
 
 | Command | Cards | Today's action |

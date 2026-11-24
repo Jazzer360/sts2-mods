@@ -8,6 +8,7 @@ using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
 using SpireQoL.Procs;
 using SpireQoL.Procs.Programs;
+using static SpireQoL.Procs.Programs.StepValues;
 using Sts2Mods.Core.Game;
 
 namespace SpireQoL.Sim;
@@ -273,13 +274,6 @@ public static partial class SimAdapter
         return stepPlay;
     }
 
-    /// <summary>The value sums an attack's results (DamageResult's TotalDamage and OverkillDamage).</summary>
-    private static bool ReadsResults(ProgramValue value) => value.Parts().Any(part => part is QueryValue { Name: "TotalDamage" or "Results" });
-
-    private static string? Argument(CommandStep command, int index) => index < command.Arguments.Count ? command.Arguments[index] : null;
-
-    private static ProgramValue? ValueAt(CommandStep command, int index) => index < command.Values.Count ? Unstored(command.Values[index]) : null;
-
     /// <summary>How many rounds the step's loops go on the board, each but the ones it acts on each item of (Rally's players, Piercing Wail's enemies).</summary>
     private static int RoundsOf(CardEffects.Found found, StepPlay play, Func<LoopStep, bool>? skip = null) =>
         found.Loops.Where(loop => skip == null || !skip(loop)).Aggregate(1, (times, loop) => times * ProgramEvaluator.Rounds(loop, play.Board, play.Program));
@@ -313,37 +307,6 @@ public static partial class SimAdapter
 
     /// <summary>The players of your side the step's loop goes over (PlayersIn of its innermost loop over them).</summary>
     private static List<int> PlayersOf(CardEffects.Found found, StepPlay play) => PlayersIn(found.Loops.LastOrDefault(OverPlayers)?.Items, play);
-
-    /// <summary>The loop goes over the enemies you can hit.</summary>
-    private static bool OverEnemies(LoopStep loop) => loop.Items?.Parts().Any(part => part is QueryValue { Name: "HittableEnemies" }) == true;
-
-    /// <summary>The value is the item of the loop it's in (each, each.Player, each.Creature).</summary>
-    private static bool IsEach(ProgramValue? value) => value != null && value.Parts().Any(part => part is NamedValue { Name: "each" });
-
-    /// <summary>The value is the card's target, or its player, or that player's creature (cardPlay.Target, .Player, .Player.Creature: Constellation's).</summary>
-    private static bool IsTarget(ProgramValue? value)
-    {
-        for (var depth = 0; depth < 3 && value != null; depth++)
-        {
-            value = Unstored(value);
-            if (value is QueryValue { Name: "Target", Of: NamedValue { Name: "cardPlay" } }) return true;
-            if (value is not QueryValue { Name: "Player" or "Creature" } inner) return false;
-            value = inner.Of;
-        }
-        return false;
-    }
-
-    /// <summary>Every enemy you can hit (CombatState.HittableEnemies, or that when there's a fight: a value two ways leave, the other null).</summary>
-    private static bool IsEveryEnemy(ProgramValue? value) => value switch
-    {
-        QueryValue { Name: "HittableEnemies" } => true,
-        WaysValue ways => ways.Ways.Any(way => IsEveryEnemy(Unstored(way.Value))) && ways.Ways.All(way => IsEveryEnemy(Unstored(way.Value)) || way.Value is NullValue),
-        _ => false,
-    };
-
-    private static bool IsYou(ProgramValue? value) => value is QueryValue { Name: "Creature", Of: QueryValue { Name: "Owner", Of: NamedValue { Name: "this" } } };
-
-    private static bool IsOwnerPlayer(ProgramValue? value) => value is QueryValue { Name: "Owner", Of: NamedValue { Name: "this" } };
 
     private static int Number(StepPlay play, ProgramValue? value, int fallback, Creature? target = null) =>
         value != null && ProgramEvaluator.Number(value, play.Board with { Target = target ?? play.Aimed }, play.Program) is { } read ? (int)read : fallback;
@@ -421,16 +384,6 @@ public static partial class SimAdapter
             return hits;
         }
     }
-
-    /// <summary>The card value a step's argument names (Damage, OstyDamage, DynamicVars.CalculatedDamage), or null.</summary>
-    private static string? ValueKey(ProgramValue? value) => (value == null ? null : Unstored(value)) switch
-    {
-        CardValue cardValue => cardValue.Key,
-        QueryValue { Of: QueryValue { Name: "DynamicVars" } } property => property.Name,
-        QueryValue { Name: "op_Implicit", Arguments: [var inner] } => ValueKey(inner),
-        _ => null,
-    };
-
 
     /// <summary>
     /// An attack of the card's value <paramref name="key"/> (its damage value: calculated on each target when it's a calculated value),
@@ -867,21 +820,6 @@ public static partial class SimAdapter
         return none;
     }
 
-    /// <summary>The card value a counter loop goes up to (i &lt; CalculatedChannels: Voltaic's), or null.</summary>
-    private static string? LoopBoundKey(LoopStep loop) =>
-        loop.While is { Terms: [[{ Holds: true, Test: CompareValue { Op: Comparison.Less or Comparison.LessOrEqual } bound }]] } && Unstored(bound.Right) is CardValue { Key: var key }
-            ? key : null;
-
-    /// <summary>The condition without its tests of your orbs (an evoke with none evokes nothing).</summary>
-    private static ProgramCondition WithoutOrbTests(ProgramCondition condition)
-    {
-        if (condition.Terms.Count != 1) return condition;
-        var kept = ProgramCondition.Always;
-        foreach (var literal in condition.Terms[0])
-            if (!literal.Test.Parts().Any(part => part is QueryValue { Name: "Orbs" or "OrbQueue" })) kept = kept.And(literal);
-        return kept;
-    }
-
     // ---------------------------------------------------------------- cards taken, moved, shuffled, auto-played
 
     /// <summary>The take actions of the step (TakesOf), under the take's own tests of the play (its tests of the card it takes are its filter).</summary>
@@ -923,7 +861,7 @@ public static partial class SimAdapter
         var result = new Dictionary<CommandStep, List<SimAction>>(ReferenceEqualityComparer.Instance);
         int Count(ProgramValue? value) => value != null && ProgramEvaluator.Number(value, board, program) is { } read ? Math.Max(0, (int)read) : 1;
         var exhausts = CardEffects.ExhaustsOfOthers(type);
-        foreach (var (take, key, cardEvent, eventIfNot, leaves) in TakesInOrder(card))
+        foreach (var (take, key, cardEvent, eventIfNot, leaves) in BoardCounts.TakesInOrder(card))
         {
             var actions = result.TryGetValue(take.Command, out var already) ? already : result[take.Command] = new List<SimAction>();
             if (eventIfNot != null && CardEffects.Discards(type).FirstOrDefault(discard => ReferenceEquals(discard.Pick, take.Pick)) is { } shared) play.Consumed.Add(shared.Command);
@@ -970,29 +908,6 @@ public static partial class SimAdapter
         return result;
     }
 
-    /// <summary>
-    /// The play's takes from your hand in their filters' order (each named "Card#n": TakesOf, TakeFiltersOf), each whose own test of the
-    /// play holds on the board: the exhausts of other cards (a pick shared with a discard by a test on the card sends the others to the
-    /// discard: The Hermit), the discards, the transforms in your hand (made in place; none when you choose how many).
-    /// </summary>
-    private static List<(CardEffects.CardsTaken Take, string Key, CardEvent? Event, CardEvent? EventIfNot, bool Leaves)> TakesInOrder(CardModel card)
-    {
-        var type = card.GetType();
-        var program = CardPrograms.Of(type);
-        var board = new ProgramBoard(card);
-        var exhausts = CardEffects.ExhaustsOfOthers(type);
-        var discards = CardEffects.Discards(type);
-        var ordered = new List<(CardEffects.CardsTaken, CardEvent?, CardEvent?, bool)>();
-        foreach (var exhaust in exhausts)
-            ordered.Add((exhaust, CardEvent.Exhausted, discards.Any(discard => discard.Pick != null && ReferenceEquals(discard.Pick, exhaust.Pick)) ? CardEvent.Discarded : null, true));
-        foreach (var discard in discards)
-            if (!exhausts.Any(exhaust => exhaust.Pick != null && ReferenceEquals(exhaust.Pick, discard.Pick))) ordered.Add((discard, CardEvent.Discarded, null, true));
-        foreach (var transform in CardEffects.Transforms(type))
-            if (!transform.ChoosesHowMany && transform.PickPile is null or PileType.Hand) ordered.Add((transform, CardEvent.Generated, null, false));
-        var serial = 0;
-        return ordered.Where(entry => ProgramEvaluator.Holds(entry.Item1.PlayTest, board, program) != false)
-            .Select(entry => (entry.Item1, $"{type.Name}#{serial++}", entry.Item2, entry.Item3, entry.Item4)).ToList();
-    }
     /// <summary>
     /// What a take's loop does after each card besides taking it (Second Wind: block for each card exhausted): its other commands' actions,
     /// once each, taken out of the play's own steps.
@@ -1070,10 +985,6 @@ public static partial class SimAdapter
             : new List<SimDrawGroup>();
         return (new List<SimAction> { new ShuffleDrawPileAction(handIn) }, null);
     }
-
-    /// <summary>The value is the count of your draw pile's cards (GetPile(Draw).Cards.Count).</summary>
-    private static bool DrawPileCount(ProgramValue value) =>
-        Unstored(value) is QueryValue { Name: "Count" } count && count.Parts().Any(part => part is QueryValue { Name: "GetPile", Arguments: [ConstantValue { Value: var pile }, ..] } && pile == (int)PileType.Draw);
 
     /// <summary>
     /// CardPileCmd.AutoPlayFromDrawPile: how many (its count argument on the board, or what a take of the play took: The Devil), whether they
@@ -1180,13 +1091,13 @@ public static partial class SimAdapter
     /// </summary>
     private static IEnumerable<int> MadeFor(MadeCards.Make make, CardEffects.Found found, StepPlay play)
     {
-        if (MadeCards.IsEach(make.For) && found.Loops.Any(OverPlayers)) return PlayersOf(found, play);
+        if (IsEach(make.For) && found.Loops.Any(OverPlayers)) return PlayersOf(found, play);
         if (IsTarget(make.For)) return Who.KindOf(play.AllyId) == CreatureKind.Teammate ? new[] { play.AllyId } : Array.Empty<int>();
         return new[] { play.Owner };
     }
 
     /// <summary>Who makes a make's cards for <paramref name="player"/> (its creator argument): the card's owner when it names them, else the player itself.</summary>
-    private static int MadeBy(MadeCards.Make make, StepPlay play, int player) => MadeCards.IsOwner(make.Creator) ? play.Owner : player;
+    private static int MadeBy(MadeCards.Make make, StepPlay play, int player) => IsOwner(make.Creator) ? play.Owner : player;
 
     /// <summary>
     /// The cards a card turns into after its last play (MadeCards.Way.AfterPlay: Mourning Blow's Sadness, CardModel.TransformIntoAfterPlay):

@@ -574,4 +574,28 @@ public static class BoardCounts
                 return (int.MaxValue, SimCount.Given);
         }
     }
+
+    /// <summary>
+    /// The play's takes from your hand in their filters' order (each named "Card#n": TakesOf, TakeFiltersOf), each whose own test of the
+    /// play holds on the board: the exhausts of other cards (a pick shared with a discard by a test on the card sends the others to the
+    /// discard: The Hermit), the discards, the transforms in your hand (made in place; none when you choose how many).
+    /// </summary>
+    internal static List<(CardEffects.CardsTaken Take, string Key, CardEvent? Event, CardEvent? EventIfNot, bool Leaves)> TakesInOrder(CardModel card)
+    {
+        var type = card.GetType();
+        var program = CardPrograms.Of(type);
+        var board = new ProgramBoard(card);
+        var exhausts = CardEffects.ExhaustsOfOthers(type);
+        var discards = CardEffects.Discards(type);
+        var ordered = new List<(CardEffects.CardsTaken, CardEvent?, CardEvent?, bool)>();
+        foreach (var exhaust in exhausts)
+            ordered.Add((exhaust, CardEvent.Exhausted, discards.Any(discard => discard.Pick != null && ReferenceEquals(discard.Pick, exhaust.Pick)) ? CardEvent.Discarded : null, true));
+        foreach (var discard in discards)
+            if (!exhausts.Any(exhaust => exhaust.Pick != null && ReferenceEquals(exhaust.Pick, discard.Pick))) ordered.Add((discard, CardEvent.Discarded, null, true));
+        foreach (var transform in CardEffects.Transforms(type))
+            if (!transform.ChoosesHowMany && transform.PickPile is null or PileType.Hand) ordered.Add((transform, CardEvent.Generated, null, false));
+        var serial = 0;
+        return ordered.Where(entry => ProgramEvaluator.Holds(entry.Item1.PlayTest, board, program) != false)
+            .Select(entry => (entry.Item1, $"{type.Name}#{serial++}", entry.Item2, entry.Item3, entry.Item4)).ToList();
+    }
 }

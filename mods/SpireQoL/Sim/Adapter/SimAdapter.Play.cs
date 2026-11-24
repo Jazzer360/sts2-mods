@@ -184,7 +184,7 @@ public static partial class SimAdapter
         var program = Procs.Programs.CardPrograms.Of(type);
         var board = new Procs.Programs.ProgramBoard(card);
         var filters = new List<(string, Func<CardModel, bool, bool?>)>();
-        foreach (var (take, key, _, eventIfNot, _) in TakesInOrder(card))
+        foreach (var (take, key, _, eventIfNot, _) in Procs.Programs.BoardCounts.TakesInOrder(card))
             switch (take.Way)
             {
                 case Procs.Programs.CardEffects.TakeWay.Picked when take.PickPile is null or MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand:

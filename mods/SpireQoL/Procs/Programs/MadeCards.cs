@@ -118,12 +118,6 @@ public static class MadeCards
         return new Make(found, Way.Added, perCall, filledBy, card, whose, Value(2), PileOf(Value(1)));
     }
 
-    /// <summary>The value is the card's owner (this.Owner, or its creature).</summary>
-    public static bool IsOwner(ProgramValue? value) =>
-        Unstored(value) is QueryValue { Name: "Owner", Of: NamedValue { Name: "this" } } or QueryValue { Name: "Creature", Of: QueryValue { Name: "Owner", Of: NamedValue { Name: "this" } } };
-
-    /// <summary>The value is the item of the loop it's in (each, each.Player, a local stored from it).</summary>
-    public static bool IsEach(ProgramValue? value) => value != null && value.Parts().Any(part => part is NamedValue { Name: "each" });
 
     /// <summary>What a card's makes give on the board before its play, its own (the ones it makes as their creator): for the card scan and your hand after.</summary>
     /// <param name="Made">Every card it makes.</param>
@@ -164,7 +158,7 @@ public static class MadeCards
                 case Kind.Status: statuses += count; break;
                 case Kind.Sadness: sadness += count; break;
             }
-            if (IntoHand(make, type) && (make.For == null || IsOwner(make.For) || make.By == Way.Forged)) intoHand += count;
+            if (IntoHand(make, type) && (make.For == null || StepValues.IsOwner(make.For) || make.By == Way.Forged)) intoHand += count;
         }
         return new OnBoard(made, statuses, sadness, intoHand, forged, unread);
     }
@@ -182,7 +176,7 @@ public static class MadeCards
     /// <summary>The players of your side a make in a loop over them makes cards for, as their creator: all of them when you are, else only you.</summary>
     private static int PlayersByYou(Make make, ProgramBoard board, CardProgram program)
     {
-        if (make.Found?.Loops.LastOrDefault(CardEffects.OverYourSide) is not { Items: { } players } || !IsOwner(make.Creator) || board.Card.IsCanonical) return 1;
+        if (make.Found?.Loops.LastOrDefault(CardEffects.OverYourSide) is not { Items: { } players } || !StepValues.IsOwner(make.Creator) || board.Card.IsCanonical) return 1;
         return ProgramEvaluator.Items(players, board, program)?.Count ?? 1;
     }
 
