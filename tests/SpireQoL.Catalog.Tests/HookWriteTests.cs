@@ -71,7 +71,10 @@ public class HookWriteTests
                 if (spec.Of(name) is { Returns: not null }) continue;
                 var translated = spec.Of(name)?.Steps ?? Array.Empty<HookStep>();
                 var flat = new ModelSpec(spec.Name, spec.Kind, new[] { new HookProgram(name, translated) }).Steps().ToList();
-                var commands = steps.OfType<CommandStep>().Count(step => step.Condition is not { IsNever: true }) + steps.OfType<CardActionStep>().Count(step => step.Condition is not { IsNever: true });
+                // A keyword applied to a copy the same hook then makes (Music Box's ApplyKeyword on cardPlay.Card.CreateClone()) is the made card's, one step with it.
+                var made = steps.OfType<CommandStep>().Where(step => step.Command.FullName == "CardPileCmd.AddGeneratedCardToCombat" && step.Values.Count > 0).Select(step => step.Values[0].ToString()).ToHashSet(StringComparer.Ordinal);
+                var folded = steps.OfType<CommandStep>().Count(step => step.Command.FullName == "CardCmd.ApplyKeyword" && step.Values.Count > 0 && made.Contains(step.Values[0].ToString()));
+                var commands = steps.OfType<CommandStep>().Count(step => step.Condition is not { IsNever: true }) + steps.OfType<CardActionStep>().Count(step => step.Condition is not { IsNever: true }) - folded;
                 var commandSteps = flat.Count(step => step is not (StoreFieldStep or BindStep or UnbindStep or RepeatStep or ForEachStep or LetStep or FlashStep));
                 if (commands != commandSteps) dropped.Add($"{type.Name}.{hook.Name}: {commands} commands, {commandSteps} translated");
                 foreach (var store in steps.OfType<StoreStep>())

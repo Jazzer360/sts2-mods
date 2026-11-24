@@ -441,7 +441,7 @@ public static class HookReader
                 case GainEnergyStep: return TabKind.Energy;
             }
         // A pass of the HP-loss pipeline changes the HP a hit takes: it acts (the hand-written models' trigger: Tungsten Rod, The Boot).
-        return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep)
+        return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep)
             || programs.Any(program => program.Returns != null && program.Hook is HookName.ModifyHpLostBeforeOsty or HookName.ModifyHpLostBeforeOstyLate or HookName.ModifyHpLostAfterOsty or HookName.ModifyHpLostAfterOstyLate)
             ? TabKind.Trigger : null;
     }
@@ -856,6 +856,19 @@ public static class HookReader
             return steps.Count > 0 && steps.All(step => step is not (StoreStep or DataStep) && step.Condition is { } condition && condition.Terms.All(term => term.Any(OwnCard)));
         }
 
+        /// <summary>The keywords its code put on each copy of the card played (by the copy's value), for the card made of it (MakeCopyStep).</summary>
+        private readonly Dictionary<string, List<string>> _copyKeywords = new(StringComparer.Ordinal);
+
+        /// <summary>A copy of the card played (cardPlay.Card.CreateClone(), kept in a local or not).</summary>
+        private bool IsCopyOfPlayCard(ProgramValue value) => Unstored(value) is QueryValue { Name: "CreateClone", Of: { } cloned } && IsPlayCard(cloned);
+
+        /// <summary>A card its code keeps in a field of its own (MusicBox's CardBeingPlayed): what's bound to the play in progress (HookFact.BoundHeld).</summary>
+        private bool IsKeptCard(ProgramValue value) => Unstored(value) is QueryValue { Of: NamedValue { Name: "this" }, Name: var member } && KeepsACard(member)
+            || Unstored(value) is NamedValue { Name: var named } && KeepsACard(named);
+
+        /// <summary>A field or property of its own class (not a base class's: an enchantment's base.Card is its card) that holds a card.</summary>
+        private bool KeepsACard(string member) => (_type.GetProperty(member, Declared)?.PropertyType ?? _type.GetField(member, Declared)?.FieldType) is { Name: "CardModel" };
+
         /// <summary>While a hand pick's step is read: its condition's tests of the pick hold (Test).</summary>
         private bool _handPickHolds;
 
@@ -1015,6 +1028,12 @@ public static class HookReader
                 case CommandStep command:
                     var translated = Command(command);
                     return translated == null ? Array.Empty<HookStep>() : new[] { translated with { When = Condition(step.Condition) } };
+                // A card its code keeps in a field of its own (MusicBox's CardBeingPlayed): the card played kept binds the play in progress (BindStep),
+                // null lets it go (UnbindStep), as a power's own data's Add(cardPlay.Card, ...) and Remove do; any other card is a gap.
+                case StoreStep cardStore when KeepsACard(cardStore.Field):
+                    if (IsPlayCard(cardStore.Value)) return new HookStep[] { new BindStep(new HookConstant(1m)) { When = Condition(step.Condition) } };
+                    if (cardStore.Value is NullValue) return new HookStep[] { new UnbindStep { When = Condition(step.Condition) } };
+                    throw new Gap(ReaderCapability.OwnData, $"gap: keeps {cardStore.Value} in {cardStore.Field}");
                 case StoreStep store:
                     // A store to its own state (a field or property of its class, a plain field of its data): simulator state its programs read (HookField).
                     // One of its own values set (DynamicVars["CardsLeft"].BaseValue = ...): its state too, under the value's key.
@@ -1147,6 +1166,19 @@ public static class HookReader
                         throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: damage to {values[targetAt]}");
                     return new DamageStep(damaged, amount, props) { NoDealer = noDealer };
                 }
+                // A copy of the card played made into its owner's hand (MusicBox's cardPlay.Card.CreateClone(), its keywords applied to the copy first):
+                // a card made, its facts the card played's with those keywords (MakeCopyStep). Any other card made is a gap.
+                case "CardPileCmd.AddGeneratedCardToCombat":
+                {
+                    var pileAt = IndexOf(types, "PileType");
+                    var creatorAt = IndexOf(types, "Player");
+                    if (values.Count == 0 || !IsCopyOfPlayCard(values[0])) throw new Gap(ReaderCapability.CardMade, $"gap: makes {(values.Count > 0 ? values[0] : "nothing")}");
+                    if (pileAt < 0 || values[pileAt] is not ConstantValue pile || EnumName(_type.Assembly, "PileType", pile.Value) != "Hand") throw new Gap(ReaderCapability.CardMade, "gap: a card made into another pile");
+                    if (creatorAt < 0 || !IsOwner(values[creatorAt])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, "gap: a card made for someone else");
+                    var keywords = _copyKeywords.TryGetValue(values[0].ToString(), out var applied) ? applied : new List<string>();
+                    if (keywords.Any(keyword => keyword != "Ethereal")) throw new Gap(ReaderCapability.CardChanged, $"gap: the keywords {string.Join(", ", keywords)} on a card made");
+                    return new MakeCopyStep(Ethereal: keywords.Contains("Ethereal"));
+                }
                 case "CardPileCmd.Draw":
                 {
                     var playerAt = IndexOf(types, "Player");
@@ -1206,6 +1238,13 @@ public static class HookReader
                     return new UpgradeCardStep();
                 case "CardCmd.ApplyKeyword":
                 {
+                    // A keyword on a copy of the card played that its code then makes (MusicBox's): the made card's (MakeCopyStep), no step of its own.
+                    if (values.Count >= 2 && IsCopyOfPlayCard(values[0]) && KeywordsOf(values[1]) is { } copyKeywords)
+                    {
+                        var key = values[0].ToString();
+                        _copyKeywords[key] = (_copyKeywords.TryGetValue(key, out var earlier) ? earlier : new List<string>()).Concat(copyKeywords).ToList();
+                        return null;
+                    }
                     if (values.Count < 2 || !IsPlayCard(values[0])) throw new Gap(ReaderCapability.CardChanged, $"gap: a keyword on {(values.Count > 0 ? values[0] : "nothing")}, not the card played");
                     var keywords = KeywordsOf(values[1]);
                     if (keywords is not [var keyword]) throw new Gap(ReaderCapability.CardChanged, $"gap: the keywords {values[1]}");
@@ -1430,6 +1469,9 @@ public static class HookReader
                 // hand holds).
                 case QueryValue { Name: "NextItem", Arguments: [var picked] } when _handPickHolds && FromOwnersHand(picked):
                     return new HookConstant(1m);
+                // Its kept card tested as there (MusicBox's CardBeingPlayed): a play bound to it.
+                case var kept when IsKeptCard(kept):
+                    return new HookFactValue(HookFact.BoundHeld);
                 case CompareValue compare:
                     return Compare(compare);
                 // An enchantment's status tested as true or false (Normal is 0: Swift's and Sown's status == Normal): its state, not 0.
@@ -1661,6 +1703,14 @@ public static class HookReader
         {
             if (compare.Op is Comparison.Equal or Comparison.NotEqual)
             {
+                // Its kept card is there (CardBeingPlayed != null), or is the card played (cardPlay.Card == CardBeingPlayed): a play is bound to it,
+                // the one in progress (the simulator's plays don't overlap but for one inside another, as the hand-written models took it).
+                if (IsKeptCard(compare.Left) && (compare.Right is NullValue || IsPlayCard(compare.Right)) || IsKeptCard(compare.Right) && (compare.Left is NullValue || IsPlayCard(compare.Left)))
+                {
+                    var held = new HookFactValue(HookFact.BoundHeld);
+                    var isNull = compare.Left is NullValue || compare.Right is NullValue;
+                    return (compare.Op == Comparison.Equal) != isNull ? held : Not(held);
+                }
                 // The orb a hook is given is its owner's (orb.Owner == base.Owner, base.Owner.Player).
                 var orbOwner = IsOrbOwner(compare.Left) && IsOwner(compare.Right) || IsOrbOwner(compare.Right) && IsOwner(compare.Left);
                 // It's its owner's front orb (orb == base.Owner.PlayerCombatState.OrbQueue.Orbs[0]).

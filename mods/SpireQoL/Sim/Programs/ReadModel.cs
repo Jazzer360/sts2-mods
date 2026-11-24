@@ -309,7 +309,7 @@ public sealed class ReadModel : SimModel
         var compiled = new List<CompiledStep>();
         foreach (var step in steps)
         {
-            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep;
+            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep;
             // An enchantment's effects are its card's (no tab of its own, nothing in the play log: its card's play shows them).
             var fires = firstRound && acts && Spec.Kind != ModelKind.Enchantment && !firing.Any(earlier => Equals(earlier.When, step.When));
             if (acts) firing.Add(step);
@@ -939,7 +939,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep
+            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1128,6 +1128,20 @@ public sealed class ReadModel : SimModel
                 };
             // A card in its owner's hand made free this turn (Mummified Hand's pick): it acts when another card in that hand costs something (the
             // card played's fact, read as it was played), on a card the game picks at random (SimEngine.FreeInHand).
+            // A copy of the card played made into its owner's hand (Music Box's): it joins the hand (SimEngine.AddToHand, Ethereal: it exhausts as the
+            // turn ends), then what reacts to a card made hears it, the copy's facts the card played's with its keywords (CardPileCmd.AddGeneratedCardToCombat).
+            case MakeCopyStep copy:
+            {
+                var ethereal = copy.Ethereal;
+                return args =>
+                {
+                    if (args.Play is not { } played) return One(args.State);
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                    SimEngine.AddToHand(args.State, args.Owner, count: 1, ethereal);
+                    var made = ethereal && !played.Card.Ethereal ? played.Card with { Ethereal = true } : played.Card;
+                    return SimEngine.ProcCardEvent(args.State, CardEvent.Generated, count: 1, args.Owner, onEach: SimEngine.TallyFor(Name, Tab, CardEvent.Generated, args.Owner), card: made);
+                };
+            }
             case FreeInHandStep:
                 return args =>
                 {
@@ -1448,6 +1462,7 @@ public sealed class ReadModel : SimModel
                 ? args.State.Enemy(args.Owner) is { Alive: true } : args.State.TakesPart(args.Owner)) ? 1m : 0m;
             case HookFact.TakeBound: return (in HookArgs args) => Take(in args) ? 1m : 0m;
             case HookFact.BoundTaken: return (in HookArgs args) => args.Taken?[0] ?? 0;
+            case HookFact.BoundHeld: return (in HookArgs args) => args.State.Bound.Has(BoundKey(in args)) ? 1m : 0m;
             case HookFact.HitUnblocked: return (in HookArgs args) => args.Hit?.Unblocked ?? 0;
             case HookFact.HitTotal: return (in HookArgs args) => args.Hit?.Total ?? 0;
             case HookFact.PlayCountSoFar: return (in HookArgs args) => args.PlayCount;

@@ -119,22 +119,6 @@ public sealed class BurningSticks : RelicProc
     }
 }
 
-/// <summary>MusicBox: once a turn, the first Attack you play (bound at BeforeCardPlayed) is copied into your hand, Ethereal.</summary>
-public sealed class MusicBox : RelicProc
-{
-    public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (Mine(play, owner) && Armed(state, owner) && play.Card.Type == SimCardType.Attack && !state.Bound.Has(SimKeys.Owned(Name, owner))) Bind(state, owner, amount: 1);
-        return One(state);
-    }
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (!Mine(play, owner) || TakeBound(state, owner) is null) return One(state);
-        Disarm(state, owner);
-        return MakeInHand(Fire(state, owner), play.Card, count: 1, owner, ethereal: true); // a clone of the Attack played
-    }
-}
-
 /// <summary>
 /// UnsettlingLamp: while armed, the first card of yours that applies a debuff to an enemy without Artifact (BeforePowerAmountChanged)
 /// has its debuffs doubled (ModifyPowerAmountGivenMultiplicative); AfterCardPlayed of that card uses it up. Data bit 2: bound.

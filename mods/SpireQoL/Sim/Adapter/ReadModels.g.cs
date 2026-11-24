@@ -104,6 +104,7 @@ public static partial class ReadModels
         PowerId.Monologue.Name,
         PowerId.Motif.Name,
         RelicId.MummifiedHand.Name,
+        RelicId.MusicBox.Name,
         PowerId.Neurosurge.Name,
         PowerId.NoxiousFumes.Name,
         RelicId.Nunchaku.Name,

@@ -89,7 +89,7 @@ internal static partial class CoverageLedger
         ["Metronome"] = "covered: read from its code (ReadModel, decision #195): AfterOrbChanneled counts your orbs channeled (its own OrbsChanneled) and damages all enemies at its count (proc damage, second pass, tracker)",
         ["MiniRegent"] = "covered: read from its code (ReadModel, decision #195): AfterStarsSpent Strength once per turn (proc tab)",
         ["MummifiedHand"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed makes a random card in hand that costs free on a Power (proc tab; a branch per card for the cheapest pick at the turn's end, decision #223)",
-        ["MusicBox"] = "covered: Before/AfterCardPlayed clones the first attack as Ethereal (proc tab, created card)",
+        ["MusicBox"] = "covered: read from its code (ReadModel, decision #195): BeforeCardPlayed keeps the first Attack its owner plays while unused this turn (the play bound), AfterCardPlayed makes an Ethereal copy of it into the hand (proc tab, a card made; decision #226)",
         ["Nunchaku"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed energy every N attacks (proc tab, tracker)",
         ["Orichalcum"] = "covered: read from its code (ReadModel, decision #195): BeforeSideTurnEndVeryEarly sets ShouldTrigger with no block; BeforeSideTurnEnd gives its block",
         ["OrnamentalFan"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed block every N attacks (proc block, tracker)",

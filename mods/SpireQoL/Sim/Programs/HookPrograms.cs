@@ -168,6 +168,11 @@ public enum HookFact
     TakeBound,
     /// <summary>The amount this hook run took from what the model bound to the play (Remove's out value; 0 when none was).</summary>
     BoundTaken,
+    /// <summary>
+    /// The model has a play bound, left there (a card its code keeps in a field of its own: MusicBox's CardBeingPlayed != null, or ==
+    /// cardPlay.Card: the one in progress).
+    /// </summary>
+    BoundHeld,
     /// <summary>The card play's count as the listeners before it left it (ModifyCardPlayCount's playCount).</summary>
     PlayCountSoFar,
     /// <summary>The HP a hit took past block (AfterDamageGiven's and AfterDamageReceived's result.UnblockedDamage).</summary>
@@ -515,6 +520,12 @@ public sealed record ApplyKeywordStep(string Keyword) : HookStep;
 /// NextItem over the cards that cost energy or stars, else the rest), as the card played's own play hook runs it (SimEngine.FreeInHand).
 /// </summary>
 public sealed record FreeInHandStep : HookStep;
+
+/// <summary>
+/// CardPileCmd.AddGeneratedCardToCombat of a copy of the card played into its owner's hand (cardPlay.Card.CreateClone(), Ethereal when its code
+/// applies it to the copy first: Music Box's): a card made, joining the hand, its event's card the card played's facts with those keywords.
+/// </summary>
+public sealed record MakeCopyStep(bool Ethereal) : HookStep;
 
 /// <summary>PowerCmd.Remove(this): the power itself goes from its owner.</summary>
 public sealed record RemovePowerStep : HookStep;

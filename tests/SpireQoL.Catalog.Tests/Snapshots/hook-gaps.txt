@@ -1,24 +1,25 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by the capability the reader names.
-# 97 hand-written models.
+# 96 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
 read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 8 classes, 8 alone: ArtOfWar*, ConquerorPower*, DemonTongue*, EmotionChip*, MonarchsGazePower*, ParryingShield*, RippleBasin*, SelfFormingClay*
-its own data: a card or a play kept, a field used directly: 14 classes, 7 alone: BlackHolePower, CalamityPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, MusicBox, PaelsLegion, PenNib, RupturePower*, SerpentFormPower*, StretchPower*, UnsettlingLamp, Vambrace, WitheringPresencePower*
+its own data: a card or a play kept, a field used directly: 10 classes, 7 alone: BlackHolePower, CalamityPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, PaelsLegion, RupturePower*, SerpentFormPower*, StretchPower*, WitheringPresencePower*
 a monster's own state set (its flag, its next move): 10 classes, 4 alone: AsleepPower, CurlUpPower, FlutterPower*, ImbalancedPower*, InfestedPower, PlowPower*, RavenousPower*, SlumberPower, SteamEruptionPower, StockPower
 arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd): 6 classes, 4 alone: CoveringFirePower*, ExplosiveArrowsPower*, ImpaledPower, QuietusPower, Twine*, YahPower*
+queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 7 classes, 3 alone: CurlUpPower, LethalityPower*, PaelsEye, PenNib*, PhantomBladesPower, TagTeamPower*, Vambrace
 hooks: BeforeAttack and AfterAttack: 6 classes, 3 alone: AimPower, BoneFlute*, GigantificationPower*, QuietusPower, SkittishPower, VigorPower*
 commands: a card made (AddGeneratedCardToCombat, a made card): 3 classes, 3 alone: BiiigHug*, BurningSticks*, PersonalHivePower*
 the damage cap and AfterModifyingDamageAmount: 3 classes, 3 alone: HardToKillPower*, IntangiblePower*, SlowPower*
 the fight's log (the history ledger, decision #191): 3 classes, 3 alone: SongPathPower*, UnmovablePower*, ViolentChordPower*
 the simulator's own model (no game class by its name): 3 classes, 3 alone: ImpaledPowerOther*, Regret*, Void*
-queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 7 classes, 2 alone: CurlUpPower, LethalityPower*, PaelsEye, PenNib, PhantomBladesPower, TagTeamPower*, Vambrace
 hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount): 4 classes, 2 alone: BurrowedPower*, HandDrill*, PaelsLegion, Vambrace
 multiplayer scaling (GetScaledAmountForMultiplayer, the players' count): 4 classes, 2 alone: BufferPower*, PlatingPower, SkittishPower, SlipperyPower*
 the play's result location (ModifyCardPlayResultLocation): 4 classes, 2 alone: CorruptionPower, FeralPower, NostalgiaPower*, ReboundPower*
 a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 2 classes, 2 alone: InsatiableDominionPower*, ShadowmeldPower*
 commands: OstyCmd.Summon: 2 classes, 2 alone: DevourLifePower*, SicEmPower*
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
+hooks: the power amount given: 2 classes, 2 alone: SneckoSkull*, UnsettlingLamp*
 orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first): 2 classes, 2 alone: ConsumingShadowPower*, TrashToTreasurePower*
 outcomes: a stun or a kill (outcome tabs): 2 classes, 2 alone: ShriekPower*, TheGambitPower*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*
@@ -27,7 +28,6 @@ another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionMo
 card costs and keywords (cards' own hooks, Part B3): 3 classes, 1 alone: ChemicalX*, CorruptionPower, PhantomBladesPower
 hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...): 3 classes, 1 alone: SmoggyPower, SurroundedPower, UnceasingTop*
 queries: the damage's or block's props: 3 classes, 1 alone: AimPower, NoBlockPower*, QuietusPower
-hooks: the power amount given: 2 classes, 1 alone: SneckoSkull*, UnsettlingLamp
 a pick: 1 classes, 1 alone: StratagemPower*
 commands: AutoPlayFromDrawPile: 1 classes, 1 alone: LostLutePower*
 hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*
@@ -40,7 +40,6 @@ a model's own method (its body read where it's called): 2 classes, 0 alone: Fera
 queries: the owner's powers: 2 classes, 0 alone: CoveredPower, InterceptPower
 a command on another power (PowerCmd.Remove of another): 1 classes, 0 alone: AsleepPower
 a turn's start (an extra turn): 1 classes, 0 alone: PaelsEye
-commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn): 1 classes, 0 alone: MusicBox
 commands: a power's amount changed (PowerCmd.ModifyAmount): 1 classes, 0 alone: PlatingPower
 queries: a creature's side or presence: 1 classes, 0 alone: PlatingPower
 queries: the hit's result: 1 classes, 0 alone: SlumberPower
@@ -55,7 +54,7 @@ BiiigHug: [commands: a card made (AddGeneratedCardToCombat, a made card)] AfterS
 BlackHolePower: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: the value cardPlay.Resources.StarsSpent | [queries: the hook's amount] AfterStarsGained: gap: the value amount
 BoneFlute: [hooks: BeforeAttack and AfterAttack] AfterAttack: gap: the simulator runs no read model's AfterAttack
 BufferPower: [multiplayer scaling (GetScaledAmountForMultiplayer, the players' count)] GetScaledAmountForMultiplayer: gap: the simulator runs no read model's GetScaledAmountForMultiplayer
-BurningSticks: [commands: a card made (AddGeneratedCardToCombat, a made card)] AfterCardExhausted: gap: CardPileCmd.AddGeneratedCardToCombat isn't translated
+BurningSticks: [commands: a card made (AddGeneratedCardToCombat, a made card)] AfterCardExhausted: gap: makes card.CreateClone()
 BurrowedPower: [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount)] AfterBlockBroken: gap: the simulator runs no read model's AfterBlockBroken | [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount)] ShouldClearBlock: gap: the simulator runs no read model's ShouldClearBlock
 CalamityPower: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: changes a collection (Enumerator.get_Current) where the reader reads no step
 ChemicalX: [card costs and keywords (cards' own hooks, Part B3)] ModifyXValue: gap: the simulator runs no read model's ModifyXValue
@@ -89,7 +88,6 @@ LethalityPower: [queries: the card's facts (its pile, tags, keywords, class; an 
 LostLutePower: [commands: AutoPlayFromDrawPile] AfterCardPlayed: gap: CardPileCmd.AutoPlayFromDrawPile isn't translated
 MagicBombPower: [queries: the power's applier (alive, its side)] AfterSideTurnEnd: gap: tests this.Applier.IsDead
 MonarchsGazePower: [read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule)] read whole
-MusicBox: [commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn)] AfterCardPlayed: gap: a keyword on cardPlay.Card.CreateClone(), not the card played | [its own data: a card or a play kept, a field used directly] BeforeCardPlayed: gap: the value cardPlay.Card
 NecroMasteryPower: [hooks: AfterCurrentHpChanged] AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged
 NoBlockPower: [queries: the damage's or block's props] ModifyBlockMultiplicative: gap: tests props.HasFlag(4)
 NostalgiaPower: [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
@@ -98,7 +96,7 @@ PaelsLegion: [its own data: a card or a play kept, a field used directly] AfterC
 PaelsTears: [the owner's energy] BeforeSideTurnEnd: gap: the value this.Owner.PlayerCombatState.Energy
 ParryPower: [the simulator's own model (its game class has no hooks: another class's code reads it)] no hooks
 ParryingShield: [read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule)] read whole
-PenNib: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: the value cardPlay.Card | [its own data: a card or a play kept, a field used directly] BeforeCardPlayed: gap: the value cardPlay.Card | [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyDamageMultiplicative: gap: tests cardSource.Pile
+PenNib: [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyDamageMultiplicative: gap: tests cardSource.Pile
 PersonalHivePower: [commands: a card made (AddGeneratedCardToCombat, a made card)] AfterDamageReceived: gap: makes a Dazed
 PhantomBladesPower: [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyDamageAdditive: gap: tests Contains(cardSource.Tags, 5) | [card costs and keywords (cards' own hooks, Part B3)] TryModifyKeywordsInCombat: gap: the simulator runs no read model's TryModifyKeywordsInCombat
 PlatingPower: [multiplayer scaling (GetScaledAmountForMultiplayer, the players' count)] AfterApplied: gap: the value this.Owner.CombatState.RunState.Players.Count | [commands: a power's amount changed (PowerCmd.ModifyAmount)] AfterSideTurnStart: gap: PowerCmd.ModifyAmount isn't translated | [queries: a creature's side or presence] BeforeSideTurnStart: gap: the value side | [multiplayer scaling (GetScaledAmountForMultiplayer, the players' count)] GetScaledAmountForMultiplayer: gap: the simulator runs no read model's GetScaledAmountForMultiplayer
@@ -138,8 +136,8 @@ TrashToTreasurePower: [orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb m
 Twine: [arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd)] AfterArrowDislodged: gap: compares the owner with arrow.owner()
 UnceasingTop: [hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...)] AfterHandEmptied: gap: the simulator runs no read model's AfterHandEmptied
 UnmovablePower: [the fight's log (the history ledger, decision #191)] ModifyBlockMultiplicative: gap: the fight's log (one card play: e.CardPlay != cardPlay): Count(OfType(Instance.History.Entries), e => e.HappenedThisTurn(this.CombatState) and e.CardPla...
-UnsettlingLamp: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: the value cardPlay.Card | [hooks: the power amount given] BeforePowerAmountChanged: gap: the simulator runs no read model's BeforePowerAmountChanged | [hooks: the power amount given] ModifyPowerAmountGivenMultiplicative: gap: the simulator runs no read model's ModifyPowerAmountGivenMultiplicative
-Vambrace: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: the value cardPlay.Card | [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount)] AfterModifyingBlockAmount: gap: the simulator runs no read model's AfterModifyingBlockAmount | [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyBlockMultiplicative: gap: the value cardSource
+UnsettlingLamp: [hooks: the power amount given] BeforePowerAmountChanged: gap: the simulator runs no read model's BeforePowerAmountChanged | [hooks: the power amount given] ModifyPowerAmountGivenMultiplicative: gap: the simulator runs no read model's ModifyPowerAmountGivenMultiplicative
+Vambrace: [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount)] AfterModifyingBlockAmount: gap: the simulator runs no read model's AfterModifyingBlockAmount | [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyBlockMultiplicative: gap: the value cardSource
 VigorPower: [hooks: BeforeAttack and AfterAttack] AfterAttack: gap: the simulator runs no read model's AfterAttack | [hooks: BeforeAttack and AfterAttack] BeforeAttack: gap: the simulator runs no read model's BeforeAttack | [hooks: BeforeAttack and AfterAttack] ModifyDamageAdditive: gap: tests this.GetInternalData<Data>().commandToModify()
 ViolentChordPower: [the fight's log (the history ledger, decision #191)] AfterCardPlayed: gap: tests FirstOrDefault(Instance.History.CardPlaysStarted, e => e.HappenedThisTurn(cardPlay.Player.Creature.CombatState) and Contains(e.CardPlay.Card.Tags,...
 Void: [the simulator's own model (no game class by its name)] no game class

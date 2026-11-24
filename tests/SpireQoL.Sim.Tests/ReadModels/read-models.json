@@ -11743,6 +11743,147 @@
     "HelpsOwner": false
   },
   {
+    "Name": "MusicBox",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__13.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "BoundHeld"
+              }
+            }
+          },
+          {
+            "$kind": "MakeCopyStep",
+            "Ethereal": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__13.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "BoundHeld"
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "WasUsedThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__13.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "BoundHeld"
+              }
+            }
+          },
+          {
+            "$kind": "UnbindStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__13.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "BoundHeld"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeCardPlayed",
+        "Steps": [
+          {
+            "$kind": "BindStep",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "MusicBox.BeforeCardPlayed:0006",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "BoundHeld"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "MusicBox.BeforeCardPlayed:001F",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PlayIsOwners"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "MusicBox.BeforeCardPlayed:002D",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "WasUsedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "MusicBox.BeforeCardPlayed:0041",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false
+  },
+  {
     "Name": "NeurosurgePower",
     "Kind": "Power",
     "Hooks": [

@@ -67,6 +67,26 @@ public class SimMadeInHandTests
     }
 
     [Fact]
+    public void MusicBoxIsReadFromItsCode()
+    {
+        // MusicBox.BeforeCardPlayed keeps the first Attack its owner plays (CardBeingPlayed = cardPlay.Card) while !WasUsedThisTurn; its
+        // AfterCardPlayed makes cardPlay.Card.CreateClone() with CardCmd.ApplyKeyword(Ethereal) into the hand, then WasUsedThisTurn = true.
+        var music = Assert.IsType<ReadModel>(SimModels.Get(RelicId.MusicBox.Name));
+        var state = Hand(cards: 5);
+        state.You.Relics = state.You.Relics.With(RelicId.MusicBox, amount: 0, data: 0);
+        var after = After(state, Played("StrikeSilent", SimCardType.Attack));
+        Assert.Equal(1, after.You.Fading);
+        Assert.Equal(1, after.You.Fields[music.FieldKey("WasUsedThisTurn")]);
+        Assert.False(after.Bound.Has(SimKeys.Owned(RelicId.MusicBox.Name, Who.You))); // let go once its copy is made
+        // A Skill isn't kept; once used this turn, nothing.
+        Assert.Equal(0, After(state, Played("DefendSilent", SimCardType.Skill)).You.Fading);
+        state.You.Fields = state.You.Fields.With(music.FieldKey("WasUsedThisTurn"), 1);
+        var used = After(state, Played("StrikeSilent", SimCardType.Attack));
+        Assert.Equal(0, used.You.Fading);
+        Assert.False(used.Fired.Has(RelicId.MusicBox.Name));
+    }
+
+    [Fact]
     public void ACardYouMakeForATeammateJoinsTheirHandAndItsEventIsYours()
     {
         // Largesse: CardPileCmd.AddGeneratedCardToCombat(the card made for the target's player, Hand, creator: you). The card goes to its
