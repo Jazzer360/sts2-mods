@@ -772,10 +772,22 @@ public sealed class SimState
 
     /// <summary>
     /// The fight's multiplayer scaling (MultiplayerScalingModel.GetMultiplayerScaling(encounter, act), the game's own math, read by the adapter):
-    /// what PowerModel's GetScaledAmountForMultiplayer multiplies by (decision #234). Never changed. Null: not read (a power it would scale
-    /// makes the simulation unknown).
+    /// what PowerModel's GetScaledAmountForMultiplayer multiplies by (decision #234). Kept among the shared values that aren't whole numbers
+    /// (Fractions, under its own key), so a branch's copy holds nothing more; set once as the state is built, never changed. Null: not read (a
+    /// power it would scale makes the simulation unknown).
     /// </summary>
-    public decimal? EncounterScaling;
+    [JsonIgnore] public decimal? EncounterScaling
+    {
+        get => Fractions.TryGetValue(EncounterScalingKey, out var scaling) ? scaling : null;
+        set
+        {
+            if (value is { } scaling) Fractions[EncounterScalingKey] = scaling;
+            else Fractions.Remove(EncounterScalingKey);
+        }
+    }
+
+    /// <summary>EncounterScaling's key among Fractions (no model's value has it: theirs are "owner:Model:key").</summary>
+    private const string EncounterScalingKey = "fight:EncounterScaling";
 
     /// <summary>
     /// The players' turn number this turn (PlayerCombatState.TurnNumber: 1 on the fight's first), read from the game. Constant: a simulation

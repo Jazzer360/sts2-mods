@@ -86,8 +86,9 @@ Non-goals:
 - **End of turn** (`CombatManager.DoTurnEnd`): auto-play phase; `BeforeSideTurnEndEarly`; `BeforeSideTurnEnd`; orb passives
   per player; Ethereal exhausts and cards acting in hand; `AfterSideTurnEnd` (Constrict, Magic Bomb, Demise with the other
   powers and relics); `AfterSideTurnEndLate` (Disintegration, Insatiable Dominion); then
-  the enemy turn (poison tick, block cleared, each enemy's move as its code runs it: hit by hit, with the powers and block it gives in
-  their place).
+  the enemy turn (poison tick, block cleared, each enemy's move as its code runs it: hit by hit, each attack between its BeforeAttack and
+  AfterAttack, your Thorns, Flame Barrier and Reflect hitting back as damage through the engine (decision #233), with the powers and block it
+  gives in their place, a new power on an enemy scaled for the players as PowerCmd.Apply scales it: decision #234).
 
 ## Architecture
 
