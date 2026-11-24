@@ -21,8 +21,11 @@ public static class HandModelled
     public static readonly IReadOnlyList<HandModelledRule> Engine = new HandModelledRule[]
     {
         new("A card play: its shape (play count, result location), each play's hooks and its body in its program's order",
-            new[] { "SimEngine.RunCardPlay", "SimEngine.RunEnchantment", "SimEngine.DecideCardPlay", "SimEngine.ApplyPlay", "SimEngine.ApplyPlayTo", "SimEngine.RunScript", "SimEngine.RunScriptTo", "SimEngine.Count", "SimEngine.CardResolved", "SimEngine.RunFixedHits" },
+            new[] { "SimEngine.RunCardPlay", "SimEngine.PlayOnce", "SimEngine.RunEnchantment", "SimEngine.DecideCardPlay", "SimEngine.ApplyPlay", "SimEngine.ApplyPlayTo", "SimEngine.RunScript", "SimEngine.RunScriptTo", "SimEngine.Count", "SimEngine.CardResolved", "SimEngine.RunFixedHits" },
             new[] { "CardModel.OnPlayWrapper", "EnchantmentModel.OnPlay", "Hook.ModifyCardPlayCount", "Hook.AfterModifyingCardPlayCount", "Hook.ModifyCardPlayResultLocation", "Hook.BeforeCardPlayed", "Hook.AfterCardPlayed", "CardCmd.AutoPlay" }),
+        new("A card changed during its play: an upgrade of the card in play makes its later plays its upgraded copy's (read by the adapter from an upgraded copy)",
+            new[] { "SimEngine.UpgradeCardInPlay" },
+            new[] { "CardCmd.Upgrade", "CardModel.UpgradeInternal", "CardModel.FinalizeUpgradeInternal" }),
         new("Damage to a creature: the damage math, block, the HP-loss pipeline, a death held back, the hit's reactions",
             new[] { "SimEngine.Damage", "SimEngine.ModifiedDamage", "SimEngine.CalcDamage", "SimEngine.PlainDamage", "SimEngine.AnyListensToDamage", "SimEngine.HpLossPipeline", "SimEngine.HpLoss",
                 "SimEngine.PlayerDamaged", "SimEngine.LandBlockable", "SimEngine.LandOnPlayer", "SimEngine.LandUnblockable", "SimEngine.LoseHp", "SimEngine.Lose", "SimEngine.PlayHp", "SimEngine.BiggestHit",

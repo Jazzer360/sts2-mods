@@ -26,6 +26,12 @@ public sealed class SimPlay
     public SimCardPlay? Card;
     /// <summary>What each play does (OnPlay, then the enchantment's), in order.</summary>
     public List<SimAction> Body = new();
+    /// <summary>
+    /// The card upgraded, for its plays after a play upgrades it (CardCmd.Upgrade of the card in play: Razor Tooth); null when nothing on the
+    /// board upgrades it or it plays once (SimAdapter.UpgradedVersion).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public CardVersion? Upgraded;
     /// <summary>Actions before the card play (the energy it spends) and after it (its own exhaust, events of the whole play).</summary>
     public List<SimAction> Before = new(), After = new();
     /// <summary>The card in your hand this play is (SimHandCard.Id): playing it takes it out of SimPlayer.AutoHand. 0 = none.</summary>
@@ -157,7 +163,7 @@ public sealed class SimScript
         var body = new List<SimAction>(simPlay.Body);
         var shorthand = Shorthand(simPlay);
         if (shorthand.Count > 0) body.Add(new FirstPlayOnly(shorthand));
-        script.Actions.Add(new CardPlayAction(play, body) { FromHand = simPlay.HandCard != 0, HandCard = simPlay.HandCard, CountByModels = true });
+        script.Actions.Add(new CardPlayAction(play, body) { FromHand = simPlay.HandCard != 0, HandCard = simPlay.HandCard, CountByModels = true, Upgraded = simPlay.Upgraded });
         script.Actions.AddRange(simPlay.After);
         script.Actions.Add(new CardResolvedAction(simPlay.HandDelta, simPlay.HandCard, simPlay.AutoPlay, simPlay.Draws, simPlay.FadingDelta, simPlay.IsAttack) { Owner = play.Owner, HexFadingDelta = simPlay.HexFadingDelta });
         if (simPlay.RandomPoison > 0 && simPlay.RandomPoisonTimes > 0)

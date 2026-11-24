@@ -142,7 +142,7 @@ Every relic here exposes `ShowCounter`, `DisplayAmount` and `Status` (the game s
 | [~] | Daughter of the Wind | attacks | block per attack |
 | [~] | Ivory Tile | cards costing ≥3 | refund energy |
 | [~] | Helical Dart | Shivs | +Dexterity |
-| [~] | Razor Tooth | attacks and skills that can still be upgraded | upgrades the card when played |
+| [~] | Razor Tooth | attacks and skills that can still be upgraded | upgrades the card when played; a replay's later plays are the upgraded card's (decision #218) |
 | [~] | Chemical X | X-cost cards | +2 to X |
 | — | Strike Dummy / Fake Strike Dummy | Strikes | not a tab: it's a damage modifier (`ModifyDamageAdditive`), so the card's own damage number already includes it |
 | — | Velvet Choker | | no card tab since 0.23.1: the tracker shows plays left, and the game crosses out the cost once you can't play more |

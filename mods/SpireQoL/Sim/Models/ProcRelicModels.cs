@@ -180,11 +180,19 @@ public sealed class ChemicalX : RelicProc
         Mine(play, owner) && play.PlayIndex == 0 && (play.Card.CostsX || play.Card.StarCostX) ? Fire(state, owner) : One(state);
 }
 
-/// <summary>RazorTooth.AfterCardPlayed: an Attack or Skill you play that can be upgraded is upgraded.</summary>
+/// <summary>
+/// RazorTooth.AfterCardPlayed: an Attack or Skill you play that can be upgraded is upgraded (CardCmd.Upgrade): a replay's later plays are the
+/// upgraded card's (SimEngine.UpgradeCardInPlay), which can't be upgraded again.
+/// </summary>
 public sealed class RazorTooth : RelicProc
 {
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.PlayIndex == 0 && play.Card.Type is SimCardType.Attack or SimCardType.Skill && play.Card.Upgradable ? Fire(state, owner) : One(state);
+    public override bool UpgradesCardInPlay => true;
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (!Mine(play, owner) || play.Card.Type is not (SimCardType.Attack or SimCardType.Skill) || !play.Card.Upgradable) return One(state);
+        SimEngine.UpgradeCardInPlay(state);
+        return Fire(state, owner);
+    }
 }
 
 /// <summary>Twine.AfterArrowDislodged: block for each of your arrows that comes loose.</summary>

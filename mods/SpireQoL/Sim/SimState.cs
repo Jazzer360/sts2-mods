@@ -821,6 +821,8 @@ public sealed class SimState
     /// <summary>The card play in progress': how many times it plays, and where the card goes after (SimEngine.DecideCardPlay); 0 and Default outside one.</summary>
     internal int PlayCountNow;
     internal SimResultLocation PlayResultLocation;
+    /// <summary>The card play in progress' card was upgraded this many times by its plays so far (SimEngine.UpgradeCardInPlay); 0 outside one.</summary>
+    internal int PlayUpgrades;
     /// <summary>The enemy a shot's arrow is flying at (spent before the attack, impaling after it); -1 none.</summary>
     internal int ArrowAwayAt = Who.None;
     /// <summary>The card a card event is about, when known (the played card exhausting itself: Burning Sticks).</summary>
@@ -857,13 +859,13 @@ public sealed class SimState
 
     /// <summary>What a card play inside another (an auto-play) puts aside and gives back: the outer play's own scratch.</summary>
     internal readonly record struct PlayFrame(SimCardPlay? Play, CardEventCounts Events, int BlockGains, int Attack, int Taken, NamedCounts Matching, bool Killed, NamedCounts Tests,
-        int PlayCount, SimResultLocation Location);
+        int PlayCount, SimResultLocation Location, int Upgrades);
 
-    internal PlayFrame SaveFrame() => new(CurrentPlay, PlayEvents, PlayCardBlockGains, CurrentAttack, PlayTaken, TakeMatching, AttackKilled, PlayTests, PlayCountNow, PlayResultLocation);
+    internal PlayFrame SaveFrame() => new(CurrentPlay, PlayEvents, PlayCardBlockGains, CurrentAttack, PlayTaken, TakeMatching, AttackKilled, PlayTests, PlayCountNow, PlayResultLocation, PlayUpgrades);
 
     internal void RestoreFrame(PlayFrame frame) =>
-        (CurrentPlay, PlayEvents, PlayCardBlockGains, CurrentAttack, PlayTaken, TakeMatching, AttackKilled, PlayTests, PlayCountNow, PlayResultLocation) =
-        (frame.Play, frame.Events, frame.BlockGains, frame.Attack, frame.Taken, frame.Matching, frame.Killed, frame.Tests, frame.PlayCount, frame.Location);
+        (CurrentPlay, PlayEvents, PlayCardBlockGains, CurrentAttack, PlayTaken, TakeMatching, AttackKilled, PlayTests, PlayCountNow, PlayResultLocation, PlayUpgrades) =
+        (frame.Play, frame.Events, frame.BlockGains, frame.Attack, frame.Taken, frame.Matching, frame.Killed, frame.Tests, frame.PlayCount, frame.Location, frame.Upgrades);
 
     /// <summary>The listeners (SimEngine.Listeners) and the power and relic sets they were built from: rebuilt when one changes.</summary>
     internal List<(SimModel Model, int Owner)>? ListenerCache;
@@ -1048,6 +1050,7 @@ public sealed class SimState
         // What the play's conditions read later (decision #190): the last attack's kill, the code's tests already asked.
         key.Add(AttackKilled ? 1 : 0); PlayTests.Hash(ref key);
         key.Add(PlayCountNow); key.Add((int)PlayResultLocation); // the card play's shape (SimEngine.DecideCardPlay)
+        if (PlayUpgrades != 0) key.Add(-1000 - PlayUpgrades); // the card in play upgraded: its later plays are its upgraded copy's
         key.Add(AutoPlaysUnknown ? 1 : 0); key.Add(AutoPlayed); key.Add(DrawnTally); key.Add(Unmodelled == null ? 0 : Unmodelled.GetHashCode());
         foreach (var pick in AutoPicks) { key.Add(pick.Card.GetHashCode()); key.Add(pick.Target); } // branches that picked different cards stay apart (the check tells them apart)
         foreach (var enemy in Enemies) enemy.Hash(ref key);

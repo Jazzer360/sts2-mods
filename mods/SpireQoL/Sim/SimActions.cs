@@ -25,7 +25,15 @@ public sealed record CardPlayAction(SimCardPlay Play, IReadOnlyList<SimAction> B
     /// Play.PlayCount as the count the sources it doesn't model gave. False: Play.PlayCount is the whole count.
     /// </summary>
     public bool CountByModels { get; init; }
+    /// <summary>
+    /// The card upgraded, for its plays after one upgrades it (CardCmd.Upgrade of the card in play, SimEngine.UpgradeCardInPlay): each later play
+    /// is this card's, with this body, as OnPlayWrapper's next OnPlay reads the upgraded card. Null: none read (a later play is then unknown).
+    /// </summary>
+    public CardVersion? Upgraded { get; init; }
 }
+
+/// <summary>A card as a change during its play leaves it (its upgraded copy): the card its later plays' hooks see, and what each of them does.</summary>
+public sealed record CardVersion(SimCard Card, IReadOnlyList<SimAction> Body);
 
 /// <summary>
 /// The damage of one attack, worked out at each hit from the state (docs/SIMULATOR.md "Pipelines"): the card's base value

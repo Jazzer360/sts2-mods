@@ -232,6 +232,12 @@ public abstract class SimModel
     public virtual bool FlashesOnDamageModified => false;
 
     /// <summary>
+    /// It upgrades the card being played (CardCmd.Upgrade of cardPlay.Card: Razor Tooth): the adapter reads that card's upgraded copy for a replay's
+    /// later plays (SimPlay.Upgraded).
+    /// </summary>
+    public virtual bool UpgradesCardInPlay => false;
+
+    /// <summary>
     /// A power each application of which is a copy of its own, with its own amount and values (PowerInstanceType.Instanced: each
     /// Monologue or The Bomb played). Its Powers entry holds them merged (amounts added), so its model must say how its copies act:
     /// each on its own counter (the frozen counter models' list), on their values' total (VarTotal), or all the same. Its AfterApplied runs for

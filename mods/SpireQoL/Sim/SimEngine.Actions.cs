@@ -44,17 +44,31 @@ public static partial class SimEngine
             }
             try
             {
-                branches.Do(branch => { branch.CurrentPlay = cardPlayAction.Play with { PlayIndex = index, PlayCount = branch.PlayCountNow }; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; branch.PlayTaken = 0; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty; });
-                HookStep(branches, nameof(SimModel.BeforeCardPlayed), (model, owner, branch) => model.BeforeCardPlayed(branch, owner, branch.CurrentPlay!));
-                branches.Do(branch => Count(branch, branch.CurrentPlay!, PlayStage.Started));
-                foreach (var action in cardPlayAction.Body) Run(branches, action);
-                // Its enchantment's OnPlay, after the card's own (CardModel.OnPlayWrapper), read from its code (decision #217).
-                RunEnchantment(branches, cardPlayAction.Play.Card, HookName.OnPlay);
-                branches.Do(branch => Count(branch, branch.CurrentPlay!, PlayStage.Finished));
-                HookStep(branches, nameof(SimModel.AfterCardPlayed), (model, owner, branch) => model.AfterCardPlayed(branch, owner, branch.CurrentPlay!));
-                // Its enchantment hears its own card's play (Swift and Sown turn themselves off): it's a listener among its card's pile's cards, after
-                // its owner's powers and relics, and no other listener reads its state, so it runs once the play's listeners have.
-                RunEnchantment(branches, cardPlayAction.Play.Card, HookName.AfterCardPlayed);
+                // A play after one that upgraded the card is its upgraded copy's (CardCmd.Upgrade changes the card itself: the next OnPlay reads it):
+                // the branches whose card was upgraded play that copy, the others the card as it was.
+                if (cardPlayAction.Upgraded is not { } upgraded || branches.States.All(branch => branch.PlayUpgrades == 0))
+                {
+                    if (index > 0) branches.Do(branch => { if (branch.PlayUpgrades > 0) branch.Unmodelled ??= UpgradedUnread; });
+                    PlayOnce(branches, cardPlayAction.Play, cardPlayAction.Body, index);
+                }
+                else if (branches.States.All(branch => branch.PlayUpgrades > 0)) PlayOnce(branches, cardPlayAction.Play with { Card = upgraded.Card }, upgraded.Body, index);
+                else
+                {
+                    var upgradedBranches = branches.States.Where(branch => branch.PlayUpgrades > 0).ToList();
+                    branches.States = branches.States.Where(branch => branch.PlayUpgrades == 0).ToList();
+                    branches.Aside += upgradedBranches.Count;
+                    PlayOnce(branches, cardPlayAction.Play, cardPlayAction.Body, index);
+                    branches.Aside -= upgradedBranches.Count;
+                    var plain = branches.States;
+                    branches.States = upgradedBranches;
+                    branches.Aside += plain.Count;
+                    try { PlayOnce(branches, cardPlayAction.Play with { Card = upgraded.Card }, upgraded.Body, index); }
+                    finally
+                    {
+                        branches.Aside -= plain.Count;
+                        branches.States.AddRange(plain);
+                    }
+                }
             }
             finally
             {
@@ -89,8 +103,41 @@ public static partial class SimEngine
         {
             if (branch.PlayResultLocation == SimResultLocation.HandTop) AddToHand(branch, cardPlayAction.Play.Owner, count: 1);
             branch.CurrentPlay = null; branch.PlayTaken = 0; branch.TakeMatching = NamedCounts.Empty; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty;
-            branch.PlayCountNow = 0; branch.PlayResultLocation = SimResultLocation.Default;
+            branch.PlayCountNow = 0; branch.PlayResultLocation = SimResultLocation.Default; branch.PlayUpgrades = 0;
         });
+    }
+
+    /// <summary>
+    /// One play of a card play (CardModel.OnPlayWrapper's loop body): BeforeCardPlayed, the play started, its body (OnPlay), its enchantment's
+    /// OnPlay, the play finished, AfterCardPlayed, its enchantment's AfterCardPlayed; <paramref name="play"/>'s card as the plays before left it.
+    /// </summary>
+    private static void PlayOnce(BranchSet branches, SimCardPlay play, IReadOnlyList<SimAction> body, int index)
+    {
+        branches.Do(branch => { branch.CurrentPlay = play with { PlayIndex = index, PlayCount = branch.PlayCountNow }; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; branch.PlayTaken = 0; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty; });
+        HookStep(branches, nameof(SimModel.BeforeCardPlayed), (model, owner, branch) => model.BeforeCardPlayed(branch, owner, branch.CurrentPlay!));
+        branches.Do(branch => Count(branch, branch.CurrentPlay!, PlayStage.Started));
+        foreach (var action in body) Run(branches, action);
+        // Its enchantment's OnPlay, after the card's own (CardModel.OnPlayWrapper), read from its code (decision #217).
+        RunEnchantment(branches, play.Card, HookName.OnPlay);
+        branches.Do(branch => Count(branch, branch.CurrentPlay!, PlayStage.Finished));
+        HookStep(branches, nameof(SimModel.AfterCardPlayed), (model, owner, branch) => model.AfterCardPlayed(branch, owner, branch.CurrentPlay!));
+        // Its enchantment hears its own card's play (Swift and Sown turn themselves off): it's a listener among its card's pile's cards, after
+        // its owner's powers and relics, and no other listener reads its state, so it runs once the play's listeners have.
+        RunEnchantment(branches, play.Card, HookName.AfterCardPlayed);
+    }
+
+    private const string UpgradedUnread = "the card was upgraded during its play and its upgraded copy wasn't read: its later plays aren't known";
+
+    /// <summary>
+    /// CardCmd.Upgrade of the card in play (cardPlay.Card): a card that can still be upgraded is (UpgradeInternal), so its later plays in this card
+    /// play are its upgraded copy's (CardPlayAction.Upgraded); one that can't is left as it is (the command's !IsUpgradable). A card upgraded a
+    /// second time in one card play (a card with more than one upgrade) makes its later plays unknown: only one upgraded copy is read.
+    /// </summary>
+    internal static void UpgradeCardInPlay(SimState state)
+    {
+        if (state.CurrentPlay is not { Card.Upgradable: true }) return;
+        state.PlayUpgrades++;
+        if (state.PlayUpgrades > 1) state.Unmodelled ??= "the card was upgraded twice during its play: its later plays aren't known";
     }
 
     /// <summary>
@@ -143,6 +190,7 @@ public static partial class SimEngine
             if (counted != null) foreach (var (model, owner) in counted) model.AfterModifyingCardPlayCount(state, owner, play);
         }
         state.PlayCountNow = Math.Max(1, count);
+        state.PlayUpgrades = 0;
     }
 
     /// <summary>

@@ -29,7 +29,7 @@ public static partial class SimAdapter
     }
 
     private static SimPlay PlayFromGame(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids,
-        int targetId, int owner, int playCount)
+        int targetId, int owner, int playCount, bool withUpgraded = true)
     {
         var name = card.GetType().Name;
         // The plays the simulator doesn't decide itself: Echo Form's it decides as the play starts (CardPlayAction.CountByModels).
@@ -78,7 +78,50 @@ public static partial class SimAdapter
         play.After.AddRange(MadeAfterPlay(card));
         // A teammate's card: the block it gives its player is theirs.
         if (owner != Who.You) play.Body = play.Body.Select(action => ToOwner(action, owner)).ToList();
+        // A card upgraded during its play (CardCmd.Upgrade of the card in play) plays its later plays upgraded: read from its upgraded copy.
+        if (withUpgraded && playCount > 1 && Safe(() => card.IsUpgradable) && UpgradesCardsInPlay(me)) play.Upgraded = UpgradedVersion(card, play, me, combat, ids, targetId, owner, playCount);
         return play;
+    }
+
+    /// <summary>One of the player's powers or relics upgrades the card being played (SimModel.UpgradesCardInPlay, read from its code or its model).</summary>
+    private static bool UpgradesCardsInPlay(Player me)
+    {
+        foreach (var relic in me.Relics) if (SimModels.Get(relic.GetType().Name) is { UpgradesCardInPlay: true }) return true;
+        foreach (var power in me.Creature.Powers) if (SimModels.Get(power.GetType().Name) is { UpgradesCardInPlay: true }) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// The card upgraded (CardCmd.Upgrade: UpgradeInternal, FinalizeUpgradeInternal on the card), read from an upgraded copy made the way the game
+    /// makes its upgrade previews (MutableClone): what each later play does, and the card its hooks see (its values, keywords, tags and upgrade; the
+    /// card play's own resources, its place in your hand and its result pile stay the card play's). Null when the copy can't be made.
+    /// </summary>
+    private static CardVersion? UpgradedVersion(CardModel card, SimPlay play, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, int targetId, int owner, int playCount)
+    {
+        if (play.Card is not { Card: var original }) return null;
+        try
+        {
+            var copy = (CardModel)card.MutableClone();
+            copy.UpgradeInternal();
+            copy.FinalizeUpgradeInternal();
+            var upgraded = PlayFromGame(copy, me, combat, ids, targetId, owner, playCount, withUpgraded: false);
+            if (upgraded.Card is not { Card: var upgradedCard }) return null;
+            return new CardVersion(original with
+            {
+                Upgraded = upgradedCard.Upgraded, Upgradable = upgradedCard.Upgradable, Vars = upgradedCard.Vars, Ethereal = upgradedCard.Ethereal, Tags = upgradedCard.Tags,
+                Enchantment = upgradedCard.Enchantment, GainsBlock = upgradedCard.GainsBlock, Targets = upgradedCard.Targets,
+            }, upgraded.Body);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool Safe(Func<bool> read)
+    {
+        try { return read(); }
+        catch { return false; }
     }
 
     /// <summary>

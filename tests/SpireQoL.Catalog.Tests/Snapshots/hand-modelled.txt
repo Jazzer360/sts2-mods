@@ -1,12 +1,15 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 18 engine rules naming 126 game methods; 5 adapter rules; 103 hand-written models.
+# 19 engine rules naming 129 game methods; 5 adapter rules; 103 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
 A card play: its shape (play count, result location), each play's hooks and its body in its program's order
   game: CardModel.OnPlayWrapper, EnchantmentModel.OnPlay, Hook.ModifyCardPlayCount, Hook.AfterModifyingCardPlayCount, Hook.ModifyCardPlayResultLocation, Hook.BeforeCardPlayed, Hook.AfterCardPlayed, CardCmd.AutoPlay
-  simulator: SimEngine.RunCardPlay, SimEngine.RunEnchantment, SimEngine.DecideCardPlay, SimEngine.ApplyPlay, SimEngine.ApplyPlayTo, SimEngine.RunScript, SimEngine.RunScriptTo, SimEngine.Count, SimEngine.CardResolved, SimEngine.RunFixedHits
+  simulator: SimEngine.RunCardPlay, SimEngine.PlayOnce, SimEngine.RunEnchantment, SimEngine.DecideCardPlay, SimEngine.ApplyPlay, SimEngine.ApplyPlayTo, SimEngine.RunScript, SimEngine.RunScriptTo, SimEngine.Count, SimEngine.CardResolved, SimEngine.RunFixedHits
+A card changed during its play: an upgrade of the card in play makes its later plays its upgraded copy's (read by the adapter from an upgraded copy)
+  game: CardCmd.Upgrade, CardModel.UpgradeInternal, CardModel.FinalizeUpgradeInternal
+  simulator: SimEngine.UpgradeCardInPlay
 Damage to a creature: the damage math, block, the HP-loss pipeline, a death held back, the hit's reactions
   game: CreatureCmd.Damage, Hook.ModifyDamage, Hook.AfterModifyingDamageAmount, Hook.BeforeDamageReceived, Hook.ModifyHpLost, Hook.AfterModifyingHpLostBeforeOsty, Hook.AfterModifyingHpLostAfterOsty, Hook.ModifyPreBlockDamageTarget (beta only), Hook.ModifyUnblockedDamageTarget, Hook.AfterBlockBroken, Hook.AfterDamageGiven, Hook.AfterDamageReceived, Hook.ShouldDie, Hook.AfterPreventingDeath, Creature.DamageBlockInternal, Creature.LoseHpInternal
   simulator: SimEngine.Damage, SimEngine.ModifiedDamage, SimEngine.CalcDamage, SimEngine.PlainDamage, SimEngine.AnyListensToDamage, SimEngine.HpLossPipeline, SimEngine.HpLoss, SimEngine.PlayerDamaged, SimEngine.LandBlockable, SimEngine.LandOnPlayer, SimEngine.LandUnblockable, SimEngine.LoseHp, SimEngine.Lose, SimEngine.PlayHp, SimEngine.BiggestHit, SimEngine.HitOnce, SimEngine.HitAll, SimEngine.HitRandom, SimEngine.RandomTarget, SimEngine.ProcHitOn, SimEngine.ProcDamageAll, SimEngine.ProcDamageRandom, SimEngine.ProcDamageOn, SimEngine.ProcDamagePlayer, SimEngine.RunDamage, SimEngine.IntentDamage, SimEngine.WithoutEnchantment, SimEngine.DamageAllEnemies
