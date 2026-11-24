@@ -152,15 +152,19 @@ public static partial class SimEngine
     /// <summary>The events raised during a hit or an action, each through every listener.</summary>
     internal static IEnumerable<SimState> DrainPending(SimState state)
     {
-        if (state.Pending.IsEmpty && state.PendingIntoDraw.IsEmpty && state.PendingSpawns.IsEmpty) return new[] { state };
+        if (!state.HasPending) return new[] { state };
         var pending = state.Pending;
         var intoDraw = state.PendingIntoDraw;
         var spawns = state.PendingSpawns;
+        var powers = state.PendingPowers;
         state.Pending = ImmutableArray<PendingEvent>.Empty;
         state.PendingIntoDraw = ImmutableArray<(int Player, string Card)>.Empty;
         state.PendingSpawns = ImmutableArray<int>.Empty;
+        state.PendingPowers = ImmutableArray<PendingPower>.Empty;
         IEnumerable<SimState> states = new[] { state };
         foreach (var dead in spawns) states = Then(states.ToList(), branch => Spawn(branch, dead));
+        // The powers that landed: each one's listeners told in the order they landed (Hook.AfterPowerAmountChanged).
+        foreach (var (power, amount, applier, target, debuff) in powers) states = Then(states.ToList(), branch => Tell(branch, power, amount, applier, target, debuff));
         foreach (var (player, card) in intoDraw) states = Then(states.ToList(), branch => IntoDrawPile(branch, player, card));
         foreach (var (cardEvent, player, source, count) in pending)
         {

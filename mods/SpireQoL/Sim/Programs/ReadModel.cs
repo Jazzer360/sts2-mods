@@ -250,6 +250,9 @@ public sealed class ReadModel : SimModel
     public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit) => InDamage(HookName.AfterDamageGiven, state, owner, hit);
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit) => InDamage(HookName.AfterDamageReceived, state, owner, hit);
 
+    /// <summary>A hook told inside a hit or a death (on the state given: its run can't branch).</summary>
+    private static bool InHit(HookName hook) => hook is HookName.AfterDamageGiven or HookName.AfterDamageReceived or HookName.AfterDeath;
+
     private void InDamage(HookName hook, SimState state, int owner, DamageEvent hit)
     {
         foreach (var branch in Run(hook, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Hit = hit, Target = hit.Target }))
@@ -609,6 +612,20 @@ public sealed class ReadModel : SimModel
                     // Its applier: its owner, or the creature its code names (the applier it keeps; no one).
                     var applier = appliedBy == null ? args.Owner : CreatureOf(in args, appliedBy);
                     if (fires) state.LogFired(Name, amount: 0, args.Owner);
+                    // Inside a hit or a death, where hooks can't branch: it lands now, heard once that's over (SimEngine.ApplyInHit).
+                    if (InHit(args.Hook))
+                    {
+                        switch (target)
+                        {
+                            case HookTarget.Owner: SimEngine.ApplyInHit(state, applier, args.Owner, power, given, debuff); break;
+                            case HookTarget.PowerOwner or HookTarget.HitTarget: SimEngine.ApplyInHit(state, applier, args.Target, power, given, debuff); break;
+                            case HookTarget.AllEnemies:
+                                foreach (var enemy in state.Targetable.ToList()) SimEngine.ApplyInHit(state, applier, enemy.Id, power, given, debuff);
+                                break;
+                            default: throw new InvalidOperationException($"{Name}: no power on {target}");
+                        }
+                        return One(state);
+                    }
                     // Each landing heard by the listeners (PowerCmd.Apply: Hook.AfterPowerAmountChanged), on each one's own creature in turn.
                     switch (target)
                     {

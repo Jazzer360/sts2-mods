@@ -818,6 +818,10 @@ public sealed class SimState
     internal ImmutableArray<(int Player, string Card)> PendingIntoDraw = ImmutableArray<(int Player, string Card)>.Empty;
     /// <summary>Enemies whose death adds creatures (SimEnemy.Spawns), added once the hit is over (DrainPending).</summary>
     internal ImmutableArray<int> PendingSpawns = ImmutableArray<int>.Empty;
+    /// <summary>Powers landed inside a hit or a death, their listeners told once it's over (SimEngine.ApplyInHit, DrainPending).</summary>
+    internal ImmutableArray<PendingPower> PendingPowers = ImmutableArray<PendingPower>.Empty;
+    /// <summary>Something raised inside a hit or a death waits to run (DrainPending).</summary>
+    internal bool HasPending => !Pending.IsEmpty || !PendingIntoDraw.IsEmpty || !PendingSpawns.IsEmpty || !PendingPowers.IsEmpty;
     /// <summary>The damage the current attack's hits dealt, blocked, unblocked and overkill (Blossom Shot's Stretch); reset as each attack starts.</summary>
     internal int AttackDealt;
     /// <summary>The card play in progress': how many times it plays, and where the card goes after (SimEngine.DecideCardPlay); 0 and Default outside one.</summary>

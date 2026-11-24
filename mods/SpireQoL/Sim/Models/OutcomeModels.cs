@@ -81,7 +81,7 @@ public sealed class HandDrill : SimModel
     public override void AfterBlockBroken(SimState state, int owner, int target, int? breaker)
     {
         if (!Who.IsEnemy(target) || !(breaker == owner || (owner == Who.You && breaker == Who.YourOsty))) return;
-        SimEngine.ApplyPower(state, owner, target, PowerId.Vulnerable, SimEngine.Var(state, owner, Name, "VulnerablePower", fallback: 2), debuff: true);
+        SimEngine.ApplyInHit(state, owner, target, PowerId.Vulnerable, SimEngine.Var(state, owner, Name, "VulnerablePower", fallback: 2), debuff: true);
         state.LogFired(Name, amount: 0, owner);
     }
 }
@@ -163,6 +163,6 @@ public sealed class RedSkull : SimModel
         var relics = SimEngine.RelicsOf(state, owner);
         if (relics.DataOf(ThisRelic) != 0 || player.Hp > relics[ThisRelic]) return;
         SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], StrengthGiven));
-        SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, SimEngine.Var(state, owner, Name, "StrengthPower", fallback: 3), debuff: false);
+        SimEngine.ApplyInHit(state, owner, owner, PowerId.Strength, SimEngine.Var(state, owner, Name, "StrengthPower", fallback: 3), debuff: false);
     }
 }

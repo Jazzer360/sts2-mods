@@ -429,10 +429,10 @@ public static partial class SimEngine
         HookStep(branches, nameof(SimModel.AfterAttack), (model, owner, branch) => model.AfterAttack(branch, owner, Info(branch)));
         // Blossom Shot: Stretch for the damage it dealt (PowerCmd.Apply<StretchPower> after the attack, inside the shot).
         if (at.StretchFromDamage)
-            branches.Do(branch =>
+            branches.Each(branch =>
             {
                 var owner = branch.CurrentPlay?.Owner ?? Who.You;
-                if (branch.AttackDealt > 0) ApplyPower(branch, owner, owner, PowerId.Stretch, branch.AttackDealt, debuff: false);
+                return branch.AttackDealt > 0 ? ApplyAndTell(branch, owner, owner, PowerId.Stretch, branch.AttackDealt, debuff: false) : new[] { branch };
             });
         branches.Do(branch => branch.CurrentAttack = 0);
 
@@ -634,9 +634,21 @@ public static partial class SimEngine
     /// debuff you land).
     /// </summary>
     internal static IEnumerable<SimState> ApplyAndTell(SimState state, int applier, int target, PowerId power, int amount, bool debuff) =>
-        ApplyPower(state, applier, target, power, amount, debuff)
-            ? Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, branch) => model.AfterPowerApplied(branch, owner, power, amount, applier, target, debuff))
-            : new[] { state };
+        ApplyPower(state, applier, target, power, amount, debuff) ? Tell(state, power, amount, applier, target, debuff) : new[] { state };
+
+    /// <summary>
+    /// PowerCmd.Apply where hooks can't branch (a hook inside a hit or a death: Hand Drill's Vulnerable as it breaks block): the power lands now,
+    /// and its listeners hear it once the hit or the action is over (DrainPending), as a card event raised there runs then (Raise): a listener's
+    /// draw (Vicious) can't branch inside the hit.
+    /// </summary>
+    internal static void ApplyInHit(SimState state, int applier, int target, PowerId power, int amount, bool debuff)
+    {
+        if (ApplyPower(state, applier, target, power, amount, debuff)) state.PendingPowers = state.PendingPowers.Add(new PendingPower(power, amount, applier, target, debuff));
+    }
+
+    /// <summary>A power that landed, told to every AfterPowerApplied listener (the game's Hook.AfterPowerAmountChanged).</summary>
+    internal static IEnumerable<SimState> Tell(SimState state, PowerId power, int amount, int applier, int target, bool debuff) =>
+        Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, branch) => model.AfterPowerApplied(branch, owner, power, amount, applier, target, debuff));
 
     /// <summary>The power on each creature it reaches, then AfterPowerApplied for each that landed (Artifact took none of it).</summary>
     private static void RunApplyPower(BranchSet branches, ApplyPowerAction applyPowerAction)

@@ -83,6 +83,9 @@ public static class SimKeys
 /// <param name="Source">The model that raised it, when its tab counts what it gives (a draw or energy tab: decision #132).</param>
 public sealed record PendingEvent(CardEvent Event, int Player, string? Source, int Count);
 
+/// <summary>A power that landed where hooks can't branch (inside a hit or a death), its AfterPowerApplied listeners told once that's over.</summary>
+public sealed record PendingPower(PowerId Power, int Amount, int Applier, int Target, bool Debuff);
+
 /// <summary>How many of each card event the current play has caused for its player (Unceasing Top: nothing drawn or created). Immutable.</summary>
 public sealed class CardEventCounts
 {

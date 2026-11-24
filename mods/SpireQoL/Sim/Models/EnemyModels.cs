@@ -14,7 +14,7 @@ public sealed class MonarchsGazePower : SimModel
     {
         if (hit.Dealer != owner || !hit.Props.IsPoweredAttack() || hit.Target < 0) return;
         state.LogFired(Name, amount: 0, owner);
-        SimEngine.ApplyPower(state, owner, hit.Target, PowerId.Strength, -SimEngine.PowerOn(state, owner, ThisPower), debuff: true);
+        SimEngine.ApplyInHit(state, owner, hit.Target, PowerId.Strength, -SimEngine.PowerOn(state, owner, ThisPower), debuff: true);
     }
 }
 
@@ -27,8 +27,7 @@ public sealed class VitalSparkPower : SimModel
     {
         if (play.Card.Affliction != SimAffliction.Tainted) return One(state);
         state.LogFired(Name, amount: 0, owner);
-        SimEngine.ApplyPower(state, owner, play.Owner, PowerId.Tainted, SimEngine.PowerOn(state, owner, ThisPower), debuff: false);
-        return One(state);
+        return SimEngine.ApplyAndTell(state, owner, play.Owner, PowerId.Tainted, SimEngine.PowerOn(state, owner, ThisPower), debuff: false);
     }
 }
 

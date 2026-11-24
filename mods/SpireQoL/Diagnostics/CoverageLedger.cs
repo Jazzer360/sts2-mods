@@ -67,7 +67,7 @@ internal static partial class CoverageLedger
         ["GamePiece"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed draws on a Power (simulator model; its draws in the play's log)",
         ["GhostSeed"] = "ignore: AfterCardEnteredCombat makes cards Ethereal (keywords read from the card)",
         ["GremlinHorn"] = "covered: read from its code (ReadModel, decision #195): AfterDeath of an enemy gives energy and a draw, queued until the hit is over (a bonus tab on a play that kills in every outcome, read from what its AfterDeath waits on)",
-        ["HandDrill"] = "covered: AfterBlockBroken Vulnerable (tab from the simulator's block breaks)",
+        ["HandDrill"] = "covered: AfterBlockBroken Vulnerable (tab from the simulator's block breaks; heard by the AfterPowerAmountChanged listeners once the hit is over)",
         ["HelicalDart"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed Dexterity on Shivs (proc tab)",
         ["HistoryCourse"] = "ignore: AfterAutoPrePlayPhaseEntered replays an attack at the start of your turn (before your plays)",
         ["HornCleat"] = "covered: AfterBlockCleared block on turn 2, at the start of your turn (tracker turn timer)",

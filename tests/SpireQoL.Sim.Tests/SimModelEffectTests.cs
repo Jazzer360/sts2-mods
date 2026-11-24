@@ -105,6 +105,25 @@ public class SimModelEffectTests
     }
 
     [Fact]
+    public void HandDrillsVulnerableIsHeardByTheListeners()
+    {
+        // HandDrill.AfterBlockBroken: PowerCmd.Apply<VulnerablePower>(target, ..., base.Owner.Creature): the game's AfterPowerAmountChanged tells
+        // every listener. SleightOfFleshPower deals its amount to an enemy its owner lands a debuff on; ViciousPower draws for a Vulnerable its owner
+        // lands. Heard once the hit is over (a draw can't branch inside it).
+        var state = Power(Relic(State(enemyBlock: 5), RelicId.HandDrill, ("VulnerablePower", 2)), PowerId.SleightOfFlesh, amount: 3);
+        var after = After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 10)));
+        Assert.Equal(100 - 5 - 3, after.Enemies[0].Hp);
+        Assert.True(after.Fired.Has(PowerId.SleightOfFlesh.Name));
+
+        var drawing = Power(Relic(State(enemyBlock: 5), RelicId.HandDrill, ("VulnerablePower", 2)), PowerId.Vicious, amount: 1);
+        drawing.You.HandCount = 4;
+        drawing.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), Count: 10) } };
+        var drew = After(drawing, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 10)));
+        Assert.Equal(5, drew.You.HandCount);
+        Assert.True(drew.Fired.Has(PowerId.Vicious.Name));
+    }
+
+    [Fact]
     public void KnockoutBlowsStarsWaitOnItsKill()
     {
         // KnockoutBlow.OnPlay gains stars only when its attack kills the target (decision #190: a WhenAction); Black Hole then hits every
