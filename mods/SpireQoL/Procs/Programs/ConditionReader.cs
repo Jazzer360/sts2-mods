@@ -119,7 +119,7 @@ public static class ConditionReader
         {
             if (step.Condition == null) continue;
             foreach (var literal in step.Condition.Literals)
-                if (HandQuery(Unstored(literal.Test)) is { Lambda: { } lambda } && filters.All(filter => filter.Key != FilterKey(cardType, literal.At)))
+                if (literal.Test.Parts().Select(HandQuery).FirstOrDefault(query => query?.Lambda != null) is { Lambda: { } lambda } && filters.All(filter => filter.Key != FilterKey(cardType, literal.At)))
                     filters.Add(new HandFilter(FilterKey(cardType, literal.At), lambda));
         }
         return filters;

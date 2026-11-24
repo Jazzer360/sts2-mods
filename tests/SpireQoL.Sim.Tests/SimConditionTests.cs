@@ -138,6 +138,22 @@ public class SimConditionTests
     }
 
     [Fact]
+    public void ACardYouPickMayBeTheKindTheTestCountsSoItsCountIsntKnown()
+    {
+        // One Attack among 3 other cards; you discard one you pick (a card, never a particular one: decision #188), then a test asks
+        // whether an Attack is left: it may or may not be, so it isn't known. With the Attack the only card, it's known to be gone.
+        const string filter = SimEngine.ConditionFilterPrefix + "Probe#0";
+        var attackLeft = new CountCondition(SimCounted.HandMatching, SimCompare.Greater, Than: 0) { Filter = filter, Matching = 1 };
+        SimPlay Play() => Card("Probe", plays: 1,
+            new TakeFromHandAction(HandTakeWay.Pick) { Event = CardEvent.Discarded },
+            new WhenAction(attackLeft, new SimAction[] { Energy(amount: 1) }));
+        Assert.Equal(SimEngine.HandMatchingUnknown, Assert.Single(SimEngine.Run(Board(hand: 4), Play()).Branches).Unmodelled);
+        var alone = Assert.Single(SimEngine.Run(Board(hand: 2), Play()).Branches);
+        Assert.Null(alone.Unmodelled);
+        Assert.Equal(0, alone.You.Energy);
+    }
+
+    [Fact]
     public void FtlDrawsWhileYourPlaysThisTurnAreUnderItsMost()
     {
         // FTL: draw if the cards you finished playing this turn are fewer than PlayMax (3). With 2 finished before it, replayed: the first

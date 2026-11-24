@@ -53,7 +53,16 @@ internal static class PlayConditions
     {
         var program = CardPrograms.Of(card.GetType());
         var conditions = new Dictionary<CommandStep, ProgramCondition>(ReferenceEqualityComparer.Instance);
-        foreach (var found in CardEffects.Find(program, _ => true)) conditions[found.Command] = found.Condition;
+        var all = CardEffects.Find(program, _ => true);
+        foreach (var found in all) conditions[found.Command] = found.Condition;
+        // An action stands for its command's step only when every step of that kind runs on the same condition: the facts build one action
+        // for steps of a kind (a power its code applies on two ways), so a step's own condition would leave the other way out.
+        bool OneCondition(SimAction action, CommandStep step)
+        {
+            var key = PlayOrder.KeyOf(action);
+            var keys = key != null && PlayOrder.KeysOf(step).Contains(key) ? new HashSet<string> { key } : PlayOrder.KeysOf(step).ToHashSet();
+            return all.Where(found => PlayOrder.KeysOf(found.Command).Any(keys.Contains)).Select(found => found.Condition.ToString()).Distinct().Count() == 1;
+        }
         var asks = new List<SimCondition>();
         var body = new List<SimAction>();
         foreach (var (action, step) in arranged)
@@ -63,7 +72,7 @@ internal static class PlayConditions
                 asks.Add(ask.Condition);
                 continue;
             }
-            if (!GuardedFromFacts(action) || step == null || !conditions.TryGetValue(step, out var condition))
+            if (!GuardedFromFacts(action) || step == null || !conditions.TryGetValue(step, out var condition) || !OneCondition(action, step))
             {
                 body.Add(action);
                 continue;
