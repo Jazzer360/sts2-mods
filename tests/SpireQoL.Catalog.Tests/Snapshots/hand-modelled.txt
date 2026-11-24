@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 132 game methods; 3 adapter rules; 92 hand-written models.
+# 20 engine rules naming 132 game methods; 3 adapter rules; 89 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -127,8 +127,6 @@ FlutterPower: FlutterPower.AfterDamageReceived, FlutterPower.ModifyDamageMultipl
   model: AfterDamageReceived, ModifyDamageMultiplicative, OutcomeTab
 HandDrill: HandDrill.AfterBlockBroken
   model: AfterBlockBroken, OutcomeTab
-HardToKillPower: HardToKillPower.AfterModifyingDamageAmount, HardToKillPower.ModifyDamageCap
-  model: ModifyDamageCap
 HardenedShellPower: HardenedShellPower.AfterDamageReceived, HardenedShellPower.AfterModifyingHpLostBeforeOsty, HardenedShellPower.BeforeSideTurnStart, HardenedShellPower.InitInternalData, HardenedShellPower.ModifyHpLostBeforeOstyLate
   model: AfterDamageReceived, BeforeSideTurnStart, ModifyHpLostBeforeOstyLate
 ImbalancedPower: ImbalancedPower.AfterDamageGiven
@@ -143,8 +141,6 @@ InfestedPower: InfestedPower.AfterDeath, InfestedPower.ShouldStopCombatFromEndin
   model: nothing it overrides
 InsatiableDominionPower: InsatiableDominionPower.AfterApplied (beta only), InsatiableDominionPower.AfterSideTurnEndLate (beta only), InsatiableDominionPower.AfterSideTurnStart (beta only)
   model: AfterSideTurnEndLate
-IntangiblePower: IntangiblePower.AfterModifyingDamageAmount, IntangiblePower.AfterModifyingHpLostAfterOsty, IntangiblePower.AfterSideTurnEnd, IntangiblePower.ModifyDamageCap, IntangiblePower.ModifyHpLostAfterOsty
-  model: ModifyDamageCap, ModifyHpLostAfterOsty
 InterceptPower: InterceptPower.AfterRemoved, InterceptPower.AfterSideTurnEnd, InterceptPower.InitInternalData, InterceptPower.ModifyDamageMultiplicative
   model: ModifyDamageMultiplicative
 JugglingPower: JugglingPower.AfterApplied, JugglingPower.AfterCardPlayed, JugglingPower.AfterSideTurnEnd, JugglingPower.BeforeCardPlayed, JugglingPower.InitInternalData
@@ -213,8 +209,6 @@ SkittishPower: SkittishPower.AfterAttack, SkittishPower.AfterSideTurnEnd, Skitti
   model: AfterAttack, AfterDamageReceived, BeforeAttack
 SlipperyPower: SlipperyPower.AfterDamageReceived, SlipperyPower.GetScaledAmountForMultiplayer, SlipperyPower.ModifyHpLostAfterOsty
   model: AfterDamageReceived, AfterModifyingHpLost, ModifyHpLostAfterOsty, OutcomeTab
-SlowPower: SlowPower.AfterCardPlayed, SlowPower.AfterModifyingDamageAmount, SlowPower.AfterSideTurnStart, SlowPower.ModifyDamageMultiplicative
-  model: AfterCardPlayed, ModifyDamageMultiplicative
 SlumberPower: SlumberPower.AfterDamageReceived, SlumberPower.AfterRemoved, SlumberPower.AfterSideTurnEnd
   model: AfterDamageReceived, OutcomeTab
 SmoggyPower: SmoggyPower.AfterCardEnteredCombat, SmoggyPower.AfterCardPlayed, SmoggyPower.AfterSideTurnEnd, SmoggyPower.ShouldPlay

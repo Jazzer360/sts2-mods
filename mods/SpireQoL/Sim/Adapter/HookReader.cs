@@ -445,7 +445,20 @@ public static class HookReader
         return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep)
             || programs.Any(program => program.Returns != null && program.Hook is HookName.ModifyHpLostBeforeOsty or HookName.ModifyHpLostBeforeOstyLate or HookName.ModifyHpLostAfterOsty or HookName.ModifyHpLostAfterOstyLate)
             || programs.Any(SpentByAnAttack)
+            // A term that changed a damage, told so (Hook.AfterModifyingDamageAmount: Slow's, Hard to Kill's flash): it acts there (decision #229).
+            || programs.Any(program => program.Hook == HookName.AfterModifyingDamageAmount)
+            // A play that changes the state its damage term reads (Slow's count of the cards played) acts on that play.
+            || ChangesItsTermOnAPlay(programs)
             ? TabKind.Trigger : null;
+    }
+
+    /// <summary>A play hook stores to state a damage term of its own reads (Slow's SlowAmount, which its ModifyDamageMultiplicative reads).</summary>
+    private static bool ChangesItsTermOnAPlay(IReadOnlyList<HookProgram> programs)
+    {
+        var termFields = programs.Where(program => program.Returns != null && program.Hook is HookName.ModifyDamageAdditive or HookName.ModifyDamageMultiplicative or HookName.ModifyDamageMultiplicativeLate or HookName.ModifyDamageCap)
+            .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Values()).OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
+        return programs.Where(program => program.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed)
+            .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps()).Any(step => step is StoreFieldStep store && termFields.Contains(store.Field));
     }
 
     /// <summary>An AfterAttack that takes the power's own stacks (Decrement, Remove: Gigantification's, Quietus'): the attack spent it, the power acting.</summary>
@@ -2011,6 +2024,8 @@ public static class HookReader
                 case NamedValue { Name: "Decimal.Zero" }: return new HookConstant(0m);
                 case NamedValue { Name: "Decimal.One" }: return new HookConstant(1m);
                 case NamedValue { Name: "Decimal.MinusOne" }: return new HookConstant(-1m);
+                // No cap (ModifyDamageCap's return for a damage it doesn't cap).
+                case NamedValue { Name: "Decimal.MaxValue" }: return new HookConstant(decimal.MaxValue);
                 case NamedValue { Name: "amount" } when _hook == "AfterPowerAmountChanged": return new HookFactValue(HookFact.PowerAmount);
                 // The energy a spend took (AfterEnergySpent's amount): the simulator raises one energy-spent event for each energy spent.
                 case NamedValue { Name: "amount" } or ParameterValue { Name: "amount" } when _hook == "AfterEnergySpent": return new HookConstant(1m);

@@ -32,22 +32,7 @@ public sealed class FlutterPower : SimModel
     }
 }
 
-/// <summary>HardToKillPower.ModifyDamageCap: at most its amount per damage to its owner; it flashes when it caps.</summary>
-public sealed class HardToKillPower : SimModel
-{
-    public override bool FlashesOnDamageModified => true;
-    public override decimal ModifyDamageCap(SimState state, int owner, DamageCtx damage) => damage.Target == owner ? SimEngine.PowerOn(state, owner, ThisPower) : decimal.MaxValue;
-}
-
-/// <summary>IntangiblePower.ModifyDamageCap: at most 1 per damage to its owner (its HP-loss cap is in the HP-loss pipeline).</summary>
-public sealed class IntangiblePower : SimModel
-{
-    public override bool FlashesOnDamageModified => true;
-    public override decimal ModifyDamageCap(SimState state, int owner, DamageCtx damage) => damage.Target == owner ? 1m : decimal.MaxValue;
-    /// <summary>ModifyHpLostAfterOsty: at most 1 HP per damage to its owner (it flashes when it changes one).</summary>
-    public override decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount) =>
-        damage.Target != owner || amount < 1m ? amount : 1m;
-}
+// Hard to Kill and Intangible are read from their code (ReadModel, decision #229).
 
 /// <summary>
 /// SurroundedPower (you, Kaiser Crab): Data is the way you face (0 right, 1 left). A dealer behind you (BackAttackLeftPower

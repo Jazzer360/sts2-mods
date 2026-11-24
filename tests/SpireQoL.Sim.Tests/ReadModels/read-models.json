@@ -7087,6 +7087,57 @@
     "HelpsOwner": false
   },
   {
+    "Name": "HardToKillPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterModifyingDamageAmount",
+        "Steps": [
+          {
+            "$kind": "FlashStep"
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyDamageCap",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "HardToKillPower.ModifyDamageCap:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 79228162514264337593543950335
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "HatchPower",
     "Kind": "Power",
     "Hooks": [
@@ -7654,6 +7705,138 @@
             }
           }
         ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "IntangiblePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterModifyingDamageAmount",
+        "Steps": [
+          {
+            "$kind": "FlashStep"
+          }
+        ]
+      },
+      {
+        "Hook": "AfterModifyingHpLostAfterOsty",
+        "Steps": [
+          {
+            "$kind": "FlashStep"
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyDamageCap",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "IntangiblePower.ModifyDamageCap:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 79228162514264337593543950335
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Hook": "ModifyHpLostAfterOsty",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "IntangiblePower.ModifyHpLostAfterOsty:0015",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "IntangiblePower.ModifyHpLostAfterOsty:0024",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Less",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HpLostSoFar"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "IntangiblePower.ModifyHpLostAfterOsty:0024",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HpLostSoFar"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
       }
     ],
     "HelpsOwner": false
@@ -18463,6 +18646,133 @@
       }
     ],
     "Tab": "Damage",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "SlowPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Var.SlowAmount",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "Var.SlowAmount"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterModifyingDamageAmount",
+        "Steps": [
+          {
+            "$kind": "FlashStep"
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Var.SlowAmount",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "SlowPower.AfterSideTurnStart:000C",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "SlowPower.ModifyDamageMultiplicative:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "SlowPower.ModifyDamageMultiplicative:0015",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Add",
+                "Left": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "Multiply",
+                  "Left": {
+                    "$kind": "HookConstant",
+                    "Value": 0.1
+                  },
+                  "Right": {
+                    "$kind": "HookField",
+                    "Field": "Var.SlowAmount"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "Tab": "Trigger",
     "HelpsOwner": false
   },
   {

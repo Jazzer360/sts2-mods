@@ -76,6 +76,10 @@ public enum HookName
     BeforeAttack,
     /// <summary>Hook.AfterAttack: an attack made its hits.</summary>
     AfterAttack,
+    /// <summary>Hook.ModifyDamage's cap (ModifyDamageCap): the most a damage can be, the smallest of the listeners' (SimEngine's caps).</summary>
+    ModifyDamageCap,
+    /// <summary>Hook.AfterModifyingDamageAmount: told to the listeners whose term changed a damage (a flash).</summary>
+    AfterModifyingDamageAmount,
 }
 
 /// <summary>When an orb's passive goes off: the OrbModel trigger hook its class overrides with a call of TriggerPassive (OrbQueue calls them).</summary>

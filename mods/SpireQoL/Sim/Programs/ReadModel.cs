@@ -84,6 +84,9 @@ public sealed class ReadModel : SimModel
     public override bool UpgradesCardInPlay => _upgradesCardInPlay;
     private readonly bool _upgradesCardInPlay;
 
+    /// <summary>The state its damage terms read (its Modify hooks' returns' fields: Slow's SlowAmount): a play that changes it acts on that play.</summary>
+    private readonly HashSet<string> _termFields;
+
     /// <summary>
     /// Crossed by whose side its effect helps (decision #198): a play anyone makes setting off something that helps its owner (ModelSpec.HelpsOwner)
     /// is a warning only on an enemy, your play helping the other side; a teammate's (Sneaky's block on your Attack) helps yours. A play setting
@@ -112,6 +115,8 @@ public sealed class ReadModel : SimModel
         HasCopies = spec.Kind == ModelKind.Power && spec.Copies != PowerCopies.One;
         _copyPrefix = spec.Name + "@";
         _upgradesCardInPlay = spec.Steps().Any(step => step is UpgradeCardStep);
+        _termFields = spec.Hooks.Where(program => program.Returns != null && program.Hook is HookName.ModifyDamageAdditive or HookName.ModifyDamageMultiplicative or HookName.ModifyDamageMultiplicativeLate or HookName.ModifyDamageCap)
+            .SelectMany(program => new ModelSpec(spec.Name, spec.Kind, new[] { program }).Values()).OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
         foreach (var test in spec.Values().OfType<HookTest>()) _testSlots.TryAdd(test.At, _testSlots.Count);
         foreach (var let in spec.Steps().OfType<LetStep>()) _localSlots.TryAdd(let.Name, _localSlots.Count);
         if (spec.Kind == ModelKind.Orb)
@@ -312,8 +317,10 @@ public sealed class ReadModel : SimModel
         foreach (var step in steps)
         {
             // A power an attack spends (its AfterAttack takes its own stacks: Gigantification's Decrement) acts on that play too (decision #228).
+            // A play that changes the state its damage term reads (Slow's SlowAmount++ on every card) acts on that play too (decision #229).
             var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep
-                || hook == HookName.AfterAttack && step is DecrementPowerStep or RemovePowerStep;
+                || hook == HookName.AfterAttack && step is DecrementPowerStep or RemovePowerStep
+                || hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed && step is StoreFieldStep { Field: var termField } && _termFields.Contains(termField);
             // An enchantment's effects are its card's (no tab of its own, nothing in the play log: its card's play shows them).
             var fires = firstRound && acts && Spec.Kind != ModelKind.Enchantment && !firing.Any(earlier => Equals(earlier.When, step.When));
             if (acts) firing.Add(step);
@@ -359,6 +366,8 @@ public sealed class ReadModel : SimModel
         HookName.AfterOrbEvoked => nameof(AfterOrbEvoked),
         HookName.BeforeAttack => nameof(BeforeAttack),
         HookName.AfterAttack => nameof(AfterAttack),
+        HookName.ModifyDamageCap => nameof(ModifyDamageCap),
+        HookName.AfterModifyingDamageAmount => nameof(AfterModifyingDamageAmount),
         // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook; an enchantment's OnPlay
         // where its card plays (RunEnchantment).
         HookName.Passive or HookName.Evoke or HookName.OnPlay => "",
@@ -529,6 +538,19 @@ public sealed class ReadModel : SimModel
     public override decimal ModifyDamageAdditive(SimState state, int owner, DamageCtx damage) => Returned(HookName.ModifyDamageAdditive, state, owner, damage, otherwise: 0m);
     public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) => Returned(HookName.ModifyDamageMultiplicative, state, owner, damage, otherwise: 1m);
     public override decimal ModifyDamageMultiplicativeLate(SimState state, int owner, DamageCtx damage) => Returned(HookName.ModifyDamageMultiplicativeLate, state, owner, damage, otherwise: 1m);
+    public override decimal ModifyDamageCap(SimState state, int owner, DamageCtx damage) => Returned(HookName.ModifyDamageCap, state, owner, damage, otherwise: decimal.MaxValue);
+
+    /// <summary>
+    /// Its term changed a damage (the game calls Hook.AfterModifyingDamageAmount on such listeners): it acts there, logged as the hand-written
+    /// models' FlashesOnDamageModified did, then its code's steps (a flash), inside the damage. A model whose code doesn't answer it does nothing.
+    /// </summary>
+    public override void AfterModifyingDamageAmount(SimState state, int owner, SimCard? card)
+    {
+        if (_steps[(int)HookName.AfterModifyingDamageAmount] == null) return;
+        state.LogFired(Name, amount: 0, owner);
+        foreach (var branch in Run(HookName.AfterModifyingDamageAmount, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay }))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingDamageAmount branched inside a damage");
+    }
     public override decimal ModifyBlockAdditive(SimState state, int owner, BlockCtx block) => Returned(HookName.ModifyBlockAdditive, state, owner, block, otherwise: 0m);
     public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block) => Returned(HookName.ModifyBlockMultiplicative, state, owner, block, otherwise: 1m);
 
@@ -577,7 +599,7 @@ public sealed class ReadModel : SimModel
         foreach (var copy in CopiesOrOne(state, owner))
         {
             var args = new HookArgs { State = state, Owner = owner, Damage = damage, Play = damage.Play, Copy = copy };
-            total = hook == HookName.ModifyDamageAdditive ? total + returns(in args) : total * returns(in args);
+            total = hook == HookName.ModifyDamageAdditive ? total + returns(in args) : hook == HookName.ModifyDamageCap ? Math.Min(total, returns(in args)) : total * returns(in args);
         }
         return total;
     }
@@ -1123,6 +1145,7 @@ public sealed class ReadModel : SimModel
                 var field = store.Field;
                 return args =>
                 {
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
                     var stored = (int)value(in args);
                     if (args.Copy > 0) ListCopies(args.State, args.Owner);
                     SimEngine.SetField(args.State, args.Owner, args.Copy > 0 ? CopyFieldKey(args.Copy, field) : key, stored);

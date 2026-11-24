@@ -56,6 +56,7 @@ public class ReadModelParityTests
         ["PaleBlueDotPower.AfterCardPlayed"] = "PowerCmd.Apply<DrawCardsNextTurnPower>(base.Owner, base.Amount): the read model puts Draw Cards Next Turn on its owner where the hand-written model only fired. It acts as its owner's next turn starts, outside a simulation: no prediction changes",
         ["VulnerablePower.ModifyDamageMultiplicative"] = "dealer.Player?.GetRelic<PaperPhrog>(), and PaperPhrog's and CrueltyPower's own `target == base.Owner` returns: Osty's hits get no Paper Phrog (a pet's creature has no Player; the hand-written model gave him his player's), a fix where Osty hits a Vulnerable enemy with Paper Phrog; and a creature's own Phrog and Cruelty don't raise a powered attack on itself (none happens today)",
         ["MonologuePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this), then Strength -StrengthApplied (what its copy gave this turn, taken back) when its owner takes part: it goes as your turn ends. No card of yours plays after it this turn (the auto-plays come before), so no damage reads that Strength: no prediction changes. Its Apply logs a firing there (the read models' acting steps do), outside any play's log, so no tab reads it",
+        ["SlowPower.AfterSideTurnStart"] = "participants.Contains(base.Owner): DynamicVars[\"SlowAmount\"].BaseValue = 0 as its owner's side's turn starts (the enemies'), where the hand-written model left the count to the adapter's next reading. No card of yours plays in the enemies' turn, so no attack on it reads the count after: no prediction changes",
         ["BoneFlute.AfterAttack"] = "command.Attacker?.Monster is Osty && command.Attacker.PetOwner?.Creature == base.Owner.Creature: CreatureCmd.GainBlock, with no test of Osty alive: every attack Osty made gives the block, one he died during included (a hit back: Thorns), where the hand-written model wanted him above 0 HP after it (a fix)",
         ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
     };
@@ -112,6 +113,8 @@ public class ReadModelParityTests
         [PowerId.Cacophony.Name] = (3, new[] { (HookField.VarPrefix + "Cards", 3) }),
         // PanachePower: its CardsLeft value; counting once alreadyApplied (a Data of 0 was "just applied").
         [PowerId.Panache.Name] = (3, new[] { (HookField.VarPrefix + "CardsLeft", 3), ("Data.alreadyApplied", 1) }),
+        // SlowPower: the cards played this turn (its SlowAmount value, which it counts).
+        [PowerId.Slow.Name] = (1, new[] { (HookField.VarPrefix + "SlowAmount", 1) }),
         // OrbitPower: DisplayAmount is 4 - energySpent % 4.
         [PowerId.Orbit.Name] = (3, new[] { ("Data.energySpent", 1), ("Data.triggerCount", 0) }),
     };
@@ -228,7 +231,7 @@ public class ReadModelParityTests
         nameof(SimModel.ModifyHpLostBeforeOsty), nameof(SimModel.ModifyHpLostBeforeOstyLate), nameof(SimModel.ModifyHpLostAfterOsty), nameof(SimModel.ModifyHpLostAfterOstyLate),
         nameof(SimModel.AfterModifyingHpLost),
         nameof(SimModel.ModifyOrbValue), nameof(SimModel.ModifyOrbPassiveTriggerCounts), nameof(SimModel.AfterModifyingOrbPassiveTriggerCount), nameof(SimModel.AfterOrbEvoked),
-        nameof(SimModel.BeforeAttack), nameof(SimModel.AfterAttack),
+        nameof(SimModel.BeforeAttack), nameof(SimModel.AfterAttack), nameof(SimModel.ModifyDamageCap), nameof(SimModel.AfterModifyingDamageAmount),
     };
 
     [Fact]
@@ -341,6 +344,20 @@ public class ReadModelParityTests
                         nameof(SimModel.ModifyDamageMultiplicative) => model.ModifyDamageMultiplicative(state, owner, damage),
                         _ => model.ModifyDamageMultiplicativeLate(state, owner, damage),
                     }));
+                break;
+            case nameof(SimModel.ModifyDamageCap):
+                // The most a damage of every dealer, target, kind and card can be (Hook.ModifyDamage's cap).
+                foreach (var damage in Damages(owner))
+                    yield return ($"{damage}", (model, state) => Number(model.ModifyDamageCap(state, owner, damage)));
+                break;
+            case nameof(SimModel.AfterModifyingDamageAmount):
+                // Its term changed a damage (the engine tells the ones that did): what it does then (a flash), inside the damage.
+                foreach (var card in new[] { null, new SimCard("Strike", SimCardType.Attack) })
+                    yield return ($"after it changed a damage, card {card?.Name ?? "none"}", (model, state) =>
+                    {
+                        model.AfterModifyingDamageAmount(state, owner, card);
+                        return Branches(new[] { state });
+                    });
                 break;
             case nameof(SimModel.ModifyHpLostBeforeOsty) or nameof(SimModel.ModifyHpLostBeforeOstyLate) or nameof(SimModel.ModifyHpLostAfterOsty) or nameof(SimModel.ModifyHpLostAfterOstyLate):
                 // The HP a hit would take as the pass starts (none, one, some, more than a cap), for every dealer, target, kind and card.
@@ -679,7 +696,12 @@ public class ReadModelParityTests
             foreach (var power in player.Powers.Items.Where(power => CounterFields.ContainsKey(power.Name.Name) || KeptAttackData.Contains(power.Name.Name)))
                 player.Powers = player.Powers.With(power.Name, power.Amount, data: 0);
         }
-        foreach (var enemy in copy.Enemies) enemy.Fields = NamedCounts.Empty;
+        foreach (var enemy in copy.Enemies)
+        {
+            enemy.Fields = NamedCounts.Empty;
+            foreach (var power in enemy.Powers.Items.Where(power => CounterFields.ContainsKey(power.Name.Name) || KeptAttackData.Contains(power.Name.Name)))
+                enemy.Powers = enemy.Powers.With(power.Name, power.Amount, data: 0);
+        }
         return copy;
     }
 

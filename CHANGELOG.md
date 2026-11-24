@@ -14,6 +14,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Changed
 - Vigor, Gigantification, Bone Flute and Calcify are worked out from their own code (the attack Vigor and Gigantification keep and spend, Bone Flute's block for each attack your Osty makes, Calcify on Osty's attacks). What's shown is unchanged but for the fix below.
+- Hard to Kill, Intangible and Slow are worked out from their own code (their caps on a damage, Slow's count of the cards played). What's shown is unchanged.
 - No Block, Dislike You and Honing are worked out from their own code (No Block stops the block you gain from cards; Dislike You on an enemy and your Honing raise an arrow's attack). What's shown is unchanged.
 - Music Box is worked out from its own code (the Ethereal copy of the first Attack you play each turn). What's shown is unchanged.
 - Afflictions (Bound, Entangled, Galvanized, Hexed, Ringing, Smog, Tainted) are worked out from their own code: each is a fact of its card the powers' code tests, with nothing of its own to run; one a game update changes shows the plays of its cards as uncertain. What's shown is unchanged.

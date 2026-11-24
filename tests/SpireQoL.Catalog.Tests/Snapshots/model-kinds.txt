@@ -3,9 +3,9 @@
 
 ## Powers and relics
 
-beta powers: 304 classes, 273 with hooks; read from code 101, hand-written 68, neither 106 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 304 classes, 273 with hooks; read from code 104, hand-written 65, neither 106 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 51, hand-written 21, neither 238 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 88, hand-written 56, neither 93 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 91, hand-written 53, neither 93 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 44, hand-written 20, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 6, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 2
@@ -128,7 +128,6 @@ PlasmaOrb (both; read from its code (ReadModel); OrbKind.Plasma; ledger: no revi
 SimReaders.Read (powers): TagTeamPower: hand-written; reads the game's Applier: needs more than its own fields and values
 SimReaders.Read (powers): ImpaledPower: hand-written; reads the game's Applier, the game's ArrowsIn, the game's HitCounter: needs more than its own fields and values
 SimReaders.Read (powers): ImpaledPower: hand-written; reads the game's Applier, the game's ArrowsIn: needs more than its own fields and values
-SimReaders.Read (powers): SlowPower: hand-written; reads its own value SlowAmount: a read model's own fields and values replace it
 SimReaders.Read (powers): SkittishPower: hand-written; reads its own field HasGainedBlockThisTurn: a read model's own fields and values replace it
 SimReaders.Read (powers): HardenedShellPower: hand-written; reads the game's DisplayAmount: needs more than its own fields and values
 SimReaders.Read (powers): FlutterPower: hand-written; reads its own value DamageDecrease: a read model's own fields and values replace it
@@ -212,7 +211,6 @@ a pick: 3 classes, 3 alone: StratagemPower*, DropletOfPrecognition (potion)*, Ga
 commands: OstyCmd.Summon: 3 classes, 3 alone: DevourLifePower*, SicEmPower*, BoneBrew (potion)*
 commands: another command (no translation): 3 classes, 3 alone: BottledPotential (potion)*, FruitJuice (potion)*, KingsCourage (potion)*
 orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first): 3 classes, 3 alone: ConsumingShadowPower*, TrashToTreasurePower*, PotionOfCapacity (potion)*
-the damage cap and AfterModifyingDamageAmount: 3 classes, 3 alone: HardToKillPower*, IntangiblePower*, SlowPower*
 the fight's log (the history ledger, decision #191): 3 classes, 3 alone: SongPathPower*, UnmovablePower*, ViolentChordPower*
 the simulator's own model (no game class by its name): 3 classes, 3 alone: ImpaledPowerOther*, Regret*, Void*
 a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 4 classes, 2 alone: InsatiableDominionPower*, PlatingPower, ShadowmeldPower*, SkittishPower

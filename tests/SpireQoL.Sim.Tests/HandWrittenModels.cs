@@ -1589,3 +1589,42 @@ public sealed class BoneFlute : RelicProc
     public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack) =>
         owner == Who.You && attack.Dealer == Who.YourOsty && state.You.OstyHp > 0 ? RelicBlock(state, owner) : One(state);
 }
+
+// ---- the damage cap and AfterModifyingDamageAmount (Sim/Models/TargetModels.cs and StatModels.cs, deleted 2026-11-24)
+
+/// <summary>HardToKillPower.ModifyDamageCap: at most its amount per damage to its owner; it flashes when it caps.</summary>
+public sealed class HardToKillPower : SimModel
+{
+    public override bool FlashesOnDamageModified => true;
+    public override decimal ModifyDamageCap(SimState state, int owner, DamageCtx damage) => damage.Target == owner ? SimEngine.PowerOn(state, owner, ThisPower) : decimal.MaxValue;
+}
+
+/// <summary>IntangiblePower.ModifyDamageCap: at most 1 per damage to its owner (its HP-loss cap is in the HP-loss pipeline).</summary>
+public sealed class IntangiblePower : SimModel
+{
+    public override bool FlashesOnDamageModified => true;
+    public override decimal ModifyDamageCap(SimState state, int owner, DamageCtx damage) => damage.Target == owner ? 1m : decimal.MaxValue;
+    /// <summary>ModifyHpLostAfterOsty: at most 1 HP per damage to its owner (it flashes when it changes one).</summary>
+    public override decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount) =>
+        damage.Target != owner || amount < 1m ? amount : 1m;
+}
+
+/// <summary>
+/// SlowPower: powered attacks on its owner deal 10% more per card played this turn (SlowAmount, Data: AfterCardPlayed adds 1
+/// for every card played; reset when its side's turn starts). It flashes when it changes damage.
+/// </summary>
+public sealed class SlowPower : SimModel
+{
+    public override TabKind? Tab => TabKind.Trigger;
+    public override bool FlashesOnDamageModified => true;
+    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
+        damage.Target == owner && damage.Props.IsPoweredAttack() ? 1m + 0.1m * SimEngine.PowersOf(state, owner).DataOf(ThisPower) : 1m;
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        var powers = SimEngine.PowersOf(state, owner);
+        if (!powers.Has(ThisPower)) return One(state);
+        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], powers.DataOf(ThisPower) + 1));
+        state.LogFired(Name, amount: 0, owner);
+        return One(state);
+    }
+}

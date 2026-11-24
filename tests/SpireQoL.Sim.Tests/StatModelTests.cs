@@ -168,7 +168,9 @@ public class StatModelTests
     public void SlowGrowsWithEveryCardPlayed()
     {
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 100) } };
-        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Slow, amount: 1, data: 2); // 2 cards played this turn: +20%
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Slow, amount: 1);
+        // 2 cards played this turn: +20% (its SlowAmount, which it counts: decision #229).
+        SimEngine.SetField(state, 0, Assert.IsType<ReadModel>(SimModels.Get(PowerId.Slow.Name)).FieldKey(HookField.VarPrefix + "SlowAmount"), 2);
         var after = After(state, Play(Card("Strike"), target: 0, plays: 2, Attack(baseDamage: 10))).Single();
         Assert.Equal(75, after.Enemy(id: 0)!.Hp); // 12, then 13
     }

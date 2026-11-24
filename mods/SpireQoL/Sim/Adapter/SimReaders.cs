@@ -78,7 +78,6 @@ public static class SimReaders
                 data = power.Applier is { } nextCreature && idOf(nextCreature) is { } taId && Who.TeammateIndex(taId) is var teammateIndex and >= 0 and < 7 ? Math.Min(15, amount) << (4 * teammateIndex) : 0;
                 amount = Math.Max(1, amount);
                 break;
-            case nameof(SlowPower): data = Sts2State.Var(power, "SlowAmount", fallback: 0); break;
             case nameof(SkittishPower): data = Sts2State.Private(power, "HasGainedBlockThisTurn", fallback: false) ? Models.SkittishPower.UsedThisTurn : 0; break;
             case nameof(HardenedShellPower): data = Math.Max(0, power.DisplayAmount); break;
             case nameof(FlutterPower): data = Sts2State.Var(power, "DamageDecrease", fallback: 50); break;

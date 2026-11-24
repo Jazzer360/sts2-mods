@@ -85,25 +85,7 @@ public sealed class QuietusPower : AttackBoundPower
     }
 }
 
-/// <summary>
-/// SlowPower: powered attacks on its owner deal 10% more per card played this turn (SlowAmount, Data: AfterCardPlayed adds 1
-/// for every card played; reset when its side's turn starts). It flashes when it changes damage.
-/// </summary>
-public sealed class SlowPower : SimModel
-{
-    public override TabKind? Tab => TabKind.Trigger;
-    public override bool FlashesOnDamageModified => true;
-    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
-        damage.Target == owner && damage.Props.IsPoweredAttack() ? 1m + 0.1m * SimEngine.PowersOf(state, owner).DataOf(ThisPower) : 1m;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        var powers = SimEngine.PowersOf(state, owner);
-        if (!powers.Has(ThisPower)) return One(state);
-        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], powers.DataOf(ThisPower) + 1));
-        state.LogFired(Name, amount: 0, owner);
-        return One(state);
-    }
-}
+// Slow is read from its code (ReadModel, decision #229).
 
 /// <summary>
 /// LethalityPower.ModifyDamageMultiplicative: 1 + amount/100 on the owner's first Attack play each turn (a replay's later
