@@ -200,8 +200,7 @@ public static partial class SimAdapter
     {
         var filters = TakeFiltersOf(card);
         if (filters.Count == 0) return Array.Empty<string>();
-        var made = Procs.Programs.CardPrograms.Of(card.GetType()).All().OfType<Procs.Programs.CreateStep>().Select(create => create.Card).Distinct().ToList();
-        if (made.Count != 1 || ModelDb.AllCards.FirstOrDefault(canonical => canonical.GetType().Name == made[0]) is not { } madeCard) return null;
+        if (MadeCardOf(card) is not { } madeCard) return null;
         var keys = new List<string>();
         foreach (var (key, takes) in filters)
         {
@@ -213,6 +212,13 @@ public static partial class SimAdapter
             }
         }
         return keys;
+    }
+
+    /// <summary>The one card the play makes, the game's own (its program's CreateSteps all make it); null for none, several or one not read.</summary>
+    internal static CardModel? MadeCardOf(CardModel card)
+    {
+        var made = Procs.Programs.CardPrograms.Of(card.GetType()).All().OfType<Procs.Programs.CreateStep>().Select(create => create.Card).Distinct().ToList();
+        return made.Count == 1 ? ModelDb.AllCards.FirstOrDefault(canonical => canonical.GetType().Name == made[0]) : null;
     }
 
     /// <summary>A take's test as asked of a card: of a card the play makes, without its tests of the card's pile (it's in a combat pile, never the exhaust pile).</summary>
@@ -247,14 +253,16 @@ public static partial class SimAdapter
         var from = takes || facts.GeneratedFrom != SimCount.CardsTaken ? facts.GeneratedFrom : SimCount.Given;
         // What its filtered takes would make of each card it makes, for a later play (decision #189).
         var takenBy = made > 0 ? MadeTakenBy(facts.Card) : null;
+        // The card it makes, when it's one: into a full hand it goes to the discard pile (CardEventAction.MadeCard).
+        var madeCard = made > 0 ? MadeCardOf(facts.Card)?.GetType().Name : null;
         void Made(CardEvent cardEvent, int count, bool joinsHand)
         {
             if (from != SimCount.Given && made > 0)
             {
-                if (count > 0) play.Body.Add(new CardEventAction(cardEvent, from == SimCount.HandRoom ? int.MaxValue : 0) { Indirect = true, JoinsHand = joinsHand, CountFrom = from, TakenBy = takenBy });
+                if (count > 0) play.Body.Add(new CardEventAction(cardEvent, from == SimCount.HandRoom ? int.MaxValue : 0) { Indirect = true, JoinsHand = joinsHand, CountFrom = from, TakenBy = takenBy, MadeCard = joinsHand ? madeCard : null });
                 return;
             }
-            if (count > 0) play.Body.Add(new CardEventAction(cardEvent, count) { Indirect = true, JoinsHand = joinsHand, TakenBy = takenBy });
+            if (count > 0) play.Body.Add(new CardEventAction(cardEvent, count) { Indirect = true, JoinsHand = joinsHand, TakenBy = takenBy, MadeCard = joinsHand ? madeCard : null });
         }
         var allInHand = inHand >= made;
         // Into your hand first, the rest elsewhere (Severance: one of three into your hand).

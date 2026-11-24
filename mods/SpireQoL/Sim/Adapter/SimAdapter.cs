@@ -402,6 +402,13 @@ public static partial class SimAdapter
                 catch { /* not built: a draw of it is unknown */ }
             }
             if (combat.Enemies.Any(enemy => enemy.Powers.Any(power => power.GetType().Name == nameof(PersonalHivePower)))) Made<Dazed>();
+            // The cards your hand's cards make into your hand: into a full one they go to your discard pile (CardEventAction.MadeCard).
+            foreach (var maker in handCards)
+                if (MadeCardOf(maker) is { } madeByPlay && !made.ContainsKey(madeByPlay.GetType().Name))
+                {
+                    try { made[madeByPlay.GetType().Name] = Profile(madeByPlay); }
+                    catch { /* not built: it isn't followed into the pile */ }
+                }
             if (me.Relics.Any(relic => relic.GetType().Name == nameof(MegaCrit.Sts2.Core.Models.Relics.BiiigHug))) Made<Soot>();
             player.MadeCards = made.Count > 0 ? made : null;
             // Iteration counts the Status cards drawn this turn (CardDrawnEntry: you watched them come).

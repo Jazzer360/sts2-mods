@@ -379,7 +379,7 @@ public static partial class SimAdapter
         var hits = HitsOf(command, play, aimed) * RoundsOf(found, play);
         hits = WithHitCountHooks(card, play.Combat, hits);
         var takes = CardEffects.ExhaustsOfOthers(play.Type).Concat(CardEffects.Discards(play.Type)).ToList();
-        var hitsTaken = takes.Any(take => CardEffects.CountsTaken(command.HitCountValue, take));
+        var hitsTaken = takes.Any(take => CardEffects.CountsTaken(command.HitCountValue, take) || CountsTakenByItsValue(card, command.HitCountValue, take));
         var hitsLogged = command.HitCountValue?.Parts().Any(part => part is CardValue { Key: "CalculatedHits" }) == true
             ? HistoryLedger.LoggedOf(card, "CalculatedHits", play.Combat) : null;
         if (hits <= 0 && !hitsTaken && hitsLogged == null) return new List<SimAction>();
@@ -420,6 +420,20 @@ public static partial class SimAdapter
         return ways.Count == 1 ? ways[0] : byCard;
     }
 
+    /// <summary>
+    /// The value is a card value calculated as the count of a take's collection and nothing more (Flak Cannon's CalculatedHits: its
+    /// multiplier counts the statuses its loop exhausts, its base 0 and extra 1): what that take took, read as it runs (SimCount.CardsTaken).
+    /// </summary>
+    private static bool CountsTakenByItsValue(CardModel card, ProgramValue? value, CardEffects.CardsTaken take)
+    {
+        if (value == null || take.Items == null || value.Parts().OfType<CardValue>().FirstOrDefault() is not { } cardValue) return false;
+        if (Sts2State.Var(card, "CalculationBase", fallback: -1) != 0 || Sts2State.Var(card, "CalculationExtra", fallback: -1) != 1) return false;
+        var multipliers = CardProgramReader.CalculatedMultipliers(card.GetType(), RuntimeCode.Read);
+        if (!multipliers.TryGetValue(cardValue.Key, out var multiplier) || multiplier is not QueryValue { Name: "Count", Arguments: [var counted] }) return false;
+        // The multiplier's lambda names the card "card" where its play names it "this".
+        static string Collection(ProgramValue items) => (items is QueryValue { Name: "ToList" or "ToArray", Arguments: [var inner] } ? inner : items).ToString()!;
+        return Collection(counted).Replace("card.", "this.", StringComparison.Ordinal) == Collection(Unstored(take.Items));
+    }
     /// <summary>The attack's hits on the board (WithHitCount's argument at the target; with none aimed at, its least): one with no hit count.</summary>
     private static int HitsOf(CommandStep command, StepPlay play, Creature? target)
     {
@@ -1118,6 +1132,7 @@ public static partial class SimAdapter
         return PlayersOf(found, play).Select(player => (SimAction)new CardEventAction(CardEvent.Generated, each)
         {
             Indirect = true, JoinsHand = player == Who.You && intoHand, Player = player == Who.You || byYou ? null : player, TakenBy = takenBy,
+            MadeCard = player == Who.You && intoHand ? MadeCardOf(play.Card)?.GetType().Name : null,
         }).ToList();
     }
 

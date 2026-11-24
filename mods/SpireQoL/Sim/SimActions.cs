@@ -314,6 +314,11 @@ public sealed record CardEventAction(CardEvent Event, int Count) : SimAction
     public bool JoinsHand { get; init; }
     /// <summary>The filtered takes of the play each card it makes would be taken by (decision #189: SimDrawCard.TakenBy); null: not known.</summary>
     public IReadOnlyList<string>? TakenBy { get; init; }
+    /// <summary>
+    /// The card it makes, by its class's name, when it's one: into a full hand it goes to its owner's discard pile (CardPileCmd.Add), as its
+    /// profile (SimPlayer.MadeCards). Null: not known (it isn't followed into the pile).
+    /// </summary>
+    public string? MadeCard { get; init; }
 }
 
 /// <summary>

@@ -72,6 +72,28 @@ public class StepActionTests
     }
 
     [Fact]
+    public void ACardMadeIntoAFullHandGoesToTheDiscardPile()
+    {
+        // CardPileCmd.Add to the hand: a full hand sends the card to the discard pile, where a shuffle later in the turn finds it.
+        var full = new SimState();
+        full.You.HandCount = 10;
+        full.You.Draw = new SimDrawPile();
+        full.You.MadeCards = new Dictionary<string, SimDrawCard> { ["Shiv"] = new SimDrawCard("Shiv") };
+        var shiv = Play(Card("BladeDance", SimCardType.Skill), target: Who.None, plays: 1,
+            new CardEventAction(CardEvent.Generated, Count: 1) { Indirect = true, JoinsHand = true, MadeCard = "Shiv" });
+        var after = Assert.Single(After(full, shiv));
+        Assert.Equal(10, after.You.HandCount);
+        Assert.Equal(1, after.You.Draw!.DiscardCount);
+        var room = new SimState();
+        room.You.HandCount = 5;
+        room.You.Draw = new SimDrawPile();
+        room.You.MadeCards = full.You.MadeCards;
+        var roomy = Assert.Single(After(room, shiv));
+        Assert.Equal(6, roomy.You.HandCount);
+        Assert.Equal(0, roomy.You.Draw!.DiscardCount);
+    }
+
+    [Fact]
     public void AnEvokeThatKeepsItsOrbEvokesItAgainNext()
     {
         // Dualcast.OnPlay: EvokeNext(dequeue: false), then EvokeNext(): the front orb evoked twice, then gone.
