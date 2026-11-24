@@ -671,7 +671,6 @@ public static partial class SimAdapter
             player.HexFrom = hexId;
             player.HexFading = hand.Count(card => IsFading(card, combat) && EtherealOnlyFromHex(card));
         }
-        player.AttacksThisTurn = Sts2State.CountPlayedThisTurn(me, CardType.Attack);
         // Cards that act in hand at the end of the turn (the simulator's list): their Damage or HpLoss as the card shows it.
         foreach (var card in hand)
             if (TurnEndOf(card) is { } turnEnd) player.TurnEndCards.Add(turnEnd);

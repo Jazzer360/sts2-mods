@@ -157,7 +157,6 @@ public class BonusTabParityTests
         if (random.Next(5) == 0) player.Thorns = random.Next(1, 4);
         // An Attack already played this turn (the fight's log and Art of War's own flag).
         var attacked = random.Next(3) == 0;
-        if (attacked) player.AttacksThisTurn = 1;
         if (attacked)
             player.Turn = SimKeys.CountPlay(SimKeys.CountPlay(player.Turn, PlayStage.Started, SimCardType.Attack, new HashSet<SimCardTag>()), PlayStage.Finished, SimCardType.Attack, new HashSet<SimCardTag>());
         void Var(string model, string key, int value) => state.Vars[$"{id}:{model}:{key}"] = value;

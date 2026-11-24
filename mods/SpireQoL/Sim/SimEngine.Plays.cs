@@ -55,7 +55,6 @@ public static partial class SimEngine
         }
         player.Fading = Math.Max(0, player.Fading + cardResolvedAction.FadingDelta);
         player.HexFading = Math.Max(0, player.HexFading + cardResolvedAction.HexFadingDelta);
-        if (cardResolvedAction.IsAttack) player.AttacksThisTurn++;
         AllyDeaths(state);
     }
 }

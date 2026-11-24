@@ -174,7 +174,6 @@ public sealed class SimEnemy
     public bool GambitTriggered;
     /// <summary>Slippery: hits that lose it at most 1 HP each, left (0 = none).</summary>
     [JsonIgnore] public int Slippery { get => Powers[PowerId.Slippery]; set => Set(PowerId.Slippery, value); }
-    public bool SlipperyTriggered;
     /// <summary>Alive when the simulation starts (deaths after that set off Crab Rage and Ravenous).</summary>
     public bool StartedAlive = true;
     /// <summary>Ravenous: an ally dying stuns it (RavenousPower.AfterDeath).</summary>
@@ -245,7 +244,7 @@ public sealed class SimEnemy
     {
         key.Add(Id); key.Add(Hp); key.Add(Block); key.Add(UnblockedInstances); key.Add(FirstHitFullyBlocked ? 1 : 0); key.Add(Poison); key.Add(DiedBeforeActing ? 1 : 0);
         key.Add(Stunned ? 1 : 0); key.Add(IntendsToAttack ? 1 : 0); key.Add(BlockBroken ? 1 : 0); key.Add(GambitTriggered ? 1 : 0);
-        key.Add(SlipperyTriggered ? 1 : 0); key.Add(MoveBlock);
+        key.Add(MoveBlock);
         Powers.Hash(ref key); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         Fields.Hash(ref key);
         key.Add(Hits.Count); foreach (var hit in Hits) key.Add(hit);
@@ -384,7 +383,6 @@ public sealed class SimPlayer
     public int HexFading;
     [JsonConverter(typeof(CreatureIdJson))]
     public int HexFrom = Who.None;
-    public int AttacksThisTurn;
     /// <summary>
     /// Cards in hand that act when the turn ends (CardModel.OnTurnEndInHand), in hand order: what each does is the simulator's
     /// (SimEngine.HandAtTurnEnd). Never changed in place (shared between clones).
@@ -510,7 +508,7 @@ public sealed class SimPlayer
         key.Add(Block); key.Add(Hp); key.Add(MaxHp); key.Add(Taken); key.Add(Through); key.Add(OstyTaken); key.Add(UnblockableTaken); key.Add(Incoming); key.Add(BlockGained);
         key.Add(WuppyHp); key.Add(WuppyTaken); key.Add(OstyHp); key.Add(Died ? 1 : 0); key.Add(LizardTailUsed ? 1 : 0); key.Add(LizardTailHeal); key.Add(FairiesUsed); key.Add(Fairies);
         key.Add(BlockGains); key.Add(Energy); key.Add(HandCount); key.Add(PlayingFromHand); key.Add(Arrows); key.Add(Fading); key.Add(HexFading); key.Add(HexFrom); key.Add(Drawn); key.Add(ExhaustPile); key.Add(TakenToHand);
-        key.Add(AttacksThisTurn); key.Add(OrbCapacity); key.Add(BeaconGiving ? 1 : 0); key.Add(InvincibleBlock); key.Add(InvincibleDrawPile);
+        key.Add(OrbCapacity); key.Add(BeaconGiving ? 1 : 0); key.Add(InvincibleBlock); key.Add(InvincibleDrawPile);
         Draw?.Hash(ref key);
         key.Add(TurnEndCards.Count);
         foreach (var turnEndCard in TurnEndCards) { key.Add(turnEndCard.Card.GetHashCode()); key.Add(turnEndCard.Amount); }
@@ -687,8 +685,6 @@ public sealed class SimState
     public int CancelledHits;
     /// <summary>Block you have when the enemy turn starts.</summary>
     public int BlockAtEnemyTurn;
-    /// <summary>Your Parrying Shield fired at the end of your turn (your block at least its threshold).</summary>
-    public bool ParryingShieldFired;
     /// <summary>
     /// The payouts whose condition held where their hook ran (ModelSpec.Payouts decided where they're paid: Parrying Shield's damage as your turn
     /// ends, decision #239), each under its source's log key (SimKeys.Logged): what a tab judged on how the turn ends compares with ending it now.
@@ -1064,7 +1060,7 @@ public sealed class SimState
         var key = new BranchKey();
 
         if (Payouts.Count > 0) Payouts.Hash(ref key);
-        key.Add(ParryingShieldFired ? 1 : 0); key.Add(BlockDemand); key.Add(SkippedPoisoned); key.Add(SkippedEndOfTurn); key.Add(CancelledHits);
+        key.Add(BlockDemand); key.Add(SkippedPoisoned); key.Add(SkippedEndOfTurn); key.Add(CancelledHits);
         if (DrawRecord != null)
         {
             key.Add(DrawRecord.Count);

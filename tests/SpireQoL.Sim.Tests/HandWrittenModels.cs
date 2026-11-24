@@ -1764,7 +1764,12 @@ public sealed class DemonTongue : SimModel
 public sealed class SlipperyPower : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        Who.IsEnemy(owner) && !now.InSome(branch => branch.Enemy(owner) is { SlipperyTriggered: true }) ? new(Harmful: true, outcome => outcome.InSome(branch => branch.Enemy(owner) is { SlipperyTriggered: true }), branch => branch.Enemy(owner) is { SlipperyTriggered: true }) : null;
+        Who.IsEnemy(owner) && !now.InSome(branch => Triggered(branch, owner)) ? new(Harmful: true, outcome => outcome.InSome(branch => Triggered(branch, owner)), branch => Triggered(branch, owner)) : null;
+
+    /// <summary>Its enemy's flag that a hit took HP through it (SimEnemy.SlipperyTriggered, the engine's until it went: kept in its owner's fields now).</summary>
+    private const string TriggeredField = "SlipperyPower.Triggered";
+
+    private static bool Triggered(SimState branch, int owner) => SimEngine.FieldsOf(branch, owner).Has(TriggeredField);
 
     public override decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount) =>
         damage.Target != owner || amount < 1m ? amount : 1m;
@@ -1775,7 +1780,7 @@ public sealed class SlipperyPower : SimModel
         state.LogFired(Name, amount: 0, owner);
         var powers = SimEngine.PowersOf(state, owner);
         SimEngine.SetPowers(state, owner, powers[ThisPower] <= 1 ? powers.Without(ThisPower) : powers.With(ThisPower, powers[ThisPower] - 1));
-        if (state.Enemy(owner) is { } enemy) enemy.SlipperyTriggered = true;
+        if (state.Enemy(owner) != null) SimEngine.SetField(state, owner, TriggeredField, 1);
     }
 }
 
@@ -1796,7 +1801,8 @@ public sealed class ArtOfWar : FirstAttackGivesUp { }
 public sealed class RippleBasin : FirstAttackGivesUp
 {
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner) =>
-        state.TakesPart(owner) && state.Player(owner) is { AttacksThisTurn: 0 } && Amount(state, owner) > 0 ? Block(state, owner, Amount(state, owner)) : One(state);
+        // Its owner's Attacks this turn (SimPlayer.AttacksThisTurn, the engine's count until it went: the turn's count of Attack plays now).
+        state.TakesPart(owner) && SimEngine.TurnOf(state, owner)[SimKeys.Plays(PlayStage.Started, SimCardType.Attack)] == 0 && Amount(state, owner) > 0 ? Block(state, owner, Amount(state, owner)) : One(state);
 }
 
 /// <inheritdoc cref="SpireQoL.Sim.Models.EndOfTurnModel"/>
@@ -1811,13 +1817,18 @@ public sealed class ParryingShield : EndOfTurnRelic
     /// <summary>Plain when this play makes it fire for sure and ending the turn now might not; crossed when it would for sure now and the play can stop it.</summary>
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
         owner != Who.You ? null
-        : !now.InEvery(branch => branch.ParryingShieldFired) ? new(Harmful: false, outcome => outcome.InEvery(branch => branch.ParryingShieldFired), InPlay: false)
-        : new(Harmful: true, outcome => !outcome.InEvery(branch => branch.ParryingShieldFired), branch => !branch.ParryingShieldFired, InPlay: false);
+        : !now.InEvery(Fired) ? new(Harmful: false, outcome => outcome.InEvery(Fired), InPlay: false)
+        : new(Harmful: true, outcome => !outcome.InEvery(Fired), branch => !Fired(branch), InPlay: false);
+
+    /// <summary>It fired as your turn ended (SimState.ParryingShieldFired, the engine's until it went: kept in your fields now).</summary>
+    private const string FiredField = "ParryingShield.Fired";
+
+    private static bool Fired(SimState branch) => SimEngine.FieldsOf(branch, Who.You).Has(FiredField);
 
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner)
     {
         if (!state.TakesPart(owner) || Amount(state, owner) <= 0 || state.Player(owner) is not { } player || player.Block < Data(state, owner)) return One(state);
-        if (owner == Who.You) state.ParryingShieldFired = true;
+        if (owner == Who.You) SimEngine.SetField(state, Who.You, FiredField, 1);
         return DamageRandom(state, owner, Amount(state, owner));
     }
 }

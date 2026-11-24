@@ -248,7 +248,7 @@ public class SimAutoPlayTests
     [Fact]
     public void ATeammatesAutoPlayedAttackIsTheirsNotYours()
     {
-        // Their Howl counts as their Attack this turn: your Ripple Basin still gives its block, and your hand keeps its size.
+        // Their Howl is their Attack this turn, not yours: your Ripple Basin still gives its block, and your hand keeps its size.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 10) } };
         state.WithRelic(Who.You, RelicId.RippleBasin, "Block", value: 4);
         state.You.HandCount = 3;
@@ -258,7 +258,6 @@ public class SimAutoPlayTests
         var outcome = SimEngine.Run(state);
         Assert.Equal(6, outcome.TakenMax);
         Assert.All(outcome.Branches, branch => Assert.Equal(3, branch.You.HandCount));
-        Assert.All(outcome.Branches, branch => Assert.Equal(1, branch.Teammates[0].AttacksThisTurn));
     }
 
     [Fact]
