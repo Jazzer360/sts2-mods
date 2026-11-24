@@ -7,6 +7,9 @@ namespace SpireQoL.Sim;
 /// <summary>One hook body of a power or a relic as read (decision #195): translated into the simulator's program, or a named gap with why.</summary>
 public sealed record HookReading(string Hook, string? Gap)
 {
+    /// <summary>What the reader would need to read the body, where it stopped (set with every gap: decision #195, round eight).</summary>
+    public ReaderCapability? Capability { get; init; }
+
     /// <summary>A reason the simulator never runs this hook body (outside fights, past the simulated turns): nothing of it to translate.</summary>
     public string? NotRun { get; init; }
 
@@ -117,7 +120,7 @@ public static class HookReader
         foreach (var hook in Hooks(type).OrderBy(method => method.Name, StringComparer.Ordinal))
         {
             var (program, gap, notRun) = reader.Hook(hook);
-            readings.Add(new HookReading(hook.Name, gap) { NotRun = notRun });
+            readings.Add(new HookReading(hook.Name, gap?.Text) { NotRun = notRun, Capability = gap?.Capability });
             if (program != null) programs.Add(program);
         }
         // One of its own values its code stores (DynamicVars["CardsLeft"].BaseValue--: Panache's count) is its state: every read of it reads
@@ -148,6 +151,17 @@ public static class HookReader
             Copies = kind == ModelKind.Power ? reader.Copies() : PowerCopies.One,
         };
         return new ModelReading(spec, readings);
+    }
+
+    /// <summary>
+    /// A model of a kind the engine runs no read program for (an enchantment, an affliction, a potion, an orb: decision #195's last kinds): each of
+    /// its hook bodies read as far as the reader goes, to its first gap, or, read whole, the engine running no read effect of its kind
+    /// (ReaderCapability.EffectNotRun). For the measurement (HookGapTests): nothing runs these readings.
+    /// </summary>
+    public static IReadOnlyList<HookReading> ReadEffects(Type type, Func<MethodBase, List<CodeOp>> read)
+    {
+        var reader = new Translation(type, ModelKind.Power, read);
+        return Hooks(type).OrderBy(method => method.Name, StringComparer.Ordinal).Select(reader.Effect).ToList();
     }
 
     /// <summary>The prefix of one of a model's own values kept as its state ("Var.CardsLeft"), where its code stores it.</summary>
@@ -270,8 +284,13 @@ public static class HookReader
     /// <summary>A gap in a body: what the reader or the translator can't follow, named.</summary>
     private sealed class Gap : Exception
     {
-        public Gap(string reason) : base(reason) { }
+        public Gap(ReaderCapability capability, string reason) : base(reason) => Capability = capability;
+
+        public ReaderCapability Capability { get; }
     }
+
+    /// <summary>A gap as a hook's reading names it: its words and the capability it waits on.</summary>
+    internal readonly record struct GapOf(ReaderCapability Capability, string Text);
 
     /// <summary>One class's translation: its hooks, each body's steps and values, with what's known about the class (its kind, its assembly).</summary>
     private sealed class Translation
@@ -314,7 +333,36 @@ public static class HookReader
             _read = read;
         }
 
-        public (HookProgram? Program, string? Gap, string? NotRun) Hook(MethodInfo hook)
+        /// <summary>One hook body of a kind the engine runs no read program for, read to its first gap (ReadEffects).</summary>
+        public HookReading Effect(MethodInfo hook)
+        {
+            _hook = hook.Name;
+            if (NotRun.TryGetValue(hook.Name, out var why)) return new HookReading(hook.Name, null) { NotRun = why };
+            if (Diagnostics.CoverageLedger.OutOfCombatHooks.Contains(hook.Name)) return new HookReading(hook.Name, null) { NotRun = "it acts outside fights (Diagnostics/OutOfCombatHooks.txt)" };
+            static HookReading Gapped(string hook, GapOf gap) => new(hook, gap.Text) { Capability = gap.Capability };
+            try
+            {
+                if (hook.ReturnType.FullName != typeof(void).FullName && !hook.ReturnType.Name.StartsWith(nameof(Task), StringComparison.Ordinal)) _ = Pruned(Ways(ProgramReader.ReadReturnedWays(_type, hook, _read)));
+                else
+                {
+                    var program = ProgramReader.Read(_type, _read, hook.Name);
+                    if (program.Unknowns.FirstOrDefault() is { } unknown) return Gapped(hook.Name, new GapOf(ReaderCapability.ValueNotFollowed, "gap: the reader can't follow it: " + unknown));
+                    if (OwnData(hook, program) is { } data) return Gapped(hook.Name, data);
+                    foreach (var step in program.Steps) _ = Step(step).ToList();
+                }
+                return Gapped(hook.Name, new GapOf(ReaderCapability.EffectNotRun, $"gap: the engine runs no read {_type.BaseType?.Name}'s {hook.Name}"));
+            }
+            catch (Gap gap)
+            {
+                return Gapped(hook.Name, new GapOf(gap.Capability, gap.Message));
+            }
+            catch (Exception exception)
+            {
+                return Gapped(hook.Name, new GapOf(ReaderCapability.NotRead, $"gap: not read ({exception.GetType().Name}: {exception.Message})"));
+            }
+        }
+
+        public (HookProgram? Program, GapOf? Gap, string? NotRun) Hook(MethodInfo hook)
         {
             _hook = hook.Name;
             if (NotRun.TryGetValue(hook.Name, out var why)) return (null, null, why);
@@ -323,12 +371,12 @@ public static class HookReader
             {
                 if (PlayersTurnStartHooks.Contains(hook.Name)) return (null, null, "it runs as the players' next turn starts, past the turns a simulation covers");
                 if (StartsATurn(hook.Name) && PastTheHorizon(hook) is { } horizon)
-                    return horizon.Length == 0 ? (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers") : (null, horizon, null);
-                if (!Enum.TryParse<HookName>(hook.Name, out var name)) return (null, $"gap: the simulator runs no read model's {hook.Name}", null);
+                    return horizon.Length == 0 ? (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers") : (null, new GapOf(ReaderCapability.ValueNotFollowed, horizon), null);
+                if (!Enum.TryParse<HookName>(hook.Name, out var name)) return (null, new GapOf(ReaderCapabilities.OfHook(hook.Name), $"gap: the simulator runs no read model's {hook.Name}"), null);
                 if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name == HookName.ModifyCardPlayCount)
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(Ways(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
                 var program = ProgramReader.Read(_type, _read, hook.Name);
-                if (program.Unknowns.FirstOrDefault() is { } unknown) return (null, "gap: the reader can't follow it: " + unknown, null);
+                if (program.Unknowns.FirstOrDefault() is { } unknown) return (null, new GapOf(ReaderCapability.ValueNotFollowed, "gap: the reader can't follow it: " + unknown), null);
                 if (OwnData(hook, program) is { } data) return (null, data, null);
                 var steps = new List<HookStep>();
                 foreach (var step in program.Steps) steps.AddRange(Step(step));
@@ -339,11 +387,11 @@ public static class HookReader
             }
             catch (Gap gap)
             {
-                return (null, gap.Message, null);
+                return (null, new GapOf(gap.Capability, gap.Message), null);
             }
             catch (Exception exception)
             {
-                return (null, $"gap: not read ({exception.GetType().Name}: {exception.Message})", null);
+                return (null, new GapOf(ReaderCapability.NotRead, $"gap: not read ({exception.GetType().Name}: {exception.Message})"), null);
             }
         }
 
@@ -353,7 +401,7 @@ public static class HookReader
         /// state unseen. Read: a store as a StoreStep at its place, a collection's change whose result isn't used as a DataStep at its place, a
         /// Remove whose result is tested (taken as a fact: HookFact.TakeBound); a query (Contains, Count...) changes nothing. Null: nothing unread.
         /// </summary>
-        private string? OwnData(MethodInfo hook, ModelProgram program)
+        private GapOf? OwnData(MethodInfo hook, ModelProgram program)
         {
             List<CodeOp> ops;
             try { ops = _read(ProgramReader.BodyOf(hook)); }
@@ -365,29 +413,43 @@ public static class HookReader
             {
                 var instruction = ops[index];
                 if (instruction.OpCode == System.Reflection.Emit.OpCodes.Stfld && instruction.Member is { } stored && nested.Contains(stored.DeclaringType) && !stepsAt.Contains(instruction.Offset))
-                    return $"gap: changes its own data ({stored.Name}) where the reader reads no store";
+                    return new GapOf(ReaderCapability.OwnData, $"gap: changes its own data ({stored.Name}) where the reader reads no store");
                 if (instruction.IsCall && instruction.Member is { Kind: CodeMemberKind.Method, HasThis: true } call && usesData && call.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)
                     && !CollectionQueries.Contains(call.Name) && !stepsAt.Contains(instruction.Offset)
                     && !(call.Name == "Remove" && call.ParameterCount == 2 && index + 1 < ops.Count && ops[index + 1].OpCode != System.Reflection.Emit.OpCodes.Pop))
-                    return $"gap: changes a collection ({call.FullName}) where the reader reads no step";
-                if (instruction.IsCall && ChangesAGameObject(instruction.Member)) return $"gap: changes a game object outside a command ({instruction.Member!.FullName})";
+                    return new GapOf(ReaderCapability.OwnData, $"gap: changes a collection ({call.FullName}) where the reader reads no step");
+                if (instruction.IsCall && ChangesAGameObject(instruction.Member)) return new GapOf(SetOn(instruction.Member!.DeclaringType, call: true), $"gap: changes a game object outside a command ({instruction.Member!.FullName})");
                 // A property set on one of the game's objects the reader reads no store for (Panache's DynamicVars["CardsLeft"].BaseValue--).
                 // A text set (a StringVar's StringValue: words its tooltip shows) is what's shown, never a number anything reads.
                 if (instruction.IsCall && instruction.Member is { Kind: CodeMemberKind.Method, HasThis: true } setter && setter.Name.StartsWith("set_", StringComparison.Ordinal)
                     && setter.Namespace.StartsWith("MegaCrit", StringComparison.Ordinal) && !setter.Namespace.Contains(".Nodes", StringComparison.Ordinal) && !stepsAt.Contains(instruction.Offset)
                     && setter.ParameterTypes is not ["String"])
-                    return $"gap: sets {setter.DeclaringType}.{setter.Name[4..]} where the reader reads no store";
+                    return new GapOf(SetOn(setter.DeclaringType, call: false), $"gap: sets {setter.DeclaringType}.{setter.Name[4..]} where the reader reads no store");
                 // A field stored on one of the game's objects (not the hook's own locals) the reader reads no store for.
                 if (instruction.OpCode == System.Reflection.Emit.OpCodes.Stfld && instruction.Member is { } storedField && !storedField.DeclaringType.StartsWith('<') && !storedField.Name.StartsWith('<')
                     && !stepsAt.Contains(instruction.Offset))
-                    return $"gap: stores {storedField.DeclaringType}.{storedField.Name} where the reader reads no store";
+                    return new GapOf(SetOn(storedField.DeclaringType, call: false), $"gap: stores {storedField.DeclaringType}.{storedField.Name} where the reader reads no store");
                 // One of its own fields: a plain one (a flag, a count) is its state, read and stored as its properties are; any other (a list, a
                 // card kept) is changed by calls on it the reader doesn't read.
                 if (instruction.Member is { Kind: CodeMemberKind.Field } field && field.DeclaringType == _type.Name && !field.Name.StartsWith('<') && !IsPlainField(field))
-                    return $"gap: uses its own field ({field.Name}) directly: what a call on it changes isn't read";
+                    return new GapOf(ReaderCapability.OwnData, $"gap: uses its own field ({field.Name}) directly: what a call on it changes isn't read");
             }
             return null;
         }
+
+        /// <summary>
+        /// What setting a value on a game object of this class would need: a monster's own state (its flag, its next move), a card changed, or
+        /// another model's value (a power's Target, a DynamicVar's BaseValue, an affliction's Amount).
+        /// </summary>
+        private ReaderCapability SetOn(string declaring, bool call) =>
+            _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Monsters." + declaring) != null ? ReaderCapability.MonsterStateSet
+            : declaring is "CardModel" or "CardEnergyCost" ? ReaderCapability.CardChanged
+            : call && Derives(_type, declaring) ? ReaderCapability.OwnMethod
+            : ReaderCapability.OtherModelValueSet;
+
+        /// <summary>What a command on a creature the reader can't act on would need: a potion's chosen target (OnUse's target), or the target's own kind.</summary>
+        private ReaderCapability Other(ProgramValue creature) =>
+            _hook == "OnUse" && Unstored(creature) is ParameterValue { Name: "target" } or NamedValue { Name: "target" } ? ReaderCapability.UseTarget : ReaderCapabilities.OfTarget(creature);
 
         /// <summary>
         /// A call that changes one of the game's objects outside a command (a card made free this turn, a keyword added): an instance method of
@@ -435,7 +497,7 @@ public static class HookReader
                     // A counter loop (for i < n): its body n times, n worked out as the loop starts (the card programs read it the same way:
                     // ProgramEvaluator.Rounds). Any other loop is a gap.
                     if (loop.Items != null || loop.While is not { Terms: [[{ Holds: true, Test: CompareValue { Op: Comparison.Less or Comparison.LessOrEqual } bound }]] })
-                        throw new Gap("gap: a loop");
+                        throw new Gap(ReaderCapability.LoopOverItems, "gap: a loop");
                     var times = Value(bound.Right);
                     if (bound.Op == Comparison.LessOrEqual) times = new HookMath(HookOperation.Add, times, new HookConstant(1m));
                     var body = loop.Body.SelectMany(Step).ToList();
@@ -451,11 +513,11 @@ public static class HookReader
                     return new HookStep[] { new FlashStep { When = when } };
                 }
                 case ChoiceStep:
-                    throw new Gap("gap: a pick");
+                    throw new Gap(ReaderCapability.Pick, "gap: a pick");
                 case CreateStep create:
-                    throw new Gap($"gap: makes a {create.Card}");
+                    throw new Gap(ReaderCapability.CardMade, $"gap: makes a {create.Card}");
                 default:
-                    throw new Gap($"gap: {step}");
+                    throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: {step}");
             }
         }
 
@@ -468,12 +530,12 @@ public static class HookReader
         /// </summary>
         private HookStep Data(DataStep data)
         {
-            if (data.Values.Count == 0 || !IsPlayCard(data.Values[0])) throw new Gap($"gap: changes its own data ({data.Data}.{data.Operation}) by {(data.Values.Count > 0 ? data.Values[0] : "nothing")}");
+            if (data.Values.Count == 0 || !IsPlayCard(data.Values[0])) throw new Gap(ReaderCapability.OwnData, $"gap: changes its own data ({data.Data}.{data.Operation}) by {(data.Values.Count > 0 ? data.Values[0] : "nothing")}");
             return data.Operation switch
             {
                 "Add" when data.Values.Count == 2 => new BindStep(Value(data.Values[1])),
                 "Remove" => new UnbindStep(),
-                _ => throw new Gap($"gap: changes its own data ({data.Data}.{data.Operation})"),
+                _ => throw new Gap(ReaderCapability.OwnData, $"gap: changes its own data ({data.Data}.{data.Operation})"),
             };
         }
 
@@ -492,10 +554,10 @@ public static class HookReader
             {
                 case "CreatureCmd.GainBlock":
                 {
-                    if (!IsOwner(values[0])) throw new Gap($"gap: block for {values[0]}");
+                    if (!IsOwner(values[0])) throw new Gap(Other(values[0]), $"gap: block for {values[0]}");
                     if (types[1] == "BlockVar")
                     {
-                        var key = VarKey(values[1]) ?? throw new Gap($"gap: block of {values[1]}");
+                        var key = VarKey(values[1]) ?? throw new Gap(ReaderCapabilities.OfValue(values[1]), $"gap: block of {values[1]}");
                         return new GainBlockStep(Var(key), Var(key + ".Props"));
                     }
                     return new GainBlockStep(Value(values[1]), Value(values[2]));
@@ -504,37 +566,37 @@ public static class HookReader
                 {
                     var targetAt = IndexOf(types, "Creature", "IEnumerable`1");
                     var amountAt = IndexOf(types, "Decimal", "DamageVar");
-                    if (targetAt < 0 || amountAt < 0) throw new Gap($"gap: damage overload {string.Join(",", types)}");
+                    if (targetAt < 0 || amountAt < 0) throw new Gap(ReaderCapability.CommandNotTranslated, $"gap: damage overload {string.Join(",", types)}");
                     var dealerAt = IndexOf(types, from: amountAt + 1, "Creature");
                     HookValue amount, props;
                     if (types[amountAt] == "DamageVar")
                     {
-                        var key = VarKey(values[amountAt]) ?? throw new Gap($"gap: damage of {values[amountAt]}");
+                        var key = VarKey(values[amountAt]) ?? throw new Gap(ReaderCapabilities.OfValue(values[amountAt]), $"gap: damage of {values[amountAt]}");
                         (amount, props) = (Var(key), Var(key + ".Props"));
                     }
                     else (amount, props) = (Value(values[amountAt]), Value(values[amountAt + 1]));
                     var noDealer = dealerAt < 0 || values[dealerAt] is NullValue;
-                    if (!noDealer && !IsOwner(values[dealerAt])) throw new Gap($"gap: damage dealt by {values[dealerAt]}");
+                    if (!noDealer && !IsOwner(values[dealerAt])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: damage dealt by {values[dealerAt]}");
                     // Damage the simulator's procs deal: to every hittable enemy, a roll over them, the creature a power landed on, or its owner.
                     var damaged = Targets(values[targetAt]);
-                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.PowerOwner or HookTarget.Owner)) throw new Gap($"gap: damage to {values[targetAt]}");
+                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.PowerOwner or HookTarget.Owner)) throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: damage to {values[targetAt]}");
                     return new DamageStep(damaged, amount, props) { NoDealer = noDealer };
                 }
                 case "CardPileCmd.Draw":
                 {
                     var playerAt = IndexOf(types, "Player");
-                    if (playerAt < 0 || !IsOwner(values[playerAt])) throw new Gap("gap: a draw for someone else");
+                    if (playerAt < 0 || !IsOwner(values[playerAt])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, "gap: a draw for someone else");
                     var countAt = IndexOf(types, "Decimal");
                     return new DrawStep(countAt < 0 ? new HookConstant(1m) : Value(values[countAt]));
                 }
                 case "CreatureCmd.Heal":
-                    if (!IsOwner(values[0])) throw new Gap($"gap: a heal for {values[0]}");
+                    if (!IsOwner(values[0])) throw new Gap(Other(values[0]), $"gap: a heal for {values[0]}");
                     return new HealStep(Value(values[1]));
                 case "PlayerCmd.GainEnergy":
-                    if (!IsOwner(values[1])) throw new Gap("gap: energy for someone else");
+                    if (!IsOwner(values[1])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, "gap: energy for someone else");
                     return new GainEnergyStep(Value(values[0]));
                 case "PlayerCmd.GainStars":
-                    if (!IsOwner(values[1])) throw new Gap("gap: stars for someone else");
+                    if (!IsOwner(values[1])) throw new Gap(ReaderCapability.Stars, "gap: stars for someone else");
                     return new GainStarsStep(Value(values[0]));
                 case "PowerCmd.Apply":
                 {
@@ -543,13 +605,13 @@ public static class HookReader
                     var amountAt = IndexOf(types, "Decimal");
                     var applierAt = IndexOf(types, from: amountAt + 1, "Creature");
                     // Its applier: its owner, the applier the power keeps (base.Applier), or no one (null).
-                    HookCreature? by = applierAt < 0 ? throw new Gap($"gap: {power} applied by someone else")
+                    HookCreature? by = applierAt < 0 ? throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: {power} applied by someone else")
                         : IsOwner(values[applierAt]) ? null
                         : IsApplier(values[applierAt]) ? new HookCreature(HookWho.Applier)
                         : values[applierAt] is NullValue ? new HookCreature(HookWho.NoOne)
-                        : throw new Gap($"gap: {power} applied by someone else");
+                        : throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: {power} applied by someone else");
                     var amount = Value(values[amountAt]);
-                    if (Targets(values[targetAt]) is not (HookTarget.Owner or HookTarget.PowerOwner or HookTarget.AllEnemies or HookTarget.HitTarget)) throw new Gap($"gap: {power} on {values[targetAt]}");
+                    if (Targets(values[targetAt]) is not (HookTarget.Owner or HookTarget.PowerOwner or HookTarget.AllEnemies or HookTarget.HitTarget)) throw new Gap(Other(values[targetAt]), $"gap: {power} on {values[targetAt]}");
                     // A temporary Strength or Dexterity power (Helical Dart's) lands as the Strength or Dexterity its BeforeApplied applies, by its sign
                     // (TemporaryStrengthPower, TemporaryDexterityPower: IsPositive), as the card programs land it (SimAdapter.PowersFrom).
                     if (TemporaryOf(power) is { } underlying)
@@ -565,16 +627,16 @@ public static class HookReader
                 case "OrbCmd.Channel":
                 {
                     var playerAt = IndexOf(types, "Player");
-                    if (playerAt < 0 || !IsOwner(values[playerAt])) throw new Gap("gap: an orb channeled for someone else");
-                    var orb = member.GenericArguments.SingleOrDefault() ?? throw new Gap("gap: an orb made first");
+                    if (playerAt < 0 || !IsOwner(values[playerAt])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, "gap: an orb channeled for someone else");
+                    var orb = member.GenericArguments.SingleOrDefault() ?? throw new Gap(ReaderCapability.Orbs, "gap: an orb made first");
                     return Enum.TryParse<OrbKind>(orb.EndsWith("Orb", StringComparison.Ordinal) ? orb[..^3] : orb, out var kind) && kind is not (OrbKind.Unknown or OrbKind.Random)
-                        ? new ChannelStep(kind) : throw new Gap($"gap: channels a {orb}");
+                        ? new ChannelStep(kind) : throw new Gap(ReaderCapability.Orbs, $"gap: channels a {orb}");
                 }
                 case "PowerCmd.Remove" or "PowerCmd.Decrement" or "PowerCmd.TickDownDuration":
-                    if (values[0] is not NamedValue { Name: "this" }) throw new Gap($"gap: {member.FullName} of another power");
+                    if (values[0] is not NamedValue { Name: "this" }) throw new Gap(ReaderCapability.CommandOnAnotherPower, $"gap: {member.FullName} of another power");
                     return member.Name == "Remove" ? new RemovePowerStep() : new DecrementPowerStep();
                 default:
-                    throw new Gap($"gap: {member} isn't translated");
+                    throw new Gap(ReaderCapabilities.OfCommand(member.FullName), $"gap: {member} isn't translated");
             }
         }
 
@@ -588,8 +650,8 @@ public static class HookReader
         {
             var property = _type.GetProperty(name, Declared);
             if (property == null || property.SetMethod != null) return new HookField(name);
-            if (property.GetMethod is not { } getter || !_inlining.Add(name)) throw new Gap($"gap: the property {name}");
-            try { return Value(ProgramReader.ReadReturnedValue(_type, getter, _read) ?? throw new Gap($"gap: the property {name}")); }
+            if (property.GetMethod is not { } getter || !_inlining.Add(name)) throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: the property {name}");
+            try { return Value(ProgramReader.ReadReturnedValue(_type, getter, _read) ?? throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: the property {name}")); }
             finally { _inlining.Remove(name); }
         }
 
@@ -642,7 +704,7 @@ public static class HookReader
             if (value is QueryValue { Name: "HittableEnemies" }) return HookTarget.AllEnemies;
             if (value is QueryValue { Name: "NextItem", Arguments: [QueryValue { Name: "HittableEnemies" }] }) return HookTarget.RandomEnemy;
             if (value is QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } }) return HookTarget.PowerOwner;
-            throw new Gap($"gap: acts on {value}");
+            throw new Gap(Other(value), $"gap: acts on {value}");
         }
 
         /// <summary>The power a temporary Strength or Dexterity power applies as it lands (its base class's BeforeApplied), or null for any other.</summary>
@@ -663,7 +725,7 @@ public static class HookReader
         /// </summary>
         private bool LandsAsDebuff(string power, HookValue amount)
         {
-            var powerType = _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + power) ?? throw new Gap($"gap: no power class {power}");
+            var powerType = _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + power) ?? throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: no power class {power}");
             var negative = amount is HookConstant { Value: < 0m };
             if (negative && Returned(powerType, "get_AllowNegative") is ConstantValue { Value: 1 }) return true;
             return Returned(powerType, "get_Type") is ConstantValue type && EnumName(powerType.Assembly, "PowerType", type.Value) == "Debuff";
@@ -766,7 +828,7 @@ public static class HookReader
                     return Test(storedTest.Value);
                 case QueryValue { Name: "Contains", Arguments: [QueryValue { Name: "Tags", Of: { } tagsOf }, ConstantValue tag] } when IsPlayCard(tagsOf):
                     return EnumName(_type.Assembly, "CardTag", tag.Value) is { } tagName && Enum.TryParse<SimCardTag>(tagName, out _)
-                        ? new HookFactValue(HookFact.CardTag) { Of = tagName } : throw new Gap($"gap: tests the card's tag {tag.Value}");
+                        ? new HookFactValue(HookFact.CardTag) { Of = tagName } : throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's tag {tag.Value}");
                 // A card drawn in a simulation is never the turn's hand draw.
                 case NamedValue { Name: "fromHandDraw" }:
                     return new HookConstant(0m);
@@ -821,7 +883,7 @@ public static class HookReader
                 case QueryValue { Name: "IsCardOrMonsterMove", Arguments: [var props] } when IsProps(props):
                     return new HookFactValue(HookFact.CardOrMonsterMove);
                 case QueryValue { Name: "Contains", Of: QueryValue { Name: "Keywords", Of: { } keywordsOf }, Arguments: [ConstantValue keyword] } when IsPlayCard(keywordsOf) || IsEventCard(keywordsOf):
-                    return EnumName(_type.Assembly, "CardKeyword", keyword.Value) == "Ethereal" ? new HookFactValue(HookFact.CardEthereal) : throw new Gap($"gap: tests the card's keyword {keyword.Value}");
+                    return EnumName(_type.Assembly, "CardKeyword", keyword.Value) == "Ethereal" ? new HookFactValue(HookFact.CardEthereal) : throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's keyword {keyword.Value}");
                 case QueryValue { Name: "is", Of: NamedValue { Name: "power" }, Type: var powerClass }:
                     return PowerIs(powerClass);
                 case QueryValue { Name: "is", Of: { } cardOf, Type: var cardClass } when IsEventCard(cardOf):
@@ -843,7 +905,7 @@ public static class HookReader
                 case var creatureTest when CreatureTest(creatureTest) is { } creatureFact:
                     return creatureFact;
                 default:
-                    throw new Gap($"gap: tests {test}");
+                    throw new Gap(ReaderCapabilities.OfValue(test), $"gap: tests {test}");
             }
         }
 
@@ -875,10 +937,10 @@ public static class HookReader
 
         /// <summary>A power class of this branch, by name (a gap for anything else: an interface, a base class).</summary>
         private string PowerClass(string name) =>
-            _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + name) is { IsInterface: false, IsAbstract: false } ? name : throw new Gap($"gap: tests a power {name}");
+            _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + name) is { IsInterface: false, IsAbstract: false } ? name : throw new Gap(ReaderCapability.OwnerPowers, $"gap: tests a power {name}");
 
         private string RelicClass(string name) =>
-            _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Relics." + name) is { IsInterface: false, IsAbstract: false } ? name : throw new Gap($"gap: tests a relic {name}");
+            _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Relics." + name) is { IsInterface: false, IsAbstract: false } ? name : throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: tests a relic {name}");
 
         /// <summary>
         /// The creature a value names: the owner, the damage's dealer or target (a Modify, block or hit hook's), the creature that died (AfterDeath's),
@@ -968,7 +1030,7 @@ public static class HookReader
             if (compare.Left is QueryValue { Type: "CardModel", Name: "Type", Of: { } typeOf } && (IsPlayCard(typeOf) || IsEventCard(typeOf)) && compare.Right is ConstantValue cardType)
             {
                 var simType = EnumName(_type.Assembly, "CardType", cardType.Value) is { } typeName && Enum.TryParse<SimCardType>(typeName, out var parsed) ? parsed
-                    : throw new Gap($"gap: a card type {cardType.Value}");
+                    : throw new Gap(ReaderCapability.CardFacts, $"gap: a card type {cardType.Value}");
                 return new HookMath(OperationOf(compare.Op), new HookFactValue(HookFact.CardType), new HookConstant((int)simType));
             }
             if (compare.Left is QueryValue { Name: "GetTypeForAmount", Of: NamedValue { Name: "power" } } && compare.Right is ConstantValue powerType
@@ -978,7 +1040,7 @@ public static class HookReader
                 {
                     "Debuff" => new HookFactValue(HookFact.PowerIsDebuff),
                     "Buff" => Not(new HookFactValue(HookFact.PowerIsDebuff)),
-                    var other => throw new Gap($"gap: a power type {other}"),
+                    var other => throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: a power type {other}"),
                 };
                 return compare.Op == Comparison.Equal ? debuff : Not(debuff);
             }
@@ -1009,7 +1071,7 @@ public static class HookReader
                 return IsPlayCard(card) ? new HookFactValue(HookFact.PlayIsOwners)
                     : IsEventCard(card) ? new HookFactValue(HookFact.EventIsOwners)
                     : IsSourceCard(card) ? new HookFactValue(HookFact.CardIsOwners)
-                    : throw new Gap($"gap: compares the owner with {other}");
+                    : throw new Gap(ReaderCapabilities.OfValue(other, otherwise: ReaderCapability.CreatureSide), $"gap: compares the owner with {other}");
             if (IsDead(other)) return new HookFactValue(HookFact.DeadIsOwner);
             if (IsCreator(other)) return new HookFactValue(HookFact.EventIsOwners);
             if (IsDealer(other)) return new HookFactValue(HookFact.DealerIsOwner);
@@ -1020,7 +1082,7 @@ public static class HookReader
                 return new HookFactValue(HookFact.EventIsOwners);
             // Another creature the code names (a pet's player, a creature's player): the creatures' comparison (CreatureCompare).
             if (CreatureOf(other) != null) return null;
-            throw new Gap($"gap: compares the owner with {other}");
+            throw new Gap(ReaderCapabilities.OfValue(other, otherwise: ReaderCapability.CreatureSide), $"gap: compares the owner with {other}");
         }
 
         private HookValue PowerIs(string powerClass)
@@ -1030,7 +1092,7 @@ public static class HookReader
             // An interface (ITemporaryPower): the power classes that are one, read from the game's types.
             var classes = HookReader.Powers(_type.Assembly.GetTypes()).Where(type => type.GetInterfaces().Any(implemented => implemented.Name == powerClass))
                 .Select(type => type.Name).OrderBy(name => name, StringComparer.Ordinal).ToList();
-            return classes.Count == 0 ? throw new Gap($"gap: tests the power is {powerClass}") : new HookFactValue(HookFact.PowerIn) { Of = string.Join(",", classes) };
+            return classes.Count == 0 ? throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: tests the power is {powerClass}") : new HookFactValue(HookFact.PowerIn) { Of = string.Join(",", classes) };
         }
 
         // ---- values
@@ -1076,7 +1138,7 @@ public static class HookReader
                     {
                         1 => new HookConstant(numbers[0]),
                         5 => new HookConstant(new decimal((int)numbers[0], (int)numbers[1], (int)numbers[2], numbers[3] != 0, (byte)numbers[4])),
-                        _ => throw new Gap($"gap: a decimal {value}"),
+                        _ => throw new Gap(ReaderCapability.Arithmetic, $"gap: a decimal {value}"),
                     };
                 }
                 case QueryValue { Name: "Amount", Of: NamedValue { Name: "this" }, Type: "PowerModel" }:
@@ -1104,7 +1166,7 @@ public static class HookReader
                     return new HookMath(arithmetic.Op switch
                     {
                         "add" => HookOperation.Add, "sub" => HookOperation.Subtract, "mul" => HookOperation.Multiply, "div" => HookOperation.Divide, "rem" => HookOperation.Remainder,
-                        _ => throw new Gap($"gap: {arithmetic.Op}"),
+                        _ => throw new Gap(ReaderCapability.Arithmetic, $"gap: {arithmetic.Op}"),
                     }, Value(arithmetic.Left), Value(arithmetic.Right));
                 case QueryValue { Type: "Decimal", Name: var operatorName, Arguments: [var left, var right] } when OperatorOf(operatorName) is { } operation:
                     return new HookMath(operation, Value(left), Value(right));
@@ -1154,7 +1216,7 @@ public static class HookReader
             if (value is WaysValue ways)
                 return new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), Value(way.Value))).ToList());
             if (value is QueryValue { Of: { } receiver } call && ModelCall(call, receiver) is { } called) return called;
-            throw new Gap($"gap: the value {value}");
+            throw new Gap(ReaderCapabilities.OfValue(value), $"gap: the value {value}");
         }
 
         /// <summary>
@@ -1164,7 +1226,7 @@ public static class HookReader
         private HookValue History(QueryValue code)
         {
             var reading = HistoryQueryReader.Read(code, (enumType, number) => EnumName(_type.Assembly, enumType, number));
-            if (reading.Query is not { } query) throw new Gap($"gap: the fight's log ({reading.Gap}: {reading.Why}): {code}");
+            if (reading.Query is not { } query) throw new Gap(ReaderCapability.FightLog, $"gap: the fight's log ({reading.Gap}: {reading.Why}): {code}");
             return new HookHistory(query) { Any = reading.AsksAny };
         }
 
@@ -1195,10 +1257,10 @@ public static class HookReader
             foreach (var (when, getter) in receivers)
             {
                 var (_, model, relic) = Getter(getter)!.Value;
-                var calleeType = _type.Assembly.GetType((relic ? "MegaCrit.Sts2.Core.Models.Relics." : "MegaCrit.Sts2.Core.Models.Powers.") + model) ?? throw new Gap($"gap: no class {model}");
+                var calleeType = _type.Assembly.GetType((relic ? "MegaCrit.Sts2.Core.Models.Relics." : "MegaCrit.Sts2.Core.Models.Powers.") + model) ?? throw new Gap(ReaderCapability.ModelCall, $"gap: no class {model}");
                 var method = calleeType.GetMethods(Declared).FirstOrDefault(candidate => candidate.Name == call.Name && candidate.GetParameters().Length == call.Arguments.Count)
-                    ?? throw new Gap($"gap: {model}.{call.Name} not found");
-                if (method.ReturnType.Name != "Decimal") throw new Gap($"gap: {model}.{call.Name} gives a {method.ReturnType.Name}");
+                    ?? throw new Gap(ReaderCapability.ModelCall, $"gap: {model}.{call.Name} not found");
+                if (method.ReturnType.Name != "Decimal") throw new Gap(ReaderCapability.ModelCall, $"gap: {model}.{call.Name} gives a {method.ReturnType.Name}");
                 var returned = ProgramReader.ReadReturnedWays(calleeType, method, _read);
                 // Its parameters are the caller's arguments, its own model (this) the one got from the creature: one map, so neither is read as the other.
                 var parameters = method.GetParameters().Select((parameter, index) => (parameter.Name!, call.Arguments[index])).ToDictionary(pair => pair.Item1, pair => pair.Item2, StringComparer.Ordinal);
@@ -1209,7 +1271,7 @@ public static class HookReader
                     NamedValue { Name: var name } when parameters.TryGetValue(name, out var argument) => argument,
                     _ => null,
                 });
-                if (mapped.Parts().Any(part => part is QueryValue { Name: "DynamicVars", Of: var varsOf } && Equals(varsOf, getter))) throw new Gap($"gap: {model}.{call.Name} reads its own values");
+                if (mapped.Parts().Any(part => part is QueryValue { Name: "DynamicVars", Of: var varsOf } && Equals(varsOf, getter))) throw new Gap(ReaderCapability.ModelCall, $"gap: {model}.{call.Name} reads its own values");
                 ways.Add(new HookWay(when == null ? new HookConstant(1m) : Condition(when) ?? new HookConstant(1m), Ways(mapped)));
             }
             return ways.Count == 1 && ways[0].When is HookConstant { Value: 1m } ? ways[0].Value : new HookWays(ways);
@@ -1279,7 +1341,7 @@ public static class HookReader
         /// <summary>A Modify hook's returns: each way's test and value, the first that holds.</summary>
         private HookValue Ways(WaysValue ways)
         {
-            if (ways.Ways.Count == 0) throw new Gap("gap: no return read");
+            if (ways.Ways.Count == 0) throw new Gap(ReaderCapability.ValueNotFollowed, "gap: no return read");
             return new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), Value(way.Value))).ToList());
         }
 
@@ -1398,10 +1460,14 @@ public static class HookReader
 
         // ---- what values are
 
-        /// <summary>The model's owner: base.Owner (a power's creature, a relic's player), its player or creature.</summary>
+        /// <summary>
+        /// The model's owner: base.Owner (a power's creature, a relic's, a potion's or an orb's player), an enchantment's or affliction's card's
+        /// owner (base.Card.Owner), its player or creature.
+        /// </summary>
         private static bool IsOwner(ProgramValue value) => value switch
         {
-            QueryValue { Name: "Owner", Of: NamedValue { Name: "this" }, Type: "PowerModel" or "RelicModel" or "AbstractModel" } => true,
+            QueryValue { Name: "Owner", Of: NamedValue { Name: "this" }, Type: "PowerModel" or "RelicModel" or "AbstractModel" or "PotionModel" or "OrbModel" } => true,
+            QueryValue { Name: "Owner", Of: QueryValue { Name: "Card", Of: NamedValue { Name: "this" }, Type: "EnchantmentModel" or "AfflictionModel" } } => true,
             QueryValue { Name: "Player" or "Creature", Of: { } of } => IsOwner(of),
             _ => false,
         };

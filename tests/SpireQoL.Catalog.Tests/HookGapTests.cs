@@ -1,98 +1,50 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using SpireQoL.Diagnostics;
 using SpireQoL.Sim;
 using Xunit;
 
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// What each hand-written model's game class still needs before it can be read from its code (decision #195): every hook body's first gap, on
-/// beta, named by the reader capability it waits on, and each capability with the classes it blocks (Snapshots/hook-gaps.txt, regenerated with
-/// SPIREQOL_UPDATE_SNAPSHOT=1). A class blocked by several capabilities counts in each; "alone" counts the classes it's the last one for. The
-/// reader stops a body at its first gap, so a body can need more than its line says: the measurement is a floor, by what the code reads to.
+/// What each game model still needs before it's read from its code (decision #195), measured by the reader capability each gap waits on, which the
+/// reader names where it stops (HookReading.Capability, a ReaderCapability: round eight). Two snapshots, regenerated with SPIREQOL_UPDATE_SNAPSHOT=1:
+/// Snapshots/hook-gaps.txt, each hand-written model's game class on beta, every hook body's first gap; and Snapshots/model-kinds.txt, every kind on
+/// both branches (powers and relics in totals; every enchantment, affliction, potion and orb with how it's handled and its bodies' first gaps; the
+/// adapter's per-class reading tables, with what would replace each entry), and the capabilities by the classes they'd unlock across every kind. A
+/// class blocked by several capabilities counts in each; "alone" counts the classes it's the last one for. The reader stops a body at its first gap,
+/// so the measurement is a floor, by what the code reads to.
 /// </summary>
 public class HookGapTests
 {
-    /// <summary>
-    /// A gap's capability, by what the reader says it couldn't follow: the first pattern that matches, in order (the specific before the general).
-    /// A gap no pattern names fails the test, so a new kind of gap gets a name before it's counted.
-    /// </summary>
-    private static readonly (string Pattern, string Capability)[] Capabilities =
-    {
-        (@"ModifyVulnerableMultiplier|ModifyWeakMultiplier", "a call into another model's method, its owner rebound (Paper Phrog, Paper Krane, Cruelty, Debilitate)"),
-        (@"Instance\.History|the fight's log", "the fight's log (the history ledger, decision #191)"),
-        (@"the value \{|compares the owner with \{", "a value of several ways (a local set on each branch, merged)"),
-        (@"read model's (AfterAttack|BeforeAttack)\b", "hooks: BeforeAttack and AfterAttack"),
-        (@"commandToModify", "hooks: BeforeAttack and AfterAttack"),
-        (@"read model's (ModifyHpLost\w*|AfterModifyingHpLost\w*)", "the HP-loss pipeline"),
-        (@"read model's (ModifyDamageCap|AfterModifyingDamageAmount)", "the damage cap and AfterModifyingDamageAmount"),
-        (@"read model's (ModifyCardPlayResultLocation|AfterModifyingCardPlayResultLocation)", "the play's result location (ModifyCardPlayResultLocation)"),
-        (@"read model's AfterApplied", "hooks: AfterApplied"),
-        (@"read model's BeforeDamageReceived", "hooks: BeforeDamageReceived"),
-        (@"read model's (AfterBlockBroken|ShouldClearBlock|AfterModifyingBlockAmount|AfterBlockGained|AfterBlockCleared|AfterPreventingBlockClear)", "hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount)"),
-        (@"read model's AfterCurrentHpChanged", "hooks: AfterCurrentHpChanged"),
-        (@"read model's AfterCardEnteredCombat", "hooks: AfterCardEnteredCombat"),
-        (@"read model's (AfterArrowShot|AfterArrowImpaled)|arrow\.owner|DislodgeAllArrows", "arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner)"),
-        (@"read model's AfterOrbChanneled|OrbCmd\.EvokeLast|an orb made first", "orbs (AfterOrbChanneled, EvokeLast, an orb made first)"),
-        (@"read model's (ModifyPowerAmountGiven\w*|AfterModifyingPowerAmountGiven|BeforePowerAmountChanged)", "hooks: the power amount given"),
-        (@"read model's (TryModifyEnergyCost\w*|TryModifyStarCost|TryModifyKeywordsInCombat|ModifyXValue)", "card costs and keywords (cards' own hooks, Part B3)"),
-        (@"read model's (ModifyHandDraw|AfterModifyingHandDraw)", "hooks: the hand draw"),
-        (@"read model's (AfterTakingExtraTurn|ShouldTakeExtraTurn\w*)|acts as a side's turn starts", "a turn's start (the enemies' turn start, an extra turn)"),
-        (@"read model's GetScaledAmountForMultiplayer|Players.Count", "multiplayer scaling (GetScaledAmountForMultiplayer)"),
-        (@"read model's (ShouldStopCombatFromEnding|ShouldCreatureBeRemovedFromCombatAfterDeath|ShouldPowerBeRemovedAfterOwnerDeath)", "a death the game holds back (ShouldStopCombatFromEnding and the like)"),
-        (@"read model's (AfterHandEmptied|ShouldPlay|BeforePotionUsed)", "hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed)"),
-        (@"PlayerCmd\.GainStars", "commands: GainStars"),
-        (@"CardCmd\.ApplyKeyword|CardCmd\.Upgrade|SetToFreeThisTurn", "commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn)"),
-        (@"AddGeneratedCardToCombat|makes a ", "commands: a card made (AddGeneratedCardToCombat, a made card)"),
-        (@"AutoPlayFromDrawPile", "commands: AutoPlayFromDrawPile"),
-        (@"OstyCmd\.", "commands: OstyCmd.Summon"),
-        (@"CreatureCmd\.Stun|CreatureCmd\.Kill|SetStunned", "outcomes: a stun or a kill (outcome tabs)"),
-        (@"(\w+)\.\w+ isn't translated|the value value$|the value direction$", "a model's own method (its body read where it's called)"),
-        (@"the value \?\w", "a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)"),
-        (@"applied by someone else", "a power applied by someone other than its owner"),
-        (@"PowerCmd\.\w+ of another power", "a command on another power (PowerCmd.Remove of another)"),
-        (@"TurnNumber", "the turn number"),
-        (@"PlayerCombatState\.Energy", "the owner's energy"),
-        (@"a loop", "a loop over items (creatures, cards)"),
-        (@"a pick", "a pick"),
-        (@"changes its own data|uses its own field|changes a collection|GetInternalData|the value null|the value cardPlay", "its own data: a card or a play kept, a field used directly"),
-        (@"acts on |damage to |block for |a heal for ", "a command on another creature (the players, a card's owner, a roll's list)"),
-        (@"HasFlag|IsCardOrMonsterMove", "queries: the damage's or block's props"),
-        (@"\.Side\b|the value side|tests (dealer|target)\b|the value dealer|IsMonster", "queries: a creature's side or presence"),
-        (@"CurrentHp", "queries: a creature's HP"),
-        (@"compares the owner with player", "queries: the hook's player (a shuffle's)"),
-        (@"cardSource|causedByEthereal|IsAutoPlay|Keywords|the value cardPlay\.Card|EnergyCost\.CostsX|Affliction is","queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)"),
-        (@"the value amount", "queries: the hook's amount (AfterStarsSpent's)"),
-        (@"result\.(TotalDamage|UnblockedDamage)", "queries: the hit's result"),
-        (@"Pow\b|op_UnaryNegation", "queries: arithmetic (Math.Pow, a negation)"),
-        (@"the value card\.Owner", "queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)"),
-        (@"this\.Owner\.Powers", "queries: the owner's powers"),
-        (@"Applier", "queries: the power's applier (alive, its side)"),
-    };
+    private static string SnapshotPath(string file) => Path.Combine(HookProgramTests.RepoRoot(), "tests", "SpireQoL.Catalog.Tests", "Snapshots", file);
 
-    /// <summary>The capability a gap waits on (a monster's or another model's state set is its own kind: read from the class it sets).</summary>
-    private static string CapabilityOf(string gap, Func<string, bool> isMonster)
-    {
-        var set = Regex.Match(gap, @"(?:sets|stores) (\w+)\.\w+ where|changes a game object outside a command \((\w+)\.");
-        if (set.Success)
-        {
-            var declaring = set.Groups[1].Success ? set.Groups[1].Value : set.Groups[2].Value;
-            if (isMonster(declaring)) return "a monster's own state set (its flag, its next move)";
-            if (declaring != "CardModel") return "another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount)";
-        }
-        foreach (var (pattern, capability) in Capabilities)
-            if (Regex.IsMatch(gap, pattern)) return capability;
-        throw new InvalidOperationException($"no capability names the gap \"{gap}\": add one to HookGapTests.Capabilities");
-    }
+    /// <summary>A gap's capability's words: every gap the reader names carries one.</summary>
+    private static string CapabilityOf(HookReading hook, string kind) =>
+        hook.Capability is not { } capability ? throw new InvalidOperationException($"{hook}: a gap with no capability (HookReader names one where it stops)")
+        : capability == ReaderCapability.EffectNotRun ? $"the engine runs no read {kind} (its bodies read whole but for that)" : ReaderCapabilities.Text(capability);
 
     [Fact]
     public void EachHandWrittenModelsGapsAreTheSnapshots()
     {
         if (!File.Exists(BranchCode.BetaPath)) return; // no decompile here (docs/DEVELOPMENT.md "Decompiled game source")
         using var code = new BranchCode(BranchCode.BetaPath);
+        var byClass = HandWrittenGaps(code);
+        var text = new StringBuilder();
+        text.Append("# The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by the capability the reader names.\n");
+        text.Append($"# {byClass.Count} hand-written models.\n\n## Capabilities, by the classes each blocks (alone: the classes it's the last one for)\n\n");
+        AppendCapabilities(text, byClass);
+        text.Append("\n## Classes, each hook body's gap in reading order\n\n");
+        foreach (var (name, gaps) in byClass)
+            text.Append($"{name}: {string.Join(" | ", gaps.Select(gap => $"[{gap.Capability}] {gap.Gap}"))}\n");
+        Matches("hook-gaps.txt", text.ToString(), "the hand-written models' gaps");
+    }
+
+    /// <summary>Each hand-written model's game class's gaps on beta, in name order.</summary>
+    private static List<(string Class, List<(string Capability, string Gap)> Gaps)> HandWrittenGaps(BranchCode code)
+    {
         var types = code.Assembly.GetTypes();
         var classes = HookReader.Powers(types).Concat(HookReader.Relics(types)).ToDictionary(type => type.Name, StringComparer.Ordinal);
-        var monsters = types.Where(type => Derives(type, "MonsterModel")).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
         var byClass = new List<(string Class, List<(string Capability, string Gap)> Gaps)>();
         foreach (var name in SimModels.HandWrittenNames.Order(StringComparer.Ordinal))
         {
@@ -102,30 +54,231 @@ public class HookGapTests
                 continue;
             }
             var reading = HookReader.Read(type, code.Read);
-            var gaps = reading.Hooks.Where(hook => !hook.Read).Select(hook => (CapabilityOf(hook.Gap!, monsters.Contains), $"{hook.Hook}: {Shortened(hook.Gap!)}")).ToList();
+            var kind = HookReader.Relics(new[] { type }).Any() ? "relic" : "power";
+            var gaps = reading.Hooks.Where(hook => !hook.Read).Select(hook => (CapabilityOf(hook, kind), $"{hook.Hook}: {Shortened(hook.Gap!)}")).ToList();
             // A class with no hook of its own: what it does is in another class's code (Sovereign Blade's plays read Parry, Seeking Edge).
             if (gaps.Count == 0 && reading.Hooks.Count == 0) gaps.Add(("the simulator's own model (its game class has no hooks: another class's code reads it)", "no hooks"));
             if (gaps.Count == 0) gaps.Add(("read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule)", "read whole"));
             byClass.Add((name, gaps));
         }
-        var text = new StringBuilder();
-        text.Append("# The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by capability.\n");
-        text.Append($"# {byClass.Count} hand-written models.\n\n## Capabilities, by the classes each blocks (alone: the classes it's the last one for)\n\n");
+        return byClass;
+    }
+
+    private static void AppendCapabilities(StringBuilder text, IEnumerable<(string Class, List<(string Capability, string Gap)> Gaps)> byClass)
+    {
         var capabilities = byClass.SelectMany(entry => entry.Gaps.Select(gap => gap.Capability).Distinct().Select(capability => (capability, entry.Class, Alone: entry.Gaps.All(gap => gap.Capability == capability))))
             .GroupBy(entry => entry.capability).OrderByDescending(group => group.Count(entry => entry.Alone)).ThenByDescending(group => group.Count()).ThenBy(group => group.Key, StringComparer.Ordinal);
         foreach (var group in capabilities)
             text.Append($"{group.Key}: {group.Count()} classes, {group.Count(entry => entry.Alone)} alone: {string.Join(", ", group.Select(entry => entry.Alone ? entry.Class + "*" : entry.Class))}\n");
-        text.Append("\n## Classes, each hook body's gap in reading order\n\n");
-        foreach (var (name, gaps) in byClass)
-            text.Append($"{name}: {string.Join(" | ", gaps.Select(gap => $"[{gap.Capability}] {gap.Gap}"))}\n");
-        var path = Path.Combine(HookProgramTests.RepoRoot(), "tests", "SpireQoL.Catalog.Tests", "Snapshots", "hook-gaps.txt");
+    }
+
+    /// <summary>The other kinds the simulator handles: their folder, base class and the word for one.</summary>
+    private static readonly (string Folder, string Base, string Kind)[] OtherKinds =
+    {
+        ("Enchantments", "EnchantmentModel", "enchantment"), ("Afflictions", "AfflictionModel", "affliction"), ("Potions", "PotionModel", "potion"), ("Orbs", "OrbModel", "orb"),
+    };
+
+    /// <summary>
+    /// Every kind measured, on both branches: powers' and relics' totals (read from code, hand-written, by the rule's gaps); every enchantment,
+    /// affliction, potion and orb with how the mod handles it now (read live through the game's own code, a per-name rule in the adapter or the engine,
+    /// a simulator kind, its ledger review) and each body's first gap; the adapter's per-class reading tables; and the capabilities across every kind.
+    /// </summary>
+    [Fact]
+    public void EveryKindIsMeasured()
+    {
+        if (!File.Exists(BranchCode.BetaPath) || !File.Exists(BranchCode.MainPath)) return;
+        using var beta = new BranchCode(BranchCode.BetaPath);
+        using var main = new BranchCode(BranchCode.MainPath);
+        var sources = ModSources();
+        var text = new StringBuilder();
+        text.Append("# Every kind of game model as the simulator handles it (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta and main.\n");
+        text.Append("# Each body's first gap by the capability the reader names (decision #195, round eight). A measurement: a floor, by what the code reads to.\n\n");
+
+        // ---- powers and relics: totals
+        text.Append("## Powers and relics\n\n");
+        foreach (var (branch, code) in new[] { ("beta", beta), ("main", main) })
+        {
+            var types = code.Assembly.GetTypes();
+            var read = ReadModels.Specs(types, code.Read).Where(spec => spec.Unread == null).Select(spec => spec.Name).ToHashSet(StringComparer.Ordinal);
+            foreach (var (kind, classes) in new[] { ("powers", HookReader.Powers(types).ToList()), ("relics", HookReader.Relics(types).ToList()) })
+            {
+                var withHooks = classes.Where(type => HookReader.Hooks(type).Any()).ToList();
+                var handWritten = classes.Count(type => SimModels.IsHandWritten(type.Name));
+                var fromCode = classes.Count(type => read.Contains(type.Name));
+                text.Append($"{branch} {kind}: {classes.Count} classes, {withHooks.Count} with hooks; read from code {fromCode}, hand-written {handWritten}, neither {withHooks.Count(type => !read.Contains(type.Name) && !SimModels.IsHandWritten(type.Name))} (each by its first gap: Snapshots/hook-readings.txt)\n");
+            }
+        }
+
+        // ---- the other kinds
+        var byClass = HandWrittenGaps(beta).Select(entry => (Class: entry.Class, entry.Gaps)).ToList();
+        foreach (var (folder, baseName, kind) in OtherKinds)
+        {
+            var betaTypes = ClassesOf(beta, folder, baseName);
+            var mainTypes = ClassesOf(main, folder, baseName);
+            var names = betaTypes.Keys.Union(mainTypes.Keys, StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+            var lines = new List<string>();
+            var handled = new Dictionary<string, int>(StringComparer.Ordinal);
+            foreach (var name in names)
+            {
+                var branches = betaTypes.ContainsKey(name) && mainTypes.ContainsKey(name) ? "both" : betaTypes.ContainsKey(name) ? "beta only" : "main only";
+                var type = betaTypes.GetValueOrDefault(name) ?? mainTypes[name];
+                var code = betaTypes.ContainsKey(name) ? beta : main;
+                var (category, how) = HandledBy(name, kind, sources);
+                var readings = HookReader.ReadEffects(type, code.Read);
+                var gaps = new List<(string Capability, string Gap)>();
+                var parts = new List<string>();
+                foreach (var reading in readings)
+                {
+                    if (reading.NotRun != null) { parts.Add($"{reading.Hook}: not run ({reading.NotRun})"); continue; }
+                    if (CalledLive(reading.Hook, sources)) { parts.Add($"{reading.Hook}: called live (the adapter runs the game's own code)"); continue; }
+                    var capability = CapabilityOf(reading, kind);
+                    if (branches != "main only") gaps.Add((capability, reading.Hook));
+                    parts.Add($"{reading.Hook}: [{capability}] {Shortened(reading.Gap!)}");
+                }
+                if (branches != "main only" && gaps.Count > 0) byClass.Add(($"{name} ({kind})", gaps));
+                if (category == "not modelled by name" && readings.Any(reading => reading.NotRun == null && CalledLive(reading.Hook, sources))) category = "the game's own code, called live";
+                if (category == "not modelled by name" && readings.Count == 0) category = "no hooks";
+                handled[category] = handled.GetValueOrDefault(category) + 1;
+                lines.Add($"{name} ({branches}; {how}): {(parts.Count == 0 ? "no hooks" : string.Join(" | ", parts))}");
+            }
+            text.Append($"\n## {folder}: {names.Count} classes (beta {betaTypes.Count}, main {mainTypes.Count}); handled: {string.Join(", ", handled.OrderByDescending(pair => pair.Value).ThenBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key} {pair.Value}"))}\n\n");
+            foreach (var line in lines) text.Append(line).Append('\n');
+        }
+
+        // ---- the adapter's per-class reading tables
+        text.Append("\n## The adapter's per-class readings and name gates (what a read model's own fields and values would replace)\n\n");
+        foreach (var line in AdapterTables(beta, sources)) text.Append(line).Append('\n');
+
+        // ---- the capabilities across every kind
+        text.Append("\n## Capabilities across every kind, by the classes each blocks on beta (alone: the classes it's the last one for; hand-written powers and relics and every other kind's class with a body to read)\n\n");
+        AppendCapabilities(text, byClass);
+        Matches("model-kinds.txt", text.ToString(), "every kind's measurement");
+    }
+
+    /// <summary>A kind's classes on a branch, by name.</summary>
+    private static Dictionary<string, Type> ClassesOf(BranchCode code, string folder, string baseName) =>
+        code.Assembly.GetTypes().Where(type => type.Namespace == "MegaCrit.Sts2.Core.Models." + folder && !type.IsAbstract && !type.IsNested && Derives(type, baseName))
+            .ToDictionary(type => type.Name, StringComparer.Ordinal);
+
+    /// <summary>The mod's own code (not generated, not the ledger's reviews or the menu's words), by path from the mod's folder.</summary>
+    private static Dictionary<string, string> ModSources()
+    {
+        var root = Path.Combine(HookProgramTests.RepoRoot(), "mods", "SpireQoL");
+        return Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories)
+            .Select(path => (Relative: Path.GetRelativePath(root, path).Replace('\\', '/'), path))
+            .Where(file => !file.Relative.StartsWith("obj/", StringComparison.Ordinal) && !file.Relative.StartsWith("bin/", StringComparison.Ordinal) && !file.Relative.EndsWith(".g.cs", StringComparison.Ordinal)
+                && !file.Relative.StartsWith("Diagnostics/CoverageLedger", StringComparison.Ordinal) && !file.Relative.StartsWith("Menu/", StringComparison.Ordinal) && file.Relative != "Cards/GameIcons.cs")
+            .ToDictionary(file => file.Relative, file => StripComments(File.ReadAllText(file.path)), StringComparer.Ordinal);
+    }
+
+    private static string StripComments(string source) => Regex.Replace(source, @"//[^\n]*", "");
+
+    /// <summary>
+    /// How the mod handles a class of another kind now: a simulator kind of its own (an orb's OrbKind, an affliction's SimAffliction: the engine's
+    /// or the models' rules for it), a per-name rule where the mod's code names it (the adapter, the engine, a feature), or nothing but its ledger
+    /// review; then the ledger's status.
+    /// </summary>
+    private static (string Category, string Detail) HandledBy(string name, string kind, Dictionary<string, string> sources)
+    {
+        var how = new List<string>();
+        var category = "not modelled by name";
+        if (kind == "orb" && Enum.TryParse<OrbKind>(name.EndsWith("Orb", StringComparison.Ordinal) ? name[..^3] : name, out var orb) && orb is not (OrbKind.Unknown or OrbKind.Random))
+        {
+            how.Add($"the engine's rules for OrbKind.{orb}");
+            category = "a simulator kind of its own";
+        }
+        if (kind == "affliction" && Enum.TryParse<SimAffliction>(name, out var affliction) && affliction != SimAffliction.Other)
+        {
+            how.Add($"SimAffliction.{affliction}, tested by the models");
+            category = "a simulator kind of its own";
+        }
+        // Named as a class: nameof, a type pattern or a switch arm on it, its namespace's name, or its name as a text.
+        var pattern = $@"nameof\({name}\)|""{name}""|\.(Enchantments|Afflictions|Potions|Orbs)\.{name}\b|\bis {name}\b|\b{name}\s*=>|<{name}>";
+        var named = sources.Where(source => Regex.IsMatch(source.Value, pattern)).Select(source => source.Key).Order(StringComparer.Ordinal).ToList();
+        if (named.Count > 0)
+        {
+            how.Add("named in " + string.Join(", ", named));
+            if (category == "not modelled by name") category = "a per-name rule";
+        }
+        var review = CoverageLedger.ReviewedEntries.TryGetValue(name, out var note) ? note.Split(':')[0] : "no review";
+        return (category, $"{(how.Count == 0 ? category : string.Join(" and ", how))}; ledger: {review}");
+    }
+
+    /// <summary>A hook the adapter calls on the game's own object (the enchantment's damage and block math): the game's code runs it live.</summary>
+    private static bool CalledLive(string hook, Dictionary<string, string> sources) =>
+        sources.Where(source => source.Key.StartsWith("Sim/Adapter/", StringComparison.Ordinal)).Any(source => Regex.IsMatch(source.Value, $@"\.{hook}\("));
+
+    /// <summary>
+    /// The adapter's per-class readings (SimReaders.Read's powers, SimReaders.Relics', RelicAmountVars) and every other per-class name in the adapter
+    /// and the procs (a name gate): each class, what it reads (its own field or value, or the game's), and whether a read model would replace it.
+    /// </summary>
+    private static IEnumerable<string> AdapterTables(BranchCode beta, Dictionary<string, string> sources)
+    {
+        var types = beta.Assembly.GetTypes();
+        var models = HookReader.Powers(types).Concat(HookReader.Relics(types)).ToDictionary(type => type.Name, StringComparer.Ordinal);
+        var lines = new List<string>();
+        var readers = sources["Sim/Adapter/SimReaders.cs"];
+        foreach (var (table, start, end) in new[] { ("SimReaders.Read (powers)", "Read(PowerModel power", "return (name, amount, data);"), ("SimReaders.Relics", "public static RelicSet Relics(Player player)", "return set;") })
+        {
+            var body = readers[readers.IndexOf(start, StringComparison.Ordinal)..];
+            body = body[..body.IndexOf(end, StringComparison.Ordinal)];
+            foreach (var chunk in Regex.Split(body, @"(?=case nameof\()").Where(chunk => chunk.StartsWith("case nameof(", StringComparison.Ordinal)))
+            {
+                var label = chunk[..chunk.IndexOf(':')];
+                var classes = Regex.Matches(label, @"nameof\((\w+)\)").Select(match => match.Groups[1].Value).ToList();
+                var members = Regex.Matches(chunk, @"(Var|Private(?:<[^>]+>)?|Internal)\((?:\w+), ""(\w+)""").Select(match => (Kind: match.Groups[1].Value.StartsWith("Var", StringComparison.Ordinal) ? "value" : "field", Name: match.Groups[2].Value)).ToList();
+                var game = new[] { "DisplayAmount", "Applier", "Owner.Powers", "MaxHp", "ArrowsIn", "HitCounter", "CopiesFrom" }.Where(member => chunk.Contains(member, StringComparison.Ordinal)).ToList();
+                foreach (var name in classes) lines.Add($"{table}: {name}: {Replaced(name, members, game, models)}");
+            }
+        }
+        foreach (Match entry in Regex.Matches(readers, @"\[nameof\((\w+)\)\] = Var\(""(\w+)"""))
+            lines.Add($"SimReaders.RelicAmountVars: {entry.Groups[1].Value}: {Replaced(entry.Groups[1].Value, new() { ("value", entry.Groups[2].Value) }, new(), models)}");
+        // Every other per-class name in the adapter and the procs: a gate on a power's or relic's class by its name.
+        var gates = sources.Where(source => (source.Key.StartsWith("Sim/Adapter/", StringComparison.Ordinal) || source.Key.StartsWith("Procs/", StringComparison.Ordinal)) && source.Key != "Sim/Adapter/SimReaders.cs")
+            .SelectMany(source => Regex.Matches(source.Value, @"nameof\((\w+)\)|""(\w+)""").Select(match => match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value)
+                .Where(models.ContainsKey).Select(name => (name, source.Key)))
+            .GroupBy(gate => gate.name, StringComparer.Ordinal).OrderBy(group => group.Key, StringComparer.Ordinal);
+        var readFromCode = ReadModels.Specs(types, beta.Read).Where(spec => spec.Unread == null).Select(spec => spec.Name).ToHashSet(StringComparer.Ordinal);
+        foreach (var group in gates)
+            lines.Add($"name gate: {group.Key} in {string.Join(", ", group.Select(gate => gate.Key).Distinct().Order(StringComparer.Ordinal))}: "
+                + (SimModels.IsHandWritten(group.Key) ? "hand-written: goes with its model" : readFromCode.Contains(group.Key) ? "read from code: a gate its reading could replace" : "not modelled from code: a gate to replace by a rule"));
+        return lines;
+    }
+
+    /// <summary>What would replace one class's reading: a read model's own fields and values (all its own), or more (what it reads of the game).</summary>
+    private static string Replaced(string name, List<(string Kind, string Name)> members, List<string> game, Dictionary<string, Type> models)
+    {
+        var reads = members.Select(member => $"its own {member.Kind} {member.Name}").Concat(game.Select(member => $"the game's {member}")).ToList();
+        var handWritten = SimModels.IsHandWritten(name) ? "hand-written" : "read from code";
+        var replaced = game.Count == 0 && members.Count > 0 ? "a read model's own fields and values replace it" : "needs more than its own fields and values";
+        return $"{handWritten}; reads {(reads.Count == 0 ? "nothing named" : string.Join(", ", reads))}: {replaced}{(models.ContainsKey(name) ? "" : " (no game class by its name)")}";
+    }
+
+    private static void Matches(string file, string text, string what)
+    {
+        var path = SnapshotPath(file);
         if (Environment.GetEnvironmentVariable("SPIREQOL_UPDATE_SNAPSHOT") == "1")
         {
-            File.WriteAllText(path, text.ToString());
+            File.WriteAllText(path, text);
             return;
         }
         Assert.True(File.Exists(path), $"missing {path}: generate it with SPIREQOL_UPDATE_SNAPSHOT=1");
-        Assert.True(File.ReadAllText(path).ReplaceLineEndings("\n") == text.ToString(), $"{path} isn't the hand-written models' gaps: regenerate it with SPIREQOL_UPDATE_SNAPSHOT=1 and explain the change");
+        Assert.True(File.ReadAllText(path).ReplaceLineEndings("\n") == text, $"{path} isn't {what}: regenerate it with SPIREQOL_UPDATE_SNAPSHOT=1 and explain the change");
+    }
+
+    /// <summary>Every gap the reader names on either branch, of every kind, carries the capability it waits on.</summary>
+    [Fact]
+    public void EveryGapNamesItsCapability()
+    {
+        foreach (var path in new[] { BranchCode.BetaPath, BranchCode.MainPath })
+        {
+            if (!File.Exists(path)) continue;
+            using var code = new BranchCode(path);
+            var types = code.Assembly.GetTypes();
+            var readings = HookReader.Powers(types).Concat(HookReader.Relics(types)).SelectMany(type => HookReader.Read(type, code.Read).Hooks.Select(hook => (type.Name, hook)))
+                .Concat(OtherKinds.SelectMany(kind => ClassesOf(code, kind.Folder, kind.Base).Values).SelectMany(type => HookReader.ReadEffects(type, code.Read).Select(hook => (type.Name, hook))));
+            Assert.All(readings.Where(reading => !reading.hook.Read), reading => Assert.True(reading.hook.Capability != null, $"{reading.Name}.{reading.hook}"));
+        }
     }
 
     /// <summary>A gap's text cut short (a Modify hook's whole ways can run to pages: Vulnerable's).</summary>
