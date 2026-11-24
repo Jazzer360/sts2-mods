@@ -143,7 +143,7 @@ Rebound, Corruption's Skills to the exhaust pile) and the play count the simulat
 ledger, Burst, Duplication, One-Two Punch, Signal Boost, Ki Verse, Tag Team, Throwing Axe), each branch its own.
 
 Its actions are built from the card's own code, one command step at a time, in the order the code runs them (decisions #182,
-#193, docs/CARD_PROGRAMS.md): `CardProgramReader` reads the card's `OnPlay` (its state machine, local functions and the delegates it
+#193, docs/CARD_PROGRAMS.md): `ProgramReader` reads the card's `OnPlay` (its state machine, local functions and the delegates it
 hands to commands) from the running game into a program, and `SimAdapter.Steps` translates each command step into the simulator's
 action for that command (`CommandsTranslated`: an attack from `DamageCmd.Attack` with its hits and targeting from its builder, a block
 from `CreatureCmd.GainBlock` to the creature its argument names, a power from `PowerCmd.Apply<T>` with its amount argument, a draw, a

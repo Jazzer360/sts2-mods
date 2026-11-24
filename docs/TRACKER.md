@@ -474,6 +474,11 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 
 ---
 
+## 21. Model programs: enemies (decision #195, 2026-11-24)
+
+- [x] The reader reads any game method (`ProgramReader`, `ModelProgram`, `ModelPrograms`): a monster's moves and hooks, found by shape (`MonsterCode`). Stores to the model's own state are steps (`StoreStep`), a monster's calls into MonsterModel that change it too (`SetMoveImmediate`), `base.` hook calls are their base code.
+- [x] The scan: every move and hook body of every monster on both branches read, each command translated or a named gap (`MonsterProgramTests`: 318 moves, 93 hook bodies).
+
 ## 20. Replays (decision #160, 2026-11-21)
 
 - [x] 1.27.0: a replay has what the card's earlier plays gave it, read from its code (PlayGrowth: Rampage, The Ball, Claw, Maul; Goopy, Momentum), checked against every card and enchantment of the installed game (catalog `PlayGrowthTests`).

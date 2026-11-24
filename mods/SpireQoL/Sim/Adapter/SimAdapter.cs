@@ -444,7 +444,7 @@ public static partial class SimAdapter
             switch (step)
             {
                 case Procs.Programs.LoopStep loop when loop.While?.Literals.Any(literal => OnDrawn(literal.Test)) == true
-                                                     && new Procs.Programs.CardProgram("", loop.Body).Commands.Any(command => command.Command is { DeclaringType: "CardPileCmd", Name: "Draw" })
+                                                     && new Procs.Programs.ModelProgram("", loop.Body).Commands.Any(command => command.Command is { DeclaringType: "CardPileCmd", Name: "Draw" })
                                                      && TypeTested(loop.While) is { } again:
                     return new DrawnCardReader(DrawnCardReader.Reads.Type, $"draws again while the card it draws is a {again} and your hand has room", DrawsAgain: true, Counts: true)
                         { Type = again };

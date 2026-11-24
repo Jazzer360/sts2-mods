@@ -80,7 +80,7 @@ public class ConditionTranslationTests
         {
             if (!cards.TryGetValue(card, out var type)) continue; // a card only the other branch has
             if (branch == "main" && OnlyBetaTests.Contains(card)) continue;
-            var program = CardProgramReader.Read(type, code.Read);
+            var program = ProgramReader.Read(type, code.Read);
             var step = CardEffects.Find(program, candidate => candidate.Command.FullName == command)[skip];
             var reading = ConditionReader.Read(step.Condition, new ConditionReader.Context(type, code.Read, Board: null, program));
             Assert.True(reading.Way == ConditionWay.Simulated, $"{card} {command}: {reading.Way} ({reading.Reason})");
@@ -102,7 +102,7 @@ public class ConditionTranslationTests
         foreach (var card in new[] { "Restlessness", "Fetch" })
         {
             if (code.Cards().FirstOrDefault(type => type.Name == card) is not { } type) continue;
-            var program = CardProgramReader.Read(type, code.Read);
+            var program = ProgramReader.Read(type, code.Read);
             var places = CardEffects.Find(program, candidate => candidate.Command.FullName is "CardPileCmd.Draw" or "PlayerCmd.GainEnergy" or "DamageCmd.Attack")
                 .Select(found => ConditionReader.Read(found.Condition, new ConditionReader.Context(type, code.Read, Board: null, program)).Condition!)
                 .Select(condition => SimEngine.ConditionParts(condition).Select(part => part.At).First(at => at != null))
@@ -122,7 +122,7 @@ public class ConditionTranslationTests
         foreach (var (card, command) in new[] { ("Spinner", "OrbCmd.Channel"), ("MadScience", "CreatureCmd.GainBlock"), ("Acrobatics", "CardCmd.Discard") })
         {
             if (code.Cards().FirstOrDefault(type => type.Name == card) is not { } type) continue;
-            var program = CardProgramReader.Read(type, code.Read);
+            var program = ProgramReader.Read(type, code.Read);
             var step = CardEffects.Find(program, candidate => candidate.Command.FullName == command)[0];
             var reading = ConditionReader.Read(step.Condition, new ConditionReader.Context(type, code.Read, Board: null, program));
             Assert.True(reading.Way == ConditionWay.Decided, $"{card} {command}: {reading.Way} ({reading.Reason})");

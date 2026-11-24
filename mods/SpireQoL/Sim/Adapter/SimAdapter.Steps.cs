@@ -69,6 +69,7 @@ public static partial class SimAdapter
     internal static readonly IReadOnlyDictionary<string, string> CommandsNotTranslated = new Dictionary<string, string>
     {
         ["CardCmd.Upgrade"] = "a card upgraded mid-play: its numbers aren't followed by the simulator (gap)",
+        ["MonsterModel.OnDieToDoom"] = "a monster's own reaction to dying of Doom (End of Days' kills): its looks only (Torch Head Amalgam's torches)",
         ["CardCmd.AutoPlay"] = "a card in hand or a pile played by the card (Beat Down, Knife Trap): not simulated (gap)",
         ["CardCmd.ApplyKeyword"] = "a keyword given to a card: not simulated (gap)",
         ["CardCmd.ApplySingleTurnSly"] = "Sly given to a card this turn: not simulated (gap)",
@@ -92,7 +93,7 @@ public static partial class SimAdapter
     private sealed class StepPlay
     {
         public required CardModel Card { get; init; }
-        public required CardProgram Program { get; init; }
+        public required ModelProgram Program { get; init; }
         public required ProgramBoard Board { get; init; }
         public required Player Me { get; init; }
         public required ICombatState Combat { get; init; }
@@ -802,9 +803,9 @@ public static partial class SimAdapter
                 var guard = WithoutOrbTests(found.Condition);
                 if (found.Loops.FirstOrDefault(loop => loop.While?.Literals.Any(literal => literal.Test.Parts().Any(part => part is QueryValue { Name: "Orbs" })) == true) is { } overOrbs)
                 {
-                    var perOrb = new CardProgram("", overOrbs.Body).Commands.Count(other => other.Command is { DeclaringType: "OrbCmd", Name: "EvokeNext" });
+                    var perOrb = new ModelProgram("", overOrbs.Body).Commands.Count(other => other.Command is { DeclaringType: "OrbCmd", Name: "EvokeNext" });
                     // The loop's evokes are one action: every orb, that many times.
-                    foreach (var other in new CardProgram("", overOrbs.Body).Commands.Where(other => !ReferenceEquals(other, command))) play.Consumed.Add(other);
+                    foreach (var other in new ModelProgram("", overOrbs.Body).Commands.Where(other => !ReferenceEquals(other, command))) play.Consumed.Add(other);
                     return (new List<SimAction> { perOrb == 2 ? new OrbAction(OrbAction.Op.EvokeAllTwice) : new NotModelledAction($"every orb evoked {perOrb} times") }, guard);
                 }
                 var keeps = ValueAt(command, 2) is ConstantValue { Value: 0 };
@@ -915,10 +916,10 @@ public static partial class SimAdapter
     private static IReadOnlyList<SimAction> EachCardOf(CardEffects.CardsTaken take, StepPlay play)
     {
         var loop = play.Program.All().OfType<LoopStep>()
-            .FirstOrDefault(candidate => new CardProgram("", candidate.Body).Commands.Any(command => ReferenceEquals(command, take.Command)));
+            .FirstOrDefault(candidate => new ModelProgram("", candidate.Body).Commands.Any(command => ReferenceEquals(command, take.Command)));
         if (loop == null) return Array.Empty<SimAction>();
         var actions = new List<SimAction>();
-        foreach (var other in new CardProgram("", loop.Body).Commands.Where(command => command.Command is { DeclaringType: "CreatureCmd", Name: "GainBlock" }))
+        foreach (var other in new ModelProgram("", loop.Body).Commands.Where(command => command.Command is { DeclaringType: "CreatureCmd", Name: "GainBlock" }))
         {
             play.Consumed.Add(other);
             actions.AddRange(BlocksFrom(play.Found[other], play, times: 1));

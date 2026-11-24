@@ -39,7 +39,7 @@ public class HistoryLedgerTests
         var gapsUsed = new HashSet<string>();
         var translated = 0;
         foreach (var type in code.Models())
-            foreach (var (method, query) in CardProgramReader.HistoryQueries(type, code.Read))
+            foreach (var (method, query) in ProgramReader.HistoryQueries(type, code.Read))
             {
                 var reading = HistoryQueryReader.Read((QueryValue)query, code.EnumName);
                 if (reading.Query != null) translated++;
@@ -81,7 +81,7 @@ public class HistoryLedgerTests
         foreach (var (model, method, expected, any) in Known)
         {
             if (!models.TryGetValue(model, out var type)) continue; // a model only the other branch has
-            var readings = CardProgramReader.HistoryQueries(type, code.Read).Where(found => found.Method.Contains(method, StringComparison.Ordinal))
+            var readings = ProgramReader.HistoryQueries(type, code.Read).Where(found => found.Method.Contains(method, StringComparison.Ordinal))
                 .Select(found => HistoryQueryReader.Read((QueryValue)found.Query, code.EnumName)).ToList();
             if (readings.Count == 0 && branch == "main") continue; // main asks nothing there (its Forgotten Ritual gains energy on every play)
             var reading = Assert.Single(readings.Where(candidate => candidate.Query?.Key == expected).DistinctBy(candidate => candidate.Query));
@@ -104,7 +104,7 @@ public class HistoryLedgerTests
         foreach (var name in SimModels.Names)
         {
             if (SimModels.Get(name) is not { History.Count: > 0 } model || !models.TryGetValue(name, out var type)) continue;
-            var asked = CardProgramReader.HistoryQueries(type, code.Read).Select(found => HistoryQueryReader.Read((QueryValue)found.Query, code.EnumName).Query).ToList();
+            var asked = ProgramReader.HistoryQueries(type, code.Read).Select(found => HistoryQueryReader.Read((QueryValue)found.Query, code.EnumName).Query).ToList();
             foreach (var query in model.History) Assert.True(asked.Contains(query), $"{name} asks {query}; its code asks {string.Join(", ", asked)}");
             checkedModels++;
         }
@@ -181,14 +181,14 @@ public class HistoryLedgerTests
             var counted = 0;
             var mismatches = new List<string>();
             foreach (var type in typeof(CardModel).Assembly.GetTypes().Where(type => type.Namespace is "MegaCrit.Sts2.Core.Models.Cards" or "MegaCrit.Sts2.Core.Models.Powers" or "MegaCrit.Sts2.Core.Models.Relics" && !type.IsNested && !type.IsAbstract))
-                foreach (var (method, found) in CardProgramReader.HistoryQueries(type, RuntimeCode.Read))
+                foreach (var (method, found) in ProgramReader.HistoryQueries(type, RuntimeCode.Read))
                 {
                     if (HistoryQueryReader.Read((QueryValue)found).Query is not { } query) continue;
                     // The code's own question, its own lambda, evaluated on this fight: "this" a model of its kind owned by you, a calculated
                     // value's card your Strike.
                     object self = typeof(PowerModel).IsAssignableFrom(type) ? strength : strike;
                     var board = new ProgramBoard(strike) { Self = self };
-                    var answer = ProgramEvaluator.Value(found, board, CardProgram.Empty, new Dictionary<string, object?> { ["card"] = strike });
+                    var answer = ProgramEvaluator.Value(found, board, ModelProgram.Empty, new Dictionary<string, object?> { ["card"] = strike });
                     var expected = answer switch { bool any => any ? 1 : 0, decimal count => (int)count, int count => count, _ => (int?)null };
                     var turn = NamedSet<string>.Empty;
                     var fight = HistoryLedger.Seed(new[] { query }, me, combat, ref turn);

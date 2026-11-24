@@ -19,8 +19,8 @@ public class CardEffectsTests
         var path = branch == "main" ? BranchCode.MainPath : BranchCode.BetaPath;
         if (!File.Exists(path)) return;
         using var code = new BranchCode(path);
-        var programs = code.Cards().ToDictionary(type => type.Name, type => CardProgramReader.Read(type, code.Read));
-        void Finds(Func<CardProgram, bool> rule, params string[] cards)
+        var programs = code.Cards().ToDictionary(type => type.Name, type => ProgramReader.Read(type, code.Read));
+        void Finds(Func<ModelProgram, bool> rule, params string[] cards)
         {
             foreach (var card in cards)
                 if (programs.TryGetValue(card, out var program)) Assert.True(rule(program), $"{card} ({branch}): {program}");
@@ -47,9 +47,9 @@ public class CardEffectsTests
         var path = branch == "main" ? BranchCode.MainPath : BranchCode.BetaPath;
         if (!File.Exists(path)) return;
         using var code = new BranchCode(path);
-        var programs = code.Cards().ToDictionary(type => type.Name, type => CardProgramReader.Read(type, code.Read));
+        var programs = code.Cards().ToDictionary(type => type.Name, type => ProgramReader.Read(type, code.Read));
         var failures = new List<string>();
-        void Exactly(string rule, Func<CardProgram, bool> finds, params string[] table)
+        void Exactly(string rule, Func<ModelProgram, bool> finds, params string[] table)
         {
             var found = programs.Where(entry => finds(entry.Value)).Select(entry => entry.Key).OrderBy(name => name, StringComparer.Ordinal).ToList();
             var expected = table.Where(programs.ContainsKey).OrderBy(name => name, StringComparer.Ordinal).ToList();
@@ -95,7 +95,7 @@ public class CardEffectsTests
         Exactly(nameof(CardEffects.Discards), program => CardEffects.Discards(program).Count > 0, Tables.DiscardCards.Keys.ToArray());
         Exactly(nameof(CardEffects.Transforms), program => CardEffects.Transforms(program).Count > 0, Tables.TransformCards.Keys.ToArray());
         Exactly(nameof(CardEffects.TakesIntoHandOf), program => CardEffects.TakesIntoHandOf(program).Count > 0, Tables.HandTakes.Keys.ToArray());
-        void Ways(string rule, Func<CardProgram, IReadOnlyList<CardEffects.CardsTaken>> takes, Dictionary<string, string> table)
+        void Ways(string rule, Func<ModelProgram, IReadOnlyList<CardEffects.CardsTaken>> takes, Dictionary<string, string> table)
         {
             foreach (var (card, ways) in table)
             {

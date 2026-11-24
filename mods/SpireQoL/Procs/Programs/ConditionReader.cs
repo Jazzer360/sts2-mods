@@ -56,7 +56,7 @@ public static class ConditionReader
     /// Where a condition is read: the card's type, how to read a getter's code, and the board (null: no board, the catalog's read of the
     /// code alone) with the card's program.
     /// </summary>
-    public sealed record Context(Type CardType, Func<MethodBase, List<CodeOp>> ReadCode, ProgramBoard? Board, CardProgram Program);
+    public sealed record Context(Type CardType, Func<MethodBase, List<CodeOp>> ReadCode, ProgramBoard? Board, ModelProgram Program);
 
     /// <summary>The step's condition (its own and every loop's around it) for the simulator.</summary>
     public static ConditionReading Read(ProgramCondition condition, Context context)
@@ -112,7 +112,7 @@ public static class ConditionReader
     /// The filters of your hand's cards the card's conditions ask about (Any or Count of your hand's cards with a lambda), each named by
     /// the card and its test (SimCondition's Filter): what a card joining your hand during the play counts for (SimDrawCard.TakenBy).
     /// </summary>
-    public static IReadOnlyList<HandFilter> HandFiltersOf(Type cardType, CardProgram program)
+    public static IReadOnlyList<HandFilter> HandFiltersOf(Type cardType, ModelProgram program)
     {
         var filters = new List<HandFilter>();
         foreach (var step in program.All())
@@ -213,7 +213,7 @@ public static class ConditionReader
         if (test is QueryValue { IsProperty: true, Of: NamedValue { Name: "this" }, Name: var property })
         {
             if (property == "IsUpgraded" || IsStoredOnCard(context, property)) return Decided(test, context, "the card's own value");
-            if (depth < 2 && CardProgramReader.ReadProperty(context.CardType, property, context.ReadCode) is { } getter) return Nested(getter, context, at, depth + 1);
+            if (depth < 2 && ProgramReader.ReadProperty(context.CardType, property, context.ReadCode) is { } getter) return Nested(getter, context, at, depth + 1);
             return NotRead($"the card's {property}, a getter its code doesn't show");
         }
         // A pick's card (decision #188: a pick is a card, never a particular one).
@@ -268,11 +268,11 @@ public static class ConditionReader
     {
         ConditionReading Simulated(HistoryQuery query, SimCompare compare, int than) =>
             new(ConditionWay.Simulated) { Condition = new CountCondition(SimCounted.History, compare, than) { Query = query, At = at } };
-        if (test is QueryValue { Type: "Enumerable", Name: "Any" } any && CardProgramReader.ReadsHistory(any))
+        if (test is QueryValue { Type: "Enumerable", Name: "Any" } any && ProgramReader.ReadsHistory(any))
             return HistoryQueryReader.Read(any) is { Query: { } query } ? Simulated(query, SimCompare.Greater, than: 0)
                 : new ConditionReading(ConditionWay.NotRead) { Reason = "a question to the fight's log the ledger doesn't count", Unread = test };
         if (test is CompareValue { Left: var left, Right: var right } compare && Unstored(left) is QueryValue { Type: "Enumerable", Name: "Count" } count
-            && CardProgramReader.ReadsHistory(count) && IsCardsOwn(right, context) && Number(right, context) is { } number)
+            && ProgramReader.ReadsHistory(count) && IsCardsOwn(right, context) && Number(right, context) is { } number)
             return HistoryQueryReader.Read(count) is { Query: { } counted } ? Simulated(counted, Compared(compare.Op), number)
                 : new ConditionReading(ConditionWay.NotRead) { Reason = "a question to the fight's log the ledger doesn't count", Unread = test };
         return null;

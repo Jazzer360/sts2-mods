@@ -19,30 +19,30 @@ public static class CardEffects
     public static bool ChannelsForTarget(Type cardType) => ChannelsForTarget(CardPrograms.Of(cardType));
 
     /// <summary>Kills your Osty (CreatureCmd.Kill on Owner.Osty: Sacrifice, Bone Shards).</summary>
-    public static bool KillsOsty(CardProgram program) => program.Commands.Any(command => Is(command, "CreatureCmd", "Kill") && Argument(command, 0) == "Owner.Osty");
+    public static bool KillsOsty(ModelProgram program) => program.Commands.Any(command => Is(command, "CreatureCmd", "Kill") && Argument(command, 0) == "Owner.Osty");
 
     /// <summary>Sets its target's HP (CreatureCmd.SetCurrentHp: Judgement's execute).</summary>
-    public static bool SetsTargetsHp(CardProgram program) => program.Commands.Any(command => Is(command, "CreatureCmd", "SetCurrentHp") && Argument(command, 0) == Target);
+    public static bool SetsTargetsHp(ModelProgram program) => program.Commands.Any(command => Is(command, "CreatureCmd", "SetCurrentHp") && Argument(command, 0) == Target);
 
     /// <summary>Takes its target's block (CreatureCmd.LoseBlock on the target: Expose).</summary>
-    public static bool TakesTargetsBlock(CardProgram program) => program.Commands.Any(command => Is(command, "CreatureCmd", "LoseBlock") && Argument(command, 1) == Target);
+    public static bool TakesTargetsBlock(ModelProgram program) => program.Commands.Any(command => Is(command, "CreatureCmd", "LoseBlock") && Argument(command, 1) == Target);
 
     /// <summary>Damages its target with CreatureCmd.Damage rather than an attack (Capture Spirit).</summary>
-    public static bool DamagesTargetWithoutAttacking(CardProgram program) =>
+    public static bool DamagesTargetWithoutAttacking(ModelProgram program) =>
         program.Commands.Any(command => Is(command, "CreatureCmd", "Damage") && Argument(command, 1) == Target);
 
     /// <summary>Gains block for a creature that isn't you, outside a loop over players (Lift, Demonic Shield: its target; Constellation: the teammate it picked).</summary>
-    public static bool BlocksAnother(CardProgram program) =>
+    public static bool BlocksAnother(ModelProgram program) =>
         Outside(program.Steps).Any(command => Is(command, "CreatureCmd", "GainBlock") && Argument(command, 0) is { } gainer && gainer != You
                                              && (gainer == Target || gainer.EndsWith(".Creature", StringComparison.Ordinal)));
 
     /// <summary>Gains block for each creature a loop goes over (Rally: every living player), not for you or the target each round.</summary>
-    public static bool BlocksEachPlayer(CardProgram program) =>
+    public static bool BlocksEachPlayer(ModelProgram program) =>
         program.All().OfType<LoopStep>().Any(loop => loop.Body.OfType<CommandStep>().Any(command => Is(command, "CreatureCmd", "GainBlock") && Argument(command, 0) is { } gainer
                                                                                                     && gainer != You && gainer != Target));
 
     /// <summary>Channels an orb for its target's player (Ignition: into a teammate's orbs).</summary>
-    public static bool ChannelsForTarget(CardProgram program) =>
+    public static bool ChannelsForTarget(ModelProgram program) =>
         program.Commands.Any(command => Is(command, "OrbCmd", "Channel") && command.Arguments.Contains(Target + ".Player"));
 
     public static bool DrawsForTarget(Type cardType) => DrawsForTarget(CardPrograms.Of(cardType));
@@ -56,19 +56,19 @@ public static class CardEffects
     // ---- draws and shuffles
 
     /// <summary>Draws for a player that isn't you, outside a loop over players (Constellation: CardPileCmd.Draw for its target's player).</summary>
-    public static bool DrawsForTarget(CardProgram program) =>
+    public static bool DrawsForTarget(ModelProgram program) =>
         Outside(program.Steps).Any(command => IsDraw(command) && Argument(command, 2) is { } player && player != "Owner");
 
     /// <summary>Draws for each player a loop goes over, not you (Huddle Up: every teammate draws).</summary>
-    public static bool DrawsForEachTeammate(CardProgram program) =>
+    public static bool DrawsForEachTeammate(ModelProgram program) =>
         program.All().OfType<LoopStep>().Any(loop => loop.Body.OfType<CommandStep>().Any(command => IsDraw(command) && Argument(command, 2) is { } player && player != "Owner"));
 
     /// <summary>Shuffles your discard pile into your draw pile on every play (Reboot: CardPileCmd.Shuffle, no condition around it).</summary>
-    public static bool ShufflesDiscardPileIn(CardProgram program) =>
+    public static bool ShufflesDiscardPileIn(ModelProgram program) =>
         program.Commands.Any(command => Is(command, "CardPileCmd", "Shuffle") && command.Condition == null);
 
     /// <summary>Shuffles your discard pile in only on a condition (Ki Chant: when your draw pile is short of what it looks at).</summary>
-    public static bool ShufflesWhenShort(CardProgram program) =>
+    public static bool ShufflesWhenShort(ModelProgram program) =>
         program.Commands.Any(command => Is(command, "CardPileCmd", "Shuffle")) && !ShufflesDiscardPileIn(program);
 
     private static bool IsDraw(CommandStep command) =>
@@ -95,7 +95,7 @@ public static class CardEffects
     /// The play's draws for you, in order: to its owner, or to each player a loop over your side goes over (GetTeammatesOf: you are one of
     /// them, Huddle Up).
     /// </summary>
-    public static IReadOnlyList<DrawForYou> DrawsForYou(CardProgram program) =>
+    public static IReadOnlyList<DrawForYou> DrawsForYou(ModelProgram program) =>
         Find(program, command => command.Command.DeclaringType == "CardCmd" && command.Command.Name == "DiscardAndDraw" || IsDraw(command))
             .Where(found => !IsDraw(found.Command) || found.Command.Arguments.Contains("Owner") || ForEachOfYourSide(found))
             .Select(found => new DrawForYou(found.Command, found.Condition, found.Loops.Where(loop => !OverYourSide(loop)).ToList())).ToList();
@@ -221,19 +221,19 @@ public static class CardEffects
     /// The play's exhausts of other cards, in order: CardCmd.Exhaust of a pick's card (Picked), of a roll's (Random), or of each card a
     /// loop goes over (Each; a loop over a pick's result is Picked). An exhaust of the card itself, or of a card it can't tell, isn't one.
     /// </summary>
-    public static IReadOnlyList<CardsTaken> ExhaustsOfOthers(CardProgram program) =>
+    public static IReadOnlyList<CardsTaken> ExhaustsOfOthers(ModelProgram program) =>
         Takes(program, command => Is(command, "CardCmd", "Exhaust") ? 1 : null, collections: false);
 
     /// <summary>The play's discards (CardCmd.Discard, DiscardAndDraw: the cards are their second argument), in order.</summary>
-    public static IReadOnlyList<CardsTaken> Discards(CardProgram program) =>
+    public static IReadOnlyList<CardsTaken> Discards(ModelProgram program) =>
         Takes(program, command => command.Command.DeclaringType == "CardCmd" && command.Command.Name is "Discard" or "DiscardAndDraw" ? 1 : null, collections: true);
 
     /// <summary>The play's transforms (CardCmd.Transform, TransformTo, TransformToRandom: the card or the list is their first argument), in order.</summary>
-    public static IReadOnlyList<CardsTaken> Transforms(CardProgram program) =>
+    public static IReadOnlyList<CardsTaken> Transforms(ModelProgram program) =>
         Takes(program, command => command.Command.DeclaringType == "CardCmd" && command.Command.Name.StartsWith("Transform", StringComparison.Ordinal) ? 0 : null, collections: true);
 
     /// <summary>The play's moves into your hand (CardPileCmd.Add to the hand, after no pick from another player's cards), in order.</summary>
-    public static IReadOnlyList<CardsTaken> TakesIntoHandOf(CardProgram program) =>
+    public static IReadOnlyList<CardsTaken> TakesIntoHandOf(ModelProgram program) =>
         Takes(program, command => Is(command, "CardPileCmd", "Add") && Argument(command, 1) == HandPile ? 0 : null, collections: true)
             .Where(take => take.Pick == null || PicksYourCards(take.Pick)).ToList();
 
@@ -243,7 +243,7 @@ public static class CardEffects
     /// Picked), and with <paramref name="collections"/> a collection given whole (your hand, a Where of it: Each), the cards a draw gave
     /// (Drawn) or the ones looked at on top of your draw pile (LookedAt). Anything else (the card itself, a card it can't tell) isn't one.
     /// </summary>
-    private static IReadOnlyList<CardsTaken> Takes(CardProgram program, Func<CommandStep, int?> cardsArgument, bool collections) =>
+    private static IReadOnlyList<CardsTaken> Takes(ModelProgram program, Func<CommandStep, int?> cardsArgument, bool collections) =>
         Find(program, command => cardsArgument(command) is { } index && index < command.Values.Count)
             .Select(found => Taken(found.Command, Unstored(found.Command.Values[cardsArgument(found.Command)!.Value])!, found.Condition, found.Loops.Count > 0 ? found.Loops[^1] : null,
                 found.Pick, found.LoopBefore, collections))
@@ -282,7 +282,7 @@ public static class CardEffects
     private static ProgramValue? Unstored(ProgramValue? value) => value is StoredValue stored ? Unstored(stored.Value) : value;
 
     /// <summary>It exhausts other cards in its play, read from its program (True Grit, Fiend Fire, Second Wind, Cleanse...).</summary>
-    public static bool ExhaustsOthers(CardProgram program) => ExhaustsOfOthers(program).Count > 0;
+    public static bool ExhaustsOthers(ModelProgram program) => ExhaustsOfOthers(program).Count > 0;
 
     // ---- cards moved between piles (CardPileCmd.Add)
 
@@ -298,7 +298,7 @@ public static class CardEffects
     /// player's cards: Hologram, Wish, Summon Forth); back onto your draw pile after a pick from your hand (Glimmer); after a pick,
     /// anywhere else (Headbutt onto your draw pile, Tutor into a teammate's hand); or with no pick before it (Reboot's whole hand).
     /// </summary>
-    private static IEnumerable<Move> Moves(CardProgram program)
+    private static IEnumerable<Move> Moves(ModelProgram program)
     {
         ChoiceStep? pick = null;
         foreach (var step in program.All())
@@ -320,16 +320,16 @@ public static class CardEffects
     private static bool PicksYourCards(ChoiceStep pick) => pick.Arguments.Contains("Owner") || pick.Arguments.Contains("?");
 
     /// <summary>Moves cards from your piles into your hand (CardPileCmd.Add to the hand: Hologram, Wish, Dredge, Summon Forth...).</summary>
-    public static bool TakesIntoHand(CardProgram program) => Moves(program).Contains(Move.IntoYourHand);
+    public static bool TakesIntoHand(ModelProgram program) => Moves(program).Contains(Move.IntoYourHand);
 
     /// <summary>Puts cards you pick from your hand back on your draw pile (Glimmer, Photon Cut, Thinking Ahead).</summary>
-    public static bool PutsBackFromHand(CardProgram program) => Moves(program).Contains(Move.PutBack);
+    public static bool PutsBackFromHand(ModelProgram program) => Moves(program).Contains(Move.PutBack);
 
     /// <summary>
     /// Moves a card it picks somewhere your hand doesn't see: from your discard pile onto your draw pile (Headbutt, Recall, Cosmic
     /// Indifference), or into a teammate's hand (Tutor).
     /// </summary>
-    public static bool MovesCardsElsewhere(CardProgram program) =>
+    public static bool MovesCardsElsewhere(ModelProgram program) =>
         Moves(program).ToList() is var moves && moves.Contains(Move.Elsewhere) && !moves.Contains(Move.IntoYourHand) && !moves.Contains(Move.PutBack);
 
     public static bool HitsXTimes(Type cardType) => HitsXTimes(CardPrograms.Of(cardType));
@@ -338,16 +338,16 @@ public static class CardEffects
     // ---- attacks
 
     /// <summary>An attack whose hit count is the card's X (WithHitCount(ResolveEnergyXValue()): Whirlwind, Skewer, Volley).</summary>
-    public static bool HitsXTimes(CardProgram program) =>
+    public static bool HitsXTimes(ModelProgram program) =>
         program.Commands.Any(command => Is(command, "DamageCmd", "Attack") && command.HitCount == "ResolveEnergyXValue");
 
     /// <summary>
     /// Attacks once (no hit count) and repeats something else its Repeat times (Ice Lance channels Repeat Frost, Heirloom Hammer makes
     /// Repeat copies): its Repeat value isn't its hits.
     /// </summary>
-    public static bool AttacksOnceRepeatingSomethingElse(CardProgram program) =>
+    public static bool AttacksOnceRepeatingSomethingElse(ModelProgram program) =>
         program.Commands.Any(command => Is(command, "DamageCmd", "Attack") && command.HitCount == null)
-        && program.All().OfType<LoopStep>().Any(loop => loop.Over == "Repeat" && !new CardProgram("", loop.Body).Commands.Any(command => Is(command, "DamageCmd", "Attack")));
+        && program.All().OfType<LoopStep>().Any(loop => loop.Over == "Repeat" && !new ModelProgram("", loop.Body).Commands.Any(command => Is(command, "DamageCmd", "Attack")));
 
     public static bool AutoPlaysFromDrawPile(Type cardType) => AutoPlaysFromDrawPile(CardPrograms.Of(cardType));
     public static bool SummonsEachPlayer(Type cardType) => SummonsEachPlayer(CardPrograms.Of(cardType));
@@ -361,7 +361,7 @@ public static class CardEffects
     /// The Devil, Reboot), or a discard of the hand's cards (Storm of Steel, Calculated Gamble). Not a loop over some of them (Second
     /// Wind's non-Attacks, Growth's Sadness: a filter, Where).
     /// </summary>
-    public static bool TakesWholeHand(CardProgram program) =>
+    public static bool TakesWholeHand(ModelProgram program) =>
         program.All().OfType<LoopStep>().Any(loop => IsWholeHand(loop.Over.Replace("each of ", ""))
                                                      && loop.Body.OfType<CommandStep>().Any(command => TakesFromHand(command)))
         || program.Commands.Any(command => command.Command.DeclaringType == "CardCmd" && command.Command.Name is "Discard" or "DiscardAndDraw"
@@ -417,19 +417,19 @@ public static class CardEffects
     // ---- the rest
 
     /// <summary>Plays cards from the top of your draw pile (CardPileCmd.AutoPlayFromDrawPile: Havoc, Cascade, The Devil).</summary>
-    public static bool AutoPlaysFromDrawPile(CardProgram program) => program.Commands.Any(command => Is(command, "CardPileCmd", "AutoPlayFromDrawPile"));
+    public static bool AutoPlaysFromDrawPile(ModelProgram program) => program.Commands.Any(command => Is(command, "CardPileCmd", "AutoPlayFromDrawPile"));
 
     /// <summary>Summons each player's Osty, a loop over the players (Legion of Bone: OstyCmd.Summon for each, not only you).</summary>
-    public static bool SummonsEachPlayer(CardProgram program) =>
+    public static bool SummonsEachPlayer(ModelProgram program) =>
         program.All().OfType<LoopStep>().Any(loop => loop.Body.OfType<CommandStep>().Any(command => Is(command, "OstyCmd", "Summon") && Argument(command, 1) is { } player && player != "Owner"));
 
     /// <summary>Knocks your arrows out of its target (ArrowCmd.DislodgeArrow on the target: Recall, Uproot, Wrest).</summary>
-    public static bool DislodgesArrows(CardProgram program) => program.Commands.Any(command => Is(command, "ArrowCmd", "DislodgeArrow") && Argument(command, 0) == Target);
+    public static bool DislodgesArrows(ModelProgram program) => program.Commands.Any(command => Is(command, "ArrowCmd", "DislodgeArrow") && Argument(command, 0) == Target);
 
     /// <summary>
     /// Gains block, then gives you Stretch (Cho Ki): the Stretch is for a replay's later plays, so this play's block doesn't spend it.
     /// </summary>
-    public static bool KeepsStretchForReplays(CardProgram program)
+    public static bool KeepsStretchForReplays(ModelProgram program)
     {
         var blocked = false;
         foreach (var command in program.Commands)
@@ -451,10 +451,10 @@ public static class CardEffects
     /// Makes Sadness (CombatState.CreateCard&lt;Sadness&gt; in its play: Jest's into your hand, Mourning Blow turning into one): the
     /// statuses it makes are Sadness, which Fertilizer and All Is Well react to.
     /// </summary>
-    public static bool MakesSadness(CardProgram program) => program.All().OfType<CreateStep>().Any(create => create.Card == nameof(MegaCrit.Sts2.Core.Models.Cards.Sadness));
+    public static bool MakesSadness(ModelProgram program) => program.All().OfType<CreateStep>().Any(create => create.Card == nameof(MegaCrit.Sts2.Core.Models.Cards.Sadness));
 
     /// <summary>Forges (ForgeCmd.Forge: a Sovereign Blade made the first time, more damage after).</summary>
-    public static bool Forges(CardProgram program) => program.Commands.Any(command => Is(command, "ForgeCmd", "Forge"));
+    public static bool Forges(ModelProgram program) => program.Commands.Any(command => Is(command, "ForgeCmd", "Forge"));
 
     // ---- commands found with what they run on
 
@@ -472,7 +472,7 @@ public static class CardEffects
     /// The play's commands <paramref name="which"/> picks, in order, each with its condition, its loops, the pick before it and the loop
     /// finished before it: the one walk every effect kind is a filter of (draws, takes, attacks, block, orbs...).
     /// </summary>
-    public static IReadOnlyList<Found> Find(CardProgram program, Func<CommandStep, bool> which)
+    public static IReadOnlyList<Found> Find(ModelProgram program, Func<CommandStep, bool> which)
     {
         var found = new List<Found>();
         ChoiceStep? lastPick = null;
@@ -505,7 +505,7 @@ public static class CardEffects
     public static bool TriggersPoison(Type cardType) => TriggersPoison(CardPrograms.Of(cardType));
 
     /// <summary>Sets off poison during the play (PoisonPower.Trigger, a power's action the card runs: Outbreak on every enemy's poison).</summary>
-    public static bool TriggersPoison(CardProgram program) =>
+    public static bool TriggersPoison(ModelProgram program) =>
         program.Commands.Any(command => command.Command is { DeclaringType: nameof(MegaCrit.Sts2.Core.Models.Powers.PoisonPower), Name: "Trigger" });
 
     // ---- attacks
@@ -514,7 +514,7 @@ public static class CardEffects
 
     /// <summary>The play's attacks (DamageCmd.Attack, built up to Execute), in order, each with its condition and loops.</summary>
     public static IReadOnlyList<Found> Attacks(Type cardType) => AttackSteps.GetOrAdd(cardType, type => Attacks(CardPrograms.Of(type)));
-    public static IReadOnlyList<Found> Attacks(CardProgram program) => Find(program, command => Is(command, "DamageCmd", "Attack"));
+    public static IReadOnlyList<Found> Attacks(ModelProgram program) => Find(program, command => Is(command, "DamageCmd", "Attack"));
 
     // ---- block
 
@@ -522,7 +522,7 @@ public static class CardEffects
 
     /// <summary>The play's block gains (CreatureCmd.GainBlock: for you, the teammate it's aimed at, or each player a loop goes over), in order.</summary>
     public static IReadOnlyList<Found> BlockGains(Type cardType) => BlockSteps.GetOrAdd(cardType, type => BlockGains(CardPrograms.Of(type)));
-    public static IReadOnlyList<Found> BlockGains(CardProgram program) => Find(program, command => Is(command, "CreatureCmd", "GainBlock"));
+    public static IReadOnlyList<Found> BlockGains(ModelProgram program) => Find(program, command => Is(command, "CreatureCmd", "GainBlock"));
 
     /// <summary>The gain is for each item of the loop it's in (Rally: each living player), not the same creature each round.</summary>
     public static bool GainsForEachOfLoop(CommandStep gain) => gain.Values.Count > 0 && Unstored(gain.Values[0]) is NamedValue { Name: "each" };
@@ -537,7 +537,7 @@ public static class CardEffects
         if (gain.Values.Count < 2 || Unstored(gain.Values[1]) is not { } amount) return SpireQoL.Sim.SimBlockBase.Given;
         if (ReadsAttackResults(amount)) return SpireQoL.Sim.SimBlockBase.AttackDealt;
         if (amount is QueryValue { Name: "Block", Of: { } whose } && Unstored(gain.Values[0])?.ToString() == Unstored(whose)?.ToString()) return SpireQoL.Sim.SimBlockBase.OwnBlock;
-        if (amount is CardValue { Key: var key } && CardProgramReader.CalculatedMultipliers(cardType, RuntimeCode.Read).TryGetValue(key, out var multiplier)
+        if (amount is CardValue { Key: var key } && ProgramReader.CalculatedMultipliers(cardType, RuntimeCode.Read).TryGetValue(key, out var multiplier)
             && multiplier.Parts().Any(part => part is QueryValue { Name: "Block", Of: { } of } && of.Parts().Any(inner => inner is ParameterValue { Name: "target" } or NamedValue { Name: "target" })))
             return SpireQoL.Sim.SimBlockBase.TargetBlock;
         return SpireQoL.Sim.SimBlockBase.Given;
@@ -555,7 +555,7 @@ public static class CardEffects
     /// </summary>
     public static bool SplashesDamage(Type cardType) => SplashesDamage(CardPrograms.Of(cardType));
 
-    public static bool SplashesDamage(CardProgram program) => program.Commands.Any(SplashOf);
+    public static bool SplashesDamage(ModelProgram program) => program.Commands.Any(SplashOf);
 
     /// <summary>A CreatureCmd.Damage of what an earlier CreatureCmd.Damage dealt, to the others of its receiver's side (a splash).</summary>
     public static bool SplashOf(CommandStep command) =>
@@ -571,7 +571,7 @@ public static class CardEffects
         CardCode.Calls(cardType, "DamageResult", "get_WasTargetKilled")
         && CardPrograms.Of(cardType).All().OfType<LoopStep>().Any(loop =>
             loop.While is { Terms: [[{ Holds: true, Test: CompareValue { Op: Comparison.Greater, Right: ConstantValue { Value: 0 } } }]] }
-            && new CardProgram("", loop.Body).Commands.Any(command => Is(command, "CreatureCmd", "Damage") && command.Values.Count > 1
+            && new ModelProgram("", loop.Body).Commands.Any(command => Is(command, "CreatureCmd", "Damage") && command.Values.Count > 1
                                                                       && command.Values[1].Parts().Any(part => part is QueryValue { Name: "HittableEnemies" })));
 
     /// <summary>
@@ -603,15 +603,15 @@ public static class CardEffects
 
     /// <summary>The play's channels (OrbCmd.Channel&lt;T&gt;, or Channel of a random orb: Chaos, The Magician), in order.</summary>
     public static IReadOnlyList<Found> OrbChannels(Type cardType) => ChannelSteps.GetOrAdd(cardType, type => OrbChannels(CardPrograms.Of(type)));
-    public static IReadOnlyList<Found> OrbChannels(CardProgram program) => Find(program, command => Is(command, "OrbCmd", "Channel"));
+    public static IReadOnlyList<Found> OrbChannels(ModelProgram program) => Find(program, command => Is(command, "OrbCmd", "Channel"));
 
     /// <summary>The play's evokes of your front orb (OrbCmd.EvokeNext: Dualcast, Quadcast, Multicast, Shatter), in order.</summary>
     public static IReadOnlyList<Found> OrbEvokes(Type cardType) => EvokeSteps.GetOrAdd(cardType, type => OrbEvokes(CardPrograms.Of(type)));
-    public static IReadOnlyList<Found> OrbEvokes(CardProgram program) => Find(program, command => Is(command, "OrbCmd", "EvokeNext"));
+    public static IReadOnlyList<Found> OrbEvokes(ModelProgram program) => Find(program, command => Is(command, "OrbCmd", "EvokeNext"));
 
     /// <summary>The play's orb slots added or removed (OrbCmd.AddSlots, RemoveSlots: their count is the second argument).</summary>
     public static IReadOnlyList<Found> OrbSlotChanges(Type cardType) => SlotSteps.GetOrAdd(cardType, type => OrbSlotChanges(CardPrograms.Of(type)));
-    public static IReadOnlyList<Found> OrbSlotChanges(CardProgram program) =>
+    public static IReadOnlyList<Found> OrbSlotChanges(ModelProgram program) =>
         Find(program, command => command.Command.DeclaringType == "OrbCmd" && command.Command.Name is "AddSlots" or "RemoveSlots");
 
     /// <summary>
@@ -650,7 +650,7 @@ public static class CardEffects
     /// (Acrobatics, Prepared, The Hermit), not the whole hand (Storm of Steel, Calculated Gamble). A pick is a card, never a particular
     /// one (decision #92): what only a particular card would do then (a Sly card playing itself) isn't followed.
     /// </summary>
-    public static bool DiscardsOnlyPicks(CardProgram program)
+    public static bool DiscardsOnlyPicks(ModelProgram program)
     {
         var picked = false;
         var discards = false;

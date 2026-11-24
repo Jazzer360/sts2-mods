@@ -282,7 +282,7 @@ public static class BoardCounts
     }
 
     /// <summary>The cards a pick from your hand also has to pick from: the ones the play draws before it (Acrobatics), when it draws first.</summary>
-    private static int DrawsBefore(CardModel card, Programs.CardProgram program, Programs.CardEffects.CardsTaken take, int draws)
+    private static int DrawsBefore(CardModel card, Programs.ModelProgram program, Programs.CardEffects.CardsTaken take, int draws)
     {
         if (draws <= 0 || take.Pick == null) return 0;
         foreach (var step in program.All())
@@ -297,7 +297,7 @@ public static class BoardCounts
     /// The cards of yours in <paramref name="pile"/> a pick can take: its filter's and its test's, read on the board; a draw pile with the
     /// discard pile the play shuffles in first when it's short (Ki Chant). <paramref name="otherwise"/> when the pile can't be read.
     /// </summary>
-    private static int PileCount(CardModel card, PileType pile, Programs.CardEffects.CardsTaken take, Programs.ProgramBoard board, Programs.CardProgram program,
+    private static int PileCount(CardModel card, PileType pile, Programs.CardEffects.CardsTaken take, Programs.ProgramBoard board, Programs.ModelProgram program,
         Func<object?, bool> eligible, int otherwise)
     {
         if (OwnerOf(card) is not { } me) return otherwise;
@@ -312,7 +312,7 @@ public static class BoardCounts
     /// How many cards the take's collection holds on the board (only your hand's, when asked), those its test on each card lets through;
     /// <paramref name="others"/> when it can't be told.
     /// </summary>
-    private static int Collection(Programs.CardEffects.CardsTaken take, List<CardModel> others, Programs.ProgramBoard board, Programs.CardProgram program, bool fromHandOnly,
+    private static int Collection(Programs.CardEffects.CardsTaken take, List<CardModel> others, Programs.ProgramBoard board, Programs.ModelProgram program, bool fromHandOnly,
         Func<object?, bool> eligible)
     {
         if (take.Items == null || Programs.ProgramEvaluator.Items(take.Items, board, program) is not { } items) return others.Count;
@@ -442,7 +442,7 @@ public static class BoardCounts
     }
 
     /// <summary>The least a value two ways leave can be (Dismantle with no target: one hit), when each way's value can be told.</summary>
-    private static int? Least(Programs.ProgramValue value, Programs.ProgramBoard board, Programs.CardProgram program)
+    private static int? Least(Programs.ProgramValue value, Programs.ProgramBoard board, Programs.ModelProgram program)
     {
         while (value is Programs.StoredValue stored) value = stored.Value;
         if (value is not Programs.WaysValue ways) return null;
@@ -519,14 +519,14 @@ public static class BoardCounts
     {
         if (value == null || take.Items == null || value.Parts().OfType<CardValue>().FirstOrDefault() is not { } cardValue) return false;
         if (Sts2State.Var(card, "CalculationBase", fallback: -1) != 0 || Sts2State.Var(card, "CalculationExtra", fallback: -1) != 1) return false;
-        var multipliers = CardProgramReader.CalculatedMultipliers(card.GetType(), RuntimeCode.Read);
+        var multipliers = ProgramReader.CalculatedMultipliers(card.GetType(), RuntimeCode.Read);
         if (!multipliers.TryGetValue(cardValue.Key, out var multiplier) || multiplier is not QueryValue { Name: "Count", Arguments: [var counted] }) return false;
         // The multiplier's lambda names the card "card" where its play names it "this".
         static string Collection(ProgramValue items) => (items is QueryValue { Name: "ToList" or "ToArray", Arguments: [var inner] } ? inner : items).ToString()!;
         return Collection(counted).Replace("card.", "this.", StringComparison.Ordinal) == Collection(take.Items is StoredValue stored ? stored.Value : take.Items);
     }
     /// <summary>The attack's hits on the board (WithHitCount's argument at the target; with none aimed at, its least): one with no hit count.</summary>
-    internal static int HitsOf(CommandStep command, ProgramBoard board, CardProgram program)
+    internal static int HitsOf(CommandStep command, ProgramBoard board, ModelProgram program)
     {
         if (command.HitCountValue is not { } count) return 1;
         if (ProgramEvaluator.Number(count, board, program) is { } read) return Math.Max(0, (int)read);

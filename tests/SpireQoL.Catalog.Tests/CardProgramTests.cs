@@ -60,7 +60,7 @@ public class CardProgramTests
         foreach (var (card, expected) in Known)
         {
             if (!cards.TryGetValue(card, out var type)) continue; // a card only the other branch has
-            Assert.Equal(expected, CardProgramReader.Read(type, code.Read).ToString());
+            Assert.Equal(expected, ProgramReader.Read(type, code.Read).ToString());
         }
     }
 
@@ -76,7 +76,7 @@ public class CardProgramTests
         var unknown = new List<string>();
         foreach (var type in code.Cards())
         {
-            var program = CardProgramReader.Read(type, code.Read);
+            var program = ProgramReader.Read(type, code.Read);
             unknown.AddRange(program.Unknowns.Select(reason => $"{type.Name}: {reason}"));
             var read = program.All().Select(step => step switch
             {
@@ -86,7 +86,7 @@ public class CardProgramTests
             }).OfType<string>().ToHashSet();
             var called = OnPlayCode(type).SelectMany(code.Read)
                 .Where(instruction => instruction.IsCall && instruction.Member is { } member
-                    && (CardProgramReader.IsCommand(member) || member.DeclaringType == "CardSelectCmd" && member.Namespace == "MegaCrit.Sts2.Core.Commands"))
+                    && (ProgramReader.IsCommand(member) || member.DeclaringType == "CardSelectCmd" && member.Namespace == "MegaCrit.Sts2.Core.Commands"))
                 .Select(instruction => instruction.Member!.FullName).ToHashSet();
             foreach (var command in called.Where(command => !read.Contains(command)))
                 if (program.Unknowns.All(reason => !reason.Contains("callback"))) missing.Add($"{type.Name}: {command}");
@@ -120,14 +120,14 @@ public class CardProgramTests
         var cards = code.Cards().ToDictionary(type => type.Name);
         if (cards.TryGetValue("AllForOne", out var allForOne))
         {
-            var taken = CardProgramReader.Read(allForOne, code.Read).All().OfType<LoopStep>().Single(loop => loop.Items != null);
+            var taken = ProgramReader.Read(allForOne, code.Read).All().OfType<LoopStep>().Single(loop => loop.Items != null);
             Assert.DoesNotContain(taken.Items!.Parts(), part => part is UnknownValue);
             Assert.Contains(taken.Items!.Parts(), part => part is QueryValue { Name: "CostsX" });
             Assert.Contains(taken.Items!.Parts(), part => part is QueryValue { Name: "Type" });
         }
         if (cards.TryGetValue("EvilEye", out var evilEye))
         {
-            var loop = CardProgramReader.Read(evilEye, code.Read).All().OfType<LoopStep>().Single();
+            var loop = ProgramReader.Read(evilEye, code.Read).All().OfType<LoopStep>().Single();
             var ways = loop.While!.Literals.SelectMany(literal => literal.Test.Parts()).OfType<WaysValue>().Single();
             Assert.Equal(new long[] { 1, 2 }, ways.Ways.Select(way => ((ConstantValue)way.Value).Value).Order());
         }
@@ -166,7 +166,7 @@ public class CardProgramTests
         foreach (var type in code.Cards())
         {
             if (loaded.GetType(type.FullName!) is not { } runtime) continue;
-            Assert.Equal(CardProgramReader.Read(type, code.Read).ToString(), CardProgramReader.Read(runtime, RuntimeCode.Read).ToString());
+            Assert.Equal(ProgramReader.Read(type, code.Read).ToString(), ProgramReader.Read(runtime, RuntimeCode.Read).ToString());
         }
     }
 }

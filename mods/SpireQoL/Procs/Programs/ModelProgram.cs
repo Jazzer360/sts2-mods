@@ -3,7 +3,10 @@ using System.Reflection.Emit;
 
 namespace SpireQoL.Procs.Programs;
 
-/// <summary>One step of a play, in the order the card's code runs it (decision #182, docs/CARD_PROGRAMS.md).</summary>
+/// <summary>
+/// One step of a game method (a card's play, a monster's move, a model's hook), in the order its code runs it (decisions #182, #195,
+/// docs/CARD_PROGRAMS.md).
+/// </summary>
 public abstract record ProgramStep(int Offset)
 {
     /// <summary>
@@ -88,16 +91,29 @@ public sealed record LoopStep(int Offset, string Over, IReadOnlyList<ProgramStep
     public override string ToString() => (Over == "?" && While != null ? $"loop while {While}" : $"loop over {Over}") + $" [{string.Join(", ", Body)}]" + When;
 }
 
+/// <summary>
+/// A store to the model's own state (decision #195): a field or a property of its class or a base class of the game's, set to a value
+/// (Queen's HasAmalgamDied, a counter a power keeps). Not a command, but what a later read of that state reads (a monster's conditional
+/// move branch, the model's next hook).
+/// </summary>
+public sealed record StoreStep(int Offset, string Field, ProgramValue Value) : ProgramStep(Offset)
+{
+    public override string ToString() => "store " + Field + " = " + Value + When;
+}
+
 /// <summary>Something the reader couldn't follow: the steps it holds or stands for aren't known.</summary>
 public sealed record UnknownStep(int Offset, string Reason) : ProgramStep(Offset)
 {
     public override string ToString() => "unknown: " + Reason + When;
 }
 
-/// <summary>A card's play as its code runs it: its steps in order, and what the reader couldn't follow.</summary>
-public sealed record CardProgram(string Card, IReadOnlyList<ProgramStep> Steps)
+/// <summary>
+/// A game method as its code runs it (a card's play, a monster's move, a model's hook: decision #195): its steps in order, and what the
+/// reader couldn't follow. <paramref name="Owner"/>: the class it was read from (the card, the monster, the power...).
+/// </summary>
+public sealed record ModelProgram(string Owner, IReadOnlyList<ProgramStep> Steps)
 {
-    public static readonly CardProgram Empty = new("", Array.Empty<ProgramStep>());
+    public static readonly ModelProgram Empty = new("", Array.Empty<ProgramStep>());
 
     /// <summary>Every step, loops' bodies included, in order.</summary>
     public IEnumerable<ProgramStep> All() => Flatten(Steps);
@@ -117,23 +133,23 @@ public sealed record CardProgram(string Card, IReadOnlyList<ProgramStep> Steps)
     public IEnumerable<CommandStep> Commands => All().OfType<CommandStep>();
     public IEnumerable<string> Unknowns => All().OfType<UnknownStep>().Select(step => step.Reason);
 
-    public override string ToString() => Card + ": " + string.Join(", ", Steps);
+    public override string ToString() => Owner + ": " + string.Join(", ", Steps);
 }
 
 /// <summary>The loaded game's card programs, read once per card type, and what they say about order.</summary>
 public static class CardPrograms
 {
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, CardProgram> Cache = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, ModelProgram> Cache = new();
 
     /// <summary>The card's program (empty when its code can't be read).</summary>
-    public static CardProgram Of(Type cardType) => Cache.GetOrAdd(cardType, type =>
+    public static ModelProgram Of(Type cardType) => Cache.GetOrAdd(cardType, type =>
     {
-        try { return CardProgramReader.Read(type, RuntimeCode.Read); }
-        catch { return CardProgram.Empty; }
+        try { return ProgramReader.Read(type, RuntimeCode.Read); }
+        catch { return ModelProgram.Empty; }
     });
 
     /// <summary>The program's first command whose name starts with <paramref name="first"/> comes before its first <paramref name="second"/>.</summary>
-    internal static bool Before(CardProgram program, string first, string second)
+    internal static bool Before(ModelProgram program, string first, string second)
     {
         var firstAt = -1;
         var secondAt = -1;
@@ -150,11 +166,11 @@ public static class CardPrograms
 }
 
 /// <summary>
-/// Reads a card's OnPlay (its async state machine, the local functions it calls) into a <see cref="CardProgram"/>. Works on any
+/// Reads a card's OnPlay (its async state machine, the local functions it calls) into a <see cref="ModelProgram"/>. Works on any
 /// branch's code: types are matched by name, and the instructions come from the reader it's given (the loaded game's module, or
 /// an assembly file's metadata in the tests). Reads code only, never the game's state or its RNG.
 /// </summary>
-public static class CardProgramReader
+public static class ProgramReader
 {
     private const BindingFlags All = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
     private const int MaxDepth = 3;
@@ -162,12 +178,12 @@ public static class CardProgramReader
     /// <summary>Commands that only show or sound something: they change nothing.</summary>
     private static readonly HashSet<string> ShowOnlyTypes = new() { "Cmd", "SfxCmd", "VfxCmd", "TalkCmd", "ThinkCmd", "MelodyCmd" };
 
-    public static CardProgram Read(Type cardType, Func<MethodBase, List<CodeOp>> read, string method = "OnPlay")
+    public static ModelProgram Read(Type cardType, Func<MethodBase, List<CodeOp>> read, string method = "OnPlay")
     {
         var body = Body(cardType, method);
-        if (body == null) return new CardProgram(cardType.Name, Array.Empty<ProgramStep>());
+        if (body == null) return new ModelProgram(cardType.Name, Array.Empty<ProgramStep>());
         var steps = new Reader(cardType, read).Steps(body, depth: 0);
-        return new CardProgram(cardType.Name, steps);
+        return new ModelProgram(cardType.Name, steps);
     }
 
     /// <summary>
@@ -278,6 +294,16 @@ public static class CardProgramReader
         member is { Kind: CodeMemberKind.Method, HasThis: true, Namespace: "MegaCrit.Sts2.Core.Models.Powers" } && member.ValueType.StartsWith("Task", StringComparison.Ordinal)
         && !Asks(member.Name) && !member.Name.StartsWith("get_", StringComparison.Ordinal);
 
+    /// <summary>
+    /// What a monster does to its own move rules or itself through its base class (MonsterModel.SetMoveImmediate: Queen's Enrage when her
+    /// Amalgam dies): an instance method of MonsterModel that isn't a question, a property or a show. A step like a command, named by its
+    /// class and method.
+    /// </summary>
+    internal static bool IsModelAction(CodeMember member) =>
+        member is { Kind: CodeMemberKind.Method, HasThis: true, DeclaringType: nameof(MegaCrit.Sts2.Core.Models.MonsterModel), Namespace: "MegaCrit.Sts2.Core.Models" }
+        && (member.ValueType == typeof(void).Name || member.ValueType == nameof(Task)) && !member.Name.StartsWith('<')
+        && !member.Name.StartsWith("get_", StringComparison.Ordinal) && !member.Name.StartsWith("set_", StringComparison.Ordinal) && !Asks(member.Name) && !ShowsOnly(member.Name);
+
     private static bool ShowsOnly(string name) =>
         name.StartsWith("Preview", StringComparison.Ordinal) || name.StartsWith("TriggerAnim", StringComparison.Ordinal) || name.Contains("Vfx")
         || name.Contains("Wait") || name.StartsWith("Shake", StringComparison.Ordinal) || name.StartsWith("Play", StringComparison.Ordinal) && name.EndsWith("Anim", StringComparison.Ordinal);
@@ -287,7 +313,7 @@ public static class CardProgramReader
         name.StartsWith("Is", StringComparison.Ordinal) || name.StartsWith("Has", StringComparison.Ordinal) || name.StartsWith("PlayerHas", StringComparison.Ordinal)
         || name.StartsWith("CreatureIs", StringComparison.Ordinal) || name.StartsWith("Find", StringComparison.Ordinal) || name.StartsWith("Get", StringComparison.Ordinal);
 
-    /// <summary>Whether a static game helper asks the fight's log or calls another helper of its type (CardProgramReader.Reader.AsksTheLog).</summary>
+    /// <summary>Whether a static game helper asks the fight's log or calls another helper of its type (ProgramReader.Reader.AsksTheLog).</summary>
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type Owner, string Name, int Parameters), bool> HelperAsks = new();
 
     private sealed class Reader
@@ -455,7 +481,34 @@ public static class CardProgramReader
                 // Code no way reaches (a handler, a resume point): nothing of it runs in a play.
                 if (flow.ReachedAt(i) is not { IsNever: false } reached) continue;
                 var condition = Relative(reached, outer);
+                // A store to the model's own state (this.HasAmalgamDied = true): a step of its own, for what reads that state later.
+                if (instruction.OpCode == OpCodes.Stfld && instruction.Member is { Kind: CodeMemberKind.Field } field && OwnState(field) is { } stored)
+                {
+                    into.Add(new StoreStep(instruction.Offset, stored, flow.ValueBefore(i)) { Condition = condition });
+                    continue;
+                }
                 if (!instruction.IsCall || instruction.Member is not { } member) continue;
+                if (member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1 } && member.Name.StartsWith("set_", StringComparison.Ordinal) && OwnState(member) is { } property)
+                {
+                    into.Add(new StoreStep(instruction.Offset, property, flow.ArgumentValues(i, member)[0]) { Condition = condition });
+                    continue;
+                }
+                // base.AfterAddedToRoom(): the base class's own code of the hook (a non-virtual call to an instance method of a base model
+                // class), its steps run here.
+                if (instruction.OpCode == OpCodes.Call && member.HasThis && BaseImplementation(member) is { } implementation)
+                {
+                    if (depth < MaxDepth)
+                    {
+                        var inner = new Reader(_card, _read).Steps(implementation, depth + 1);
+                        into.AddRange(condition == null ? inner : inner.Select(step => step with { Condition = And(condition, step.Condition) }));
+                    }
+                    continue;
+                }
+                if (IsModelAction(member))
+                {
+                    into.Add(new CommandStep(instruction.Offset, member, Arguments(flow, i, member)) { Condition = condition, Values = flow.ArgumentValues(i, member) });
+                    continue;
+                }
                 if (member.Namespace == "MegaCrit.Sts2.Core.Commands" && member.DeclaringType == "CardSelectCmd")
                 {
                     into.Add(new ChoiceStep(instruction.Offset, member) { Condition = condition, Arguments = Arguments(flow, i, member), Values = flow.ArgumentValues(i, member) });
@@ -559,7 +612,7 @@ public static class CardProgramReader
         private static ProgramCondition? Relative(ProgramCondition reached, ProgramCondition? outer) => reached.Without(outer) is { IsAlways: false } relative ? relative : null;
 
         /// <summary>Steps that do something: a command or a choice (a helper or delegate with neither only asks or shows).</summary>
-        private static bool Acts(List<ProgramStep> steps) => new CardProgram("", steps).All().Any(step => step is CommandStep or ChoiceStep or UnknownStep);
+        private static bool Acts(List<ProgramStep> steps) => new ModelProgram("", steps).All().Any(step => step is CommandStep or ChoiceStep or UnknownStep);
 
         /// <summary>The attack DamageCmd.Attack starts: its builder calls up to Execute.</summary>
         private static CommandStep Attack(Flow flow, int at, CodeMember member)
@@ -617,6 +670,39 @@ public static class CardProgramReader
                 if (type.Name != member.DeclaringType) continue;
                 if (type.GetMethods(All).FirstOrDefault(method => method.Name == member.Name) is not { } found) continue;
                 return BodyOf(found);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// The name of the model's own state a store sets (a field, or a property by its setter, of its class or of a base class of the
+        /// game's: an auto-property's backing field by the property's name); null for anything else (a state machine's locals, another
+        /// object's).
+        /// </summary>
+        private string? OwnState(CodeMember member)
+        {
+            if (member.Name.StartsWith("<>", StringComparison.Ordinal)) return null;
+            for (var type = _card; type != null && type.Namespace?.StartsWith("MegaCrit", StringComparison.Ordinal) == true; type = type.BaseType)
+            {
+                if (type.Name != member.DeclaringType) continue;
+                var name = member.Name.StartsWith("set_", StringComparison.Ordinal) ? member.Name[4..] : member.Name;
+                return name.StartsWith('<') && name.IndexOf('>') is var close and > 1 ? name[1..close] : name;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// The code of a base model class's own virtual method the model calls past its override (base.AfterAddedToRoom(): MonsterModel's,
+        /// which does nothing): a virtual method of a base class of the game's, other than the model's own class, called without dispatch.
+        /// </summary>
+        private MethodBase? BaseImplementation(CodeMember member)
+        {
+            if (member.Name.StartsWith('<') || member.Name.StartsWith("get_", StringComparison.Ordinal) || member.DeclaringType == _card.Name) return null;
+            for (var type = _card.BaseType; type != null && type.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models", StringComparison.Ordinal) == true; type = type.BaseType)
+            {
+                if (type.Name != member.DeclaringType) continue;
+                return type.GetMethods(All).FirstOrDefault(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount) is { IsAbstract: false, IsVirtual: true } found
+                    ? BodyOf(found) : null;
             }
             return null;
         }

@@ -54,7 +54,7 @@ public class BlockGainTests
         if (!File.Exists(path)) return;
         using var code = new BranchCode(path);
         var table = new[] { "ChoFirm", "ChoLimbs", "DeathsDoor", "EvilEye", "Rally", "SecondWind" };
-        var found = code.Cards().Where(type => CardEffects.BlockGains(CardProgramReader.Read(type, code.Read)) is var gains
+        var found = code.Cards().Where(type => CardEffects.BlockGains(ProgramReader.Read(type, code.Read)) is var gains
                                                 && (gains.Count > 1 || gains.Any(gain => gain.Loops.Count > 0)))
             .Select(type => type.Name).Order(StringComparer.Ordinal).ToList();
         Assert.Equal(table.Where(card => code.Cards().Any(type => type.Name == card)), found);

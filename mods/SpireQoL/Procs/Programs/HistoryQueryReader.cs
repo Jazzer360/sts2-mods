@@ -79,9 +79,9 @@ public static class HistoryQueryReader
     /// <summary>The entries the source names: CardPlaysStarted, CardPlaysFinished, or Entries.OfType&lt;XEntry&gt;.</summary>
     private static HistoryKind? Source(ProgramValue source) => source switch
     {
-        QueryValue { Name: "CardPlaysStarted" } plays when CardProgramReader.ReadsHistory(plays) => HistoryKind.CardPlayStarted,
-        QueryValue { Name: "CardPlaysFinished" } plays when CardProgramReader.ReadsHistory(plays) => HistoryKind.CardPlayFinished,
-        QueryValue { Name: "OfType", GenericArguments: [var entry], Arguments: [QueryValue { Name: "Entries" } entries] } when CardProgramReader.ReadsHistory(entries)
+        QueryValue { Name: "CardPlaysStarted" } plays when ProgramReader.ReadsHistory(plays) => HistoryKind.CardPlayStarted,
+        QueryValue { Name: "CardPlaysFinished" } plays when ProgramReader.ReadsHistory(plays) => HistoryKind.CardPlayFinished,
+        QueryValue { Name: "OfType", GenericArguments: [var entry], Arguments: [QueryValue { Name: "Entries" } entries] } when ProgramReader.ReadsHistory(entries)
             => EntryKinds.TryGetValue(entry, out var kind) ? kind : null,
         _ => null,
     };

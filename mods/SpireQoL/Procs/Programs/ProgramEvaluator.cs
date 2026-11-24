@@ -41,42 +41,42 @@ public static class ProgramEvaluator
     /// <summary>The play itself (cardPlay): its Target, Card and Player.</summary>
     private static readonly object ThePlay = new();
 
-    private sealed record Context(ProgramBoard Board, CardProgram Program, IReadOnlyDictionary<string, object?> Parameters);
+    private sealed record Context(ProgramBoard Board, ModelProgram Program, IReadOnlyDictionary<string, object?> Parameters);
 
     private sealed record Closure(LambdaValue Lambda, Context Context);
 
     /// <summary>Whether <paramref name="condition"/> holds on the board: null when it can't be told.</summary>
-    public static bool? Holds(ProgramCondition condition, ProgramBoard board, CardProgram program) =>
+    public static bool? Holds(ProgramCondition condition, ProgramBoard board, ModelProgram program) =>
         Holds(condition, new Context(board, program, new Dictionary<string, object?>()));
 
     /// <summary>The value on the board (a number as a decimal, an object, null): null when it can't be told.</summary>
-    public static object? Value(ProgramValue value, ProgramBoard board, CardProgram program)
+    public static object? Value(ProgramValue value, ProgramBoard board, ModelProgram program)
     {
         var result = Evaluate(value, new Context(board, program, new Dictionary<string, object?>()));
         return result == Unknown ? null : result;
     }
 
     /// <summary>The value with its parameters bound (a calculated value's lambda's card): null when it can't be told.</summary>
-    public static object? Value(ProgramValue value, ProgramBoard board, CardProgram program, IReadOnlyDictionary<string, object?> parameters)
+    public static object? Value(ProgramValue value, ProgramBoard board, ModelProgram program, IReadOnlyDictionary<string, object?> parameters)
     {
         var result = Evaluate(value, new Context(board, program, parameters));
         return result == Unknown ? null : result;
     }
 
     /// <summary>A number the value works out to on the board (a card value, a count, a constant); null when it can't be told.</summary>
-    public static decimal? Number(ProgramValue value, ProgramBoard board, CardProgram program) =>
+    public static decimal? Number(ProgramValue value, ProgramBoard board, ModelProgram program) =>
         ToNumber(Evaluate(value, new Context(board, program, new Dictionary<string, object?>())));
 
     /// <summary>Whether <paramref name="condition"/> holds for <paramref name="item"/> (the card a loop or a pick takes: "each").</summary>
-    public static bool? HoldsFor(ProgramCondition condition, object? item, ProgramBoard board, CardProgram program) =>
+    public static bool? HoldsFor(ProgramCondition condition, object? item, ProgramBoard board, ModelProgram program) =>
         Holds(condition, new Context(board, program, new Dictionary<string, object?> { ["each"] = item }));
 
     /// <summary>Whether a lambda (a filter) holds for <paramref name="item"/>.</summary>
-    public static bool? Passes(LambdaValue lambda, object? item, ProgramBoard board, CardProgram program) =>
+    public static bool? Passes(LambdaValue lambda, object? item, ProgramBoard board, ModelProgram program) =>
         Holds(lambda.Body, new Context(board, program, new Dictionary<string, object?> { [lambda.Parameter] = item }));
 
     /// <summary>The items a collection value holds on the board (your hand without the played card); null when it can't be told.</summary>
-    public static IReadOnlyList<object?>? Items(ProgramValue value, ProgramBoard board, CardProgram program) =>
+    public static IReadOnlyList<object?>? Items(ProgramValue value, ProgramBoard board, ModelProgram program) =>
         Evaluate(value, new Context(board, program, new Dictionary<string, object?>())) is IEnumerable items and not string ? items.Cast<object?>().ToList() : null;
 
     /// <summary>
@@ -84,7 +84,7 @@ public static class ProgramEvaluator
     /// factory makes for the fight, as many as its count argument asks: Jack of All Trades, Metamorphosis), its counter's bound (i &lt; Repeat,
     /// i &lt; 2, i &lt; your X), or the card value it's over; one when none can be told (the game's template card).
     /// </summary>
-    public static int Rounds(LoopStep loop, ProgramBoard board, CardProgram program)
+    public static int Rounds(LoopStep loop, ProgramBoard board, ModelProgram program)
     {
         // A foreach: its collection's count (a counter loop inside one keeps the collection as its items too: its own bound is its rounds).
         if (loop.Items != null && loop.Over.StartsWith("each of", StringComparison.Ordinal))
@@ -408,7 +408,7 @@ public static class ProgramEvaluator
     /// <summary>A bool property of the card's own type (or a base type's), read from its code; null when there's none or it can't be read.</summary>
     private static ProgramCondition? OwnProperty(Type cardType, string name) => Getters.GetOrAdd((cardType, name), key =>
     {
-        try { return CardProgramReader.ReadProperty(key.Item1, key.Item2, RuntimeCode.Read); }
+        try { return ProgramReader.ReadProperty(key.Item1, key.Item2, RuntimeCode.Read); }
         catch { return null; }
     });
 

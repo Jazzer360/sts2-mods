@@ -51,7 +51,7 @@ public static class MadeCards
     public static bool Makes(CommandStep command) =>
         command.Command.DeclaringType == "CardPileCmd" && AddCommands.Contains(command.Command.Name) || command.Command is { DeclaringType: "ForgeCmd", Name: "Forge" };
 
-    public static IReadOnlyList<Make> Of(CardProgram program, Type cardType)
+    public static IReadOnlyList<Make> Of(ModelProgram program, Type cardType)
     {
         var makes = new List<Make>();
         var named = new HashSet<string>();
@@ -106,7 +106,7 @@ public static class MadeCards
         {
             perCall = maker is { Name: "Create", Arguments.Count: >= 2 } create && source == made ? create.Arguments[1] : ProgramEvaluator.FactoryCount(made);
             // A list a loop filled with the cards it made (Crash Landing's Debris, Shiv.CreateInHand's Shivs): that loop's rounds, its card the one it made.
-            if (perCall == null && found.LoopBefore is { } loop && new CardProgram("", loop.Body).All().OfType<CreateStep>().ToList() is { Count: > 0 } creates
+            if (perCall == null && found.LoopBefore is { } loop && new ModelProgram("", loop.Body).All().OfType<CreateStep>().ToList() is { Count: > 0 } creates
                 && creates.Select(create => create.Card).Distinct().ToList() is [var filled])
             {
                 filledBy = loop;
@@ -174,7 +174,7 @@ public static class MadeCards
     }
 
     /// <summary>The players of your side a make in a loop over them makes cards for, as their creator: all of them when you are, else only you.</summary>
-    private static int PlayersByYou(Make make, ProgramBoard board, CardProgram program)
+    private static int PlayersByYou(Make make, ProgramBoard board, ModelProgram program)
     {
         if (make.Found?.Loops.LastOrDefault(CardEffects.OverYourSide) is not { Items: { } players } || !StepValues.IsOwner(make.Creator) || board.Card.IsCanonical) return 1;
         return ProgramEvaluator.Items(players, board, program)?.Count ?? 1;
@@ -202,7 +202,7 @@ public static class MadeCards
     private static ProgramValue? Unstored(ProgramValue? value) => value is StoredValue stored ? Unstored(stored.Value) : value;
 
     /// <summary>How many cards one round of the make makes on the board (its loops' rounds aren't in it); null when its count can't be read.</summary>
-    public static int? PerRound(Make make, ProgramBoard board, CardProgram program)
+    public static int? PerRound(Make make, ProgramBoard board, ModelProgram program)
     {
         if (make.FilledBy != null) return ProgramEvaluator.Rounds(make.FilledBy, board, program);
         if (make.PerCall == null) return 1;
@@ -210,7 +210,7 @@ public static class MadeCards
     }
 
     /// <summary>How many cards the make makes on the board: one round's times the rounds of its loops but the ones over your side; null when it can't be read.</summary>
-    public static int? CountOn(Make make, ProgramBoard board, CardProgram program)
+    public static int? CountOn(Make make, ProgramBoard board, ModelProgram program)
     {
         if (PerRound(make, board, program) is not { } perRound) return null;
         var loops = make.Found?.Loops.Where(loop => !CardEffects.OverYourSide(loop)) ?? Enumerable.Empty<LoopStep>();

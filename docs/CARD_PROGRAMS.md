@@ -40,7 +40,7 @@ and the tables with what the code says. The last two rows get checks against the
 
 ### A1. Reading a program
 
-`Procs/CardProgram.cs` reads a card type's play into a `CardProgram`, once per type and cached. It reads the loaded game's
+`Procs/Programs/ModelProgram.cs` (`ProgramReader`) reads a card type's play into a `ModelProgram`, once per type and cached (`CardPrograms`; any other game method: Part C). It reads the loaded game's
 code (`GameCode.Instructions` over `CardCode.OnPlayMethods`: `OnPlay`, its state machine and its local functions), so a player
 on main gets main's program. It reads only code, never state or the RNG.
 
@@ -294,7 +294,7 @@ hooks.
     every enemy you can hit (a loop over them or all at once), its amount evaluated (decimal's operators and constants now evaluate:
     Shared Fate's `-EnemyStrengthLoss`, Resonance's `Decimal.MinusOne`). It replaced `EnemyStrengthCards`; StrengthLossTests proves
     the cards and amounts are the table's.
-  - A power's own action the card runs, awaited (`CardProgramReader.IsPowerAction`: Outbreak's `PoisonPower.Trigger` on each enemy's
+  - A power's own action the card runs, awaited (`ProgramReader.IsPowerAction`: Outbreak's `PoisonPower.Trigger` on each enemy's
     poison) is a step like a command; `CardEffects.TriggersPoison` replaced `TriggerPoisonCards` (only Outbreak has one, on both branches).
   - **One play, repeated** (2026-11-23, decision #189): the adapter describes one play from the program and the simulator's loop repeats
     it, as `CardModel.OnPlayWrapper` does; the card goes to its pile once, after the last play. What a play takes from your hand is a
@@ -427,6 +427,32 @@ Thinking Ahead 1), with `SimAdapter`'s `RepeatPerKillCards` and `BlockFor`'s Fis
 - **B3. Listeners beyond powers and relics** (after A and B1–B2, in the same push if time allows): the listener list follows
   `IterateHookListeners` fully. That adds orbs (today `SimEngine.Orbs`), monsters (today `EnemyModels`), potions, and cards
   with their own hooks in your piles (38 beta cards override a hook). Each is added as a model in that order, with a test.
+
+## Part C: model programs (decision #195)
+
+The reader reads any game method, not only a card's play: a monster's moves and hooks now, a power's or relic's hooks next. One reader
+(`ProgramReader`), one program (`ModelProgram`: its `Owner` is the class it was read from), the same steps and conditions.
+
+### C1. Reading any game method
+
+- **The cache.** `ModelPrograms.Of(owner, method)` reads a method of any model class from the running game's code once and keeps it
+  (decision #31: never per call). Cards keep their own cache (`CardPrograms`).
+- **A monster's code** (`MonsterCode`, found by shape, never by a list): its moves are the methods its `MoveState`s perform (a `Task`
+  taking the move's targets; in the game a move is reached from the `MoveState` that names it, its `_onPerform`), its hooks the game's
+  virtual methods it overrides (`AfterAddedToRoom`, `AfterDeath`, `BeforeRemovedFromRoom`, `AfterDamageReceived`...), less how it looks
+  and how its move rules are built.
+- **What the reader adds for models** (each a general rule, tested on cards too):
+  - a store to the model's own state is a step (`StoreStep`: a field or a property of its class or a base class of the game's, set to a
+    value: Queen's `HasAmalgamDied`, Bowlbug Rock's `IsOffBalance`). It's what a later read of that state reads (a conditional move
+    branch, the model's next hook), so it isn't dropped as a non-command any more;
+  - a monster's call into its base class that changes it (`MonsterModel.SetMoveImmediate`: Queen's Enrage when her Amalgam dies) is a
+    step like a command (`ProgramReader.IsModelAction`); End of Days' `OnDieToDoom` on a monster it kills is named for cards;
+  - a call to the base class's own code of the hook being overridden (`base.AfterAddedToRoom()`, a non-dispatched call to a virtual
+    method of a base class) is read as that code (MonsterModel's: nothing).
+- **The scan** (`MonsterProgramTests`, catalog tests, both branches): every monster's moves and hooks are read with nothing the reader
+  couldn't follow, and every command in them is translated into the enemy turn's action (`SimAdapter.MoveCommandsTranslated`) or is a
+  named gap with why (`MoveCommandsNotTranslated`). At v0.113.1 (beta) and v0.111.1 (main): 116 monster classes with code, 318 moves
+  and 93 hook bodies on each branch, every one read.
 
 ## Order of work (one session)
 

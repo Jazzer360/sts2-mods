@@ -10,7 +10,7 @@ namespace SpireQoL.Sim;
 
 /// <summary>
 /// The history ledger's seed (decision #191): which questions to the game's log of the fight this board's cards, relics and powers ask
-/// (read from their code: CardProgramReader.HistoryQueries, translated by HistoryQueryReader), and each player's count of each from the
+/// (read from their code: ProgramReader.HistoryQueries, translated by HistoryQueryReader), and each player's count of each from the
 /// game's log, taken once, in the snapshot the rest of the start state is read in. The simulator counts forward from there; it never
 /// reads the game's log while it runs.
 /// </summary>
@@ -23,7 +23,7 @@ internal static class HistoryLedger
     {
         try
         {
-            return CardProgramReader.HistoryQueries(owner, RuntimeCode.Read)
+            return ProgramReader.HistoryQueries(owner, RuntimeCode.Read)
                 .Select(found => HistoryQueryReader.Read((QueryValue)found.Query).Query)
                 .OfType<HistoryQuery>().Where(query => !query.IsTurnPlayCount).Distinct().ToList();
         }
@@ -80,7 +80,7 @@ internal static class HistoryLedger
         try
         {
             if (!card.DynamicVars.TryGetValue(name, out var dynamicVar) || dynamicVar is not MegaCrit.Sts2.Core.Localization.DynamicVars.CalculatedVar calculated || card.Owner is not { } owner) return null;
-            var multipliers = Multipliers.GetOrAdd(card.GetType(), type => CardProgramReader.CalculatedMultipliers(type, RuntimeCode.Read));
+            var multipliers = Multipliers.GetOrAdd(card.GetType(), type => ProgramReader.CalculatedMultipliers(type, RuntimeCode.Read));
             if (!multipliers.TryGetValue(name, out var multiplier) || Linear(multiplier) is not var (question, factor) || HistoryQueryReader.Read(question).Query is not { } query) return null;
             var extra = typeof(MegaCrit.Sts2.Core.Localization.DynamicVars.CalculatedVar)
                 .GetMethod("GetExtraVar", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.Invoke(calculated, null) as MegaCrit.Sts2.Core.Localization.DynamicVars.DynamicVar;
@@ -98,7 +98,7 @@ internal static class HistoryLedger
     /// <summary>A multiplier that is a count of the log (Count(...)), plus a constant (1 + Count(...): Rattle, Tear Asunder): the count and its factor.</summary>
     private static (QueryValue Count, decimal Factor)? Linear(ProgramValue value) => value switch
     {
-        QueryValue { Type: "Enumerable", Name: "Count" } count when CardProgramReader.ReadsHistory(count) => (count, 1m),
+        QueryValue { Type: "Enumerable", Name: "Count" } count when ProgramReader.ReadsHistory(count) => (count, 1m),
         ArithmeticValue { Op: "add", Left: ConstantValue, Right: var counted } => Linear(counted),
         ArithmeticValue { Op: "add", Left: var counted, Right: ConstantValue } => Linear(counted),
         _ => null,

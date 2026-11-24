@@ -23,7 +23,7 @@ public class StepTranslationTests
         using var code = new BranchCode(PathOf(branch));
         var missing = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var type in code.Cards())
-            foreach (var command in CardProgramReader.Read(type, code.Read).Commands)
+            foreach (var command in ProgramReader.Read(type, code.Read).Commands)
                 if (!SimAdapter.CommandsTranslated.ContainsKey(command.Command.FullName) && !SimAdapter.CommandsNotTranslated.ContainsKey(command.Command.FullName))
                     missing.Add($"{command.Command.FullName} ({type.Name})");
         Assert.True(missing.Count == 0, $"Commands a card's play calls with no translation and no named gap ({branch}):\n" + string.Join("\n", missing));
@@ -39,7 +39,7 @@ public class StepTranslationTests
             if (!File.Exists(PathOf(branch))) return;
             using var code = new BranchCode(PathOf(branch));
             foreach (var type in code.Cards())
-                foreach (var command in CardProgramReader.Read(type, code.Read).Commands)
+                foreach (var command in ProgramReader.Read(type, code.Read).Commands)
                     called.Add(command.Command.FullName);
         }
         var stale = SimAdapter.CommandsTranslated.Keys.Concat(SimAdapter.CommandsNotTranslated.Keys).Where(command => !called.Contains(command)).ToList();
