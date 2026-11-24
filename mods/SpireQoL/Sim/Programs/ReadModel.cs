@@ -1529,6 +1529,10 @@ public sealed class ReadModel : SimModel
             case HookFact.PoweredBlock: return (in HookArgs args) => args.Block?.Props.IsPoweredBlock() == true ? 1m : 0m;
             case HookFact.CardOrMonsterMove: return (in HookArgs args) => (args.Damage?.Props ?? args.Block?.Props ?? args.Hit?.Props)?.IsCardOrMonsterMove() == true ? 1m : 0m;
             case HookFact.FromCard: return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card) != null ? 1m : 0m;
+            // The damage's card where it is (decision #231): being played is having a card play (a card acting in your hand has none).
+            case HookFact.SourceInPlay: return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card) != null && (args.Damage?.Play ?? args.Block?.Play) != null ? 1m : 0m;
+            case HookFact.SourcePlayIndex: return (in HookArgs args) => (args.Damage?.Play ?? args.Block?.Play)?.PlayIndex ?? 0;
+            case HookFact.FromPlay: return (in HookArgs args) => (args.Damage?.Play ?? args.Block?.Play) != null ? 1m : 0m;
             case HookFact.CardIsOwners: return (in HookArgs args) => (args.Damage?.Play ?? args.Block?.Play)?.Owner == args.Owner ? 1m : 0m;
             // The side whose turn ends is the players' (a living player takes part); the side whose turn starts, the enemies' (a living enemy).
             case HookFact.TakesPart: return (in HookArgs args) => (args.Hook is HookName.BeforeSideTurnStart or HookName.AfterSideTurnStart or HookName.AfterSideTurnStartLate

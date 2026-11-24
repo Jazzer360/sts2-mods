@@ -1647,3 +1647,20 @@ public sealed class BufferPower : SimModel
         state.LogFired(Name, amount: 0, owner);
     }
 }
+
+// ---- where the damage's card is (Sim/Models/StatModels.cs, deleted 2026-11-24)
+
+/// <summary>
+/// LethalityPower.ModifyDamageMultiplicative: 1 + amount/100 on the owner's first Attack play each turn (a replay's later
+/// plays don't get it; attack plays started this turn: the owner's Turn "Started:Attack").
+/// </summary>
+public sealed class LethalityPower : SimModel
+{
+    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage)
+    {
+        if (!damage.Props.IsPoweredAttack() || damage.Card == null || damage.Play?.Owner != owner) return 1m;
+        if (damage.Play.PlayIndex > 0) return 1m;
+        var started = SimEngine.TurnOf(state, owner)[SimKeys.Plays(PlayStage.Started, SimCardType.Attack)];
+        return started > 1 ? 1m : 1m + SimEngine.PowerOn(state, owner, ThisPower) / 100m;
+    }
+}

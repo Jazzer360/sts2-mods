@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 132 game methods; 3 adapter rules; 88 hand-written models.
+# 20 engine rules naming 132 game methods; 3 adapter rules; 87 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -143,8 +143,6 @@ InterceptPower: InterceptPower.AfterRemoved, InterceptPower.AfterSideTurnEnd, In
   model: ModifyDamageMultiplicative
 JugglingPower: JugglingPower.AfterApplied, JugglingPower.AfterCardPlayed, JugglingPower.AfterSideTurnEnd, JugglingPower.BeforeCardPlayed, JugglingPower.InitInternalData
   model: AfterCardPlayed, BeforeCardPlayed
-LethalityPower: LethalityPower.ModifyDamageMultiplicative
-  model: ModifyDamageMultiplicative
 LostLutePower: LostLutePower.AfterCardPlayed (beta only)
   model: AfterCardPlayed
 MagicBombPower: MagicBombPower.AfterDeath, MagicBombPower.AfterSideTurnEnd

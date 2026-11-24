@@ -3,9 +3,9 @@
 
 ## Powers and relics
 
-beta powers: 304 classes, 273 with hooks; read from code 105, hand-written 64, neither 106 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 304 classes, 273 with hooks; read from code 106, hand-written 63, neither 106 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 51, hand-written 21, neither 238 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 92, hand-written 52, neither 93 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 93, hand-written 51, neither 93 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 44, hand-written 20, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 6, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 2
@@ -204,8 +204,8 @@ commands: a card made (AddGeneratedCardToCombat, a made card): 6 classes, 6 alon
 a loop over items (creatures, cards): 8 classes, 5 alone: CompostPower*, ImpaledPower, PaelsEye, SmoggyPower, BlessingOfTheForge (potion)*, CosmicConcoction (potion)*, EntropicBrew (potion)*, GlowwaterPotion (potion)*
 arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd): 6 classes, 5 alone: CoveringFirePower*, ExplosiveArrowsPower*, ImpaledPower, QuietusPower*, Twine*, YahPower*
 a monster's own state set (its flag, its next move): 10 classes, 4 alone: AsleepPower, CurlUpPower, FlutterPower*, ImbalancedPower*, InfestedPower, PlowPower*, RavenousPower*, SlumberPower, SteamEruptionPower, StockPower
-queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 8 classes, 4 alone: AimPower*, CurlUpPower, LethalityPower*, PaelsEye, PenNib*, PhantomBladesPower, TagTeamPower*, Vambrace
 the engine runs no read enchantment (its bodies read whole but for that): 4 classes, 4 alone: Glam (enchantment)*, Imbued (enchantment)*, Slither (enchantment)*, Spiral (enchantment)*
+queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 7 classes, 3 alone: AimPower*, CurlUpPower, PaelsEye, PenNib*, PhantomBladesPower, TagTeamPower*, Vambrace
 another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 5 classes, 3 alone: CoveredPower, HardenedShellPower*, SurprisePower, Goopy (enchantment)*, FoulPotion (potion)*
 a pick: 3 classes, 3 alone: StratagemPower*, DropletOfPrecognition (potion)*, GamblersBrew (potion)*
 commands: OstyCmd.Summon: 3 classes, 3 alone: DevourLifePower*, SicEmPower*, BoneBrew (potion)*

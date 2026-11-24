@@ -961,6 +961,37 @@ public static class HookReader
             return holds == null ? null : compare.Op == Comparison.Equal ? holds : Not(holds);
         }
 
+        /// <summary>The pile of the card a damage comes from (cardSource.Pile, kept in a local or not).</summary>
+        private static bool IsSourcePile(ProgramValue value) => Unstored(value) switch
+        {
+            QueryValue { Name: "Pile", Of: { } pileOf } => IsSourceCard(Unstored(pileOf)),
+            // A local set on each branch to the same pile (Lethality's pile), merged: that pile.
+            WaysValue ways => ways.Ways.Count > 0 && ways.Ways.All(way => IsSourcePile(way.Value)),
+            _ => false,
+        };
+
+        /// <summary>
+        /// The card a damage comes from, where it is (decision #231): in a pile (cardSource.Pile != null: every card a simulation's damage comes from
+        /// is), in the play pile (Pile.Type == PileType.Play: being played, the damage's card play there; any other pile a gap), and the Modify hook's
+        /// card play there (cardPlay != null). Null for anything else.
+        /// </summary>
+        private HookValue? SourceCompare(CompareValue compare)
+        {
+            if (compare.Op is not (Comparison.Equal or Comparison.NotEqual)) return null;
+            HookValue? holds = null;
+            foreach (var (one, other) in new[] { (compare.Left, compare.Right), (compare.Right, compare.Left) })
+            {
+                if (IsSourcePile(one) && other is NullValue) holds = Not(new HookFactValue(HookFact.FromCard));
+                else if (Unstored(one) is QueryValue { Name: "Type", Of: { } typeOf } && IsSourcePile(typeOf) && other is ConstantValue pileType)
+                    holds = EnumName(_type.Assembly, "PileType", pileType.Value) == "Play" ? new HookFactValue(HookFact.SourceInPlay)
+                        : throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's pile is {pileType.Value}");
+                else if (Unstored(one) is ParameterValue { Name: "cardPlay" } or NamedValue { Name: "cardPlay" } && DamageHooks.Contains(_hook) && other is NullValue)
+                    holds = Not(new HookFactValue(HookFact.FromPlay));
+                if (holds != null) break;
+            }
+            return holds == null ? null : compare.Op == Comparison.Equal ? holds : Not(holds);
+        }
+
         /// <summary>While a hand pick's step is read: its condition's tests of the pick hold (Test).</summary>
         private bool _handPickHolds;
 
@@ -1656,6 +1687,12 @@ public static class HookReader
                     return new HookConstant(0m);
                 case ParameterValue { Name: "cardSource" } or NamedValue { Name: "cardSource" }:
                     return new HookFactValue(HookFact.FromCard);
+                // The card a damage comes from is in a pile (cardSource.Pile, tested as there): every card a simulation's damage comes from is (decision #231).
+                case var sourcePile when IsSourcePile(sourcePile):
+                    return new HookFactValue(HookFact.FromCard);
+                // The card play a Modify hook is given (cardPlay, tested as there): the damage's or block's play.
+                case ParameterValue { Name: "cardPlay" } or NamedValue { Name: "cardPlay" } when DamageHooks.Contains(_hook):
+                    return new HookFactValue(HookFact.FromPlay);
                 // A value of several ways (a null-conditional chain: base.Applier?.Player) tested as true: a way holds and its value is true.
                 case WaysValue ways:
                 {
@@ -1855,6 +1892,7 @@ public static class HookReader
         private HookValue Compare(CompareValue compare)
         {
             if (AttackCompare(compare) is { } attacks) return attacks;
+            if (SourceCompare(compare) is { } sources) return sources;
             if (compare.Op is Comparison.Equal or Comparison.NotEqual)
             {
                 // Its kept card is there (CardBeingPlayed != null), or is the card played (cardPlay.Card == CardBeingPlayed): a play is bound to it,
@@ -2027,6 +2065,12 @@ public static class HookReader
                 case NamedValue { Name: "Decimal.Zero" }: return new HookConstant(0m);
                 case NamedValue { Name: "Decimal.One" }: return new HookConstant(1m);
                 case NamedValue { Name: "Decimal.MinusOne" }: return new HookConstant(-1m);
+                // A true-or-false the code worked out and kept as a number (int num2 = (a && b) ? 1 : 0: Lethality's): its condition, 1 or 0.
+                case ConditionValue condition:
+                    return Condition(condition.Condition) ?? new HookConstant(1m);
+                // Which play of its card play the damage's card is in (cardSource.CurrentPlayIndex: 0 the first; the damage's card play's).
+                case QueryValue { Name: "CurrentPlayIndex", Of: { } indexOf } when IsSourceCard(Unstored(indexOf)):
+                    return new HookFactValue(HookFact.SourcePlayIndex);
                 // No cap (ModifyDamageCap's return for a damage it doesn't cap).
                 case NamedValue { Name: "Decimal.MaxValue" }: return new HookConstant(decimal.MaxValue);
                 case NamedValue { Name: "amount" } when _hook == "AfterPowerAmountChanged": return new HookFactValue(HookFact.PowerAmount);

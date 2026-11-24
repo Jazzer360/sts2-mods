@@ -282,6 +282,12 @@ public enum HookFact
     /// (creature.Monster is Osty).
     /// </summary>
     CreatureIsPet,
+    /// <summary>The card a damage or block comes from is being played (cardSource.Pile.Type == PileType.Play): the damage's card play is there.</summary>
+    SourceInPlay,
+    /// <summary>Which play of its card play the damage's card is in (cardSource.CurrentPlayIndex: 0 the first).</summary>
+    SourcePlayIndex,
+    /// <summary>The Modify hook is given a card play (cardPlay != null): the damage's or block's.</summary>
+    FromPlay,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>

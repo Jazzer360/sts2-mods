@@ -100,6 +100,7 @@ public static partial class ReadModels
         RelicId.Kusarigama.Name,
         PowerId.LagavulinMatriarchDominion.Name,
         PowerId.Leadership.Name,
+        PowerId.Lethality.Name,
         RelicId.LetterOpener.Name,
         nameof(MegaCrit.Sts2.Core.Models.Orbs.LightningOrb),
         RelicId.LostWisp.Name,

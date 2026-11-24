@@ -9653,6 +9653,404 @@
     "HelpsOwner": false
   },
   {
+    "Name": "LethalityPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "LethalityPower.ModifyDamageMultiplicative:0006",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "LethalityPower.ModifyDamageMultiplicative:0010",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "FromCard"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "LethalityPower.ModifyDamageMultiplicative:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "LethalityPower.ModifyDamageMultiplicative:0048",
+                    "Test": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookFactValue",
+                        "Fact": "SourceInPlay"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "LethalityPower.ModifyDamageMultiplicative:0052",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "SourcePlayIndex"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "LethalityPower.ModifyDamageMultiplicative:0048",
+                    "Test": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookFactValue",
+                        "Fact": "SourceInPlay"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "LethalityPower.ModifyDamageMultiplicative:009A",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "LessOrEqual",
+                        "Left": {
+                          "$kind": "HookHistory",
+                          "Query": {
+                            "Kind": "CardPlayStarted",
+                            "Scope": "ThisTurn",
+                            "Whose": "Owner",
+                            "Details": "None",
+                            "CardType": "Attack"
+                          },
+                          "Any": false
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "LethalityPower.ModifyDamageMultiplicative:0052",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "SourcePlayIndex"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "LethalityPower.ModifyDamageMultiplicative:009A",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "LessOrEqual",
+                        "Left": {
+                          "$kind": "HookHistory",
+                          "Query": {
+                            "Kind": "CardPlayStarted",
+                            "Scope": "ThisTurn",
+                            "Whose": "Owner",
+                            "Details": "None",
+                            "CardType": "Attack"
+                          },
+                          "Any": false
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "LethalityPower.ModifyDamageMultiplicative:0052",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "LessOrEqual",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "SourcePlayIndex"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "LethalityPower.ModifyDamageMultiplicative:008D",
+                                "Test": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "SourceInPlay"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "LethalityPower.ModifyDamageMultiplicative:0091",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "FromPlay"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "LethalityPower.ModifyDamageMultiplicative:0048",
+                    "Test": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookFactValue",
+                        "Fact": "SourceInPlay"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "LethalityPower.ModifyDamageMultiplicative:009A",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookHistory",
+                        "Query": {
+                          "Kind": "CardPlayStarted",
+                          "Scope": "ThisTurn",
+                          "Whose": "Owner",
+                          "Details": "None",
+                          "CardType": "Attack"
+                        },
+                        "Any": false
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "LethalityPower.ModifyDamageMultiplicative:0052",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "SourcePlayIndex"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "LethalityPower.ModifyDamageMultiplicative:009A",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookHistory",
+                        "Query": {
+                          "Kind": "CardPlayStarted",
+                          "Scope": "ThisTurn",
+                          "Whose": "Owner",
+                          "Details": "None",
+                          "CardType": "Attack"
+                        },
+                        "Any": false
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "LethalityPower.ModifyDamageMultiplicative:0052",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "LessOrEqual",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "SourcePlayIndex"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "LethalityPower.ModifyDamageMultiplicative:008D",
+                              "Test": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "SourceInPlay"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "LethalityPower.ModifyDamageMultiplicative:0091",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "FromPlay"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Add",
+                "Left": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "Divide",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 100
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "LetterOpener",
     "Kind": "Relic",
     "Hooks": [
