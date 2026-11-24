@@ -92,31 +92,9 @@ public static class CardEffects
     public static IReadOnlyList<DrawForYou> DrawsForYou(Type cardType) => Draws.GetOrAdd(cardType, type => DrawsForYou(CardPrograms.Of(type)));
 
     /// <summary>The play's draws for you, in order.</summary>
-    public static IReadOnlyList<DrawForYou> DrawsForYou(CardProgram program)
-    {
-        var draws = new List<DrawForYou>();
-        void Walk(IEnumerable<ProgramStep> steps, ProgramCondition outer, IReadOnlyList<LoopStep> loops)
-        {
-            foreach (var step in steps)
-            {
-                var condition = step.Condition is { } own ? outer.And(own) : outer;
-                switch (step)
-                {
-                    case LoopStep loop:
-                        Walk(loop.Body, condition, loops.Append(loop).ToList());
-                        break;
-                    case CommandStep command:
-                        if (command.Command.DeclaringType == "CardCmd" && command.Command.Name == "DiscardAndDraw"
-                            || IsDraw(command) && command.Arguments.Contains("Owner"))
-                            draws.Add(new DrawForYou(command, condition, loops));
-                        Walk(command.Inner, condition, loops);
-                        break;
-                }
-            }
-        }
-        Walk(program.Steps, ProgramCondition.Always, Array.Empty<LoopStep>());
-        return draws;
-    }
+    public static IReadOnlyList<DrawForYou> DrawsForYou(CardProgram program) =>
+        Find(program, command => command.Command.DeclaringType == "CardCmd" && command.Command.Name == "DiscardAndDraw" || IsDraw(command) && command.Arguments.Contains("Owner"))
+            .Select(found => new DrawForYou(found.Command, found.Condition, found.Loops)).ToList();
 
     // ---- cards a play takes: other cards exhausted, discarded, transformed or moved into your hand
 
@@ -253,36 +231,11 @@ public static class CardEffects
     /// Picked), and with <paramref name="collections"/> a collection given whole (your hand, a Where of it: Each), the cards a draw gave
     /// (Drawn) or the ones looked at on top of your draw pile (LookedAt). Anything else (the card itself, a card it can't tell) isn't one.
     /// </summary>
-    private static IReadOnlyList<CardsTaken> Takes(CardProgram program, Func<CommandStep, int?> cardsArgument, bool collections)
-    {
-        var takes = new List<CardsTaken>();
-        ChoiceStep? lastPick = null;
-        LoopStep? lastLoop = null;
-        void Walk(IEnumerable<ProgramStep> steps, ProgramCondition outer, LoopStep? loop)
-        {
-            foreach (var step in steps)
-            {
-                var condition = step.Condition is { } own ? outer.And(own) : outer;
-                switch (step)
-                {
-                    case ChoiceStep choice:
-                        lastPick = choice;
-                        break;
-                    case LoopStep inner:
-                        Walk(inner.Body, condition, inner);
-                        lastLoop = inner;
-                        break;
-                    case CommandStep command:
-                        if (cardsArgument(command) is { } index && index < command.Values.Count && Taken(command, Unstored(command.Values[index])!, condition, loop, lastPick, lastLoop, collections) is { } take)
-                            takes.Add(take);
-                        Walk(command.Inner, condition, loop);
-                        break;
-                }
-            }
-        }
-        Walk(program.Steps, ProgramCondition.Always, loop: null);
-        return takes;
-    }
+    private static IReadOnlyList<CardsTaken> Takes(CardProgram program, Func<CommandStep, int?> cardsArgument, bool collections) =>
+        Find(program, command => cardsArgument(command) is { } index && index < command.Values.Count)
+            .Select(found => Taken(found.Command, Unstored(found.Command.Values[cardsArgument(found.Command)!.Value])!, found.Condition, found.Loops.Count > 0 ? found.Loops[^1] : null,
+                found.Pick, found.LoopBefore, collections))
+            .OfType<CardsTaken>().ToList();
 
     private static CardsTaken? Taken(CommandStep command, ProgramValue cards, ProgramCondition condition, LoopStep? loop, ChoiceStep? lastPick, LoopStep? lastLoop, bool collections)
     {
@@ -494,12 +447,24 @@ public static class CardEffects
     // ---- commands found with what they run on
 
     /// <summary>A command of the play, with everything it runs on (its own condition and every loop's around it) and the loops it's in.</summary>
-    public sealed record Found(CommandStep Command, ProgramCondition Condition, IReadOnlyList<LoopStep> Loops);
+    public sealed record Found(CommandStep Command, ProgramCondition Condition, IReadOnlyList<LoopStep> Loops)
+    {
+        /// <summary>The last pick before it in the play (CardSelectCmd), whose card or cards it may act on.</summary>
+        public ChoiceStep? Pick { get; init; }
 
-    /// <summary>The play's commands <paramref name="which"/> picks, in order, each with its condition and loops.</summary>
+        /// <summary>The last loop the play finished before it (a list a loop filled, given whole after it: Compact).</summary>
+        public LoopStep? LoopBefore { get; init; }
+    }
+
+    /// <summary>
+    /// The play's commands <paramref name="which"/> picks, in order, each with its condition, its loops, the pick before it and the loop
+    /// finished before it: the one walk every effect kind is a filter of (draws, takes, attacks, block, orbs...).
+    /// </summary>
     public static IReadOnlyList<Found> Find(CardProgram program, Func<CommandStep, bool> which)
     {
         var found = new List<Found>();
+        ChoiceStep? lastPick = null;
+        LoopStep? lastLoop = null;
         void Walk(IEnumerable<ProgramStep> steps, ProgramCondition outer, IReadOnlyList<LoopStep> loops)
         {
             foreach (var step in steps)
@@ -507,11 +472,15 @@ public static class CardEffects
                 var condition = step.Condition is { } own ? outer.And(own) : outer;
                 switch (step)
                 {
+                    case ChoiceStep choice:
+                        lastPick = choice;
+                        break;
                     case LoopStep loop:
                         Walk(loop.Body, condition, loops.Append(loop).ToList());
+                        lastLoop = loop;
                         break;
                     case CommandStep command:
-                        if (which(command)) found.Add(new Found(command, condition, loops));
+                        if (which(command)) found.Add(new Found(command, condition, loops) { Pick = lastPick, LoopBefore = lastLoop });
                         Walk(command.Inner, condition, loops);
                         break;
                 }
