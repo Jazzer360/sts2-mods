@@ -319,9 +319,8 @@ public sealed class SimPlayer
     [JsonIgnore] public int Plating { get => Powers[PowerId.Plating]; set => Set(PowerId.Plating, value); }
     [JsonIgnore] public int FeelNoPain { get => Powers[PowerId.FeelNoPain]; set => Set(PowerId.FeelNoPain, value); }
     // End-of-turn powers and relics, as views onto their entries (the models read the entries: Sim/Models/EndOfTurnModels.cs).
-    /// <summary>Hailstorm (amount; Data = the Frost orbs it needs).</summary>
-    [JsonIgnore] public int Hailstorm { get => Powers[PowerId.Hailstorm]; set => Powers = value == 0 ? Powers.Without(PowerId.Hailstorm) : Powers.With(PowerId.Hailstorm, value, Powers.Has(PowerId.Hailstorm) ? Powers.DataOf(PowerId.Hailstorm) : 1); }
-    [JsonIgnore] public int HailstormFrostNeeded { get => Powers.Has(PowerId.Hailstorm) ? Powers.DataOf(PowerId.Hailstorm) : 1; set => Powers = Powers.With(PowerId.Hailstorm, Powers[PowerId.Hailstorm], value); }
+    /// <summary>Hailstorm (amount; the Frost orbs it needs are its FrostOrbs value, read from its code).</summary>
+    [JsonIgnore] public int Hailstorm { get => Powers[PowerId.Hailstorm]; set => Set(PowerId.Hailstorm, value); }
     /// <summary>The Bomb's damage when it goes off this turn end (its last tick: amount 1; Data = its damage), else 0.</summary>
     [JsonIgnore] public int TheBombDamage { get => Powers.Has(PowerId.TheBomb) && Powers[PowerId.TheBomb] <= 1 ? Powers.DataOf(PowerId.TheBomb) : 0; set => Powers = value == 0 ? Powers.Without(PowerId.TheBomb) : Powers.With(PowerId.TheBomb, amount: 1, value); }
     [JsonIgnore] public int ConsumingShadow { get => Powers[PowerId.ConsumingShadow]; set => Set(PowerId.ConsumingShadow, value); }
@@ -335,12 +334,9 @@ public sealed class SimPlayer
     [JsonIgnore] public int Inferno { get => Powers[PowerId.Inferno]; set => Set(PowerId.Inferno, value); }
 
     // Relics (amount: their block or damage; Data where said).
-    [JsonIgnore] public int CloakClaspPerCard { get => Relics[RelicId.CloakClasp]; set => SetRelic(RelicId.CloakClasp, value); }
     [JsonIgnore] public int RippleBasinBlock { get => Relics[RelicId.RippleBasin]; set => SetRelic(RelicId.RippleBasin, value); }
     /// <summary>Stone Calendar's damage when this is its turn (Data: turns until then), else 0.</summary>
     [JsonIgnore] public int StoneCalendarDamage { get => Relics.DataOf(RelicId.StoneCalendar) == 0 ? Relics[RelicId.StoneCalendar] : 0; set => SetRelic(RelicId.StoneCalendar, value); }
-    /// <summary>Obsidian Vice: damage per card in hand to a random enemy at end of turn (v0.113.0).</summary>
-    [JsonIgnore] public int ObsidianViceDamage { get => Relics[RelicId.ObsidianVice]; set => SetRelic(RelicId.ObsidianVice, value); }
     /// <summary>Parrying Shield (amount: its damage; Data: the block it needs).</summary>
     [JsonIgnore] public int ParryingShieldDamage { get => Relics[RelicId.ParryingShield]; set => Relics = Relics.With(RelicId.ParryingShield, value, Relics.DataOf(RelicId.ParryingShield)); }
     [JsonIgnore] public int ParryingShieldBlock { get => Relics.DataOf(RelicId.ParryingShield); set => Relics = Relics.With(RelicId.ParryingShield, Relics[RelicId.ParryingShield], value); }

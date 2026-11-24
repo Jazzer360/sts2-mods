@@ -332,6 +332,66 @@
     "Harmful": false
   },
   {
+    "Name": "CloakClasp",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "OwnerHandCount"
+              },
+              "Right": {
+                "$kind": "HookVar",
+                "Key": "Block",
+                "Canonical": 1
+              }
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__6.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__6.MoveNext:0049",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerHandCount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Harmful": false
+  },
+  {
     "Name": "CorrosiveWavePower",
     "Kind": "Power",
     "Hooks": [
@@ -1704,6 +1764,64 @@
     "Harmful": false
   },
   {
+    "Name": "HailstormPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__10.MoveNext:0025",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeSideTurnEnd\u003Ed__10.MoveNext:0081",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "OwnerOrbCount",
+                      "Of": "Frost"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "FrostOrbs",
+                      "Canonical": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Harmful": false
+  },
+  {
     "Name": "HatchPower",
     "Kind": "Power",
     "Hooks": [
@@ -2880,6 +2998,68 @@
       }
     ],
     "Tab": "Energy",
+    "Harmful": false
+  },
+  {
+    "Name": "ObsidianVice",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "RandomEnemy",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookVar",
+                "Key": "Damage",
+                "Canonical": 1
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "OwnerHandCount"
+              }
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__4.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__4.MoveNext:0049",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerHandCount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
     "Harmful": false
   },
   {

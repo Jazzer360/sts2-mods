@@ -198,7 +198,7 @@ public class SimReviewTests
         // before Orichalcum's block (relic) sets off Juggernaut, which then can only hit the other one.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 3, block: 0, hits: 10), Enemy(id: 2, hp: 4, block: 0, hits: 10) } };
         state.You.Hailstorm = 3;
-        state.You.HailstormFrostNeeded = 0;
+        state.Vars[$"{Who.You}:{PowerId.Hailstorm.Name}:FrostOrbs"] = 0; // HailstormPower's FrostOrbs value
         state.WithRelic(Who.You, RelicId.Orichalcum, "Block", value: 5);
         state.You.Juggernaut = 1;
         var outcome = SimEngine.Run(state);

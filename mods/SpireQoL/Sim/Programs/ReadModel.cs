@@ -321,19 +321,21 @@ public sealed class ReadModel : SimModel
             {
                 var amount = Compile(gain.Amount);
                 var props = Compile(gain.Props);
+                var perCard = PerHandCard(gain.Amount);
                 // An enemy's own block (Sneaky's) is its reaction to your play; a player's goes through the proc block, its tab counting it.
                 return args => Who.IsEnemy(args.Owner) ? SimEngine.EnemyBlock(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args))
-                    : SimEngine.ProcBlock(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args));
+                    : SimEngine.ProcBlock(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args), label: perCard ? PerCardLabel(in args) : null);
             }
             case DamageStep damage:
             {
                 var amount = Compile(damage.Amount);
                 var props = Compile(damage.Props);
                 var noDealer = damage.NoDealer;
+                var perCard = PerHandCard(damage.Amount);
                 return damage.Target switch
                 {
-                    HookTarget.AllEnemies => args => SimEngine.ProcDamageAll(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer),
-                    HookTarget.RandomEnemy => args => SimEngine.ProcDamageRandom(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer),
+                    HookTarget.AllEnemies => args => SimEngine.ProcDamageAll(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer, label: perCard ? PerCardLabel(in args) : null),
+                    HookTarget.RandomEnemy => args => SimEngine.ProcDamageRandom(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer, label: perCard ? PerCardLabel(in args) : null),
                     HookTarget.PowerOwner => args => SimEngine.ProcDamageOn(args.State, args.Owner, Name, args.Target, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer),
                     // Its owner: a player through the damage on a player (Incoming Damage's breakdown names it as the game does), an enemy as any.
                     HookTarget.Owner => args => Who.IsPlayer(args.Owner)
@@ -410,6 +412,16 @@ public sealed class ReadModel : SimModel
                 throw new InvalidOperationException($"{Name}: no command for {step.GetType().Name}");
         }
     }
+
+    /// <summary>
+    /// An amount its code works out per card in its owner's hand (cards.Count * Block: Cloak Clasp's block, Obsidian Vice's damage): Incoming
+    /// Damage's breakdown names it with the count, as "Cloak Clasp ×4" (the value's own factor, not the class: any model whose amount is so).
+    /// </summary>
+    private static bool PerHandCard(HookValue amount) => amount is HookMath { Operation: HookOperation.Multiply } product
+        && (product.Left is HookFactValue { Fact: HookFact.OwnerHandCount } || product.Right is HookFactValue { Fact: HookFact.OwnerHandCount });
+
+    /// <summary>Its name in Incoming Damage's breakdown with the cards its amount counts ("Cloak Clasp ×4").</summary>
+    private string PerCardLabel(in HookArgs args) => $"{SimEngine.Title(args.State, args.Owner, Name)} ×{args.State.Player(args.Owner)?.HandCount ?? 0}";
 
     /// <summary>
     /// What it bound to the play in progress (its own data's Remove(cardPlay.Card, out amount)): taken out of the state into this run's slot;
@@ -556,6 +568,16 @@ public sealed class ReadModel : SimModel
             case HookFact.PlayCountSoFar: return (in HookArgs args) => args.PlayCount;
             case HookFact.OwnerBlock: return (in HookArgs args) => args.State.Player(args.Owner)?.Block ?? args.State.Enemy(args.Owner)?.Block ?? 0;
             case HookFact.OwnerHandCount: return (in HookArgs args) => args.State.Player(args.Owner)?.HandCount ?? 0;
+            case HookFact.OwnerOrbCount:
+            {
+                var kind = Enum.Parse<OrbKind>(named!);
+                return (in HookArgs args) =>
+                {
+                    var count = 0;
+                    if (args.State.Player(args.Owner) is { } player) foreach (var orb in player.Orbs) if (orb.Kind == kind) count++;
+                    return count;
+                };
+            }
             case HookFact.OwnerDead: return (in HookArgs args) => (args.State.Player(args.Owner) is { } player ? player.Died || player.Hp <= 0 : args.State.Enemy(args.Owner) is not { Alive: true }) ? 1m : 0m;
             default: throw new InvalidOperationException($"{Name}: no fact {fact.Fact}");
         }

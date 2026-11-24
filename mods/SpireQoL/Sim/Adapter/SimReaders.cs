@@ -76,7 +76,6 @@ public static class SimReaders
                 data = power.Applier is { } nextCreature && idOf(nextCreature) is { } taId && Who.TeammateIndex(taId) is var teammateIndex and >= 0 and < 7 ? Math.Min(15, amount) << (4 * teammateIndex) : 0;
                 amount = Math.Max(1, amount);
                 break;
-            case nameof(HailstormPower): data = Sts2State.Var(power, "FrostOrbs", fallback: 1); break;
             case nameof(TheBombPower): data = Sts2State.Var(power, "Damage"); break;
             case nameof(SlowPower): data = Sts2State.Var(power, "SlowAmount", fallback: 0); break;
             case nameof(SkittishPower): data = Sts2State.Private(power, "HasGainedBlockThisTurn", fallback: false) ? Models.SkittishPower.UsedThisTurn : 0; break;
@@ -200,9 +199,7 @@ public static class SimReaders
         [nameof(TheBoot)] = Var("DamageMinimum", fallback: 5),
         [nameof(SneckoSkull)] = Var("PoisonPower", fallback: 1),
         // End-of-turn relics: their block, damage or stars.
-        [nameof(CloakClasp)] = Var("Block"),
         [nameof(RippleBasin)] = Var("Block"),
-        [nameof(ObsidianVice)] = Var("Damage", fallback: 1),
         [nameof(StoneCalendar)] = Var("Damage"),
         [nameof(ParryingShield)] = Var("Damage"),
         [nameof(LunarPastry)] = Var("Stars", fallback: 1),

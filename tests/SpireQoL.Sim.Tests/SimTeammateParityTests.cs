@@ -42,7 +42,7 @@ public class SimTeammateParityTests
         {
             case "Plating": player.Plating = 4; break;
             case "Orichalcum": state.WithRelic(id, RelicId.Orichalcum, "Block", value: 6); break;
-            case "Cloak Clasp": player.CloakClaspPerCard = 1; player.HandCount = 5; break;
+            case "Cloak Clasp": state.WithRelic(id, RelicId.CloakClasp, "Block", value: 1); player.HandCount = 5; break;
             case "Ripple Basin": player.RippleBasinBlock = 4; break;
             case "Parrying Shield": player.Plating = 10; player.ParryingShieldBlock = 10; player.ParryingShieldDamage = 6; break;
             case "Frost and Hailstorm":
@@ -56,7 +56,7 @@ public class SimTeammateParityTests
             case "Juggernaut": player.Plating = 5; player.Juggernaut = 7; break;
             case "Consuming Shadow (Lightning)": player.Orbs.Add(new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 }); player.ConsumingShadow = 1; break;
             case "Consuming Shadow (Frost)": player.Orbs.Add(new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 }); player.ConsumingShadow = 1; break;
-            case "Obsidian Vice": player.ObsidianViceDamage = 1; player.HandCount = 4; break;
+            case "Obsidian Vice": state.WithRelic(id, RelicId.ObsidianVice, "Damage", value: 1); player.HandCount = 4; break;
             // Ethereal cards exhausting at end of turn (CombatManager.DoTurnEnd): each one sets off the exhaust effects.
             case "Ethereal and Feel No Pain": player.Fading = 2; player.FeelNoPain = 3; player.HandCount = 2; break;
             case "Ethereal and Charon's Ashes": player.Fading = 2; state.WithRelic(id, RelicId.CharonsAshes, "Damage", value: 3); player.HandCount = 2; break;
@@ -186,7 +186,8 @@ public class SimTeammateParityTests
         // 15 incoming against their 5 block: 10 short now. Cloak Clasp with 5 cards in hand adds 5 at end
         // of turn, so they lose 5.
         var state = new SimState { Enemies = { Target(hp: 50, hits: 15) } };
-        state.Teammates.Add(new SimPlayer { Hp = 60, Block = 5, CloakClaspPerCard = 1, HandCount = 5 });
+        state.Teammates.Add(new SimPlayer { Hp = 60, Block = 5, HandCount = 5 });
+        state.WithRelic(Who.Teammate(0), RelicId.CloakClasp, "Block", value: 1);
         var outcome = SimEngine.Run(state);
         var player = outcome.TeammateWorst(teammateIndex: 0);
         Assert.Equal(15, player.Incoming);
@@ -200,9 +201,10 @@ public class SimTeammateParityTests
         // A Burn (2, blockable) in their hand: counted for the checks, not for what's shown. Their hand
         // size still counts (Cloak Clasp).
         var state = new SimState { Enemies = { Target(hp: 50, hits: 10) } };
-        var mate = new SimPlayer { Hp = 60, CloakClaspPerCard = 1, HandCount = 3 };
+        var mate = new SimPlayer { Hp = 60, HandCount = 3 };
         mate.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", Amount: 2));
         state.Teammates.Add(mate);
+        state.WithRelic(Who.Teammate(0), RelicId.CloakClasp, "Block", value: 1);
 
         Assert.Equal(9, SimEngine.Run(state).TeammateTakenMax(teammateIndex: 0));     // 10 + 2 - 3
         var shown = SimEngine.Run(state.WithoutTeammateHands());

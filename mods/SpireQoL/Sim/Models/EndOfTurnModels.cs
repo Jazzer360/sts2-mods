@@ -24,16 +24,6 @@ public sealed class PlatingPower : EndOfTurnModel
         state.TakesPart(owner) && Amount(state, owner) > 0 ? Block(state, owner, Amount(state, owner)) : One(state);
 }
 
-/// <summary>HailstormPower.BeforeSideTurnEnd: its amount to every hittable enemy when its owner has its FrostOrbs (Data) Frost orbs.</summary>
-public sealed class HailstormPower : EndOfTurnModel
-{
-    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner)
-    {
-        if (!state.TakesPart(owner) || state.Player(owner) is not { } player || Amount(state, owner) <= 0) return One(state);
-        return player.Orbs.Count(orb => orb.Kind == OrbKind.Frost) >= Data(state, owner) ? DamageAll(state, owner, Amount(state, owner)) : One(state);
-    }
-}
-
 /// <summary>
 /// TheBombPower.BeforeSideTurnEnd: ticks down (amount: turns left); on its last its Damage to every hittable enemy, then it goes.
 /// Each Bomb played is a copy of its own (instanced) with its own turns and Damage, each ticking on its own: the copies listed in
@@ -85,31 +75,11 @@ public sealed class ConsumingShadowPower : EndOfTurnModel
     }
 }
 
-/// <summary>CloakClasp.BeforeSideTurnEnd: its block (amount) per card in its owner's hand (unpowered).</summary>
-public sealed class CloakClasp : EndOfTurnRelic
-{
-    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner)
-    {
-        if (!state.TakesPart(owner) || state.Player(owner) is not { HandCount: > 0 } player) return One(state);
-        return SimEngine.ProcBlock(state, owner, Name, player.HandCount * Amount(state, owner), Unpowered, label: $"{SimEngine.Title(state, owner, Name)} ×{player.HandCount}");
-    }
-}
-
 /// <summary>StoneCalendar.BeforeSideTurnEnd: its damage (amount) to every hittable enemy on its DamageTurn (Data: turns until then).</summary>
 public sealed class StoneCalendar : EndOfTurnRelic
 {
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner) =>
         state.TakesPart(owner) && Data(state, owner) == 0 && Amount(state, owner) > 0 ? DamageAll(state, owner, Amount(state, owner)) : One(state);
-}
-
-/// <summary>ObsidianVice.BeforeSideTurnEnd: its damage (amount) per card in its owner's hand, to one random hittable enemy (unpowered).</summary>
-public sealed class ObsidianVice : EndOfTurnRelic
-{
-    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner)
-    {
-        if (!state.TakesPart(owner) || state.Player(owner) is not { HandCount: > 0 } player || Amount(state, owner) <= 0) return One(state);
-        return SimEngine.ProcDamageRandom(state, owner, Name, Amount(state, owner) * player.HandCount, Unpowered, label: $"{SimEngine.Title(state, owner, Name)} ×{player.HandCount}");
-    }
 }
 
 /// <summary>ParryingShield.AfterSideTurnEnd: its damage (amount) to a random hittable enemy when its owner has at least its Block (Data).</summary>

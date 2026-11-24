@@ -651,3 +651,35 @@ public sealed class SneakyPower : SimModel
         return One(state);
     }
 }
+
+// ---- the turn's end: a count of the owner's Frost orbs, the cards in its hand (Sim/Models/EndOfTurnModels.cs, deleted 2026-11-24)
+
+/// <summary>HailstormPower.BeforeSideTurnEnd: its amount to every hittable enemy when its owner has its FrostOrbs (Data) Frost orbs.</summary>
+public sealed class HailstormPower : EndOfTurnModel
+{
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner)
+    {
+        if (!state.TakesPart(owner) || state.Player(owner) is not { } player || Amount(state, owner) <= 0) return One(state);
+        return player.Orbs.Count(orb => orb.Kind == OrbKind.Frost) >= Data(state, owner) ? DamageAll(state, owner, Amount(state, owner)) : One(state);
+    }
+}
+
+/// <summary>CloakClasp.BeforeSideTurnEnd: its block (amount) per card in its owner's hand (unpowered).</summary>
+public sealed class CloakClasp : EndOfTurnRelic
+{
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner)
+    {
+        if (!state.TakesPart(owner) || state.Player(owner) is not { HandCount: > 0 } player) return One(state);
+        return SimEngine.ProcBlock(state, owner, Name, player.HandCount * Amount(state, owner), Unpowered, label: $"{SimEngine.Title(state, owner, Name)} ×{player.HandCount}");
+    }
+}
+
+/// <summary>ObsidianVice.BeforeSideTurnEnd: its damage (amount) per card in its owner's hand, to one random hittable enemy (unpowered).</summary>
+public sealed class ObsidianVice : EndOfTurnRelic
+{
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner)
+    {
+        if (!state.TakesPart(owner) || state.Player(owner) is not { HandCount: > 0 } player || Amount(state, owner) <= 0) return One(state);
+        return SimEngine.ProcDamageRandom(state, owner, Name, Amount(state, owner) * player.HandCount, Unpowered, label: $"{SimEngine.Title(state, owner, Name)} ×{player.HandCount}");
+    }
+}

@@ -512,7 +512,8 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 | `CreatureCmd.Damage(base.Owner, ...)`, `CreatureCmd.Heal(base.Owner, amount)`, `base.Owner.IsDead` | `DamageStep` on `HookTarget.Owner` (a player through the damage on a player, named by its title in Incoming Damage's breakdown), `HealStep` (up to max HP), `HookFact.OwnerDead` |
 | a command on a creature a read model can't act on (a power on a roll, damage to a hit's target) | a gap at reading |
 | a play hook's block for its owner or buff on it, on a condition that doesn't need the play to be its owner's | a crossed tab (`ModelSpec.Harmful`, a trigger) |
-| `base.Owner.Creature.Block`, `PileType.Hand.GetPile(base.Owner).Cards.Count` / `.IsEmpty` | `HookFact.OwnerBlock`, `HookFact.OwnerHandCount` |
+| `base.Owner.Creature.Block`, `PileType.Hand.GetPile(base.Owner).Cards.Count` / `.IsEmpty` (its Cards kept in a local or not) | `HookFact.OwnerBlock`, `HookFact.OwnerHandCount`; an amount per card in the hand is named with the count in Incoming Damage's breakdown ("Cloak Clasp ×3") |
+| `OrbQueue.Orbs.Count(o => o is FrostOrb)` | `HookFact.OwnerOrbCount` (the kind from the lambda's test) |
 | `new PowerVar<T>(n)`, `new PowerVar<T>("Name", n)` in CanonicalVars | the value keyed by T's class (the constructor's type argument: `CodeMember.TypeArguments`) or by its name |
 | a power whose copies act on their own (`PowerInstanceType.Instanced`), a game object's property set or field stored where no step is read (a `DynamicVar.BaseValue--`) | a gap, so a class is never read whole while part of what it does is dropped |
 | a temporary Strength or Dexterity power applied | the Strength or Dexterity its base class's BeforeApplied applies, by its sign |

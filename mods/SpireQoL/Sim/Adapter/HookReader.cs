@@ -550,7 +550,7 @@ public static class HookReader
                 // The owner's hand is empty (GetPile(Hand, owner).IsEmpty), or has cards (its Count tested as true or false).
                 case QueryValue { Name: "IsEmpty", Of: { } emptyPile } when IsOwnersHand(emptyPile):
                     return new HookMath(HookOperation.Equal, new HookFactValue(HookFact.OwnerHandCount), new HookConstant(0m));
-                case QueryValue { Name: "Count", Of: QueryValue { Name: "Cards", Of: { } countedPile } } when IsOwnersHand(countedPile):
+                case QueryValue { Name: "Count", Of: { } countedCards } when IsOwnersHandCards(countedCards):
                     return new HookMath(HookOperation.NotEqual, new HookFactValue(HookFact.OwnerHandCount), new HookConstant(0m));
                 // Its own data's Remove(cardPlay.Card, out value): what it bound to the play is taken, 1 when there was one.
                 case var take when IsTakeBound(take):
@@ -564,6 +564,9 @@ public static class HookReader
                 // A roll over the hittable enemies found one: the simulator's random damage hits none when there's none to hit (ProcDamageRandom).
                 case StoredValue { Value: QueryValue { Name: "NextItem", Arguments: [QueryValue { Name: "HittableEnemies" }] } }:
                     return new HookConstant(1m);
+                // A value the code kept in a local and tests (int count = ...; if (count != 0)): the value it kept.
+                case StoredValue storedTest:
+                    return Test(storedTest.Value);
                 case QueryValue { Name: "Contains", Arguments: [QueryValue { Name: "Tags", Of: { } tagsOf }, ConstantValue tag] } when IsPlayCard(tagsOf):
                     return EnumName(_type.Assembly, "CardTag", tag.Value) is { } tagName && Enum.TryParse<SimCardTag>(tagName, out _)
                         ? new HookFactValue(HookFact.CardTag) { Of = tagName } : throw new Gap($"gap: tests the card's tag {tag.Value}");
@@ -718,9 +721,12 @@ public static class HookReader
                 // The owner's block (base.Owner.Creature.Block).
                 case QueryValue { Name: "Block", Of: { } blockOf } when IsOwner(blockOf):
                     return new HookFactValue(HookFact.OwnerBlock);
-                // The cards in the owner's hand (PileType.Hand.GetPile(base.Owner).Cards.Count).
-                case QueryValue { Name: "Count", Of: QueryValue { Name: "Cards", Of: { } pile } } when IsOwnersHand(pile):
+                // The cards in the owner's hand (PileType.Hand.GetPile(base.Owner).Cards.Count, its Cards kept in a local or not).
+                case QueryValue { Name: "Count", Of: { } cards } when IsOwnersHandCards(cards):
                     return new HookFactValue(HookFact.OwnerHandCount);
+                // The owner's orbs of a kind (OrbQueue.Orbs.Count(o => o is FrostOrb)).
+                case QueryValue { Type: "Enumerable", Name: "Count", Arguments: [var orbs, LambdaValue lambda] } when IsOwnersOrbs(orbs) && OrbKindTested(lambda) is { } orbKind:
+                    return new HookFactValue(HookFact.OwnerOrbCount) { Of = orbKind.ToString() };
                 // What its own data's Remove(cardPlay.Card, out value) took: the amount bound to the play.
                 case OutValue { Call: var take, Parameter: 1 } when IsTakeBound(take):
                     return new HookFactValue(HookFact.BoundTaken);
@@ -843,6 +849,24 @@ public static class HookReader
         private bool IsOwnersHand(ProgramValue value) =>
             (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "GetPile", Arguments: [ConstantValue pileType, var whose] }
             && EnumName(_type.Assembly, "PileType", pileType.Value) == "Hand" && IsOwner(whose);
+
+        /// <summary>The cards in the owner's hand: GetPile(Hand, base.Owner).Cards, kept in a local or not.</summary>
+        private bool IsOwnersHandCards(ProgramValue value) =>
+            (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Cards", Of: { } pile } && IsOwnersHand(pile);
+
+        /// <summary>The owner's orbs: base.Owner.Player.PlayerCombatState.OrbQueue.Orbs.</summary>
+        private static bool IsOwnersOrbs(ProgramValue value) =>
+            (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Orbs", Of: QueryValue { Name: "OrbQueue", Of: QueryValue { Name: "PlayerCombatState", Of: { } player } } }
+            && IsOwner(player);
+
+        /// <summary>The kind of orb a lambda tests its orb for (o => o is FrostOrb), or null for any other lambda.</summary>
+        private static OrbKind? OrbKindTested(LambdaValue lambda)
+        {
+            if (lambda.Body.Terms is not [[{ Holds: true, Test: var test }]]) return null;
+            if (test is CompareValue { Op: Comparison.NotEqual, Left: var isOrb, Right: NullValue }) test = isOrb;
+            if (test is not QueryValue { Name: "is", Of: ParameterValue or NamedValue, Type: var orbClass } isQuery || isQuery.Of is ParameterValue { Name: var name } && name != lambda.Parameter) return null;
+            return Enum.TryParse<OrbKind>(orbClass.EndsWith("Orb", StringComparison.Ordinal) ? orbClass[..^3] : orbClass, out var kind) && kind is not (OrbKind.Unknown or OrbKind.Random) ? kind : null;
+        }
 
         /// <summary>The card whose owner a value is (card.Owner, card.Owner.Creature); null otherwise.</summary>
         private static ProgramValue? CardOwnerOf(ProgramValue value) => value switch

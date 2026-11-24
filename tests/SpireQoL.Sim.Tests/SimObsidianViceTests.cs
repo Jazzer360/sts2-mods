@@ -14,7 +14,7 @@ public class SimObsidianViceTests
     public void OneHitOfDamageTimesCardsInHand()
     {
         var state = new SimState { Enemies = { E(id: 1, hp: 30, hits: 10) } };
-        state.You.ObsidianViceDamage = 1;
+        state.WithRelic(Who.You, RelicId.ObsidianVice, "Damage", value: 1);
         state.You.HandCount = 4;
         var outcome = SimEngine.Run(state);
         Assert.Equal(26, outcome.Worst.Enemy(id: 1)!.HpAtTurnEnd);
@@ -24,7 +24,7 @@ public class SimObsidianViceTests
     public void ItCanKillBeforeTheEnemyActsAndThenItDoesntAttack()
     {
         var state = new SimState { Enemies = { E(id: 1, hp: 5, hits: 12) } };
-        state.You.ObsidianViceDamage = 1;
+        state.WithRelic(Who.You, RelicId.ObsidianVice, "Damage", value: 1);
         state.You.HandCount = 6;
         var outcome = SimEngine.Run(state);
         Assert.True(outcome.DeadInAll(enemyId: 1));
@@ -37,7 +37,7 @@ public class SimObsidianViceTests
         // Two enemies at 5 HP, 6 damage: each dies in one branch, neither in every branch; you take the
         // survivor's hit either way.
         var state = new SimState { Enemies = { E(id: 1, hp: 5, hits: 7), E(id: 2, hp: 5, hits: 9) } };
-        state.You.ObsidianViceDamage = 1;
+        state.WithRelic(Who.You, RelicId.ObsidianVice, "Damage", value: 1);
         state.You.HandCount = 6;
         var outcome = SimEngine.Run(state);
         Assert.False(outcome.DeadInAll(enemyId: 1));
@@ -52,7 +52,7 @@ public class SimObsidianViceTests
     public void AnEmptyHandDealsNothing()
     {
         var state = new SimState { Enemies = { E(id: 1, hp: 30, hits: 10) } };
-        state.You.ObsidianViceDamage = 1;
+        state.WithRelic(Who.You, RelicId.ObsidianVice, "Damage", value: 1);
         state.You.HandCount = 0;
         Assert.Equal(30, SimEngine.Run(state).Worst.Enemy(id: 1)!.HpAtTurnEnd);
     }
@@ -62,7 +62,7 @@ public class SimObsidianViceTests
     {
         // A play that draws 2 (hand 3 → 3 - 1 + 2 = 4 at end of turn).
         var state = new SimState { Enemies = { E(id: 1, hp: 30, hits: 10) } };
-        state.You.ObsidianViceDamage = 1;
+        state.WithRelic(Who.You, RelicId.ObsidianVice, "Damage", value: 1);
         state.You.HandCount = 3;
         var outcome = SimEngine.Run(state, new SimPlay { HandDelta = 1 });
         Assert.Equal(26, outcome.Worst.Enemy(id: 1)!.HpAtTurnEnd);

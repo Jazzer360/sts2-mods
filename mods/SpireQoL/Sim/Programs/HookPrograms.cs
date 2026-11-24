@@ -105,6 +105,8 @@ public enum HookFact
     OwnerHandCount,
     /// <summary>The owner is dead (base.Owner.IsDead): a player who died, an enemy with no HP left.</summary>
     OwnerDead,
+    /// <summary>The owner's orbs of the kind named in Of (OrbQueue.Orbs.Count(o => o is FrostOrb): an OrbKind's name).</summary>
+    OwnerOrbCount,
 }
 
 /// <summary>An operation of the code on two values (decimal throughout; a true-or-false is 1 or 0).</summary>

@@ -60,3 +60,32 @@ public class ReadModelTestTests
         Assert.Equal(1, after.You.Fields["TestLoopPower.Count"]);
     }
 }
+
+/// <summary>
+/// An amount per card in its owner's hand (its code's cards.Count * value) is named with the count in Incoming Damage's breakdown, as "Cloak
+/// Clasp ×3": the read model's own value, as the hand-written model named it.
+/// </summary>
+public class PerCardLabelTests
+{
+    [Fact]
+    public void CloakClaspsBlockIsNamedWithTheCardsItCounts()
+    {
+        var state = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 50, Hits = new List<int> { 10 } } }, Log = true };
+        state.You.HandCount = 3;
+        state.WithRelic(Who.You, RelicId.CloakClasp, "Block", value: 2);
+        state.Titles[$"{Who.You}:{RelicId.CloakClasp.Name}"] = "Cloak Clasp";
+        var branch = SimEngine.Run(state).Worst;
+        Assert.Contains(("Cloak Clasp ×3", 6), branch.EndOfTurnBlock);
+    }
+
+    [Fact]
+    public void ObsidianVicesDamageIsNamedWithTheCardsItCounts()
+    {
+        var state = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 50, Hits = new List<int> { 10 } } }, Log = true };
+        state.You.HandCount = 4;
+        state.WithRelic(Who.You, RelicId.ObsidianVice, "Damage", value: 1);
+        state.Titles[$"{Who.You}:{RelicId.ObsidianVice.Name}"] = "Obsidian Vice";
+        var branch = SimEngine.Run(state).Worst;
+        Assert.Contains(("Obsidian Vice ×4", 4), branch.EndOfTurnDamage);
+    }
+}

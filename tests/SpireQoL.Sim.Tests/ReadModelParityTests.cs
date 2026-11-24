@@ -43,8 +43,14 @@ public class ReadModelParityTests
     /// </summary>
     private static readonly Dictionary<string, string> RelicAmountVars = new(StringComparer.Ordinal) {
         [RelicId.CharonsAshes.Name] = "Damage", [RelicId.ForgottenSoul.Name] = "Damage", [RelicId.Orichalcum.Name] = "Block", [RelicId.FakeOrichalcum.Name] = "Block",
-        [RelicId.ScreamingFlagon.Name] = "Damage",
+        [RelicId.ScreamingFlagon.Name] = "Damage", [RelicId.CloakClasp.Name] = "Block", [RelicId.ObsidianVice.Name] = "Damage",
     };
+
+    /// <summary>
+    /// The powers whose hand-written model's Data the adapter read from one of their values (SimReaders.Powers), by that value's key: the board
+    /// gives the Data as the adapter did (Hailstorm's FrostOrbs, the Frost orbs it needs).
+    /// </summary>
+    private static readonly Dictionary<string, string> PowerDataVars = new(StringComparer.Ordinal) { [PowerId.Hailstorm.Name] = "FrostOrbs" };
 
     public static TheoryData<string> Models() => new(HandWritten.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
@@ -126,18 +132,22 @@ public class ReadModelParityTests
 
     /// <summary>
     /// A board with the model on <paramref name="owner"/> (a power at 3, a relic armed), its values as the adapter reads them (each one its
-    /// code reads, one more than its canonical value, so the state's is what's read), you and a teammate with block and cards, two enemies.
+    /// code reads, one more than its canonical value, so the state's is what's read), you and a teammate with block and cards (the teammate with two
+    /// Frost orbs), two enemies.
     /// </summary>
     private static SimState Board(ReadModel model, int owner)
     {
         var state = new SimState();
         state.You = new SimPlayer { Hp = 50, MaxHp = 70, Block = 4, HandCount = 3, Energy = 3 };
-        state.Teammates.Add(new SimPlayer { Hp = 40, MaxHp = 60, Block = 0, HandCount = 2, Energy = 2 });
+        state.Teammates.Add(new SimPlayer { Hp = 40, MaxHp = 60, Block = 0, HandCount = 2, Energy = 2, OrbCapacity = 3 });
+        state.Teammates[0].Orbs.Add(new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 });
+        state.Teammates[0].Orbs.Add(new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 });
         state.Enemies.Add(new SimEnemy { Id = 0, Name = "E0", Hp = 30, Hits = new List<int> { 6 } });
         state.Enemies.Add(new SimEnemy { Id = 1, Name = "E1", Hp = 25, Block = 5, Hits = new List<int> { 3, 3 } });
-        if (model.Spec.Kind == ModelKind.Power) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).With(new PowerId(model.Name), amount: 3));
         foreach (var variable in VarsOf(model.Spec))
             state.Vars[$"{owner}:{model.Name}:{variable.Key}"] = variable.Key.EndsWith(".Props", StringComparison.Ordinal) ? (int)variable.Canonical : (int)variable.Canonical + 1;
+        var powerData = PowerDataVars.TryGetValue(model.Name, out var dataVar) ? state.Vars[$"{owner}:{model.Name}:{dataVar}"] : 0;
+        if (model.Spec.Kind == ModelKind.Power) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).With(new PowerId(model.Name), amount: 3, data: powerData));
         var amount = RelicAmountVars.TryGetValue(model.Name, out var amountVar) ? state.Vars[$"{owner}:{model.Name}:{amountVar}"] : 0;
         // A relic whose amount is its value keeps no flag (SimReaders.Relics); any other starts armed.
         var data = RelicAmountVars.ContainsKey(model.Name) ? 0 : (int)RelicUse.Armed;
@@ -353,21 +363,22 @@ public class ReadModelParityTests
     }
 
     /// <summary>
-    /// A hook's branches as text: each one's state key, weight, what it logged and whether it's unknown, in key order. What each kind of model
+    /// A hook's branches as text: each one's state key, weight, what it logged and whether it's unknown, in key order, identical ones merged. What each kind of model
     /// keeps of its own is left out of the key (a relic's counter and flag on its entry, a read model's fields), as two ways of keeping the same
     /// thing: the sequences compare what they do with it.
     /// </summary>
     private static string Branches(IEnumerable<SimState> states)
     {
+        // Identical branches as one, their weights summed (decision #107: a read model's steps merge them; a hand-written model's may not have).
         var lines = states.ToList().Select(branch =>
         {
             var text = new StringBuilder();
-            text.Append($"key {Stripped(branch).Key():X16} weight {branch.Weight:0.####}");
+            text.Append($"key {Stripped(branch).Key():X16}");
             text.Append(" fired [" + string.Join(",", branch.Fired.Items.Select(entry => $"{entry.Name}:{entry.Amount}/{entry.Data}")) + "]");
             text.Append(" any [" + string.Join(",", branch.FiredAny.Items.Select(entry => $"{entry.Name}:{entry.Amount}/{entry.Data}")) + "]");
             if (branch.Unmodelled != null) text.Append(" unknown: " + branch.Unmodelled);
-            return text.ToString();
-        }).Order(StringComparer.Ordinal);
+            return (Text: text.ToString(), branch.Weight);
+        }).GroupBy(line => line.Text, StringComparer.Ordinal).Select(group => $"{group.Key} weight {group.Sum(line => line.Weight):0.####}").Order(StringComparer.Ordinal);
         return string.Join(" | ", lines);
     }
 }

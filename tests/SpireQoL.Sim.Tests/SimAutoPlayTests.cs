@@ -279,7 +279,7 @@ public class SimAutoPlayTests
         // the hand as it was. The adapter builds it with HandDelta 0 (SimAdapter.Play: the card isn't in your hand).
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 10) } };
         state.You.HandCount = 3;
-        state.You.CloakClaspPerCard = 1;
+        state.WithRelic(Who.You, RelicId.CloakClasp, "Block", value: 1);
         var howl = AllEnemies("HowlFromBeyond", damage: 3, ids: 1);
         howl.HandDelta = 0;
         howl.AutoPlay = true;

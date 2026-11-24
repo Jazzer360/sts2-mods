@@ -32,7 +32,7 @@ public class EndOfTurnModelTests
         state.Teammates.Add(mate);
         state.WithRelic(Who.Teammate(0), RelicId.ScreamingFlagon, "Damage", value: 5);
         state.You.HandCount = 2;
-        state.You.ObsidianViceDamage = 4;
+        state.WithRelic(Who.You, RelicId.ObsidianVice, "Damage", value: 4);
         var outcome = SimEngine.Run(state);
         Assert.True(outcome.DeadInAll(enemyId: 0));
         Assert.All(outcome.Branches, branch => Assert.Equal(17, branch.Enemy(id: 1)!.HpAtTurnEnd)); // 30 - 5 (Flagon hits every enemy) - 8
