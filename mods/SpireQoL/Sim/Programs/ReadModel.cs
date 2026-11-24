@@ -21,6 +21,8 @@ internal readonly struct HookArgs
     public int Applier { get; init; }
     public int Target { get; init; }
     public bool Debuff { get; init; }
+    /// <summary>The hit a damage-time hook is told of (AfterDamageGiven, AfterDamageReceived).</summary>
+    public DamageEvent? Hit { get; init; }
     /// <summary>The card play's count so far (ModifyCardPlayCount).</summary>
     public int PlayCount { get; init; }
     /// <summary>The damage or block being worked out (the Modify hooks).</summary>
@@ -112,6 +114,8 @@ public sealed class ReadModel : SimModel
         HookName.AfterSideTurnEndLate => nameof(AfterSideTurnEndLate),
         HookName.ModifyCardPlayCount => nameof(ModifyCardPlayCount),
         HookName.AfterModifyingCardPlayCount => nameof(AfterModifyingCardPlayCount),
+        HookName.AfterDamageGiven => nameof(AfterDamageGiven),
+        HookName.AfterDamageReceived => nameof(AfterDamageReceived),
         HookName.ModifyDamageAdditive => nameof(ModifyDamageAdditive),
         HookName.ModifyDamageMultiplicative => nameof(ModifyDamageMultiplicative),
         HookName.ModifyDamageMultiplicativeLate => nameof(ModifyDamageMultiplicativeLate),
@@ -171,6 +175,16 @@ public sealed class ReadModel : SimModel
     {
         foreach (var branch in Run(HookName.AfterModifyingCardPlayCount, new HookArgs { State = state, Owner = owner, Play = play }))
             if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingCardPlayCount branched");
+    }
+
+    /// <summary>A hit it dealt or took (inside the damage: SimEngine.Damage): deterministic, on the state given, as the hand-written models' are.</summary>
+    public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit) => InDamage(HookName.AfterDamageGiven, state, owner, hit);
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit) => InDamage(HookName.AfterDamageReceived, state, owner, hit);
+
+    private void InDamage(HookName hook, SimState state, int owner, DamageEvent hit)
+    {
+        foreach (var branch in Run(hook, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Hit = hit, Target = hit.Target }))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: {hook} branched inside a hit");
     }
 
     /// <summary>A hook of the players' side's turn ending (decision #51), in its place among them.</summary>
@@ -324,7 +338,7 @@ public sealed class ReadModel : SimModel
                     switch (target)
                     {
                         case HookTarget.Owner: SimEngine.ApplyPower(state, args.Owner, args.Owner, power, given, debuff); break;
-                        case HookTarget.PowerOwner: SimEngine.ApplyPower(state, args.Owner, args.Target, power, given, debuff); break;
+                        case HookTarget.PowerOwner or HookTarget.HitTarget: SimEngine.ApplyPower(state, args.Owner, args.Target, power, given, debuff); break;
                         case HookTarget.AllEnemies:
                             foreach (var enemy in state.Targetable.ToList()) SimEngine.ApplyPower(state, args.Owner, enemy.Id, power, given, debuff);
                             break;
@@ -492,16 +506,17 @@ public sealed class ReadModel : SimModel
             case HookFact.PowerAmount: return (in HookArgs args) => args.PowerAmount;
             case HookFact.PowerIsDebuff: return (in HookArgs args) => args.Debuff ? 1m : 0m;
             case HookFact.PowerOnEnemy: return (in HookArgs args) => Who.IsEnemy(args.Target) ? 1m : 0m;
-            case HookFact.DealerIsOwner: return (in HookArgs args) => args.Damage?.Dealer == args.Owner ? 1m : 0m;
+            case HookFact.DealerIsOwner: return (in HookArgs args) => (args.Damage?.Dealer ?? args.Hit?.Dealer) == args.Owner ? 1m : 0m;
             case HookFact.DealerIsOwnersPet: return (in HookArgs args) => args.Owner == Who.You && args.Damage?.Dealer == Who.YourOsty ? 1m : 0m;
-            case HookFact.TargetIsOwner: return (in HookArgs args) => (args.Damage?.Target ?? args.Block?.Target) == args.Owner ? 1m : 0m;
-            case HookFact.PoweredAttack: return (in HookArgs args) => args.Damage?.Props.IsPoweredAttack() == true ? 1m : 0m;
+            case HookFact.TargetIsOwner: return (in HookArgs args) => (args.Damage?.Target ?? args.Block?.Target ?? args.Hit?.Target) == args.Owner ? 1m : 0m;
+            case HookFact.PoweredAttack: return (in HookArgs args) => (args.Damage?.Props ?? args.Hit?.Props)?.IsPoweredAttack() == true ? 1m : 0m;
             case HookFact.PoweredBlock: return (in HookArgs args) => args.Block?.Props.IsPoweredBlock() == true ? 1m : 0m;
             case HookFact.FromCard: return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card) != null ? 1m : 0m;
             case HookFact.CardIsOwners: return (in HookArgs args) => (args.Damage?.Play ?? args.Block?.Play)?.Owner == args.Owner ? 1m : 0m;
             case HookFact.TakesPart: return (in HookArgs args) => args.State.TakesPart(args.Owner) ? 1m : 0m;
             case HookFact.TakeBound: return (in HookArgs args) => Take(in args) ? 1m : 0m;
             case HookFact.BoundTaken: return (in HookArgs args) => args.Taken?[0] ?? 0;
+            case HookFact.HitUnblocked: return (in HookArgs args) => args.Hit?.Unblocked ?? 0;
             case HookFact.PlayCountSoFar: return (in HookArgs args) => args.PlayCount;
             case HookFact.OwnerBlock: return (in HookArgs args) => args.State.Player(args.Owner)?.Block ?? args.State.Enemy(args.Owner)?.Block ?? 0;
             case HookFact.OwnerHandCount: return (in HookArgs args) => args.State.Player(args.Owner)?.HandCount ?? 0;

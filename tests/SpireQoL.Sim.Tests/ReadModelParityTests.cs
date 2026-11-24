@@ -110,6 +110,7 @@ public class ReadModelParityTests
         nameof(SimModel.BeforeCardPlayed), nameof(SimModel.AfterCardPlayed), nameof(SimModel.AfterCardEvent), nameof(SimModel.AfterPowerApplied),
         nameof(SimModel.BeforeSideTurnEndVeryEarly), nameof(SimModel.BeforeSideTurnEndEarly), nameof(SimModel.BeforeSideTurnEnd), nameof(SimModel.AfterSideTurnEnd),
         nameof(SimModel.AfterSideTurnEndLate), nameof(SimModel.ModifyCardPlayCount), nameof(SimModel.AfterModifyingCardPlayCount),
+        nameof(SimModel.AfterDamageGiven), nameof(SimModel.AfterDamageReceived),
     };
 
     [Fact]
@@ -220,6 +221,15 @@ public class ReadModelParityTests
                                     yield return ($"{power.Name} {amount} by {applier} on {target}, debuff {debuff}", (model, state) =>
                                         Branches(model.AfterPowerApplied(state, owner, power, amount, applier, target, debuff)));
                 break;
+            case nameof(SimModel.AfterDamageGiven) or nameof(SimModel.AfterDamageReceived):
+                // A hit of every dealer, target, kind and outcome (blocked, through, a kill), inside the damage: the state it's given changes.
+                foreach (var hit in Hits(owner))
+                    yield return ($"{hit}", (model, state) =>
+                    {
+                        if (hook == nameof(SimModel.AfterDamageGiven)) model.AfterDamageGiven(state, owner, hit); else model.AfterDamageReceived(state, owner, hit);
+                        return Branches(new[] { state });
+                    });
+                break;
             case nameof(SimModel.ModifyCardPlayCount) or nameof(SimModel.AfterModifyingCardPlayCount):
                 // Each play's shape decided four times in turn, as the engine decides it (DecideCardPlay): the count from 1 and from 2, and
                 // AfterModifyingCardPlayCount when it changed it (a stack used each time); each count and each step's outcome compared.
@@ -284,6 +294,16 @@ public class ReadModelParityTests
                         yield return new DamageCtx(dealer, target, props, play?.Card, play);
                         if (play == null) yield return new DamageCtx(dealer, target, props, card, Play: null);
                     }
+    }
+
+    private static IEnumerable<DamageEvent> Hits(int owner)
+    {
+        var card = new SimCard("Strike", SimCardType.Attack);
+        foreach (var dealer in new int?[] { owner, Who.You, Who.YourOsty, Who.Teammate(0), 0, null }.Distinct())
+            foreach (var target in new[] { owner, 1, Who.You, Who.Teammate(0) }.Distinct())
+                foreach (var props in new[] { SimProps.Move, SimProps.Move | SimProps.Unpowered, SimProps.Unpowered })
+                    foreach (var (blocked, unblocked, killed) in new[] { (5, 0, false), (2, 4, false), (0, 9, true) })
+                        yield return new DamageEvent(dealer, target, props, props.HasFlag(SimProps.Move) ? card : null, blocked + unblocked, blocked, unblocked, killed);
     }
 
     private static IEnumerable<BlockCtx> Blocks(int owner)

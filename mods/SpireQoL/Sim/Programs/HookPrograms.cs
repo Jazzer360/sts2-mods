@@ -27,6 +27,8 @@ public enum HookName
     AfterSideTurnEndLate,
     ModifyCardPlayCount,
     AfterModifyingCardPlayCount,
+    AfterDamageGiven,
+    AfterDamageReceived,
     ModifyDamageAdditive,
     ModifyDamageMultiplicative,
     ModifyDamageMultiplicativeLate,
@@ -95,6 +97,8 @@ public enum HookFact
     BoundTaken,
     /// <summary>The card play's count as the listeners before it left it (ModifyCardPlayCount's playCount).</summary>
     PlayCountSoFar,
+    /// <summary>The HP a hit took past block (AfterDamageGiven's and AfterDamageReceived's result.UnblockedDamage).</summary>
+    HitUnblocked,
     /// <summary>The owner's block (base.Owner.Creature.Block).</summary>
     OwnerBlock,
     /// <summary>The cards in the owner's hand (PileType.Hand.GetPile(base.Owner).Cards.Count; IsEmpty is this at 0).</summary>
@@ -160,6 +164,8 @@ public enum HookTarget
     RandomEnemy,
     /// <summary>The creature the power landing landed on (power.Owner in AfterPowerAmountChanged).</summary>
     PowerOwner,
+    /// <summary>The creature a hit landed on (AfterDamageGiven's and AfterDamageReceived's target).</summary>
+    HitTarget,
 }
 
 /// <summary>One command of a hook's code, on the condition its code runs it on (null: always).</summary>

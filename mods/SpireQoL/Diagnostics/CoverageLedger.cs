@@ -179,7 +179,7 @@ internal static partial class CoverageLedger
         ["DuplicationPower"] = "covered: read from its code (ReadModel, decision #195): ModifyCardPlayCount replays any card of yours, AfterModifyingCardPlayCount a stack used (the double-play tab from the game's hook; decision #192); AfterSideTurnEnd removes itself",
         ["EchoFormPower"] = "covered: double plays (Hook.ModifyCardPlayCount: the double-play tab from the game's hook; in the simulator its model decides each card play's count as it starts, on the fight's log: decision #192)",
         ["EnragePower"] = "covered: AfterCardPlayed Strength on Skills (simulator intents; crossed tab)",
-        ["EnvenomPower"] = "covered: AfterDamageGiven poison on attack hits through block (simulator)",
+        ["EnvenomPower"] = "covered: read from its code (ReadModel, decision #195): AfterDamageGiven poisons the target of its owner's powered hits that get HP through",
         ["EscapeArtistPower"] = "ignore: AfterSideTurnEnd ticks down",
         ["FeelNoPainPower"] = "covered: read from its code (ReadModel, decision #195): AfterCardExhausted block (proc block; simulator for Ethereal exhausts)",
         ["FeralPower"] = "covered: ModifyCardPlayResultLocation returns 0-cost attacks to your hand, decided once before a card play's plays, counted by AfterModifyingCardPlayResultLocation; AfterApplied counts the 0-cost attacks started this turn from the fight's log (proc tab; decision #192)",

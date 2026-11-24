@@ -339,7 +339,10 @@ public static class HookReader
                     else (amount, props) = (Value(values[amountAt]), Value(values[amountAt + 1]));
                     var noDealer = dealerAt < 0 || values[dealerAt] is NullValue;
                     if (!noDealer && !IsOwner(values[dealerAt])) throw new Gap($"gap: damage dealt by {values[dealerAt]}");
-                    return new DamageStep(Targets(values[targetAt]), amount, props) { NoDealer = noDealer };
+                    // Damage the simulator's procs deal: to every hittable enemy, a roll over them, or the creature a power landed on.
+                    var damaged = Targets(values[targetAt]);
+                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.PowerOwner)) throw new Gap($"gap: damage to {values[targetAt]}");
+                    return new DamageStep(damaged, amount, props) { NoDealer = noDealer };
                 }
                 case "CardPileCmd.Draw":
                 {
@@ -359,6 +362,7 @@ public static class HookReader
                     var applierAt = IndexOf(types, from: amountAt + 1, "Creature");
                     if (applierAt < 0 || !IsOwner(values[applierAt])) throw new Gap($"gap: {power} applied by someone else");
                     var amount = Value(values[amountAt]);
+                    if (Targets(values[targetAt]) is not (HookTarget.Owner or HookTarget.PowerOwner or HookTarget.AllEnemies or HookTarget.HitTarget)) throw new Gap($"gap: {power} on {values[targetAt]}");
                     // A temporary Strength or Dexterity power (Helical Dart's) lands as the Strength or Dexterity its BeforeApplied applies, by its sign
                     // (TemporaryStrengthPower, TemporaryDexterityPower: IsPositive), as the card programs land it (SimAdapter.PowersFrom).
                     if (TemporaryOf(power) is { } underlying)
@@ -413,9 +417,11 @@ public static class HookReader
         }
 
         /// <summary>Who a command acts on: the owner, every hittable enemy, a roll over them, or the creature a power landed on.</summary>
-        private static HookTarget Targets(ProgramValue value)
+        private HookTarget Targets(ProgramValue value)
         {
             if (value is StoredValue stored) return Targets(stored.Value);
+            // The creature a hit landed on (AfterDamageGiven's, AfterDamageReceived's target).
+            if (value is ParameterValue { Name: "target" } or NamedValue { Name: "target" } && _hook is "AfterDamageGiven" or "AfterDamageReceived") return HookTarget.HitTarget;
             if (IsOwner(value)) return HookTarget.Owner;
             if (value is QueryValue { Name: "HittableEnemies" }) return HookTarget.AllEnemies;
             if (value is QueryValue { Name: "NextItem", Arguments: [QueryValue { Name: "HittableEnemies" }] }) return HookTarget.RandomEnemy;
@@ -642,6 +648,9 @@ public static class HookReader
                 case NamedValue { Name: "Decimal.One" }: return new HookConstant(1m);
                 case NamedValue { Name: "Decimal.MinusOne" }: return new HookConstant(-1m);
                 case NamedValue { Name: "amount" } when _hook == "AfterPowerAmountChanged": return new HookFactValue(HookFact.PowerAmount);
+                // The HP a hit took past block (result.UnblockedDamage).
+                case QueryValue { Name: "UnblockedDamage", Of: ParameterValue { Name: "result" } or NamedValue { Name: "result" } } when _hook is "AfterDamageGiven" or "AfterDamageReceived":
+                    return new HookFactValue(HookFact.HitUnblocked);
                 // The play count the listeners before it gave (ModifyCardPlayCount's playCount).
                 case ParameterValue { Name: "playCount" } or NamedValue { Name: "playCount" } when _hook == "ModifyCardPlayCount": return new HookFactValue(HookFact.PlayCountSoFar);
                 case QueryValue { Type: "Decimal", Name: ".ctor", Arguments: var parts } when parts.All(part => part is ConstantValue):

@@ -570,3 +570,17 @@ public sealed class ThrowingAxe : SimModel
         SimEngine.SetRelics(state, owner, relics.With(RelicId.ThrowingAxe, relics[RelicId.ThrowingAxe], 0));
     }
 }
+
+// ---- a hit's reaction (Sim/Models/ReactionModels.cs), deleted 2026-11-24: inside the damage
+
+/// <summary>EnvenomPower.AfterDamageGiven: a powered hit of its owner's that gets HP through poisons the target.</summary>
+public sealed class EnvenomPower : SimModel
+{
+    public override TabKind? Tab => TabKind.Trigger;
+    public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Dealer != owner || !hit.Props.IsPoweredAttack() || hit.Unblocked <= 0) return;
+        state.LogFired(Name, amount: 0, owner);
+        SimEngine.ApplyPower(state, owner, hit.Target, PowerId.Poison, SimEngine.PowerOn(state, owner, ThisPower), debuff: true);
+    }
+}

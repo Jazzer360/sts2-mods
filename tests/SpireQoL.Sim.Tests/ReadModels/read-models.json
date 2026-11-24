@@ -1087,6 +1087,68 @@
     ]
   },
   {
+    "Name": "EnvenomPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageGiven",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "PoisonPower",
+            "Target": "HitTarget",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": true,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageGiven\u003Ed__6.MoveNext:0020",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "DealerIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageGiven\u003Ed__6.MoveNext:0032",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageGiven\u003Ed__6.MoveNext:0045",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Greater",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HitUnblocked"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger"
+  },
+  {
     "Name": "FakeOrichalcum",
     "Kind": "Relic",
     "Hooks": [

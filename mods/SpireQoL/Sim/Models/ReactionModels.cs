@@ -29,18 +29,7 @@ public sealed class ThornsPower : SimModel
     }
 }
 
-/// <summary>EnvenomPower / ConcoctPower.AfterDamageGiven: a powered hit of its owner's that gets HP through poisons the target.</summary>
-public sealed class EnvenomPower : SimModel
-{
-    public override TabKind? Tab => TabKind.Trigger;
-    public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit)
-    {
-        if (hit.Dealer != owner || !hit.Props.IsPoweredAttack() || hit.Unblocked <= 0) return;
-        state.LogFired(Name, amount: 0, owner);
-        SimEngine.ApplyPower(state, owner, hit.Target, PowerId.Poison, SimEngine.PowerOn(state, owner, ThisPower), debuff: true);
-    }
-}
-
+/// <summary>ConcoctPower.AfterDamageGiven: a powered hit of its owner's that gets HP through poisons the target (as Envenom, read from its code).</summary>
 public sealed class ConcoctPower : SimModel
 {
     public override TabKind? Tab => TabKind.Trigger;
