@@ -261,6 +261,23 @@ public static partial class SimEngine
         else if (state.Player(id) != null) state.MutablePlayer(id).Fields = state.Player(id)!.Fields.With(key, value);
     }
 
+    /// <summary>
+    /// CreatureCmd.Heal: a player heals up to their max HP (no hook changes a heal; one who died, or whose HP isn't known, doesn't). An enemy's
+    /// heal isn't simulated (its max HP isn't read): the simulation is unknown with why, never a guess (decision #92).
+    /// </summary>
+    public static void Heal(SimState state, int creature, int amount)
+    {
+        if (amount <= 0) return;
+        if (state.Player(creature) is { } player)
+        {
+            if (player.Died || player.Hp == int.MaxValue) return;
+            var healed = state.MutablePlayer(creature);
+            healed.Hp = (int)Math.Min(healed.MaxHp, (long)healed.Hp + amount);
+            return;
+        }
+        if (state.Enemy(creature) is { Alive: true }) state.Unmodelled ??= "an enemy's heal (its max HP isn't read)";
+    }
+
     /// <summary>A power's amount down by one, gone at 0 (PowerCmd.Decrement).</summary>
     public static void DecrementPower(SimState state, int id, PowerId power)
     {

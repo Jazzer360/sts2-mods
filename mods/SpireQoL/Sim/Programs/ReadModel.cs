@@ -333,7 +333,20 @@ public sealed class ReadModel : SimModel
                     HookTarget.AllEnemies => args => SimEngine.ProcDamageAll(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer),
                     HookTarget.RandomEnemy => args => SimEngine.ProcDamageRandom(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer),
                     HookTarget.PowerOwner => args => SimEngine.ProcDamageOn(args.State, args.Owner, Name, args.Target, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer),
+                    // Its owner: a player through the damage on a player (Incoming Damage's breakdown names it as the game does), an enemy as any.
+                    HookTarget.Owner => args => Who.IsPlayer(args.Owner)
+                        ? SimEngine.ProcDamagePlayer(args.State, args.Owner, Name, args.Owner, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer, label: SimEngine.Title(args.State, args.Owner, Name))
+                        : SimEngine.ProcDamageOn(args.State, args.Owner, Name, args.Owner, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer),
                     _ => throw new InvalidOperationException($"{Name}: no damage to {damage.Target}"),
+                };
+            }
+            case HealStep heal:
+            {
+                var amount = Compile(heal.Amount);
+                return args =>
+                {
+                    SimEngine.Heal(args.State, args.Owner, (int)amount(in args));
+                    return One(args.State);
                 };
             }
             case DrawStep draw:
@@ -541,6 +554,7 @@ public sealed class ReadModel : SimModel
             case HookFact.PlayCountSoFar: return (in HookArgs args) => args.PlayCount;
             case HookFact.OwnerBlock: return (in HookArgs args) => args.State.Player(args.Owner)?.Block ?? args.State.Enemy(args.Owner)?.Block ?? 0;
             case HookFact.OwnerHandCount: return (in HookArgs args) => args.State.Player(args.Owner)?.HandCount ?? 0;
+            case HookFact.OwnerDead: return (in HookArgs args) => (args.State.Player(args.Owner) is { } player ? player.Died || player.Hp <= 0 : args.State.Enemy(args.Owner) is not { Alive: true }) ? 1m : 0m;
             default: throw new InvalidOperationException($"{Name}: no fact {fact.Fact}");
         }
     }

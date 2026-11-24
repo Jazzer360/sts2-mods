@@ -103,6 +103,8 @@ public enum HookFact
     OwnerBlock,
     /// <summary>The cards in the owner's hand (PileType.Hand.GetPile(base.Owner).Cards.Count; IsEmpty is this at 0).</summary>
     OwnerHandCount,
+    /// <summary>The owner is dead (base.Owner.IsDead): a player who died, an enemy with no HP left.</summary>
+    OwnerDead,
 }
 
 /// <summary>An operation of the code on two values (decimal throughout; a true-or-false is 1 or 0).</summary>
@@ -156,7 +158,7 @@ public sealed record HookWays(IReadOnlyList<HookWay> Ways) : HookValue;
 /// <summary>Who a hook's command acts on.</summary>
 public enum HookTarget
 {
-    /// <summary>The model's owner (base.Owner, base.Owner.Creature, base.Owner.Player).</summary>
+    /// <summary>The model's owner (base.Owner, base.Owner.Creature, base.Owner.Player): damage to it, through the pipeline on it.</summary>
     Owner,
     /// <summary>Every enemy that can be hit (CombatState.HittableEnemies).</summary>
     AllEnemies,
@@ -183,6 +185,9 @@ public sealed record DamageStep(HookTarget Target, HookValue Amount, HookValue P
     /// <summary>No dealer (the dealer argument is null).</summary>
     public bool NoDealer { get; init; }
 }
+
+/// <summary>CreatureCmd.Heal of the owner: its amount, up to its max HP (no modifiers: the game's heal has none).</summary>
+public sealed record HealStep(HookValue Amount) : HookStep;
 
 /// <summary>CardPileCmd.Draw for the owner: its count of cards, each a card event.</summary>
 public sealed record DrawStep(HookValue Count) : HookStep;
@@ -270,6 +275,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             DamageStep damage => Inside(damage.Amount).Concat(Inside(damage.Props)),
             DrawStep draw => Inside(draw.Count),
             GainEnergyStep energy => Inside(energy.Amount),
+            HealStep heal => Inside(heal.Amount),
             ApplyPowerStep apply => Inside(apply.Amount),
             StoreFieldStep store => Inside(store.Value),
             BindStep bind => Inside(bind.Value),

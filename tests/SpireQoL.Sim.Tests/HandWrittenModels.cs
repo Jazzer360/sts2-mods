@@ -600,3 +600,37 @@ public sealed class EnragePower : SimModel
         return One(state);
     }
 }
+
+// ---- the turn's end: damage to its owner, a heal (Sim/Models/EndOfTurnModels.cs, deleted 2026-11-24)
+
+/// <summary>
+/// RegenPower.BeforeSideTurnEndEarly: its owner heals its amount (CreatureCmd.Heal: up to max HP, no modifiers) and it goes down by
+/// 1. On a player that's the end of their turn, before the enemies act; an enemy's heals after its own attacks (not simulated past).
+/// </summary>
+public sealed class RegenPower : EndOfTurnModel
+{
+    public override IEnumerable<SimState> BeforeSideTurnEndEarly(SimState state, int owner)
+    {
+        var amount = Amount(state, owner);
+        if (!state.TakesPart(owner) || state.Player(owner) is not { Died: false, Hp: < int.MaxValue } || amount <= 0) return One(state);
+        var player = state.MutablePlayer(owner);
+        player.Hp = (int)Math.Min(player.MaxHp, (long)player.Hp + amount);
+        var powers = SimEngine.PowersOf(state, owner);
+        SimEngine.SetPowers(state, owner, amount > 1 ? powers.With(ThisPower, amount - 1, powers.DataOf(ThisPower)) : powers.Without(ThisPower));
+        return One(state);
+    }
+}
+
+/// <summary>DemisePower.AfterSideTurnEnd: its amount to its owner, unblockable (no dealer).</summary>
+public sealed class DemisePower : TurnEndDebuff
+{
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) =>
+        state.TakesPart(owner) ? Hurt(state, owner, Amount(state, owner), SimProps.Unblockable | Unpowered, selfDealt: false) : One(state);
+}
+
+/// <summary>DisintegrationPower.AfterSideTurnEndLate: its amount to its owner (unpowered, dealt by its owner).</summary>
+public sealed class DisintegrationPower : TurnEndDebuff
+{
+    public override IEnumerable<SimState> AfterSideTurnEndLate(SimState state, int owner) =>
+        state.TakesPart(owner) ? Hurt(state, owner, Amount(state, owner), Unpowered, selfDealt: true) : One(state);
+}

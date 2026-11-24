@@ -509,6 +509,39 @@
     "Harmful": false
   },
   {
+    "Name": "DemisePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 6
+            },
+            "NoDealer": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__4.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Harmful": false
+  },
+  {
     "Name": "DexterityPower",
     "Kind": "Power",
     "Hooks": [
@@ -741,6 +774,39 @@
             }
           ]
         }
+      }
+    ],
+    "Harmful": false
+  },
+  {
+    "Name": "DisintegrationPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEndLate",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEndLate\u003Ed__4.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
       }
     ],
     "Harmful": false
@@ -4016,6 +4082,74 @@
       }
     ],
     "Tab": "Block",
+    "Harmful": false
+  },
+  {
+    "Name": "RegenPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "BeforeSideTurnEndEarly",
+        "Steps": [
+          {
+            "$kind": "HealStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEndEarly\u003Ed__6.MoveNext:002C",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeSideTurnEndEarly\u003Ed__6.MoveNext:003E",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerDead"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEndEarly\u003Ed__6.MoveNext:002C",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeSideTurnEndEarly\u003Ed__6.MoveNext:003E",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerDead"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
     "Harmful": false
   },
   {

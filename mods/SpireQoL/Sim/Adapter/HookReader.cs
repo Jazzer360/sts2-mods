@@ -42,7 +42,8 @@ public static class HookReader
     internal static readonly IReadOnlyDictionary<string, string> CommandsTranslated = new Dictionary<string, string>
     {
         ["CreatureCmd.GainBlock"] = "GainBlockStep: block for the owner through the block pipeline (its amount and props, or its BlockVar's)",
-        ["CreatureCmd.Damage"] = "DamageStep: damage to every hittable enemy, a random one (a branch each) or the creature a power landed on, from the owner or no one",
+        ["CreatureCmd.Damage"] = "DamageStep: damage to every hittable enemy, a random one (a branch each), the creature a power landed on or the owner, from the owner or no one",
+        ["CreatureCmd.Heal"] = "HealStep: the owner heals, up to its max HP",
         ["CardPileCmd.Draw"] = "DrawStep: cards drawn by the owner, each a card event",
         ["PlayerCmd.GainEnergy"] = "GainEnergyStep: energy for the owner, each a card event",
         ["PowerCmd.Apply"] = "ApplyPowerStep: the power on the owner, every hittable enemy or the creature a power landed on, applied by the owner",
@@ -361,9 +362,9 @@ public static class HookReader
                     else (amount, props) = (Value(values[amountAt]), Value(values[amountAt + 1]));
                     var noDealer = dealerAt < 0 || values[dealerAt] is NullValue;
                     if (!noDealer && !IsOwner(values[dealerAt])) throw new Gap($"gap: damage dealt by {values[dealerAt]}");
-                    // Damage the simulator's procs deal: to every hittable enemy, a roll over them, or the creature a power landed on.
+                    // Damage the simulator's procs deal: to every hittable enemy, a roll over them, the creature a power landed on, or its owner.
                     var damaged = Targets(values[targetAt]);
-                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.PowerOwner)) throw new Gap($"gap: damage to {values[targetAt]}");
+                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.PowerOwner or HookTarget.Owner)) throw new Gap($"gap: damage to {values[targetAt]}");
                     return new DamageStep(damaged, amount, props) { NoDealer = noDealer };
                 }
                 case "CardPileCmd.Draw":
@@ -373,6 +374,9 @@ public static class HookReader
                     var countAt = IndexOf(types, "Decimal");
                     return new DrawStep(countAt < 0 ? new HookConstant(1m) : Value(values[countAt]));
                 }
+                case "CreatureCmd.Heal":
+                    if (!IsOwner(values[0])) throw new Gap($"gap: a heal for {values[0]}");
+                    return new HealStep(Value(values[1]));
                 case "PlayerCmd.GainEnergy":
                     if (!IsOwner(values[1])) throw new Gap("gap: energy for someone else");
                     return new GainEnergyStep(Value(values[0]));
@@ -568,6 +572,9 @@ public static class HookReader
                     return new HookConstant(0m);
                 case ParameterValue { Name: "cardSource" } or NamedValue { Name: "cardSource" }:
                     return new HookFactValue(HookFact.FromCard);
+                // Its owner is dead (base.Owner.IsDead).
+                case QueryValue { Name: "IsDead", Of: { } deadOf } when IsOwner(deadOf):
+                    return new HookFactValue(HookFact.OwnerDead);
                 case QueryValue { Type: "CombatManager", Name: "IsInProgress" }:
                     return new HookConstant(1m);
                 case QueryValue { Type: "Creature", Name: "IsEnemy", Of: QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } } }:

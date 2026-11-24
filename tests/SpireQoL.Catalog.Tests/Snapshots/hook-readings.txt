@@ -25,7 +25,7 @@ power CompostPower: AfterDeath: gap: the simulator runs no read model's AfterDea
 power ConcoctPower: AfterDamageGiven: read | AfterSideTurnEnd: gap: the value this.Owner.Side
 power ConfusedPower: AfterCardDrawn: gap: changes a game object outside a command (CardEnergyCost.SetThisCombat)
 power ConquerorPower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: gap: tests cardSource is SovereignBlade
-power ConstrictPower: AfterDeath: gap: the simulator runs no read model's AfterDeath | AfterSideTurnEnd: gap: damage to this.Owner
+power ConstrictPower: AfterDeath: gap: the simulator runs no read model's AfterDeath | AfterSideTurnEnd: read
 power ConsumingShadowPower: AfterSideTurnEnd: gap: OrbCmd.EvokeLast isn't translated
 power CorrosiveWavePower: AfterCardDrawn: read | AfterSideTurnEnd: read
 power CorruptionPower: AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
@@ -37,10 +37,10 @@ power DampenPower: AfterApplied: gap: the simulator runs no read model's AfterAp
 power DanseMacabrePower: BeforeCardPlayed: read
 power DarkEmbracePower: AfterCardExhausted: gap: changes its own data (etherealCount) where the reader reads no store | AfterSideTurnEnd: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power DebilitatePower: AfterSideTurnEnd: read
-power DemisePower: AfterSideTurnEnd: gap: damage to this.Owner
+power DemisePower: AfterSideTurnEnd: read
 power DevourLifePower: AfterCardPlayed: gap: OstyCmd.Summon isn't translated
 power DieForYouPower: ModifyUnblockedDamageTarget: gap: the simulator runs no read model's ModifyUnblockedDamageTarget | ShouldAllowHitting: gap: the simulator runs no read model's ShouldAllowHitting | ShouldCreatureBeRemovedFromCombatAfterDeath: gap: the simulator runs no read model's ShouldCreatureBeRemovedFromCombatAfterDeath | ShouldPowerBeRemovedAfterOwnerDeath: gap: the simulator runs no read model's ShouldPowerBeRemovedAfterOwnerDeath
-power DisintegrationPower: AfterSideTurnEndLate: gap: damage to this.Owner
+power DisintegrationPower: AfterSideTurnEndLate: read
 power DislikeYouPower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: gap: tests props.HasFlag(32)
 power DoomPower: AfterSideTurnEnd: gap: the reader can't follow it: commands in a callback | BeforeSideTurnEnd: gap: the reader can't follow it: commands in a callback
 power DoubleDamagePower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
@@ -83,7 +83,7 @@ power ImitationLearningPower: AfterCardPlayed: gap: each copy acts on its own (P
 power ImpaledPower: AfterApplied: gap: the simulator runs no read model's AfterApplied | AfterDamageReceived: gap: tests dealer | AfterDeath: gap: the simulator runs no read model's AfterDeath | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power InfernoPower: AfterDamageReceived: read | AfterPlayerTurnStart: gap: AfterPlayerTurnStart acts as a side's turn starts (the enemies' turn start runs no read model)
 power InfestedPower: AfterDeath: gap: the simulator runs no read model's AfterDeath | ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding
-power InsatiableDominionPower: AfterApplied: gap: the simulator runs no read model's AfterApplied | AfterSideTurnEndLate: gap: damage to this.Owner | AfterSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers
+power InsatiableDominionPower: AfterApplied: gap: the simulator runs no read model's AfterApplied | AfterSideTurnEndLate: read | AfterSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers
 power IntangiblePower: AfterModifyingDamageAmount: gap: the simulator runs no read model's AfterModifyingDamageAmount | AfterModifyingHpLostAfterOsty: gap: the simulator runs no read model's AfterModifyingHpLostAfterOsty | AfterSideTurnEnd: not run: its commands wait on the enemies' side's turn ending, which no simulation reaches | ModifyDamageCap: gap: the simulator runs no read model's ModifyDamageCap | ModifyHpLostAfterOsty: gap: the simulator runs no read model's ModifyHpLostAfterOsty
 power InterceptPower: AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | AfterSideTurnEnd: gap: tests Contains(this.Owner.Powers, this) | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyDamageMultiplicative: gap: the value this.GetInternalData<Data>().coveredCreatures().Count
 power IterationPower: AfterCardDrawn: gap: the value Count(OfType(Instance.History.Entries), e => e.HappenedThisTurn(this.CombatState) and e.Actor == this.Owner and e.Card.Type == Status)
@@ -127,7 +127,7 @@ power ReaperFormPower: AfterApplied: gap: the simulator runs no read model's Aft
 power ReattachPower: AfterDeath: gap: the simulator runs no read model's AfterDeath | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ShouldAllowHitting: gap: the simulator runs no read model's ShouldAllowHitting | ShouldCreatureBeRemovedFromCombatAfterDeath: gap: the simulator runs no read model's ShouldCreatureBeRemovedFromCombatAfterDeath | ShouldOwnerDeathTriggerFatal: gap: the simulator runs no read model's ShouldOwnerDeathTriggerFatal | ShouldPowerBeRemovedAfterOwnerDeath: gap: the simulator runs no read model's ShouldPowerBeRemovedAfterOwnerDeath
 power ReboundPower: AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | AfterSideTurnEnd: read | ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
 power ReflectPower: AfterDamageReceived: gap: the value result.BlockedDamage | AfterSideTurnStart: gap: AfterSideTurnStart acts as a side's turn starts (the enemies' turn start runs no read model)
-power RegenPower: BeforeSideTurnEndEarly: gap: CreatureCmd.Heal isn't translated
+power RegenPower: BeforeSideTurnEndEarly: read
 power RetainHandPower: AfterSideTurnEnd: read | ShouldFlush: gap: the simulator runs no read model's ShouldFlush
 power RingingPower: AfterApplied: gap: the simulator runs no read model's AfterApplied | AfterCardEnteredCombat: gap: the simulator runs no read model's AfterCardEnteredCombat | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | AfterSideTurnEnd: read | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
 power RitualPower: AfterApplied: gap: the simulator runs no read model's AfterApplied | AfterSideTurnEnd: read
@@ -159,7 +159,7 @@ power StampedePower: AfterAutoPostPlayPhaseEntered: gap: the simulator runs no r
 power SteamEruptionPower: AfterDeath: gap: the simulator runs no read model's AfterDeath | ShouldCreatureBeRemovedFromCombatAfterDeath: gap: the simulator runs no read model's ShouldCreatureBeRemovedFromCombatAfterDeath | ShouldPowerBeRemovedAfterOwnerDeath: gap: the simulator runs no read model's ShouldPowerBeRemovedAfterOwnerDeath | ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding
 power StockPower: AfterDeath: gap: the simulator runs no read model's AfterDeath | ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding
 power StormPower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
-power StranglePower: AfterCardPlayed: gap: damage to this.Owner | AfterSideTurnEnd: read | BeforeCardPlayed: gap: tests {not this.Applier: null; this.Applier: this.Applier.Player} | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
+power StranglePower: AfterCardPlayed: read | AfterSideTurnEnd: read | BeforeCardPlayed: gap: tests {not this.Applier: null; this.Applier: this.Applier.Player} | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power StratagemPower: AfterShuffle: gap: a pick
 power StretchPower: AfterCardPlayed: gap: the value null | BeforeCardPlayed: gap: the value cardPlay | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyBlockAdditive: gap: tests this.GetInternalData<Data>().cardPlay()
 power SubroutinePower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them

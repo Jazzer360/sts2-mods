@@ -22,9 +22,9 @@ internal static class ReadModelsFile
         Unread = "UnreadableForTestsPower's hooks couldn't be read from the game's code (a game update?): what it does isn't simulated",
     };
 
-    /// <summary>A class read whole whose program the simulator can't compile (damage to its owner, which no read model deals): unread too.</summary>
+    /// <summary>A class read whole whose program the simulator can't compile (damage to a hit's target, which no read model deals): unread too.</summary>
     public static readonly ModelSpec Uncompilable = new("UncompilableForTestsPower", ModelKind.Power,
-        new[] { new HookProgram(HookName.AfterCardPlayed, new HookStep[] { new DamageStep(HookTarget.Owner, new HookConstant(3m), new HookConstant(4m)) }) });
+        new[] { new HookProgram(HookName.AfterCardPlayed, new HookStep[] { new DamageStep(HookTarget.HitTarget, new HookConstant(3m), new HookConstant(4m)) }) });
 
     [ModuleInitializer]
     internal static void Use() => SimModels.Read = () => Specs().Append(Unreadable).Append(Uncompilable);
