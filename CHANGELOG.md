@@ -13,6 +13,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Play Preview: while you hold a card where letting go would play it (aimed at its target, for one that needs one; above the hand's play line, or once selected with a controller or the keyboard, for one that doesn't), Incoming Damage, Teammate Incoming Damage and the Death Skull show the turn as it would go after you play it, tinted lavender, and an enemy intent the play changes gets a line through its damage and the new number above it in the same font (Weak lowering it, Strength raising it; the line alone for an enemy the play kills in every outcome). Every outcome of the play was already worked out for each card and target, so it shows at once; the card tabs don't change. A new check holds it to the board the play leaves.
 
 #### Changed
+- Monarch's Gaze is worked out from its own code (the temporary Strength loss each of your powered hits gives its target). What's shown is unchanged.
 - Every card's program is read from the game's code once a launch, on a background thread as the mod loads, so a fight no longer reads one on the game's thread (a small stutter on a launch's first fight). Dev mode logs how long the reads took.
 - Dev mode leaves out the first frame after the game's window comes back to the front, as it already did the time in the background (the switch's frame, not play's).
 - Twine and Yah are worked out from their own code (what each does when one of your arrows comes loose). What's shown is unchanged.

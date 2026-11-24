@@ -12674,6 +12674,58 @@
     "HelpsOwner": false
   },
   {
+    "Name": "MonarchsGazePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageGiven",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "HitTarget",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": -1
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": true,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageGiven\u003Ed__4.MoveNext:001D",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "DealerIsOwner"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageGiven\u003Ed__4.MoveNext:002F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PoweredAttack"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false
+  },
+  {
     "Name": "MonologuePower",
     "Kind": "Power",
     "Hooks": [

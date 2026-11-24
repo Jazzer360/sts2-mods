@@ -1023,7 +1023,7 @@ public sealed class SimState
 
     /// <summary>
     /// An indirect firing (from a card event) is also logged as "~Name" (and "~Name@id" for an enemy's or a teammate's). A
-    /// teammate's firings are only under Name@id (CardPredictions.LogTab reads them there).
+    /// teammate's firings are only under Name@id (CardTabs.FromLog reads them there).
     /// </summary>
     private void Log1(string key, int amount, int times = 1)
     {

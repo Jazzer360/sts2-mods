@@ -111,6 +111,7 @@ public static partial class ReadModels
         RelicId.Metronome.Name,
         RelicId.MightyWings.Name,
         RelicId.MiniRegent.Name,
+        PowerId.MonarchsGaze.Name,
         PowerId.Monologue.Name,
         PowerId.Motif.Name,
         RelicId.MummifiedHand.Name,

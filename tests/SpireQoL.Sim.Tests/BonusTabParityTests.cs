@@ -33,8 +33,25 @@ public class BonusTabParityTests
             return;
         }
         var expected = File.ReadAllLines(ParityPath);
-        var changed = actual.Zip(expected).Where(pair => pair.First != pair.Second).Select(pair => $"{pair.Second}\n  now: {pair.First}").ToList();
+        var changed = actual.Zip(expected).Where(pair => Compared(pair.First) != Compared(pair.Second)).Select(pair => $"{pair.Second}\n  now: {pair.First}").ToList();
         Assert.True(expected.Length == actual.Count && changed.Count == 0, $"the tabs changed in {changed.Count} of {actual.Count} scenarios:\n{string.Join("\n", changed.Take(6))}");
+    }
+
+    /// <summary>
+    /// What the play check holds a class to, where reading it from its code changed it on purpose (the tabs never change): the class, and why. A
+    /// read model is held to its code's flashes (decision #199), a hand-written one to its acting log.
+    /// </summary>
+    private static readonly Dictionary<string, string> ReviewedChecks = new(StringComparer.Ordinal)
+    {
+        ["MonarchsGazePower"] = "its code never flashes (MonarchsGazePower.AfterDamageGiven: PowerCmd.Apply alone), so the play check no longer expects a flash where its tab shows",
+    };
+
+    /// <summary>A scenario's line as compared: the play check's entry for a reviewed class left out.</summary>
+    private static string Compared(string line)
+    {
+        foreach (var name in ReviewedChecks.Keys)
+            line = System.Text.RegularExpressions.Regex.Replace(line, $@"(\| checked [^|]*?){name} [01]+/[01]+; ", "$1");
+        return line;
     }
 
     [Fact]

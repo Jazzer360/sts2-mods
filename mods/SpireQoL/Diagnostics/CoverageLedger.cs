@@ -218,7 +218,7 @@ internal static partial class CoverageLedger
         ["MagicBombPower"] = "covered: model on AfterSideTurnEnd (its amount to its owner while its applier lives, then removed); AfterDeath of its applier removes it",
         ["MasterPlannerPower"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed makes Skills Sly (CardCmd.ApplyKeyword on the card played, decision #218; proc tab)",
         ["MayhemPower"] = "ignore: AfterAutoPrePlayPhaseEntered auto-plays at the start of your turn",
-        ["MonarchsGazePower"] = "covered: AfterDamageGiven takes Strength from the enemy each powered hit lands on: simulator intents for single-target and all-enemy attacks, and per branch for random-target ones (SimPlay.GazeHits)",
+        ["MonarchsGazePower"] = "covered: read from its code (ReadModel, decision #238): AfterDamageGiven puts MonarchsGazeStrengthDownPower (a temporary Strength loss: its IsPositive is false) on whatever its owner's powered attack hits; trigger tab",
         ["MonologuePower"] = "covered: read from its code (ReadModel, decision #195), each copy on its own (decision #196): AfterCardPlayed Strength per card (proc tab)",
         ["NecroMasteryPower"] = "covered: AfterCurrentHpChanged damages all enemies when Osty loses HP: a card that kills Osty (proc tab; simulator). Not modelled: Osty losing HP to an enemy's Thorns or attacks",
         ["NemesisPower"] = "ignore: AfterSideTurnEnd Intangible at the end of its own turn (your next turn)",

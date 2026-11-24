@@ -1714,3 +1714,20 @@ public sealed class Twine : RelicProc
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
         cardEvent == CardEvent.ArrowDislodged && player == owner ? RelicBlock(state, owner) : One(state);
 }
+
+// ---- a hit's reactions (Sim/Models/EnemyModels.cs, deleted 2026-11-24)
+
+/// <summary>
+/// MonarchsGazePower.AfterDamageGiven: each powered hit its owner deals takes its amount of Strength from the target for the turn
+/// (MonarchsGazeStrengthDownPower: a temporary Strength loss; Artifact can take it).
+/// </summary>
+public sealed class MonarchsGazePower : SimModel
+{
+    public override TabKind? Tab => TabKind.Trigger;
+    public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Dealer != owner || !hit.Props.IsPoweredAttack() || hit.Target < 0) return;
+        state.LogFired(Name, amount: 0, owner);
+        SimEngine.ApplyInHit(state, owner, hit.Target, PowerId.Strength, -SimEngine.PowerOn(state, owner, ThisPower), debuff: true);
+    }
+}

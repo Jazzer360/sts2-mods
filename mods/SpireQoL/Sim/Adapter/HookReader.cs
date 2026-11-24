@@ -1380,7 +1380,8 @@ public static class HookReader
                     // (TemporaryStrengthPower, TemporaryDexterityPower: IsPositive), as the card programs land it (SimAdapter.PowersFrom).
                     if (TemporaryOf(power) is { } underlying)
                     {
-                        var negative = LandsAsDebuff(power, amount);
+                        // Its sign is its own class's IsPositive (TemporaryStrengthPower.Type asks it: MonarchsGazeStrengthDownPower's is false).
+                        var negative = !IsPositive(power) || LandsAsDebuff(power, amount);
                         return new ApplyPowerStep(underlying, Targets(values[targetAt]), negative ? new HookMath(HookOperation.Multiply, amount, new HookConstant(-1m)) : amount) { Debuff = negative, By = by };
                     }
                     return new ApplyPowerStep(power, Targets(values[targetAt]), amount)
@@ -1594,6 +1595,10 @@ public static class HookReader
             _hook = method.Name;
             return (allowNegative, Pruned(Ways(ProgramReader.ReadReturnedWays(_type, method, _read))));
         }
+
+        /// <summary>A temporary Strength or Dexterity power's IsPositive, read from its own class (an override, or its base class's true).</summary>
+        private bool IsPositive(string power) =>
+            _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + power) is not { } powerType || Returned(powerType, "get_IsPositive") is not ConstantValue { Value: 0 };
 
         /// <summary>The power can go below 0 (its AllowNegative): given less than 0, it lands as a debuff.</summary>
         private bool AllowsNegative(string power) =>
