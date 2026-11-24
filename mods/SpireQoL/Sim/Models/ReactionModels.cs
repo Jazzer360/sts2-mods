@@ -214,7 +214,7 @@ public sealed class CurlUpPower : SimModel
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
-        if (state.Enemy(owner) is not { Alive: true } enemy || enemy.Powers.DataOf(ThisPower) != BoundToPlay) return One(state);
+        if (state.Enemy(owner) is not { } enemy || enemy.Powers.DataOf(ThisPower) != BoundToPlay) return One(state);
         enemy.Block += enemy.Powers[ThisPower];
         enemy.Powers = enemy.Powers.Without(ThisPower);
         enemy.ReactedWithBlock = true;
@@ -250,7 +250,7 @@ public sealed class SkittishPower : SimModel
     }
     public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack)
     {
-        if (state.Enemy(owner) is not { Alive: true } enemy) return One(state);
+        if (state.Enemy(owner) is not { } enemy) return One(state);
         var data = enemy.Powers.DataOf(ThisPower);
         if ((data & UsedThisTurn) != 0 || (data & FirstHitGotThrough) == 0 || !attack.Props.HasFlag(SimProps.Move) || attack.Card == null) return One(state);
         enemy.Block += enemy.Powers[ThisPower];
@@ -268,7 +268,7 @@ public sealed class SneakyPower : SimModel
     public override bool Harmful => true;
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
-        if (play.Card.Type != SimCardType.Attack || play.Owner == owner || state.Enemy(owner) is not { Alive: true } enemy) return One(state);
+        if (play.Card.Type != SimCardType.Attack || play.Owner == owner || state.Enemy(owner) is not { } enemy) return One(state);
         enemy.Block += enemy.Powers[ThisPower];
         enemy.ReactedWithBlock = true;
         state.LogFired(Name, amount: 0, owner);

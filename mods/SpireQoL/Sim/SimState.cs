@@ -865,6 +865,8 @@ public sealed class SimState
     /// <summary>The listeners (SimEngine.Listeners) and the power and relic sets they were built from: rebuilt when one changes.</summary>
     internal List<(SimModel Model, int Owner)>? ListenerCache;
     internal object[]? ListenerSets;
+    /// <summary>The enemies that were dead when ListenerCache was built (a bit per place in Enemies): a death rebuilds it.</summary>
+    internal ulong ListenerDead;
 
     /// <summary>The run's work counter (SimEngine.Run sets it; every copy of the state shares it).</summary>
     internal SimWork? Work;

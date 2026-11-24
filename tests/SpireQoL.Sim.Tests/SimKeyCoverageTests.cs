@@ -21,7 +21,7 @@ public class SimKeyCoverageTests
     {
         // The search itself.
         ["SimState.Weight"] = "the branch's share of the rolls: identical branches add theirs when they merge",
-        ["SimState.Log"] = Bookkeeping, ["SimState.Work"] = Bookkeeping, ["SimState.ListenerCache"] = Bookkeeping, ["SimState.ListenerSets"] = Bookkeeping,
+        ["SimState.Log"] = Bookkeeping, ["SimState.Work"] = Bookkeeping, ["SimState.ListenerCache"] = Bookkeeping, ["SimState.ListenerSets"] = Bookkeeping, ["SimState.ListenerDead"] = Bookkeeping,
         ["SimState._teammatesShared"] = Bookkeeping, ["SimPlayer._orbsShared"] = Bookkeeping,
         // Read from the game once and never changed.
         ["SimState.Vars"] = Constant, ["SimState.MainRules"] = Constant, ["SimState.History"] = Constant, ["SimState.Titles"] = Constant, ["SimState.TeammatesBeforeMe"] = Constant,

@@ -80,10 +80,29 @@ public sealed class ReadModel : SimModel
             var one = new ModelSpec(spec.Name, spec.Kind, new[] { program });
             // A take of what it bound is a test with an effect: asked once a run, as a store's tests are.
             _takes[(int)program.Hook] = one.Steps().Any(step => step is UnbindStep) || one.Values().Any(value => value is HookFactValue { Fact: HookFact.TakeBound or HookFact.BoundTaken });
-            _asksOnce[(int)program.Hook] = one.Steps().Any(step => step is StoreFieldStep) || _takes[(int)program.Hook];
+            // A test that guards more than one step is asked once too: the game asks it once at its branch, though the first step it guards
+            // changes what it tests (if (Block == 0) { GainBlock; GainEnergy }). One that guards a single step can't tell.
+            _asksOnce[(int)program.Hook] = one.Steps().Any(step => step is StoreFieldStep) || _takes[(int)program.Hook] || GuardsSeveral(one);
             if (program.Returns != null) _returns[(int)program.Hook] = Compile(program.Returns);
             _steps[(int)program.Hook] = CompileSteps(program.Steps, new List<HookStep>(), firstRound: true);
         }
+    }
+
+    /// <summary>One of the code's tests (by its place) is in the condition of more than one step of the program.</summary>
+    private static bool GuardsSeveral(ModelSpec program)
+    {
+        static IEnumerable<string> Tests(HookValue? value) => value switch
+        {
+            HookTest test => new[] { test.At }.Concat(Tests(test.Test)),
+            HookMath math => Tests(math.Left).Concat(Tests(math.Right)),
+            HookNot not => Tests(not.Inner),
+            _ => Array.Empty<string>(),
+        };
+        var places = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var step in program.Steps())
+            foreach (var place in Tests(step.When).Distinct(StringComparer.Ordinal))
+                if (!places.Add(place)) return true;
+        return false;
     }
 
     /// <summary>
@@ -200,14 +219,14 @@ public sealed class ReadModel : SimModel
 
     private decimal Returned(HookName hook, SimState state, int owner, DamageCtx damage, decimal otherwise)
     {
-        if (_returns[(int)hook] is not { } returns || Gone(state, owner)) return otherwise;
+        if (_returns[(int)hook] is not { } returns) return otherwise;
         var args = new HookArgs { State = state, Owner = owner, Damage = damage, Play = damage.Play };
         return returns(in args);
     }
 
     private decimal Returned(HookName hook, SimState state, int owner, BlockCtx block, decimal otherwise)
     {
-        if (_returns[(int)hook] is not { } returns || Gone(state, owner)) return otherwise;
+        if (_returns[(int)hook] is not { } returns) return otherwise;
         var args = new HookArgs { State = state, Owner = owner, Block = block, Play = block.Play };
         return returns(in args);
     }
@@ -218,17 +237,10 @@ public sealed class ReadModel : SimModel
     /// </summary>
     private IEnumerable<SimState> Run(HookName hook, HookArgs args)
     {
-        if (_steps[(int)hook] is not { } steps || Gone(args.State, args.Owner)) return One(args.State);
+        if (_steps[(int)hook] is not { } steps) return One(args.State);
         args = args with { Hook = hook, Asked = _asksOnce[(int)hook] ? new int[_testSlots.Count] : null, Taken = _takes[(int)hook] ? new int[1] : null };
         return RunSteps(steps, args);
     }
-
-    /// <summary>
-    /// A power whose owner, an enemy, is dead: the game removed it with the creature's powers (Creature.RemoveAllPowersAfterDeath; a power
-    /// that stays overrides ShouldPowerBeRemovedAfterOwnerDeath, a hook no read model answers), so it answers nothing. A hit's own reactions
-    /// still run on the creature it killed (the game's deaths come after them).
-    /// </summary>
-    private bool Gone(SimState state, int owner) => Spec.Kind == ModelKind.Power && Who.IsEnemy(owner) && state.Enemy(owner) is not { Alive: true };
 
     /// <summary>Compiled steps in order on one branch (see Run).</summary>
     private static IEnumerable<SimState> RunSteps(CompiledStep[] steps, HookArgs args)

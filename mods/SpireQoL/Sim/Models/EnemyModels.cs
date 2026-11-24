@@ -42,7 +42,7 @@ public sealed class CrabRagePower : SimModel
     public override void AfterDeath(SimState state, int owner, int dead)
     {
         // Any ally on its side, whatever its own move is (a Buff intent too: a dev review report, Crusher's 99 block missing).
-        if (dead == owner || !Who.IsEnemy(dead) || state.Enemy(owner) is not { Alive: true } enemy || !enemy.Powers.Has(ThisPower)) return;
+        if (dead == owner || !Who.IsEnemy(dead) || state.Enemy(owner) is not { } enemy || !enemy.Powers.Has(ThisPower)) return;
         state.LogFired(Name, amount: 0, owner);
         var strength = enemy.Powers[ThisPower];
         enemy.Powers = enemy.Powers.Without(ThisPower).Add(PowerId.Strength, strength);
@@ -57,7 +57,7 @@ public sealed class RavenousPower : SimModel
 
     public override void AfterDeath(SimState state, int owner, int dead)
     {
-        if (dead == owner || dead < 0 || state.Enemy(owner) is not { Alive: true } enemy || enemy.Stunned) return;
+        if (dead == owner || dead < 0 || state.Enemy(owner) is not { } enemy || enemy.Stunned) return;
         state.LogFired(Name, amount: 0, owner);
         SimEngine.Stun(enemy);
     }

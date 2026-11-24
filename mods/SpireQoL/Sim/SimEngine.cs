@@ -474,12 +474,13 @@ public static partial class SimEngine
             }
         }
         state.AttackDealt += absorbed + toHp;
-        // After the HP loss, before the damage hooks (the game's results loop in CreatureCmd.Damage).
-        if (blockBroken) foreach (var (model, o) in Listeners(state)) model.AfterBlockBroken(state, o, enemy.Id, dealer);
+        // After the HP loss, before the damage hooks (the game's results loop in CreatureCmd.Damage). A hit that killed it is told to its
+        // own powers too: the game kills it after these hooks.
+        if (blockBroken) foreach (var (model, o) in ListenersWith(state, enemy.Id)) model.AfterBlockBroken(state, o, enemy.Id, dealer);
         var hit = new DamageEvent(dealer, enemy.Id, props, card, absorbed + Math.Min(toHp, Math.Max(0, hpBefore)), absorbed, toHp, hpBefore > 0 && enemy.Hp <= 0);
         if (props.IsPoweredAttack() && dealer is Who.You or Who.YourOsty) BiggestHit(state, hit.Total);
-        foreach (var (m, o) in Listeners(state)) m.AfterDamageGiven(state, o, hit);
-        foreach (var (m, o) in Listeners(state)) m.AfterDamageReceived(state, o, hit);
+        foreach (var (m, o) in ListenersWith(state, enemy.Id)) m.AfterDamageGiven(state, o, hit);
+        foreach (var (m, o) in ListenersWith(state, enemy.Id)) m.AfterDamageReceived(state, o, hit);
         return toHp;
     }
 
@@ -1280,7 +1281,8 @@ public static partial class SimEngine
                 dead.DeathHandled = true;
                 handled = true;
                 if (!PowersOf(state, dead.Id).Has(PowerId.Minion)) mainDied = true;
-                foreach (var (model, o) in Listeners(state)) model.AfterDeath(state, o, dead.Id);
+                // Its own powers hear its death (CreatureCmd.Kill runs AfterDeath before RemoveAllPowersAfterDeath); no other dead one's do.
+                foreach (var (model, o) in ListenersWith(state, dead.Id)) model.AfterDeath(state, o, dead.Id);
             }
             var left = state.Enemies.Where(enemy => enemy.Alive).ToList();
             if (mainDied && left.Count > 0 && left.All(enemy => PowersOf(state, enemy.Id).Has(PowerId.Minion)))
