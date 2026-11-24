@@ -1,5 +1,6 @@
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
+using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
 using SpireQoL.Sim;
 using Sts2Mods.Core.Game;
 
@@ -38,6 +39,7 @@ internal static class IntentForecastAudit
                 Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "the enemy's move rules couldn't be read", __instance.GetType().Name);
                 return;
             }
+            CheckConditions(__instance, machine);
             var current = new MoveNodeMove(__instance.NextMove.Id, __instance.NextMove.FollowUpState?.Id ?? __instance.NextMove.FollowUpStateId);
             var turns = IntentForecast.Forecast(graph, current, machine.StateLog.Select(monsterState => monsterState.Id).ToList(), maxTurns: 1);
             __state = turns.FirstOrDefault();
@@ -47,6 +49,33 @@ internal static class IntentForecastAudit
             ModEntry.Log.Warn($"[audit] [intent] forecast before the roll failed: {ex.Message}");
             Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "the forecast before the roll failed", __instance.GetType().Name);
         }
+    }
+
+    /// <summary>
+    /// The conditional branches as the simulator asks them (decision #195, MoveConditions: each lambda's code translated, asked of the
+    /// adapter's state as this monster) against the game's own lambdas, as the game is about to ask them: a difference is reported as a
+    /// mismatch. Nothing shown reads them yet; this proves them before anything does.
+    /// </summary>
+    private static void CheckConditions(MonsterModel monster, MonsterMoveStateMachine machine)
+    {
+        var states = machine.States.Values.OfType<ConditionalBranchState>().ToList();
+        if (states.Count == 0 || Sts2State.Me is not { } me || monster.Creature.CombatState is not { } combat) return;
+        var state = SimAdapter.Build(me, combat, out var ids);
+        if (!ids.TryGetValue(monster.Creature, out var id)) return;
+        var name = monster.GetType().Name;
+        foreach (var branchState in states)
+            foreach (var (to, lambda) in MoveConditions.BranchesOf(branchState))
+            {
+                var game = lambda == null || lambda.DynamicInvoke() is true;
+                var condition = MoveConditions.Of(monster, lambda);
+                var simulated = condition == null ? null : SimEngine.Holds(state, condition, id);
+                if (simulated == game) continue;
+                var details = $"{name} {branchState.Id} -> {to}: the game's lambda {game}, the simulator's condition {simulated?.ToString() ?? "unread"} ({condition})";
+                ModEntry.Log.Detail("[audit] [intent] condition: " + details);
+                if (Reported.Add("condition|" + details) && Reported.Count <= 200)
+                    Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("intent", $"A conditional move branch read differently from the game: {name}",
+                        new[] { "intent", name }, details);
+            }
     }
 
     private static void After(MonsterModel __instance, ForecastTurn? __state)

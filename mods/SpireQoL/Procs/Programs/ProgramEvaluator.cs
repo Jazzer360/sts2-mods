@@ -193,6 +193,8 @@ public static class ProgramEvaluator
                 NamedValue { Name: "Decimal.Zero" } => 0m,
                 NamedValue { Name: "Decimal.MinusOne" } => -1m,
                 NamedValue named when context.Parameters.TryGetValue(named.Name, out var bound) => bound,
+                // A text in the code ("first": a monster's slot).
+                NamedValue { Name: ['"', .., '"'] } text => text.Name[1..^1],
                 ParameterValue parameter => context.Parameters.TryGetValue(parameter.Name, out var bound) ? bound : Unknown,
                 CardValue card => CardNumber(card.Key, context.Board),
                 StoredValue stored => Evaluate(stored.Value, context),
@@ -327,6 +329,9 @@ public static class ProgramEvaluator
         // x is T: x when it's a T, else null.
         if (query.Name == "is" && query.Of != null) return asked != null && IsOfType(asked.GetType(), query.Type) ? asked : null;
         if (query.Of == null && query.Type == "Enumerable") return Linq(query, arguments, context);
+        // string's == and != (a monster's slot: SlotName == "first"), null against a text included.
+        if (query is { Of: null, Name: "op_Equality" or "op_Inequality", Type: nameof(String) } && arguments is [var leftText, var rightText])
+            return Equals(leftText, rightText) == (query.Name == "op_Equality");
         // decimal's operators on numbers (Shared Fate's -EnemyStrengthLoss; Sovereign Blade's Parry above 0).
         if (query.Of == null && query.Name is "op_UnaryNegation" or "op_Addition" or "op_Subtraction" or "op_Multiply"
                 or "op_GreaterThan" or "op_GreaterThanOrEqual" or "op_LessThan" or "op_LessThanOrEqual" or "op_Equality" or "op_Inequality")
@@ -521,6 +526,11 @@ public static class ProgramEvaluator
                     return Forbidden(property.PropertyType) ? Unknown : property.GetValue(asked);
             return Unknown;
         }
+        // A field of the object (a monster's own counter: Knowledge Demon's _curseOfKnowledgeCounter), read as a property is.
+        if (query.Arguments.Count == 0)
+            for (var current = type; current != null; current = current.BaseType)
+                if (current.GetField(query.Name, Everything | BindingFlags.DeclaredOnly) is { } field)
+                    return Forbidden(field.FieldType) ? Unknown : field.GetValue(asked);
         if (!OnlyAsks(query.Name)) return Unknown;
         return Invoke(type, asked, query, arguments);
     }

@@ -54,15 +54,15 @@ public static partial class SimEngine
     /// Whether the condition holds on the state now: null when it can't be told. A test of the card's code (one with an At) is asked once a
     /// play: its first answer is kept (SimState.PlayTests) and given again.
     /// </summary>
-    internal static bool? Holds(SimState state, SimCondition condition)
+    internal static bool? Holds(SimState state, SimCondition condition, int monster = Who.None)
     {
         if (condition.At is { } at && state.PlayTests.Has(at)) return state.PlayTests[at] switch { 1 => true, 2 => false, _ => null };
-        var holds = HoldsNow(state, condition);
+        var holds = HoldsNow(state, condition, monster);
         if (condition.At is { } asked) state.PlayTests = state.PlayTests.With(asked, holds switch { true => 1, false => 2, _ => 3 });
         return holds;
     }
 
-    private static bool? HoldsNow(SimState state, SimCondition condition)
+    private static bool? HoldsNow(SimState state, SimCondition condition, int monster)
     {
         var owner = state.CurrentPlay?.Owner ?? Who.You;
         var target = state.CurrentPlay?.Target ?? Who.None;
@@ -79,15 +79,17 @@ public static partial class SimEngine
                 return state.PlayTests.Has(ShotKey) && state.PlayTests[ShotKey] == 1;
             case TargetIntendsToAttackCondition:
                 return state.Enemy(target) is { Alive: true, IntendsToAttack: true, Stunned: false };
+            case KnownCondition known:
+                return known.Holds;
             case CountCondition counted:
-                return CountOf(state, counted, owner) is { } count ? Compares(count, counted.Compare, counted.Than) : null;
+                return CountOf(state, counted, owner, monster) is { } count ? Compares(count, counted.Compare, counted.Than) : null;
             case NotCondition not:
-                return Holds(state, not.Inner) is { } inner ? !inner : null;
+                return Holds(state, not.Inner, monster) is { } inner ? !inner : null;
             case AllCondition all:
             {
                 // Asked in order, as the code's && does: a part after one that fails isn't asked.
                 foreach (var part in all.Parts)
-                    switch (Holds(state, part))
+                    switch (Holds(state, part, monster))
                     {
                         case false: return false;
                         case null: return null;
@@ -97,7 +99,7 @@ public static partial class SimEngine
             case AnyCondition any:
             {
                 foreach (var part in any.Parts)
-                    switch (Holds(state, part))
+                    switch (Holds(state, part, monster))
                     {
                         case true: return true;
                         case null: return null;
@@ -110,7 +112,7 @@ public static partial class SimEngine
     }
 
     /// <summary>A counted condition's count on the state; null when it can't be told (a filter's cards after one joined unread).</summary>
-    private static int? CountOf(SimState state, CountCondition counted, int owner)
+    private static int? CountOf(SimState state, CountCondition counted, int owner, int monster)
     {
         switch (counted.Counted)
         {
@@ -139,6 +141,12 @@ public static partial class SimEngine
                 if (state.Enemy(hpOf) is { } enemy) return enemy.Alive ? Math.Max(0, enemy.Hp) : 0;
                 return state.Player(hpOf) is { } aimedPlayer ? Math.Max(0, aimedPlayer.Hp) : 0;
             }
+            case SimCounted.MonsterHp:
+                return state.Enemy(monster) is { Alive: true } asking ? asking.Hp : 0;
+            case SimCounted.MonsterPower:
+                return counted.Power is { } its && state.Enemy(monster) is { Alive: true } holder ? (its == PowerId.Poison ? holder.PoisonStacks : holder.Powers[its]) : 0;
+            case SimCounted.MonsterSideAlive:
+                return state.Enemies.Count(enemy => enemy.Alive && !(counted.ExcludingItself && enemy.Id == monster));
             case SimCounted.History:
                 if (counted.Query == null) return null;
                 var logged = HistoryCount(state, owner, counted.Query);

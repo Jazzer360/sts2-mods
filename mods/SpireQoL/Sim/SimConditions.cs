@@ -23,6 +23,11 @@ public enum SimTest
     TargetIntendsToAttack,
     /// <summary>The play's last shot had an arrow to shoot at a living target (ArrowCmd.ShootArrowAtTarget's and TryShootArrow's result).</summary>
     ShotHadArrow,
+    /// <summary>
+    /// A test decided when it was read (KnownCondition: a monster's own flag or counter the simulator doesn't follow, the slot it stands in),
+    /// as it stood then.
+    /// </summary>
+    Known,
 }
 
 /// <summary>How a counted condition compares its count with its number.</summary>
@@ -57,6 +62,15 @@ public enum SimCounted
     TargetHp,
     /// <summary>The play owner's amount of a power (CountCondition.Power: their HasPower, GetPowerAmount: Cho Ki's Stretch).</summary>
     OwnerPower,
+    /// <summary>The HP of the monster whose code asks (decision #195: a conditional move branch's CurrentHp), 0 when it's dead.</summary>
+    MonsterHp,
+    /// <summary>The asking monster's amount of a power (CountCondition.Power: its HasPower: Lagavulin Matriarch's Asleep), 0 when it's dead.</summary>
+    MonsterPower,
+    /// <summary>
+    /// The living creatures of the asking monster's side (its GetTeammatesOf counted by IsAlive: Fabricator's room to fabricate), without it
+    /// when CountCondition.ExcludingItself (Living Shield's allies).
+    /// </summary>
+    MonsterSideAlive,
 }
 
 /// <summary>
@@ -106,9 +120,15 @@ public sealed record CountCondition(SimCounted Counted, SimCompare Compare, int 
     /// <summary>History: the query of the fight's log it counts (its count in the ledger: SimEngine.HistoryCount).</summary>
     public HistoryQuery? Query { get; init; }
 
-    /// <summary>TargetPower, OwnerPower: the power.</summary>
+    /// <summary>TargetPower, OwnerPower, MonsterPower: the power.</summary>
     public PowerId? Power { get; init; }
+
+    /// <summary>MonsterSideAlive: the asking monster itself isn't counted (c != base.Creature).</summary>
+    public bool ExcludingItself { get; init; }
 }
+
+/// <summary>A test decided when it was read (SimTest.Known): a monster's own flag the simulator doesn't follow, the slot it stands in.</summary>
+public sealed record KnownCondition(bool Holds) : SimCondition(SimTest.Known);
 
 /// <summary>The condition doesn't hold.</summary>
 public sealed record NotCondition(SimCondition Inner) : SimCondition(SimTest.Not);

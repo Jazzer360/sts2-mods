@@ -16,7 +16,14 @@ public sealed record RandomBranch(string To, MoveRepeat Repeat, int MaxTimes, in
 public sealed record MoveNodeRandom(string Id, IReadOnlyList<RandomBranch> Branches) : MoveNode(Id);
 
 /// <summary>A conditional branch (ConditionalBranchState): the first branch whose condition holds, in order (null: it couldn't be read).</summary>
-public sealed record MoveNodeConditional(string Id, IReadOnlyList<(string To, bool? Holds)> Branches) : MoveNode(Id);
+public sealed record MoveNodeConditional(string Id, IReadOnlyList<(string To, bool? Holds)> Branches) : MoveNode(Id)
+{
+    /// <summary>
+    /// Each branch's condition as the simulator's (decision #195: read from its lambda's code, asked of the monster on a simulated state), in
+    /// the order of Branches; null where one couldn't be translated. Null: none read.
+    /// </summary>
+    public IReadOnlyList<SimCondition?>? Conditions { get; init; }
+}
 
 /// <summary>An enemy's move rules: every state by id, and the initial state (a move with no follow-up goes back to it).</summary>
 public sealed record MoveGraph(IReadOnlyDictionary<string, MoveNode> Nodes, string InitialId);
@@ -53,7 +60,7 @@ public static class IntentForecast
         for (var turn = 0; turn < maxTurns; turn++)
         {
             var dist = new Dictionary<string, double>();
-            if (!Walk(graph, move.FollowUp ?? graph.InitialId, chance: 1.0, history, dist, depth: 0)) break;
+            if (!Walk(graph, move.FollowUp ?? graph.InitialId, chance: 1.0, history, dist, depth: 0, AsReadNow)) break;
             var moves = dist.Where(entry => entry.Value > 0).OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key)
                 .Select(entry => (entry.Key, entry.Value)).ToList();
             if (moves.Count == 0) break;
@@ -66,8 +73,28 @@ public static class IntentForecast
         return turns;
     }
 
+    /// <summary>A conditional branch's condition as the game's lambda answered it when the rules were read.</summary>
+    private static bool? AsReadNow(MoveNodeConditional node, int branch) => node.Branches[branch].Holds;
+
+    /// <summary>
+    /// The moves an enemy can make after the move <paramref name="moveId"/>, each with its chance, its conditional branches asked of the
+    /// simulated <paramref name="state"/> as the enemy <paramref name="enemyId"/> (decision #195: SimCondition, the simulator's own HP, powers
+    /// and side), as the game picks when that move ends (MonsterMoveStateMachine.FindNextMoveState). Null when the rules can't say (a branch
+    /// with no condition read). <paramref name="log"/>: the moves it was given this fight, that one last.
+    /// </summary>
+    public static IReadOnlyList<(string Move, double Chance)>? NextOn(MoveGraph graph, string moveId, IReadOnlyList<string> log, SimState state, int enemyId)
+    {
+        if (graph.Nodes.GetValueOrDefault(moveId) is not MoveNodeMove move) return null;
+        var dist = new Dictionary<string, double>();
+        bool? Simulated(MoveNodeConditional node, int branch) => node.Conditions is { } conditions && branch < conditions.Count && conditions[branch] is { } condition
+            ? SimEngine.Holds(state, condition, enemyId) : null;
+        if (!Walk(graph, move.FollowUp ?? graph.InitialId, chance: 1.0, log.ToList(), dist, depth: 0, Simulated)) return null;
+        return dist.Where(entry => entry.Value > 0).OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key).Select(entry => (entry.Key, entry.Value)).ToList();
+    }
+
     /// <summary>Spreads <paramref name="chance"/> over the moves reached from a state; false when the rules can't say.</summary>
-    private static bool Walk(MoveGraph graph, string id, double chance, List<string> log, Dictionary<string, double> into, int depth)
+    private static bool Walk(MoveGraph graph, string id, double chance, List<string> log, Dictionary<string, double> into, int depth,
+        Func<MoveNodeConditional, int, bool?> holdsOf)
     {
         if (depth > MaxDepth || !graph.Nodes.TryGetValue(id, out var node)) return false;
         switch (node)
@@ -82,15 +109,16 @@ public static class IntentForecast
                 var total = weights.Sum();
                 if (total <= 0) return false; // the game throws: no valid state
                 for (var i = 0; i < moveNodeRandom.Branches.Count; i++)
-                    if (weights[i] > 0 && !Walk(graph, moveNodeRandom.Branches[i].To, chance * weights[i] / total, log, into, depth + 1)) return false;
+                    if (weights[i] > 0 && !Walk(graph, moveNodeRandom.Branches[i].To, chance * weights[i] / total, log, into, depth + 1, holdsOf)) return false;
                 return true;
             }
             case MoveNodeConditional moveNodeConditional:
             {
-                foreach (var (to, holds) in moveNodeConditional.Branches)
+                for (var branch = 0; branch < moveNodeConditional.Branches.Count; branch++)
                 {
+                    var holds = holdsOf(moveNodeConditional, branch);
                     if (holds == null) return false; // a condition that couldn't be read, before the one that holds
-                    if (holds.Value) return Walk(graph, to, chance, log, into, depth + 1);
+                    if (holds.Value) return Walk(graph, moveNodeConditional.Branches[branch].To, chance, log, into, depth + 1, holdsOf);
                 }
                 return false; // the game throws: no valid next state
             }

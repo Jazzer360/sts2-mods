@@ -1,5 +1,6 @@
 using System.Reflection;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.MonsterMoves;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine;
@@ -30,8 +31,11 @@ internal static class IntentReader
         return turns.Count == 0 ? null : (turns, new MoveStateMachineView(machine));
     }
 
-    /// <summary>The move rules as the pure model, or null when they can't be read.</summary>
-    public static MoveGraph? Graph(MonsterMoveStateMachine machine)
+    /// <summary>
+    /// The move rules as the pure model, or null when they can't be read. With <paramref name="monster"/>, each conditional branch also carries
+    /// its condition as the simulator's (MoveConditions, decision #195), for asking a simulated state.
+    /// </summary>
+    public static MoveGraph? Graph(MonsterMoveStateMachine machine, MonsterModel? monster = null)
     {
         try
         {
@@ -42,7 +46,10 @@ internal static class IntentReader
                 {
                     MoveState moveState => Node(moveState),
                     RandomBranchState randomBranchState => new MoveNodeRandom(id, randomBranchState.States.Select(Branch).ToList()),
-                    ConditionalBranchState conditionalBranchState => new MoveNodeConditional(id, Conditions(conditionalBranchState)),
+                    ConditionalBranchState conditionalBranchState => new MoveNodeConditional(id, Conditions(conditionalBranchState))
+                    {
+                        Conditions = monster == null ? null : MoveConditions.BranchesOf(conditionalBranchState).Select(branch => MoveConditions.Of(monster, branch.Lambda)).ToList(),
+                    },
                     _ => null,
                 };
                 if (node == null) return null; // a kind of state the forecast doesn't know

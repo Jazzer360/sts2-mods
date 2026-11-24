@@ -199,6 +199,17 @@ public static class ProgramReader
     }
 
     /// <summary>
+    /// What a method of a model returns, as a condition (a monster's conditional move branch's lambda: Frog Knight's
+    /// HasBeetleCharged || CurrentHp &gt;= MaxHp / 2), read with <paramref name="owner"/> as the model whose code it is.
+    /// </summary>
+    public static ProgramCondition ReadReturned(Type owner, MethodBase method, Func<MethodBase, List<CodeOp>> read) =>
+        new Reader(owner, read).Returned(BodyOf(method));
+
+    /// <summary>What a method of a model returns, as a value (Living Shield's GetAllyCount: a count of its living side but itself); null when no one way returns it.</summary>
+    public static ProgramValue? ReadReturnedValue(Type owner, MethodBase method, Func<MethodBase, List<CodeOp>> read) =>
+        new Reader(owner, read).ReturnedValue(BodyOf(method));
+
+    /// <summary>
     /// The questions to the game's log of the fight (CombatManager.Instance.History) a model type's code asks (decision #191), each the value
     /// its code works out: read from every method of the type and of the types nested in it (its state machines, its lambdas), each the
     /// outermost value a call there works out that reads the log. One that uses a parameter of a helper of the type's own (Spite's
@@ -344,6 +355,9 @@ public static class ProgramReader
 
         /// <summary>What a method returns, as a condition (a getter's value).</summary>
         public ProgramCondition Returned(MethodBase method) => Flow.Of(_read(method), method, LambdaOf, HelperValue).Returned();
+
+        /// <summary>What a method returns, as a value (null when no one way returns it).</summary>
+        public ProgramValue? ReturnedValue(MethodBase method) => Flow.Of(_read(method), method, LambdaOf, HelperValue).ReturnedValue();
 
         /// <summary>
         /// Each WithMultiplier call in a method's code (a card's CanonicalVars): the calculated value it's asked of, and what its lambda
