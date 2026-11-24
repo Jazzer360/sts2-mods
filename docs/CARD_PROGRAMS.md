@@ -518,7 +518,7 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 
 What isn't read is a named gap (a store to the model's own state, its internal data, a hook no read model runs yet, a query with no fact), and a
 hook the simulator never runs says why (outside fights: `OutOfCombatHooks.txt`; a relic's turn-start body that waits on its owner's next turn).
-`HookProgramTests` reads every power's and relic's hooks on both branches and pins the counts. Which classes are read is a rule
+`HookProgramTests` reads every power's and relic's hooks on both branches and pins the counts. `HookWriteTests` holds a class read whole to dropping nothing: every instruction that changes something in a hook it answers (and what that hook calls of its own) is a step of its program. Which classes are read is a rule
 (`ReadModels.Specs`): every power and relic class with no hand-written model (`SimModels.IsHandWritten`: it keeps its model until a parity proof
 converts it) whose hooks read whole and that answers a hook the simulator runs. The classes the rule reads on both reviewed builds are a generated
 record (`ReadModels.ReadWholeAtReview`, `ReadModels.g.cs`, held to both decompiles by `HookProgramTests`); one of them whose hooks the running
