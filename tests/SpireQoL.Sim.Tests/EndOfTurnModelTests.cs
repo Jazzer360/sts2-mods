@@ -134,6 +134,25 @@ public class EndOfTurnModelTests
     }
 
     [Fact]
+    public void ADeathsDrawAtTheTurnsEndLandsBeforeTheHandActs()
+    {
+        // Screaming Flagon kills E0 at BeforeSideTurnEnd: CreatureCmd.Damage ends in CreatureCmd.Kill, which runs Hook.AfterDeath as it dies, and
+        // GremlinHorn.AfterDeath draws there (CardPileCmd.Draw). DoTurnEnd only then lists the hand's cards with an end-of-turn effect
+        // (CombatManager.DoTurnEnd: HasTurnEndInHandEffect), so the Burn it draws burns you this turn.
+        var state = new SimState { Enemies = { Attacker(id: 0, hp: 5), Attacker(id: 1, hp: 50) } };
+        state.You.Hp = 50;
+        state.You.MaxHp = 80;
+        state.You.HandCount = 0;
+        state.WithRelic(Who.You, RelicId.ScreamingFlagon, "Damage", value: 5);
+        state.You.Relics = state.You.Relics.With(RelicId.GremlinHorn, amount: 1);
+        state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("Burn") { TurnEnd = new TurnEndCard("Burn", "Burn", Amount: 2) }, Count: 5) } };
+        var outcome = SimEngine.Run(state);
+        Assert.True(outcome.DeadInAll(enemyId: 0));
+        Assert.All(outcome.Branches, branch => Assert.Equal(1, branch.You.Drawn));
+        Assert.All(outcome.Branches, branch => Assert.Equal(48, branch.You.Hp));
+    }
+
+    [Fact]
     public void DemiseIgnoresYourBlockAndConstrictUsesIt()
     {
         var state = new SimState { Enemies = { Attacker(id: 0, hp: 50) } };

@@ -695,14 +695,15 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// The deaths an end-of-turn step caused run their hooks before the next step (CreatureCmd.Kill runs Hook.AfterDeath as the creature dies:
-    /// Explosive's damage meets the block its players have then), only when one is waiting (no extra step otherwise). What their hooks raise
-    /// (a draw, energy) waits for the end of the turn's steps, as before.
+    /// The deaths an end-of-turn step caused run their hooks before the next step (CreatureCmd.Damage ends in CreatureCmd.Kill, which runs
+    /// Hook.AfterDeath as the creature dies: Explosive's damage meets the block its players have then), and what those hooks and the step's
+    /// hits raised (Gremlin Horn's draw and energy) runs then too, as the game runs each command to its end before the next: a Burn drawn
+    /// there is in the hand when DoTurnEnd lists the cards that act in it. Only when one is waiting (no extra step otherwise).
     /// </summary>
     private static void DeathCheck(BranchSet branches)
     {
-        if (!branches.States.Any(branch => branch.Enemies.Any(enemy => enemy.StartedAlive && !enemy.Alive && !enemy.DeathHandled))) return;
-        branches.Do(AllyDeaths);
+        if (branches.States.Any(branch => branch.Enemies.Any(enemy => enemy.StartedAlive && !enemy.Alive && !enemy.DeathHandled))) branches.Do(AllyDeaths);
+        if (branches.States.Any(branch => branch.HasPending)) branches.Each(DrainPending);
     }
 
     /// <summary>Damage to every hittable enemy (Inferno and the like: Unpowered, their block first), dealt by <paramref name="dealer"/>.</summary>

@@ -74,7 +74,7 @@ public static class HandModelled
         new("Poison: Outbreak's trigger of every enemy's poison, and the game's preview of the next tick (the tick itself is PoisonPower's code: decision #201)",
             new[] { "SimEngine.RunModelCommand", "SimEngine.PoisonTick" },
             new[] { "PoisonPower.Trigger", "PoisonPower.CalculateTotalDamageNextTurn" }),
-        new("Deaths: the hooks told as each happens (an end-of-turn step's before the next), a dead enemy's powers gone, the creatures a death adds, a kill, a stun",
+        new("Deaths: the hooks told as each happens (an end-of-turn step's, and what they raise, before the next), a dead enemy's powers gone, the creatures a death adds, a kill, a stun",
             new[] { "SimEngine.AllyDeaths", "SimEngine.DeathCheck", "SimEngine.Spawn", "SimEngine.Stun", "SimEngine.RunExecute" },
             new[] { "CreatureCmd.Kill", "Hook.AfterDeath", "Creature.RemoveAllPowersAfterDeath", "Hook.ShouldPowerBeRemovedOnDeath", "CreatureCmd.Add", "CreatureCmd.Stun" }),
         new("The players' turn's end: its hooks in their places, Ethereal cards, the cards that act in hand, the hand flushed",

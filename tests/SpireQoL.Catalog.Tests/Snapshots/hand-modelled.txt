@@ -43,7 +43,7 @@ Osty: the HP he loses for his player
 Poison: Outbreak's trigger of every enemy's poison, and the game's preview of the next tick (the tick itself is PoisonPower's code: decision #201)
   game: PoisonPower.Trigger, PoisonPower.CalculateTotalDamageNextTurn
   simulator: SimEngine.RunModelCommand, SimEngine.PoisonTick
-Deaths: the hooks told as each happens (an end-of-turn step's before the next), a dead enemy's powers gone, the creatures a death adds, a kill, a stun
+Deaths: the hooks told as each happens (an end-of-turn step's, and what they raise, before the next), a dead enemy's powers gone, the creatures a death adds, a kill, a stun
   game: CreatureCmd.Kill, Hook.AfterDeath, Creature.RemoveAllPowersAfterDeath, Hook.ShouldPowerBeRemovedOnDeath, CreatureCmd.Add, CreatureCmd.Stun
   simulator: SimEngine.AllyDeaths, SimEngine.DeathCheck, SimEngine.Spawn, SimEngine.Stun, SimEngine.RunExecute
 The players' turn's end: its hooks in their places, Ethereal cards, the cards that act in hand, the hand flushed
