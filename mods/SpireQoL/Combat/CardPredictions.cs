@@ -470,7 +470,7 @@ public sealed class CardPredictions
         // The plays are built here (they read the game); only the simulation runs off the main thread.
         var inputs = new SimInputs
         {
-            Start = forecast.State, Ids = forecast.Ids, Allies = forecast.Teammates.Select(player => player.Creature).ToList(),
+            Start = forecast.State, StartKey = forecast.StateKey, Ids = forecast.Ids, Allies = forecast.Teammates.Select(player => player.Creature).ToList(),
             FullStart = ReferenceEquals(forecast.FullState, forecast.State) ? null : forecast.FullState,
         };
         foreach (var target in targets) inputs.PlayByTarget[target] = SimAdapter.Play(card, _me, _cs, forecast.Ids, target, plays: prediction.Plays);

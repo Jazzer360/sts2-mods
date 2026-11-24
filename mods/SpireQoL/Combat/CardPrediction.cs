@@ -145,6 +145,11 @@ public sealed class SimInputs
 {
     public required SimState Start { get; init; }
     /// <summary>
+    /// The board's key Start was read at (TurnEndModel.ForecastStart.StateKey): the same board read again later (dev mode's check, a
+    /// probe change that didn't change the board) is a new state object with the same key, so "is this for the board now" compares keys.
+    /// </summary>
+    public long StartKey { get; init; }
+    /// <summary>
     /// The same board with teammates' hands (decision #25: the checks use everything that isn't a roll), when Start leaves them
     /// out (Count teammates' hands off); null when they're the same.
     /// </summary>

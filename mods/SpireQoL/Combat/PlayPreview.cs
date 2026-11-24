@@ -51,12 +51,34 @@ internal static class PlayPreview
         // (NMouseCardPlay.IsCardInPlayZone: above the play zone's line). A controller's (or keyboard's) play is ready from the
         // start: NControllerCardPlay.MultiCreatureTargeting plays it on Confirmed, and a card that can't be played cancels at once.
         else if (Sts2State.CurrentCardPlay() is not { } play || !(play is NMouseCardPlay mouse ? InPlayZone?.Invoke(mouse) == true : play is NControllerCardPlay)) return null;
-        if (!ctx.Predictions.LastPredictions.TryGetValue(card, out var prediction) || prediction.Sim is not { } inputs || prediction.OutcomeByAim is not { } outcomes) return null;
-        if (inputs.AimFor(target) is not { } aim || !outcomes.TryGetValue(aim, out var outcome)) return null;
-        // Its outcome must be for the board now: the forecast's start this frame is the one the card's search started from.
-        if (TurnEndModel.Begin() is not { } start || !ReferenceEquals(start.State, inputs.Start)) return null;
+        // Ready to play: from here on, a preview not shown says why in dev mode's log (once per card and reason).
+        if (!ctx.Predictions.LastPredictions.TryGetValue(card, out var prediction)) return NotShown(card, NoPreview.NoPrediction);
+        if (prediction.Sim is not { } inputs) return NotShown(card, NoPreview.NoSimulation);
+        if (prediction.OutcomeByAim is not { } outcomes) return NotShown(card, NoPreview.NoOutcomes);
+        if (inputs.AimFor(target) is not { } aim || !outcomes.TryGetValue(aim, out var outcome)) return NotShown(card, NoPreview.NoOutcomeAtTheAim);
+        // Its outcome must be for the board now: the board the card's search started from is the forecast's this frame (by key: the same
+        // board read again is a new state object with the same key).
+        if (TurnEndModel.Begin() is not { } start) return NotShown(card, NoPreview.NoForecast);
+        if (start.StateKey != inputs.StartKey) return NotShown(card, NoPreview.AnotherBoard);
         if (_built is { } built && ReferenceEquals(built.Outcome, outcome) && ReferenceEquals(built.Card, card)) return built;
         return _built = new Shown(card, outcome, TurnEndModel.Preview(start, outcome), start.Ids);
+    }
+
+    /// <summary>Why a card ready to play shows no preview (dev mode's log).</summary>
+    private enum NoPreview { NoPrediction, NoSimulation, NoOutcomes, NoOutcomeAtTheAim, NoForecast, AnotherBoard }
+
+    private static (CardModel? Card, NoPreview Why) _lastNotShown;
+
+    /// <summary>
+    /// No preview for a card ready to play: dev mode logs why, once per card and reason (a held card asks every frame; a log line only when
+    /// the card or the reason changes, so a steady frame allocates nothing).
+    /// </summary>
+    private static Shown? NotShown(CardModel card, NoPreview why)
+    {
+        if (ReferenceEquals(_lastNotShown.Card, card) && _lastNotShown.Why == why) return null;
+        _lastNotShown = (card, why);
+        ModEntry.Log.Detail($"[play-preview] no preview for {card.GetType().Name}: {why}");
+        return null;
     }
 
     /// <summary>What Incoming Damage, the Death Skull and Teammate Incoming Damage show: the held card's turn, else ending it now.</summary>
