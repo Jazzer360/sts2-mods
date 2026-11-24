@@ -44,7 +44,7 @@ public class ModelEffectTests
         var path = branch == "main" ? BranchCode.MainPath : BranchCode.BetaPath;
         if (!File.Exists(path)) return; // no decompile of this branch here (docs/DEVELOPMENT.md "Decompiled game source")
         GameModels.EnsureLoaded();
-        using var code = new BranchCode(path);
+        var code = BranchCode.Of(path);
         var models = code.Assembly.GetTypes().Where(type => type is { IsClass: true, IsAbstract: false, IsNested: false }
             && type.Namespace is "MegaCrit.Sts2.Core.Models.Powers" or "MegaCrit.Sts2.Core.Models.Relics");
         var report = ModelAmountCheck.Run(models, code.Read);

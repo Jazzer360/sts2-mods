@@ -56,7 +56,7 @@ public class SpawnTests
     {
         var path = branch == "main" ? BranchCode.MainPath : BranchCode.BetaPath;
         if (!File.Exists(path)) return;
-        using var code = new BranchCode(path);
+        var code = BranchCode.Of(path);
         var found = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var power in code.Models().Where(type => type.Namespace == "MegaCrit.Sts2.Core.Models.Powers"))
         {

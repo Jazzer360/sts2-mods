@@ -20,7 +20,7 @@ public class DrawnStatusTests
     {
         var path = branch == "main" ? BranchCode.MainPath : BranchCode.BetaPath;
         if (!File.Exists(path)) return; // no decompile of this branch here (docs/DEVELOPMENT.md "Decompiled game source")
-        using var code = new BranchCode(path);
+        var code = BranchCode.Of(path);
         var asking = new List<string>();
         foreach (var type in code.Models().Where(type => type.Namespace is "MegaCrit.Sts2.Core.Models.Cards" or "MegaCrit.Sts2.Core.Models.Powers" or "MegaCrit.Sts2.Core.Models.Relics" && !type.IsAbstract))
         {

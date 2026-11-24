@@ -18,7 +18,7 @@ public class CardEffectsTests
     {
         var path = branch == "main" ? BranchCode.MainPath : BranchCode.BetaPath;
         if (!File.Exists(path)) return;
-        using var code = new BranchCode(path);
+        var code = BranchCode.Of(path);
         var programs = code.Cards().ToDictionary(type => type.Name, type => ProgramReader.Read(type, code.Read));
         void Finds(Func<ModelProgram, bool> rule, params string[] cards)
         {
@@ -46,7 +46,7 @@ public class CardEffectsTests
         // below are that table, as it was when it was deleted. A card a game update adds or changes is read by the rule, never listed.
         var path = branch == "main" ? BranchCode.MainPath : BranchCode.BetaPath;
         if (!File.Exists(path)) return;
-        using var code = new BranchCode(path);
+        var code = BranchCode.Of(path);
         var programs = code.Cards().ToDictionary(type => type.Name, type => ProgramReader.Read(type, code.Read));
         var failures = new List<string>();
         void Exactly(string rule, Func<ModelProgram, bool> finds, params string[] table)

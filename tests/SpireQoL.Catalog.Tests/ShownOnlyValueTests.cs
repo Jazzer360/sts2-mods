@@ -33,7 +33,7 @@ public class ShownOnlyValueTests
     {
         var path = branch == "main" ? BranchCode.MainPath : BranchCode.BetaPath;
         if (!File.Exists(path)) return; // no decompile of this branch here (docs/DEVELOPMENT.md "Decompiled game source")
-        using var code = new BranchCode(path);
+        var code = BranchCode.Of(path);
         var getters = HookReader.ShownOnly.Select(setter => setter.Replace(".set_", ".get_", StringComparison.Ordinal)).ToHashSet(StringComparer.Ordinal);
         const BindingFlags all = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
         var readers = new SortedSet<string>(StringComparer.Ordinal);

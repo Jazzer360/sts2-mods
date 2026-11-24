@@ -18,7 +18,7 @@ public class AfflictionReadTests
     {
         var path = branch == "main" ? BranchCode.MainPath : BranchCode.BetaPath;
         if (!File.Exists(path)) return; // no decompile of this branch here
-        using var code = new BranchCode(path);
+        var code = BranchCode.Of(path);
         var afflictions = HookReader.Afflictions(code.Assembly.GetTypes()).ToList();
         Assert.NotEmpty(afflictions);
         foreach (var type in afflictions)
@@ -36,7 +36,7 @@ public class AfflictionReadTests
     public void AnAfflictionThatNoLongerReadsIsUnreadAndToldOnce()
     {
         if (!File.Exists(BranchCode.BetaPath)) return;
-        using var code = new BranchCode(BranchCode.BetaPath);
+        var code = BranchCode.Of(BranchCode.BetaPath);
         var told = new List<string>();
         List<Procs.Programs.CodeOp> Failing(System.Reflection.MethodBase method) =>
             method.DeclaringType?.Name.Contains(nameof(MegaCrit.Sts2.Core.Models.Afflictions.Hexed), StringComparison.Ordinal) == true ? throw new InvalidOperationException("a game update") : code.Read(method);

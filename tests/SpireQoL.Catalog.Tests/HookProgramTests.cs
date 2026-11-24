@@ -11,7 +11,16 @@ namespace SpireQoL.Catalog.Tests;
 internal static class CatalogReadModels
 {
     [ModuleInitializer]
-    internal static void Use() => SimModels.Read = () => ReadModels.Specs(CoverageLedger.ModelTypes(), RuntimeCode.Read);
+    internal static void Use() => SimModels.Read = () => InstalledCode.Specs;
+}
+
+/// <summary>The installed game's code as the mod reads it (RuntimeCode), read once a test run and shared, as BranchCode shares a branch's.</summary>
+internal static class InstalledCode
+{
+    private static readonly Lazy<List<ModelSpec>> ReadSpecs = new(() => ReadModels.Specs(CoverageLedger.ModelTypes(), RuntimeCode.Read));
+
+    /// <summary>The read models of the installed game (ReadModels.Specs over the ledger's model types): callers only read the list.</summary>
+    public static List<ModelSpec> Specs => ReadSpecs.Value;
 }
 
 /// <summary>
@@ -43,7 +52,7 @@ public class HookProgramTests
         var readings = new List<(string, string, HookReading)>();
         foreach (var (kind, classes) in new[] { ("power", HookReader.Powers(types)), ("relic", HookReader.Relics(types)) })
             foreach (var type in classes.OrderBy(type => type.Name, StringComparer.Ordinal))
-                foreach (var hook in HookReader.Read(type, code.Read).Hooks) readings.Add((kind, type.Name, hook));
+                foreach (var hook in code.HookReading(type).Hooks) readings.Add((kind, type.Name, hook));
         return readings;
     }
 
@@ -52,7 +61,7 @@ public class HookProgramTests
     public void EveryHookBodyIsReadOrANamedGap(string branch)
     {
         if (!File.Exists(PathOf(branch))) return; // no decompile of this branch here (docs/DEVELOPMENT.md "Decompiled game source")
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         var readings = Readings(code);
         // Every gap says why.
         Assert.All(readings.Where(reading => !reading.Hook.Read), reading => Assert.StartsWith("gap: ", reading.Hook.Gap, StringComparison.Ordinal));
@@ -71,7 +80,7 @@ public class HookProgramTests
 
     /// <summary>The classes the rule models from their code on a branch (ReadModels.Specs: no hand-written model, hooks read whole, a hook run).</summary>
     private static HashSet<string> ReadOn(BranchCode code) =>
-        ReadModels.Specs(code.Assembly.GetTypes(), code.Read).Where(spec => spec.Unread == null).Select(spec => spec.Name).ToHashSet(StringComparer.Ordinal);
+        code.Specs().Where(spec => spec.Unread == null).Select(spec => spec.Name).ToHashSet(StringComparer.Ordinal);
 
     /// <summary>The generated record of the classes read whole at the reviewed builds (Sim/Adapter/ReadModels.g.cs).</summary>
     private static string RecordFile => Path.Combine(RepoRoot(), "mods", "SpireQoL", "Sim", "Adapter", "ReadModels.g.cs");
@@ -85,15 +94,15 @@ public class HookProgramTests
     public void TheRecordIsTheClassesReadWholeOnBothBuilds()
     {
         if (!File.Exists(BranchCode.BetaPath) || !File.Exists(BranchCode.MainPath)) return;
-        using var beta = new BranchCode(BranchCode.BetaPath);
-        using var main = new BranchCode(BranchCode.MainPath);
+        var beta = BranchCode.Of(BranchCode.BetaPath);
+        var main = BranchCode.Of(BranchCode.MainPath);
         var (betaRead, mainRead) = (ReadOn(beta), ReadOn(main));
         var betaClasses = HookReader.Powers(beta.Assembly.GetTypes()).Concat(HookReader.Relics(beta.Assembly.GetTypes())).Concat(HookReader.Orbs(beta.Assembly.GetTypes())).Concat(HookReader.Enchantments(beta.Assembly.GetTypes())).Concat(HookReader.Afflictions(beta.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
         var mainClasses = HookReader.Powers(main.Assembly.GetTypes()).Concat(HookReader.Relics(main.Assembly.GetTypes())).Concat(HookReader.Orbs(main.Assembly.GetTypes())).Concat(HookReader.Enchantments(main.Assembly.GetTypes())).Concat(HookReader.Afflictions(main.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
         // A class whose code on the other branch has nothing the simulator runs (it reads whole with no program: main's Byrdpip counts no Swoops)
         // differs in the game's code, not in the reader.
         static HashSet<string> Nothing(BranchCode code) => HookReader.Powers(code.Assembly.GetTypes()).Concat(HookReader.Relics(code.Assembly.GetTypes()))
-            .Where(type => HookReader.Read(type, code.Read) is { Whole: true, Spec.Hooks.Count: 0 }).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
+            .Where(type => code.HookReading(type) is { Whole: true, Spec.Hooks.Count: 0 }).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
         var (betaNothing, mainNothing) = (Nothing(beta), Nothing(main));
         var differ = betaRead.Where(mainClasses.Contains).Except(mainRead).Where(name => !mainNothing.Contains(name))
             .Concat(mainRead.Where(betaClasses.Contains).Except(betaRead).Where(name => !betaNothing.Contains(name))).Order(StringComparer.Ordinal).ToList();
@@ -150,7 +159,7 @@ public class HookProgramTests
     public void AClassThatNoLongerReadsIsUnreadAndToldOnce()
     {
         if (!File.Exists(BranchCode.BetaPath)) return;
-        using var code = new BranchCode(BranchCode.BetaPath);
+        var code = BranchCode.Of(BranchCode.BetaPath);
         var told = new List<string>();
         List<CodeOp> Failing(System.Reflection.MethodBase method) =>
             method.DeclaringType?.Name == PowerId.Strength.Name && method.Name == "ModifyDamageAdditive" ? throw new InvalidOperationException("a game update") : code.Read(method);
@@ -165,7 +174,7 @@ public class HookProgramTests
     [Fact]
     public void AClassIsReadOrHandWrittenNeverBoth()
     {
-        var read = ReadModels.Specs(CoverageLedger.ModelTypes(), RuntimeCode.Read);
+        var read = InstalledCode.Specs;
         Assert.DoesNotContain(read, spec => SimModels.IsHandWritten(spec.Name));
         Assert.All(read.Where(spec => spec.Unread == null && spec.Kind is ModelKind.Power or ModelKind.Relic), spec => Assert.IsType<ReadModel>(SimModels.Get(spec.Name)));
         Assert.All(read.Where(spec => spec.Unread == null && spec.Kind == ModelKind.Enchantment), spec => Assert.IsType<ReadModel>(SimModels.Enchantment(spec.Name)));
@@ -184,7 +193,7 @@ public class HookProgramTests
     [Fact]
     public void TheSimulatorTestsReadModelsAreTheInstalledGamesCode()
     {
-        var actual = HookProgramJson.Write(ReadModels.Specs(CoverageLedger.ModelTypes(), RuntimeCode.Read));
+        var actual = HookProgramJson.Write(InstalledCode.Specs);
         if (Environment.GetEnvironmentVariable("SPIREQOL_UPDATE_SNAPSHOT") == "1")
         {
             Directory.CreateDirectory(Path.GetDirectoryName(ReadModelsFile)!);
@@ -200,9 +209,9 @@ public class HookProgramTests
     public void TheGameAndItsAssemblyFileReadTheSame()
     {
         if (!File.Exists(BranchCode.BetaPath)) return;
-        using var code = new BranchCode(BranchCode.BetaPath);
-        var fromFile = HookProgramJson.Write(ReadModels.Specs(code.Assembly.GetTypes(), code.Read));
-        var fromGame = HookProgramJson.Write(ReadModels.Specs(CoverageLedger.ModelTypes(), RuntimeCode.Read));
+        var code = BranchCode.Of(BranchCode.BetaPath);
+        var fromFile = HookProgramJson.Write(code.Specs());
+        var fromGame = HookProgramJson.Write(InstalledCode.Specs);
         Assert.Equal(fromGame, fromFile);
     }
 
@@ -215,7 +224,7 @@ public class HookProgramTests
     public void EachLedgerClassesReadingsAreTheSnapshots()
     {
         if (!File.Exists(BranchCode.BetaPath)) return;
-        using var code = new BranchCode(BranchCode.BetaPath);
+        var code = BranchCode.Of(BranchCode.BetaPath);
         var ledger = CoverageLedger.ReviewedEntries.Keys.ToHashSet(StringComparer.Ordinal);
         var lines = Readings(code).Where(reading => ledger.Contains(reading.Class)).GroupBy(reading => (reading.Kind, reading.Class))
             .Select(group => $"{group.Key.Kind} {group.Key.Class}: {string.Join(" | ", group.Select(reading => reading.Hook))}").ToList();
@@ -237,7 +246,7 @@ public class HookProgramTests
     {
         var path = Environment.GetEnvironmentVariable("SPIREQOL_DUMP");
         if (path == null || !File.Exists(BranchCode.BetaPath)) return;
-        using var code = new BranchCode(BranchCode.BetaPath);
+        var code = BranchCode.Of(BranchCode.BetaPath);
         var text = new StringBuilder();
         foreach (var group in Readings(code).GroupBy(reading => (reading.Kind, reading.Class)))
             text.AppendLine($"{group.Key.Kind} {group.Key.Class}: {string.Join(" | ", group.Select(reading => reading.Hook))}");

@@ -33,7 +33,7 @@ public class MonsterProgramTests
     public void EveryMoveAndHookIsReadAndEachCommandTranslatedOrANamedGap(string branch)
     {
         if (!File.Exists(PathOf(branch))) return; // no decompile of this branch here (docs/DEVELOPMENT.md "Decompiled game source")
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         var programs = Programs(code);
         var unread = programs.SelectMany(entry => entry.Program.Unknowns.Select(reason => $"{entry.Name}: {reason}")).ToList();
         var missing = new SortedSet<string>(StringComparer.Ordinal);
@@ -55,7 +55,7 @@ public class MonsterProgramTests
         foreach (var branch in new[] { "beta", "main" })
         {
             if (!File.Exists(PathOf(branch))) return;
-            using var code = new BranchCode(PathOf(branch));
+            var code = BranchCode.Of(PathOf(branch));
             foreach (var (_, _, program) in Programs(code))
                 foreach (var command in program.Commands) called.Add(command.Command.FullName);
         }
@@ -69,7 +69,7 @@ public class MonsterProgramTests
     public void AMovesProgramIsItsCode(string branch)
     {
         if (!File.Exists(PathOf(branch))) return;
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         var monsters = MonsterCode.Monsters(code.Assembly.GetTypes()).ToDictionary(type => type.Name);
         // Byrdonis' Peck: one attack of PeckDamage, PeckRepeat hits.
         var peck = Assert.Single(ProgramReader.Read(monsters["Byrdonis"], code.Read, "PeckMove").Commands);
@@ -84,7 +84,7 @@ public class MonsterProgramTests
     public void AHooksStoresAndModelActionsAreSteps()
     {
         if (!File.Exists(BranchCode.BetaPath)) return;
-        using var code = new BranchCode(BranchCode.BetaPath);
+        var code = BranchCode.Of(BranchCode.BetaPath);
         var queen = MonsterCode.Monsters(code.Assembly.GetTypes()).Single(type => type.Name == "Queen");
         // Queen's AfterDeath: when her Amalgam dies, she notes it (HasAmalgamDied, read by her conditional move branch) and switches Burn
         // Bright for Me to Enrage (SetMoveImmediate).

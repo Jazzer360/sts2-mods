@@ -73,7 +73,7 @@ public class ConditionTranslationTests
     public void EachKnownStepIsGuardedByItsCodesTest(string branch)
     {
         if (!File.Exists(PathOf(branch))) return; // no decompile of this branch here
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         var cards = code.Cards().ToDictionary(type => type.Name);
         var checkedCards = 0;
         foreach (var (card, command, skip, expected, askedFirst) in Known)
@@ -98,7 +98,7 @@ public class ConditionTranslationTests
         // Restlessness' draws and energy are under one if: one test (one At), asked once a play, so the energy's isn't asked after the draws
         // filled your hand. Fetch's attack and draw share the Osty test the same way.
         if (!File.Exists(PathOf(branch))) return;
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         foreach (var card in new[] { "Restlessness", "Fetch" })
         {
             if (code.Cards().FirstOrDefault(type => type.Name == card) is not { } type) continue;
@@ -118,7 +118,7 @@ public class ConditionTranslationTests
         // Spinner's channel on its upgrade, Mad Science's rider, Acrobatics' discard of its pick (decision #188): nothing in the play changes
         // them, so they're decided on the board, never asked by the simulator.
         if (!File.Exists(PathOf(branch))) return;
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         foreach (var (card, command) in new[] { ("Spinner", "OrbCmd.Channel"), ("MadScience", "CreatureCmd.GainBlock"), ("Acrobatics", "CardCmd.Discard") })
         {
             if (code.Cards().FirstOrDefault(type => type.Name == card) is not { } type) continue;

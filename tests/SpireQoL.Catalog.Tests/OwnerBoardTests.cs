@@ -30,8 +30,8 @@ public class OwnerBoardTests
         var kinds = new SortedDictionary<string, OwnerKinds>(StringComparer.Ordinal);
         foreach (var path in branches)
         {
-            using var code = new BranchCode(path);
-            var board = new OwnerBoard(code);
+            var code = BranchCode.Of(path);
+            var board = code.Board();
             Assert.Equal(UnnamedReviewed.Keys.Order(StringComparer.Ordinal), board.UnnamedPowers);
             foreach (var (power, owners) in board.Powers) kinds[power] = kinds.GetValueOrDefault(power) | owners;
         }
@@ -53,8 +53,8 @@ public class OwnerBoardTests
         // Known from the code: Strangle on an enemy only (the card aims it at one, and Mad Science's rider at its target), Sneaky on a player
         // only (the multiplayer card puts it on its player), Impaled on an enemy only (an arrow in the shot's target), Concoct on a player.
         if (!File.Exists(BranchCode.BetaPath)) return;
-        using var code = new BranchCode(BranchCode.BetaPath);
-        var board = new OwnerBoard(code);
+        var code = BranchCode.Of(BranchCode.BetaPath);
+        var board = code.Board();
         Assert.Equal(OwnerKinds.Enemy, board.Powers[nameof(StranglePower)]);
         Assert.Equal(OwnerKinds.Player, board.Powers[nameof(SneakyPower)]);
         Assert.Equal(OwnerKinds.Enemy, board.Powers[nameof(ImpaledPower)]);

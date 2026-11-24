@@ -322,11 +322,12 @@ internal sealed class SourceIndex
     public static SourceIndex Build(string root)
     {
         var index = new SourceIndex();
-        foreach (var file in Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories))
+        // The files are parsed in parallel (most of the time this takes), and indexed one after another in the order they're listed.
+        var files = Directory.EnumerateFiles(root, "*.cs", SearchOption.AllDirectories).Where(file => !file.Contains(Path.DirectorySeparatorChar + ".git")).ToList();
+        var parsed = new List<SyntaxNode>[files.Count];
+        Parallel.For(0, files.Count, index => parsed[index] = CSharpSyntaxTree.ParseText(File.ReadAllText(files[index])).GetRoot().DescendantNodes().ToList());
+        foreach (var nodes in parsed)
         {
-            if (file.Contains(Path.DirectorySeparatorChar + ".git")) continue;
-            var tree = CSharpSyntaxTree.ParseText(File.ReadAllText(file));
-            var nodes = tree.GetRoot().DescendantNodes().ToList();
             foreach (var declaration in nodes.OfType<BaseTypeDeclarationSyntax>()) index.Add(declaration);
             foreach (var declaration in nodes.OfType<DelegateDeclarationSyntax>()) index.Get(NameOf(declaration, declaration.Identifier.Text, declaration.TypeParameterList)).IsDelegate = true;
         }

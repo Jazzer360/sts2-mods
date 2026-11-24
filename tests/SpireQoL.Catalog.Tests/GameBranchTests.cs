@@ -131,8 +131,7 @@ public class GameBranchTests
     [Fact]
     public void GatedMethodsAreCalledThroughTheirGate()
     {
-        var source = MainSource.Value ?? new SourceIndex();
-        var direct = ModAssemblies().SelectMany(assembly => GameMembers.Of(assembly, source).CalledDirectly).ToList();
+        var direct = (AgainstMain.Value ?? ModAssemblies().Select(assembly => GameMembers.Of(assembly, new SourceIndex())).ToList()).SelectMany(members => members.CalledDirectly).ToList();
         Assert.True(direct.Count == 0, "[BetaOnly] methods called directly: " + string.Join("; ", direct));
     }
 

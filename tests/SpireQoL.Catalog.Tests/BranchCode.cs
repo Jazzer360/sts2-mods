@@ -13,20 +13,47 @@ namespace SpireQoL.Catalog.Tests;
 /// MetadataLoadContext, its method bodies' instructions named through its metadata (the context can't resolve tokens), so the card
 /// program reader (decision #182) reads main's code the way the mod reads the loaded game's.
 /// </summary>
-internal sealed class BranchCode : IDisposable
+internal sealed class BranchCode
 {
     public static string BetaPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "git", "sts2-decompiled", "assembly", "sts2.dll");
     public static string MainPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "git", "sts2-decompiled-main", "assembly", "sts2.dll");
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Lazy<BranchCode>> Shared = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The branch's code at <paramref name="path"/>, loaded once a test run and shared by every test that reads it: nothing in it changes once
+    /// loaded (its types, and each method's instructions decoded once, <see cref="Read"/>), so the whole-game scans don't each load and decode
+    /// the same assembly again. Never disposed: it lives as long as the test run.
+    /// </summary>
+    public static BranchCode Of(string path) => Shared.GetOrAdd(Path.GetFullPath(path), full => new Lazy<BranchCode>(() => new BranchCode(full))).Value;
 
     private readonly MetadataLoadContext _context;
     private readonly FileStream _stream;
     private readonly PEReader _portable;
     private readonly MetadataReader _reader;
     private readonly Names _names;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<(Module, int), List<CodeOp>> _decoded = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, Lazy<object>> _readings = new(StringComparer.Ordinal);
 
     public Assembly Assembly { get; }
 
-    public BranchCode(string path)
+    /// <summary>
+    /// A reading of this branch's code made once a test run (an owner board, the read models' specs...): <paramref name="make"/> runs once for
+    /// <paramref name="key"/>, every caller gets what it made. What it makes must not be changed by its callers.
+    /// </summary>
+    public T Reading<T>(string key, Func<BranchCode, T> make) where T : class =>
+        (T)_readings.GetOrAdd(key, _ => new Lazy<object>(() => make(this))).Value;
+
+    /// <summary>A power's, relic's or orb's hooks read by the model reader (HookReader.Read), once a test run.</summary>
+    public Sim.ModelReading HookReading(Type type) => Reading("hook reading " + type.FullName, code => Sim.HookReader.Read(type, code.Read));
+
+    /// <summary>The read models of this branch (ReadModels.Specs over its types), once a test run.</summary>
+    public List<Sim.ModelSpec> Specs() => Reading("specs", code => Sim.ReadModels.Specs(code.Assembly.GetTypes(), code.Read));
+
+    /// <summary>The branch's owner board (which kinds of creature each power can be on), once a test run.</summary>
+    public OwnerBoard Board() => Reading("owner board", code => new OwnerBoard(code));
+
+    private BranchCode(string path)
     {
         var gameDir = Path.GetDirectoryName(typeof(MegaCrit.Sts2.Core.Models.CardModel).Assembly.Location)!;
         var paths = Directory.GetFiles(RuntimeEnvironment.GetRuntimeDirectory(), "*.dll")
@@ -63,7 +90,10 @@ internal sealed class BranchCode : IDisposable
         return false;
     }
 
-    public List<CodeOp> Read(MethodBase method)
+    /// <summary>A method's instructions, decoded once a test run (as CodeOps' cache does for the running game): callers only read the list.</summary>
+    public List<CodeOp> Read(MethodBase method) => _decoded.GetOrAdd((method.Module, method.MetadataToken), _ => Decode(method));
+
+    private List<CodeOp> Decode(MethodBase method)
     {
         var code = method.GetMethodBody()?.GetILAsByteArray();
         if (code == null) return new List<CodeOp>();
@@ -164,13 +194,6 @@ internal sealed class BranchCode : IDisposable
             ValueType = signature.ReturnType,
             Namespace = space,
         };
-
-    public void Dispose()
-    {
-        _portable.Dispose();
-        _stream.Dispose();
-        _context.Dispose();
-    }
 
     /// <summary>Simple type names from metadata (no namespace, no generic arguments), as reflection's Type.Name gives them.</summary>
     private sealed class Names : ISignatureTypeProvider<string, object?>

@@ -52,7 +52,7 @@ public class BlockGainTests
         // PlayFacts.RepeatedBlockCards, as it was when it was deleted: the cards that can gain block more than once in a play.
         var path = branch == "main" ? BranchCode.MainPath : BranchCode.BetaPath;
         if (!File.Exists(path)) return;
-        using var code = new BranchCode(path);
+        var code = BranchCode.Of(path);
         var table = new[] { "ChoFirm", "ChoLimbs", "DeathsDoor", "EvilEye", "Rally", "SecondWind" };
         var found = code.Cards().Where(type => CardEffects.BlockGains(ProgramReader.Read(type, code.Read)) is var gains
                                                 && (gains.Count > 1 || gains.Any(gain => gain.Loops.Count > 0)))

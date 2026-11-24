@@ -28,7 +28,7 @@ public class HookGapTests
     public void EachHandWrittenModelsGapsAreTheSnapshots()
     {
         if (!File.Exists(BranchCode.BetaPath)) return; // no decompile here (docs/DEVELOPMENT.md "Decompiled game source")
-        using var code = new BranchCode(BranchCode.BetaPath);
+        var code = BranchCode.Of(BranchCode.BetaPath);
         var byClass = HandWrittenGaps(code);
         var text = new StringBuilder();
         text.Append("# The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by the capability the reader names.\n");
@@ -53,7 +53,7 @@ public class HookGapTests
                 byClass.Add((name, new() { ("the simulator's own model (no game class by its name)", "no game class") }));
                 continue;
             }
-            var reading = HookReader.Read(type, code.Read);
+            var reading = code.HookReading(type);
             var kind = HookReader.Relics(new[] { type }).Any() ? "relic" : "power";
             var gaps = reading.Hooks.Where(hook => !hook.Read).Select(hook => (CapabilityOf(hook, kind), $"{hook.Hook}: {Shortened(hook.Gap!)}")).ToList();
             // A class with no hook of its own: what it does is in another class's code (Sovereign Blade's plays read Parry, Seeking Edge).
@@ -87,8 +87,8 @@ public class HookGapTests
     public void EveryKindIsMeasured()
     {
         if (!File.Exists(BranchCode.BetaPath) || !File.Exists(BranchCode.MainPath)) return;
-        using var beta = new BranchCode(BranchCode.BetaPath);
-        using var main = new BranchCode(BranchCode.MainPath);
+        var beta = BranchCode.Of(BranchCode.BetaPath);
+        var main = BranchCode.Of(BranchCode.MainPath);
         var sources = ModSources();
         var text = new StringBuilder();
         text.Append("# Every kind of game model as the simulator handles it (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta and main.\n");
@@ -99,7 +99,7 @@ public class HookGapTests
         foreach (var (branch, code) in new[] { ("beta", beta), ("main", main) })
         {
             var types = code.Assembly.GetTypes();
-            var read = ReadModels.Specs(types, code.Read).Where(spec => spec.Unread == null).Select(spec => spec.Name).ToHashSet(StringComparer.Ordinal);
+            var read = code.Specs().Where(spec => spec.Unread == null).Select(spec => spec.Name).ToHashSet(StringComparer.Ordinal);
             foreach (var (kind, classes) in new[] { ("powers", HookReader.Powers(types).ToList()), ("relics", HookReader.Relics(types).ToList()) })
             {
                 var withHooks = classes.Where(type => HookReader.Hooks(type).Any()).ToList();
@@ -186,7 +186,11 @@ public class HookGapTests
             .ToDictionary(type => type.Name, StringComparer.Ordinal);
 
     /// <summary>The mod's own code (not generated, not the ledger's reviews or the menu's words), by path from the mod's folder.</summary>
-    private static Dictionary<string, string> ModSources()
+    private static Dictionary<string, string> ModSources() => Sources.Value;
+
+    private static readonly Lazy<Dictionary<string, string>> Sources = new(ReadSources);
+
+    private static Dictionary<string, string> ReadSources()
     {
         var root = Path.Combine(HookProgramTests.RepoRoot(), "mods", "SpireQoL");
         return Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories)
@@ -219,7 +223,7 @@ public class HookGapTests
         }
         // Named as a class: nameof, a type pattern or a switch arm on it, its namespace's name, or its name as a text.
         var pattern = $@"nameof\({name}\)|""{name}""|\.(Enchantments|Afflictions|Potions|Orbs)\.{name}\b|\bis {name}\b|\b{name}\s*=>|<{name}>";
-        var named = sources.Where(source => Regex.IsMatch(source.Value, pattern)).Select(source => source.Key).Order(StringComparer.Ordinal).ToList();
+        var named = sources.Where(source => source.Value.Contains(name, StringComparison.Ordinal) && Regex.IsMatch(source.Value, pattern)).Select(source => source.Key).Order(StringComparer.Ordinal).ToList();
         if (named.Count > 0)
         {
             how.Add("named in " + string.Join(", ", named));
@@ -231,7 +235,7 @@ public class HookGapTests
 
     /// <summary>A hook the adapter calls on the game's own object (the enchantment's damage and block math): the game's code runs it live.</summary>
     private static bool CalledLive(string hook, Dictionary<string, string> sources) =>
-        sources.Where(source => source.Key.StartsWith("Sim/Adapter/", StringComparison.Ordinal)).Any(source => Regex.IsMatch(source.Value, $@"\.{hook}\("));
+        sources.Where(source => source.Key.StartsWith("Sim/Adapter/", StringComparison.Ordinal)).Any(source => source.Value.Contains(hook, StringComparison.Ordinal) && Regex.IsMatch(source.Value, $@"\.{hook}\("));
 
     /// <summary>
     /// The adapter's per-class readings (SimReaders.Read's powers, SimReaders.Relics', RelicAmountVars) and every other per-class name in the adapter
@@ -263,7 +267,7 @@ public class HookGapTests
             .SelectMany(source => Regex.Matches(source.Value, @"nameof\((\w+)\)|""(\w+)""").Select(match => match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value)
                 .Where(models.ContainsKey).Select(name => (name, source.Key)))
             .GroupBy(gate => gate.name, StringComparer.Ordinal).OrderBy(group => group.Key, StringComparer.Ordinal);
-        var readFromCode = ReadModels.Specs(types, beta.Read).Where(spec => spec.Unread == null).Select(spec => spec.Name).ToHashSet(StringComparer.Ordinal);
+        var readFromCode = beta.Specs().Where(spec => spec.Unread == null).Select(spec => spec.Name).ToHashSet(StringComparer.Ordinal);
         foreach (var group in gates)
             lines.Add($"name gate: {group.Key} in {string.Join(", ", group.Select(gate => gate.Key).Distinct().Order(StringComparer.Ordinal))}: "
                 + (SimModels.IsHandWritten(group.Key) ? "hand-written: goes with its model" : readFromCode.Contains(group.Key) ? "read from code: a gate its reading could replace" : "not modelled from code: a gate to replace by a rule"));
@@ -299,7 +303,7 @@ public class HookGapTests
     public void NoAdapterReadingForAClassReadFromItsCode()
     {
         if (!File.Exists(BranchCode.BetaPath)) return;
-        using var beta = new BranchCode(BranchCode.BetaPath);
+        var beta = BranchCode.Of(BranchCode.BetaPath);
         var stale = AdapterTables(beta, ModSources()).Where(line => line.StartsWith("SimReaders.", StringComparison.Ordinal) && line.Contains(": read from code;", StringComparison.Ordinal)).ToList();
         Assert.True(stale.Count == 0, "the adapter reads a class read from its code by name: " + string.Join("; ", stale));
     }
@@ -311,9 +315,9 @@ public class HookGapTests
         foreach (var path in new[] { BranchCode.BetaPath, BranchCode.MainPath })
         {
             if (!File.Exists(path)) continue;
-            using var code = new BranchCode(path);
+            var code = BranchCode.Of(path);
             var types = code.Assembly.GetTypes();
-            var readings = HookReader.Powers(types).Concat(HookReader.Relics(types)).SelectMany(type => HookReader.Read(type, code.Read).Hooks.Select(hook => (type.Name, hook)))
+            var readings = HookReader.Powers(types).Concat(HookReader.Relics(types)).SelectMany(type => code.HookReading(type).Hooks.Select(hook => (type.Name, hook)))
                 .Concat(OtherKinds.SelectMany(kind => ClassesOf(code, kind.Folder, kind.Base).Values.Select(type => (Kind: kind.Kind, Type: type))).SelectMany(each => (each.Kind == "enchantment" ? HookReader.ReadEnchantment(each.Type, code.Read).Hooks : HookReader.ReadEffects(each.Type, code.Read)).Select(hook => (each.Type.Name, hook))));
             Assert.All(readings.Where(reading => !reading.hook.Read), reading => Assert.True(reading.hook.Capability != null, $"{reading.Name}.{reading.hook}"));
         }

@@ -45,8 +45,8 @@ public class HandModelledTests
     public void EveryGameMethodNamedIsOnABranch()
     {
         if (!File.Exists(BranchCode.BetaPath)) return; // no decompile here (docs/DEVELOPMENT.md "Decompiled game source")
-        using var beta = new BranchCode(BranchCode.BetaPath);
-        using var main = File.Exists(BranchCode.MainPath) ? new BranchCode(BranchCode.MainPath) : null;
+        var beta = BranchCode.Of(BranchCode.BetaPath);
+        var main = File.Exists(BranchCode.MainPath) ? BranchCode.Of(BranchCode.MainPath) : null;
         var betaTypes = GameTypes(beta);
         var mainTypes = main == null ? new List<Type>() : GameTypes(main);
         var gone = HandModelled.Engine.Concat(HandModelled.Adapter).SelectMany(rule => rule.Game).Distinct()
@@ -58,8 +58,8 @@ public class HandModelledTests
     public void TheMethodListIsTheSnapshot()
     {
         if (!File.Exists(BranchCode.BetaPath) || !File.Exists(BranchCode.MainPath)) return;
-        using var beta = new BranchCode(BranchCode.BetaPath);
-        using var main = new BranchCode(BranchCode.MainPath);
+        var beta = BranchCode.Of(BranchCode.BetaPath);
+        var main = BranchCode.Of(BranchCode.MainPath);
         var betaTypes = GameTypes(beta);
         var mainTypes = GameTypes(main);
         string Branches(string method) => (Exists(betaTypes, method), Exists(mainTypes, method)) switch

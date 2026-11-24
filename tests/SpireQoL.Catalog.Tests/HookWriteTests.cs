@@ -48,9 +48,9 @@ public class HookWriteTests
     {
         var path = branch == "main" ? BranchCode.MainPath : BranchCode.BetaPath;
         if (!File.Exists(path)) return; // no decompile of this branch here
-        using var code = new BranchCode(path);
+        var code = BranchCode.Of(path);
         var types = code.Assembly.GetTypes();
-        var read = ReadModels.Specs(types, code.Read).Where(spec => spec.Unread == null).ToDictionary(spec => spec.Name, StringComparer.Ordinal);
+        var read = code.Specs().Where(spec => spec.Unread == null).ToDictionary(spec => spec.Name, StringComparer.Ordinal);
         var dropped = new List<string>();
         var checkedHooks = 0;
         foreach (var type in HookReader.Powers(types).Concat(HookReader.Relics(types)).Where(type => read.ContainsKey(type.Name)))
@@ -58,7 +58,7 @@ public class HookWriteTests
             var spec = read[type.Name];
             foreach (var hook in HookReader.Hooks(type))
             {
-                if (!Enum.TryParse<HookName>(hook.Name, out var name) || HookReader.Read(type, code.Read).Hooks.FirstOrDefault(reading => reading.Hook == hook.Name) is not { Translated: true })
+                if (!Enum.TryParse<HookName>(hook.Name, out var name) || code.HookReading(type).Hooks.FirstOrDefault(reading => reading.Hook == hook.Name) is not { Translated: true })
                     continue;
                 checkedHooks++;
                 var program = ProgramReader.Read(type, code.Read, hook.Name);
@@ -95,7 +95,7 @@ public class HookWriteTests
     public void TheScanFindsAWriteWithNoStep()
     {
         if (!File.Exists(BranchCode.BetaPath)) return;
-        using var code = new BranchCode(BranchCode.BetaPath);
+        var code = BranchCode.Of(BranchCode.BetaPath);
         var vitalSpark = code.Assembly.GetTypes().Single(type => type.Name == PowerId.VitalSpark.Name);
         var hook = HookReader.Hooks(vitalSpark).Single(method => method.Name == nameof(HookName.AfterPowerAmountChanged));
         var steps = ProgramReader.Read(vitalSpark, code.Read, hook.Name).All().ToList();

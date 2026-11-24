@@ -78,7 +78,7 @@ public class PipelineParityTests
     public void EveryPipelineRunsTheGameCommandsHooksInItsOrder(string branch)
     {
         if (!File.Exists(PathOf(branch))) return; // no decompile of this branch here (docs/DEVELOPMENT.md "Decompiled game source")
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         var unreviewed = new List<string>();
         foreach (var pipeline in SimPipelines.All)
         {
@@ -98,7 +98,7 @@ public class PipelineParityTests
         var seen = new HashSet<(string, Difference, string)>();
         foreach (var path in new[] { BranchCode.BetaPath, BranchCode.MainPath })
         {
-            using var code = new BranchCode(path);
+            var code = BranchCode.Of(path);
             foreach (var pipeline in SimPipelines.All)
                 foreach (var difference in Differences(GameHooks(code, pipeline.GameCommand), pipeline.Hooks))
                     seen.Add((pipeline.Name, difference.Kind, difference.Hook));
@@ -123,7 +123,7 @@ public class PipelineParityTests
     {
         // The step the simulator once skipped (No Draw): the game's draw asks Hook.ShouldDraw before anything else.
         if (!File.Exists(PathOf(branch))) return;
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         Assert.Equal("ShouldDraw", GameHooks(code, "CardPileCmd.Draw")[0]);
         Assert.Equal(new[] { "BeforeBlockGained", "ModifyBlock", "AfterModifyingBlockAmount", "AfterBlockGained" }, GameHooks(code, "CreatureCmd.GainBlock"));
     }

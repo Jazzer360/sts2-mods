@@ -45,8 +45,9 @@ internal sealed class OwnerBoard
         _code = code;
         var types = code.Assembly.GetTypes().Where(type => !type.IsNested && type.Namespace?.StartsWith("MegaCrit.Sts2.Core", StringComparison.Ordinal) == true
             && !NotInAFight.Any(part => type.Namespace!.Contains(part, StringComparison.Ordinal))).ToList();
-        var ops = types.ToDictionary(type => type, type => new[] { type }.Concat(Procs.CardCode.NestedTypes(type))
-            .SelectMany(nested => nested.GetMethods(Declared).Cast<MethodBase>().Concat(nested.GetConstructors(Declared))).SelectMany(Read).ToList());
+        // Each class's instructions decoded in parallel (the branch's code is read-only), kept by class.
+        var ops = types.AsParallel().Select(type => (type, Ops: new[] { type }.Concat(Procs.CardCode.NestedTypes(type))
+            .SelectMany(nested => nested.GetMethods(Declared).Cast<MethodBase>().Concat(nested.GetConstructors(Declared))).SelectMany(Read).ToList())).ToDictionary(pair => pair.type, pair => pair.Ops);
         foreach (var call in ops.Values.SelectMany(list => list).Where(instruction => instruction.IsCall && instruction.Member is { Name: "AddPet" }))
             foreach (var pet in call.Member!.GenericArguments) _pets.Add(pet);
         // Every place that applies a power, read from its method's program.

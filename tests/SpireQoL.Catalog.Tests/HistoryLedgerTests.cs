@@ -22,8 +22,7 @@ namespace SpireQoL.Catalog.Tests;
 /// a shape the reader doesn't know fails here. The adapter's seed of each query is the game's own answer to the code's own question, on a
 /// fight built from the game's objects.
 /// </summary>
-[Collection(GameFightCollection.Name)]
-public class HistoryLedgerTests
+public class HistoryQuestionTests
 {
     public static TheoryData<string> Branches => new() { "beta", "main" };
 
@@ -34,12 +33,13 @@ public class HistoryLedgerTests
     public void EveryQuestionToTheLogIsAQueryOrAReviewedGap(string branch)
     {
         if (!File.Exists(PathOf(branch))) return;
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         var unknown = new List<string>();
         var gapsUsed = new HashSet<string>();
         var translated = 0;
-        foreach (var type in code.Models())
-            foreach (var (method, query) in ProgramReader.HistoryQueries(type, code.Read))
+        // Each model's questions read in parallel (the reader keeps no state between reads), then counted in the models' order.
+        foreach (var (type, questions) in code.Models().AsParallel().AsOrdered().Select(type => (type, ProgramReader.HistoryQueries(type, code.Read).ToList())).ToList())
+            foreach (var (method, query) in questions)
             {
                 var reading = HistoryQueryReader.Read((QueryValue)query, code.EnumName);
                 if (reading.Query != null) translated++;
@@ -75,7 +75,7 @@ public class HistoryLedgerTests
     public void KnownQuestionsReadAsTheirQueries(string branch)
     {
         if (!File.Exists(PathOf(branch))) return;
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         var models = code.Models().GroupBy(type => type.Name).ToDictionary(group => group.Key, group => group.First());
         var checkedModels = 0;
         foreach (var (model, method, expected, any) in Known)
@@ -98,7 +98,7 @@ public class HistoryLedgerTests
         // A model that reads the ledger (Feral's AfterApplied, Echo Form's ModifyCardPlayCount) declares its questions; each is one its game
         // class's code asks, read and translated from that code on each branch.
         if (!File.Exists(PathOf(branch))) return;
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         var models = code.Models().GroupBy(type => type.Name).ToDictionary(group => group.Key, group => group.First());
         var checkedModels = 0;
         foreach (var name in SimModels.Names)
@@ -112,6 +112,12 @@ public class HistoryLedgerTests
         Assert.True(checkedModels >= 1);
     }
 
+}
+
+/// <summary>The history ledger's seed (decision #191): the adapter's seed of each query is the game's own answer to the code's own question, on a fight built from the game's objects (the questions themselves: HistoryQuestionTests, which read code only and so run beside the other scans).</summary>
+[Collection(GameFightCollection.Name)]
+public class HistoryLedgerTests
+{
     // ---- the seed: the game's own answer
 
     private static CardPlay PlayOf(CardModel card, Player player, int energy = 1, int index = 0, bool auto = false) => new()

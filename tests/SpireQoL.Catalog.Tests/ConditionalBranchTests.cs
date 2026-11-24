@@ -147,7 +147,7 @@ public class ConditionalBranchTests
         // Each ConditionalBranchState.AddState's lambda (the ldftn before it in GenerateMoveStateMachine) reads with nothing unknown.
         var path = branch == "main" ? BranchCode.MainPath : BranchCode.BetaPath;
         if (!File.Exists(path)) return;
-        using var code = new BranchCode(path);
+        var code = BranchCode.Of(path);
         const BindingFlags declared = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
         var read = 0;
         var unread = new List<string>();

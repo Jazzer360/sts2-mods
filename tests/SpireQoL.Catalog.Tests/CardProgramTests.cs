@@ -55,7 +55,7 @@ public class CardProgramTests
     public void KnownCardsReadAsTheirCodeRuns(string branch)
     {
         if (!File.Exists(PathOf(branch))) return; // no decompile of this branch here (docs/DEVELOPMENT.md "Decompiled game source")
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         var cards = code.Cards().ToDictionary(type => type.Name);
         foreach (var (card, expected) in Known)
         {
@@ -71,7 +71,7 @@ public class CardProgramTests
         // The reader drops nothing: each game command a card's play code calls (its OnPlay, the local functions and delegates it
         // declares) is a step of its program, or the program says what it couldn't follow.
         if (!File.Exists(PathOf(branch))) return;
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         var missing = new List<string>();
         var unknown = new List<string>();
         foreach (var type in code.Cards())
@@ -116,7 +116,7 @@ public class CardProgramTests
         // jump past b leaves false), a local stored on several ways (AllForOne's Filter: flag2 = flag; if (flag2) flag2 = a type test), and
         // a number (EvilEye: blockGains = WasCardExhaustedThisTurn ? 2 : 1).
         if (!File.Exists(PathOf(branch))) return;
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         var cards = code.Cards().ToDictionary(type => type.Name);
         if (cards.TryGetValue("AllForOne", out var allForOne))
         {
@@ -161,7 +161,7 @@ public class CardProgramTests
         // The mod reads the loaded game (RuntimeCode); the tests read the decompile's copy of the same build (BranchCode).
         if (!File.Exists(BranchCode.BetaPath)) return;
         GameModels.EnsureLoaded();
-        using var code = new BranchCode(BranchCode.BetaPath);
+        var code = BranchCode.Of(BranchCode.BetaPath);
         var loaded = typeof(MegaCrit.Sts2.Core.Models.CardModel).Assembly;
         foreach (var type in code.Cards())
         {

@@ -20,7 +20,7 @@ public class StepTranslationTests
     public void EveryCommandStepIsTranslatedOrANamedGap(string branch)
     {
         if (!File.Exists(PathOf(branch))) return; // no decompile of this branch here (docs/DEVELOPMENT.md "Decompiled game source")
-        using var code = new BranchCode(PathOf(branch));
+        var code = BranchCode.Of(PathOf(branch));
         var missing = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var type in code.Cards())
             foreach (var command in ProgramReader.Read(type, code.Read).Commands)
@@ -37,7 +37,7 @@ public class StepTranslationTests
         foreach (var branch in new[] { "beta", "main" })
         {
             if (!File.Exists(PathOf(branch))) return;
-            using var code = new BranchCode(PathOf(branch));
+            var code = BranchCode.Of(PathOf(branch));
             foreach (var type in code.Cards())
                 foreach (var command in ProgramReader.Read(type, code.Read).Commands)
                     called.Add(command.Command.FullName);
