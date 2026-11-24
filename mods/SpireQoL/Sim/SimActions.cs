@@ -312,6 +312,11 @@ public sealed record CardEventAction(CardEvent Event, int Count) : SimAction
     /// full hand none (decision #189). False: the play's HandDelta counts them (the test shorthand).
     /// </summary>
     public bool JoinsHand { get; init; }
+    /// <summary>
+    /// The player whose hand the cards join, when it isn't the player the event happens to: a card made by you for a teammate (Largesse's goes
+    /// to their hand, its created-card event is yours: Hook.AfterCardGeneratedForCombat's creator). Null: the event's player.
+    /// </summary>
+    public int? IntoHandOf { get; init; }
     /// <summary>The filtered takes of the play each card it makes would be taken by (decision #189: SimDrawCard.TakenBy); null: not known.</summary>
     public IReadOnlyList<string>? TakenBy { get; init; }
     /// <summary>

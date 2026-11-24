@@ -243,9 +243,12 @@ internal static class CardCoverage
             issues.Add("exhausts other cards with a filter a card that acts when exhausted passes (Drum of Battle's energy when exhausted isn't followed)");
         if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && None(otherCard => PlayFacts.DiscardCount(otherCard, others, PlayFacts.CardsDrawn(otherCard, handCount: 5))))
             issues.Add("discards cards (not counted: Tingsha, Tough Bandages...)");
+        // The cards it makes are its makes' (MadeCards, from its program): each make's count must be readable on the board.
         if ((Calls("CardPileCmd", "AddGeneratedCardToCombat") || Calls("CardPileCmd", "AddGeneratedCardsToCombat") || Calls("CardPileCmd", "AddToCombatAndPreview"))
-            && None(otherCard => PlayFacts.GeneratedCount(otherCard, name, others, null!, out _) + SimAdapter.MadeByYouForYourSide(otherCard)))
+            && None(otherCard => Procs.Programs.MadeCards.Summary(otherCard).Made))
             issues.Add("creates cards (not counted: created-card procs)");
+        if (Procs.Programs.MadeCards.Summary(card).Unread || upgraded != null && Procs.Programs.MadeCards.Summary(upgraded).Unread)
+            issues.Add("creates cards in a count its program's evaluator can't read (counted as one: created-card procs)");
         // A card whose hooks (not its play) move a card (itself: Make It So, Right Hand Hand...) to a pile: it comes back to
         // your hand on something you do, which only ReturnToHand models (the return tabs, your hand size after).
         if (HookCalls(card.GetType()).Contains("CardPileCmd.Add") && !ReturnToHand.Modelled.Contains(name) && !ReturnToHand.NextTurn.Contains(name))
@@ -286,7 +289,7 @@ internal static class CardCoverage
         if (Calls("CreatureCmd", "Kill") && !Procs.Programs.CardEffects.KillsOsty(card.GetType()))
             issues.Add("kills a creature (not in the simulator)");
         // A card that becomes another card once played (Mourning Blow into a Sadness): a created card.
-        if (Calls("CardModel", "set_TransformIntoAfterPlay") && None(otherCard => PlayFacts.GeneratedCount(otherCard, name, others, null!, out _)))
+        if (Calls("CardModel", "set_TransformIntoAfterPlay") && !Procs.Programs.MadeCards.Of(card.GetType()).Any(make => make.By == Procs.Programs.MadeCards.Way.AfterPlay))
             issues.Add("turns into another card after the play (not counted: created-card procs)");
         if (Calls("CardPileCmd", "Shuffle") && !Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType()) && !Procs.Programs.CardEffects.ShufflesWhenShort(card.GetType()))
             issues.Add("shuffles your discard pile (not counted: shuffle procs, Biiig Hug)");

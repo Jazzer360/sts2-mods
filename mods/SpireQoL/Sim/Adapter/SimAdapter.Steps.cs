@@ -42,8 +42,9 @@ public static partial class SimAdapter
         ["CardPileCmd.Shuffle"] = "ShuffleDrawPileAction (with the hand the play put into your draw pile)",
         ["CardPileCmd.ShuffleIfNecessary"] = "ShuffleDrawPileAction when the draw pile is empty",
         ["CardPileCmd.AutoPlayFromDrawPile"] = "AutoPlayFromDrawAction: its count, exhaust and upgrading callback",
-        ["CardPileCmd.AddGeneratedCardToCombat"] = "the play's made cards (counted by PlayFacts.GeneratedCount: a gap, TRACKER)",
-        ["CardPileCmd.AddGeneratedCardsToCombat"] = "the play's made cards (counted by PlayFacts.GeneratedCount: a gap, TRACKER)",
+        ["CardPileCmd.AddGeneratedCardToCombat"] = "CardEventAction(Generated, GeneratedStatus or GeneratedSadness) for its creator, one, into the pile it names (MadeCards)",
+        ["CardPileCmd.AddGeneratedCardsToCombat"] = "the same, as many as its list holds: a Create's count, a card factory's count, the rounds of the loop that filled it",
+        ["CardPileCmd.AddToCombatAndPreview"] = "the same, its count argument of the card it names, for the target's player",
         ["ForgeCmd.Forge"] = "the Sovereign Blade it makes when you have none (the first play's)",
         ["CardCmd.Exhaust"] = "TakeFromHandAction(Exhausted), after ExhaustFromHandAction",
         ["CardCmd.Discard"] = "TakeFromHandAction(Discarded), or the cards it looked at on your draw pile",
@@ -72,7 +73,6 @@ public static partial class SimAdapter
         ["CardCmd.ApplySingleTurnSly"] = "Sly given to a card this turn: not simulated (gap)",
         ["CardCmd.ApplySingleTurnRetain"] = "Retain given to a card this turn (main): the turn's end reads your hand from the game (gap)",
         ["CardCmd.Enchant"] = "an enchantment given to a card: not simulated (gap)",
-        ["CardPileCmd.AddToCombatAndPreview"] = "a card added to a pile for the fight: not simulated (gap)",
         ["CardPileCmd.RemoveFromDeck"] = "a card taken out of your deck: outside the fight",
         ["OstyCmd.Summon"] = "Osty summoned or given HP: not simulated (gap)",
         ["OrbCmd.Passive"] = "an orb's passive set off by a card: not simulated (gap)",
@@ -117,8 +117,6 @@ public static partial class SimAdapter
         public Dictionary<CommandStep, List<SimAction>> Takes { get; set; } = new(ReferenceEqualityComparer.Instance);
         /// <summary>The tests the code stores before its first command: asked at the play's start (AskAction).</summary>
         public List<SimCondition> Asks { get; } = new();
-        /// <summary>The play's made cards are in (they're one block: PlayFacts.GeneratedCount).</summary>
-        public bool MadeCardsIn { get; set; }
         public Type Type => Card.GetType();
         public string Name => Card.GetType().Name;
     }
@@ -128,8 +126,6 @@ public static partial class SimAdapter
     {
         var body = new List<SimAction>();
         Walk(play.Program.Steps, play, body, inner: false);
-        // Cards it makes with no step the program shows (a card turning into one after its play: Mourning Blow).
-        if (!play.MadeCardsIn) body.AddRange(MadeCards(play));
         var first = play.Asks.Where(condition => condition.At != null).DistinctBy(condition => condition.At).Select(condition => (SimAction)new AskAction(condition));
         return first.Concat(body).ToList();
     }
@@ -237,16 +233,9 @@ public static partial class SimAdapter
                 return ShuffleFrom(found, play);
             case ("CardPileCmd", "AutoPlayFromDrawPile"):
                 return (AutoPlayFrom(found, play), null);
-            // Made cards aren't held to their step's condition yet: Shiv.CreateInHand's count test reads a helper's parameter the reader doesn't
-            // bind (TRACKER).
-            case ("CardPileCmd", "AddGeneratedCardToCombat" or "AddGeneratedCardsToCombat") when found.Loops.Any(OverPlayers):
-                play.MadeCardsIn = true;
-                return (MadeForPlayers(found, play), ProgramCondition.Always);
-            case ("CardPileCmd", "AddGeneratedCardToCombat" or "AddGeneratedCardsToCombat"):
+            case ("CardPileCmd", "AddGeneratedCardToCombat" or "AddGeneratedCardsToCombat" or "AddToCombatAndPreview"):
             case ("ForgeCmd", "Forge"):
-                if (play.MadeCardsIn) return none;
-                play.MadeCardsIn = true;
-                return (MadeCards(play), ProgramCondition.Always);
+                return (MadeFrom(found, play), null);
         }
         return none;
     }
@@ -294,7 +283,7 @@ public static partial class SimAdapter
 
     /// <summary>How many rounds the step's loops go on the board, each but the ones it acts on each item of (Rally's players, Piercing Wail's enemies).</summary>
     private static int RoundsOf(CardEffects.Found found, StepPlay play, Func<LoopStep, bool>? skip = null) =>
-        found.Loops.Where(loop => skip == null || !skip(loop)).Aggregate(1, (times, loop) => times * PlayFacts.Rounds(loop, play.Board, play.Program));
+        found.Loops.Where(loop => skip == null || !skip(loop)).Aggregate(1, (times, loop) => times * ProgramEvaluator.Rounds(loop, play.Board, play.Program));
 
     /// <summary>The loop goes over the players on your side (GetTeammatesOf: you and your teammates).</summary>
     private static bool OverPlayers(LoopStep loop) => CardEffects.OverYourSide(loop);
@@ -1118,67 +1107,83 @@ public static partial class SimAdapter
         CardPrograms.Of(card.GetType()).Commands.FirstOrDefault(command => command.Command is { DeclaringType: "CardPileCmd", Name: "AutoPlayFromDrawPile" }) is { } autoPlay
             ? AutoPlayOf(autoPlay, card) : null;
 
+    // ---------------------------------------------------------------- made cards
 
     /// <summary>
-    /// Cards made for each player a loop goes over (GetTeammatesOf: you and each living teammate; Blade Symphony's Shivs, Glimpse Beyond's
-    /// Souls), as many per player as the loops inside it go round times what one call makes (a Create's count), each made by whom the call
-    /// names (its creator argument: you, or that player: their own created-card procs), into the pile it names (your hand: they join it).
+    /// A make (MadeCards: CardPileCmd.AddGeneratedCardToCombat, AddGeneratedCardsToCombat, AddToCombatAndPreview, ForgeCmd.Forge): its cards'
+    /// created-card events for their creator (Hook.AfterCardGeneratedForCombat's: you, or the player a helper made them for: Blade Symphony's
+    /// Shivs), as many as its count on the board (or read as it runs: your hand's room, the cards a take took), each player's of your side a
+    /// loop over them goes round, into the pile it names (a hand: they join it as they come, into a full one the discard pile). A forge makes
+    /// the Sovereign Blade when you have none, on the first play only (a later play finds it).
     /// </summary>
-    private static List<SimAction> MadeForPlayers(CardEffects.Found found, StepPlay play)
+    private static List<SimAction> MadeFrom(CardEffects.Found found, StepPlay play)
     {
-        var (each, byYou, intoHand) = MadePerPlayer(found, play.Board, play.Program);
-        if (each <= 0) return new List<SimAction>();
+        if (MadeCards.Of(play.Type).FirstOrDefault(make => ReferenceEquals(make.Found?.Command, found.Command)) is not { } make) return new List<SimAction>();
+        if (make.By == MadeCards.Way.Forged)
+            return MadeCards.HasBlade(play.Card) ? new List<SimAction>()
+                : new List<SimAction> { new FirstPlayOnly(new SimAction[] { new CardEventAction(CardEvent.Generated, Count: 1) { Indirect = true, JoinsHand = true } }) };
+        var (count, from) = MadeCount(make, play);
+        if (count <= 0 && from == SimCount.Given) return new List<SimAction>();
+        var intoHand = MadeCards.IntoHand(make, play.Type);
         var takenBy = MadeTakenBy(play.Card);
-        return PlayersOf(found, play).Select(player => (SimAction)new CardEventAction(CardEvent.Generated, each)
+        var madeCard = MadeCardOf(play.Card)?.GetType().Name;
+        var actions = new List<SimAction>();
+        foreach (var player in MadeFor(make, found, play))
         {
-            Indirect = true, JoinsHand = player == Who.You && intoHand, Player = player == Who.You || byYou ? null : player, TakenBy = takenBy,
-            MadeCard = player == Who.You && intoHand ? MadeCardOf(play.Card)?.GetType().Name : null,
-        }).ToList();
-    }
-
-    /// <summary>
-    /// What a make step in a loop over your side makes for each player: how many (the loops inside it, times what one call makes: a Create's
-    /// count, or the rounds of the loop that filled the list it's given), whether you make them (its creator argument is you) and whether they
-    /// go into the hand (its pile argument; Shiv.CreateInHand's, read from where the card's code makes them).
-    /// </summary>
-    internal static (int Each, bool ByYou, bool IntoHand) MadePerPlayer(CardEffects.Found found, ProgramBoard board, CardProgram program)
-    {
-        var command = found.Command;
-        int Count(ProgramValue value) => ProgramEvaluator.Number(value, board, program) is { } read ? (int)read : 1;
-        var made = ValueAt(command, 0);
-        var perCall = made?.Parts().OfType<QueryValue>().FirstOrDefault(value => value is { Name: "Create", Arguments.Count: >= 2 }) is { } create ? Count(create.Arguments[1])
-            : made is QueryValue { Name: ".ctor" } && found.LoopBefore is { } filled ? PlayFacts.Rounds(filled, board, program) : 1;
-        var each = found.Loops.Where(loop => !OverPlayers(loop)).Aggregate(1, (times, loop) => times * PlayFacts.Rounds(loop, board, program)) * perCall;
-        var pile = ValueAt(command, 1) is ConstantValue { Value: var pileType } ? (PileType)pileType : (PileType?)null;
-        var intoHand = pile == PileType.Hand || pile == null && CardCode.MadeInto(board.Card.GetType()).All(madeInto => madeInto is null or PileType.Hand);
-        return (Math.Max(0, each), IsOwnerPlayer(ValueAt(command, 2)), intoHand);
-    }
-
-    /// <summary>
-    /// The cards a play makes for the players of your side that you make (MadePerPlayer: Glimpse Beyond's for each, Blade Symphony's and
-    /// Outrage's yours): what PlayFacts counts as made by you beside its table.
-    /// </summary>
-    internal static int MadeByYouForYourSide(CardModel card)
-    {
-        var program = CardPrograms.Of(card.GetType());
-        var board = new ProgramBoard(card);
-        var total = 0;
-        foreach (var found in CardEffects.Find(program, command => command.Command is { DeclaringType: "CardPileCmd", Name: "AddGeneratedCardToCombat" or "AddGeneratedCardsToCombat" }))
-        {
-            if (!found.Loops.Any(OverPlayers)) continue;
-            var (each, byYou, _) = MadePerPlayer(found, board, program);
-            var loop = found.Loops.Last(OverPlayers);
-            var players = card.IsCanonical ? 1 : ProgramEvaluator.Items(loop.Items!, board, program)?.OfType<Creature>().Count(creature => byYou || ReferenceEquals(creature, card.Owner.Creature)) ?? 1;
-            total += each * players;
+            var creator = MadeBy(make, play, player);
+            var yours = player == play.Owner;
+            actions.Add(new CardEventAction(EventOf(make), count)
+            {
+                Indirect = true, CountFrom = from, Player = creator == play.Owner ? null : creator, JoinsHand = intoHand,
+                IntoHandOf = intoHand && player != creator ? player : null,
+                TakenBy = yours ? takenBy : Array.Empty<string>(), MadeCard = intoHand && yours ? madeCard : null,
+            });
         }
-        return total;
+        return actions;
     }
 
-    /// <summary>The cards one play makes (PlayFacts' count: GeneratedCount, a gap: TRACKER), at the play's first step that makes cards.</summary>
-    private static List<SimAction> MadeCards(StepPlay play)
+    /// <summary>A make's card event: a made status, a made Sadness (Fertilizer, All Is Well) or any other made card.</summary>
+    private static CardEvent EventOf(MadeCards.Make make) => MadeCards.KindOf(make) switch
     {
-        var made = new SimPlay();
-        AddMadeCards(made, play.Facts, takes: play.Takes.Count > 0);
-        return made.Body;
+        MadeCards.Kind.Status => CardEvent.GeneratedStatus,
+        MadeCards.Kind.Sadness => CardEvent.GeneratedSadness,
+        _ => CardEvent.Generated,
+    };
+
+    /// <summary>
+    /// How many cards one round of a make makes for each player: read as it runs when its count is your hand's room (The Moon, The Lovers, Crash
+    /// Landing) or what a take of the play took (Storm of Steel, Stoke); else its count on the board (MadeCards.CountOn), one when it can't be read.
+    /// </summary>
+    private static (int Count, SimCount From) MadeCount(MadeCards.Make make, StepPlay play)
+    {
+        if (make.CountValue is { } value)
+        {
+            if (CardEffects.ReadsHandRoom(value)) return (int.MaxValue, SimCount.HandRoom);
+            var takes = CardEffects.ExhaustsOfOthers(play.Type).Concat(CardEffects.Discards(play.Type));
+            if (play.Takes.Count > 0 && takes.Any(take => CardEffects.CountsTaken(value, take))) return (0, SimCount.CardsTaken);
+        }
+        return (MadeCards.CountOn(make, play.Board, play.Program) ?? 1, SimCount.Given);
     }
+
+    /// <summary>
+    /// The players a make's cards are for (their pile's): each player of your side a loop over them goes round (Glimpse Beyond, Blade
+    /// Symphony), the teammate the card is aimed at (Largesse: none with none to aim at), or the card's owner.
+    /// </summary>
+    private static IEnumerable<int> MadeFor(MadeCards.Make make, CardEffects.Found found, StepPlay play)
+    {
+        if (MadeCards.IsEach(make.For) && found.Loops.Any(OverPlayers)) return PlayersOf(found, play);
+        if (IsTarget(make.For)) return Who.KindOf(play.AllyId) == CreatureKind.Teammate ? new[] { play.AllyId } : Array.Empty<int>();
+        return new[] { play.Owner };
+    }
+
+    /// <summary>Who makes a make's cards for <paramref name="player"/> (its creator argument): the card's owner when it names them, else the player itself.</summary>
+    private static int MadeBy(MadeCards.Make make, StepPlay play, int player) => MadeCards.IsOwner(make.Creator) ? play.Owner : player;
+
+    /// <summary>
+    /// The cards a card turns into after its last play (MadeCards.Way.AfterPlay: Mourning Blow's Sadness, CardModel.TransformIntoAfterPlay):
+    /// made once the card play is over (CardCmd.Transform, where the card goes), never into your hand.
+    /// </summary>
+    private static IEnumerable<SimAction> MadeAfterPlay(CardModel card) =>
+        MadeCards.Of(card.GetType()).Where(make => make.By == MadeCards.Way.AfterPlay)
+            .Select(make => (SimAction)new CardEventAction(EventOf(make), Count: 1) { Indirect = true, TakenBy = MadeTakenBy(card) });
 }

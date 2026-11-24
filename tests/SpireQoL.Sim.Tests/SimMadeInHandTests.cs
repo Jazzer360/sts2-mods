@@ -67,6 +67,21 @@ public class SimMadeInHandTests
     }
 
     [Fact]
+    public void ACardYouMakeForATeammateJoinsTheirHandAndItsEventIsYours()
+    {
+        // Largesse: CardPileCmd.AddGeneratedCardToCombat(the card made for the target's player, Hand, creator: you). The card goes to its
+        // owner's hand (the teammate's), and the created-card hooks hear its creator (Hook.AfterCardGeneratedForCombat(card, creator)).
+        var state = Hand(cards: 5);
+        state.Teammates.Add(new SimPlayer { Hp = 50, MaxHp = 50, HandCount = 3 });
+        var play = Played("Largesse", SimCardType.Skill);
+        play.Body.Add(new CardEventAction(CardEvent.Generated, Count: 1) { Indirect = true, JoinsHand = true, IntoHandOf = Who.Teammate(teammateIndex: 0) });
+        var after = After(state, play);
+        Assert.Equal(4, after.You.HandCount);
+        Assert.Equal(4, after.Teammates[0].HandCount);
+        Assert.Equal(1, after.Fired[SimKeys.PlayEvent(CardEvent.Generated)]);
+    }
+
+    [Fact]
     public void ACardMadeIntoAFullHandGoesToTheDiscardPile()
     {
         // Calamity 3 on an attack played from a full hand: the attack still holds its slot when the cards are made, so one fits;

@@ -67,6 +67,9 @@ public sealed record ChoiceStep(int Offset, CodeMember Command) : ProgramStep(Of
 /// </summary>
 public sealed record CreateStep(int Offset, string Card) : ProgramStep(Offset)
 {
+    /// <summary>Its arguments as values (CreateCard&lt;T&gt;(owner): whose card it is).</summary>
+    public IReadOnlyList<ProgramValue> Values { get; init; } = Array.Empty<ProgramValue>();
+
     public override string ToString() => "create " + Card + When;
 }
 
@@ -466,7 +469,7 @@ public static class CardProgramReader
                 }
                 if (member.Name == "CreateCard" && member.GenericArguments.Count == 1)
                 {
-                    into.Add(new CreateStep(instruction.Offset, member.GenericArguments[0]) { Condition = condition });
+                    into.Add(new CreateStep(instruction.Offset, member.GenericArguments[0]) { Condition = condition, Values = flow.ArgumentValues(i, member) });
                     continue;
                 }
                 if (member.DeclaringType == "DamageCmd" && member.Name == "Attack")
@@ -489,26 +492,18 @@ public static class CardProgramReader
                     {
                         // Its parameters are what this call passes (MadScience.ExecuteRider(TinkerTimeRider, ...): its tests of rider are tests
                         // of the card's rider).
-                        var passed = new Dictionary<string, ProgramValue>();
-                        var names = own.Called.GetParameters();
-                        var values = flow.ArgumentValues(i, member);
-                        for (var parameter = 0; parameter < names.Length && parameter < values.Count; parameter++)
-                            if (names[parameter].Name is { } parameterName && values[parameter] is not UnknownValue) passed[parameterName] = values[parameter];
-                        ProgramValue? Passed(ProgramValue value) => value switch
-                        {
-                            ParameterValue parameterValue when passed.TryGetValue(parameterValue.Name, out var given) => given,
-                            NamedValue namedValue when passed.TryGetValue(namedValue.Name, out var given) => given,
-                            _ => null,
-                        };
-                        var inner = new Reader(_card, _read).Steps(own.Body, depth + 1).Select(step => Bound(step, Passed));
+                        var passed = PassedTo(own.Called, flow.ArgumentValues(i, member));
+                        var inner = new Reader(_card, _read).Steps(own.Body, depth + 1).Select(step => Bound(step, passed));
                         into.AddRange(condition == null ? inner : inner.Select(step => step with { Condition = And(condition, step.Condition) }));
                     }
                     continue;
                 }
-                // A static helper of the game's models that runs commands (Shiv.CreateInHand: Blade Symphony's Shivs): its steps run here.
+                // A static helper of the game's models that runs commands (Shiv.CreateInHand: Blade Symphony's Shivs): its steps run here, its
+                // parameters what this call passes (Blade Dance's one Shiv, Storm of Steel's as many as it discarded).
                 if (depth < MaxDepth && GameHelper(member) is { } helper)
                 {
-                    var inner = new Reader(helper.Owner, _read).Steps(helper.Body, depth + 1);
+                    var passed = PassedTo(helper.Called, flow.ArgumentValues(i, member));
+                    var inner = new Reader(helper.Owner, _read).Steps(helper.Body, depth + 1).Select(step => Bound(step, passed)).ToList();
                     if (Acts(inner)) into.AddRange(condition == null ? inner : inner.Select(step => step with { Condition = And(condition, step.Condition) }));
                     continue;
                 }
@@ -528,6 +523,24 @@ public static class CardProgramReader
             if (callback != null) into.Add(new UnknownStep(ops.Count > 0 ? ops[^1].Offset : 0, "commands in a callback"));
         }
 
+        /// <summary>
+        /// A method's parameters as a call passes them (each the value of its argument), for its steps' values and conditions: a parameter, or
+        /// its state machine's field named after it.
+        /// </summary>
+        private static Func<ProgramValue, ProgramValue?> PassedTo(MethodBase called, IReadOnlyList<ProgramValue> values)
+        {
+            var passed = new Dictionary<string, ProgramValue>();
+            var names = called.GetParameters();
+            for (var parameter = 0; parameter < names.Length && parameter < values.Count; parameter++)
+                if (names[parameter].Name is { } parameterName && values[parameter] is not UnknownValue) passed[parameterName] = values[parameter];
+            return value => value switch
+            {
+                ParameterValue parameterValue when passed.TryGetValue(parameterValue.Name, out var given) => given,
+                NamedValue namedValue when passed.TryGetValue(namedValue.Name, out var given) => given,
+                _ => null,
+            };
+        }
+
         /// <summary>A step with the values in its conditions mapped (a helper's parameters by what its caller passed), its inner steps too.</summary>
         private static ProgramStep Bound(ProgramStep step, Func<ProgramValue, ProgramValue?> replace)
         {
@@ -536,6 +549,7 @@ public static class CardProgramReader
             {
                 LoopStep loop => loop with { While = loop.While?.Map(replace), Items = loop.Items?.Map(replace), Body = loop.Body.Select(inner => Bound(inner, replace)).ToList() },
                 ChoiceStep choice => choice with { Values = choice.Values.Select(value => value.Map(replace)).ToList() },
+                CreateStep create => create with { Values = create.Values.Select(value => value.Map(replace)).ToList() },
                 CommandStep command => command with
                 {
                     Values = command.Values.Select(value => value.Map(replace)).ToList(), Inner = command.Inner.Select(inner => Bound(inner, replace)).ToList(),
@@ -593,13 +607,13 @@ public static class CardProgramReader
         }
 
         /// <summary>A static method of another of the game's models (not a command, not a property): the type it's on and its code.</summary>
-        private (Type Owner, MethodBase Body)? GameHelper(CodeMember member)
+        private (Type Owner, MethodBase Called, MethodBase Body)? GameHelper(CodeMember member)
         {
             if (member.Kind != CodeMemberKind.Method || member.HasThis || IsCommand(member) || member.Name.StartsWith('<') || member.Name.StartsWith("op_", StringComparison.Ordinal)) return null;
             if (!member.Namespace.StartsWith("MegaCrit.Sts2.Core.Models", StringComparison.Ordinal) || member.Name.StartsWith("get_", StringComparison.Ordinal)) return null;
             if (_card.Assembly.GetType(member.Namespace + "." + member.DeclaringType) is not { } owner) return null;
             if (owner.GetMethods(All).FirstOrDefault(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount) is not { } found) return null;
-            return (owner, BodyOf(found));
+            return (owner, found, BodyOf(found));
         }
 
         private MethodBase? Lambda(CodeMember member)

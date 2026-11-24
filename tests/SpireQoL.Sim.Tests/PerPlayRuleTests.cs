@@ -42,9 +42,6 @@ public class PerPlayRuleTests
         ["mods/SpireQoL/Procs/PlayFacts.cs: CardsBack = ReturnToHand.Returning(card, me, plays, Math.Min(CardPile.MaxCardsInHand, hand.Count - 1 + createdInHand) + draws + swiftDraws,"] =
             "cards' own hooks after the play (ReturnToHand, docs/CARD_PROGRAMS.md A5): a tracker item with HandDelta's",
         ["mods/SpireQoL/Procs/PlayFacts.cs: if (chosen.Count == 0 || handCount - 1 >= CardPile.MaxCardsInHand) return false;"] = "whether Neow's Fury's how-many is a choice at all (its NotModelledAction)",
-        ["mods/SpireQoL/Procs/PlayFacts.cs: var room = Math.Max(0, CardPile.MaxCardsInHand - others.Count);"] = "GeneratedCount's first-play count for the facts; the simulator reads the room as it runs (SimCount.HandRoom)",
-        ["mods/SpireQoL/Procs/PlayFacts.cs: case nameof(TheLovers): from = SpireQoL.Sim.SimCount.HandRoom; return Math.Max(0, CardPile.MaxCardsInHand - others.Count);"] = "GeneratedCount (above)",
-        ["mods/SpireQoL/Procs/PlayFacts.cs: case nameof(TheMoon): from = SpireQoL.Sim.SimCount.HandRoom; return Math.Max(0, CardPile.MaxCardsInHand - others.Count);"] = "GeneratedCount (above)",
         ["mods/SpireQoL/Procs/Programs/CardEffects.cs: value != null && value.Parts().Any(part => part is QueryValue { Name: \"MaxCardsInHand\" } or NamedValue { Name: \"MaxCardsInHand\" });"] =
             "reads the game's own name in a card's code (a count of your hand's room: SimCount.HandRoom), compares nothing",
         ["mods/SpireQoL/Procs/Programs/ConditionReader.cs: QueryValue { Type: \"CardPile\", Name: \"MaxCardsInHand\", Of: null, IsProperty: true } => true,"] =

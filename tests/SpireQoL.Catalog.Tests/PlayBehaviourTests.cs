@@ -467,4 +467,57 @@ public class PlayBehaviourTests
         Assert.Equal(2 * draws, after.You.Drawn);
         Assert.Equal(2 * draws - 2, after.You.HandCount);
     }
+
+    // ---- made cards: each make step's own count, card, owner and pile (MadeCards)
+
+    [Fact]
+    public void LargessesCardGoesToTheTeammatesHandAndItsEventIsYours()
+    {
+        // Largesse.OnPlay: a colorless card made for the target's player (CardFactory.GetDistinctForCombat(cardPlay.Target.Player, ...)), added
+        // to their hand with you as its creator. Your hand loses the card played; theirs gains the made one; the created-card event is yours.
+        var gameFight = new GameFight(teammates: 1);
+        gameFight.Me.PlayerCombatState!.Energy = 3;
+        Enemy(gameFight);
+        var card = gameFight.Add<Largesse>();
+        gameFight.Add<StrikeIronclad>();
+        var start = SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
+        var mateHand = start.Teammates[0].HandCount;
+        var play = SimAdapter.Play(card, PlayFacts.For(card, gameFight.Me, gameFight.Combat, plays: 1), gameFight.Me, gameFight.Combat, ids, Who.Teammate(teammateIndex: 0));
+        SimEngine.ApplyPlayTo(start, play, out var branches, out _);
+        var after = Only(branches);
+        Assert.Equal(1, after.You.HandCount);
+        Assert.Equal(mateHand + 1, after.Teammates[0].HandCount);
+        Assert.Equal(1, after.PlayEvents[CardEvent.Generated]);
+    }
+
+    [Fact]
+    public void MourningBlowTurnsIntoASadnessThatDoesntJoinYourHand()
+    {
+        // MourningBlow.OnPlay sets TransformIntoAfterPlay to a Sadness it makes (on the series' last play): after the play the card itself
+        // becomes it (CardModel.OnPlayWrapper: CardCmd.Transform), where the card went. A made Sadness, not one more card in your hand.
+        var gameFight = Fight();
+        var enemy = Enemy(gameFight);
+        var card = gameFight.Add<MourningBlow>();
+        gameFight.Add<StrikeIronclad>();
+        var after = Only(PlayOut(gameFight, card, enemy));
+        Assert.Equal(1, after.You.HandCount);
+        Assert.Equal(1, after.PlayEvents[CardEvent.GeneratedSadness]);
+    }
+
+    [Fact]
+    public void ShivsAHelperMakesForEachTeammateJoinTheirHands()
+    {
+        // BladeSymphony.OnPlay: Shiv.CreateInHand(teammate.Player, ...) for each player of your side: each player's Shivs go to their own
+        // hand, made by them (CreateInHand's creator ?? owner: their created-card hooks).
+        var gameFight = new GameFight(teammates: 1);
+        gameFight.Me.PlayerCombatState!.Energy = 3;
+        Enemy(gameFight);
+        var card = gameFight.Add<BladeSymphony>();
+        var start = SimAdapter.Build(gameFight.Me, gameFight.Combat, out _);
+        var mateHand = start.Teammates[0].HandCount;
+        var shivs = Sts2Mods.Core.Game.Sts2State.Var(card, "Cards");
+        var after = Only(PlayOut(gameFight, card));
+        Assert.Equal(shivs, after.You.HandCount);
+        Assert.Equal(mateHand + shivs, after.Teammates[0].HandCount);
+    }
 }

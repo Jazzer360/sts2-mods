@@ -77,6 +77,8 @@ public static partial class SimAdapter
         // The card's energy from its own hooks during the play (Epic Retrieval's for each arrow it knocks loose: CardEnergy.Rules).
         CardEnergy.AddHookEnergy(play, card);
         AddCardEvents(play, facts);
+        // What it turns into once its last play is over (Mourning Blow's Sadness).
+        play.After.AddRange(MadeAfterPlay(card));
         // The card's enchantment acts after the card itself, on every play (CardModel: EnchantmentModel.OnPlay after OnPlay). The
         // coverage ledger reviews every enchantment's OnPlay.
         switch (card.Enchantment)
@@ -235,46 +237,6 @@ public static partial class SimAdapter
     private static int DrawPileOfCard(CardModel card)
     {
         try { return card.Owner is { } owner ? MegaCrit.Sts2.Core.Entities.Cards.PileType.Draw.GetPile(owner).Cards.Count : 0; } catch { return 0; }
-    }
-    /// <summary>
-    /// The cards one play makes (PlayFacts: Generated, its statuses and Sadness), into your hand as they're
-    /// made when they go there (CardCode.MadeInto), each play's count its own or read as it runs (the cards the play took: Storm of Steel;
-    /// your hand's room: The Moon). The Sovereign Blade a forge makes is the first play's only: a later play finds it.
-    /// </summary>
-    private static void AddMadeCards(SimPlay play, PlayFacts facts, bool takes)
-    {
-        var forged = facts.ForgesBlade ? 1 : 0;
-        var sadness = facts.SadnessCreated;
-        var statuses = Math.Max(0, facts.GeneratedStatuses - sadness);
-        // Less the ones made for each player of your side: their step's own (MadeForPlayers).
-        var plain = Math.Max(0, facts.Generated - forged - statuses - sadness - MadeByYouForYourSide(facts.Card));
-        var made = plain + statuses + sadness;
-        var inHand = Math.Max(0, facts.GeneratedInHand - forged);
-        var from = takes || facts.GeneratedFrom != SimCount.CardsTaken ? facts.GeneratedFrom : SimCount.Given;
-        // What its filtered takes would make of each card it makes, for a later play (decision #189).
-        var takenBy = made > 0 ? MadeTakenBy(facts.Card) : null;
-        // The card it makes, when it's one: into a full hand it goes to the discard pile (CardEventAction.MadeCard).
-        var madeCard = made > 0 ? MadeCardOf(facts.Card)?.GetType().Name : null;
-        void Made(CardEvent cardEvent, int count, bool joinsHand)
-        {
-            if (from != SimCount.Given && made > 0)
-            {
-                if (count > 0) play.Body.Add(new CardEventAction(cardEvent, from == SimCount.HandRoom ? int.MaxValue : 0) { Indirect = true, JoinsHand = joinsHand, CountFrom = from, TakenBy = takenBy, MadeCard = joinsHand ? madeCard : null });
-                return;
-            }
-            if (count > 0) play.Body.Add(new CardEventAction(cardEvent, count) { Indirect = true, JoinsHand = joinsHand, TakenBy = takenBy, MadeCard = joinsHand ? madeCard : null });
-        }
-        var allInHand = inHand >= made;
-        // Into your hand first, the rest elsewhere (Severance: one of three into your hand).
-        if (!allInHand && inHand > 0 && from == SimCount.Given)
-        {
-            Made(CardEvent.Generated, Math.Min(inHand, plain), joinsHand: true);
-            Made(CardEvent.Generated, plain - Math.Min(inHand, plain), joinsHand: false);
-        }
-        else Made(CardEvent.Generated, plain, allInHand);
-        Made(CardEvent.GeneratedStatus, statuses, allInHand);
-        Made(CardEvent.GeneratedSadness, sadness, allInHand);
-        if (forged > 0) play.Body.Add(new FirstPlayOnly(new SimAction[] { new CardEventAction(CardEvent.Generated, Count: 1) { Indirect = true, JoinsHand = true } }));
     }
     /// <summary>
     /// The attack's hit count's ways when its code works it out on a test the simulator asks (WithHitCount's argument a value two ways

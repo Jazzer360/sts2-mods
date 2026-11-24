@@ -79,6 +79,45 @@ public static class ProgramEvaluator
     public static IReadOnlyList<object?>? Items(ProgramValue value, ProgramBoard board, CardProgram program) =>
         Evaluate(value, new Context(board, program, new Dictionary<string, object?>())) is IEnumerable items and not string ? items.Cast<object?>().ToList() : null;
 
+    /// <summary>
+    /// How many rounds a loop of the play goes on the board: its foreach's collection (Chill: the enemies you can hit; the cards the card
+    /// factory makes for the fight, as many as its count argument asks: Jack of All Trades, Metamorphosis), its counter's bound (i &lt; Repeat,
+    /// i &lt; 2, i &lt; your X), or the card value it's over; one when none can be told (the game's template card).
+    /// </summary>
+    public static int Rounds(LoopStep loop, ProgramBoard board, CardProgram program)
+    {
+        // A foreach: its collection's count (a counter loop inside one keeps the collection as its items too: its own bound is its rounds).
+        if (loop.Items != null && loop.Over.StartsWith("each of", StringComparison.Ordinal))
+        {
+            if (Items(loop.Items, board, program) is { } items) return items.Count;
+            return FactoryCount(loop.Items) is { } asked && Number(asked, board, program) is { } count ? Math.Max(0, (int)count) : 1;
+        }
+        if (loop.While is { Terms: [[{ Holds: true, Test: CompareValue { Op: Comparison.Less or Comparison.LessOrEqual } bound }]] }
+            && Number(bound.Right, board, program) is { } most)
+            return Math.Max(0, (int)most + (bound.Op == Comparison.LessOrEqual ? 1 : 0));
+        // decimal's own comparison (i < a card value as a decimal: Self-Deprecate's Joy, Brighten Up's).
+        if (loop.While is { Terms: [[{ Holds: true, Test: QueryValue { Name: "op_LessThan" or "op_LessThanOrEqual", Arguments: [_, var limit] } decimalBound }]] }
+            && Number(limit, board, program) is { } decimalMost)
+            return Math.Max(0, (int)decimalMost + (decimalBound.Name == "op_LessThanOrEqual" ? 1 : 0));
+        return board.Card.DynamicVars.ContainsKey(loop.Over) ? Sts2Mods.Core.Game.Sts2State.Var(board.Card, loop.Over) : 1;
+    }
+
+    /// <summary>
+    /// The count a card factory's collection is asked for (CardFactory.GetForCombat, GetDistinctForCombat(player, pool, count, rng): its
+    /// third argument), so its size is read without the roll that picks its cards; null for any other value.
+    /// </summary>
+    public static ProgramValue? FactoryCount(ProgramValue? value)
+    {
+        while (true)
+            switch (value)
+            {
+                case StoredValue stored: value = stored.Value; break;
+                case QueryValue { Name: "ToList" or "ToArray", Arguments: [var inner] }: value = inner; break;
+                case QueryValue { Name: "GetForCombat" or "GetDistinctForCombat", Arguments.Count: >= 3 } factory: return factory.Arguments[2];
+                default: return null;
+            }
+    }
+
     /// <summary>The condition asks about the play's target (cardPlay.Target): it can differ from one target to the next.</summary>
     public static bool AsksTarget(ProgramCondition condition) =>
         condition.Literals.Any(literal => literal.Test.Parts().Any(part => part is QueryValue { Name: "Target", Of: NamedValue { Name: "cardPlay" } }));
@@ -247,6 +286,8 @@ public static class ProgramEvaluator
 
     private static object? Query(QueryValue query, Context context)
     {
+        // The fight going on (CombatManager.IsOverOrEnding): a play is only predicted in a fight that isn't over, as ConditionReader decides it.
+        if (query is { Name: "IsOverOrEnding", IsProperty: true }) return false;
         var asked = query.Of == null ? null : Evaluate(query.Of, context);
         if (asked == Unknown || asked != null && Forbidden(asked.GetType())) return Unknown;
         var board = context.Board;
@@ -300,7 +341,10 @@ public static class ProgramEvaluator
                 ("Abs", [{ } only]) => Math.Abs(only),
                 _ => Unknown,
             };
-        if (query.Of == null) return StaticMember(query, arguments);
+        // CardPile.GetCards(player, piles): the same piles as the play sees them, the card played in none of them (The Moon's room).
+        if (query.Of == null)
+            return StaticMember(query, arguments) is var member && query.Name == "GetCards" && member is IEnumerable<CardModel> piles
+                ? piles.Where(card => !ReferenceEquals(card, board.Card)).ToList() : member;
         if (asked == null) return Unknown;
         var result = Member(asked, query, arguments);
         // The hand the play sees: the card played has left it (it's in play while its OnPlay runs).

@@ -680,7 +680,9 @@ public static partial class SimEngine
     {
         var cardEvent = cardEventAction.Event;
         if (cardEvent == CardEvent.Drawn && DrawsFromPile(state, player)) return DrawCards(state, player, count: 1, cardEventAction.Indirect);
-        if (cardEventAction.JoinsHand && state.Player(player) is { } simPlayer)
+        // Whose hand it joins: the event's player's, or a made card's owner's when someone else made it (IntoHandOf).
+        var handOf = cardEvent == CardEvent.Drawn ? player : cardEventAction.IntoHandOf ?? player;
+        if (cardEventAction.JoinsHand && state.Player(handOf) is { } simPlayer)
         {
             if (cardEvent == CardEvent.Drawn)
             {
@@ -693,12 +695,12 @@ public static partial class SimEngine
             var made = cardEvent != CardEvent.Drawn;
             if (RoomIn(simPlayer) > 0)
             {
-                AddToHand(state, player, count: 1, takenBy: made ? cardEventAction.TakenBy : null, known: made && cardEventAction.TakenBy != null);
+                AddToHand(state, handOf, count: 1, takenBy: made ? cardEventAction.TakenBy : null, known: made && cardEventAction.TakenBy != null);
                 return FireCardEvent(state, cardEvent, player, cardEventAction.Indirect);
             }
             // Made into a full hand: it goes to the discard pile instead (CardPileCmd.Add), for a shuffle later in the turn.
             if (made && cardEventAction.MadeCard is { } madeName && simPlayer.Draw != null && simPlayer.MadeCards?.TryGetValue(madeName, out var madeProfile) == true)
-                state.MutablePlayer(player).Draw = simPlayer.Draw.WithDiscarded(madeProfile);
+                state.MutablePlayer(handOf).Draw = simPlayer.Draw.WithDiscarded(madeProfile);
         }
         // A made card outside the hand (or into a full one: the discard pile) still counts for a take of every pile.
         if (cardEvent is CardEvent.Generated or CardEvent.GeneratedStatus or CardEvent.GeneratedSadness)

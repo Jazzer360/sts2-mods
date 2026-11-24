@@ -68,9 +68,13 @@ public class CardCodeTests
         // Undeath's copy goes to your discard pile (a report: the hand was counted one too many); Severance's three go one to each pile,
         // so one into your hand; Bundle of Joy's all into your hand.
         GameModels.EnsureLoaded();
-        Assert.Equal(0, PlayFacts.MadeIntoHand(ModelDb.Card<Undeath>(), generated: 1));
-        Assert.Equal(1, PlayFacts.MadeIntoHand(ModelDb.Card<Severance>(), generated: 3));
-        Assert.Equal(4, PlayFacts.MadeIntoHand(ModelDb.Card<BundleOfJoy>(), generated: 4));
+        var undeath = SpireQoL.Procs.Programs.MadeCards.Summary(ModelDb.Card<Undeath>());
+        Assert.Equal((1, 0), (undeath.Made, undeath.IntoYourHand));
+        var severance = SpireQoL.Procs.Programs.MadeCards.Summary(ModelDb.Card<Severance>());
+        Assert.Equal((3, 1), (severance.Made, severance.IntoYourHand));
+        var bundle = SpireQoL.Procs.Programs.MadeCards.Summary(ModelDb.Card<BundleOfJoy>());
+        Assert.True(bundle.Made > 0);
+        Assert.Equal(bundle.Made, bundle.IntoYourHand);
     }
 
     [Fact]

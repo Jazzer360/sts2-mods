@@ -126,10 +126,6 @@ public sealed class PlayFacts
     public int GeneratedStatuses { get; private set; }
     /// <summary>Of those, Sadness cards you create (Fertilizer, All Is Well react: AfterCardGeneratedForCombat).</summary>
     public int SadnessCreated { get; private set; }
-    /// <summary>Where a play's count of made cards comes from as it runs (decision #189): given, the cards the play took, or your hand's room.</summary>
-    public SpireQoL.Sim.SimCount GeneratedFrom { get; init; }
-    /// <summary>One of the made cards is the Sovereign Blade its forge makes when you have none (ForgeCmd.Forge): the first play's only.</summary>
-    public bool ForgesBlade { get; init; }
 
     /// <summary>The cards a play puts back on your draw pile from your hand (Glimmer, Photon Cut: PutBack; Thinking Ahead one).</summary>
     internal static int PutBackCount(CardModel card) => card.GetType().Name == nameof(ThinkingAhead) ? 1 : Sts2State.Var(card, "PutBack", fallback: 1);
@@ -397,15 +393,12 @@ public sealed class PlayFacts
         if (card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Swift { Status: MegaCrit.Sts2.Core.Entities.Enchantments.EnchantmentStatus.Normal } swift)
             swiftDraws = swift.Amount;
         var drawPile = Sts2State.DrawPileCount(me);
-        var name = card.GetType().Name;
         var evoked = EvokedOrbs(card, me);
         var orbs = OrbDamageFor(evoked, me, combat);
-        var forged = ForgedBlade(card.GetType(), me);
-        // With the cards it makes for each player of your side that you make (Glimpse Beyond's, Blade Symphony's and Outrage's yours: read
-        // from its program).
-        var generated = GeneratedCount(card, name, others, me, out var statuses, out var generatedFrom) + forged + SpireQoL.Sim.SimAdapter.MadeByYouForYourSide(card);
+        // The cards it makes, read from its program's makes (MadeCards), the ones for each player of your side that you make included.
+        var made = Programs.MadeCards.Summary(card);
         // Cards the play puts into your hand (Bundle of Joy's four): they fill it before anything comes back.
-        var createdInHand = MadeIntoHand(card, generated);
+        var createdInHand = made.IntoYourHand;
 
         var facts = new PlayFacts
         {
@@ -435,12 +428,10 @@ public sealed class PlayFacts
                 ? Math.Max(draws, CardPile.MaxCardsInHand - (hand.Count - 1)) + swiftDraws : 0,
             EnchantmentDraws = swiftDraws,
             BlockGains = BlockGainCount(card),
-            Generated = generated,
+            Generated = made.Made,
             GeneratedInHand = createdInHand,
-            GeneratedStatuses = statuses,
-            GeneratedFrom = generatedFrom,
-            ForgesBlade = forged > 0,
-            SadnessCreated = Programs.CardEffects.MakesSadness(card.GetType()) ? statuses : 0,
+            GeneratedStatuses = made.Statuses + made.Sadness,
+            SadnessCreated = made.Sadness,
             CardsBack = ReturnToHand.Returning(card, me, plays, Math.Min(CardPile.MaxCardsInHand, hand.Count - 1 + createdInHand) + draws + swiftDraws,
                 Fool.Shoots(card, me) ? 1 : 0),
             TakenToHand = TakenToHandCount(card),
@@ -470,19 +461,6 @@ public sealed class PlayFacts
             DrawsBlocked = me.Creature.HasPower<NoDrawPower>() || me.Relics.Any(relic => relic is Fiddle),
         };
         return facts;
-    }
-
-    /// <summary>
-    /// How many of the <paramref name="generated"/> cards a play makes go into your hand: the share of its make calls that name your
-    /// hand (CardCode.MadeInto, the pile each passes, read from its code: Anger's copy into your discard pile, Severance's one of
-    /// three into your hand), exact when each call makes as many (they do). Made some other way (a forge): into your hand.
-    /// </summary>
-    internal static int MadeIntoHand(CardModel card, int generated)
-    {
-        var piles = CardCode.MadeInto(card.GetType());
-        if (piles.Count == 0 || generated <= 0) return generated;
-        var hand = piles.Count(pile => pile is null or PileType.Hand);
-        return hand == piles.Count ? generated : generated * hand / piles.Count;
     }
 
 
@@ -1071,7 +1049,7 @@ public sealed class PlayFacts
         {
             if (Programs.ProgramEvaluator.Holds(gain.Condition, board, program) == false) continue;
             // The loop over the players it gains each one's block in: yours once.
-            count += gain.Loops.Aggregate(1, (times, loop) => times * (Programs.CardEffects.GainsForEachOfLoop(gain.Command) ? 1 : Rounds(loop, board, program)));
+            count += gain.Loops.Aggregate(1, (times, loop) => times * (Programs.CardEffects.GainsForEachOfLoop(gain.Command) ? 1 : Programs.ProgramEvaluator.Rounds(loop, board, program)));
         }
         return count;
     }
@@ -1117,7 +1095,7 @@ public sealed class PlayFacts
         var hits = attack.Command.HitCountValue is not { } count ? 1
             : Programs.ProgramEvaluator.Number(count, board, program) is { } read ? (int)read
             : Least(count, board, program) ?? Math.Max(1, Sts2State.Var(card, "HitCount", Sts2State.Var(card, "Repeat", fallback: 1)));
-        return Math.Max(0, hits * attack.Loops.Aggregate(1, (times, loop) => times * Rounds(loop, board, program)));
+        return Math.Max(0, hits * attack.Loops.Aggregate(1, (times, loop) => times * Programs.ProgramEvaluator.Rounds(loop, board, program)));
     }
 
     /// <summary>The least a value two ways leave can be (Dismantle with no target: one hit), when each way's value can be told.</summary>
@@ -1162,7 +1140,7 @@ public sealed class PlayFacts
         var program = Programs.CardPrograms.Of(type);
         var board = new Programs.ProgramBoard(card);
         int Number(Programs.ProgramValue value, int fallback) => Programs.ProgramEvaluator.Number(value, board, program) is { } read ? (int)read : fallback;
-        int Times(Programs.CardEffects.Found found) => found.Loops.Aggregate(1, (times, loop) => times * Rounds(loop, board, program));
+        int Times(Programs.CardEffects.Found found) => found.Loops.Aggregate(1, (times, loop) => times * Programs.ProgramEvaluator.Rounds(loop, board, program));
         var slots = 0;
         foreach (var change in Programs.CardEffects.OrbSlotChanges(type))
             if (Programs.ProgramEvaluator.Holds(change.Condition, board, program) != false && change.Command.Values.Count > 1)
@@ -1187,24 +1165,6 @@ public sealed class PlayFacts
     }
 
     /// <summary>
-    /// How many rounds a loop of the play goes on the board: its foreach's collection (Chill: the enemies you can hit), its counter's
-    /// bound (i &lt; Repeat, i &lt; 2, i &lt; your X), or the card value it's over; one when none can be told (the game's template card).
-    /// </summary>
-    internal static int Rounds(Programs.LoopStep loop, Programs.ProgramBoard board, Programs.CardProgram program)
-    {
-        // A foreach: its collection's count (a counter loop inside one keeps the collection as its items too: its own bound is its rounds).
-        if (loop.Items != null && loop.Over.StartsWith("each of", StringComparison.Ordinal)) return Programs.ProgramEvaluator.Items(loop.Items, board, program) is { } items ? items.Count : 1;
-        if (loop.While is { Terms: [[{ Holds: true, Test: Programs.CompareValue { Op: Programs.Comparison.Less or Programs.Comparison.LessOrEqual } bound }]] }
-            && Programs.ProgramEvaluator.Number(bound.Right, board, program) is { } most)
-            return Math.Max(0, (int)most + (bound.Op == Programs.Comparison.LessOrEqual ? 1 : 0));
-        // decimal's own comparison (i < a card value as a decimal: Self-Deprecate's Joy, Brighten Up's).
-        if (loop.While is { Terms: [[{ Holds: true, Test: Programs.QueryValue { Name: "op_LessThan" or "op_LessThanOrEqual", Arguments: [_, var limit] } decimalBound }]] }
-            && Programs.ProgramEvaluator.Number(limit, board, program) is { } decimalMost)
-            return Math.Max(0, (int)decimalMost + (decimalBound.Name == "op_LessThanOrEqual" ? 1 : 0));
-        return board.Card.DynamicVars.ContainsKey(loop.Over) ? Sts2State.Var(board.Card, loop.Over) : 1;
-    }
-
-    /// <summary>
     /// The star gains of one play of the card: each PlayerCmd.GainStars in its play, on every way through it, to its owner, read from
     /// its own code (CardEnergy.CallsOf). A gain on a condition is guarded by it in the simulation instead (decision #190: Knockout Blow's kill).
     /// </summary>
@@ -1219,90 +1179,6 @@ public sealed class PlayFacts
     {
         try { return card.Tags.Contains(MegaCrit.Sts2.Core.Entities.Cards.CardTag.OstyAttack); }
         catch { return false; }
-    }
-
-    // ------------------------------------------------------------------ generated cards
-
-    // A card that makes Sadness (CardEffects.MakesSadness, from its program): its created statuses are all Sadness (GeneratedCount),
-    // so that count is the Sadness made.
-
-    internal static int GeneratedCount(CardModel card, string name, List<CardModel> others, Player me, out int statuses) => GeneratedCount(card, name, others, me, out statuses, out _);
-
-    /// <summary>
-    /// One play's made cards on the board, and where a later play's count comes from (decision #189): the cards the play took from your
-    /// hand (Storm of Steel, Stoke), or the room in your hand (Crash Landing, The Lovers, The Moon), read by the simulator as it runs.
-    /// </summary>
-    internal static int GeneratedCount(CardModel card, string name, List<CardModel> others, Player me, out int statuses, out SpireQoL.Sim.SimCount from)
-    {
-        statuses = 0;
-        from = SpireQoL.Sim.SimCount.Given;
-        int Var(string key, int fallback = 1) => Sts2State.Var(card, key, fallback);
-        switch (name)
-        {
-            // Statuses.
-            case nameof(BoostAway): case nameof(CollisionCourse): case nameof(GunkUp): case nameof(Overclock): case nameof(Turbo):
-                statuses = 1; return 1;
-            case nameof(FightThrough):
-                statuses = 2; return 2;
-            case nameof(CrashLanding):
-            {
-                var room = Math.Max(0, CardPile.MaxCardsInHand - others.Count);
-                statuses = room; from = SpireQoL.Sim.SimCount.HandRoom; return room;
-            }
-            // Shivs.
-            case nameof(BladeDance): case nameof(BladeOfInk): case nameof(CloakAndDagger): case nameof(UpMySleeve): return Var("Cards");
-            case nameof(FanOfKnives): case nameof(HiddenDaggers): return Var("Shivs");
-            case nameof(LeadingStrike): return Var("Shivs");
-            case nameof(StormOfSteel): from = SpireQoL.Sim.SimCount.CardsTaken; return others.Count;
-            // Souls.
-            case nameof(CaptureSpirit): case nameof(GraveWarden): case nameof(Reave): return Var("Cards");
-
-            case nameof(Severance): return 3;
-            case nameof(Dirge): return me?.PlayerCombatState?.Energy ?? 1; // X souls
-            // Other cards.
-            case nameof(BundleOfJoy): case nameof(JackOfAllTrades): case nameof(Jackpot): case nameof(Metamorphosis): case nameof(DualWield): return Var("Cards");
-            case nameof(HeirloomHammer): return Var("Repeat");
-            case nameof(Stoke): from = SpireQoL.Sim.SimCount.CardsTaken; return others.Count;
-            case nameof(Abundance): case nameof(AdaptiveStrike): case nameof(Anger): case nameof(Discovery): case nameof(Distraction):
-            case nameof(InfernalBlade): case nameof(Largesse): case nameof(ManifestAuthority): case nameof(Quasar):
-            case nameof(Splash): case nameof(Undeath): case nameof(WhiteNoise):
-                return 1;
-            // v0.113.0 (names as strings): the Fool's Sadness (a status) and Joy, The Shot, tarot and event cards.
-            case nameof(BlotOutTheSky): case nameof(Florescence): return 1;
-            case nameof(MourningBlow): case nameof(Vitriol): case nameof(Rummage): statuses = 1; return 1; // Mourning Blow turns into a Sadness
-            case nameof(Jest): case nameof(SorrowfulStrike): statuses = Var("Cards"); return statuses;
-            case nameof(BrightenUp): statuses = Var("Sadness", fallback: 2); return statuses + Var("Joy", fallback: 2);
-            // Sadness for you; the Joy for every other living player it makes is read from its program (SimAdapter.MadeByYouForYourSide).
-            case nameof(SelfDeprecate):
-                statuses = Var("Sadness", fallback: 1);
-                return statuses;
-            case nameof(TheHierophant): return Var("Cards", fallback: 3);
-            case nameof(TheLovers): from = SpireQoL.Sim.SimCount.HandRoom; return Math.Max(0, CardPile.MaxCardsInHand - others.Count);
-            // Shivs until your hand is full (TheMoon.OnPlay: MaxCardsInHand - hand, once it has left your hand).
-            case nameof(TheMoon): from = SpireQoL.Sim.SimCount.HandRoom; return Math.Max(0, CardPile.MaxCardsInHand - others.Count);
-            case nameof(TheSun): statuses = 1; return 1; // a Soot into your discard pile
-            case nameof(MightyShield): case nameof(MightyWeapon): statuses = Var("Cards"); return statuses; // Dazed into your draw pile
-        }
-        return 0;
-    }
-
-    /// <summary>
-    /// A card that forges (CardEffects.Forges: ForgeCmd.Forge in its program). Forging creates a Sovereign Blade in your hand when you have none outside your exhaust pile
-    /// (ForgeCmd.Forge, through AddGeneratedCardToCombat); later forges only add damage. Once per play
-    /// chain: a replay finds the blade the first play made.
-    /// </summary>
-    private static int ForgedBlade(Type cardType, Player me)
-    {
-        if (!Programs.CardEffects.Forges(cardType)) return 0;
-        try
-        {
-            var hasBlade = me.PlayerCombatState?.AllCards.Any(card => card is SovereignBlade && !card.IsDupe && card.Pile?.Type != PileType.Exhaust) ?? true;
-            return hasBlade ? 0 : 1;
-        }
-        catch
-        {
-            return 0;
-        }
     }
 
     // ------------------------------------------------------------------ debuffs
