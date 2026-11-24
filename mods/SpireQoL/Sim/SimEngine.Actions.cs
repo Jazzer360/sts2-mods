@@ -503,11 +503,17 @@ public static partial class SimEngine
         return true;
     }
 
+    /// <summary>An application's amount as it lands: its own, the applier's amount of the power (Cho Ki), or the target's (Molten Fist).</summary>
+    private static int AmountOf(SimState state, ApplyPowerAction apply, int applier, int target) =>
+        apply.CopiesOwn ? PowerOn(state, applier, apply.Power)
+        : apply.CopiesTarget ? (apply.Power == PowerId.Poison ? state.Enemy(target)?.PoisonStacks ?? 0 : PowerOn(state, target, apply.Power))
+        : apply.Amount;
+
     /// <summary>The power on each creature it reaches, then AfterPowerApplied for each that landed (Artifact took none of it).</summary>
     private static void RunApplyPower(BranchSet branches, ApplyPowerAction applyPowerAction)
     {
         IEnumerable<SimState> Apply(SimState state, int applier, int target) =>
-            ApplyPower(state, applier, target, applyPowerAction.Power, applyPowerAction.CopiesOwn ? PowerOn(state, applier, applyPowerAction.Power) : applyPowerAction.Amount, applyPowerAction.Debuff)
+            ApplyPower(state, applier, target, applyPowerAction.Power, AmountOf(state, applyPowerAction, applier, target), applyPowerAction.Debuff)
                 ? Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, branch) => model.AfterPowerApplied(branch, owner, applyPowerAction.Power, applyPowerAction.Amount, applier, target, applyPowerAction.Debuff)) : new[] { state };
         if (applyPowerAction.To == ApplyPowerAction.Where.RandomEnemy)
         {

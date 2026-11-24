@@ -41,6 +41,11 @@ public class ConditionTranslationTests
         ("ForgottenRitual", "PlayerCmd.GainEnergy", 0, "History>0", false),
         ("KiRest", "PowerCmd.Apply", 1, "any(History>0, History>0)", false),
         ("ArrowStab", "CardPileCmd.Add", 0, "all(ArrowsAvailable>0, HandCards<)", false),
+        // The board the simulator keeps: the target's powers and intent, your exhaust pile.
+        ("BubbleBubble", "PowerCmd.Apply", 0, "TargetPower>0", false),
+        ("GoForTheEyes", "PowerCmd.Apply", 0, "TargetIntendsToAttackCondition", false),
+        ("MoltenFist", "PowerCmd.Apply", 0, "not TargetPowerLessOrEqual", false),
+        ("PactsEnd", "DamageCmd.Attack", 0, "ExhaustPileGreaterOrEqual", false),
     };
 
     /// <summary>Cards whose step main runs on every play (main's Forgotten Ritual gains its energy with no test).</summary>

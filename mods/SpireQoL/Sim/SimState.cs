@@ -92,6 +92,11 @@ public sealed class SimEnemy
     /// <summary>Keeps its block between turns (BarricadePower, or BurrowedPower.ShouldClearBlock).</summary>
     [JsonIgnore] public bool Barricade { get => Powers.Has(PowerId.Barricade) || Powers.Has(PowerId.Burrowed); set => Set(PowerId.Barricade, value ? 1 : 0); }
     public bool Stunned;
+    /// <summary>
+    /// Its next move is an attack (MonsterModel.IntendsToAttack: an Attack or Death Blow intent), read from the game; a stun replaces the move
+    /// (CreatureCmd.Stun sets the STUNNED move), so it doesn't attack once Stunned (Go for the Eyes' test).
+    /// </summary>
+    public bool IntendsToAttack;
     /// <summary>Its attack this turn: damage of each hit on you (the intent's numbers).</summary>
     public List<int> Hits = new();
     /// <summary>
@@ -232,7 +237,7 @@ public sealed class SimEnemy
     internal void Hash(Action<long> add)
     {
         add(Id); add(Hp); add(Block); add(UnblockedInstances); add(FirstHitFullyBlocked ? 1 : 0); add(Poison); add(DiedBeforeActing ? 1 : 0);
-        add(PoisonStacks); add(Stunned ? 1 : 0); add(ReactedWithBlock ? 1 : 0); add(BlockBroken ? 1 : 0); add(GambitTriggered ? 1 : 0);
+        add(PoisonStacks); add(Stunned ? 1 : 0); add(IntendsToAttack ? 1 : 0); add(ReactedWithBlock ? 1 : 0); add(BlockBroken ? 1 : 0); add(GambitTriggered ? 1 : 0);
         add(SlipperyTriggered ? 1 : 0); add(Exploded ? 1 : 0);
         Powers.Hash(add); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         add(Hits.Count); foreach (var hit in Hits) add(hit);
@@ -356,6 +361,8 @@ public sealed class SimPlayer
     /// Soot), by the card's class name, as the adapter reads them for this board: SimEngine.IntoDrawPile. Null: none.
     /// </summary>
     public IReadOnlyDictionary<string, SimDrawCard>? MadeCards;
+    /// <summary>The cards in their exhaust pile (Pact's End's test): read from the game, one more for each card exhausted (CardEvent.Exhausted).</summary>
+    public int ExhaustPile;
     /// <summary>Cards drawn in this simulation (each drawn card's id in AutoHand).</summary>
     public int Drawn;
     /// <summary>Cards taken from your draw pile into your hand in this simulation (each one's id in AutoHand: TakenId).</summary>
@@ -519,7 +526,7 @@ public sealed class SimPlayer
     {
         add(Block); add(Hp); add(MaxHp); add(Taken); add(Through); add(OstyTaken); add(UnblockableTaken); add(Incoming); add(BlockGained);
         add(WuppyHp); add(WuppyTaken); add(OstyHp); add(Died ? 1 : 0); add(LizardTailUsed ? 1 : 0); add(LizardTailHeal); add(FairiesUsed); add(Fairies);
-        add(BlockGains); add(Energy); add(HandCount); add(PlayingFromHand); add(Arrows); add(Fading); add(HexFading); add(HexFrom); add(Drawn); add(TakenToHand); add(StatusDrawn);
+        add(BlockGains); add(Energy); add(HandCount); add(PlayingFromHand); add(Arrows); add(Fading); add(HexFading); add(HexFrom); add(Drawn); add(ExhaustPile); add(TakenToHand); add(StatusDrawn);
         add(AttacksThisTurn); add(Focus); add(Thunder); add(OrbCapacity); add(BeaconGiving ? 1 : 0); add(InvincibleBlock); add(InvincibleDrawPile);
         Draw?.Hash(add);
         add(TurnEndCards.Count);

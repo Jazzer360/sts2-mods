@@ -693,7 +693,7 @@ public static partial class SimAdapter
             if (PlayFacts.IsDebuffType(type))
             {
                 if (!debuffs.Contains(type) || whereEnemies is not { } where) continue;
-                actions.Add(new ApplyPowerAction(new PowerId(simPowerName), AmountOf(type)) { To = where, Debuff = true });
+                actions.Add(new ApplyPowerAction(new PowerId(simPowerName), AmountOf(type)) { To = where, Debuff = true, CopiesTarget = AppliesTargetsAmount(card.GetType(), type.Name) });
             }
             else if (card.TargetType == TargetType.AnyAlly && allyId != Who.None && simPowerName == nameof(CoveredPower))
             {
@@ -713,6 +713,17 @@ public static partial class SimAdapter
         foreach (var (_, amount, all) in enemyStrength)
             actions.Add(new ApplyPowerAction(PowerId.Strength, amount) { To = all ? ApplyPowerAction.Where.AllEnemies : ApplyPowerAction.Where.Target, Debuff = amount < 0 });
         return actions;
+    }
+
+    /// <summary>
+    /// Every PowerCmd.Apply of <paramref name="power"/> the card's code makes applies the target's own amount of it, as it is when it lands
+    /// (Molten Fist: its Vulnerable again), read from the amount argument (ConditionReader.TargetPowerOf).
+    /// </summary>
+    private static bool AppliesTargetsAmount(Type cardType, string power)
+    {
+        var applies = Procs.Programs.CardPrograms.Of(cardType).Commands
+            .Where(command => command.Command is { DeclaringType: "PowerCmd", Name: "Apply" } && command.Command.GenericArguments.SequenceEqual(new[] { power })).ToList();
+        return applies.Count > 0 && applies.All(apply => apply.Values.Count > 2 && Procs.Programs.ConditionReader.TargetPowerOf(Unstored(apply.Values[2])) == power);
     }
 
     /// <summary>

@@ -142,10 +142,20 @@ public static class ConditionReader
         if (reading.Way != ConditionWay.Simulated) return reading;
         var condition = positive ? reading.Condition! : new NotCondition(reading.Condition!);
         if (!stored) return reading with { Condition = condition };
-        // A local the code stores, read later: asked where it's stored. Only before the play's first command can that be placed.
+        // A local the code stores, read later: asked where it's stored. Only before the play's first command can that be placed; one stored
+        // with no command between its store and its test (Molten Fist's num, right before its if) is the same asked at the test.
+        if (NoCommandBetween(context, storedAt, literal.At)) return reading with { Condition = condition };
         if (context.Program.Commands.Any(command => command.Offset < storedAt))
             return new ConditionReading(ConditionWay.NotRead) { Reason = $"a test stored after the play's first command ({literal.Test})" };
         return reading with { Condition = condition, AskFirst = reading.AskFirst.Append(reading.Condition!).ToList() };
+    }
+
+    /// <summary>No command of the play runs between a local's store and the test that reads it (its branch's offset, in the same method).</summary>
+    private static bool NoCommandBetween(Context context, int storedAt, string at)
+    {
+        var colon = at.LastIndexOf(':');
+        if (colon < 0 || !int.TryParse(at[(colon + 1)..], System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out var testAt) || testAt < storedAt) return false;
+        return !context.Program.Commands.Any(command => command.Offset > storedAt && command.Offset < testAt);
     }
 
     /// <summary>A value's test, positive (a literal's direction is applied by the caller), its At kept for the engine's once-a-play asking.</summary>
@@ -191,6 +201,8 @@ public static class ConditionReader
         if (CountedTest(test, context, at) is { } counted) return counted;
         // A question to the fight's log (decision #191: the history ledger): whether there's any, or its count compared with a number.
         if (LoggedTest(test, context, at) is { } logged) return logged;
+        // The board the simulator keeps: the target's powers and intent, your exhaust pile.
+        if (BoardTest(test, context, at) is { } board) return board;
         // A property of the card: its upgrade, an auto-property (set when it's made: Mad Science's rider), or a getter read from its code.
         if (test is QueryValue { IsProperty: true, Of: NamedValue { Name: "this" }, Name: var property })
         {
@@ -258,6 +270,53 @@ public static class ConditionReader
             return HistoryQueryReader.Read(count) is { Query: { } counted } ? Simulated(counted, Compared(compare.Op), number)
                 : new ConditionReading(ConditionWay.NotRead) { Reason = "a question to the fight's log the ledger doesn't count", Unread = test };
         return null;
+    }
+
+    /// <summary>
+    /// A test of the board the simulator keeps, asked as the step runs: the target has a power (HasPower&lt;T&gt;: Bubble Bubble's poison), its
+    /// amount of one compared with a number (Molten Fist's Vulnerable, 0 when it's dead), it intends to attack (Go for the Eyes), the cards
+    /// in your exhaust pile compared with a number (Pact's End). Null when it's none of those.
+    /// </summary>
+    private static ConditionReading? BoardTest(ProgramValue test, Context context, string? at)
+    {
+        ConditionReading Simulated(SimCondition condition) => new(ConditionWay.Simulated) { Condition = condition with { At = at } };
+        if (test is QueryValue { Name: "HasPower", GenericArguments: [var power], Of: { } holder } && IsTarget(holder))
+            return Simulated(new CountCondition(SimCounted.TargetPower, SimCompare.Greater, Than: 0) { Power = PowerId.Of(power) });
+        if (test is QueryValue { Name: "IntendsToAttack", Of: QueryValue { Name: "Monster", Of: { } monster } } && IsTarget(monster))
+            return Simulated(new TargetIntendsToAttackCondition());
+        if (test is not CompareValue { Left: var left, Right: var right } compare || !IsCardsOwn(right, context)) return null;
+        var number = Number(right, context);
+        if (number == null && context.Board != null) return null;
+        if (TargetPowerOf(Unstored(left)) is { } amountOf)
+            return Simulated(new CountCondition(SimCounted.TargetPower, Compared(compare.Op), number ?? 0) { Power = PowerId.Of(amountOf) });
+        if (IsExhaustPileCount(Unstored(left)))
+            return Simulated(new CountCondition(SimCounted.ExhaustPile, Compared(compare.Op), number ?? 0));
+        return null;
+    }
+
+    /// <summary>
+    /// The power whose amount on the target the value is: GetPowerAmount&lt;T&gt;() of the target, or that when it's alive and 0 when it isn't
+    /// (Molten Fist: target.IsAlive ? target.GetPowerAmount&lt;VulnerablePower&gt;() : 0); null for anything else.
+    /// </summary>
+    internal static string? TargetPowerOf(ProgramValue value)
+    {
+        if (value is QueryValue { Name: "GetPowerAmount", GenericArguments: [var power], Of: { } holder } && IsTarget(holder)) return power;
+        if (value is WaysValue { Ways: [var first, var second] }
+            && new[] { first, second }.SingleOrDefault(way => way.Value is ConstantValue { Value: 0 }) is { When: { } dead } && dead.Terms is [[{ Test: QueryValue { Name: "IsAlive" } deadTest, Holds: false }]] && IsTarget(deadTest.Of!)
+            && new[] { first, second }.SingleOrDefault(way => way.Value is not ConstantValue) is { Value: var amount, When: { } alive } && alive.Terms is [[{ Test: QueryValue { Name: "IsAlive" } aliveTest, Holds: true }]] && IsTarget(aliveTest.Of!))
+            return TargetPowerOf(amount);
+        return null;
+    }
+
+    /// <summary>The cards in your exhaust pile: Count(CardPile.GetCards(Owner, [Exhaust])) or GetPile(Exhaust, Owner).Cards.Count.</summary>
+    private static bool IsExhaustPileCount(ProgramValue value)
+    {
+        static bool IsExhaust(ProgramValue pile) => pile is ConstantValue { Value: var type } && HistoryQueryReader.LoadedEnumName("PileType", type) == "Exhaust";
+        if (value is QueryValue { Type: "Enumerable", Name: "Count", Arguments: [QueryValue { Name: "GetCards", Arguments: [var owner, ArrayValue { Items: [var pile] }] }] })
+            return IsOwner(owner) && IsExhaust(pile);
+        if (value is QueryValue { Name: "Count", IsProperty: true, Of: QueryValue { Name: "Cards", Of: QueryValue { Name: "GetPile", Arguments: [var pileType, var player] } } })
+            return IsExhaust(pileType) && IsOwner(player);
+        return false;
     }
 
     private static bool IsCount(ProgramValue value) =>

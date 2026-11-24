@@ -72,6 +72,8 @@ public static partial class SimEngine
             case TargetImpaledCondition impaled:
                 if (state.Enemy(target) is null) return false;
                 return impaled.ByOwner ? PowersOf(state, target).Has(Impaled) : IsImpaled(state, target);
+            case TargetIntendsToAttackCondition:
+                return state.Enemy(target) is { Alive: true, IntendsToAttack: true, Stunned: false };
             case CountCondition counted:
                 return CountOf(state, counted, owner) is { } count ? Compares(count, counted.Compare, counted.Than) : null;
             case NotCondition not:
@@ -119,6 +121,11 @@ public static partial class SimEngine
                 return counted.Before + (state.CurrentPlay?.PlayIndex ?? 0);
             case SimCounted.ArrowsAvailable:
                 return state.Player(owner)?.Arrows ?? 0;
+            case SimCounted.ExhaustPile:
+                return state.Player(owner)?.ExhaustPile ?? 0;
+            case SimCounted.TargetPower:
+                if (counted.Power is not { } power || state.Enemy(state.CurrentPlay?.Target ?? Who.None) is not { Alive: true } aimedAt) return 0;
+                return power == PowerId.Poison ? aimedAt.PoisonStacks : aimedAt.Powers[power];
             case SimCounted.History:
                 if (counted.Query == null) return null;
                 var logged = HistoryCount(state, owner, counted.Query);

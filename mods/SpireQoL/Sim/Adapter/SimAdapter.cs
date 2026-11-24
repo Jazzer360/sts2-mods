@@ -122,6 +122,7 @@ public static partial class SimAdapter
                 Poison = SafeInt(() => creature.GetPower<PoisonPower>()?.CalculateTotalDamageNextTurn() ?? 0),
                 PoisonStacks = creature.GetPower<PoisonPower>()?.Amount ?? 0,
                 PoisonTriggers = PoisonTriggers(creature, combat),
+                IntendsToAttack = creature.IsAlive && SafeBool(() => creature.Monster?.IntendsToAttack == true),
             };
             // Every power, with the numbers its model keeps (Curl Up, Sneaky, Skittish, Thorns, Burrowed, Asleep, Slumber, Flutter,
             // Plow, Shriek, The Gambit, Slippery, Hard to Kill, Intangible, Hardened Shell, Barricade, Strength, Weak...).
@@ -671,6 +672,7 @@ public static partial class SimAdapter
         }
 
         player.HandCount = hand.Count;
+        player.ExhaustPile = SafeInt(() => PileType.Exhaust.GetPile(me).Cards.Count);
         player.Energy = pcs.Energy;
         player.Arrows = SpireQoL.Procs.Fool.ArrowsAvailable(me);
         player.Fading = hand.Count(card => IsFading(card, combat));
@@ -857,6 +859,11 @@ public static partial class SimAdapter
     private static int SafeInt(Func<int> read, int fallback)
     {
         try { return read(); } catch { return fallback; }
+    }
+
+    private static bool SafeBool(Func<bool> read)
+    {
+        try { return read(); } catch { return false; }
     }
 
     private static string SafeCardTitle(CardModel card)

@@ -322,8 +322,8 @@ internal static class CardCoverage
         ["a command's result"] = "what an earlier command of the play gave (a drawn card, a shot's arrow, a made card, damage results): the action that follows it asks it where the simulator has one (Escape Plan's draw, a shot's NeedsArrow, Rain Shot's splash); else decided on the board (TRACKER 20)",
         ["the fight"] = "the fight going on, the card being in it, its room a fight, a test hook (IsOverOrEnding, CombatState, CurrentRoom, a mock): holds in every simulated play",
         ["a taken card"] = "a test of each card a loop or a pick takes (The Hermit's Curse): the take's own filter (TakeFromHandAction), followed through the play",
-        ["the target"] = "a test of the target the simulator doesn't ask yet (alive, its powers, its intent): decided on the board (TRACKER 20); Judgement's HP and Expose's Artifact are asked by their actions",
-        ["a count of the board"] = "a count the simulator doesn't keep or doesn't ask yet (your orbs, the enemies, your exhaust, draw or discard pile, your hand's room): decided on the board (TRACKER 20); a take into your hand reads your hand's room as it runs",
+        ["the target"] = "a test of the target the simulator doesn't ask yet (dead or alive, every power's own test, Imitation Learning's copy): decided on the board (TRACKER 20); its powers (HasPower, GetPowerAmount) and its intent to attack are asked as the step runs; Judgement's HP and Expose's Artifact are asked by their actions",
+        ["a count of the board"] = "a count the simulator doesn't keep or doesn't ask yet (your orbs, the enemies, your draw or discard pile, your hand's room; your exhaust pile is asked as the step runs): decided on the board (TRACKER 20); a take into your hand reads your hand's room as it runs",
         ["your powers"] = "a power of yours or a teammate's tested by the code (Cho Ki's Stretch, Sovereign Blade's Parry, Imitation Learning, Frantic Escape): decided on the board (TRACKER 20)",
         ["the reader"] = "a value the reader can't follow yet (a helper's local, an array's length): decided on the board as before (docs/CARD_PROGRAMS.md A5)",
     };

@@ -19,6 +19,8 @@ public enum SimTest
     All,
     /// <summary>At least one of several conditions holds.</summary>
     Any,
+    /// <summary>The play's target intends to attack (MonsterModel.IntendsToAttack), and isn't stunned since.</summary>
+    TargetIntendsToAttack,
 }
 
 /// <summary>How a counted condition compares its count with its number.</summary>
@@ -45,6 +47,10 @@ public enum SimCounted
     /// this turn (Forgotten Ritual, Evil Eye), HP lost this turn (Spite), Doom applied this turn (Death's Door), Osty's attacks (Flatten).
     /// </summary>
     History,
+    /// <summary>The cards in the play owner's exhaust pile (CardPile.GetCards(Owner, Exhaust): Pact's End).</summary>
+    ExhaustPile,
+    /// <summary>The play's target's amount of a power (CountCondition.Power: HasPower, GetPowerAmount), 0 when it's dead or there's none.</summary>
+    TargetPower,
 }
 
 /// <summary>
@@ -70,6 +76,9 @@ public sealed record AttackKilledCondition() : SimCondition(SimTest.AttackKilled
 /// <summary>The play owner's Osty is missing or dead (Osty.CheckMissingWithAnim).</summary>
 public sealed record OstyMissingCondition() : SimCondition(SimTest.OstyMissing);
 
+/// <summary>The play's target intends to attack (MonsterModel.IntendsToAttack: Go for the Eyes), not stunned since.</summary>
+public sealed record TargetIntendsToAttackCondition() : SimCondition(SimTest.TargetIntendsToAttack);
+
 /// <summary>The play's target is impaled: by anyone's arrow, or with <paramref name="ByOwner"/> by the play owner's.</summary>
 public sealed record TargetImpaledCondition(bool ByOwner) : SimCondition(SimTest.TargetImpaled);
 
@@ -87,6 +96,9 @@ public sealed record CountCondition(SimCounted Counted, SimCompare Compare, int 
 
     /// <summary>History: the query of the fight's log it counts (its count in the ledger: SimEngine.HistoryCount).</summary>
     public HistoryQuery? Query { get; init; }
+
+    /// <summary>TargetPower: the power.</summary>
+    public PowerId? Power { get; init; }
 }
 
 /// <summary>The condition doesn't hold.</summary>
