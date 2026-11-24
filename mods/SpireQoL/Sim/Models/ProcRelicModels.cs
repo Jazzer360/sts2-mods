@@ -132,7 +132,7 @@ public sealed class BurningSticks : RelicProc
     {
         if (cardEvent != CardEvent.Exhausted || player != owner || !Armed(state, owner) || state.EventCard?.Type != SimCardType.Skill) return One(state);
         Disarm(state, owner);
-        return MakeInHand(Fire(state, owner), CardEvent.Generated, count: 1, owner);
+        return MakeInHand(Fire(state, owner), state.EventCard, count: 1, owner); // a clone of the card exhausted
     }
 }
 
@@ -148,7 +148,7 @@ public sealed class MusicBox : RelicProc
     {
         if (!Mine(play, owner) || TakeBound(state, owner) is null) return One(state);
         Disarm(state, owner);
-        return MakeInHand(Fire(state, owner), CardEvent.Generated, count: 1, owner, ethereal: true);
+        return MakeInHand(Fire(state, owner), play.Card, count: 1, owner, ethereal: true); // a clone of the Attack played
     }
 }
 

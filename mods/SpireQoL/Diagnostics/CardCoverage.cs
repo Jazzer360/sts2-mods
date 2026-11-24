@@ -276,9 +276,10 @@ internal static class CardCoverage
         // A card that auto-plays cards from your draw pile: the simulator plays them (which pile position, how many).
         if (Calls("CardPileCmd", "AutoPlayFromDrawPile") && !Procs.Programs.CardEffects.AutoPlaysFromDrawPile(card.GetType()))
             issues.Add("auto-plays cards from your draw pile (not simulated: what they do)");
-        // Sadness made by the card (Fertilizer, All Is Well react): its created statuses are counted as Sadness only for these.
-        if (calls.Any(call => call.EndsWith(".CreateCard<Sadness>", StringComparison.Ordinal)) && !Procs.Programs.CardEffects.MakesSadness(card.GetType()))
-            issues.Add("creates a Sadness (not counted: Fertilizer, All Is Well)");
+        // A card made carries its class and type to the created-card hooks (All Is Well's Sadness, Smokestack's Status): one its code creates
+        // that no make carries is a card those hooks can't tell.
+        if (Procs.Programs.CardEffects.CreatedNotMade(card.GetType()) is [var notMade, ..])
+            issues.Add($"creates a {notMade} no make of its carries (what it is isn't told to the created-card hooks: All Is Well, Smokestack)");
         // Forging creates the Sovereign Blade through ForgeCmd, not in the card's own code.
         if (Calls("ForgeCmd", "Forge") && !Procs.Programs.CardEffects.Forges(card.GetType()))
             issues.Add("forges (its Sovereign Blade isn't counted: created-card procs)");

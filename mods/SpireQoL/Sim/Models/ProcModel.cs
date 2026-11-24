@@ -61,18 +61,18 @@ public abstract class ProcModel : SimModel
     /// <summary>Card events it causes (Dark Embrace's draws, Calamity's cards), after the branches it's given, each through every listener.</summary>
     /// <remarks>A draw or energy tab's amount is what the events gave: each card drawn (fewer into a full hand or from empty
     /// piles), each energy (decision #132).</remarks>
-    protected IEnumerable<SimState> Cause(IEnumerable<SimState> states, CardEvent cardEvent, int count, int player)
+    protected IEnumerable<SimState> Cause(IEnumerable<SimState> states, CardEvent cardEvent, int count, int player, SimCard? card = null)
     {
         var tally = SimEngine.TallyFor(Name, Tab, cardEvent, player);
-        return states.SelectMany(branch => SimEngine.ProcCardEvent(branch, cardEvent, count, player, onEach: tally)).ToList();
+        return states.SelectMany(branch => SimEngine.ProcCardEvent(branch, cardEvent, count, player, onEach: tally, card: card)).ToList();
     }
 
     /// <summary>
     /// Cards made into a player's hand (CardPileCmd.AddGeneratedCardToCombat to PileType.Hand): they join the hand
-    /// (SimEngine.AddToHand), then what reacts to cards made runs (AfterCardGeneratedForCombat).
+    /// (SimEngine.AddToHand), then what reacts to cards made runs (AfterCardGeneratedForCombat), about <paramref name="card"/>.
     /// </summary>
-    protected IEnumerable<SimState> MakeInHand(IEnumerable<SimState> states, CardEvent made, int count, int player, bool ethereal = false) =>
-        Cause(states.Select(branch => { SimEngine.AddToHand(branch, player, count, ethereal); return branch; }).ToList(), made, count, player);
+    protected IEnumerable<SimState> MakeInHand(IEnumerable<SimState> states, SimCard? card, int count, int player, bool ethereal = false) =>
+        Cause(states.Select(branch => { SimEngine.AddToHand(branch, player, count, ethereal); return branch; }).ToList(), CardEvent.Generated, count, player, card);
 
     /// <summary>Channels <paramref name="times"/> orbs of a kind for a player, one after another (OrbCmd.Channel); a random one is a branch per orb.</summary>
     protected static IEnumerable<SimState> Channel(IEnumerable<SimState> states, int player, OrbKind kind, int times)
@@ -81,9 +81,6 @@ public abstract class ProcModel : SimModel
         for (var i = 0; i < times; i++) otherStates = otherStates.SelectMany(branch => SimEngine.ChannelKind(branch, kind, player)).ToList();
         return otherStates;
     }
-
-    /// <summary>Any card created for combat (AfterCardGeneratedForCombat), statuses and Sadness included.</summary>
-    protected static bool Generated(CardEvent cardEvent) => cardEvent is CardEvent.Generated or CardEvent.GeneratedStatus or CardEvent.GeneratedSadness;
 }
 
 /// <summary>A relic proc: its amount is its counter, its data a flag (armed, used this turn...), its values its DynamicVars.</summary>

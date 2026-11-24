@@ -43,7 +43,7 @@ public static partial class SimAdapter
         ["CardPileCmd.Shuffle"] = "ShuffleDrawPileAction (with the hand the play put into your draw pile)",
         ["CardPileCmd.ShuffleIfNecessary"] = "ShuffleDrawPileAction when the draw pile is empty",
         ["CardPileCmd.AutoPlayFromDrawPile"] = "AutoPlayFromDrawAction: its count, exhaust and upgrading callback",
-        ["CardPileCmd.AddGeneratedCardToCombat"] = "CardEventAction(Generated, GeneratedStatus or GeneratedSadness) for its creator, one, into the pile it names (MadeCards)",
+        ["CardPileCmd.AddGeneratedCardToCombat"] = "CardEventAction(Generated), about the card it makes when its code names it (its class and type), for its creator, one, into the pile it names (MadeCards)",
         ["CardPileCmd.AddGeneratedCardsToCombat"] = "the same, as many as its list holds: a Create's count, a card factory's count, the rounds of the loop that filled it",
         ["CardPileCmd.AddToCombatAndPreview"] = "the same, its count argument of the card it names, for the target's player",
         ["ForgeCmd.Forge"] = "the Sovereign Blade it makes when you have none (the first play's)",
@@ -837,7 +837,7 @@ public static partial class SimAdapter
         // Transformed outside your hand (Charge, Seance: your draw pile): a created card each, in place; none certain when you choose how many.
         if (take is { PickPile: not (null or PileType.Hand) } && command.Command.Name.StartsWith("Transform", StringComparison.Ordinal) && !take.ChoosesHowMany
             && BoardCounts.TransformsOutsideHand(card) is > 0 and var transformed)
-            actions.Add(new CardEventAction(CardEvent.Generated, transformed) { Indirect = true });
+            actions.Add(new CardEventAction(CardEvent.Generated, transformed) { Indirect = true, Card = MadeSimCard(MadeCards.TransformedInto(command, play.Program)) });
         // A Sly card it discards without a choice (the whole hand: CardCmd.Discard's AutoPlay) plays itself: not simulated yet (tracker). One
         // you pick is a card, never a particular one (decision #188).
         if (take is { Way: CardEffects.TakeWay.Each } && command.Command.Name is "Discard" or "DiscardAndDraw" && BoardCounts.DiscardsSlyWithoutPick(play.Card))
@@ -865,6 +865,8 @@ public static partial class SimAdapter
         foreach (var (take, key, cardEvent, eventIfNot, leaves) in BoardCounts.TakesInOrder(card))
         {
             var actions = result.TryGetValue(take.Command, out var already) ? already : result[take.Command] = new List<SimAction>();
+            // A transform's made card, when its code names it: the created-card event's card.
+            var made = cardEvent == CardEvent.Generated ? MadeSimCard(MadeCards.TransformedInto(take.Command, program)) : null;
             if (eventIfNot != null && CardEffects.Discards(type).FirstOrDefault(discard => ReferenceEquals(discard.Pick, take.Pick)) is { } shared) play.Consumed.Add(shared.Command);
             switch (take.Way)
             {
@@ -877,7 +879,7 @@ public static partial class SimAdapter
                     var filtered = !take.ItemTest.IsAlways || eventIfNot != null;
                     actions.Add(new TakeFromHandAction(HandTakeWay.Pick)
                     {
-                        Event = cardEvent, EventIfNot = eventIfNot, Leaves = leaves, Most = Count(take.PerPick),
+                        Event = cardEvent, Made = made, EventIfNot = eventIfNot, Leaves = leaves, Most = Count(take.PerPick),
                         Filter = filtered ? key : null, Matching = filtered ? BoardCounts.MatchingAtStart(card, take, everyPile: false) : 0,
                     });
                     break;
@@ -887,17 +889,17 @@ public static partial class SimAdapter
                     var way = take.Way == CardEffects.TakeWay.Random ? HandTakeWay.Random : take.Single ? HandTakeWay.Pick : HandTakeWay.Each;
                     var most = take.Way == CardEffects.TakeWay.Random ? Count(take.RollCount) : 1;
                     if (CardEffects.IsYourWholeHand(take.Items) && take.ItemTest.IsAlways)
-                        actions.Add(new TakeFromHandAction(way) { Event = cardEvent, Leaves = leaves, Most = most, EachCard = EachCardOf(take, play) });
+                        actions.Add(new TakeFromHandAction(way) { Event = cardEvent, Made = made, Leaves = leaves, Most = most, EachCard = EachCardOf(take, play) });
                     else if (BoardCounts.TakesFromEveryPile(card, take))
                     {
                         // Every pile's (Flak Cannon): its hand's share leaves first, then each card of every pile sets off its event.
                         actions.Add(new TakeFromHandAction(way) { Leaves = leaves, Most = most, Filter = key, Matching = BoardCounts.MatchingAtStart(card, take, everyPile: false) });
-                        actions.Add(new TakeFromHandAction(way) { Event = cardEvent, Leaves = false, Most = most, Filter = "all:" + key, Matching = BoardCounts.MatchingAtStart(card, take, everyPile: true), EachCard = EachCardOf(take, play) });
+                        actions.Add(new TakeFromHandAction(way) { Event = cardEvent, Made = made, Leaves = false, Most = most, Filter = "all:" + key, Matching = BoardCounts.MatchingAtStart(card, take, everyPile: true), EachCard = EachCardOf(take, play) });
                     }
                     else
                         actions.Add(new TakeFromHandAction(way)
                         {
-                            Event = cardEvent, Leaves = leaves, Most = most, Filter = key, Matching = BoardCounts.MatchingAtStart(card, take, everyPile: false), EachCard = EachCardOf(take, play),
+                            Event = cardEvent, Made = made, Leaves = leaves, Most = most, Filter = key, Matching = BoardCounts.MatchingAtStart(card, take, everyPile: false), EachCard = EachCardOf(take, play),
                         });
                     break;
                 }
@@ -1042,7 +1044,7 @@ public static partial class SimAdapter
         if (MadeCards.Of(play.Type).FirstOrDefault(make => ReferenceEquals(make.Found?.Command, found.Command)) is not { } make) return new List<SimAction>();
         if (make.By == MadeCards.Way.Forged)
             return MadeCards.HasBlade(play.Card) ? new List<SimAction>()
-                : new List<SimAction> { new FirstPlayOnly(new SimAction[] { new CardEventAction(CardEvent.Generated, Count: 1) { Indirect = true, JoinsHand = true } }) };
+                : new List<SimAction> { new FirstPlayOnly(new SimAction[] { new CardEventAction(CardEvent.Generated, Count: 1) { Indirect = true, JoinsHand = true, Card = MadeSimCard(make.Card) } }) };
         var (count, from) = MadeCount(make, play);
         if (count <= 0 && from == SimCount.Given) return new List<SimAction>();
         var intoHand = MadeCards.IntoHand(make, play.Type);
@@ -1053,9 +1055,9 @@ public static partial class SimAdapter
         {
             var creator = MadeBy(make, play, player);
             var yours = player == play.Owner;
-            actions.Add(new CardEventAction(EventOf(make), count)
+            actions.Add(new CardEventAction(CardEvent.Generated, count)
             {
-                Indirect = true, CountFrom = from, Player = creator == play.Owner ? null : creator, JoinsHand = intoHand,
+                Card = MadeSimCard(make.Card), Indirect = true, CountFrom = from, Player = creator == play.Owner ? null : creator, JoinsHand = intoHand,
                 IntoHandOf = intoHand && player != creator ? player : null,
                 TakenBy = yours ? takenBy : Array.Empty<string>(), MadeCard = intoHand && yours ? madeCard : null,
             });
@@ -1063,13 +1065,15 @@ public static partial class SimAdapter
         return actions;
     }
 
-    /// <summary>A make's card event: a made status, a made Sadness (Fertilizer, All Is Well) or any other made card.</summary>
-    private static CardEvent EventOf(MadeCards.Make make) => MadeCards.KindOf(make) switch
-    {
-        MadeCards.Kind.Status => CardEvent.GeneratedStatus,
-        MadeCards.Kind.Sadness => CardEvent.GeneratedSadness,
-        _ => CardEvent.Generated,
-    };
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, SimCard?> MadeSimCards = new();
+
+    /// <summary>
+    /// The card a make makes, as the hooks that hear it see it (Hook.AfterCardGeneratedForCombat's card): its class and its canonical type and
+    /// tags, when the code names it (MadeCards.Make.Card, MadeCards.TransformedInto); null for a roll or a pick (its class isn't known). One per
+    /// class, shared.
+    /// </summary>
+    private static SimCard? MadeSimCard(string? cardClass) => cardClass is not { } name ? null : MadeSimCards.GetOrAdd(name, cardName =>
+        MadeCards.CanonicalOf(cardName) is { } canonical ? new SimCard(cardName, SimReaders.TypeOf(canonical)) { Tags = SimReaders.TagsOf(canonical).ToHashSet() } : null);
 
     /// <summary>
     /// How many cards one round of a make makes for each player: read as it runs when its count is your hand's room (The Moon, The Lovers, Crash
@@ -1106,5 +1110,5 @@ public static partial class SimAdapter
     /// </summary>
     private static IEnumerable<SimAction> MadeAfterPlay(CardModel card) =>
         MadeCards.Of(card.GetType()).Where(make => make.By == MadeCards.Way.AfterPlay)
-            .Select(make => (SimAction)new CardEventAction(EventOf(make), Count: 1) { Indirect = true, TakenBy = MadeTakenBy(card) });
+            .Select(make => (SimAction)new CardEventAction(CardEvent.Generated, Count: 1) { Card = MadeSimCard(make.Card), Indirect = true, TakenBy = MadeTakenBy(card) });
 }

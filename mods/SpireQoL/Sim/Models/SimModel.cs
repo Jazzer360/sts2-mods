@@ -10,9 +10,11 @@ public enum TabKind { Trigger, Block, Damage, Summon, Draw, Energy, CardsMade }
 
 /// <summary>
 /// A card event the hooks see (AfterCardDrawn, AfterCardExhausted, AfterCardDiscarded, AfterCardGeneratedForCombat, AfterStarsGained,
-/// AfterShuffle), one per card (or star).
+/// AfterShuffle), one per card (or star). A card made is Generated whatever it is: its class and type are the event's card
+/// (SimState.EventCard), which a hook tests as the game's code does (`card is Sadness`, `card.Type == CardType.Status`).
+/// Each keeps its number: a play's script and a report's start state carry it (4 and 5 were a made Status and a made Sadness).
 /// </summary>
-public enum CardEvent { Drawn, Exhausted, Discarded, Generated, GeneratedStatus, GeneratedSadness, StarsGained, StarsSpent, Shuffled, EnergySpent, EnergyGained, ArrowDislodged }
+public enum CardEvent { Drawn = 0, Exhausted = 1, Discarded = 2, Generated = 3, StarsGained = 6, StarsSpent = 7, Shuffled = 8, EnergySpent = 9, EnergyGained = 10, ArrowDislodged = 11 }
 
 /// <summary>The game's ValueProp flags (MegaCrit.Sts2.Core.ValueProps), same values.</summary>
 [Flags]

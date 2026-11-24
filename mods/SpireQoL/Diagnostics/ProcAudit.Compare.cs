@@ -356,7 +356,7 @@ public sealed partial class ProcAudit
                 Budget(Effect.Exhaust, "exhausts", exhausts, predictedExhausts.Most);
                 Budget(Effect.Discard, "discards", discards, predictedDiscards.Most);
                 // Transformed cards are logged as created too (CardCmd.Transform); the ones you choose how many of aren't simulated (Guards).
-                var made = Most(CardEvent.Generated) + Most(CardEvent.GeneratedStatus) + Most(CardEvent.GeneratedSadness) + prediction.ChosenTransformsAtMost;
+                var made = Most(CardEvent.Generated) + prediction.ChosenTransformsAtMost;
                 Budget(Effect.Generate, "created cards", generated, made);
                 MadeByTabs(made);
                 Budget(Effect.Orb, "orbs channeled", orbs, predictedOrbs.Most);

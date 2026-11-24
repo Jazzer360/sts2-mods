@@ -71,7 +71,7 @@ public class OrbActionTests
     {
         var state = Defect();
         state.You.Powers = state.You.Powers.With(PowerId.TrashToTreasure, amount: 1);
-        var branches = After(state, Play(Card("Purge", SimCardType.Skill), target: Who.None, plays: 1, new CardEventAction(CardEvent.GeneratedStatus, Count: 2)));
+        var branches = After(state, Play(Card("Purge", SimCardType.Skill), target: Who.None, plays: 1, new CardEventAction(CardEvent.Generated, Count: 2) { Card = new SimCard(CardId.Dazed.Name, SimCardType.Status) }));
         // Two random orbs, one after the other: every order of two of the five, each 1/25.
         Assert.Equal(25, branches.Count);
         Assert.All(branches, branch => Assert.Equal(2, branch.You.Orbs.Count(orb => SimEngine.RandomOrbs.Contains(orb.Kind))));

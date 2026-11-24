@@ -52,13 +52,15 @@ public static class SimKeys
     /// <summary>Orbs channeled during a play (OrbChanneledEntry, every player's), for the play audit's channel count.</summary>
     public const string PlayOrbChanneled = "OrbChanneled";
 
-    private static readonly string[] EventNames = Enum.GetValues<CardEvent>().Select(cardEvent => "event:" + cardEvent).ToArray();
+    /// <summary>Each event's key by its number (CardEvent's numbers have gaps: a number no event has is null).</summary>
+    private static readonly string?[] EventNames = Enumerable.Range(0, CardEventCounts.Size)
+        .Select(number => Enum.IsDefined(typeof(CardEvent), number) ? "event:" + (CardEvent)number : null).ToArray();
 
     /// <summary>
     /// A card event of the play's own player, in the play log (decision #189): over every play of a replay and what follows it, the least and
     /// the most over its outcomes (SimOutcome.PlayFiredEvery, PlayFiredAny), for the play check's counts: "event:Exhausted".
     /// </summary>
-    public static string PlayEvent(CardEvent cardEvent) => EventNames[(int)cardEvent];
+    public static string PlayEvent(CardEvent cardEvent) => EventNames[(int)cardEvent]!;
 
     /// <summary>A player's turn counts with one more play at this stage: in all, of its type, and of each of its tags.</summary>
     public static NamedCounts CountPlay(NamedCounts turn, PlayStage stage, SimCardType type, IEnumerable<SimCardTag> tags)
@@ -76,7 +78,10 @@ public sealed record PendingEvent(CardEvent Event, int Player, string? Source, i
 /// <summary>How many of each card event the current play has caused for its player (Unceasing Top: nothing drawn or created). Immutable.</summary>
 public sealed class CardEventCounts
 {
-    public static readonly CardEventCounts None = new(new int[Enum.GetValues<CardEvent>().Length]);
+    /// <summary>One past the largest event number (CardEvent keeps its numbers, with gaps).</summary>
+    internal static readonly int Size = Enum.GetValues<CardEvent>().Max(cardEvent => (int)cardEvent) + 1;
+
+    public static readonly CardEventCounts None = new(new int[Size]);
 
     private readonly int[] _counts;
 

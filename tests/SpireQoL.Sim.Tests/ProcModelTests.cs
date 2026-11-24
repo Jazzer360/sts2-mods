@@ -533,9 +533,10 @@ public class ProcModelTests
     {
         var state = Power(Power(Power(State(), PowerId.PillarOfCreation, amount: 2), PowerId.Smokestack, amount: 3), PowerId.AllIsWell, amount: 4);
         var after = One(state, Events(Card("A", SimCardType.Skill), plays: 1,
-            new CardEventAction(CardEvent.Generated, Count: 1), new CardEventAction(CardEvent.GeneratedStatus, Count: 1), new CardEventAction(CardEvent.GeneratedSadness, Count: 1)));
+            new CardEventAction(CardEvent.Generated, Count: 1), new CardEventAction(CardEvent.Generated, Count: 1) { Card = new SimCard(CardId.Dazed.Name, SimCardType.Status) },
+            new CardEventAction(CardEvent.Generated, Count: 1) { Card = new SimCard(CardId.Sadness.Name, SimCardType.Status) }));
         Assert.Equal(3 * 2 + 4, after.You.Block); // Pillar on every created card, All Is Well on the Sadness
-        Assert.Equal(97, after.Enemy(id: 0)!.Hp);   // Smokestack on the status
+        Assert.Equal(94, after.Enemy(id: 0)!.Hp);   // Smokestack on each Status: the Dazed and the Sadness (a Status: Sadness' base(-1, CardType.Status, ...))
     }
 
     [Fact]

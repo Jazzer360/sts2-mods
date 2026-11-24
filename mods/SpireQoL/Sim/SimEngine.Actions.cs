@@ -217,7 +217,7 @@ public static partial class SimEngine
             var sub = new BranchSet(state, nested: true);
             for (var i = 0; i < count; i++)
             {
-                if (cardEvent is { } each) RunCardEvent(sub, new CardEventAction(each, Count: 1) { Indirect = true });
+                if (cardEvent is { } each) RunCardEvent(sub, new CardEventAction(each, Count: 1) { Indirect = true, Card = each == CardEvent.Generated ? take.Made : null });
                 foreach (var action in take.EachCard) Run(sub, action);
             }
             result.AddRange(sub.States);
@@ -667,7 +667,7 @@ public static partial class SimEngine
     private static void RunCardEvent(BranchSet branches, CardEventAction cardEventAction)
     {
         if (cardEventAction.FirstPlayOnly && branches.States.Count > 0 && branches.States[0].CurrentPlay is { PlayIndex: > 0 }) return;
-        var made = cardEventAction.Event is CardEvent.Generated or CardEvent.GeneratedStatus or CardEvent.GeneratedSadness;
+        var made = cardEventAction.Event == CardEvent.Generated;
         if (cardEventAction.CountFrom != SimCount.Given || cardEventAction.JoinsHand || made && branches.States.Any(branch => branch.TakeMatching.Count > 0))
         {
             branches.Each(branch => CardEvents(branch, cardEventAction));
@@ -681,7 +681,7 @@ public static partial class SimEngine
                 branches.Each(branch => DrawCards(branch, cardEventAction.Player ?? branch.CurrentPlay?.Owner ?? Who.You, count: 1, cardEventAction.Indirect));
                 continue;
             }
-            branches.Do(branch => { CountEvent(branch, cardEventAction.Event, cardEventAction.Player ?? branch.CurrentPlay?.Owner ?? Who.You); branch.EventCard = cardEventAction.Card; });
+            branches.Do(branch => { branch.EventCard = cardEventAction.Card; CountEvent(branch, cardEventAction.Event, cardEventAction.Player ?? branch.CurrentPlay?.Owner ?? Who.You); });
             HookStep(branches, nameof(SimModel.AfterCardEvent), (model, owner, branch) =>
             {
                 branch.IndirectNow = cardEventAction.Indirect;
@@ -727,16 +727,16 @@ public static partial class SimEngine
             if (RoomIn(simPlayer) > 0)
             {
                 AddToHand(state, handOf, count: 1, takenBy: made ? cardEventAction.TakenBy : null, known: made && cardEventAction.TakenBy != null);
-                return FireCardEvent(state, cardEvent, player, cardEventAction.Indirect);
+                return FireCardEvent(state, cardEvent, player, cardEventAction.Indirect, cardEventAction.Card);
             }
             // Made into a full hand: it goes to the discard pile instead (CardPileCmd.Add), for a shuffle later in the turn.
             if (made && cardEventAction.MadeCard is { } madeName && simPlayer.Draw != null && simPlayer.MadeCards?.TryGetValue(madeName, out var madeProfile) == true)
                 state.MutablePlayer(handOf).Draw = simPlayer.Draw.WithDiscarded(madeProfile);
         }
         // A made card outside the hand (or into a full one: the discard pile) still counts for a take of every pile.
-        if (cardEvent is CardEvent.Generated or CardEvent.GeneratedStatus or CardEvent.GeneratedSadness)
+        if (cardEvent == CardEvent.Generated)
             JoinsTakes(state, cardEventAction.TakenBy, known: cardEventAction.TakenBy != null, intoHand: false, made: true);
-        return FireCardEvent(state, cardEvent, player, cardEventAction.Indirect);
+        return FireCardEvent(state, cardEvent, player, cardEventAction.Indirect, cardEventAction.Card);
     }
 
     /// <summary>A relic's or power's value (its DynamicVar) as the adapter read it (SimState.Vars), or the fallback.</summary>

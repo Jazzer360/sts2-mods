@@ -72,7 +72,6 @@ public class CardEffectsTests
         Exactly(nameof(CardEffects.TakesIntoHand), CardEffects.TakesIntoHand, Tables.TakenToHandCards);
         Exactly(nameof(CardEffects.PutsBackFromHand), CardEffects.PutsBackFromHand, Tables.PutBackCards);
         Exactly(nameof(CardEffects.MovesCardsElsewhere), CardEffects.MovesCardsElsewhere, Tables.MovedElsewhereCards);
-        Exactly(nameof(CardEffects.MakesSadness), CardEffects.MakesSadness, Tables.SadnessCards);
         Exactly(nameof(CardEffects.Forges), CardEffects.Forges, Tables.ForgeCards);
         Exactly(nameof(CardEffects.HitsXTimes), CardEffects.HitsXTimes, Tables.XHitCards);
         Exactly(nameof(CardEffects.AttacksOnceRepeatingSomethingElse), CardEffects.AttacksOnceRepeatingSomethingElse, Tables.SingleHitRepeatCards);
@@ -185,8 +184,7 @@ public class CardEffectsTests
         // Draws on a condition (PlayFacts.ConditionalDrawCards, TargetDrawCards).
         public static readonly string[] ConditionalDrawCards = { "Impatience", "Fetch", "Ftl", "Restlessness", "KiHop", "Wrest" };
         public static readonly string[] TargetDrawCards = { "KiHop", "Wrest" };
-        // Made cards (PlayFacts.SadnessCards, ForgeCards).
-        public static readonly string[] SadnessCards = { "BrightenUp", "Jest", "MourningBlow", "Rummage", "SelfDeprecate", "SorrowfulStrike", "Vitriol" };
+        // Made cards (PlayFacts.ForgeCards; its SadnessCards went once every made card carries its class: CardEffects.CreatedNotMade).
         public static readonly string[] ForgeCards =
         {
             "BeatIntoShape", "BigBang", "Bulwark", "Conqueror", "RefineBlade", "SeekingEdge", "SpoilsOfBattle", "SummonForth", "TheSmith", "WroughtInWar",

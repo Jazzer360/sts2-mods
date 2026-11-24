@@ -47,7 +47,7 @@ public class SimModelEffectTests
     {
         // ArsenalPower: its amount for each card made; Fertilizer: its StrengthPower when a Sadness is made.
         Assert.Equal(2, After(Power(State(), PowerId.Arsenal, amount: 1), Events(new CardEventAction(CardEvent.Generated, Count: 2))).You.Powers[PowerId.Strength]);
-        Assert.Equal(1, After(Relic(State(), RelicId.Fertilizer, ("StrengthPower", 1)), Events(new CardEventAction(CardEvent.GeneratedSadness, Count: 1))).You.Powers[PowerId.Strength]);
+        Assert.Equal(1, After(Relic(State(), RelicId.Fertilizer, ("StrengthPower", 1)), Events(new CardEventAction(CardEvent.Generated, Count: 1) { Card = new SimCard(CardId.Sadness.Name, SimCardType.Status) })).You.Powers[PowerId.Strength]);
     }
 
     [Fact]

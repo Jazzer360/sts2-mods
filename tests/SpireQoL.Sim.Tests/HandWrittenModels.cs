@@ -99,7 +99,7 @@ public sealed class ArsenalPower : ProcModel
 {
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
     {
-        if (!Generated(cardEvent) || player != owner) return One(state);
+        if (cardEvent != CardEvent.Generated || player != owner) return One(state);
         SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, Amount(state, owner), debuff: false);
         return Fire(state, owner);
     }
@@ -110,7 +110,7 @@ public sealed class PillarOfCreationPower : ProcModel
 {
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        Generated(cardEvent) && player == owner ? Block(state, owner, Amount(state, owner)) : One(state);
+        cardEvent == CardEvent.Generated && player == owner ? Block(state, owner, Amount(state, owner)) : One(state);
 }
 
 /// <summary>AllIsWellPower.AfterCardGeneratedForCombat: block (unpowered) for each Sadness its owner creates.</summary>
@@ -118,7 +118,7 @@ public sealed class AllIsWellPower : ProcModel
 {
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.GeneratedSadness && player == owner ? Block(state, owner, Amount(state, owner)) : One(state);
+        cardEvent == CardEvent.Generated && state.EventCard?.Name == CardId.Sadness.Name && player == owner ? Block(state, owner, Amount(state, owner)) : One(state);
 }
 
 /// <summary>SmokestackPower.AfterCardGeneratedForCombat: its amount to every hittable enemy for each status its owner creates.</summary>
@@ -126,7 +126,7 @@ public sealed class SmokestackPower : ProcModel
 {
     public override TabKind? Tab => TabKind.Damage;
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.GeneratedStatus && player == owner ? DamageAll(state, owner, Amount(state, owner)) : One(state);
+        cardEvent == CardEvent.Generated && state.EventCard?.Type == SimCardType.Status && player == owner ? DamageAll(state, owner, Amount(state, owner)) : One(state);
 }
 
 /// <summary>SleightOfFleshPower.AfterPowerAmountChanged: each debuff its owner lands on an enemy deals that enemy its amount (unpowered).</summary>
@@ -200,7 +200,7 @@ public sealed class Fertilizer : RelicProc
 {
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
     {
-        if (cardEvent != CardEvent.GeneratedSadness || player != owner) return One(state);
+        if (cardEvent != CardEvent.Generated || state.EventCard?.Name != CardId.Sadness.Name || player != owner) return One(state);
         SimEngine.ApplyPower(state, owner, owner, PowerId.Strength, Var(state, owner, "StrengthPower", fallback: 1), debuff: false);
         return Fire(state, owner);
     }
@@ -410,7 +410,7 @@ public sealed class Regalite : RelicProc
     public override TabKind? Tab => TabKind.Block;
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
     {
-        if (!Generated(cardEvent) || player != owner || !Armed(state, owner)) return One(state);
+        if (cardEvent != CardEvent.Generated || player != owner || !Armed(state, owner)) return One(state);
         Disarm(state, owner);
         return RelicBlock(state, owner);
     }

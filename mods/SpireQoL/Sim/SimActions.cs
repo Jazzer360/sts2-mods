@@ -237,6 +237,8 @@ public sealed record TakeFromHandAction(HandTakeWay Way) : SimAction
 {
     /// <summary>What each card taken sets off (Exhausted, Discarded, Generated for a transform); null: nothing (put back on the draw pile).</summary>
     public CardEvent? Event { get; init; }
+    /// <summary>The card a transform makes of each, when its code names it (Begone's Minion Strike): its created-card event's card. Null: not known.</summary>
+    public SimCard? Made { get; init; }
     /// <summary>
     /// A pick its test sends one way or the other (The Hermit: a Curse is exhausted, any other card discarded): Event for a card the
     /// filter lets through, this for one it doesn't. When the hand holds both, which happens is your pick (decision #188): neither is set off.

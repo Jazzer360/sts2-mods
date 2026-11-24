@@ -333,7 +333,7 @@ public class ReadModelParityTests
                     yield return ($"twelve {cardEvent} for {owner} in turn", (model, state) => Sequence(state, Enumerable.Repeat(0, 12), (branch, _) => model.AfterCardEvent(branch, owner, cardEvent, owner)));
                 foreach (var cardEvent in Enum.GetValues<CardEvent>())
                     foreach (var player in others.Where(Who.IsPlayer))
-                        foreach (var card in new[] { null, new SimCard("Skilled", SimCardType.Skill), new SimCard("Attacker", SimCardType.Attack) })
+                        foreach (var card in new[] { null, new SimCard("Skilled", SimCardType.Skill), new SimCard("Attacker", SimCardType.Attack), new SimCard(CardId.Sadness.Name, SimCardType.Status), new SimCard(CardId.Dazed.Name, SimCardType.Status), new SimCard("Cursed", SimCardType.Curse) })
                             foreach (var drawn in new[] { null, new SimDrawCard("status") { Status = true }, new SimDrawCard("ethereal") { Ethereal = true } })
                                 yield return ($"{cardEvent} for {player}, card {card?.Type}, drawn {drawn?.Key}", (model, state) =>
                                 {

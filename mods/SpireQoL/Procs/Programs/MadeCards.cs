@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
 
@@ -12,9 +13,6 @@ namespace SpireQoL.Procs.Programs;
 /// </summary>
 public static class MadeCards
 {
-    /// <summary>What a made card is to the created-card hooks: a status, a Sadness (Fertilizer, All Is Well), or any other card.</summary>
-    public enum Kind { Card, Status, Sadness }
-
     /// <summary>How a make step makes its cards.</summary>
     public enum Way
     {
@@ -123,7 +121,7 @@ public static class MadeCards
     /// <param name="Made">Every card it makes.</param>
     /// <param name="IntoYourHand">Of those, the ones into your hand.</param>
     /// <param name="Unread">A make whose count can't be read on the board.</param>
-    public sealed record OnBoard(int Made, int Statuses, int Sadness, int IntoYourHand, bool Forged, bool Unread);
+    public sealed record OnBoard(int Made, int IntoYourHand, bool Forged, bool Unread);
 
     /// <summary>
     /// The card's makes on the board, as one play of it now would make them: each make's count (CountOn), times the players of your side it
@@ -135,7 +133,7 @@ public static class MadeCards
         var type = card.GetType();
         var program = CardPrograms.Of(type);
         var board = new ProgramBoard(card);
-        int made = 0, statuses = 0, sadness = 0, intoHand = 0;
+        int made = 0, intoHand = 0;
         bool forged = false, unread = false;
         foreach (var make in Of(type))
         {
@@ -153,14 +151,9 @@ public static class MadeCards
                 unread |= !CountReadable(make);
             }
             made += count;
-            switch (KindOf(make))
-            {
-                case Kind.Status: statuses += count; break;
-                case Kind.Sadness: sadness += count; break;
-            }
             if (IntoHand(make, type) && (make.For == null || StepValues.IsOwner(make.For) || make.By == Way.Forged)) intoHand += count;
         }
-        return new OnBoard(made, statuses, sadness, intoHand, forged, unread);
+        return new OnBoard(made, intoHand, forged, unread);
     }
 
     /// <summary>
@@ -217,15 +210,36 @@ public static class MadeCards
         return loops.Aggregate(perRound, (times, loop) => times * ProgramEvaluator.Rounds(loop, board, program));
     }
 
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Kind> Kinds = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, CardModel?> Canonicals = new();
 
-    /// <summary>What the make's card is to the created-card hooks (its CardType: a status; a Sadness); any other card when it isn't named.</summary>
-    public static Kind KindOf(Make make) => make.Card is not { } name ? Kind.Card : Kinds.GetOrAdd(name, cardName =>
+    /// <summary>
+    /// The class a transform turns its cards into, when its code names it (CardCmd.TransformTo&lt;T&gt;; CardCmd.Transform to a card made by
+    /// CreateCard&lt;T&gt;: Begone's Minion Strike, Punch of Joy's Joy; a list of transformations a loop filled with the one class it creates:
+    /// Compact's Fuel); null for a roll (TransformToRandom) or a card it can't tell.
+    /// </summary>
+    public static string? TransformedInto(CommandStep command, ModelProgram program)
     {
-        if (cardName == nameof(MegaCrit.Sts2.Core.Models.Cards.Sadness)) return Kind.Sadness;
-        var canonical = ModelDb.AllCards.FirstOrDefault(other => other.GetType().Name == cardName);
-        return canonical?.Type == CardType.Status ? Kind.Status : Kind.Card;
-    });
+        if (command.Command.DeclaringType != "CardCmd" || !command.Command.Name.StartsWith("Transform", StringComparison.Ordinal)) return null;
+        // Read once per command of a class's program (the programs are cached), never per play.
+        return Transformed.GetValue(command, _ => new StrongBox<string?>(ReadTransformedInto(command, program))).Value;
+    }
+
+    private static readonly ConditionalWeakTable<CommandStep, StrongBox<string?>> Transformed = new();
+
+    private static string? ReadTransformedInto(CommandStep command, ModelProgram program)
+    {
+        if (command.Command.Name == "TransformTo" && command.Command.GenericArguments is [var into]) return into;
+        if (command.Command.Name != "Transform") return null;
+        // Transform(original, replacement): the replacement's class.
+        if (command.Values.Count >= 2 && Unstored(command.Values[1])?.Parts().OfType<QueryValue>().FirstOrDefault(value => value is { Name: "CreateCard", GenericArguments.Count: 1 }) is { } replacement)
+            return replacement.GenericArguments[0];
+        // Transform(transformations, rng): the loop before it filled the list, each round's replacement the one class its body creates.
+        return CardEffects.Find(program, step => ReferenceEquals(step, command)) is [{ LoopBefore: { } loop }, ..]
+            && new ModelProgram("", loop.Body).All().OfType<CreateStep>().Select(create => create.Card).Distinct().ToList() is [var filled] ? filled : null;
+    }
+
+    /// <summary>The game's canonical card of a made card's class (its type and tags: what the created-card hooks test of it); null when there's none.</summary>
+    public static CardModel? CanonicalOf(string cardName) => Canonicals.GetOrAdd(cardName, name => ModelDb.AllCards.FirstOrDefault(other => other.GetType().Name == name));
 
     /// <summary>
     /// The make's cards go into a hand: its pile is the hand, or not written as a constant where every pile the card's code writes is the hand

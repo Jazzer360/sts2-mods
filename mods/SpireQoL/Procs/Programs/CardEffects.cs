@@ -442,16 +442,22 @@ public static class CardEffects
         return false;
     }
 
-    public static bool MakesSadness(Type cardType) => MakesSadness(CardPrograms.Of(cardType));
     public static bool Forges(Type cardType) => Forges(CardPrograms.Of(cardType));
 
     // ---- made cards
 
     /// <summary>
-    /// Makes Sadness (CombatState.CreateCard&lt;Sadness&gt; in its play: Jest's into your hand, Mourning Blow turning into one): the
-    /// statuses it makes are Sadness, which Fertilizer and All Is Well react to.
+    /// The classes its play creates (CombatState.CreateCard&lt;T&gt;: Jest's Sadness, Mourning Blow turning into one) that none of its makes
+    /// or transforms carries (MadeCards.Make.Card, MadeCards.TransformedInto): their created-card event wouldn't say what they are, so a hook
+    /// testing the card (All Is Well's `card is Sadness`, Smokestack's Status) couldn't tell. Empty for every card they read.
     /// </summary>
-    public static bool MakesSadness(ModelProgram program) => program.All().OfType<CreateStep>().Any(create => create.Card == nameof(MegaCrit.Sts2.Core.Models.Cards.Sadness));
+    public static IReadOnlyList<string> CreatedNotMade(Type cardType)
+    {
+        var program = CardPrograms.Of(cardType);
+        var made = MadeCards.Of(cardType).Select(make => make.Card)
+            .Concat(program.All().OfType<CommandStep>().Select(command => MadeCards.TransformedInto(command, program))).ToHashSet();
+        return program.All().OfType<CreateStep>().Select(create => create.Card).Where(card => !made.Contains(card)).Distinct().ToList();
+    }
 
     /// <summary>Forges (ForgeCmd.Forge: a Sovereign Blade made the first time, more damage after).</summary>
     public static bool Forges(ModelProgram program) => program.Commands.Any(command => Is(command, "ForgeCmd", "Forge"));

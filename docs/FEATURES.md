@@ -377,7 +377,7 @@ Beside the last number (the heart line when there is one): a skull when this mig
 | Juggernaut | cards whose play gains block (its own, block procs such as Afterimage or Feel No Pain, Frost evokes), counted by the simulator | damage per block gain |
 | Speedster | cards that draw | damage × cards drawn |
 | Cacophony | cards whose draws finish its countdown | damage |
-| Smokestack | cards that create statuses | damage × statuses |
+| Smokestack | cards that create statuses (a Sadness is one) | damage × statuses |
 | Strangle (on an enemy, yours) | every card | damage |
 | Devour Life | Soul | summon |
 | Storm, Subroutine | powers | trigger |

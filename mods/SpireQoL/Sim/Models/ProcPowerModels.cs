@@ -31,7 +31,7 @@ public sealed class SerpentFormPower : BoundPower
 public sealed class CalamityPower : BoundPower
 {
     protected override bool Binds(SimCardPlay play) => play.Card.Type == SimCardType.Attack;
-    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => MakeInHand(Fire(state, owner), CardEvent.Generated, amount, owner);
+    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => MakeInHand(Fire(state, owner), card: null, amount, owner); // random Attacks: no class to tell
 }
 
 /// <summary>
@@ -47,12 +47,12 @@ public sealed class JugglingPower : ProcModel
         var count = Data(state, owner) + 1;
         Set(state, owner, Amount(state, owner), count);
         if (count != 3) return One(state);
-        if (state.MainRules.HasFlag(MainRule.JugglingCopiesBeforeThePlay)) return MakeInHand(Fire(state, owner), CardEvent.Generated, Amount(state, owner), owner);
+        if (state.MainRules.HasFlag(MainRule.JugglingCopiesBeforeThePlay)) return MakeInHand(Fire(state, owner), play.Card, Amount(state, owner), owner);
         Bind(state, owner, Amount(state, owner));
         return One(state);
     }
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && TakeBound(state, owner) is { } bound ? MakeInHand(Fire(state, owner), CardEvent.Generated, bound, owner) : One(state);
+        Mine(play, owner) && TakeBound(state, owner) is { } bound ? MakeInHand(Fire(state, owner), play.Card, bound, owner) : One(state);
 }
 
 /// <summary>OblivionPower (on an enemy, Data = its applier + 100): each card the applier plays applies Doom to it.</summary>
@@ -442,7 +442,7 @@ public sealed class StratagemPower : ProcModel
 public sealed class TrashToTreasurePower : ProcModel
 {
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.GeneratedStatus && player == owner ? Channel(Fire(state, owner), owner, OrbKind.Random, Amount(state, owner)) : One(state);
+        cardEvent == CardEvent.Generated && state.EventCard?.Type == SimCardType.Status && player == owner ? Channel(Fire(state, owner), owner, OrbKind.Random, Amount(state, owner)) : One(state);
 }
 
 // ---- powers landing
@@ -467,6 +467,7 @@ public sealed class WitheringPresencePower : ProcModel
     /// <summary>One copy per player (Aeonglass.AfterAddedToRoom), each counting its Target's cards: only yours is read (SimReaders.Powers).</summary>
     public override bool Instanced => true;
     public override bool Harmful => true;
+    private static readonly SimCard Wither = new(CardId.Wither.Name, SimCardType.Status);
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         if (owner < 0 || play.Owner != Who.You) return One(state);
@@ -474,7 +475,7 @@ public sealed class WitheringPresencePower : ProcModel
         if (left <= 0) return One(state);
         left--;
         Set(state, owner, Amount(state, owner), left <= 0 ? 6 : left);
-        return left <= 0 ? MakeInHand(Fire(state, owner), CardEvent.GeneratedStatus, count: 1, play.Owner) : One(state);
+        return left <= 0 ? MakeInHand(Fire(state, owner), Wither, count: 1, play.Owner) : One(state);
     }
 }
 

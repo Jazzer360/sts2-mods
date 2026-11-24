@@ -67,9 +67,10 @@ public static partial class SimEngine
             CardEvent.Drawn => new HistoryEvent(HistoryKind.CardDrawn, player) { Details = HistoryDetail.NotHandDraw, CardType = DrawnType(state), CardKnown = state.DrawnCard != null },
             CardEvent.Exhausted => new HistoryEvent(HistoryKind.CardExhausted, player),
             CardEvent.Discarded => new HistoryEvent(HistoryKind.CardDiscarded, player),
-            CardEvent.Generated => new HistoryEvent(HistoryKind.CardGenerated, player),
-            CardEvent.GeneratedStatus => new HistoryEvent(HistoryKind.CardGenerated, player) { CardType = SimCardType.Status },
-            CardEvent.GeneratedSadness => new HistoryEvent(HistoryKind.CardGenerated, player) { CardType = SimCardType.Curse, Card = CardId.Sadness, CardKnown = true },
+            // A made card's class and type when the code that made it names it (the event's card); unknown otherwise.
+            CardEvent.Generated => state.EventCard is { } made
+                ? new HistoryEvent(HistoryKind.CardGenerated, player) { CardType = made.Type, CardTags = made.Tags, Card = new CardId(made.Name), CardKnown = true }
+                : new HistoryEvent(HistoryKind.CardGenerated, player),
             CardEvent.EnergySpent => new HistoryEvent(HistoryKind.EnergySpent, player),
             CardEvent.StarsGained or CardEvent.StarsSpent => new HistoryEvent(HistoryKind.StarsModified, player),
             _ => (HistoryEvent?)null,

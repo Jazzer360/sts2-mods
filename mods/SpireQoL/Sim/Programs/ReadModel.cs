@@ -170,7 +170,7 @@ public sealed class ReadModel : SimModel
         CardEvent.Drawn => HookName.AfterCardDrawn,
         CardEvent.Exhausted => HookName.AfterCardExhausted,
         CardEvent.Discarded => HookName.AfterCardDiscarded,
-        CardEvent.Generated or CardEvent.GeneratedStatus or CardEvent.GeneratedSadness => HookName.AfterCardGeneratedForCombat,
+        CardEvent.Generated => HookName.AfterCardGeneratedForCombat,
         CardEvent.Shuffled => HookName.AfterShuffle,
         CardEvent.StarsSpent => HookName.AfterStarsSpent,
         CardEvent.StarsGained => HookName.AfterStarsGained,
@@ -812,8 +812,7 @@ public sealed class ReadModel : SimModel
             }
             case HookFact.EventIsOwners: return (in HookArgs args) => args.Player == args.Owner ? 1m : 0m;
             case HookFact.CardIs:
-                return (in HookArgs args) => named == CardId.Sadness.Name && args.Event == CardEvent.GeneratedSadness
-                    || args.State.EventCard?.Name == named ? 1m : 0m;
+                return (in HookArgs args) => args.State.EventCard?.Name == named ? 1m : 0m;
             case HookFact.OwnersTurn: return (in HookArgs args) => Who.IsPlayer(args.Owner) != args.State.EnemyTurnNow ? 1m : 0m;
             case HookFact.EnemiesTurn: return (in HookArgs args) => args.State.EnemyTurnNow ? 1m : 0m;
             case HookFact.ApplierIsOwner: return (in HookArgs args) => args.Applier == args.Owner ? 1m : 0m;
@@ -940,15 +939,17 @@ public sealed class ReadModel : SimModel
     private int ApplierOf(in HookArgs args) =>
         DataCreature.In(args.Copy > 0 ? CopyOf(args.State, args.Owner, args.Copy).Data : SimEngine.PowersOf(args.State, args.Owner).DataOf(ThisPower));
 
-    /// <summary>The type of the hook's card: the card played, or the event's card (a made Status or Sadness by its event; one drawn as its profile says).</summary>
+    /// <summary>
+    /// The type of the hook's card: the card played, or the event's card (a made card's, as the code that made it names it; one drawn as its
+    /// profile says). A made card no code names (a roll) has none here: it isn't the card played.
+    /// </summary>
     private static SimCardType CardTypeOf(in HookArgs args)
     {
         if (args.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed or HookName.ModifyCardPlayCount or HookName.AfterModifyingCardPlayCount) return args.Play?.Card.Type ?? SimCardType.None;
         return args.Event switch
         {
-            CardEvent.GeneratedStatus => SimCardType.Status,
-            CardEvent.GeneratedSadness => SimCardType.Curse,
-            CardEvent.Drawn => args.State.DrawnCard is { Status: true } ? SimCardType.Status : args.State.EventCard?.Type ?? SimCardType.None,
+            CardEvent.Drawn => args.State.DrawnCard is { Status: true } ? SimCardType.Status : args.State.DrawnCard?.Type ?? args.State.EventCard?.Type ?? SimCardType.None,
+            CardEvent.Generated => args.State.EventCard?.Type ?? SimCardType.None,
             _ => args.State.EventCard?.Type ?? args.Play?.Card.Type ?? SimCardType.None,
         };
     }
