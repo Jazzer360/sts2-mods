@@ -126,13 +126,6 @@ public static partial class SimAdapter
             enemy.StartedAlive = creature.IsAlive;
             // The creatures its death adds (Surprise's gremlins), read from its powers' AfterDeath code, with every HP each can start with.
             if (creature.IsAlive) enemy.Spawns = SpawnsOf(creature, combat);
-            // An ally dying: Ravenous stuns it (and gives Strength for later); Crab Rage gives it Strength once.
-            // Crab Rage: its Strength and block when an ally dies (CrabRagePower model: Strength as its amount, block here).
-            if (creature.GetPower<CrabRagePower>() is { } crab)
-            {
-                enemy.Powers = enemy.Powers.With(PowerId.CrabRage, Sts2State.Var(crab, "StrengthPower"));
-                enemy.CrabRageBlock = Sts2State.Var(crab, "Block");
-            }
             if (!creature.IsAlive) enemy.Hp = 0;
             if (creature.IsAlive && creature.Monster != null)
             {

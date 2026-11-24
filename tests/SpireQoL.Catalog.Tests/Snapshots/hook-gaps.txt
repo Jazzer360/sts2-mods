@@ -1,13 +1,13 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by capability.
-# 134 hand-written models.
+# 132 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
 its own data: a card or a play kept, a field used directly: 19 classes, 6 alone: AutomationPower, CalamityPower*, ConductorsBaton*, DarkEmbracePower*, DemonTongue*, HardenedShellPower, ImitationLearningPower, InterceptPower, JugglingPower, MusicBox, OrbitPower, PaelsLegion, PenNib, Pocketwatch, RupturePower*, SerpentFormPower, StretchPower*, UnsettlingLamp, Vambrace
-read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 6 classes, 6 alone: CrabRagePower*, GremlinHorn*, MonarchsGazePower*, ParryingShield*, RippleBasin*, SelfFormingClay*
 a monster's own state set (its flag, its next move): 10 classes, 4 alone: AsleepPower, CurlUpPower, FlutterPower*, ImbalancedPower*, InfestedPower, PlowPower*, RavenousPower*, SlumberPower, SteamEruptionPower, StockPower
 a turn's start (the enemies' turn start, an extra turn): 9 classes, 4 alone: ArtOfWar*, ConductorsBatonPower*, EmotionChip*, FeralPower, InfernoPower*, LullabyPower, PaelsEye, PlatingPower, YahPower
 queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 9 classes, 4 alone: ConquerorPower*, CurlUpPower, JossPaper*, LethalityPower*, PaelsEye, PagestormPower*, PhantomBladesPower, TagTeamPower, Vambrace
+read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 4 classes, 4 alone: MonarchsGazePower*, ParryingShield*, RippleBasin*, SelfFormingClay*
 the HP-loss pipeline: 7 classes, 3 alone: BeatingRemnant*, BufferPower, HardenedShellPower, IntangiblePower, SlipperyPower, TheBoot*, TungstenRod*
 arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner): 6 classes, 3 alone: CoveringFirePower*, ExplosiveArrowsPower*, ImpaledPower, QuietusPower, Twine*, YahPower
 hooks: BeforeAttack and AfterAttack: 6 classes, 3 alone: AimPower, BoneFlute*, GigantificationPower*, QuietusPower, SkittishPower, VigorPower*
@@ -78,7 +78,6 @@ ConsumingShadowPower: [orbs (AfterOrbChanneled, EvokeLast, an orb made first)] A
 CorruptionPower: [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation | [card costs and keywords (cards' own hooks, Part B3)] TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
 CoveredPower: [instanced copies (each copy its own amount and data)] (the class): copies | [hooks: AfterApplied] AfterApplied: gap: the simulator runs no read model's AfterApplied | [queries: the owner's powers] AfterSideTurnEnd: gap: tests Contains(this.Owner.Powers, this)
 CoveringFirePower: [arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner)] AfterArrowShot: gap: the simulator runs no read model's AfterArrowShot
-CrabRagePower: [read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule)] read whole
 CurlUpPower: [a monster's own state set (its flag, its next move)] AfterCardPlayed: gap: sets LouseProgenitor.Curled where the reader reads no store | [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] AfterDamageReceived: gap: the value cardSource
 DarkEmbracePower: [its own data: a card or a play kept, a field used directly] AfterCardExhausted: gap: changes its own data (etherealCount) where the reader reads no store
 DemonTongue: [its own data: a card or a play kept, a field used directly] AfterDamageReceived: gap: uses its own field (_triggeredThisTurn) directly: what a call on it changes isn't read
@@ -92,7 +91,6 @@ FlutterPower: [a monster's own state set (its flag, its next move)] AfterDamageR
 GalacticDust: [queries: the hook's amount (AfterStarsSpent's)] AfterStarsSpent: gap: the value amount
 GalvanicPower: [hooks: AfterCardEnteredCombat] AfterCardEnteredCombat: gap: the simulator runs no read model's AfterCardEnteredCombat | [a command on another creature (the players, a card's owner, a roll's list)] AfterCardPlayed: gap: acts on cardPlay.Card.Owner.Creature
 GigantificationPower: [hooks: BeforeAttack and AfterAttack] AfterAttack: gap: the simulator runs no read model's AfterAttack | [hooks: BeforeAttack and AfterAttack] BeforeAttack: gap: the simulator runs no read model's BeforeAttack | [hooks: BeforeAttack and AfterAttack] ModifyDamageMultiplicative: gap: tests this.GetInternalData<Data>().commandToModify()
-GremlinHorn: [read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule)] read whole
 HandDrill: [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount)] AfterBlockBroken: gap: the simulator runs no read model's AfterBlockBroken
 HardToKillPower: [the damage cap and AfterModifyingDamageAmount] AfterModifyingDamageAmount: gap: the simulator runs no read model's AfterModifyingDamageAmount | [the damage cap and AfterModifyingDamageAmount] ModifyDamageCap: gap: the simulator runs no read model's ModifyDamageCap
 HardenedShellPower: [its own data: a card or a play kept, a field used directly] AfterDamageReceived: gap: changes its own data (damageReceivedThisTurn) where the reader reads no store | [the HP-loss pipeline] AfterModifyingHpLostBeforeOsty: gap: the simulator runs no read model's AfterModifyingHpLostBeforeOsty | [the HP-loss pipeline] ModifyHpLostBeforeOstyLate: gap: the simulator runs no read model's ModifyHpLostBeforeOstyLate

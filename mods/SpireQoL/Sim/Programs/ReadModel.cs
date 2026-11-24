@@ -71,7 +71,7 @@ public sealed class ReadModel : SimModel
     /// <summary>The hooks whose program takes back what the model bound to the play: each run gets a slot for it (HookArgs.Taken).</summary>
     private readonly bool[] _takes = new bool[Enum.GetValues<HookName>().Length];
 
-    public ReadModel(ModelSpec spec) : base(spec.Name, spec.Hooks.Select(program => SimHookOf(program.Hook)).Distinct())
+    public ReadModel(ModelSpec spec) : base(spec.Name, spec.Hooks.Select(program => SimHookOf(program.Hook)).Append(spec.Outcome != null ? nameof(OutcomeTab) : "").Where(hook => hook.Length > 0).Distinct())
     {
         Spec = spec;
         foreach (var test in spec.Values().OfType<HookTest>()) _testSlots.TryAdd(test.At, _testSlots.Count);
@@ -215,6 +215,18 @@ public sealed class ReadModel : SimModel
         foreach (var branch in Run(HookName.AfterDeath, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Target = dead }))
             if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterDeath branched");
     }
+
+    /// <summary>
+    /// Its tab judged on how the turn ends, by what its AfterDeath waits on (ModelSpec.Outcome): an enemy's own death or an ally's, a warning on a
+    /// play that kills it or another enemy; a death on your side's other side, your bonus on a play that kills an enemy in every outcome.
+    /// </summary>
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => Spec.Outcome switch
+    {
+        HookOutcome.KillsIt => Who.IsEnemy(owner) ? Models.OutcomeRules.KillsIt(owner) : null,
+        HookOutcome.KillsAnother => Who.IsEnemy(owner) ? Models.OutcomeRules.KillsAnother(owner) : null,
+        HookOutcome.KillsOne => owner == Who.You ? Models.OutcomeRules.KillsOne : null,
+        _ => null,
+    };
 
     /// <summary>It keeps its applier as its Data (its code asks base.Applier): the engine lands it so (SimEngine.ApplyPower).</summary>
     public bool UsesApplier => Spec.UsesApplier();
@@ -455,6 +467,13 @@ public sealed class ReadModel : SimModel
     private IEnumerable<SimState> Cause(HookArgs args, CardEvent cardEvent, int count, bool fires)
     {
         if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+        // A death's: queued until the hit or action that killed is over (SimEngine.Raise), as the deaths are told inside it; a draw or energy tab
+        // counts them as they come.
+        if (args.Hook == HookName.AfterDeath)
+        {
+            SimEngine.Raise(args.State, cardEvent, args.Owner, count, source: SimEngine.TallyFor(Name, Tab, cardEvent, args.Owner) != null ? Name : null);
+            return One(args.State);
+        }
         return SimEngine.ProcCardEvent(args.State, cardEvent, count, args.Owner, onEach: SimEngine.TallyFor(Name, Tab, cardEvent, args.Owner));
     }
 

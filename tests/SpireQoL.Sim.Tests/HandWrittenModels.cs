@@ -837,3 +837,42 @@ public sealed class IterationPower : SimModel
         return SimEngine.ProcCardEvent(state, CardEvent.Drawn, count: SimEngine.PowerOn(state, owner, ThisPower), owner, indirect: true);
     }
 }
+
+// ---- outcome tabs from a death (round four: Sim/Models/EnemyModels.cs, ProcRelicModels.cs, deleted 2026-11-24)
+
+/// <summary>
+/// CrabRagePower (AfterDeath of an ally on its side): it gains Strength (its amount here) and block (SimEnemy.CrabRageBlock), once.
+/// </summary>
+public sealed class CrabRagePower : SimModel
+{
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => Who.IsEnemy(owner) ? OutcomeRules.KillsAnother(owner) : null;
+
+    public override void AfterDeath(SimState state, int owner, int dead)
+    {
+        // Any ally on its side, whatever its own move is (a Buff intent too: a dev review report, Crusher's 99 block missing).
+        if (dead == owner || !Who.IsEnemy(dead) || state.Enemy(owner) is not { } enemy || !enemy.Powers.Has(ThisPower)) return;
+        state.LogFired(Name, amount: 0, owner);
+        var strength = enemy.Powers[ThisPower];
+        enemy.Powers = enemy.Powers.Without(ThisPower).Add(PowerId.Strength, strength);
+        // Frozen with one change: SimEnemy.CrabRageBlock, the adapter's read of its Block value, is gone: read here as that value.
+        enemy.Block += SimEngine.Var(state, owner, Name, "Block", fallback: 99);
+    }
+}
+
+/// <summary>
+/// GremlinHorn.AfterDeath: an enemy's death gives its owner its Energy (PlayerCmd.GainEnergy), then draws its Cards (CardPileCmd.Draw),
+/// queued to run once the hit or action that killed it is over (SimEngine.Raise). No tab of its own here: its tab is judged by the
+/// play's outcome (a kill in every branch: its OutcomeTab); this model makes the energy and the draw happen in the simulation
+/// (the play check compares the energy after each play: a dev-mode report, Unleash and Debilitate killing a segment).
+/// </summary>
+public sealed class GremlinHorn : SimModel
+{
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => owner == Who.You ? OutcomeRules.KillsOne : null;
+
+    public override void AfterDeath(SimState state, int owner, int dead)
+    {
+        if (dead < 0 || !Who.IsPlayer(owner)) return;
+        SimEngine.Raise(state, CardEvent.EnergyGained, owner, SimEngine.Var(state, owner, Name, "Energy", fallback: 1));
+        SimEngine.Raise(state, CardEvent.Drawn, owner, SimEngine.Var(state, owner, Name, "Cards", fallback: 1));
+    }
+}

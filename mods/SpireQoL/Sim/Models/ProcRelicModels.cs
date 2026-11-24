@@ -68,24 +68,6 @@ public sealed class Pocketwatch : RelicProc
 }
 
 /// <summary>
-/// GremlinHorn.AfterDeath: an enemy's death gives its owner its Energy (PlayerCmd.GainEnergy), then draws its Cards (CardPileCmd.Draw),
-/// queued to run once the hit or action that killed it is over (SimEngine.Raise). No tab of its own here: its tab is judged by the
-/// play's outcome (a kill in every branch: its OutcomeTab); this model makes the energy and the draw happen in the simulation
-/// (the play check compares the energy after each play: a dev-mode report, Unleash and Debilitate killing a segment).
-/// </summary>
-public sealed class GremlinHorn : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => owner == Who.You ? OutcomeRules.KillsOne : null;
-
-    public override void AfterDeath(SimState state, int owner, int dead)
-    {
-        if (dead < 0 || !Who.IsPlayer(owner)) return;
-        SimEngine.Raise(state, CardEvent.EnergyGained, owner, SimEngine.Var(state, owner, Name, "Energy", fallback: 1));
-        SimEngine.Raise(state, CardEvent.Drawn, owner, SimEngine.Var(state, owner, Name, "Cards", fallback: 1));
-    }
-}
-
-/// <summary>
 /// CentennialPuzzle.AfterDamageReceived: the first time this combat its owner takes damage past their block (UnblockedDamage &gt; 0),
 /// draws its Cards (3), one at a time, queued until the hit is over (SimEngine.Raise). Used up for the combat (UsedThisCombat: the
 /// relic's amount here). A draw tab: the cards it really draws (decision #132).

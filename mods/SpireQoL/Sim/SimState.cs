@@ -183,8 +183,6 @@ public sealed class SimEnemy
     [JsonIgnore] public bool Ravenous { get => Powers.Has(PowerId.Ravenous); set => Set(PowerId.Ravenous, value ? 1 : 0); }
     /// <summary>Crab Rage: its hits once an ally has died (its Strength; null = no Crab Rage).</summary>
     public List<int>? HitsAfterAllyDies;
-    /// <summary>Crab Rage: block it gains when an ally dies.</summary>
-    public int CrabRageBlock;
     /// <summary>
     /// Explosive: when it dies, this much damage to you (unpowered, blockable: ExplosivePower.AfterDeath hits every
     /// living player), after the game's damage math for you; 0 = none.

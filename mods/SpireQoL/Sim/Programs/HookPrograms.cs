@@ -310,6 +310,13 @@ public sealed record HookProgram(HookName Hook, IReadOnlyList<HookStep> Steps)
     public HookValue? Returns { get; init; }
 }
 
+/// <summary>
+/// A tab judged on how the turn ends (SimModel.OutcomeTab), read from what a model's AfterDeath waits on (HookReader.OutcomeOf): its owner's death
+/// (an enemy's: a warning on a play that can kill it), another death on its owner's side (an enemy's: a warning on a play that kills another
+/// enemy), a death on the other side (a player's: a bonus on a play that kills an enemy in every outcome).
+/// </summary>
+public enum HookOutcome { KillsIt, KillsAnother, KillsOne }
+
 /// <summary>Whether a model is a power (on a creature: its PowerSet entry) or a relic (on a player: its RelicSet entry).</summary>
 public enum ModelKind { Power, Relic }
 
@@ -327,6 +334,9 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     /// its owner (block, a buff on itself): on an enemy, your play helping it (Enrage). Read from its programs (HookReader.HarmfulOf).
     /// </summary>
     public bool Harmful { get; init; }
+
+    /// <summary>Its tab is judged on how the turn ends, by what its AfterDeath waits on (HookReader.OutcomeOf); it has no play tab then. Null: none.</summary>
+    public HookOutcome? Outcome { get; init; }
 
     /// <summary>
     /// Why its hooks weren't read, for a class whose hooks read whole at the reviewed builds and no longer do (a game update): no program, and

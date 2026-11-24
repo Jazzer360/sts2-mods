@@ -1295,7 +1295,6 @@ public static partial class SimEngine
             {
                 enemy.Hits = enemy.HitsAfterAllyDies;
                 enemy.HitsAfterAllyDies = null;
-                enemy.Block += enemy.CrabRageBlock;
             }
         }
     }

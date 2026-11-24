@@ -39,6 +39,8 @@ public class ReadModelParityTests
         ["StranglePower.AfterCardPlayed"] = "CreatureCmd.Damage(base.Owner, ...), with no test of its owner's side: on a player it hurts them for their own plays (the hand-written model dealt damage to enemies only). Only enemies have it in the game (Strangle the card applies it to one): no prediction changes",
         ["SneakyPower.AfterCardPlayed"] = "cardPlay.Card.Owner.Creature != base.Owner && cardPlay.Card.Type == Attack, with no test of its owner's side: on a player it gives them block on another's Attack (the hand-written model wanted an enemy). Only enemies have it in the game: no prediction changes",
         ["ConcoctPower.AfterSideTurnEnd"] = "base.Owner.Side != side: PowerCmd.Remove(this) as the other side's turn ends, which for the players' turn the simulator ends is an enemy owner. The engine runs the turn's end for players' models only (SimEngine.EndOfTurn), and only players have it: no prediction changes",
+        ["CrabRagePower.AfterDeath"] = "CreatureCmd.GainBlock(base.Owner, Block): an enemy's block from a read model goes through the block math and is its reaction (SimEngine.EnemyBlock: logged, SimEnemy.ReactedWithBlock), where the hand-written model added it raw; with its Unpowered props nothing changes the 99, and nothing shown reads that flag: no prediction changes. Its Strength and its block are each logged, as each is a command of its code",
+        ["GremlinHorn.AfterDeath"] = "Flash(), then PlayerCmd.GainEnergy and CardPileCmd.Draw (queued until the hit is over, as the hand-written model did): the read model logs its firing (the game's Flash). Its tab is judged on the outcome (a kill in every branch), not on the log: what's shown doesn't change",
         ["IterationPower.AfterCardEvent"] = "Flash(), then CardPileCmd.Draw: the read model logs its firing (the game's Flash) where the hand-written model logged none. It has no tab (no Proc Tags row): what's shown doesn't change; the play check now holds its flash to the game's",
         ["PaleBlueDotPower.AfterCardPlayed"] = "PowerCmd.Apply<DrawCardsNextTurnPower>(base.Owner, base.Amount): the read model puts Draw Cards Next Turn on its owner where the hand-written model only fired. It acts as its owner's next turn starts, outside a simulation: no prediction changes",
         ["SerratedArrowsPower.ModifyDamageMultiplicative"] = "target.HasPower<ImpaledPower>(), with no test of the target's side: a player with Impaled would count (the hand-written model wanted an enemy). Only enemies are impaled (ArrowCmd.ImpaleTarget: an arrow in the shot's target, an enemy): no prediction changes",
@@ -60,6 +62,12 @@ public class ReadModelParityTests
     /// gives the Data as the adapter did (Hailstorm's FrostOrbs, the Frost orbs it needs).
     /// </summary>
     private static readonly Dictionary<string, string> PowerDataVars = new(StringComparer.Ordinal) { [PowerId.Hailstorm.Name] = "FrostOrbs" };
+
+    /// <summary>
+    /// The powers whose hand-written model's amount the adapter read from one of their values, by that value's key: the board gives the amount
+    /// as the adapter did (Crab Rage's Strength).
+    /// </summary>
+    private static readonly Dictionary<string, string> PowerAmountVars = new(StringComparer.Ordinal) { [PowerId.CrabRage.Name] = "StrengthPower" };
 
     /// <summary>
     /// "Model.Var": values the hand-written model wrote as a constant (Colossus' 0.5) that the read model reads from its values: the board gives
@@ -88,6 +96,12 @@ public class ReadModelParityTests
         Assert.Equal(hand.Seen, read.Seen);
         Assert.Equal(hand.Instanced, read.Instanced);
         Assert.Equal(hand.JudgedOnOutcome, read.JudgedOnOutcome);
+        // A tab judged on the outcome: the same rule for each owner (none, or a warning or a bonus, set off by the play or later).
+        foreach (var owner in OwnersOf(read))
+        {
+            static string RuleOf(OutcomeRule? rule) => rule == null ? "none" : $"harmful {rule.Harmful}, in play {rule.InPlay}, by branch {rule.InBranch != null}, in some {rule.InSome != null}";
+            Assert.Equal(RuleOf(hand.OutcomeTab(Board(read, owner), new SimOutcome(), owner)), RuleOf(read.OutcomeTab(Board(read, owner), new SimOutcome(), owner)));
+        }
         var differences = new List<string>();
         var compared = 0;
         foreach (var hook in Hooks.Where(hook => hand.Overrides(hook) || read.Overrides(hook)))
@@ -188,7 +202,7 @@ public class ReadModelParityTests
         var playersApplier = model.Spec.Values().Any(value => value is HookFactValue { Fact: HookFact.ApplierIsPlayer or HookFact.PlayIsAppliers });
         var powerData = PowerDataVars.TryGetValue(model.Name, out var dataVar) ? state.Vars[$"{owner}:{model.Name}:{dataVar}"]
             : model.UsesApplier ? DataCreature.Of(playersApplier ? Who.You : 0) : 0;
-        if (model.Spec.Kind == ModelKind.Power) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).With(new PowerId(model.Name), amount: 3, data: powerData));
+        if (model.Spec.Kind == ModelKind.Power) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).With(new PowerId(model.Name), amount: PowerAmountVars.TryGetValue(model.Name, out var amountKey) ? state.Vars[$"{owner}:{model.Name}:{amountKey}"] : 3, data: powerData));
         var amount = RelicAmountVars.TryGetValue(model.Name, out var amountVar) ? state.Vars[$"{owner}:{model.Name}:{amountVar}"] : 0;
         // A relic whose amount is its value keeps no flag (SimReaders.Relics); any other starts armed.
         var data = RelicAmountVars.ContainsKey(model.Name) ? 0 : (int)RelicUse.Armed;

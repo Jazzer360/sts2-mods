@@ -115,10 +115,44 @@ public static class HookReader
         programs = programs.Select(program => program with { Steps = program.Steps.Where(step => step is not StoreFieldStep store || fieldsRead.Contains(store.Field)).ToList() })
             .Where(program => program.Returns != null || program.Steps.Count > 0).ToList();
         var harmful = HarmfulOf(programs);
-        // A crossed tab carries no amount (only the four core resources' plain tabs do: decision #132): a trigger.
-        var spec = new ModelSpec(type.Name, kind, programs) { Tab = harmful && TabOf(programs) != null ? TabKind.Trigger : TabOf(programs), Harmful = harmful };
+        var outcome = OutcomeOf(programs);
+        // A crossed tab carries no amount (only the four core resources' plain tabs do: decision #132): a trigger. A tab judged on the outcome
+        // is its only one.
+        var spec = new ModelSpec(type.Name, kind, programs)
+        {
+            Tab = outcome != null ? null : harmful && TabOf(programs) != null ? TabKind.Trigger : TabOf(programs), Harmful = harmful, Outcome = outcome,
+        };
         return new ModelReading(spec, readings);
     }
+
+    /// <summary>
+    /// A tab judged on the outcome, from what its AfterDeath's steps wait on: its owner's death (KillsIt), another creature's on its owner's
+    /// side (KillsAnother: Crab Rage), one on the other side (KillsOne: Gremlin Horn). Null when it has no AfterDeath step, or one on
+    /// none of these.
+    /// </summary>
+    internal static HookOutcome? OutcomeOf(IReadOnlyList<HookProgram> programs)
+    {
+        static bool DeadAndOwner(HookFactValue fact) => fact.Fact == HookFact.SameSide && fact.Creature is { } one && fact.Other is { } other
+            && new[] { one.Who, other.Who }.OrderBy(who => who).SequenceEqual(new[] { HookWho.Owner, HookWho.Dead }) && !one.PetOwner && !other.PetOwner;
+        foreach (var step in new ModelSpec("", ModelKind.Power, programs.Where(program => program.Hook == HookName.AfterDeath).ToList()).Steps())
+        {
+            if (Requires(step.When, fact => fact.Fact == HookFact.DeadIsOwner, holds: true)) return HookOutcome.KillsIt;
+            if (Requires(step.When, DeadAndOwner, holds: true)) return HookOutcome.KillsAnother;
+            if (Requires(step.When, DeadAndOwner, holds: false)) return HookOutcome.KillsOne;
+        }
+        return null;
+    }
+
+    /// <summary>The condition holds only when a fact <paramref name="matches"/> holds (or fails: <paramref name="holds"/> false): one of its ands.</summary>
+    private static bool Requires(HookValue? when, Func<HookFactValue, bool> matches, bool holds) => when switch
+    {
+        HookFactValue fact => holds && matches(fact),
+        HookNot not => Requires(not.Inner, matches, !holds),
+        HookTest test => Requires(test.Test, matches, holds),
+        HookMath { Operation: HookOperation.And } both when holds => Requires(both.Left, matches, holds) || Requires(both.Right, matches, holds),
+        HookMath { Operation: HookOperation.Or } either when !holds => Requires(either.Left, matches, holds) || Requires(either.Right, matches, holds),
+        _ => false,
+    };
 
     /// <summary>
     /// A read model's tab, from what its commands give (decision #132's kinds): block, damage, cards drawn or energy, by its first command that

@@ -654,6 +654,139 @@
     "Harmful": false
   },
   {
+    "Name": "CrabRagePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDeath",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "StrengthPower",
+              "Canonical": 6
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDeath\u003Ed__8.MoveNext:002C",
+                "Test": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookFactValue",
+                    "Fact": "DeadIsOwner"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDeath\u003Ed__8.MoveNext:0049",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "SameSide",
+                  "Creature": {
+                    "Who": "Dead",
+                    "PetOwner": false
+                  },
+                  "Other": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Block",
+              "Canonical": 99
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Block.Props",
+              "Canonical": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDeath\u003Ed__8.MoveNext:002C",
+                "Test": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookFactValue",
+                    "Fact": "DeadIsOwner"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDeath\u003Ed__8.MoveNext:0049",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "SameSide",
+                  "Creature": {
+                    "Who": "Dead",
+                    "PetOwner": false
+                  },
+                  "Other": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDeath\u003Ed__8.MoveNext:002C",
+                "Test": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookFactValue",
+                    "Fact": "DeadIsOwner"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDeath\u003Ed__8.MoveNext:0049",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "SameSide",
+                  "Creature": {
+                    "Who": "Dead",
+                    "PetOwner": false
+                  },
+                  "Other": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Harmful": false,
+    "Outcome": "KillsAnother"
+  },
+  {
     "Name": "DanseMacabrePower",
     "Kind": "Power",
     "Hooks": [
@@ -1945,6 +2078,73 @@
     ],
     "Tab": "Damage",
     "Harmful": false
+  },
+  {
+    "Name": "GremlinHorn",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterDeath",
+        "Steps": [
+          {
+            "$kind": "GainEnergyStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Energy",
+              "Canonical": 1
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterDeath\u003Ed__6.MoveNext:0033",
+              "Test": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookFactValue",
+                  "Fact": "SameSide",
+                  "Creature": {
+                    "Who": "Dead",
+                    "PetOwner": false
+                  },
+                  "Other": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DrawStep",
+            "Count": {
+              "$kind": "HookVar",
+              "Key": "Cards",
+              "Canonical": 1
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterDeath\u003Ed__6.MoveNext:0033",
+              "Test": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookFactValue",
+                  "Fact": "SameSide",
+                  "Creature": {
+                    "Who": "Dead",
+                    "PetOwner": false
+                  },
+                  "Other": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Harmful": false,
+    "Outcome": "KillsOne"
   },
   {
     "Name": "HailstormPower",

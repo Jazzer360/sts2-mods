@@ -26,14 +26,12 @@ public class SimAllyDeathTests
     }
 
     [Fact]
-    public void CrabRageHitsHarderAndBlocksOnceAnAllyDies()
+    public void AnEnemysHitsChangeOnceAnAllyDies()
     {
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, hits: 4), Enemy(id: 2, hp: 30, hits: 8) } };
         state.Enemies[1].HitsAfterAllyDies = new List<int> { 14 };
-        state.Enemies[1].CrabRageBlock = 6;
         SimEngine.ApplyPlayTo(state, Strike(target: 1, damage: 5), out var after, out _);
         Assert.Equal(new[] { 14 }, after[0].Enemy(id: 2)!.Hits);
-        Assert.Equal(6, after[0].Enemy(id: 2)!.Block);
         Assert.Equal(14, SimEngine.Run(state, Strike(target: 1, damage: 5)).TakenMax);
     }
 
@@ -41,10 +39,10 @@ public class SimAllyDeathTests
     public void CrabRageGivesItsStrengthAndBlockWhateverItsMove()
     {
         // A dev review report: the Crusher, with a Buff intent (no attack: no Intent), gained 6 Strength and 99 block when the Rocket
-        // died (CrabRagePower.AfterDeath has no condition on its own move); the simulation gave neither.
+        // died (CrabRagePower.AfterDeath has no condition on its own move); the simulation gave neither. Read from its code: its
+        // PowerVar<StrengthPower>(6) and BlockVar(99, Unpowered), the game's values when the adapter reads none.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, hits: 4), Enemy(id: 2, hp: 30) } };
-        state.Enemies[1].Powers = state.Enemies[1].Powers.With(PowerId.CrabRage, 6);
-        state.Enemies[1].CrabRageBlock = 99;
+        state.Enemies[1].Powers = state.Enemies[1].Powers.With(PowerId.CrabRage, 1);
         SimEngine.ApplyPlayTo(state, Strike(target: 1, damage: 5), out var after, out _);
         var crusher = after[0].Enemy(id: 2)!;
         Assert.Equal(99, crusher.Block);
