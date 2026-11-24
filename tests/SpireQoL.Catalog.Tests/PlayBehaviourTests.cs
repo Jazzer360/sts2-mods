@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Models.Cards;
 using MegaCrit.Sts2.Core.Models.Monsters;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.Models.Relics;
+using MegaCrit.Sts2.Core.ValueProps;
 using SpireQoL.Procs;
 using SpireQoL.Sim;
 using Xunit;
@@ -217,6 +218,33 @@ public class PlayBehaviourTests
             log.Add(new MegaCrit.Sts2.Core.Combat.History.Entries.CardExhaustedEntry(card, exhausted.Combat.RoundNumber, exhausted.Combat.CurrentSide, CombatManager.Instance.History, exhausted.Combat.Players));
             var gained = Only(PlayOut(exhausted, exhausted.Add<ForgottenRitual>()));
             Assert.Equal(none.You.Energy + 3, gained.You.Energy);
+        }
+        finally
+        {
+            log.Clear();
+        }
+    }
+
+    [Fact]
+    public void SpiteHitsTwiceWhenYouLostHpThisTurn()
+    {
+        // Spite.OnPlay: hitCount = LostHpThisTurn ? HitCount : 1 (DamageReceivedEntry, yours, UnblockedDamage > 0). Each way's attack is on
+        // its condition, asked on the ledger as the play runs (decision #191); damage your block took doesn't count.
+        var log = GameFight.Log;
+        log.Clear();
+        try
+        {
+            var blocked = Fight();
+            var blockedEnemy = Enemy(blocked);
+            log.Add(new MegaCrit.Sts2.Core.Combat.History.Entries.DamageReceivedEntry(new DamageResult(blocked.Me.Creature, ValueProp.Move) { UnblockedDamage = 0, BlockedDamage = 6 },
+                blocked.Me.Creature, blockedEnemy, null, blocked.Combat.RoundNumber, blocked.Combat.CurrentSide, CombatManager.Instance.History, blocked.Combat.Players));
+            Assert.Equal(200 - 5, Only(PlayOut(blocked, blocked.Add<Spite>(), blockedEnemy)).Enemies[0].Hp);
+            log.Clear();
+            var hurt = Fight();
+            var hurtEnemy = Enemy(hurt);
+            log.Add(new MegaCrit.Sts2.Core.Combat.History.Entries.DamageReceivedEntry(new DamageResult(hurt.Me.Creature, ValueProp.Move) { UnblockedDamage = 3 },
+                hurt.Me.Creature, hurtEnemy, null, hurt.Combat.RoundNumber, hurt.Combat.CurrentSide, CombatManager.Instance.History, hurt.Combat.Players));
+            Assert.Equal(200 - 2 * 5, Only(PlayOut(hurt, hurt.Add<Spite>(), hurtEnemy)).Enemies[0].Hp);
         }
         finally
         {

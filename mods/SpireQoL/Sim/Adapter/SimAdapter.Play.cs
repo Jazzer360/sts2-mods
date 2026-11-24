@@ -82,7 +82,14 @@ public static partial class SimAdapter
         var shot = Fool.TriesShot(card);
         if (shot) play.Body.Add(new ShootAction());
         if (facts.AttackHits > 0 && AttackOf(card, facts, me, combat, ids, targetId, name) is { } attack)
-            play.Body.Add((shot ? attack with { NeedsArrow = true } : attack) with { StretchFromDamage = name == nameof(BlossomShot) });
+        {
+            attack = (shot ? attack with { NeedsArrow = true } : attack) with { StretchFromDamage = name == nameof(BlossomShot) };
+            // A hit count the code works out on a condition the simulator asks (Spite: two hits when you lost HP this turn, else one):
+            // the attack with each way's hits, on that way's condition, asked as it runs (decisions #190, #191).
+            if (attack.HitsFrom == SimCount.Given && HitWaysOf(card) is { } ways)
+                play.Body.AddRange(ways.Select(way => (SimAction)new WhenAction(way.Condition, new SimAction[] { attack with { Hits = way.Hits } })));
+            else play.Body.Add(attack);
+        }
         play.Body.AddRange(LaterAttacks(card, me, combat, ids));
         if (shot) play.Body.Add(new ImpaleAction());
         // Recall, Uproot, Wrest: every arrow of yours out of the target.
@@ -530,6 +537,32 @@ public static partial class SimAdapter
 
     private static bool IsPowerVar<T>(DynamicVar dynamicVar) where T : PowerModel =>
         dynamicVar.GetType() is { IsGenericType: true } type && type.GetGenericTypeDefinition() == typeof(PowerVar<>) && type.GetGenericArguments()[0] == typeof(T);
+
+    /// <summary>
+    /// The attack's hit count's ways when its code works it out on a test the simulator asks (WithHitCount's argument a value two ways
+    /// leave: Spite's {not LostHpThisTurn: 1; LostHpThisTurn: HitCount}): each way's condition (after the ways before it fail, as the first
+    /// way that holds gives the value) and its hits, the card's own number. Null when it isn't such a count.
+    /// </summary>
+    private static List<(SimCondition Condition, int Hits)>? HitWaysOf(CardModel card)
+    {
+        if (Procs.Programs.CardEffects.Attacks(card.GetType()) is not [var attackStep, ..]) return null;
+        var value = attackStep.Command.HitCountValue;
+        while (value is Procs.Programs.StoredValue stored) value = stored.Value;
+        if (value is not Procs.Programs.WaysValue { Ways.Count: > 1 } ways) return null;
+        var program = Procs.Programs.CardPrograms.Of(card.GetType());
+        var board = new Procs.Programs.ProgramBoard(card);
+        var result = new List<(SimCondition Condition, int Hits)>();
+        var before = new List<SimCondition>();
+        foreach (var (when, hits) in ways.Ways)
+        {
+            var reading = PlayConditions.Reading(card, when);
+            if (reading is not { Way: Procs.Programs.ConditionWay.Simulated, Condition: { } condition, AskFirst.Count: 0 }) return null;
+            if (Procs.Programs.ProgramEvaluator.Number(hits, board, program) is not { } count) return null;
+            result.Add((before.Count == 0 ? condition : new AllCondition(before.Select(earlier => (SimCondition)new NotCondition(earlier)).Append(condition).ToList()), (int)count));
+            before.Add(condition);
+        }
+        return result;
+    }
 
     /// <summary>
     /// The card's attack, each play: its hits per play, its damage value (calculated on each target when it's a calculated

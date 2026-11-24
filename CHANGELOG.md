@@ -47,6 +47,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - What happened earlier in the fight is counted from the game's log once, then by the prediction as the plays go (decision #191): Forgotten Ritual gains its energy after a card an earlier play exhausted, as in the game (it was decided on the board before the play).
 - Bubble Bubble poisons only a target that already has poison, Go for the Eyes weakens only an enemy that intends to attack and isn't stunned by then, and Molten Fist applies as much Vulnerable as its target has (it applied 1 whatever the target had, none included), each asked as the play runs, as in the game: a replayed Molten Fist doubles the Vulnerable its first play gave.
 - Feral returns a replayed 0-cost Attack once and uses one charge (it came back on each play); a Feral played after 0-cost Attacks this turn counts them, and more Feral on one adds charges, as in the game. Echo Form's extra play is decided as each card play starts, from the plays before it in the same turn: a card auto-played after the one you play (Stampede) is no longer predicted doubled.
+- An attack whose hit count its code works out on a test (Spite's HP lost this turn, Dismantle's Vulnerable target, Wah Blast's Cho or Ki this turn) asks it as each play runs: Spite hits twice after HP lost earlier in the same play, and a replay's later play counts what the earlier ones did.
 
 ### Main Saves 1.0.27
 #### Changed
