@@ -89,8 +89,7 @@ public static class SimReaders
             // Counters the proc models count down (the power's own number: DisplayAmount, or its CardsLeft value).
             // Feral: its zeroCostAttacksPlayed (its own count: the model compares it with its amount, which more Feral raises).
             case nameof(FeralPower): data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } feral ? Sts2State.Private(feral, "zeroCostAttacksPlayed", fallback: 0) : Math.Max(0, power.Amount - power.DisplayAmount); break;
-            case nameof(OrbitPower) or nameof(AutomationPower) or nameof(CacophonyPower): data = Math.Max(0, power.DisplayAmount); break;
-            case nameof(PanachePower) or nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)); break;
+            case nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)); break;
             // Once a turn (PowerUse.UsedThisTurn: already this turn).
             case nameof(PaleBlueDotPower): data = Internal(power, "alreadyActivatedThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
             case nameof(LullabyPower): data = Sts2State.Private(power, "_proccdThisTurn", fallback: true) ? (int)PowerUse.UsedThisTurn : 0; break;
@@ -128,26 +127,6 @@ public static class SimReaders
         if (SimModels.Get(name) is ReadModel { UsesApplier: true }) data = DataCreature.Of(power.Applier is { } applier ? idOf(applier) : null);
         return (name, amount, data);
     }
-
-    /// <summary>
-    /// Counter powers a creature can have several copies of (PowerInstanceType.Instanced: each Orbit card played makes its own), each
-    /// copy with its own count and amount: read one by one into SimPlayer.Counters (Counters), each counted on its own by its model
-    /// (CounterPower). A read power kept in copies (The Bomb) is read into its owner's fields instead (Fields). CountdownTests holds every countdown
-    /// model of an instanced power to this list.
-    /// </summary>
-    internal static readonly HashSet<string> InstancedCounters = new() { nameof(OrbitPower), nameof(AutomationPower), nameof(CacophonyPower), nameof(PanachePower) };
-
-    /// <summary>Each copy of a counter power on this creature (InstancedCounters), in the game's order: its count and its amount.</summary>
-    public static List<CounterCopy> Counters(Creature creature) =>
-        creature.Powers.Where(power => InstancedCounters.Contains(power.GetType().Name))
-            .Select(power => new CounterCopy(new PowerId(power.GetType().Name), CountOf(power), AmountOf(power))).ToList();
-
-    /// <summary>A counter power's count, as Powers reads it into its Data.</summary>
-    private static int CountOf(PowerModel power) =>
-        power is PanachePower ? Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)) : Math.Max(0, power.DisplayAmount);
-
-    /// <summary>What a copy gives when its count runs out: its amount.</summary>
-    private static int AmountOf(PowerModel power) => power.Amount;
 
     /// <summary>A flag in a power's internal data (PowerModel._internalData), true when unreadable (so a once-a-turn proc isn't promised).</summary>
     private static bool Internal(PowerModel power, string field) =>

@@ -19,25 +19,36 @@ public class InstancedCopyTests
     public void TwoMonologuesGiveTwoStrengthACard()
     {
         // MonologuePower.BeforeCardPlayed binds each copy's DynamicVars.Strength, AfterCardPlayed applies it: two copies of 1 each
-        // give 2 a card. The adapter reads the total over the copies ("StrengthPower.Total"); "StrengthPower" is the last copy's.
+        // give 2 a card. Read from its code (decision #196): each copy's Strength is its own state, as the adapter reads each instance.
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 100) } };
         state.You.Powers = state.You.Powers.With(PowerId.Monologue, amount: 2);
-        state.Vars[$"{Who.You}:MonologuePower:StrengthPower"] = 1;
-        state.Vars[$"{Who.You}:MonologuePower:StrengthPower{SimEngine.TotalSuffix}"] = 2;
+        foreach (var copy in new[] { 1, 2 })
+            state.You.Fields = state.You.Fields.With($"{PowerId.Monologue.Name}@{copy}", amount: 1).With($"{PowerId.Monologue.Name}@{copy}.Var.StrengthPower", amount: 1);
         var after = Assert.Single(After(state, Play(Card("Strike"), target: 0, plays: 2, Attack(baseDamage: 5))));
         Assert.Equal(4, after.You.Powers[PowerId.Strength]);
         Assert.Equal(100 - 5 - 7, after.Enemy(id: 0)!.Hp); // the second play has the first's 2
     }
 
     [Fact]
-    public void OneMonologueWithoutATotalGivesItsOwnStrength()
+    public void TwoMonologuesEachGiveTheirOwnStrength()
     {
-        // A state without a total (built by hand, or a replay case from before totals): the one copy's value.
+        // An upgraded Monologue's copy (2) beside one of 1: 3 a card, each its own.
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 100) } };
-        state.You.Powers = state.You.Powers.With(PowerId.Monologue, amount: 1);
-        state.Vars[$"{Who.You}:MonologuePower:StrengthPower"] = 3;
+        state.You.Powers = state.You.Powers.With(PowerId.Monologue, amount: 2);
+        foreach (var (copy, strength) in new[] { (1, 1), (2, 2) })
+            state.You.Fields = state.You.Fields.With($"{PowerId.Monologue.Name}@{copy}", amount: 1).With($"{PowerId.Monologue.Name}@{copy}.Var.StrengthPower", amount: strength);
         var after = Assert.Single(After(state, Play(Card("Defend", SimCardType.Skill), target: Who.None, plays: 1)));
         Assert.Equal(3, after.You.Powers[PowerId.Strength]);
+    }
+
+    [Fact]
+    public void OneMonologueKeptAsOneGivesItsCanonicalStrength()
+    {
+        // A state with the power's entry alone (no copies listed): one copy, its Strength the class's canonical 1.
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 100) } };
+        state.You.Powers = state.You.Powers.With(PowerId.Monologue, amount: 1);
+        var after = Assert.Single(After(state, Play(Card("Defend", SimCardType.Skill), target: Who.None, plays: 1)));
+        Assert.Equal(1, after.You.Powers[PowerId.Strength]);
     }
 
     // ---- The Bomb: each copy ticks and goes off on its own (read from its code: its copies in your fields, decision #196)

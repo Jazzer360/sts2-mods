@@ -112,9 +112,15 @@ public static class HookReader
         }
         // One of its own values its code stores (DynamicVars["CardsLeft"].BaseValue--: Panache's count) is its state: every read of it reads
         // the state, from the canonical value for a new instance.
-        // Its own code may set it outside its hooks too (The Bomb's SetDamage, called as it lands: each copy its own Damage): state as well.
+        // Its own code may set it outside its hooks too (The Bomb's SetDamage, called as it lands: each copy its own Damage): state as well. A
+        // power kept in copies has each of its whole values per copy (each instance's own DynamicVars: Monologue's Strength, which its card sets
+        // as it lands); a value that isn't whole (Guarded's 0.5) is the class's (the simulator's fields keep whole numbers).
+        var copied = kind == ModelKind.Power && reader.Copies() != PowerCopies.One;
         var storedVars = new ModelSpec(type.Name, kind, programs).Steps().OfType<StoreFieldStep>().Select(store => store.Field)
-            .Where(field => field.StartsWith(VarFieldPrefix, StringComparison.Ordinal)).Concat(reader.VarsStoredOutsideHooks()).ToHashSet(StringComparer.Ordinal);
+            .Where(field => field.StartsWith(VarFieldPrefix, StringComparison.Ordinal)).Concat(reader.VarsStoredOutsideHooks())
+            .Concat(copied ? new ModelSpec(type.Name, kind, programs).Values().OfType<HookVar>().Where(variable => !variable.Key.EndsWith(".Props", StringComparison.Ordinal) && variable.Canonical == decimal.Truncate(variable.Canonical))
+                .Select(variable => VarFieldPrefix + variable.Key) : Array.Empty<string>())
+            .ToHashSet(StringComparer.Ordinal);
         if (storedVars.Count > 0) programs = programs.Select(program => VarsAsState(program, storedVars)).ToList();
         // A store to a field no program reads changes only what the game shows (Kunai's IsActivating): left out.
         var fieldsRead = new ModelSpec(type.Name, kind, programs).Values().OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
@@ -133,7 +139,7 @@ public static class HookReader
     }
 
     /// <summary>The prefix of one of a model's own values kept as its state ("Var.CardsLeft"), where its code stores it.</summary>
-    public const string VarFieldPrefix = "Var.";
+    public const string VarFieldPrefix = HookField.VarPrefix;
 
     /// <summary>A program with each read of a value its model stores (HookVar) read as that state (HookField "Var.key", from its canonical value).</summary>
     private static HookProgram VarsAsState(HookProgram program, IReadOnlySet<string> stored)
@@ -510,7 +516,10 @@ public static class HookReader
                         var negative = LandsAsDebuff(power, amount);
                         return new ApplyPowerStep(underlying, Targets(values[targetAt]), negative ? new HookMath(HookOperation.Multiply, amount, new HookConstant(-1m)) : amount) { Debuff = negative };
                     }
-                    return new ApplyPowerStep(power, Targets(values[targetAt]), amount) { Debuff = LandsAsDebuff(power, amount) };
+                    return new ApplyPowerStep(power, Targets(values[targetAt]), amount)
+                    {
+                        Debuff = LandsAsDebuff(power, amount), DebuffWhenNegative = amount is not HookConstant && AllowsNegative(power),
+                    };
                 }
                 case "OrbCmd.Channel":
                 {
@@ -542,6 +551,16 @@ public static class HookReader
             try { return Value(ProgramReader.ReadReturnedValue(_type, getter, _read) ?? throw new Gap($"gap: the property {name}")); }
             finally { _inlining.Remove(name); }
         }
+
+        /// <summary>A value the code holds as a whole number (an int: a constant, an int field or property, arithmetic over them), not a decimal.</summary>
+        private static bool IsWhole(ProgramValue value) => value switch
+        {
+            StoredValue stored => IsWhole(stored.Value),
+            ConstantValue => true,
+            QueryValue { ValueType: "Int32" } => true,
+            ArithmeticValue arithmetic => IsWhole(arithmetic.Left) && IsWhole(arithmetic.Right),
+            _ => false,
+        };
 
         /// <summary>The type of one of its own fields or properties (null: not one of its own, or its data's).</summary>
         private Type? OwnMemberType(string name)
@@ -608,6 +627,10 @@ public static class HookReader
             if (negative && Returned(powerType, "get_AllowNegative") is ConstantValue { Value: 1 }) return true;
             return Returned(powerType, "get_Type") is ConstantValue type && EnumName(powerType.Assembly, "PowerType", type.Value) == "Debuff";
         }
+
+        /// <summary>The power can go below 0 (its AllowNegative): given less than 0, it lands as a debuff.</summary>
+        private bool AllowsNegative(string power) =>
+            _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + power) is { } powerType && Returned(powerType, "get_AllowNegative") is ConstantValue { Value: 1 };
 
         private ProgramValue? Returned(Type type, string method)
         {
@@ -963,6 +986,8 @@ public static class HookReader
                 case NamedValue { Name: "Decimal.One" }: return new HookConstant(1m);
                 case NamedValue { Name: "Decimal.MinusOne" }: return new HookConstant(-1m);
                 case NamedValue { Name: "amount" } when _hook == "AfterPowerAmountChanged": return new HookFactValue(HookFact.PowerAmount);
+                // The energy a spend took (AfterEnergySpent's amount): the simulator raises one energy-spent event for each energy spent.
+                case NamedValue { Name: "amount" } or ParameterValue { Name: "amount" } when _hook == "AfterEnergySpent": return new HookConstant(1m);
                 // The stars a spend took (AfterStarsSpent's amount): the play's stars, as the simulator spends them (one event a play).
                 case NamedValue { Name: "amount" } or ParameterValue { Name: "amount" } when _hook == "AfterStarsSpent": return new HookFactValue(HookFact.StarsSpent);
                 // The floor of a quotient (Mathf.FloorToInt((float)a / (float)b): Galactic Dust's blocks per Stars spent): (a - a rem b) / b, for counts.
@@ -1001,6 +1026,12 @@ public static class HookReader
                     return new HookFactValue(HookFact.CardEnergy);
                 case QueryValue { Name: "GetResolved", Of: QueryValue { Name: "EnergyCost", Of: { } costOf } } when IsPlayCard(costOf):
                     return new HookFactValue(HookFact.CardEnergy);
+                // Whole numbers divided (int energySpent / 4: Orbit's) leave the whole part, as the CPU's div does: (a - a rem b) / b.
+                case ArithmeticValue { Op: "div" } whole when IsWhole(whole.Left) && IsWhole(whole.Right):
+                {
+                    var (dividend, divisor) = (Value(whole.Left), Value(whole.Right));
+                    return new HookMath(HookOperation.Divide, new HookMath(HookOperation.Subtract, dividend, new HookMath(HookOperation.Remainder, dividend, divisor)), divisor);
+                }
                 case ArithmeticValue arithmetic:
                     return new HookMath(arithmetic.Op switch
                     {

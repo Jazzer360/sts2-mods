@@ -570,12 +570,14 @@ public sealed class ReadModel : SimModel
             {
                 var amount = Compile(apply.Amount);
                 var power = new PowerId(apply.Power);
-                var debuff = apply.Debuff;
+                var alwaysDebuff = apply.Debuff;
+                var debuffWhenNegative = apply.DebuffWhenNegative;
                 var target = apply.Target;
                 return args =>
                 {
                     var state = args.State;
                     var given = (int)amount(in args);
+                    var debuff = alwaysDebuff || debuffWhenNegative && given < 0;
                     switch (target)
                     {
                         case HookTarget.Owner: SimEngine.ApplyPower(state, args.Owner, args.Owner, power, given, debuff); break;

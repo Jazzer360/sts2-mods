@@ -22,6 +22,18 @@ public class ProcModelTests
         return state;
     }
 
+    /// <summary>
+    /// A power read from its code and kept in copies (decision #196), as one copy with its own state (its count: "Var.CardsLeft",
+    /// "Data.energySpent"), as the adapter reads it from the game's object.
+    /// </summary>
+    private static SimState Copy(SimState state, PowerId name, int amount, params (string Field, int Value)[] fields)
+    {
+        state.You.Powers = state.You.Powers.With(name, amount);
+        state.You.Fields = state.You.Fields.With($"{name.Name}@1", amount);
+        foreach (var (field, value) in fields) state.You.Fields = state.You.Fields.With($"{name.Name}@1.{field}", value);
+        return state;
+    }
+
     private static SimState Relic(SimState state, RelicId name, int amount = 0, int data = 1, params (string Var, int Value)[] vars)
     {
         state.You.Relics = state.You.Relics.With(name, amount, data);
@@ -208,11 +220,12 @@ public class ProcModelTests
     [Fact]
     public void PanacheFiresOnTheCardThatEndsItsCount()
     {
-        var state = Power(State(), PowerId.Panache, amount: 10, data: 2);
+        // Read from its code: its CardsLeft counts down on each card its owner plays once it's been applied (alreadyApplied), and starts over at 5.
+        var state = Copy(State(), PowerId.Panache, amount: 10, ("Var.CardsLeft", 2), ("Data.alreadyApplied", 1));
         var after = One(state, Events(Card("A", SimCardType.Skill), plays: 2));
         Assert.Equal(90, after.Enemy(id: 0)!.Hp);
-        Assert.Equal(5, after.You.Powers.DataOf(PowerId.Panache));
-        Assert.Equal(100, One(Power(State(), PowerId.Panache, amount: 10, data: 3), Events(Card("A", SimCardType.Skill), plays: 2)).Enemy(id: 0)!.Hp);
+        Assert.Equal(5, after.You.Fields[$"{PowerId.Panache.Name}@1.Var.CardsLeft"]);
+        Assert.Equal(100, One(Copy(State(), PowerId.Panache, amount: 10, ("Var.CardsLeft", 3), ("Data.alreadyApplied", 1)), Events(Card("A", SimCardType.Skill), plays: 2)).Enemy(id: 0)!.Hp);
     }
 
     [Fact]
@@ -239,9 +252,9 @@ public class ProcModelTests
     [Fact]
     public void MonologueGivesStrengthThatTheReplayUses()
     {
-        // MonologuePower.BeforeCardPlayed binds DynamicVars.Strength.IntValue, kept as "StrengthPower" (PowerVar<StrengthPower>).
-        var state = Power(State(), PowerId.Monologue, amount: 1);
-        state.Vars[$"{Who.You}:MonologuePower:StrengthPower"] = 2;
+        // MonologuePower.BeforeCardPlayed binds DynamicVars.Strength.IntValue, kept as "StrengthPower" (PowerVar<StrengthPower>): each copy's own
+        // (its card sets it as it lands), read from its code.
+        var state = Copy(State(), PowerId.Monologue, amount: 1, ("Var.StrengthPower", 2));
         var after = One(state, Play(Card("Strike"), target: 0, plays: 2, Attack(baseDamage: 5)));
         Assert.Equal(100 - 5 - 7, after.Enemy(id: 0)!.Hp);
         Assert.Equal(4, after.You.Powers[PowerId.Strength]);
@@ -504,11 +517,12 @@ public class ProcModelTests
     [Fact]
     public void CountdownPowersFireWhenTheirCountRunsOut()
     {
-        var state = Power(State(), PowerId.Cacophony, amount: 7, data: 2);
+        // Read from their code: Cacophony's Cards counts down a draw at a time; Orbit counts the energy spent (4 - energySpent % 4 to go).
+        var state = Copy(State(), PowerId.Cacophony, amount: 7, ("Var.Cards", 2));
         var after = One(state, Events(Card("A", SimCardType.Skill), plays: 1, new CardEventAction(CardEvent.Drawn, Count: 3)));
         Assert.Equal(93, after.Enemy(id: 0)!.Hp);
         Assert.Equal(1, after.Fired["CacophonyPower"]);
-        var orbit = One(Power(State(), PowerId.Orbit, amount: 1, data: 3), Events(Card("A", SimCardType.Skill), plays: 1, new CardEventAction(CardEvent.EnergySpent, Count: 2)));
+        var orbit = One(Copy(State(), PowerId.Orbit, amount: 1, ("Data.energySpent", 1)), Events(Card("A", SimCardType.Skill), plays: 1, new CardEventAction(CardEvent.EnergySpent, Count: 2)));
         Assert.False(orbit.Fired.Has("OrbitPower"));
     }
 
@@ -729,7 +743,7 @@ public class ProcModelTests
     {
         // Your last energy on a 1-cost card while Orbit is one energy from firing: Orbit gives energy back, so energy is left at the
         // end of the turn and nothing is given up (the owner's feedback, 1.21.1).
-        var state = Power(Relic(State(), RelicId.PaelsTears, data: 0), PowerId.Orbit, amount: 1, data: 1);
+        var state = Copy(Relic(State(), RelicId.PaelsTears, data: 0), PowerId.Orbit, amount: 1, ("Data.energySpent", 3));
         state.You.Energy = 1;
         var after = One(state, Spend(new SimCard("Strike", SimCardType.Attack) { Energy = 1 }, energy: 1));
         Assert.True(after.Fired.Has("OrbitPower"));

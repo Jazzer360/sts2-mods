@@ -46,18 +46,10 @@ internal static class ModelAmountCheck
         // After the turn the simulator predicts: nothing predicted reads them.
         ["InfernoPower Damage: game Amount | Var SelfDamage; model Amount"] =
             "its SelfDamage hits its owner at the start of their turn (AfterPlayerTurnStart): before anything predicted, the turn is under way",
-        ["MonologuePower Apply StrengthPower: game -Var StrengthApplied | Bound; model Bound"] =
-            "AfterSideTurnEnd takes back the Strength it gave this turn (-StrengthApplied): nothing predicted after your turn ends deals your powered damage",
         ["TenderPower Apply StrengthPower: game -1 | ?TenderPower.get_CardsPlayedThisTurn; model -1"] =
             "AfterSideTurnEnd gives back the Strength it took this turn (CardsPlayedThisTurn): nothing predicted after your turn ends deals your powered damage",
         ["TenderPower Apply DexterityPower: game -1 | ?TenderPower.get_CardsPlayedThisTurn; model -1"] =
             "AfterSideTurnEnd gives back the Dexterity it took this turn (CardsPlayedThisTurn): nothing predicted after your turn ends gains your powered block",
-        // Each Instanced copy acts on its own amount: the game's copies are separate powers, each with its base.Amount.
-        ["AutomationPower Energy: game Amount; model ?Enumerator.get_Current"] = "each copy's own amount (CounterPower.Copies), as each of the game's copies gives its base.Amount",
-        ["CacophonyPower Damage: game Amount; model ?Enumerator.get_Current"] = "each copy's own amount (CounterPower.Copies), as each of the game's copies deals its base.Amount",
-        ["PanachePower Damage: game Amount; model ?Enumerator.get_Current"] = "each copy's own amount (CounterPower.Copies), as each of the game's copies deals its base.Amount",
-        ["OrbitPower Energy: game mul(Amount, sub(div(?field energySpent, 4), ?field triggerCount)); model ?Enumerator.get_Current"] =
-            "each copy's own amount (CounterPower.Copies) each time its count of 4 energy spent runs out; the game gives base.Amount × the times it passed 4",
         // The same arithmetic, over something a hook's parameter or a count holds in the game and the simulation holds elsewhere.
         ["NecroMasteryPower Damage: game mul(-?parameter delta, Amount); model mul(?parameter lost, Amount)"] =
             "its amount × the HP Osty lost: AfterCurrentHpChanged's -delta in the game, AfterOstyHpLost's lost in the model",

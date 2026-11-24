@@ -218,6 +218,9 @@ public sealed record HookVar(string Key) : HookValue
 /// </summary>
 public sealed record HookField(string Field) : HookValue
 {
+    /// <summary>The prefix of one of a model's own values kept as its state ("Var.CardsLeft"): one its code stores, or each copy's own.</summary>
+    public const string VarPrefix = "Var.";
+
     /// <summary>
     /// What it is before anything stores it (a new instance's: one of its own values its code stores, "Var.CardsLeft", starts at the canonical
     /// value its CanonicalVars give it; any other field at 0).
@@ -305,6 +308,13 @@ public sealed record ApplyPowerStep(string Power, HookTarget Target, HookValue A
 {
     /// <summary>It lands as a debuff (Artifact takes it): the power's type for its amount, as the adapter read it.</summary>
     public bool Debuff { get; init; }
+
+    /// <summary>
+    /// It lands as a debuff when its amount, worked out as it runs, is below 0 (a power that can go below 0, its AllowNegative: Monologue's
+    /// Strength taken back, -StrengthApplied; power.GetTypeForAmount).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool DebuffWhenNegative { get; init; }
 }
 
 /// <summary>A store to one of the model's own fields or properties a program reads (this.AttacksPlayedThisTurn = ... + 1).</summary>

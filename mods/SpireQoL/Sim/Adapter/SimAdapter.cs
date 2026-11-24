@@ -626,7 +626,6 @@ public static partial class SimAdapter
         player.Block = creature.Block;
         // every power and relic with the numbers its model keeps, and the turn's card plays (docs/SIMULATOR.md).
         player.Powers = SimReaders.Powers(creature, idOf);
-        player.Counters = SimReaders.Counters(creature);
         player.Relics = SimReaders.Relics(me);
         player.Fields = SimReaders.Fields(creature.Powers.Cast<AbstractModel>().Concat(me.Relics.Where(relic => !relic.IsMelted)), idOf);
         player.Cards = SimReaders.Cards(me);

@@ -8,24 +8,21 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// A counter power a creature can have several copies of (PowerInstanceType.Instanced), each with its own count, is read copy by
-/// count: SimReaders.InstancedCounters lists them, and each copy is read with its own count (a report: two Orbits, one about to give
-/// energy, predicted as one).
+/// A power a creature can have several copies of (PowerInstanceType.Instanced), each with its own count, is read copy by copy (a report: two
+/// Orbits, one about to give energy, predicted as one): every instanced power the simulator models is read from its code and kept in copies
+/// (decision #196), and the adapter reads each copy with its own amount and its own state.
 /// </summary>
 [Collection(GameFightCollection.Name)]
 public class CountdownTests
 {
     [Fact]
-    public void EveryInstancedCountdownIsListed()
+    public void EveryInstancedModelKeepsItsCopies()
     {
         GameModels.EnsureLoaded();
-        var countdowns = typeof(SimReaders).Assembly.GetTypes()
-            .Where(type => !type.IsAbstract && typeof(Sim.Models.EventCountdownPower).IsAssignableFrom(type))
-            .Select(type => type.Name).Append("PanachePower");
-        var instanced = ModelDb.AllPowers.Where(power => power.InstanceType == PowerInstanceType.Instanced).Select(power => power.GetType().Name).ToHashSet();
-        var missing = countdowns.Where(instanced.Contains).Where(name => !SimReaders.InstancedCounters.Contains(name)).ToList();
-        Assert.True(missing.Count == 0, "instanced countdown powers missing from SimReaders.InstancedCounters: " + string.Join(", ", missing));
-        Assert.Contains("OrbitPower", SimReaders.InstancedCounters);
+        var instanced = ModelDb.AllPowers.Where(power => power.InstanceType != PowerInstanceType.None).Select(power => power.GetType().Name).ToHashSet();
+        var wrong = SimModels.Names.Where(instanced.Contains).Where(name => SimModels.Get(name) is ReadModel { HasCopies: false }).ToList();
+        Assert.True(wrong.Count == 0, "read models of instanced powers kept as one: " + string.Join(", ", wrong));
+        Assert.True(SimModels.Get(nameof(OrbitPower)) is ReadModel { HasCopies: true });
     }
 
     [Fact]
@@ -39,6 +36,7 @@ public class CountdownTests
         // One has had 3 energy spent on it (OrbitPower.Data.energySpent): 1 left, the other 4.
         var data = typeof(PowerModel).GetField("_internalData", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(first)!;
         data.GetType().GetField("energySpent", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!.SetValue(data, 3);
-        Assert.Equal(new[] { (1, 1), (4, 1) }, SimReaders.Counters(gameFight.Me.Creature).Select(copy => (copy.Left, copy.Amount)));
+        var fields = SimReaders.Fields(gameFight.Me.Creature.Powers);
+        Assert.Equal(new[] { (1, 3), (1, 0) }, new[] { 1, 2 }.Select(copy => (fields[$"{PowerId.Orbit.Name}@{copy}"], fields[$"{PowerId.Orbit.Name}@{copy}.Data.energySpent"])));
     }
 }

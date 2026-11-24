@@ -108,7 +108,8 @@ public class HistoryLedgerTests
             foreach (var query in model.History) Assert.True(asked.Contains(query), $"{name} asks {query}; its code asks {string.Join(", ", asked)}");
             checkedModels++;
         }
-        Assert.True(checkedModels >= 2);
+        // Fewer as models are read from their code (Echo Form is: its questions are its code's, read).
+        Assert.True(checkedModels >= 1);
     }
 
     // ---- the seed: the game's own answer

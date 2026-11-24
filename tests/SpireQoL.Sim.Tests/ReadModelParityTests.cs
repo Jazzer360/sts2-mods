@@ -40,6 +40,7 @@ public class ReadModelParityTests
         ["LunarPastry.AfterSideTurnEnd"] = "PlayerCmd.GainStars as your turn ends: the read model logs its firing, as every read model's acting step does, where the hand-written model logged only the stars. It has no tab, and the checks read from its code that it never flashes (decision #181): nothing shown changes",
         ["PaleBlueDotPower.AfterCardPlayed"] = "PowerCmd.Apply<DrawCardsNextTurnPower>(base.Owner, base.Amount): the read model puts Draw Cards Next Turn on its owner where the hand-written model only fired. It acts as its owner's next turn starts, outside a simulation: no prediction changes",
         ["VulnerablePower.ModifyDamageMultiplicative"] = "dealer.Player?.GetRelic<PaperPhrog>(), and PaperPhrog's and CrueltyPower's own `target == base.Owner` returns: Osty's hits get no Paper Phrog (a pet's creature has no Player; the hand-written model gave him his player's), a fix where Osty hits a Vulnerable enemy with Paper Phrog; and a creature's own Phrog and Cruelty don't raise a powered attack on itself (none happens today)",
+        ["MonologuePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this), then Strength -StrengthApplied (what its copy gave this turn, taken back) when its owner takes part: it goes as your turn ends. No card of yours plays after it this turn (the auto-plays come before), so no damage reads that Strength: no prediction changes. Its Apply logs a firing there (the read models' acting steps do), outside any play's log, so no tab reads it",
         ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
     };
 
@@ -75,6 +76,22 @@ public class ReadModelParityTests
     /// the game's value (its canonical one), so the two read the same number.
     /// </summary>
     private static readonly HashSet<string> HandWrittenConstants = new(StringComparer.Ordinal) { $"{PowerId.Colossus.Name}.DamageDecrease", $"{PowerId.Vulnerable.Name}.DamageIncrease", $"{PowerId.Weak.Name}.DamageDecrease" };
+
+    /// <summary>
+    /// The counters a hand-written model kept as its power's Data (the adapter read each copy's count there: SimReaders.Powers, Counters) and the
+    /// fields the read model keeps the same count in, as the adapter reads them from the game's object: 3 left either way.
+    /// </summary>
+    private static readonly Dictionary<string, (int Data, (string Field, int Value)[] Fields)> CounterFields = new(StringComparer.Ordinal)
+    {
+        // AutomationPower: Data is DisplayAmount, its data's cardsLeft.
+        [PowerId.Automation.Name] = (3, new[] { ("Data.cardsLeft", 3) }),
+        // CacophonyPower: DisplayAmount is its Cards value, which it counts down.
+        [PowerId.Cacophony.Name] = (3, new[] { (HookField.VarPrefix + "Cards", 3) }),
+        // PanachePower: its CardsLeft value; counting once alreadyApplied (a Data of 0 was "just applied").
+        [PowerId.Panache.Name] = (3, new[] { (HookField.VarPrefix + "CardsLeft", 3), ("Data.alreadyApplied", 1) }),
+        // OrbitPower: DisplayAmount is 4 - energySpent % 4.
+        [PowerId.Orbit.Name] = (3, new[] { ("Data.energySpent", 1), ("Data.triggerCount", 0) }),
+    };
 
     public static TheoryData<string> Models() => new(HandWritten.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
@@ -194,6 +211,17 @@ public class ReadModelParityTests
             state.Vars[key] = (int)value;
             if (value != (int)value) state.Fractions[key] = value;
         }
+        // A value a read model keeps as its state ("Var.key": one its code stores, or each copy's own): the one the hand-written model read from
+        // the adapter's values, on the power's one copy (or its own fields).
+        foreach (var field in model.Spec.Values().OfType<HookField>().Where(field => field.Field.StartsWith(HookField.VarPrefix, StringComparison.Ordinal)).DistinctBy(field => field.Field))
+        {
+            var value = (int)field.Canonical + 1;
+            state.Vars[$"{owner}:{model.Name}:{field.Field[HookField.VarPrefix.Length..]}"] = value;
+            SimEngine.SetField(state, owner, model.HasCopies ? model.CopyFieldKey(1, field.Field) : model.FieldKey(field.Field), value);
+        }
+        // What a hand-written counter kept as its Data (its count: Automation's cards left), the read model keeps as a field of its own.
+        if (CounterFields.TryGetValue(model.Name, out var counter))
+            foreach (var (field, value) in counter.Fields) SimEngine.SetField(state, owner, model.HasCopies ? model.CopyFieldKey(1, field) : model.FieldKey(field), value);
         // The powers and relics its code asks other creatures about (creature.HasPower<T>(), Player.GetRelic<T>()), on enemy 1 and the teammate
         // (a dealer, a target; a relic on both players), so each question is asked of a creature with it and of one without; Impaled also as a teammate's arrows (the
         // simulator's ImpaledPowerOther) on enemy 0.
@@ -218,7 +246,7 @@ public class ReadModelParityTests
         // A power whose code asks who applied it keeps its applier as its Data (DataCreature), as the adapter reads it: you, for one that asks
         // whether its applier is a player or played the card; else enemy 0 (one that asks whether its applier died).
         var playersApplier = model.Spec.Values().Any(value => value is HookFactValue { Fact: HookFact.ApplierIsPlayer or HookFact.PlayIsAppliers });
-        var powerData = PowerDataVars.TryGetValue(model.Name, out var dataVar) ? state.Vars[$"{owner}:{model.Name}:{dataVar}"]
+        var powerData = PowerDataVars.TryGetValue(model.Name, out var dataVar) ? state.Vars[$"{owner}:{model.Name}:{dataVar}"] : CounterFields.TryGetValue(model.Name, out var counted) ? counted.Data
             : model.UsesApplier ? DataCreature.Of(playersApplier ? Who.You : 0) : 0;
         if (model.Spec.Kind == ModelKind.Power) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).With(new PowerId(model.Name), amount: PowerAmountVars.TryGetValue(model.Name, out var amountKey) ? state.Vars[$"{owner}:{model.Name}:{amountKey}"] : 3, data: powerData));
         var amount = RelicAmountVars.TryGetValue(model.Name, out var amountVar) ? state.Vars[$"{owner}:{model.Name}:{amountVar}"] : 0;
@@ -461,6 +489,9 @@ public class ReadModelParityTests
             foreach (var relic in player.Relics.Items) player.Relics = player.Relics.With(relic.Name, amount: 0, data: 0);
             player.Fields = NamedCounts.Empty;
             player.Counters = new();
+            // A hand-written counter's count in its power's Data (the read model keeps it in its fields).
+            foreach (var power in player.Powers.Items.Where(power => CounterFields.ContainsKey(power.Name.Name)))
+                player.Powers = player.Powers.With(power.Name, power.Amount, data: 0);
         }
         foreach (var enemy in copy.Enemies) enemy.Fields = NamedCounts.Empty;
         return copy;

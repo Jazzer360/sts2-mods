@@ -49,7 +49,7 @@ public class ModelEffectTests
             && type.Namespace is "MegaCrit.Sts2.Core.Models.Powers" or "MegaCrit.Sts2.Core.Models.Relics");
         var report = ModelAmountCheck.Run(models, code.Read);
         // Fewer each round: a model read from its code (decision #195) takes its amounts where its code does, and isn't compared.
-        Assert.True(report.Compared > 20, $"only {report.Compared} models compared on {branch}");
+        Assert.True(report.Compared > 15, $"only {report.Compared} models compared on {branch}");
         Assert.True(report.Differences.Count + report.Unread.Count == 0, Describe(report));
     }
 

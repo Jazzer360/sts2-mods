@@ -32,7 +32,7 @@ public class ModelValueKeyTests
         var named = ModelValueKeyCheck.Named(new List<string>());
         Assert.Contains(named, key => key.Model == "Kunai" && key.Key == "DexterityPower");
         Assert.Contains(named, key => key.Model == "Kunai" && key.Key == "Cards");
-        Assert.Contains(named, key => key.Model == "MonologuePower" && key.Key == "StrengthPower");
+        Assert.Contains(named, key => key.Model == "CentennialPuzzle" && key.Key == "Cards");
         Assert.Contains("DexterityPower", ModelValueKeyCheck.GameKeys(typeof(MegaCrit.Sts2.Core.Models.Relics.Kunai)));
         Assert.DoesNotContain("Dexterity", ModelValueKeyCheck.GameKeys(typeof(MegaCrit.Sts2.Core.Models.Relics.Kunai)));
     }
