@@ -145,6 +145,8 @@ public sealed record ApplyPowerAction(PowerId Power, int Amount) : SimAction
     public bool CopiesOwn { get; init; }
     /// <summary>The amount is what the play's target has of that power when it lands (Molten Fist: PowerCmd.Apply of its Vulnerable amount).</summary>
     public bool CopiesTarget { get; init; }
+    /// <summary>The amount is what the play's target has of this other power when it lands (Dominate: your Strength, its Vulnerable).</summary>
+    public PowerId? TargetsAmountOf { get; init; }
     /// <summary>Applications (RandomEnemy: each to a random hittable enemy, a branch per target: Bouncing Flask).</summary>
     public int Times { get; init; } = 1;
 }

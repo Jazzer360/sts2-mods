@@ -37,11 +37,14 @@ public static partial class SimEngine
         {
             var target = branch.CurrentPlay?.Target ?? Who.None;
             branch.ArrowAwayAt = Who.None;
-            if (branch.You.Arrows > 0 && branch.Enemy(target) is { Alive: true })
+            var hasArrow = branch.You.Arrows > 0 && branch.Enemy(target) is { Alive: true };
+            if (hasArrow)
             {
                 branch.You.Arrows--;
                 branch.ArrowAwayAt = target;
             }
+            // Its result, for what the card does only when the shot had an arrow (Hobbling Shot's debuffs: ShotHadArrowCondition).
+            branch.PlayTests = branch.PlayTests.With(ShotKey, hasArrow ? 1 : 2);
             return Hook(branch, nameof(SimModel.AfterArrowShot), (model, owner, copy) => model.AfterArrowShot(copy, owner, Who.You));
         });
     }

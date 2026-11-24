@@ -91,10 +91,22 @@ public static class CardEffects
     /// <summary>The card type's draws for you, read once per type (its program doesn't change while the game runs).</summary>
     public static IReadOnlyList<DrawForYou> DrawsForYou(Type cardType) => Draws.GetOrAdd(cardType, type => DrawsForYou(CardPrograms.Of(type)));
 
-    /// <summary>The play's draws for you, in order.</summary>
+    /// <summary>
+    /// The play's draws for you, in order: to its owner, or to each player a loop over your side goes over (GetTeammatesOf: you are one of
+    /// them, Huddle Up).
+    /// </summary>
     public static IReadOnlyList<DrawForYou> DrawsForYou(CardProgram program) =>
-        Find(program, command => command.Command.DeclaringType == "CardCmd" && command.Command.Name == "DiscardAndDraw" || IsDraw(command) && command.Arguments.Contains("Owner"))
-            .Select(found => new DrawForYou(found.Command, found.Condition, found.Loops)).ToList();
+        Find(program, command => command.Command.DeclaringType == "CardCmd" && command.Command.Name == "DiscardAndDraw" || IsDraw(command))
+            .Where(found => !IsDraw(found.Command) || found.Command.Arguments.Contains("Owner") || ForEachOfYourSide(found))
+            .Select(found => new DrawForYou(found.Command, found.Condition, found.Loops.Where(loop => !OverYourSide(loop)).ToList())).ToList();
+
+    /// <summary>The loop goes over each creature on your side (a foreach over CombatState.GetTeammatesOf: you and your teammates).</summary>
+    public static bool OverYourSide(LoopStep loop) =>
+        loop.Over.StartsWith("each of", StringComparison.Ordinal) && loop.Items?.Parts().Any(part => part is QueryValue { Name: "GetTeammatesOf" }) == true;
+
+    /// <summary>The command acts on each player of a loop over your side (its argument is the loop's item: each.Player).</summary>
+    private static bool ForEachOfYourSide(Found found) =>
+        found.Loops.Any(OverYourSide) && found.Command.Values.Any(value => value.Parts().Any(part => part is NamedValue { Name: "each" }));
 
     // ---- cards a play takes: other cards exhausted, discarded, transformed or moved into your hand
 

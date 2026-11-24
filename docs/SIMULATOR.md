@@ -139,11 +139,15 @@ The script runs once per play (play count from the game: `ModifyCardPlayCount`),
 `OnPlayWrapper` does (decision #192): where the card goes after (`ModifyCardPlayResultLocation`: Feral, Nostalgia) and the play count the
 simulator's own models add (`ModifyCardPlayCount`: Echo Form, on the history ledger), each branch its own.
 
-Its actions run in the order the card's own code runs its commands (decision #182, docs/CARD_PROGRAMS.md): `CardProgramReader`
-reads the card's `OnPlay` (its state machine, local functions and the delegates it hands to commands) from the running game
-into a program, and `PlayOrder` puts each action at the command it stands for (block before attack for Iron Wave, exhausts
-before attack for Fiend Fire, round by round for Second Wind's loop). An action no command stands for keeps its place after
-the one it followed.
+Its actions are built from the card's own code, one command step at a time, in the order the code runs them (decisions #182,
+#193, docs/CARD_PROGRAMS.md): `CardProgramReader` reads the card's `OnPlay` (its state machine, local functions and the delegates it
+hands to commands) from the running game into a program, and `SimAdapter.Steps` translates each command step into the simulator's
+action for that command (`CommandsTranslated`: an attack from `DamageCmd.Attack` with its hits and targeting from its builder, a block
+from `CreatureCmd.GainBlock` to the creature its argument names, a power from `PowerCmd.Apply<T>` with its amount argument, a draw, a
+take, a channel...), its values from the step's arguments (block before attack for Iron Wave, exhausts before attack for Fiend
+Fire, block after each exhaust for Second Wind's loop). A command with no action yet is a named gap (`CommandsNotTranslated`), and
+`StepTranslationTests` holds every command every card calls on both branches to one or the other. Whether a step's action exists is
+never decided on the board before the play: its condition is.
 
 A step the card's code runs only on a condition is an ordinary action inside a `WhenAction` (decision #190, `Sim/SimConditions.cs`):
 the condition is a `SimCondition` (the last attack killed, Osty missing, the target impaled, a count of your hand, of the cards a filter

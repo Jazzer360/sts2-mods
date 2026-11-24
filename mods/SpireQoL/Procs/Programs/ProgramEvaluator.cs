@@ -274,14 +274,21 @@ public static class ProgramEvaluator
         // x is T: x when it's a T, else null.
         if (query.Name == "is" && query.Of != null) return asked != null && IsOfType(asked.GetType(), query.Type) ? asked : null;
         if (query.Of == null && query.Type == "Enumerable") return Linq(query, arguments, context);
-        // decimal's operators on numbers (Shared Fate's -EnemyStrengthLoss).
-        if (query.Of == null && query.Name is "op_UnaryNegation" or "op_Addition" or "op_Subtraction" or "op_Multiply")
+        // decimal's operators on numbers (Shared Fate's -EnemyStrengthLoss; Sovereign Blade's Parry above 0).
+        if (query.Of == null && query.Name is "op_UnaryNegation" or "op_Addition" or "op_Subtraction" or "op_Multiply"
+                or "op_GreaterThan" or "op_GreaterThanOrEqual" or "op_LessThan" or "op_LessThanOrEqual" or "op_Equality" or "op_Inequality")
             return (query.Name, arguments.Select(ToNumber).ToList()) switch
             {
                 ("op_UnaryNegation", [{ } only]) => -only,
                 ("op_Addition", [{ } left, { } right]) => left + right,
                 ("op_Subtraction", [{ } left, { } right]) => left - right,
                 ("op_Multiply", [{ } left, { } right]) => left * right,
+                ("op_GreaterThan", [{ } left, { } right]) => left > right,
+                ("op_GreaterThanOrEqual", [{ } left, { } right]) => left >= right,
+                ("op_LessThan", [{ } left, { } right]) => left < right,
+                ("op_LessThanOrEqual", [{ } left, { } right]) => left <= right,
+                ("op_Equality", [{ } left, { } right]) => left == right,
+                ("op_Inequality", [{ } left, { } right]) => left != right,
                 _ => Unknown,
             };
         // Math.Min, Max, Abs over numbers (Dredge's Min(Cards, your hand's room)).

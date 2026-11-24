@@ -74,10 +74,10 @@ internal static class CardCoverage
         [nameof(DemonicShield)] = "HP loss to you, block (worked out on the teammate) to them (CardEffects.BlocksAnother)",
         [nameof(Ignition)] = "a Plasma orb into the teammate's orbs, evoking their front orb when full (CardEffects.ChannelsForTarget)",
         [nameof(Mimic)] = "block to you equal to the teammate's block (CalculatedBlock on the target)",
-        [nameof(Rally)] = "its block to you and to every living teammate, worked out on each (CardEffects.BlocksEachPlayer)",
-        [nameof(HuddleUp)] = "every living teammate draws, not you: their draws (as many as their hand and piles allow) are their card events (CardEffects.DrawsForEachTeammate)",
-        [nameof(BladeSymphony)] = "Shivs into every living teammate's hand, created by them: their created-card events (SimAdapter.TeammatesShivCards)",
-        [nameof(GlimpseBeyond)] = "Souls into every living teammate's draw pile, created by you: your created-card events, per Soul (PlayFacts.GeneratedCount)",
+        [nameof(Rally)] = "its block to every living player of your side (GetTeammatesOf: you too), worked out on each (SimAdapter.BlocksFrom)",
+        [nameof(HuddleUp)] = "every living player of your side draws (GetTeammatesOf: you too): yours are simulated, a teammate's (as many as their hand and piles allow) are their card events (SimAdapter.DrawsFrom)",
+        [nameof(BladeSymphony)] = "Shivs into every living player's hand (GetTeammatesOf: you too), each made by its owner: their created-card events (SimAdapter.MadeForPlayers)",
+        [nameof(GlimpseBeyond)] = "Souls into every living player's draw pile (GetTeammatesOf: you too), created by you: your created-card events, per Soul (SimAdapter.MadeForPlayers)",
         // LegionOfBone.OnPlay: OstyCmd.Summon for every living player. Nothing reacts to a summon (no model overrides AfterSummon
         // or ModifySummonAmount, v0.113.1); it only raises each player's Osty, which is read from the game after the play.
         [nameof(LegionOfBone)] = "summons every player's Osty: nothing reacts to a summon, and each Osty's HP is read after the play",
@@ -192,7 +192,7 @@ internal static class CardCoverage
             issues.Add("channels orbs (the simulator doesn't add them)");
         if (Calls("OrbCmd", "Channel") && None(PlayFacts.ChannelCount))
             issues.Add("channels orbs (not counted for Metronome)");
-        if (Calls("CreatureCmd", "GainBlock") && None(PlayFacts.BlockGainCount))
+        if (Calls("CreatureCmd", "GainBlock") && Procs.Programs.CardEffects.BlockGains(card.GetType()).Count == 0)
             issues.Add("gains block its program doesn't show (not in the simulator or Juggernaut)");
         // Block more than once in one play (Evil Eye twice after an exhaust): each gain sets off Juggernaut and block reactions, counted
         // by its loops' rounds (PlayFacts.BlockGainCount), which must be readable.
@@ -210,9 +210,9 @@ internal static class CardCoverage
         // A card that isn't an attack but damages its target (Capture Spirit), read from its program: one damaging anything else isn't modelled.
         if (card.Type != CardType.Attack && Calls("CreatureCmd", "Damage") && card.DynamicVars.ContainsKey("Damage") && !Procs.Programs.CardEffects.DamagesTargetWithoutAttacking(card.GetType()))
             issues.Add("damages an enemy without attacking (not in the simulator: kills, lethal, Slippery)");
-        // A second damage value (Timber's hit on every enemy after a kill): the simulator models the ones it knows.
-        if (card.DynamicVars.Any(entry => entry.Key != "Damage" && entry.Value is DamageVar && !LaterAttackDamages(card.GetType(), entry.Key)))
-            issues.Add("has a second damage value (not in the simulator: kills, lethal)");
+        // A second damage value (Timber's hit on every enemy after a kill): each attack's and each damage's value is the one its step names.
+        if (card.DynamicVars.Any(entry => entry.Key != "Damage" && entry.Value is DamageVar && !DamageNamedByAStep(card.GetType(), entry.Key)))
+            issues.Add("has a second damage value no attack or damage of its play names (not in the simulator: kills, lethal)");
         // A card that sets an enemy's HP (Judgement kills at or below a threshold), read from its program: its target's.
         if (Calls("CreatureCmd", "SetCurrentHp") && !Procs.Programs.CardEffects.SetsTargetsHp(card.GetType()))
             issues.Add("sets a creature's HP (not in the simulator: kills, lethal)");
@@ -244,7 +244,7 @@ internal static class CardCoverage
         if ((Calls("CardCmd", "Discard") || Calls("CardCmd", "DiscardAndDraw")) && None(otherCard => PlayFacts.DiscardCount(otherCard, others, PlayFacts.CardsDrawn(otherCard, handCount: 5))))
             issues.Add("discards cards (not counted: Tingsha, Tough Bandages...)");
         if ((Calls("CardPileCmd", "AddGeneratedCardToCombat") || Calls("CardPileCmd", "AddGeneratedCardsToCombat") || Calls("CardPileCmd", "AddToCombatAndPreview"))
-            && None(otherCard => PlayFacts.GeneratedCount(otherCard, name, others, null!, out _)))
+            && None(otherCard => PlayFacts.GeneratedCount(otherCard, name, others, null!, out _) + SimAdapter.MadeByYouForYourSide(otherCard)))
             issues.Add("creates cards (not counted: created-card procs)");
         // A card whose hooks (not its play) move a card (itself: Make It So, Right Hand Hand...) to a pile: it comes back to
         // your hand on something you do, which only ReturnToHand models (the return tabs, your hand size after).
@@ -304,13 +304,12 @@ internal static class CardCoverage
     }
 
     /// <summary>
-    /// A later attack of the card's at every enemy deals this damage value, on a condition the simulator asks (decision #190: Timber's
-    /// OnKillDamage, SimAdapter.LaterAttacks).
+    /// An attack or a damage of the card's play deals this damage value: its step names it (decision #193: Timber's OnKillDamage on its
+    /// attack at every enemy after a kill, SimAdapter.AttacksFrom).
     /// </summary>
-    private static bool LaterAttackDamages(Type cardType, string key) =>
-        Procs.Programs.CardEffects.Attacks(cardType).Skip(1).Any(attack => attack.Command.Builder.Contains("TargetingAllOpponents") && attack.Command.Values.Count > 0
-            && attack.Command.Values[0].Parts().OfType<Procs.Programs.CardValue>().Any(value => value.Key == key)
-            && PlayConditions.CodeReading(cardType, attack.Condition).Way == Procs.Programs.ConditionWay.Simulated);
+    private static bool DamageNamedByAStep(Type cardType, string key) =>
+        Procs.Programs.CardPrograms.Of(cardType).Commands.Any(command => (command.Command.FullName == "DamageCmd.Attack" || command.Command.FullName == "CreatureCmd.Damage")
+                                                                         && command.Values.Any(value => value.Parts().OfType<Procs.Programs.CardValue>().Any(cardValue => cardValue.Key == key)));
 
     /// <summary>
     /// The kinds of test the simulator doesn't ask yet (decision #190), each reviewed: a step on one is decided on the board before the
@@ -345,14 +344,14 @@ internal static class CardCoverage
     }
 
     /// <summary>
-    /// The card's steps on a condition that the simulator acts on (a command it has an action for: PlayOrder.KeysOf) whose test it doesn't
-    /// ask and whose kind isn't reviewed (ConditionGapKinds).
+    /// The card's steps on a condition that the simulator acts on (a command it translates: SimAdapter.CommandsTranslated) whose test it
+    /// doesn't ask and whose kind isn't reviewed (ConditionGapKinds).
     /// </summary>
     internal static IEnumerable<string> ConditionGaps(Type cardType)
     {
         foreach (var found in Procs.Programs.CardEffects.Find(Procs.Programs.CardPrograms.Of(cardType), _ => true))
         {
-            if (found.Condition.IsAlways || PlayOrder.KeysOf(found.Command).All(key => key == found.Command.Command.FullName)) continue;
+            if (found.Condition.IsAlways || !SimAdapter.CommandsTranslated.ContainsKey(found.Command.Command.FullName)) continue;
             var reading = PlayConditions.CodeReading(cardType, found.Condition);
             if (reading.Way != Procs.Programs.ConditionWay.NotRead || reading.Unread is { } unread && ConditionGapKind(unread) != null) continue;
             yield return $"runs {found.Command.Command} on a test the simulator doesn't ask (decision #190): {reading.Reason}";

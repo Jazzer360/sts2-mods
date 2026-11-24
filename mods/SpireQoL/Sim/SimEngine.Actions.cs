@@ -566,10 +566,15 @@ public static partial class SimEngine
         return true;
     }
 
-    /// <summary>An application's amount as it lands: its own, the applier's amount of the power (Cho Ki), or the target's (Molten Fist).</summary>
+    /// <summary>
+    /// An application's amount as it lands: its own, the applier's amount of the power (Cho Ki), the target's (Molten Fist), or the play's
+    /// target's amount of another power (Dominate: its Vulnerable).
+    /// </summary>
     private static int AmountOf(SimState state, ApplyPowerAction apply, int applier, int target) =>
         apply.CopiesOwn ? PowerOn(state, applier, apply.Power)
         : apply.CopiesTarget ? (apply.Power == PowerId.Poison ? state.Enemy(target)?.PoisonStacks ?? 0 : PowerOn(state, target, apply.Power))
+        : apply.TargetsAmountOf is { } other ? (state.CurrentPlay?.Target ?? Who.None) is var aimedAt && state.Enemy(aimedAt) is { Alive: true } aimedEnemy
+            ? (other == PowerId.Poison ? aimedEnemy.PoisonStacks : PowerOn(state, aimedAt, other)) : 0
         : apply.Amount;
 
     /// <summary>The power on each creature it reaches, then AfterPowerApplied for each that landed (Artifact took none of it).</summary>

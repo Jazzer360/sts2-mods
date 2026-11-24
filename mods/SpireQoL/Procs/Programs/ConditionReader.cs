@@ -173,6 +173,12 @@ public static class ConditionReader
             return Simulated(new OstyMissingCondition());
         if (test is QueryValue { Name: "IsOstyAlive", IsProperty: true, Of: var ostyOwner } && ostyOwner != null && IsOwner(ostyOwner))
             return Simulated(new NotCondition(new OstyMissingCondition()));
+        // The fight going on: a play the simulator runs is in a fight (the card's CombatState) that isn't over (CombatManager.IsOverOrEnding).
+        if (test is QueryValue { Name: "IsOverOrEnding" }) return new ConditionReading(ConditionWay.Decided) { Holds = false, Reason = "the fight goes on" };
+        if (test is QueryValue { Name: "CombatState", Of: NamedValue { Name: "this" } }) return new ConditionReading(ConditionWay.Decided) { Holds = true, Reason = "the card is in the fight" };
+        // A shot's result: it had an arrow to shoot at a living target (ArrowCmd.ShootArrowAtTarget, TryShootArrow: Hobbling Shot's debuffs).
+        if (test is ResultValue { Command: "ArrowCmd.ShootArrowAtTarget" or "ArrowCmd.TryShootArrow" })
+            return Simulated(new ShotHadArrowCondition());
         // Your arrows: any to shoot (ArrowCmd.PlayerHasAnyArrows(Owner)).
         if (test is QueryValue { Name: "PlayerHasAnyArrows", Of: null, Arguments: [var archer] } && IsOwner(archer))
             return Simulated(new CountCondition(SimCounted.ArrowsAvailable, SimCompare.Greater, Than: 0));
@@ -282,15 +288,26 @@ public static class ConditionReader
         ConditionReading Simulated(SimCondition condition) => new(ConditionWay.Simulated) { Condition = condition with { At = at } };
         if (test is QueryValue { Name: "HasPower", GenericArguments: [var power], Of: { } holder } && IsTarget(holder))
             return Simulated(new CountCondition(SimCounted.TargetPower, SimCompare.Greater, Than: 0) { Power = PowerId.Of(power) });
+        if (test is QueryValue { Name: "HasPower", GenericArguments: [var ownPower], Of: { } ownHolder } && IsYou(ownHolder))
+            return Simulated(new CountCondition(SimCounted.OwnerPower, SimCompare.Greater, Than: 0) { Power = PowerId.Of(ownPower) });
         if (test is QueryValue { Name: "IntendsToAttack", Of: QueryValue { Name: "Monster", Of: { } monster } } && IsTarget(monster))
             return Simulated(new TargetIntendsToAttackCondition());
+        // The target alive or dead (Creature.IsAlive, IsDead: its HP above 0 or not).
+        if (test is QueryValue { Name: "IsAlive" or "IsDead", IsProperty: true, Of: { } living } && IsTarget(living))
+            return Simulated(new CountCondition(SimCounted.TargetHp, test is QueryValue { Name: "IsAlive" } ? SimCompare.Greater : SimCompare.LessOrEqual, Than: 0));
         if (test is not CompareValue { Left: var left, Right: var right } compare || !IsCardsOwn(right, context)) return null;
         var number = Number(right, context);
         if (number == null && context.Board != null) return null;
         if (TargetPowerOf(Unstored(left)) is { } amountOf)
             return Simulated(new CountCondition(SimCounted.TargetPower, Compared(compare.Op), number ?? 0) { Power = PowerId.Of(amountOf) });
+        // Your amount of a power compared with a number (Cho Ki's Stretch).
+        if (Unstored(left) is QueryValue { Name: "GetPowerAmount", GenericArguments: [var yours], Of: { } you } && IsYou(you))
+            return Simulated(new CountCondition(SimCounted.OwnerPower, Compared(compare.Op), number ?? 0) { Power = PowerId.Of(yours) });
         if (IsExhaustPileCount(Unstored(left)))
             return Simulated(new CountCondition(SimCounted.ExhaustPile, Compared(compare.Op), number ?? 0));
+        // The target's HP compared with a number (Judgement's threshold).
+        if (Unstored(left) is QueryValue { Name: "CurrentHp", IsProperty: true, Of: { } hurt } && IsTarget(hurt))
+            return Simulated(new CountCondition(SimCounted.TargetHp, Compared(compare.Op), number ?? 0));
         return null;
     }
 
@@ -470,6 +487,25 @@ public static class ConditionReader
     private static bool IsOwner(ProgramValue value) => Unstored(value) is QueryValue { Name: "Owner", Of: NamedValue { Name: "this" } };
 
     private static bool IsTarget(ProgramValue value) => Unstored(value) is QueryValue { Name: "Target", Of: NamedValue { Name: "cardPlay" } };
+
+    /// <summary>The card owner's creature (this.Owner.Creature).</summary>
+    private static bool IsYou(ProgramValue value) => Unstored(value) is QueryValue { Name: "Creature", Of: { } owner } && IsOwner(owner);
+
+    /// <summary>
+    /// The power whose amount on the target the value is, also through a null check of it (Dominate: target.GetPower&lt;T&gt;()?.Amount ?? 0);
+    /// null for anything else.
+    /// </summary>
+    internal static string? TargetPowerAmountOf(ProgramValue value)
+    {
+        value = Unstored(value);
+        if (TargetPowerOf(value) is { } power) return power;
+        if (value is WaysValue { Ways: [var first, var second] }
+            && new[] { first, second }.Count(way => way.Value is ConstantValue { Value: 0 }) == 1
+            && new[] { first, second }.SingleOrDefault(way => way.Value is not ConstantValue).Value is QueryValue { Name: "Amount", Of: QueryValue { Name: "GetPower", GenericArguments: [var held], Of: { } holder } }
+            && IsTarget(holder))
+            return held;
+        return null;
+    }
 
     private static ProgramValue Unstored(ProgramValue value) => value is StoredValue stored ? Unstored(stored.Value) : value;
 }

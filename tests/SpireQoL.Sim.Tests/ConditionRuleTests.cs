@@ -42,10 +42,32 @@ public class ConditionRuleTests
         Assert.True(stale.Count == 0, "reviewed, but no longer there:\n" + string.Join("\n", stale));
     }
 
-    /// <summary>The members decision #190 removed: a condition fused into an effect, or a card-level switch standing for a step's condition.</summary>
+    /// <summary>
+    /// The members decisions #190 and #193 removed: a condition fused into an effect, a card-level switch standing for a step's condition, and
+    /// the actions built from the board's counts then put in the program's order and guarded after the fact (PlayOrder, Guard).
+    /// </summary>
     private static readonly Regex Removed = new(
-        @"\b(KillRewards|KillReward|OnKillHitAll|HitEveryEnemy|GainsStarsOnKill|HitsAllOnKill|DrawsOnACondition|DrawsDependOnTarget|DrawCountsByPlay)\b|\.OnKill\b|\bByPlay\s*=",
+        @"\b(KillRewards|KillReward|OnKillHitAll|HitEveryEnemy|GainsStarsOnKill|HitsAllOnKill|DrawsOnACondition|DrawsDependOnTarget|DrawCountsByPlay"
+        + @"|PlayOrder|GuardedFromFacts|ArrangeWithSteps|LaterAttacks|TeammatesShivCards|UseCardPrograms)\b|\.OnKill\b|\bByPlay\s*=|PlayConditions\.Guard",
         RegexOptions.Compiled);
+
+    /// <summary>
+    /// What a play's facts count on the board before the play: whether an attack, a block, a power, a take, a draw or an HP cost happens at
+    /// all. The adapter builds each action from its step (decision #193), its condition asked where the code asks it, so it never reads these.
+    /// </summary>
+    private static readonly Regex PresenceFromTheBoard = new(
+        @"\b[Ff]acts\.(AttackHits|BlockGains|HitsOn|CanHit|ExhaustsOthers|TakenToHand|StarGains|LosesHp|HpLoss|EnemyDebuffs|EnemyTemporaryDebuffs|Channels|Discards|Transforms|TransformsCertain|LeavesHand|OwnDraws|Draws|TotalExhausts|OstyAttacks)\b",
+        RegexOptions.Compiled);
+
+    [Fact]
+    public void TheAdapterNeverDecidesOnTheBoardWhetherAStepHappens()
+    {
+        var found = RepoFiles.Sources("mods/SpireQoL/Sim/Adapter")
+            .SelectMany(file => file.Lines.Select((line, index) => (file.Path, Line: index + 1, Text: line)))
+            .Where(line => !line.Text.TrimStart().StartsWith("//", StringComparison.Ordinal) && PresenceFromTheBoard.IsMatch(line.Text))
+            .Select(line => $"{line.Path}:{line.Line}: {line.Text.Trim()}").ToList();
+        Assert.True(found.Count == 0, "the adapter reading on the board whether a step happens (decision #193: build the step's action, its condition guards it):\n" + string.Join("\n", found));
+    }
 
     [Fact]
     public void TheFusedMembersDontComeBack()

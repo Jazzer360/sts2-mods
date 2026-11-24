@@ -61,11 +61,6 @@ public static partial class SimAdapter
     /// <summary>Cards whose hit on every enemy repeats once per kill (Echoing Slash: attackCount += WasTargetKilled).</summary>
     internal static readonly HashSet<string> RepeatPerKillCards = new() { nameof(EchoingSlash) };
 
-    /// <summary>
-    /// Cards that put Shivs into every living teammate's hand, not yours (BladeSymphony.OnPlay: Shiv.CreateInHand(teammate),
-    /// so the teammate is the creator: their created-card procs, Arsenal, Pillar of Creation, Regalite).
-    /// </summary>
-    internal static readonly HashSet<string> TeammatesShivCards = new() { nameof(BladeSymphony) };
 
 
     /// <summary>
@@ -783,52 +778,6 @@ public static partial class SimAdapter
     }
 
     // ------------------------------------------------------------------ card plays
-
-    private static readonly Dictionary<Type, int> FocusSign = new();
-
-    /// <summary>
-    /// Focus the card gives (+) or takes (-) when played: it applies FocusPower or a temporary Focus
-    /// power (sign from TemporaryFocusPower.IsPositive: Hyperbeam's is negative), by its FocusPower
-    /// value or calculated focus (Synchronize). Read from the card's compiled code.
-    /// </summary>
-    private static int FocusChange(CardModel card)
-    {
-        var type = card.GetType();
-        if (!FocusSign.TryGetValue(type, out var sign))
-        {
-            sign = 0;
-            foreach (var applied in Diagnostics.CardCoverage.PowersApplied(type))
-            {
-                if (applied == typeof(FocusPower)) sign = 1;
-                else if (typeof(TemporaryFocusPower).IsAssignableFrom(applied))
-                {
-                    try
-                    {
-                        var instance = System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(applied);
-                        var positive = applied.GetProperty("IsPositive", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)?.GetValue(instance);
-                        sign = positive is false ? -1 : 1;
-                    }
-                    catch
-                    {
-                        sign = 1;
-                    }
-                }
-            }
-            FocusSign[type] = sign;
-        }
-        if (sign == 0) return 0;
-        decimal amount = 0;
-        try
-        {
-            if (card.DynamicVars.TryGetValue("FocusPower", out var dynamicVar)) amount = dynamicVar.BaseValue;
-            else if (card.DynamicVars.TryGetValue("CalculatedFocus", out var otherDynamicVar) && otherDynamicVar is CalculatedVar calc) amount = calc.Calculate(null);
-        }
-        catch
-        {
-            amount = 0;
-        }
-        return sign * (int)amount;
-    }
 
     /// <summary>
     /// The card's block through the game's block math. gainer: who gets it (you by default; a targeted teammate for

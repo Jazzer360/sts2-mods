@@ -52,7 +52,7 @@ public class PerPlayRuleTests
             "reads the game's own name in a card's code (a count of your hand's room: SimCount.HandRoom), compares nothing",
         ["mods/SpireQoL/Procs/Programs/ConditionReader.cs: QueryValue { Type: \"CardPile\", Name: \"MaxCardsInHand\", Of: null, IsProperty: true } => true,"] =
             "reads the game's own name in a card's test as a fixed number (Arrow Stab's room in your hand); the simulator compares your hand's count with it as the step runs",
-        ["mods/SpireQoL/Sim/Adapter/SimAdapter.Play.cs: var drawn = Math.Min(cards, Math.Min(Math.Max(0, CardPile.MaxCardsInHand - hand), drawPile + discard));"] =
+        ["mods/SpireQoL/Sim/Adapter/SimAdapter.Steps.cs: var drawn = Math.Min(cards, Math.Min(Math.Max(0, CardPile.MaxCardsInHand - hand), drawPile + discard));"] =
             "a teammate's draws (Huddle Up): their piles aren't read into the simulator, so their count is the board's: a tracker item",
     };
 

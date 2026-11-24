@@ -16,6 +16,8 @@ public sealed record OrbAction(OrbAction.Op Kind) : SimAction
     public SimOrb? Values { get; init; }
     /// <summary>Channel and EvokeFront: how many times.</summary>
     public int Times { get; init; } = 1;
+    /// <summary>EvokeFront: the orb stays after its last evoke (OrbCmd.EvokeNext with dequeue false: Dualcast's first, Shatter's).</summary>
+    public bool Keeps { get; init; }
     /// <summary>Slots: gained (OrbCmd.AddSlots, up to 10) or lost (OrbCmd.RemoveSlots: orbs past the new capacity drop from the back).</summary>
     public int Slots { get; init; }
     /// <summary>Whose orbs (Channel): you, or a targeted teammate (Ignition).</summary>
@@ -111,7 +113,7 @@ public static partial class SimEngine
                     {
                         if (branch.You.Orbs.Count == 0) return new[] { branch };
                         var orb = branch.You.Orbs[0];
-                        if (last) branch.You.OwnOrbs().RemoveAt(0);
+                        if (last && !orbAction.Keeps) branch.You.OwnOrbs().RemoveAt(0);
                         return Evoke(branch, orb);
                     });
                 }

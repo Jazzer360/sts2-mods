@@ -54,9 +54,12 @@ public class CardEnergyTests
     [Fact]
     public void EveryCardThatGainsEnergyIsCounted()
     {
+        // A gain in OnPlay or a helper it calls (Mad Science's ExecuteRider) is a step of the card's program, translated for every card
+        // (decision #193: SimAdapter.EnergyFrom; the step scan holds every command step to a translation). A gain in a hook of the card's own
+        // (After..., Before...) isn't its play: a rule or a reviewed reason.
         var missing = CardTypes()
-            .Where(type => CardEnergy.CallsOf(type).Count > 0)
-            .Where(type => !CardEnergy.IsPlain(type) && !CardEnergy.OnACondition(type) && !CardEnergy.Rules.ContainsKey(type.Name) && !CardEnergy.Reviewed.ContainsKey(type.Name))
+            .Where(type => CardEnergy.CallsOf(type).Any(call => call.Method.StartsWith("After", StringComparison.Ordinal) || call.Method.StartsWith("Before", StringComparison.Ordinal)))
+            .Where(type => !CardEnergy.Rules.ContainsKey(type.Name) && !CardEnergy.Reviewed.ContainsKey(type.Name))
             .Select(type => $"{type.Name}: {string.Join("; ", CardEnergy.CallsOf(type))}")
             .ToList();
         Assert.True(missing.Count == 0, "Cards that gain energy with no rule or reviewed reason (CardEnergy):\n" + string.Join("\n", missing));

@@ -141,15 +141,24 @@ then `PlayerCmd.GainEnergy` behind a branch on its results.
 
 ### A2. Translating a step
 
-`Sim/Adapter/ProgramTranslator.cs` turns each step into simulator actions, in program order. Its values come from today's
-readers (`AttackOf`, `BlockOf`, `PowersOf`, `OrbsOf`, `CardEnergy`, `SimReaders`: captured terms, calculated values), changed
-to take a step instead of a card.
+`Sim/Adapter/SimAdapter.Steps.cs` turns each command step into simulator actions, in program order (decision #193, 2026-11-23, round
+four). A translator per command kind (`SimAdapter.Translate`: `CommandsTranslated` names each) builds the action from the step's own
+arguments: an attack's damage value (the card value its first argument names), hits (`WithHitCount`'s argument at the target, times its
+loops' rounds, through the game's hit-count hooks) and targeting and dealer (its builder: `TargetingAllOpponents`, `FromOsty`); a block's
+gainer (you, the teammate it's aimed at, each player of your side a loop goes over) and value; a power's target (you, the target or the
+teammate it's aimed at, every enemy, a roll's enemy, every player of your side) and amount (its third argument; the target's amount of a
+power as it lands: Molten Fist, Dominate); a draw's player and count; an energy gain's player and amount (your own energy: Double Energy);
+an orb command's orb, player, rounds and dequeue; each take (exhaust, discard, transform, into your hand, back onto your draw pile, your
+whole hand) as a `TakeFromHandAction` or `TakeToHandAction`; a shot's arrow, the attack it's given and its impale; an auto-play's count,
+exhaust and upgrading callback; a shuffle and the draw pile count its condition tests. Where an amount can only come from the game's own
+math on the board (damage and block terms through the pipelines, B1), those terms are still read; never whether the step happens.
 
-The card events a command causes come from that command's step, not appended at the end:
-- an `Exhaust` step is the card leaving the hand, then `Exhausted`;
-- a `Draw` step is `Drawn` (or the drawn-card readers' `DrawnCardAction`);
-- an `AddGeneratedCardToCombat` step is `Generated`.
-
+The step's condition is the action's (decision #190, `SimAdapter.Guard`): a `WhenAction` when the simulator asks it, left out when it's
+decided false on the card's own values, and decided on the board when it has no translation yet (a gap the card scan lists). A test of a
+take's card is the take's filter; an evoke's test of your orbs and a shuffle's test of your draw pile are what those actions ask themselves.
+A loop's body is walked once: its rounds are what its steps' actions count (hits, gains, channels, draws), and a take's loop runs its other
+steps after each card (Second Wind's block). The play order and the guard put on the facts' actions after the fact are gone with the facts' gating: whether an attack, a
+block, a power or a take happens is never decided on the board before the play.
 Commands, by how many beta cards call them:
 
 | Command | Cards | Today's action |
@@ -172,20 +181,12 @@ pipelines), so a command's pipeline is one piece of code wherever it is used. Th
 checked against their game hooks by Part B. Reading their hooks as programs too is the natural next step once this works;
 it isn't part of this plan.
 
-There are 58 commands on beta and 49 on main. A command with no translation becomes `NotModelledAction("<Command> in
-<Card>.OnPlay")`. It is counted like every `SimState.Unmodelled` reason, and each one is a tracker item. It is never guessed.
+A command with no action yet is a named gap (`SimAdapter.CommandsNotTranslated`, with why: a card upgraded mid-play, Osty summoned, a
+heal...), and `StepTranslationTests` holds every command every card calls, on both branches, to one or the other. A gap adds no
+`NotModelledAction`: a new `?` on screen is the owner's call, so they're listed, not shown (TRACKER).
 
-**Built first (2026-11-23): the order.** `PlayOrder` gives each action the command it stands for (`KeyOf`) and each program
-command the actions it can take (`KeysOf`). It then puts the adapter's actions in the program's order:
-- a loop doing two or more things per round is split into rounds;
-- an action no command stands for keeps its place after the one it followed.
-
-The values still come from today's builders, which already read the code where they can (decision #157) and are tested. They
-move to the program's arguments one table at a time; that is the next step, tracked in TRACKER.
-
-A command a card calls that has no action yet adds no `NotModelledAction` in this first step. A new `?` on screen is the
-owner's call, so those commands are listed, not shown.
-
+**Built first (2026-11-23): the order.** `PlayOrder` gave each action the command it stood for and put the adapter's actions in the
+program's order, the values from the card-level builders. Replaced in round four by the actions built from the steps themselves (above).
 ### A3. Order from the program, nothing else
 
 `SimAdapter.Play` builds the body by walking the program:
@@ -261,7 +262,7 @@ hooks.
     loops): each channel's orb (its class, or random: a `GetRandomOrb` orb) and its loops' rounds on the board (`PlayFacts.Rounds`:
     a foreach's collection, a counter's bound, the card value it's over), the evokes of your front orb or of every orb (a loop over
     your orbs: Shatter), the slots added or removed. An X is the card's X (`ResolveEnergyXValue`: what playing it now spends, through
-    the X hooks). They replaced `SimAdapter.Channels`, `RepeatChannels`, `SlotChange`, `ChannelKind`, `HandlesChannel`, the evoke cards'
+    the X hooks). They replaced the adapter's `Channels`, `RepeatChannels`, `SlotChange`, `ChannelKind`, `HandlesChannel`, the evoke cards'
     switch in `OrbsOf` and `EvokedOrbs`, and `PlayFacts.ChannelCount`'s cases. Fix: upgraded Tempest's extra Lightning is counted for
     Metronome (its channels already were).
   - Block gains (2026-11-23, round three): `PlayFacts.BlockGainCount` counts each `CreatureCmd.GainBlock` of the play
@@ -318,7 +319,7 @@ hooks.
     card's own values (a card value, its upgrade, a field it keeps: Mad Science's rider) and a pick's card (#188) are decided before
     the play. A test the code asks once is asked once a play (`SimCondition.At`: an else, a later step under the same if), and a local
     stored before the first command is asked there (`AskAction`: Ki Hop, Bow Smack). `PlayConditions` guards the draws, the conditional
-    gains of energy and stars, Timber's later attack and every action the facts build (by its command's step from `PlayOrder`). They
+    gains of energy and stars, Timber's later attack and every action the facts built (by its command's step; since decision #193 each action is its step's own). They
     replaced the attack's kill rewards (Sunder's energy, Knockout Blow's stars) and Timber's kill attack inside its hit, a draw's count
     for each play index worked out before the play (FTL, Fetch, Wrest, Ki Hop at the worst target), and Sunder's, Bow Smack's and
     Restlessness' energy rules. Catalog `ConditionTranslationTests` hold each to its code on both
@@ -404,12 +405,13 @@ round two). What's left, by file: `PlayFacts` 62 (`GeneratedCount` and the forge
 |---|---|---|
 | (no table) a replay's later plays: conditions with no simulator test yet | Memento Mori | Since decision #190 a step on a condition is its ordinary action under a simulator condition (`WhenAction`), asked on each play as it runs: Osty (Sacrifice, Bone Shards, Osty's attacks), your hand's cards and their kind (Impatience, Restlessness, Wheel of Fortune), plays finished this turn (FTL, Fetch), the target's arrows (Ki Hop, Bow Smack, Wrest, Nail, Recall, Uproot), the last attack's kill (Sunder, Knockout Blow, Timber), the fight's log (decision #191: Forgotten Ritual's exhaust this turn, Ki Rest's melodies), your arrows (Arrow Stab), your exhaust pile (Pact's End), the target's powers (Bubble Bubble's poison, Molten Fist's Vulnerable, also its amount) and its intent to attack (Go for the Eyes). What has no simulator test yet (the enemies' count, your orbs, your draw pile's cards) is decided on the board before the play, listed by the card scan. |
 | (no table) Flak Cannon's hits on a replay | Flak Cannon | Its hit count is its `CalculatedHits` var (the statuses it will exhaust), a calculated var's lambda the reader doesn't follow, so it isn't recognized as the count of what its take took. |
-| `GeneratedCount` (PlayFacts) | cards that make cards | Within reach: `CardPileCmd.AddGeneratedCard(s)ToCombat`'s cards (a `CreateStep`, a loop's rounds, a helper's count: Shiv.CreateInHand) and their pile. Not done yet. |
+| `GeneratedCount` (PlayFacts) | cards that make cards | Partly read: the cards made for each player of your side, you included, are their step's (`SimAdapter.MadeForPlayers`: Blade Symphony, Glimpse Beyond, Outrage, Self-Deprecate's Joy; decision #193). Within reach for the rest: `CardPileCmd.AddGeneratedCard(s)ToCombat`'s cards (a `CreateStep`, a loop's rounds, a helper's count: Shiv.CreateInHand) and their pile. Made cards aren't held to their step's condition yet: Shiv.CreateInHand's count test reads the helper's parameter, which the reader doesn't bind. |
 | `SplashCards`, `OverkillReaders`, `RepeatPerKillCards` | Rain Shot, Omnislice, Fisticuffs, Blossom Shot, Echoing Slash | What a hit's result feeds (`TotalDamage + OverkillDamage` into the next damage, a kill into the loop's count): needs arithmetic over a command's result. |
-| `TeammatesShivCards` | Blade Symphony | The player a helper's Shivs go to (an argument inside the helper: a game helper's parameters aren't bound to its caller's arguments yet). |
-| `CardEnergy.Rules` (Sim/Adapter) | Double Energy, Mad Science, Epic Retrieval, Believe in You, Constellation, Energy Surge, Drum of Battle | Sunder, Bow Smack and Restlessness left it (decision #190: their gain is guarded by its condition, `CardEnergy.OnACondition`). Forgotten Ritual left it too (decision #191: its exhaust this turn is the ledger's count). What's left: "as much as you have" (Double Energy), the rider (Mad Science, decided before the play), and whose energy it is. |
-| `BlockOf`'s cases (SimAdapter.Play) | Fisticuffs, Entrench, Mimic | The gain's amount argument: the attack's result (Fisticuffs, with Blossom Shot's Stretch: arithmetic over a command's result), your block (Entrench), the teammate's (Mimic). |
-| `PutBack`'s count (PlayFacts) | Thinking Ahead | The put-back pick's selector, as the discards' picks are read. |
+| `CardEnergy.Rules` (Sim/Adapter) | Epic Retrieval, Drum of Battle | Their hooks, not their plays (AfterArrowDislodged, AfterCardExhausted). Every gain in a play is its step's (decision #193: `SimAdapter.EnergyFrom`): Double Energy's your own energy, Mad Science's rider decided before the play, Believe in You's and Constellation's teammate, Energy Surge's each player of your side. |
+| `BlockFor`'s cases (SimAdapter.Steps) | Fisticuffs, Entrench, Mimic | The gain's amount argument: the attack's result (Fisticuffs, with Blossom Shot's Stretch: arithmetic over a command's result), your block (Entrench), the teammate's (Mimic). |
+| `PutBackCount` (PlayFacts) | Thinking Ahead | The facts' count only (the play check's hand): the simulator reads the put-back pick's selector (decision #193). Goes with PlayFacts. |
+| (no table) an argument a translator can't read | Malaise | Its first `PowerCmd.Apply` (the target's Strength loss) has arguments the reader leaves unread (`?argument`): no action (it gave you 1 Strength before decision #193). The step scan holds the command; an argument it can't read is a reader gap. |
+| (no table) damage that isn't an attack, from an attack card | Rain Shot, Omnislice, Echoing Slash | `CreatureCmd.Damage` on the target or every enemy is simulated as the card's attack (with the splash or the repeats `SplashCards` and `RepeatPerKillCards` name), as before: the game runs no BeforeAttack or AfterAttack for it. |
 | Cards' own hooks, not plays | Make It So, Right Hand Hand, Whistling Arrows, Bolas, Bounce, Thrumming Hatchet (`ReturnToHand`); Howl from Beyond, I Am Invincible (end-of-turn auto-plays); Kingly Kick, Kingly Punch (their cost on draw) | A card's hooks (After*, Before*) aren't its play: reading them as programs is Part B3's next step. Each is reviewed by its scan. |
 | `BranchRules`' facts | Brightest Flame, Omnislice | Not a table: the code facts a branch rule is told by (decision #169) name the class their code mentions. They go when main catches up. |
 

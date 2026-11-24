@@ -472,7 +472,9 @@ public sealed class PlayFacts
         var evoked = EvokedOrbs(card, me);
         var orbs = OrbDamageFor(evoked, me, combat);
         var forged = ForgedBlade(card.GetType(), me);
-        var generated = GeneratedCount(card, name, others, me, out var statuses, out var generatedFrom) + forged;
+        // With the cards it makes for each player of your side that you make (Glimpse Beyond's, Blade Symphony's and Outrage's yours: read
+        // from its program).
+        var generated = GeneratedCount(card, name, others, me, out var statuses, out var generatedFrom) + forged + SpireQoL.Sim.SimAdapter.MadeByYouForYourSide(card);
         // Cards the play puts into your hand (Bundle of Joy's four): they fill it before anything comes back.
         var createdInHand = MadeIntoHand(card, generated);
 
@@ -1091,15 +1093,6 @@ public sealed class PlayFacts
                                    && (take.ItemTest.IsAlways || Programs.ProgramEvaluator.HoldsFor(take.ItemTest, item, board, program) != false));
     }
 
-    /// <summary>How many top cards of your draw pile the play looks at (Ki Chant's Cards), whatever the pile holds; 0 for one that looks at none.</summary>
-    internal static int LookCount(CardModel card)
-    {
-        var take = Programs.CardEffects.Discards(card.GetType()).FirstOrDefault(discard => discard.Way == Programs.CardEffects.TakeWay.LookedAt);
-        if (take == null) return 0;
-        return take.Looks is { } looks && Programs.ProgramEvaluator.Number(looks, new Programs.ProgramBoard(card), Programs.CardPrograms.Of(card.GetType())) is { } read
-            ? (int)read : Sts2State.Var(card, "Cards", fallback: 3);
-    }
-
     /// <summary>
     /// The top cards of your draw pile the play looks at (a LookedAt take's count: Take(drawPile, Cards), Ki Chant), as many as the pile
     /// holds after the shuffle its play makes first when it's short.
@@ -1352,10 +1345,15 @@ public sealed class PlayFacts
     /// </summary>
     internal static int Rounds(Programs.LoopStep loop, Programs.ProgramBoard board, Programs.CardProgram program)
     {
-        if (loop.Items != null) return Programs.ProgramEvaluator.Items(loop.Items, board, program) is { } items ? items.Count : 1;
+        // A foreach: its collection's count (a counter loop inside one keeps the collection as its items too: its own bound is its rounds).
+        if (loop.Items != null && loop.Over.StartsWith("each of", StringComparison.Ordinal)) return Programs.ProgramEvaluator.Items(loop.Items, board, program) is { } items ? items.Count : 1;
         if (loop.While is { Terms: [[{ Holds: true, Test: Programs.CompareValue { Op: Programs.Comparison.Less or Programs.Comparison.LessOrEqual } bound }]] }
             && Programs.ProgramEvaluator.Number(bound.Right, board, program) is { } most)
             return Math.Max(0, (int)most + (bound.Op == Programs.Comparison.LessOrEqual ? 1 : 0));
+        // decimal's own comparison (i < a card value as a decimal: Self-Deprecate's Joy, Brighten Up's).
+        if (loop.While is { Terms: [[{ Holds: true, Test: Programs.QueryValue { Name: "op_LessThan" or "op_LessThanOrEqual", Arguments: [_, var limit] } decimalBound }]] }
+            && Programs.ProgramEvaluator.Number(limit, board, program) is { } decimalMost)
+            return Math.Max(0, (int)decimalMost + (decimalBound.Name == "op_LessThanOrEqual" ? 1 : 0));
         return board.Card.DynamicVars.ContainsKey(loop.Over) ? Sts2State.Var(board.Card, loop.Over) : 1;
     }
 
@@ -1411,10 +1409,7 @@ public sealed class PlayFacts
             case nameof(StormOfSteel): from = SpireQoL.Sim.SimCount.CardsTaken; return others.Count;
             // Souls.
             case nameof(CaptureSpirit): case nameof(GraveWarden): case nameof(Reave): return Var("Cards");
-            // Souls into every living teammate's draw pile, created by you (GlimpseBeyond.OnPlay: AddGeneratedCardsToCombat with
-            // creator = you): your created-card procs, once per Soul. The template card (no owner) counts one teammate.
-            case nameof(GlimpseBeyond):
-                return Var("Cards") * (me == null ? 1 : me.Creature?.CombatState?.Players.Count(player => player != me && player.Creature is { IsAlive: true }) ?? 0);
+
             case nameof(Severance): return 3;
             case nameof(Dirge): return me?.PlayerCombatState?.Energy ?? 1; // X souls
             // Other cards.
@@ -1422,7 +1417,7 @@ public sealed class PlayFacts
             case nameof(HeirloomHammer): return Var("Repeat");
             case nameof(Stoke): from = SpireQoL.Sim.SimCount.CardsTaken; return others.Count;
             case nameof(Abundance): case nameof(AdaptiveStrike): case nameof(Anger): case nameof(Discovery): case nameof(Distraction):
-            case nameof(InfernalBlade): case nameof(Largesse): case nameof(ManifestAuthority): case nameof(Outrage): case nameof(Quasar):
+            case nameof(InfernalBlade): case nameof(Largesse): case nameof(ManifestAuthority): case nameof(Quasar):
             case nameof(Splash): case nameof(Undeath): case nameof(WhiteNoise):
                 return 1;
             // v0.113.0 (names as strings): the Fool's Sadness (a status) and Joy, The Shot, tarot and event cards.
@@ -1430,13 +1425,10 @@ public sealed class PlayFacts
             case nameof(MourningBlow): case nameof(Vitriol): case nameof(Rummage): statuses = 1; return 1; // Mourning Blow turns into a Sadness
             case nameof(Jest): case nameof(SorrowfulStrike): statuses = Var("Cards"); return statuses;
             case nameof(BrightenUp): statuses = Var("Sadness", fallback: 2); return statuses + Var("Joy", fallback: 2);
+            // Sadness for you; the Joy for every other living player it makes is read from its program (SimAdapter.MadeByYouForYourSide).
             case nameof(SelfDeprecate):
-            {
-                // Sadness for you, Joy for every other living player (created by you).
-                var mates = me?.Creature?.CombatState?.Players.Count(player => player != me && player.Creature is { IsAlive: true }) ?? 0;
                 statuses = Var("Sadness", fallback: 1);
-                return statuses + Var("Joy", fallback: 2) * mates;
-            }
+                return statuses;
             case nameof(TheHierophant): return Var("Cards", fallback: 3);
             case nameof(TheLovers): from = SpireQoL.Sim.SimCount.HandRoom; return Math.Max(0, CardPile.MaxCardsInHand - others.Count);
             // Shivs until your hand is full (TheMoon.OnPlay: MaxCardsInHand - hand, once it has left your hand).

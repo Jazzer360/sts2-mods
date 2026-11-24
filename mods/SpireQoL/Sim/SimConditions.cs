@@ -21,6 +21,8 @@ public enum SimTest
     Any,
     /// <summary>The play's target intends to attack (MonsterModel.IntendsToAttack), and isn't stunned since.</summary>
     TargetIntendsToAttack,
+    /// <summary>The play's last shot had an arrow to shoot at a living target (ArrowCmd.ShootArrowAtTarget's and TryShootArrow's result).</summary>
+    ShotHadArrow,
 }
 
 /// <summary>How a counted condition compares its count with its number.</summary>
@@ -51,6 +53,10 @@ public enum SimCounted
     ExhaustPile,
     /// <summary>The play's target's amount of a power (CountCondition.Power: HasPower, GetPowerAmount), 0 when it's dead or there's none.</summary>
     TargetPower,
+    /// <summary>The play's target's HP (Creature.CurrentHp; IsAlive is above 0, IsDead 0 or less), 0 when it's dead or gone.</summary>
+    TargetHp,
+    /// <summary>The play owner's amount of a power (CountCondition.Power: their HasPower, GetPowerAmount: Cho Ki's Stretch).</summary>
+    OwnerPower,
 }
 
 /// <summary>
@@ -79,6 +85,9 @@ public sealed record OstyMissingCondition() : SimCondition(SimTest.OstyMissing);
 /// <summary>The play's target intends to attack (MonsterModel.IntendsToAttack: Go for the Eyes), not stunned since.</summary>
 public sealed record TargetIntendsToAttackCondition() : SimCondition(SimTest.TargetIntendsToAttack);
 
+/// <summary>The play's last shot had an arrow to shoot at a living target (ArrowCmd.ShootArrowAtTarget's result: Hobbling Shot's debuffs).</summary>
+public sealed record ShotHadArrowCondition() : SimCondition(SimTest.ShotHadArrow);
+
 /// <summary>The play's target is impaled: by anyone's arrow, or with <paramref name="ByOwner"/> by the play owner's.</summary>
 public sealed record TargetImpaledCondition(bool ByOwner) : SimCondition(SimTest.TargetImpaled);
 
@@ -97,7 +106,7 @@ public sealed record CountCondition(SimCounted Counted, SimCompare Compare, int 
     /// <summary>History: the query of the fight's log it counts (its count in the ledger: SimEngine.HistoryCount).</summary>
     public HistoryQuery? Query { get; init; }
 
-    /// <summary>TargetPower: the power.</summary>
+    /// <summary>TargetPower, OwnerPower: the power.</summary>
     public PowerId? Power { get; init; }
 }
 

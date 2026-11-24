@@ -3,6 +3,9 @@ namespace SpireQoL.Sim;
 /// <summary>Conditions apart from effects (decision #190): a condition asked of each branch's own state when the action it guards runs.</summary>
 public static partial class SimEngine
 {
+    /// <summary>Where a play's shot keeps whether it had an arrow (SimState.PlayTests: 1 it had, 2 it didn't): ShotHadArrowCondition.</summary>
+    internal const string ShotKey = "shot";
+
     /// <summary>Why a branch's condition couldn't be told (it runs as if it held, and the play is unknown).</summary>
     internal const string HandMatchingUnknown = "a condition on the kind of cards in your hand, after cards joined it whose kind wasn't read";
 
@@ -72,6 +75,8 @@ public static partial class SimEngine
             case TargetImpaledCondition impaled:
                 if (state.Enemy(target) is null) return false;
                 return impaled.ByOwner ? PowersOf(state, target).Has(Impaled) : IsImpaled(state, target);
+            case ShotHadArrowCondition:
+                return state.PlayTests.Has(ShotKey) && state.PlayTests[ShotKey] == 1;
             case TargetIntendsToAttackCondition:
                 return state.Enemy(target) is { Alive: true, IntendsToAttack: true, Stunned: false };
             case CountCondition counted:
@@ -126,6 +131,14 @@ public static partial class SimEngine
             case SimCounted.TargetPower:
                 if (counted.Power is not { } power || state.Enemy(state.CurrentPlay?.Target ?? Who.None) is not { Alive: true } aimedAt) return 0;
                 return power == PowerId.Poison ? aimedAt.PoisonStacks : aimedAt.Powers[power];
+            case SimCounted.OwnerPower:
+                return counted.Power is { } owned ? PowerOn(state, owner, owned) : 0;
+            case SimCounted.TargetHp:
+            {
+                var hpOf = state.CurrentPlay?.Target ?? Who.None;
+                if (state.Enemy(hpOf) is { } enemy) return enemy.Alive ? Math.Max(0, enemy.Hp) : 0;
+                return state.Player(hpOf) is { } aimedPlayer ? Math.Max(0, aimedPlayer.Hp) : 0;
+            }
             case SimCounted.History:
                 if (counted.Query == null) return null;
                 var logged = HistoryCount(state, owner, counted.Query);

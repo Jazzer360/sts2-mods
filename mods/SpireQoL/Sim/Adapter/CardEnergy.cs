@@ -1,9 +1,6 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
-using MegaCrit.Sts2.Core.Combat;
-using MegaCrit.Sts2.Core.Entities.Creatures;
-using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Models.Cards;
 using Sts2Mods.Core.Game;
@@ -11,27 +8,24 @@ using Sts2Mods.Core.Game;
 namespace SpireQoL.Sim;
 
 /// <summary>
-/// A card's own energy (decision #117): every PlayerCmd.GainEnergy its code makes, read from its compiled code. A plain gain (in
-/// OnPlay, on every way through it, its energy value, to its owner: Production, Turbo, Supercritical) needs nothing named here;
-/// <see cref="Rules"/> covers a gain that depends on something (a kill, the target, the hand) or goes elsewhere, and
-/// <see cref="Reviewed"/> says why a gain isn't simulated. The catalog scan (CardEnergyTests) holds every card in the installed game
-/// that gains energy to one of the three, so a new card can't gain energy the simulator doesn't count (the Pael's Tears tab and the
-/// energy check after each play depend on it).
+/// A card's own energy (decision #117): every PlayerCmd.GainEnergy its code makes, read from its compiled code. A gain in its OnPlay is a
+/// step of its program, translated with the rest of the play (decision #193: SimAdapter.EnergyFrom, its amount, its player and its condition
+/// its own); <see cref="Rules"/> covers a gain in a hook of the card's own, and <see cref="Reviewed"/> says why a gain isn't simulated. The
+/// catalog scan (CardEnergyTests) holds every card in the installed game that gains energy outside its OnPlay to one of the two, so a new card
+/// can't gain energy the simulator doesn't count (the Pael's Tears tab and the energy check after each play depend on it).
 /// </summary>
 internal static class CardEnergy
 {
     /// <summary>One GainEnergy call in a card's code: the method it's in, whether every way through that method passes it.</summary>
     internal sealed record Call(string Method, bool Certain, bool ToOwner, bool FromEnergyVar);
 
-    /// <summary>Cards whose gain a rule in <see cref="AddTo"/> works out, with what decides it (read from the decompile).</summary>
+    /// <summary>
+    /// Cards that gain energy outside their OnPlay (a hook of their own), with what gives it. A gain in OnPlay is a step of the card's program,
+    /// translated for every card (SimAdapter.EnergyFrom: its amount and its player its arguments), so it needs nothing here.
+    /// </summary>
     internal static readonly Dictionary<string, string> Rules = new()
     {
-        [nameof(DoubleEnergy)] = "as much energy as you have once its cost is spent (GainEnergyAsHeldAction)",
-        [nameof(MadScience)] = "its Energized rider (TinkerTimeRider, EnergizedEnergy)",
         [nameof(EpicRetrieval)] = "per arrow of yours its play knocks loose (AfterArrowDislodged, source this card): SimCardPlay.ArrowEnergy",
-        [nameof(BelieveInYou)] = "to the teammate it's aimed at",
-        [nameof(Constellation)] = "to the teammate it's aimed at",
-        [nameof(EnergySurge)] = "to every living player, you included",
         [nameof(DrumOfBattle)] = "when it's exhausted (its own AfterCardExhausted, WhenExhausted): from your hand by another play (ExhaustFromHandAction), or its own exhaust (Corruption)",
     };
 
@@ -91,72 +85,11 @@ internal static class CardEnergy
         CallsOf(cardType) is [{ Method: "OnPlay", Certain: true, ToOwner: true, FromEnergyVar: true }];
 
     /// <summary>
-    /// What the card's own energy adds to its play aimed at <paramref name="target"/>: events for the energy it gains (each play),
-    /// or the fields the simulator works it out from. <paramref name="owner"/>: whose card it is; <paramref name="allyId"/>: the
-    /// teammate it's aimed at (Who.None: none).
+    /// The energy the card gives from its own hooks during its play (Rules): Epic Retrieval's for each arrow of yours its play knocks loose
+    /// (SimCardPlay.ArrowEnergy). Every gain in its OnPlay is a step of its program (SimAdapter.EnergyFrom).
     /// </summary>
-    internal static void AddTo(SimPlay play, CardModel card, Player me, ICombatState combat, Creature? target, int owner, int allyId)
+    internal static void AddHookEnergy(SimPlay play, CardModel card)
     {
-        var name = card.GetType().Name;
-        var energy = Sts2State.Var(card, "Energy");
-        void Gain(int amount, int to)
-        {
-            if (amount > 0) play.Body.Add(new CardEventAction(CardEvent.EnergyGained, amount) { Player = to });
-        }
-        switch (name)
-        {
-            case nameof(DoubleEnergy):
-                play.Body.Add(new GainEnergyAsHeldAction());
-                return;
-            case nameof(MadScience):
-                if (card is MadScience madScience && madScience.TinkerTimeRider.ToString() == "Energized") Gain(Sts2State.Var(card, "EnergizedEnergy"), owner);
-                return;
-            case nameof(EpicRetrieval):
-                if (play.Card != null) play.Card = play.Card with { ArrowEnergy = energy };
-                return;
-            case nameof(BelieveInYou) or nameof(Constellation):
-                if (Who.KindOf(allyId) == CreatureKind.Teammate) Gain(energy, allyId);
-                return;
-            case nameof(DrumOfBattle):
-                return; // not when played: when it's exhausted (WhenExhausted)
-            case nameof(EnergySurge):
-                Gain(energy, owner);
-                // Teammates are numbered from your side: a teammate's own Energy Surge (Howl from Beyond) gives you energy too, which
-                // isn't followed (it'd need their numbering of the players).
-                if (owner != Who.You) return;
-                var mates = SimAdapter.Teammates(me, combat);
-                for (var teammateIndex = 0; teammateIndex < mates.Count; teammateIndex++)
-                    if (mates[teammateIndex].Creature is { IsAlive: true }) Gain(energy, Who.Teammate(teammateIndex));
-                return;
-        }
-        if (Reviewed.ContainsKey(name)) return;
-        if (IsPlain(card.GetType())) Gain(energy, owner);
-        else if (OnACondition(card.GetType()))
-        {
-            // On a condition the simulator asks (decision #190): Sunder's kill, Bow Smack's arrow before its hit, Restlessness alone in your hand.
-            var program = Procs.Programs.CardPrograms.Of(card.GetType());
-            foreach (var gain in Procs.Programs.CardEffects.Find(program, IsGainToOwner))
-            {
-                var reading = PlayConditions.Reading(card, gain.Condition);
-                if (PlayConditions.Skipped(card, gain.Condition, reading)) continue;
-                play.Body.AddRange(PlayConditions.AsksOf(reading));
-                play.Body.Add(PlayConditions.Guarded(new CardEventAction(CardEvent.EnergyGained, energy) { Player = owner }, reading));
-            }
-        }
-    }
-
-    private static bool IsGainToOwner(Procs.Programs.CommandStep command) =>
-        command.Command is { DeclaringType: "PlayerCmd", Name: "GainEnergy" } && command.Arguments.Count > 1 && command.Arguments[1] == "Owner";
-
-    /// <summary>
-    /// Its gains are its energy value to its owner in OnPlay, each on a condition the simulator asks (decision #190: Sunder, Bow Smack,
-    /// Restlessness): read from its code, a gain guarded by that condition.
-    /// </summary>
-    internal static bool OnACondition(Type cardType)
-    {
-        var calls = CallsOf(cardType);
-        if (calls.Count == 0 || !calls.All(call => call is { Method: "OnPlay", ToOwner: true, FromEnergyVar: true })) return false;
-        var gains = Procs.Programs.CardEffects.Find(Procs.Programs.CardPrograms.Of(cardType), IsGainToOwner);
-        return gains.Count == calls.Count && gains.All(gain => PlayConditions.CodeReading(cardType, gain.Condition).Way == Procs.Programs.ConditionWay.Simulated);
-    }
-}
+        if (play.Card == null || !CallsOf(card.GetType()).Any(call => call.Method == "AfterArrowDislodged")) return;
+        play.Card = play.Card with { ArrowEnergy = Sts2State.Var(card, "Energy") };
+    }}

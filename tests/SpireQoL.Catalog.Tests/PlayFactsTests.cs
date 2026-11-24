@@ -114,15 +114,17 @@ public class PlayFactsTests
     }
 
     [Fact]
-    public void CardsForTeammatesDoNothingForYouAlone()
+    public void CardsForYourSideIncludeYou()
     {
-        // Huddle Up draws for teammates, Blade Symphony gives them Shivs, Glimpse Beyond gives them Souls: alone, none of it is
-        // yours (the counts once had Huddle Up drawing for you and Blade Symphony creating a card).
+        // Huddle Up, Blade Symphony and Glimpse Beyond go over CombatState.GetTeammatesOf(you): every player of your side, you included
+        // (GetCreaturesOnSide gives the Allies list). Alone, you draw, get your Shivs and your Souls (1.14.9 had left you out).
         var gameFight = new GameFight();
-        var huddle = PlayFacts.For(gameFight.Add<HuddleUp>(), gameFight.Me, gameFight.Combat, plays: 1);
-        Assert.Equal(0, huddle.Draws);
-        Assert.Equal(0, PlayFacts.For(gameFight.Add<BladeSymphony>(), gameFight.Me, gameFight.Combat, plays: 1).Generated);
-        Assert.Equal(0, PlayFacts.For(gameFight.Add<GlimpseBeyond>(), gameFight.Me, gameFight.Combat, plays: 1).Generated);
+        var huddle = gameFight.Add<HuddleUp>();
+        Assert.Equal(Sts2Mods.Core.Game.Sts2State.Var(huddle, "Cards"), PlayFacts.For(huddle, gameFight.Me, gameFight.Combat, plays: 1).OwnDraws);
+        var symphony = gameFight.Add<BladeSymphony>();
+        Assert.Equal(Sts2Mods.Core.Game.Sts2State.Var(symphony, "Cards"), PlayFacts.For(symphony, gameFight.Me, gameFight.Combat, plays: 1).Generated);
+        var glimpse = gameFight.Add<GlimpseBeyond>();
+        Assert.Equal(Sts2Mods.Core.Game.Sts2State.Var(glimpse, "Cards"), PlayFacts.For(glimpse, gameFight.Me, gameFight.Combat, plays: 1).Generated);
     }
 
     [Fact]
