@@ -465,6 +465,18 @@ public class PlayBehaviourTests
         Assert.Equal(2 * draws - 2, after.You.HandCount);
     }
 
+    [Fact]
+    public void MalaiseTakesStrengthAndGivesWeakForItsX()
+    {
+        // Malaise.OnPlay: powerAmount = its X (one more upgraded); PowerCmd.Apply<StrengthPower>(target, -powerAmount), then
+        // Apply<WeakPower>(target, powerAmount). Its first Apply's amount is a negation the reader reads (it was left unread: no Strength loss).
+        var gameFight = Fight();
+        var enemy = Enemy(gameFight);
+        var after = Only(PlayOut(gameFight, gameFight.Add<Malaise>(), enemy));
+        Assert.Equal(-3, after.Enemies[0].Powers[PowerId.Strength]);
+        Assert.Equal(3, after.Enemies[0].Powers[PowerId.Weak]);
+    }
+
     // ---- made cards: each make step's own count, card, owner and pile (MadeCards)
 
     [Fact]

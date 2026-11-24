@@ -61,7 +61,9 @@ public class StrengthLossTests
             ["SharedFate"] = ("EnemyStrengthLoss", false, -1), ["Resonance"] = ("", true, -1), ["FightMe"] = ("EnemyStrength", false, 1),
         };
         var read = StrengthCards().ToDictionary(entry => entry.Name, entry => (Card: entry.Card, entry.Changes));
-        Assert.Equal(table.Keys.Where(name => ModelDb.AllCards.Any(card => card.GetType().Name == name)).Order(), read.Keys.Order());
+        // And Malaise, which the table missed: its first Apply's amount, -X, is read since decision #194 (the reader reads a negation).
+        Assert.Equal(table.Keys.Append("Malaise").Where(name => ModelDb.AllCards.Any(card => card.GetType().Name == name)).Order(), read.Keys.Order());
+        if (read.TryGetValue("Malaise", out var malaise)) Assert.Equal(-SpireQoL.Procs.CardPlays.EnergyOf(malaise.Card), Assert.Single(malaise.Changes).Amount);
         foreach (var (name, (variable, all, sign)) in table)
         {
             if (!read.TryGetValue(name, out var entry)) continue;

@@ -1016,6 +1016,13 @@ public static class CardProgramReader
             if (name.StartsWith("conv", StringComparison.Ordinal) || instruction.OpCode == OpCodes.Box || instruction.OpCode == OpCodes.Unbox_Any
                 || instruction.OpCode == OpCodes.Castclass)
                 return ReadBack(at, depth + 1);
+            // A negation (-powerAmount: Malaise's Strength loss) is decimal's own (op_UnaryNegation), which the evaluator works out.
+            if (instruction.OpCode == OpCodes.Neg)
+            {
+                var negated = ReadBack(at, depth + 1);
+                return negated.Start < 0 ? (new UnknownValue("neg"), -1)
+                    : (new QueryValue("Decimal", "op_UnaryNegation", null, new[] { negated.Value }, "Int32"), negated.Start);
+            }
             // A copy (dup) is the value it copies; so is what a test of a copy leaves below it (x?.y, pile == null || pile.Type...: dup, brfalse).
             if (instruction.OpCode == OpCodes.Dup) return ReadBack(at, depth + 1);
             if (instruction.OpCode.FlowControl == FlowControl.Cond_Branch && at > 0 && Ops[at - 1].OpCode == OpCodes.Dup
