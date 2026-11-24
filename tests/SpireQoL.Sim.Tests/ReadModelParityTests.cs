@@ -33,6 +33,7 @@ public class ReadModelParityTests
         ["CorrosiveWavePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. You draw nothing after it this turn: no prediction changes",
         ["SleightOfFleshPower.AfterPowerApplied"] = "!(power is ITemporaryPower): a temporary power landing (Dark Shackles) doesn't set it off, the Strength its BeforeApplied applies does. The simulator lands a temporary Strength power as that Strength (SimAdapter.PowersFrom), which both count: no prediction changes",
         ["ShroudPower.AfterPowerApplied"] = "applier == base.Owner && power is DoomPower, with no test of the target: Doom you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Doom on a player today",
+        ["ConstrictPower.AfterDeath"] = "!wasRemovalPrevented && creature == base.Applier: PowerCmd.Remove(this), it goes as its applier dies, where the hand-written model kept it and dealt nothing as the turn ended with its applier dead. Nothing is dealt either way (the scenario's turn end shows it): no prediction changes",
         ["SneakyPower.AfterCardPlayed"] = "cardPlay.Card.Owner.Creature != base.Owner && cardPlay.Card.Type == Attack, with no test of its owner's side: on a player it gives them block on another's Attack (the hand-written model wanted an enemy). Only enemies have it in the game: no prediction changes",
         ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
     };
@@ -118,7 +119,7 @@ public class ReadModelParityTests
         nameof(SimModel.BeforeCardPlayed), nameof(SimModel.AfterCardPlayed), nameof(SimModel.AfterCardEvent), nameof(SimModel.AfterPowerApplied),
         nameof(SimModel.BeforeSideTurnEndVeryEarly), nameof(SimModel.BeforeSideTurnEndEarly), nameof(SimModel.BeforeSideTurnEnd), nameof(SimModel.AfterSideTurnEnd),
         nameof(SimModel.AfterSideTurnEndLate), nameof(SimModel.ModifyCardPlayCount), nameof(SimModel.AfterModifyingCardPlayCount),
-        nameof(SimModel.AfterDamageGiven), nameof(SimModel.AfterDamageReceived),
+        nameof(SimModel.AfterDamageGiven), nameof(SimModel.AfterDamageReceived), nameof(SimModel.AfterDeath),
     };
 
     [Fact]
@@ -146,7 +147,8 @@ public class ReadModelParityTests
         state.Enemies.Add(new SimEnemy { Id = 1, Name = "E1", Hp = 25, Block = 5, Hits = new List<int> { 3, 3 } });
         foreach (var variable in VarsOf(model.Spec))
             state.Vars[$"{owner}:{model.Name}:{variable.Key}"] = variable.Key.EndsWith(".Props", StringComparison.Ordinal) ? (int)variable.Canonical : (int)variable.Canonical + 1;
-        var powerData = PowerDataVars.TryGetValue(model.Name, out var dataVar) ? state.Vars[$"{owner}:{model.Name}:{dataVar}"] : 0;
+        // A power whose code asks who applied it keeps its applier as its Data: enemy 0 here (DataCreature), as the adapter reads it.
+        var powerData = PowerDataVars.TryGetValue(model.Name, out var dataVar) ? state.Vars[$"{owner}:{model.Name}:{dataVar}"] : model.UsesApplier ? DataCreature.Of(0) : 0;
         if (model.Spec.Kind == ModelKind.Power) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).With(new PowerId(model.Name), amount: 3, data: powerData));
         var amount = RelicAmountVars.TryGetValue(model.Name, out var amountVar) ? state.Vars[$"{owner}:{model.Name}:{amountVar}"] : 0;
         // A relic whose amount is its value keeps no flag (SimReaders.Relics); any other starts armed.
@@ -240,6 +242,16 @@ public class ReadModelParityTests
                     {
                         if (hook == nameof(SimModel.AfterDamageGiven)) model.AfterDamageGiven(state, owner, hit); else model.AfterDamageReceived(state, owner, hit);
                         return Branches(new[] { state });
+                    });
+                break;
+            case nameof(SimModel.AfterDeath):
+                // A creature dies (the applier, another enemy, the owner), then the players' turn ends: what the death changed shows there.
+                foreach (var dead in new[] { 0, 1, owner }.Distinct().Where(Who.IsEnemy))
+                    yield return ($"enemy {dead} dies, then the players' turn ends", (model, state) =>
+                    {
+                        state.Enemy(dead)!.Hp = 0;
+                        model.AfterDeath(state, owner, dead);
+                        return Branches(new[] { state }) + " // " + Sequence(state, TurnEndHooks, (branch, turnEndHook) => turnEndHook(model, branch, owner));
                     });
                 break;
             case nameof(SimModel.ModifyCardPlayCount) or nameof(SimModel.AfterModifyingCardPlayCount):

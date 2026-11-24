@@ -82,7 +82,9 @@ public class EndOfTurnModelTests
         state.You.HandCount = 0;
         state.WithRelic(Who.You, RelicId.ScreamingFlagon, "Damage", value: 5);
         state.You.Powers = state.You.Powers.With(PowerId.Constrict, amount: 4, data: 100).With(PowerId.MagicBomb, amount: 6, data: 100);
-        Assert.Equal(0, SimEngine.Run(state).TakenMax);
+        var applierDead = SimEngine.Run(state);
+        Assert.Equal(0, applierDead.TakenMax);
+        Assert.False(applierDead.Worst.You.Powers.Has(PowerId.Constrict)); // its AfterDeath: PowerCmd.Remove(this) as its applier dies
 
         // Applied by the enemy that lives: 4 + 6.
         state.You.Powers = state.You.Powers.With(PowerId.Constrict, amount: 4, data: 101).With(PowerId.MagicBomb, amount: 6, data: 101);

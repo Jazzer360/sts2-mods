@@ -104,7 +104,7 @@ public static class SimReaders
             case nameof(JugglingPower): data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } juggled ? Sts2State.Private(juggled, "attacksPlayedThisTurn", fallback: 0) : 0; break;
             // Whose plays it acts on (DataCreature: 0 is no one).
             // Gone with their applier (AfterDeath), Magic Bomb only while it lives: the applier.
-            case nameof(ConstrictPower) or nameof(MagicBombPower): data = DataCreature.Of(power.Applier is { } caster ? idOf(caster) : null); break;
+            case nameof(MagicBombPower): data = DataCreature.Of(power.Applier is { } caster ? idOf(caster) : null); break;
             case nameof(StranglePower) or nameof(OblivionPower): data = DataCreature.Of(power.Applier is { } strangler ? idOf(strangler) : null); break;
             // One copy per player it copies (ImitationLearning adds to the copy already copying its target), merged into one entry:
             // you when any copy copies you, so your Power cards set it off whichever copy is read last.
@@ -125,6 +125,8 @@ public static class SimReaders
                 break;
             }
         }
+        // A power read from its code that asks who applied it (base.Applier: Constrict's AfterDeath) keeps its applier as its Data (decision #195).
+        if (SimModels.Get(name) is ReadModel { UsesApplier: true }) data = DataCreature.Of(power.Applier is { } applier ? idOf(applier) : null);
         return (name, amount, data);
     }
 

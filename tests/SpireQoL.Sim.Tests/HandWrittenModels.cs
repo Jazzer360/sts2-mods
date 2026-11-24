@@ -683,3 +683,12 @@ public sealed class ObsidianVice : EndOfTurnRelic
         return SimEngine.ProcDamageRandom(state, owner, Name, Amount(state, owner) * player.HandCount, Unpowered, label: $"{SimEngine.Title(state, owner, Name)} ×{player.HandCount}");
     }
 }
+
+// ---- a debuff gone with its applier (Sim/Models/EndOfTurnModels.cs, deleted 2026-11-24)
+
+/// <summary>ConstrictPower.AfterSideTurnEnd: its amount to its owner (unpowered, dealt by its owner); it goes when its applier dies (AfterDeath).</summary>
+public sealed class ConstrictPower : TurnEndDebuff
+{
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) =>
+        state.TakesPart(owner) && !ApplierDead(state, owner, ThisPower) ? Hurt(state, owner, Amount(state, owner), Unpowered, selfDealt: true) : One(state);
+}

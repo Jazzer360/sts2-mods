@@ -159,7 +159,7 @@ internal static partial class CoverageLedger
         ["ConcoctPower"] = "covered: AfterDamageGiven poison on attack hits through block (proc tab; simulator, as Envenom)",
         ["ConfusedPower"] = "ignore: AfterCardDrawn random costs (costs read live; draws are random)",
         ["ConquerorPower"] = "covered: Sovereign Blade tab; AfterSideTurnEnd ticks down",
-        ["ConstrictPower"] = "covered: model on AfterSideTurnEnd (its amount to its owner, blockable); AfterDeath of its applier removes it (the model checks the applier)",
+        ["ConstrictPower"] = "covered: read from its code (ReadModel, decision #195): AfterSideTurnEnd deals its amount to its owner, blockable, dealt by its owner; AfterDeath of its applier removes it",
         ["ConsumingShadowPower"] = "covered: AfterSideTurnEnd evokes your last orb (model ConsumingShadowPower)",
         ["CorrosiveWavePower"] = "covered: read from its code (ReadModel, decision #195): AfterCardDrawn poisons all enemies per draw (proc tab)",
         ["CorruptionPower"] = "covered: ModifyCardPlayResultLocation exhausts played Skills (in the simulator its model, decided once before a card play's plays: decision #192; SimAdapter.ExhaustsAfterPlay for the tags)",

@@ -120,13 +120,6 @@ public abstract class TurnEndDebuff : EndOfTurnModel
         amount <= 0 ? One(state) : SimEngine.ProcDamagePlayer(state, owner, Name, owner, amount, props, noDealer: !selfDealt, label: SimEngine.Title(state, owner, Name));
 }
 
-/// <summary>ConstrictPower.AfterSideTurnEnd: its amount to its owner (unpowered, dealt by its owner); it goes when its applier dies (AfterDeath).</summary>
-public sealed class ConstrictPower : TurnEndDebuff
-{
-    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) =>
-        state.TakesPart(owner) && !ApplierDead(state, owner, ThisPower) ? Hurt(state, owner, Amount(state, owner), Unpowered, selfDealt: true) : One(state);
-}
-
 /// <summary>MagicBombPower.AfterSideTurnEnd: while its applier lives, its amount to its owner (unpowered, dealt by its owner), then it goes.</summary>
 public sealed class MagicBombPower : TurnEndDebuff
 {

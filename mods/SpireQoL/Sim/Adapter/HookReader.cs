@@ -575,6 +575,10 @@ public static class HookReader
                     return new HookConstant(0m);
                 case ParameterValue { Name: "cardSource" } or NamedValue { Name: "cardSource" }:
                     return new HookFactValue(HookFact.FromCard);
+                // A death the game prevented (AfterDeath's wasRemovalPrevented): the simulator's deaths are never prevented (it tells AfterDeath
+                // only of the deaths it follows through: SimEngine.AllyDeaths).
+                case ParameterValue { Name: "wasRemovalPrevented" } or NamedValue { Name: "wasRemovalPrevented" } when _hook == "AfterDeath":
+                    return new HookConstant(0m);
                 // Its owner is dead (base.Owner.IsDead).
                 case QueryValue { Name: "IsDead", Of: { } deadOf } when IsOwner(deadOf):
                     return new HookFactValue(HookFact.OwnerDead);
@@ -614,6 +618,9 @@ public static class HookReader
         {
             if (compare.Op is Comparison.Equal or Comparison.NotEqual && OwnerFact(compare.Left, compare.Right) is { } fact)
                 return compare.Op == Comparison.Equal ? fact : Not(fact);
+            // The creature that died is the one who applied this power (creature == base.Applier).
+            if (compare.Op is Comparison.Equal or Comparison.NotEqual && (IsDead(compare.Left) && IsApplier(compare.Right) || IsApplier(compare.Left) && IsDead(compare.Right)))
+                return compare.Op == Comparison.Equal ? new HookFactValue(HookFact.DeadIsApplier) : Not(new HookFactValue(HookFact.DeadIsApplier));
             if (compare.Op is Comparison.Equal or Comparison.NotEqual && IsSideOfPlayers(compare.Left, compare.Right))
                 return compare.Op == Comparison.Equal ? new HookFactValue(HookFact.OwnersTurn) : Not(new HookFactValue(HookFact.OwnersTurn));
             if (compare.Left is QueryValue { Type: "CardModel", Name: "Type", Of: { } typeOf } && (IsPlayCard(typeOf) || IsEventCard(typeOf)) && compare.Right is ConstantValue cardType)
@@ -652,6 +659,7 @@ public static class HookReader
                     : IsEventCard(card) ? new HookFactValue(HookFact.EventIsOwners)
                     : IsSourceCard(card) ? new HookFactValue(HookFact.CardIsOwners)
                     : throw new Gap($"gap: compares the owner with {other}");
+            if (IsDead(other)) return new HookFactValue(HookFact.DeadIsOwner);
             if (IsCreator(other)) return new HookFactValue(HookFact.EventIsOwners);
             if (IsDealer(other)) return new HookFactValue(HookFact.DealerIsOwner);
             if (other is ParameterValue { Name: "target" } or NamedValue { Name: "target" }) return new HookFactValue(HookFact.TargetIsOwner);
@@ -892,6 +900,13 @@ public static class HookReader
         private static bool IsCreator(ProgramValue value) =>
             value is NamedValue { Name: "creator" or "shuffler" or "spender" } or ParameterValue { Name: "creator" or "shuffler" or "spender" }
             || value is QueryValue { Type: "Player", Name: "Creature", Of: { } player } && IsCreator(player);
+
+        /// <summary>AfterDeath's creature that died (its first Creature parameter, by the hook's own name for it).</summary>
+        private bool IsDead(ProgramValue value) => _hook == "AfterDeath" && (value is ParameterValue { Name: var name } ? name : value is NamedValue { Name: var named } ? named : null) is { } creature
+            && _type.GetMethods(Declared).FirstOrDefault(method => method.Name == "AfterDeath")?.GetParameters().FirstOrDefault(parameter => parameter.ParameterType.Name == "Creature")?.Name == creature;
+
+        /// <summary>The creature that applied this power (base.Applier).</summary>
+        private static bool IsApplier(ProgramValue value) => value is QueryValue { Name: "Applier", Of: NamedValue { Name: "this" }, Type: "PowerModel" };
 
         private static bool IsDealer(ProgramValue value) => value is ParameterValue { Name: "dealer" } or NamedValue { Name: "dealer" };
 

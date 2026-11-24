@@ -29,6 +29,7 @@ public enum HookName
     AfterModifyingCardPlayCount,
     AfterDamageGiven,
     AfterDamageReceived,
+    AfterDeath,
     ModifyDamageAdditive,
     ModifyDamageMultiplicative,
     ModifyDamageMultiplicativeLate,
@@ -107,6 +108,13 @@ public enum HookFact
     OwnerDead,
     /// <summary>The owner's orbs of the kind named in Of (OrbQueue.Orbs.Count(o => o is FrostOrb): an OrbKind's name).</summary>
     OwnerOrbCount,
+    /// <summary>
+    /// The creature that died is the one who applied this power (AfterDeath's creature == base.Applier): the power keeps its applier as its Data
+    /// (DataCreature), from the adapter's read and from where it lands (ModelSpec.UsesApplier).
+    /// </summary>
+    DeadIsApplier,
+    /// <summary>The creature that died is the owner (AfterDeath's creature == base.Owner).</summary>
+    DeadIsOwner,
 }
 
 /// <summary>An operation of the code on two values (decimal throughout; a true-or-false is 1 or 0).</summary>
@@ -293,6 +301,9 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
         static IEnumerable<HookStep> All(HookStep step) => step is RepeatStep repeat ? new[] { step }.Concat(repeat.Steps.SelectMany(All)) : new[] { step };
         return Hooks.SelectMany(program => program.Steps).SelectMany(All);
     }
+
+    /// <summary>Its code asks who applied it (base.Applier): it keeps its applier as its Data (DataCreature), read and landed so.</summary>
+    public bool UsesApplier() => Values().Any(value => value is HookFactValue { Fact: HookFact.DeadIsApplier });
 
     /// <summary>Its own fields and properties its programs read or store (the adapter seeds them from the game: SimReaders.Fields).</summary>
     public IEnumerable<string> Fields() =>

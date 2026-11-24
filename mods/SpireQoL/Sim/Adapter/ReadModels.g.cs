@@ -18,6 +18,7 @@ public static partial class ReadModels
         PowerId.Burst.Name,
         RelicId.CharonsAshes.Name,
         RelicId.CloakClasp.Name,
+        PowerId.Constrict.Name,
         PowerId.CorrosiveWave.Name,
         PowerId.DanseMacabre.Name,
         RelicId.DaughterOfTheWind.Name,

@@ -508,6 +508,7 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 | `OrbCmd.Channel<T>(owner)` | `ChannelStep` (`SimEngine.ChannelKind`) |
 | the players' side's turn-end hooks (BeforeSideTurnEndVeryEarly, Early, BeforeSideTurnEnd, AfterSideTurnEnd, AfterSideTurnEndLate) | run where the engine runs every model's (decision #51) |
 | `ModifyCardPlayCount(card, target, playCount)`'s returns, `AfterModifyingCardPlayCount(card)` | the play count by the first way that holds (`HookFact.PlayCountSoFar`; `card` the card played), the steps after it changed it (decision #192) |
+| `AfterDeath(creature, source, wasRemovalPrevented, ...)` | run where the engine tells every death; `creature == base.Owner` / `== base.Applier` are `HookFact.DeadIsOwner` / `DeadIsApplier` (a read power that asks its applier keeps it as its Data); `wasRemovalPrevented` false |
 | `AfterDamageGiven` / `AfterDamageReceived(dealer, result, props, target, cardSource)` | run inside the damage on the state given; `result.UnblockedDamage` is `HookFact.HitUnblocked`, `target` a command's `HookTarget.HitTarget` |
 | `CreatureCmd.Damage(base.Owner, ...)`, `CreatureCmd.Heal(base.Owner, amount)`, `base.Owner.IsDead` | `DamageStep` on `HookTarget.Owner` (a player through the damage on a player, named by its title in Incoming Damage's breakdown), `HealStep` (up to max HP), `HookFact.OwnerDead` |
 | a command on a creature a read model can't act on (a power on a roll, damage to a hit's target) | a gap at reading |

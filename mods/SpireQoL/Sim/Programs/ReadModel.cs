@@ -137,6 +137,7 @@ public sealed class ReadModel : SimModel
         HookName.AfterModifyingCardPlayCount => nameof(AfterModifyingCardPlayCount),
         HookName.AfterDamageGiven => nameof(AfterDamageGiven),
         HookName.AfterDamageReceived => nameof(AfterDamageReceived),
+        HookName.AfterDeath => nameof(AfterDeath),
         HookName.ModifyDamageAdditive => nameof(ModifyDamageAdditive),
         HookName.ModifyDamageMultiplicative => nameof(ModifyDamageMultiplicative),
         HookName.ModifyDamageMultiplicativeLate => nameof(ModifyDamageMultiplicativeLate),
@@ -207,6 +208,16 @@ public sealed class ReadModel : SimModel
         foreach (var branch in Run(hook, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Hit = hit, Target = hit.Target }))
             if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: {hook} branched inside a hit");
     }
+
+    /// <summary>A creature died (AfterDeath, once per death, as the engine tells it: SimEngine.AllyDeaths): deterministic, on the state given.</summary>
+    public override void AfterDeath(SimState state, int owner, int dead)
+    {
+        foreach (var branch in Run(HookName.AfterDeath, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Target = dead }))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterDeath branched");
+    }
+
+    /// <summary>It keeps its applier as its Data (its code asks base.Applier): the engine lands it so (SimEngine.ApplyPower).</summary>
+    public bool UsesApplier => Spec.UsesApplier();
 
     /// <summary>A hook of the players' side's turn ending (decision #51), in its place among them.</summary>
     private IEnumerable<SimState> TurnEnd(HookName hook, SimState state, int owner) => Run(hook, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay });
@@ -578,6 +589,8 @@ public sealed class ReadModel : SimModel
                     return count;
                 };
             }
+            case HookFact.DeadIsApplier: return (in HookArgs args) => DataCreature.In(SimEngine.PowersOf(args.State, args.Owner).DataOf(ThisPower)) is var applier && applier != Who.None && applier == args.Target ? 1m : 0m;
+            case HookFact.DeadIsOwner: return (in HookArgs args) => args.Target == args.Owner ? 1m : 0m;
             case HookFact.OwnerDead: return (in HookArgs args) => (args.State.Player(args.Owner) is { } player ? player.Died || player.Hp <= 0 : args.State.Enemy(args.Owner) is not { Alive: true }) ? 1m : 0m;
             default: throw new InvalidOperationException($"{Name}: no fact {fact.Fact}");
         }
