@@ -1018,9 +1018,10 @@ public sealed class ReadModel : SimModel
         // None to draw or gain (Dark Embrace's amount × an Ethereal count of 0 as the turn ends): CardPileCmd.Draw and PlayerCmd.GainEnergy do nothing.
         if (count <= 0) return One(args.State);
         if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
-        // A death's: queued until the hit or action that killed is over (SimEngine.Raise), as the deaths are told inside it; a draw or energy tab
+        // A death's or a hit's (AfterDamageReceived: Centennial Puzzle's draws): queued until the hit or action is over (SimEngine.Raise), as
+        // the simulator can't branch inside a hit; a draw or energy tab
         // counts them as they come.
-        if (args.Hook == HookName.AfterDeath)
+        if (InHit(args.Hook))
         {
             SimEngine.Raise(args.State, cardEvent, args.Owner, count, source: SimEngine.TallyFor(Name, Tab, cardEvent, args.Owner) != null ? Name : null);
             return One(args.State);
@@ -1182,7 +1183,8 @@ public sealed class ReadModel : SimModel
             }
             case HookFact.EventIsOwners: return (in HookArgs args) => args.Player == args.Owner ? 1m : 0m;
             case HookFact.CardIs:
-                return (in HookArgs args) => args.State.EventCard?.Name == named ? 1m : 0m;
+                // The card played (a play hook's: cardPlay.Card is Soul), or the event's card.
+                return (in HookArgs args) => (IsPlayHook(args.Hook) ? args.Play?.Card.Name : args.State.EventCard?.Name) == named ? 1m : 0m;
             case HookFact.SourceCardIs:
                 return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card)?.Name == named ? 1m : 0m;
             case HookFact.OwnersTurn: return (in HookArgs args) => Who.IsPlayer(args.Owner) != args.State.EnemyTurnNow ? 1m : 0m;

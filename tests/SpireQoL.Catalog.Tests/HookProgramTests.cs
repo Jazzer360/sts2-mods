@@ -90,7 +90,13 @@ public class HookProgramTests
         var (betaRead, mainRead) = (ReadOn(beta), ReadOn(main));
         var betaClasses = HookReader.Powers(beta.Assembly.GetTypes()).Concat(HookReader.Relics(beta.Assembly.GetTypes())).Concat(HookReader.Orbs(beta.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
         var mainClasses = HookReader.Powers(main.Assembly.GetTypes()).Concat(HookReader.Relics(main.Assembly.GetTypes())).Concat(HookReader.Orbs(main.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
-        var differ = betaRead.Where(mainClasses.Contains).Except(mainRead).Concat(mainRead.Where(betaClasses.Contains).Except(betaRead)).Order(StringComparer.Ordinal).ToList();
+        // A class whose code on the other branch has nothing the simulator runs (it reads whole with no program: main's Byrdpip counts no Swoops)
+        // differs in the game's code, not in the reader.
+        static HashSet<string> Nothing(BranchCode code) => HookReader.Powers(code.Assembly.GetTypes()).Concat(HookReader.Relics(code.Assembly.GetTypes()))
+            .Where(type => HookReader.Read(type, code.Read) is { Whole: true, Spec.Hooks.Count: 0 }).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
+        var (betaNothing, mainNothing) = (Nothing(beta), Nothing(main));
+        var differ = betaRead.Where(mainClasses.Contains).Except(mainRead).Where(name => !mainNothing.Contains(name))
+            .Concat(mainRead.Where(betaClasses.Contains).Except(betaRead).Where(name => !betaNothing.Contains(name))).Order(StringComparer.Ordinal).ToList();
         Assert.True(differ.Count == 0, "read whole on one branch, not the other (review it: the reader on the other branch's code): " + string.Join(", ", differ));
         var record = betaRead.Union(mainRead).Order(StringComparer.Ordinal).ToList();
         var text = RecordText(record);

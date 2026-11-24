@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 18 engine rules naming 125 game methods; 5 adapter rules; 105 hand-written models.
+# 18 engine rules naming 125 game methods; 5 adapter rules; 103 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -99,8 +99,6 @@ BurrowedPower: BurrowedPower.AfterBlockBroken, BurrowedPower.AfterRemoved, Burro
   model: AfterBlockBroken, OutcomeTab
 CalamityPower: CalamityPower.AfterCardPlayed, CalamityPower.BeforeCardPlayed, CalamityPower.InitInternalData
   model: Act, Binds
-CentennialPuzzle: CentennialPuzzle.AfterCombatEnd, CentennialPuzzle.AfterDamageReceived
-  model: AfterDamageReceived
 ChemicalX: ChemicalX.BeforeCardPlayed, ChemicalX.ModifyXValue
   model: BeforeCardPlayed
 CompostPower: CompostPower.AfterDeath (beta only)
@@ -141,8 +139,6 @@ HardToKillPower: HardToKillPower.AfterModifyingDamageAmount, HardToKillPower.Mod
   model: ModifyDamageCap
 HardenedShellPower: HardenedShellPower.AfterDamageReceived, HardenedShellPower.AfterModifyingHpLostBeforeOsty, HardenedShellPower.BeforeSideTurnStart, HardenedShellPower.InitInternalData, HardenedShellPower.ModifyHpLostBeforeOstyLate
   model: AfterDamageReceived, BeforeSideTurnStart, ModifyHpLostBeforeOstyLate
-HauntPower: HauntPower.AfterCardPlayed
-  model: AfterCardPlayed
 ImbalancedPower: ImbalancedPower.AfterDamageGiven
   model: OutcomeTab
 ImitationLearningPower: ImitationLearningPower.AfterCardPlayed, ImitationLearningPower.BeforeCardPlayed, ImitationLearningPower.InitInternalData

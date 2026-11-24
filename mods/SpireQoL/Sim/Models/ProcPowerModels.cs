@@ -90,16 +90,6 @@ public sealed class SicEmPower : ProcModel
     }
 }
 
-/// <summary>HauntPower.AfterCardPlayed: each Soul its owner plays deals its amount to a random hittable enemy (unblockable, unpowered, no dealer).</summary>
-public sealed class HauntPower : ProcModel
-{
-    public override TabKind? Tab => TabKind.Damage;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Name == CardId.Soul.Name
-            ? SimEngine.ProcDamageRandom(state, owner, Name, Amount(state, owner), SimProps.Unblockable | Unpowered, noDealer: true)
-            : One(state);
-}
-
 /// <summary>MasterPlannerPower.AfterCardPlayed: each Skill its owner plays gains Sly.</summary>
 public sealed class MasterPlannerPower : ProcModel
 {

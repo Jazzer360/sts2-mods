@@ -728,10 +728,11 @@ public static class HookReader
                     }
                     // A counter loop (for i < n): its body n times, n worked out as the loop starts (the card programs read it the same way:
                     // ProgramEvaluator.Rounds). Any other loop is a gap.
-                    if (loop.Items != null || loop.While is not { Terms: [[{ Holds: true, Test: CompareValue { Op: Comparison.Less or Comparison.LessOrEqual } bound }]] })
-                        throw new Gap(ReaderCapability.LoopOverItems, "gap: a loop");
-                    var times = Value(bound.Right);
-                    if (bound.Op == Comparison.LessOrEqual) times = new HookMath(HookOperation.Add, times, new HookConstant(1m));
+                    // Its bound compared as an int (i < n) or as a decimal ((decimal)i < DynamicVars.Cards.BaseValue: Centennial Puzzle's).
+                    var (bounded, inclusive) = loop.Items == null && loop.While is { Terms: [[{ Holds: true, Test: var whileTest }]] } ? CounterBound(whileTest) : (null, false);
+                    if (bounded == null) throw new Gap(ReaderCapability.LoopOverItems, "gap: a loop");
+                    var times = Value(bounded);
+                    if (inclusive) times = new HookMath(HookOperation.Add, times, new HookConstant(1m));
                     var body = loop.Body.SelectMany(Step).ToList();
                     return body.Count == 0 ? Array.Empty<HookStep>() : new[] { new RepeatStep(times, body) { When = Condition(step.Condition) } };
                 }
@@ -752,6 +753,17 @@ public static class HookReader
                     throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: {step}");
             }
         }
+
+        /// <summary>
+        /// A counter loop's bound: what its test compares the counter with (i &lt; n, (decimal)i &lt; n through Decimal's operator), and whether it
+        /// includes it (&lt;=); null for any other test.
+        /// </summary>
+        private static (ProgramValue? Bound, bool Inclusive) CounterBound(ProgramValue test) => test switch
+        {
+            CompareValue { Op: Comparison.Less or Comparison.LessOrEqual } compare => (compare.Right, compare.Op == Comparison.LessOrEqual),
+            QueryValue { Type: "Decimal", Name: "op_LessThan" or "op_LessThanOrEqual", Arguments: [_, var bound] } decimalCompare => (bound, decimalCompare.Name == "op_LessThanOrEqual"),
+            _ => (null, false),
+        };
 
         /// <summary>The key of one of its own values a store names (a DynamicVarSet property's own key, or an indexed key as written).</summary>
         private string OwnVarKey(string named) => named.StartsWith('"') ? named.Trim('"') : KeyOfProperty(named);
@@ -1142,7 +1154,7 @@ public static class HookReader
                     return EnumName(_type.Assembly, "CardKeyword", keyword.Value) == "Ethereal" ? new HookFactValue(HookFact.CardEthereal) : throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's keyword {keyword.Value}");
                 case QueryValue { Name: "is", Of: NamedValue { Name: "power" }, Type: var powerClass }:
                     return PowerIs(powerClass);
-                case QueryValue { Name: "is", Of: { } cardOf, Type: var cardClass } when IsEventCard(cardOf):
+                case QueryValue { Name: "is", Of: { } cardOf, Type: var cardClass } when IsEventCard(cardOf) || IsPlayCard(cardOf):
                     return new HookFactValue(HookFact.CardIs) { Of = cardClass };
                 // The card a damage or block comes from is a class (cardSource is SovereignBlade).
                 case QueryValue { Name: "is", Of: { } sourceOf, Type: var sourceClass } when IsSourceCard(sourceOf):
@@ -1391,6 +1403,9 @@ public static class HookReader
                     return new HookFactValue(HookFact.OrbValueSoFar);
                 case NamedValue { Name: "triggerCount" } or ParameterValue { Name: "triggerCount" } when _hook == "ModifyOrbPassiveTriggerCounts":
                     return new HookFactValue(HookFact.TriggerCountSoFar);
+                // How many enemies can be hit (HittableEnemies.Count, kept in a local or not: Haunt's != 0).
+                case QueryValue { Name: "Count", Of: { } hittableCounted } when IsHittableEnemies(hittableCounted):
+                    return new HookFactValue(HookFact.HittableEnemyCount);
                 // A question to the fight's log (Count or Any of its entries): the history ledger's count (decision #191).
                 case QueryValue { Name: "Count" or "Any" } logged when ProgramReader.ReadsHistory(logged):
                     return History(logged);

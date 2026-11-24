@@ -947,9 +947,12 @@ public class ProcModelTests
         var bleed = One(state, Events(Card("Bloodletting", SimCardType.Skill), plays: 1, new LoseHpAction(Amount: 3)));
         Assert.Equal(3, bleed.PlayEvents[CardEvent.Drawn]);
         Assert.Equal(3, bleed.Fired.DataOf("CentennialPuzzle"));
-        Assert.Equal(1, bleed.You.Relics[RelicId.CentennialPuzzle]);
+        // Read from its code: UsedThisCombat is its own field.
+        Assert.Equal(1, SimEngine.FieldsOf(bleed, Who.You)[RelicId.CentennialPuzzle.Name + ".UsedThisCombat"]);
         // Used up this combat: nothing.
-        Assert.False(One(Relic(State(), RelicId.CentennialPuzzle, amount: 1), Events(Card("Bloodletting", SimCardType.Skill), plays: 1, new LoseHpAction(Amount: 3))).Fired.Has("CentennialPuzzle"));
+        var used = Relic(State(), RelicId.CentennialPuzzle, amount: 0);
+        SimEngine.SetField(used, Who.You, RelicId.CentennialPuzzle.Name + ".UsedThisCombat", 1);
+        Assert.False(One(used, Events(Card("Bloodletting", SimCardType.Skill), plays: 1, new LoseHpAction(Amount: 3))).Fired.Has("CentennialPuzzle"));
     }
 
     [Fact]

@@ -67,23 +67,6 @@ public sealed class Pocketwatch : RelicProc
     }
 }
 
-/// <summary>
-/// CentennialPuzzle.AfterDamageReceived: the first time this combat its owner takes damage past their block (UnblockedDamage &gt; 0),
-/// draws its Cards (3), one at a time, queued until the hit is over (SimEngine.Raise). Used up for the combat (UsedThisCombat: the
-/// relic's amount here). A draw tab: the cards it really draws (decision #132).
-/// </summary>
-public sealed class CentennialPuzzle : RelicProc
-{
-    public override TabKind? Tab => TabKind.Draw;
-    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
-    {
-        if (hit.Target != owner || hit.Unblocked <= 0 || !Who.IsPlayer(owner) || Amount(state, owner) != 0) return;
-        Set(state, owner, amount: 1, Data(state, owner));
-        state.LogFired(Name, amount: 0, owner);
-        SimEngine.Raise(state, CardEvent.Drawn, owner, SimEngine.Var(state, owner, Name, "Cards", fallback: 3), Name);
-    }
-}
-
 /// <summary>PaelsEye.BeforeCardPlayed: while armed, the turn's first card you play (not an auto-play) gives up its extra turn (bad for you).</summary>
 public sealed class PaelsEye : RelicProc
 {

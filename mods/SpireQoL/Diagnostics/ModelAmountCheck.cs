@@ -41,8 +41,6 @@ internal static class ModelAmountCheck
     /// </summary>
     internal static readonly Dictionary<string, string> Reviewed = new()
     {
-        // The same total, a loop in the game.
-        ["CentennialPuzzle Draw: game 1; model Var Cards"] = "the game draws one card Cards times (a for loop up to DynamicVars.Cards); the model draws Cards",
         // The same arithmetic, over something a hook's parameter or a count holds in the game and the simulation holds elsewhere.
         ["NecroMasteryPower Damage: game mul(-?parameter delta, Amount); model mul(?parameter lost, Amount)"] =
             "its amount × the HP Osty lost: AfterCurrentHpChanged's -delta in the game, AfterOstyHpLost's lost in the model",

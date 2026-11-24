@@ -1390,3 +1390,32 @@ public sealed class JossPaper : RelicProc
     }
 }
 
+
+/// <summary>HauntPower.AfterCardPlayed: each Soul its owner plays deals its amount to a random hittable enemy (unblockable, unpowered, no dealer).</summary>
+public sealed class HauntPower : ProcModel
+{
+    public override TabKind? Tab => TabKind.Damage;
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
+        Mine(play, owner) && play.Card.Name == CardId.Soul.Name
+            ? SimEngine.ProcDamageRandom(state, owner, Name, Amount(state, owner), SimProps.Unblockable | Unpowered, noDealer: true)
+            : One(state);
+}
+
+
+/// <summary>
+/// CentennialPuzzle.AfterDamageReceived: the first time this combat its owner takes damage past their block (UnblockedDamage &gt; 0),
+/// draws its Cards (3), one at a time, queued until the hit is over (SimEngine.Raise). Used up for the combat (UsedThisCombat: the
+/// relic's amount here). A draw tab: the cards it really draws (decision #132).
+/// </summary>
+public sealed class CentennialPuzzle : RelicProc
+{
+    public override TabKind? Tab => TabKind.Draw;
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Target != owner || hit.Unblocked <= 0 || !Who.IsPlayer(owner) || Amount(state, owner) != 0) return;
+        Set(state, owner, amount: 1, Data(state, owner));
+        state.LogFired(Name, amount: 0, owner);
+        SimEngine.Raise(state, CardEvent.Drawn, owner, SimEngine.Var(state, owner, Name, "Cards", fallback: 3), Name);
+    }
+}
+
