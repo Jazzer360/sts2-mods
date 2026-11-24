@@ -57,9 +57,9 @@ public sealed class SimOrb
     public SimOrb Clone() => (SimOrb)MemberwiseClone();
 
     /// <summary>For branch keys (SimState.Key): every number of the orb.</summary>
-    internal void Hash(Action<long> add)
+    internal void Hash(ref BranchKey key)
     {
-        add((int)Kind); add(Passive); add(Evoke); Fields.Hash(add);
+        key.Add((int)Kind); key.Add(Passive); key.Add(Evoke); Fields.Hash(ref key);
     }
 }
 
@@ -258,14 +258,14 @@ public sealed class SimEnemy
     public SimEnemy Clone() => (SimEnemy)MemberwiseClone();
 
     /// <summary>For branch keys (SimState.Key): every number that can differ between branches of one run.</summary>
-    internal void Hash(Action<long> add)
+    internal void Hash(ref BranchKey key)
     {
-        add(Id); add(Hp); add(Block); add(UnblockedInstances); add(FirstHitFullyBlocked ? 1 : 0); add(Poison); add(DiedBeforeActing ? 1 : 0);
-        add(Stunned ? 1 : 0); add(IntendsToAttack ? 1 : 0); add(BlockBroken ? 1 : 0); add(GambitTriggered ? 1 : 0);
-        add(SlipperyTriggered ? 1 : 0); add(Exploded ? 1 : 0); add(MoveBlock);
-        Powers.Hash(add); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
-        Fields.Hash(add);
-        add(Hits.Count); foreach (var hit in Hits) add(hit);
+        key.Add(Id); key.Add(Hp); key.Add(Block); key.Add(UnblockedInstances); key.Add(FirstHitFullyBlocked ? 1 : 0); key.Add(Poison); key.Add(DiedBeforeActing ? 1 : 0);
+        key.Add(Stunned ? 1 : 0); key.Add(IntendsToAttack ? 1 : 0); key.Add(BlockBroken ? 1 : 0); key.Add(GambitTriggered ? 1 : 0);
+        key.Add(SlipperyTriggered ? 1 : 0); key.Add(Exploded ? 1 : 0); key.Add(MoveBlock);
+        Powers.Hash(ref key); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
+        Fields.Hash(ref key);
+        key.Add(Hits.Count); foreach (var hit in Hits) key.Add(hit);
     }
 }
 
@@ -516,24 +516,27 @@ public sealed class SimPlayer
     /// teammate. Two branches that differ only in a player (their draws, block, HP, orbs, what fired for them) mustn't merge, or one
     /// of them takes the other's state.
     /// </summary>
-    internal void Hash(Action<long> add)
+    internal void Hash(ref BranchKey key)
     {
-        add(Block); add(Hp); add(MaxHp); add(Taken); add(Through); add(OstyTaken); add(UnblockableTaken); add(Incoming); add(BlockGained);
-        add(WuppyHp); add(WuppyTaken); add(OstyHp); add(Died ? 1 : 0); add(LizardTailUsed ? 1 : 0); add(LizardTailHeal); add(FairiesUsed); add(Fairies);
-        add(BlockGains); add(Energy); add(HandCount); add(PlayingFromHand); add(Arrows); add(Fading); add(HexFading); add(HexFrom); add(Drawn); add(ExhaustPile); add(TakenToHand);
-        add(AttacksThisTurn); add(OrbCapacity); add(BeaconGiving ? 1 : 0); add(InvincibleBlock); add(InvincibleDrawPile);
-        Draw?.Hash(add);
-        add(TurnEndCards.Count);
-        foreach (var turnEndCard in TurnEndCards) { add(turnEndCard.Card.GetHashCode()); add(turnEndCard.Amount); }
-        // By what each one does, in any order (copies that act the same are the same hand, as for AutoHand).
-        add(ExhaustingInHand.Count);
-        foreach (var exhausting in ExhaustingInHand.OrderBy(card => card.Energy).ThenBy(card => card.Type)) { add(exhausting.Energy); add((int)exhausting.Type); }
-        add(AutoHand?.Count ?? -1);
+        key.Add(Block); key.Add(Hp); key.Add(MaxHp); key.Add(Taken); key.Add(Through); key.Add(OstyTaken); key.Add(UnblockableTaken); key.Add(Incoming); key.Add(BlockGained);
+        key.Add(WuppyHp); key.Add(WuppyTaken); key.Add(OstyHp); key.Add(Died ? 1 : 0); key.Add(LizardTailUsed ? 1 : 0); key.Add(LizardTailHeal); key.Add(FairiesUsed); key.Add(Fairies);
+        key.Add(BlockGains); key.Add(Energy); key.Add(HandCount); key.Add(PlayingFromHand); key.Add(Arrows); key.Add(Fading); key.Add(HexFading); key.Add(HexFrom); key.Add(Drawn); key.Add(ExhaustPile); key.Add(TakenToHand);
+        key.Add(AttacksThisTurn); key.Add(OrbCapacity); key.Add(BeaconGiving ? 1 : 0); key.Add(InvincibleBlock); key.Add(InvincibleDrawPile);
+        Draw?.Hash(ref key);
+        key.Add(TurnEndCards.Count);
+        foreach (var turnEndCard in TurnEndCards) { key.Add(turnEndCard.Card.GetHashCode()); key.Add(turnEndCard.Amount); }
+        // By what each one does, in any order (copies that act the same are the same hand, as for AutoHand). Sorted only when
+        // there's an order to choose: the key is made for every copy of the state.
+        key.Add(ExhaustingInHand.Count);
+        if (ExhaustingInHand.Count == 1) { key.Add(ExhaustingInHand[0].Energy); key.Add((int)ExhaustingInHand[0].Type); }
+        else if (ExhaustingInHand.Count > 1)
+            foreach (var exhausting in ExhaustingInHand.OrderBy(card => card.Energy).ThenBy(card => card.Type)) { key.Add(exhausting.Energy); key.Add((int)exhausting.Type); }
+        key.Add(AutoHand?.Count ?? -1);
         // By what each card is, in any order: branches that picked identical copies hold the same hand, and merge.
-        if (AutoHand != null) foreach (var key in AutoHand.Select(handCard => handCard.Key).OrderBy(key => key.Digest)) add(key.GetHashCode());
-        Powers.Hash(add); Relics.Hash(add); Turn.Hash(add); Fight.Hash(add); Fields.Hash(add);
-        add(Orbs.Count);
-        foreach (var orb in Orbs) orb.Hash(add);
+        if (AutoHand != null) foreach (var cardKey in AutoHand.Select(handCard => handCard.Key).OrderBy(cardKey => cardKey.Digest)) key.Add(cardKey.GetHashCode());
+        Powers.Hash(ref key); Relics.Hash(ref key); Turn.Hash(ref key); Fight.Hash(ref key); Fields.Hash(ref key);
+        key.Add(Orbs.Count);
+        foreach (var orb in Orbs) orb.Hash(ref key);
     }
 
     public SimPlayer Clone()
@@ -1026,31 +1029,31 @@ public sealed class SimState
     public long Key()
     {
         // Every number that can differ between branches of one run, mixed into one key (BranchKey).
+        // Passed by reference to each part's Hash: no delegate or closure for the key, which is made for every copy of the state.
         var key = new BranchKey();
-        void Add(long value) => key.Add(value);
 
-        Add(ParryingShieldFired ? 1 : 0); Add(BlockDemand); Add(SkippedPoisoned); Add(SkippedEndOfTurn); Add(CancelledHits);
+        key.Add(ParryingShieldFired ? 1 : 0); key.Add(BlockDemand); key.Add(SkippedPoisoned); key.Add(SkippedEndOfTurn); key.Add(CancelledHits);
         if (DrawRecord != null)
         {
-            Add(DrawRecord.Count);
-            foreach (var cardHash in DrawRecord.Select(draw => draw.Card.Key.GetHashCode()).Order()) Add(cardHash);
-            if (DrawRecord.Count > 0) Add((int)DrawRecord[^1].Card.Type); // Pillage reads the last one's type
+            key.Add(DrawRecord.Count);
+            foreach (var cardHash in DrawRecord.Select(draw => draw.Card.Key.GetHashCode()).Order()) key.Add(cardHash);
+            if (DrawRecord.Count > 0) key.Add((int)DrawRecord[^1].Card.Type); // Pillage reads the last one's type
         }
         // Mid-draw (between AfterCardDrawn listeners), branches that drew different cards stay apart.
-        if (DrawnCard != null) Add(DrawnCard.Key.GetHashCode());
+        if (DrawnCard != null) key.Add(DrawnCard.Key.GetHashCode());
         // Mid-evoke (before AfterOrbEvoked), branches whose evoke hit different enemies stay apart.
-        if (OrbTargets != null) { Add(-OrbTargets.Length - 1); foreach (var target in OrbTargets) Add(target); }
+        if (OrbTargets != null) { key.Add(-OrbTargets.Length - 1); foreach (var target in OrbTargets) key.Add(target); }
         // What a take in the play took and what's left for the next (decision #189): a later play reads them.
-        Add(PlayTaken); TakeMatching.Hash(Add);
+        key.Add(PlayTaken); TakeMatching.Hash(ref key);
         // What the play's conditions read later (decision #190): the last attack's kill, the code's tests already asked.
-        Add(AttackKilled ? 1 : 0); PlayTests.Hash(Add);
-        Add(PlayCountNow); Add((int)PlayResultLocation); // the card play's shape (SimEngine.DecideCardPlay)
-        Add(AutoPlaysUnknown ? 1 : 0); Add(AutoPlayed); Add(DrawnTally); Add(Unmodelled == null ? 0 : Unmodelled.GetHashCode());
-        foreach (var pick in AutoPicks) { Add(pick.Card.GetHashCode()); Add(pick.Target); } // branches that picked different cards stay apart (the check tells them apart)
-        foreach (var enemy in Enemies) enemy.Hash(Add);
-        You.Hash(Add);
+        key.Add(AttackKilled ? 1 : 0); PlayTests.Hash(ref key);
+        key.Add(PlayCountNow); key.Add((int)PlayResultLocation); // the card play's shape (SimEngine.DecideCardPlay)
+        key.Add(AutoPlaysUnknown ? 1 : 0); key.Add(AutoPlayed); key.Add(DrawnTally); key.Add(Unmodelled == null ? 0 : Unmodelled.GetHashCode());
+        foreach (var pick in AutoPicks) { key.Add(pick.Card.GetHashCode()); key.Add(pick.Target); } // branches that picked different cards stay apart (the check tells them apart)
+        foreach (var enemy in Enemies) enemy.Hash(ref key);
+        You.Hash(ref key);
         // Teammates (shared between branches until one changes them): a branch that differs only in a teammate stays apart.
-        foreach (var player in Teammates) player.Hash(Add);
+        foreach (var player in Teammates) player.Hash(ref key);
         return key.Value;
     }
 }

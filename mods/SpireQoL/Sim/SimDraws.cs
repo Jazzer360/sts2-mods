@@ -170,12 +170,14 @@ public sealed class SimDrawPile
     }
 
     /// <summary>For the branch key: what's left, by profile.</summary>
-    internal void Hash(Action<long> add)
+    internal void Hash(ref BranchKey key)
     {
-        add(Top.Count);
-        foreach (var drawn in Top) add(drawn.Key.GetHashCode());
-        foreach (var group in Rest) { add(group.Card.Key.GetHashCode()); add(group.Count); }
-        add(DiscardCount);
-        add(Picked);
+        key.Add(Top.Count);
+        foreach (var drawn in Top) key.Add(drawn.Key.GetHashCode());
+        foreach (var group in Rest) { key.Add(group.Card.Key.GetHashCode()); key.Add(group.Count); }
+        var discarded = 0;
+        foreach (var group in Discard) discarded += group.Count;
+        key.Add(discarded);
+        key.Add(Picked);
     }
 }

@@ -85,14 +85,14 @@ public sealed class NamedSet<TName> where TName : IEquatable<TName>
     public NamedSet<TName> Without(TName name) => With(name, amount: 0, remove: true);
 
     /// <summary>For branch keys: every entry's name and numbers.</summary>
-    public void Hash(Action<long> add)
+    public void Hash(ref BranchKey key)
     {
-        add(_items.Length);
+        key.Add(_items.Length);
         foreach (var entry in _items)
         {
-            add(entry.Name.GetHashCode());
-            add(entry.Amount);
-            add(entry.Data);
+            key.Add(entry.Name.GetHashCode());
+            key.Add(entry.Amount);
+            key.Add(entry.Data);
         }
     }
 
