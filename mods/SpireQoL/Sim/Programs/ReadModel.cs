@@ -103,7 +103,11 @@ public sealed class ReadModel : SimModel
         HookName.BeforeCardPlayed => nameof(BeforeCardPlayed),
         HookName.AfterCardPlayed => nameof(AfterCardPlayed),
         HookName.AfterPowerAmountChanged => nameof(AfterPowerApplied),
+        HookName.BeforeSideTurnEndVeryEarly => nameof(BeforeSideTurnEndVeryEarly),
+        HookName.BeforeSideTurnEndEarly => nameof(BeforeSideTurnEndEarly),
+        HookName.BeforeSideTurnEnd => nameof(BeforeSideTurnEnd),
         HookName.AfterSideTurnEnd => nameof(AfterSideTurnEnd),
+        HookName.AfterSideTurnEndLate => nameof(AfterSideTurnEndLate),
         HookName.ModifyDamageAdditive => nameof(ModifyDamageAdditive),
         HookName.ModifyDamageMultiplicative => nameof(ModifyDamageMultiplicative),
         HookName.ModifyDamageMultiplicativeLate => nameof(ModifyDamageMultiplicativeLate),
@@ -144,8 +148,14 @@ public sealed class ReadModel : SimModel
             State = state, Owner = owner, Play = state.CurrentPlay, Power = power, PowerAmount = amount, Applier = applier, Target = target, Debuff = debuff,
         });
 
-    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) =>
-        Run(HookName.AfterSideTurnEnd, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay });
+    public override IEnumerable<SimState> BeforeSideTurnEndVeryEarly(SimState state, int owner) => TurnEnd(HookName.BeforeSideTurnEndVeryEarly, state, owner);
+    public override IEnumerable<SimState> BeforeSideTurnEndEarly(SimState state, int owner) => TurnEnd(HookName.BeforeSideTurnEndEarly, state, owner);
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner) => TurnEnd(HookName.BeforeSideTurnEnd, state, owner);
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) => TurnEnd(HookName.AfterSideTurnEnd, state, owner);
+    public override IEnumerable<SimState> AfterSideTurnEndLate(SimState state, int owner) => TurnEnd(HookName.AfterSideTurnEndLate, state, owner);
+
+    /// <summary>A hook of the players' side's turn ending (decision #51), in its place among them.</summary>
+    private IEnumerable<SimState> TurnEnd(HookName hook, SimState state, int owner) => Run(hook, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay });
 
     public override decimal ModifyDamageAdditive(SimState state, int owner, DamageCtx damage) => Returned(HookName.ModifyDamageAdditive, state, owner, damage, otherwise: 0m);
     public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) => Returned(HookName.ModifyDamageMultiplicative, state, owner, damage, otherwise: 1m);
@@ -473,6 +483,8 @@ public sealed class ReadModel : SimModel
             case HookFact.TakesPart: return (in HookArgs args) => args.State.TakesPart(args.Owner) ? 1m : 0m;
             case HookFact.TakeBound: return (in HookArgs args) => Take(in args) ? 1m : 0m;
             case HookFact.BoundTaken: return (in HookArgs args) => args.Taken?[0] ?? 0;
+            case HookFact.OwnerBlock: return (in HookArgs args) => args.State.Player(args.Owner)?.Block ?? args.State.Enemy(args.Owner)?.Block ?? 0;
+            case HookFact.OwnerHandCount: return (in HookArgs args) => args.State.Player(args.Owner)?.HandCount ?? 0;
             default: throw new InvalidOperationException($"{Name}: no fact {fact.Fact}");
         }
     }

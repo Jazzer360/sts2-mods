@@ -470,3 +470,36 @@ public sealed class SubroutinePower : BoundPower
     protected override bool Binds(SimCardPlay play) => play.Card.Type == SimCardType.Power;
     protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => Cause(Fire(state, owner), CardEvent.EnergyGained, amount, owner);
 }
+
+// ---- end-of-turn relics (Sim/Models/EndOfTurnModels.cs), deleted 2026-11-24: no tab on cards, their amount their value (SimReaders.RelicAmountVars)
+
+/// <summary>
+/// Orichalcum (and its fake): BeforeSideTurnEndVeryEarly arms it when its owner has no block (RelicUse.Armed); BeforeSideTurnEnd then
+/// gives its block (amount, unpowered).
+/// </summary>
+public abstract class OrichalcumBase : RelicProc
+{
+    public override TabKind? Tab => null;
+    public override IEnumerable<SimState> BeforeSideTurnEndVeryEarly(SimState state, int owner)
+    {
+        if (state.TakesPart(owner) && state.Player(owner) is { Block: <= 0 }) Set(state, owner, Amount(state, owner), (int)RelicUse.Armed); // armed: it gives its block
+        return One(state);
+    }
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner)
+    {
+        if (!Armed(state, owner)) return One(state);
+        Disarm(state, owner);
+        return Block(state, owner, Amount(state, owner));
+    }
+}
+
+public sealed class Orichalcum : OrichalcumBase { }
+public sealed class FakeOrichalcum : OrichalcumBase { }
+
+/// <summary>ScreamingFlagon.BeforeSideTurnEnd: its damage (amount) to every hittable enemy when its owner's hand is empty.</summary>
+public sealed class ScreamingFlagon : RelicProc
+{
+    public override TabKind? Tab => null;
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner) =>
+        state.TakesPart(owner) && state.Player(owner) is { HandCount: 0 } ? DamageAll(state, owner, Amount(state, owner)) : One(state);
+}

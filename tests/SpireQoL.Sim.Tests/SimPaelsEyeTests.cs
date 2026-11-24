@@ -51,7 +51,7 @@ public class SimPaelsEyeTests
         // then, it arms, and gives its 6 on top of Feel No Pain's 9.
         var state = Armed();
         state.You.TurnEndCards.Clear();
-        state.You.OrichalcumBlock = 6;
+        state.WithRelic(Who.You, RelicId.Orichalcum, "Block", value: 6);
         Assert.Equal(0, SimEngine.Run(state).TakenMax);
     }
 
@@ -61,7 +61,7 @@ public class SimPaelsEyeTests
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 9, hits: 10) } };
         state.You.PaelsEyeExhaust = true;
         state.You.HandCount = 3;
-        state.You.CharonsAshesDamage = 3;
+        state.WithRelic(Who.You, RelicId.CharonsAshes, "Damage", value: 3);
         Assert.True(SimEngine.Run(state).DeadInAll(enemyId: 1));
     }
 }

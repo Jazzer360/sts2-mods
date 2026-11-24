@@ -122,7 +122,7 @@ internal sealed class BranchCode : IDisposable
                     var name = _reader.GetString(reference.Name);
                     if (reference.GetKind() == MemberReferenceKind.Field)
                         return new CodeMember(CodeMemberKind.Field, declaring, name) { ValueType = reference.DecodeFieldSignature(_names, null), HasThis = true, Namespace = space };
-                    return MethodMember(declaring, space, name, reference.DecodeMethodSignature(_names, null), Array.Empty<string>());
+                    return MethodMember(declaring, space, name, reference.DecodeMethodSignature(_names, null), Array.Empty<string>()) with { TypeArguments = _names.TypeArguments(reference.Parent) };
                 }
                 case HandleKind.MethodSpecification:
                 {
@@ -213,6 +213,16 @@ internal sealed class BranchCode : IDisposable
             }
         }
 
+        /// <summary>A generic instance's type arguments (PowerVar&lt;AimPower&gt;: "AimPower"); empty for any other type.</summary>
+        public IReadOnlyList<string> TypeArguments(EntityHandle handle)
+        {
+            if (handle.Kind != HandleKind.TypeSpecification) return Array.Empty<string>();
+            var blob = _reader.GetBlobReader(_reader.GetTypeSpecification((TypeSpecificationHandle)handle).Signature);
+            var arguments = new List<string>();
+            new SignatureDecoder<string, object?>(new ArgumentNames(this, arguments), _reader, null).DecodeType(ref blob);
+            return arguments;
+        }
+
         public string GetArrayType(string elementType, ArrayShape shape) => elementType + "[]";
         public string GetByReferenceType(string elementType) => elementType + "&";
         public string GetFunctionPointerType(MethodSignature<string> signature) => "fnptr";
@@ -236,6 +246,33 @@ internal sealed class BranchCode : IDisposable
         public string GetTypeFromDefinition(MetadataReader reader, TypeDefinitionHandle handle, byte rawTypeKind) => Type(handle).Name;
         public string GetTypeFromReference(MetadataReader reader, TypeReferenceHandle handle, byte rawTypeKind) => Type(handle).Name;
         public string GetTypeFromSpecification(MetadataReader reader, object? genericContext, TypeSpecificationHandle handle, byte rawTypeKind) => Type(handle).Name;
+
+        /// <summary>A generic instance's outermost type arguments, by their simple names, into the list given.</summary>
+        private sealed class ArgumentNames : ISignatureTypeProvider<string, object?>
+        {
+            private readonly Names _names;
+            private readonly List<string> _arguments;
+            private int _depth;
+            public ArgumentNames(Names names, List<string> arguments) { _names = names; _arguments = arguments; }
+            public string GetGenericInstantiation(string genericType, ImmutableArray<string> typeArguments)
+            {
+                if (_depth++ == 0) _arguments.AddRange(typeArguments);
+                return genericType;
+            }
+            public string GetArrayType(string elementType, ArrayShape shape) => elementType + "[]";
+            public string GetByReferenceType(string elementType) => elementType;
+            public string GetFunctionPointerType(MethodSignature<string> signature) => "fnptr";
+            public string GetGenericMethodParameter(object? genericContext, int index) => "!!" + index;
+            public string GetGenericTypeParameter(object? genericContext, int index) => "!" + index;
+            public string GetModifiedType(string modifier, string unmodifiedType, bool isRequired) => unmodifiedType;
+            public string GetPinnedType(string elementType) => elementType;
+            public string GetPointerType(string elementType) => elementType;
+            public string GetPrimitiveType(PrimitiveTypeCode typeCode) => _names.GetPrimitiveType(typeCode);
+            public string GetSZArrayType(string elementType) => elementType + "[]";
+            public string GetTypeFromDefinition(MetadataReader reader, TypeDefinitionHandle handle, byte rawTypeKind) => _names.Type(handle).Name;
+            public string GetTypeFromReference(MetadataReader reader, TypeReferenceHandle handle, byte rawTypeKind) => _names.Type(handle).Name;
+            public string GetTypeFromSpecification(MetadataReader reader, object? genericContext, TypeSpecificationHandle handle, byte rawTypeKind) => _names.Type(handle).Name;
+        }
 
         /// <summary>A type specification's generic type, as "Name|Namespace".</summary>
         private sealed class GenericNames : ISignatureTypeProvider<string, object?>

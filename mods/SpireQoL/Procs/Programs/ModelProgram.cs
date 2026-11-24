@@ -1322,8 +1322,9 @@ public static class ProgramReader
             // A helper of the card's own that works out a value: what it returns.
             if (_helperOf?.Invoke(member, arguments) is { } helped) return (helped, cursor);
             var property = member.Name.StartsWith("get_", StringComparison.Ordinal);
+            // A constructor of a generic type keeps the type's arguments (new PowerVar<AimPower>(12): AimPower).
             return (new QueryValue(member.DeclaringType, property ? member.Name[4..] : member.Name, of, arguments, member.ValueType)
-                { IsProperty = property && arguments.Length == 0, GenericArguments = member.GenericArguments }, cursor);
+                { IsProperty = property && arguments.Length == 0, GenericArguments = member.Name == ".ctor" && member.GenericArguments.Count == 0 ? member.TypeArguments : member.GenericArguments }, cursor);
         }
 
         /// <summary>What an await gave back (the call GetAwaiter was asked of, before the suspend): the command's result.</summary>

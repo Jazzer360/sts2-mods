@@ -82,8 +82,8 @@ public class SimTeammateTests
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, hits: 10) } };
         var player = Defect();
         player.HandCount = -1;
-        player.ScreamingFlagonDamage = 20;
         state.Teammates.Add(player);
+        state.WithRelic(Who.Teammate(0), RelicId.ScreamingFlagon, "Damage", value: 20);
         Assert.False(SimEngine.Run(state).DeadInAll(enemyId: 1));
     }
 

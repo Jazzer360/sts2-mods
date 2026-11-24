@@ -199,7 +199,7 @@ public class SimReviewTests
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 3, block: 0, hits: 10), Enemy(id: 2, hp: 4, block: 0, hits: 10) } };
         state.You.Hailstorm = 3;
         state.You.HailstormFrostNeeded = 0;
-        state.You.OrichalcumBlock = 5;
+        state.WithRelic(Who.You, RelicId.Orichalcum, "Block", value: 5);
         state.You.Juggernaut = 1;
         var outcome = SimEngine.Run(state);
         Assert.True(outcome.DeadInAll(enemyId: 1));

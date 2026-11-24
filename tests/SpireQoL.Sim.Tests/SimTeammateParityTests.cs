@@ -34,13 +34,14 @@ public class SimTeammateParityTests
         new object[] { "Ethereal and Forgotten Soul" },
     };
 
-    private static void Setup(string name, SimPlayer player)
+    private static void Setup(string name, SimState state, int id)
     {
+        var player = state.MutablePlayer(id);
         player.OrbCapacity = 3;
         switch (name)
         {
             case "Plating": player.Plating = 4; break;
-            case "Orichalcum": player.OrichalcumBlock = 6; break;
+            case "Orichalcum": state.WithRelic(id, RelicId.Orichalcum, "Block", value: 6); break;
             case "Cloak Clasp": player.CloakClaspPerCard = 1; player.HandCount = 5; break;
             case "Ripple Basin": player.RippleBasinBlock = 4; break;
             case "Parrying Shield": player.Plating = 10; player.ParryingShieldBlock = 10; player.ParryingShieldDamage = 6; break;
@@ -50,7 +51,7 @@ public class SimTeammateParityTests
                 break;
             case "The Bomb": player.TheBombDamage = 12; break;
             case "Stone Calendar": player.StoneCalendarDamage = 9; break;
-            case "Screaming Flagon": player.ScreamingFlagonDamage = 8; player.HandCount = 0; break;
+            case "Screaming Flagon": state.WithRelic(id, RelicId.ScreamingFlagon, "Damage", value: 8); player.HandCount = 0; break;
             case "Lightning": player.Orbs.Add(new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 }); break;
             case "Juggernaut": player.Plating = 5; player.Juggernaut = 7; break;
             case "Consuming Shadow (Lightning)": player.Orbs.Add(new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 }); player.ConsumingShadow = 1; break;
@@ -58,8 +59,8 @@ public class SimTeammateParityTests
             case "Obsidian Vice": player.ObsidianViceDamage = 1; player.HandCount = 4; break;
             // Ethereal cards exhausting at end of turn (CombatManager.DoTurnEnd): each one sets off the exhaust effects.
             case "Ethereal and Feel No Pain": player.Fading = 2; player.FeelNoPain = 3; player.HandCount = 2; break;
-            case "Ethereal and Charon's Ashes": player.Fading = 2; player.CharonsAshesDamage = 3; player.HandCount = 2; break;
-            case "Ethereal and Forgotten Soul": player.Fading = 2; player.ForgottenSoulDamage = 1; player.HandCount = 2; break;
+            case "Ethereal and Charon's Ashes": player.Fading = 2; state.WithRelic(id, RelicId.CharonsAshes, "Damage", value: 3); player.HandCount = 2; break;
+            case "Ethereal and Forgotten Soul": player.Fading = 2; state.WithRelic(id, RelicId.ForgottenSoul, "Damage", value: 1); player.HandCount = 2; break;
             case "Thorns": player.Thorns = 3; break;
             case "Flame Barrier": player.FlameBarrier = 4; break;
             case "Reflect": player.Block = 6; player.Reflect = true; break;
@@ -71,13 +72,12 @@ public class SimTeammateParityTests
     public void YouAndATeammateGetTheSameEndOfTurn(string name)
     {
         var asYou = new SimState { Enemies = { Target() } };
-        Setup(name, asYou.You);
+        Setup(name, asYou, Who.You);
         var you = SimEngine.Run(asYou);
 
         var asMate = new SimState { Enemies = { Target() } };
-        var mate = new SimPlayer { Hp = 80 };
-        Setup(name, mate);
-        asMate.Teammates.Add(mate);
+        asMate.Teammates.Add(new SimPlayer { Hp = 80 });
+        Setup(name, asMate, Who.Teammate(0));
         var them = SimEngine.Run(asMate);
 
         Assert.Equal(you.Worst.BlockAtEnemyTurn, them.TeammateWorst(teammateIndex: 0).BlockGained);
@@ -93,11 +93,10 @@ public class SimTeammateParityTests
     public void YouAndATeammateRetaliateTheSame(string name)
     {
         var asYou = new SimState { Enemies = { Target(hp: 200, hits: [5, 5]) } };
-        Setup(name, asYou.You);
+        Setup(name, asYou, Who.You);
         var asMate = new SimState { Enemies = { Target(hp: 200, hits: [5, 5]) } };
-        var mate = new SimPlayer { Hp = 80 };
-        Setup(name, mate);
-        asMate.Teammates.Add(mate);
+        asMate.Teammates.Add(new SimPlayer { Hp = 80 });
+        Setup(name, asMate, Who.Teammate(0));
         // The enemy's HP after its turn: the same retaliation either way (it hits every player).
         static int[] Hp(SimOutcome outcome) => outcome.Branches.Select(branch => branch.Enemy(id: 1)!.Hp).Distinct().OrderBy(hpLeft => hpLeft).ToArray();
         Assert.Equal(Hp(SimEngine.Run(asYou)), Hp(SimEngine.Run(asMate)));
@@ -218,7 +217,8 @@ public class SimTeammateParityTests
         // Two Ethereal cards in their hand with Charon's Ashes 3: 6 to every enemy as they exhaust, killing the
         // 6 HP enemy before its 10 on you. Which cards are in their hand isn't known, so the shown run has it attack.
         var state = new SimState { Enemies = { Target(hp: 6, hits: 10) } };
-        state.Teammates.Add(new SimPlayer { Hp = 60, HandCount = 2, Fading = 2, CharonsAshesDamage = 3 });
+        state.Teammates.Add(new SimPlayer { Hp = 60, HandCount = 2, Fading = 2 });
+        state.WithRelic(Who.Teammate(0), RelicId.CharonsAshes, "Damage", value: 3);
 
         var full = SimEngine.Run(state);
         Assert.True(full.DeadInAll(enemyId: 1));

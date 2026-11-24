@@ -62,7 +62,7 @@ public class SimPerformanceTests
         state.You.OrbCapacity = 6;
         state.You.Juggernaut = 4;
         state.You.Plating = 3;
-        state.You.OrichalcumBlock = 6;
+        state.WithRelic(Who.You, RelicId.Orichalcum, "Block", value: 6);
         var plays = new List<SimPlay?> { null };
         for (var copy = 0; copy < 10; copy++)
             for (var target = 0; target < 3; target++)
@@ -102,18 +102,19 @@ public class SimPerformanceTests
     {
         var state = new SimState();
         for (var i = 0; i < 2; i++) state.Enemies.Add(new SimEnemy { Id = i, Name = $"E{i}", Hp = 300, Hits = new() { 6 } });
-        SimPlayer Setup(SimPlayer player)
+        void Setup(int id)
         {
+            var player = state.MutablePlayer(id);
             player.BeaconOfHope = true;
             player.Juggernaut = 3;
             player.Plating = 4;
-            player.OrichalcumBlock = 6;
             player.OrbCapacity = 3;
             player.Orbs = Enumerable.Range(0, 3).Select(_ => Frost()).ToList();
-            return player;
+            state.WithRelic(id, RelicId.Orichalcum, "Block", value: 6);
         }
-        Setup(state.You);
-        state.Teammates.Add(Setup(new SimPlayer { Hp = 80, HandCount = -1 }));
+        state.Teammates.Add(new SimPlayer { Hp = 80, HandCount = -1 });
+        Setup(Who.You);
+        Setup(Who.Teammate(0));
         var plays = new List<SimPlay?> { null };
         plays.AddRange(Enumerable.Range(0, 4).Select(_ => new SimPlay { BlockAmount = 5, BlockGains = 1 }));
         return (state, plays);

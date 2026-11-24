@@ -56,7 +56,7 @@ public class SimEngineTests
     public void JuggernautCardWithOrichalcumAndNoBlockKills()
     {
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, block: 0, hits: 9) } };
-        state.You.OrichalcumBlock = 6;
+        state.WithRelic(Who.You, RelicId.Orichalcum, "Block", value: 6);
         var juggernaut = new SimPlay { Name = "Juggernaut", AddJuggernaut = 5 };
         var outcome = SimEngine.Run(state, juggernaut);
         Assert.True(outcome.DeadInAll(enemyId: 1));
@@ -67,7 +67,7 @@ public class SimEngineTests
     public void OrichalcumDoesNothingWhenYouHaveBlock()
     {
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, block: 0, hits: 9) } };
-        state.You.OrichalcumBlock = 6;
+        state.WithRelic(Who.You, RelicId.Orichalcum, "Block", value: 6);
         state.You.Block = 1;
         var outcome = SimEngine.Run(state, new SimPlay { AddJuggernaut = 5 });
         Assert.False(outcome.DeadInAll(enemyId: 1));

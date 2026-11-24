@@ -82,7 +82,7 @@ public class SimAutoPlayTests
     {
         // Its block comes in the auto-play phase, so Orichalcum (no block at BeforeSideTurnEnd) doesn't arm.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 10) } };
-        state.You.OrichalcumBlock = 6;
+        state.WithRelic(Who.You, RelicId.Orichalcum, "Block", value: 6);
         Assert.Equal(4, SimEngine.Run(state).TakenMax);
         state.You.InvincibleBlock = 8;
         state.You.InvincibleDrawPile = 2;

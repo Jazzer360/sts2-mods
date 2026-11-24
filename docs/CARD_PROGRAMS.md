@@ -506,6 +506,9 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 | its own data (`GetInternalData`): `amountsForPlayedCards.Add(cardPlay.Card, value)` at BeforeCardPlayed, `Remove(cardPlay.Card, out value)` at AfterCardPlayed (tested, or for its out value), a plain field stored or read (`data.etherealCount`) | `BindStep` (the play's bound amount, `SimState.Bound`), `HookFact.TakeBound` / `UnbindStep` and `HookFact.BoundTaken` (the reader's `OutValue`), `StoreFieldStep` / `HookField` on `Data.etherealCount`; any other change to it a gap (`DataStep` and every store checked at its place) |
 | a counter loop (`for (i = 0; i < n; i++)`) | `RepeatStep`: its body n times, n worked out as it starts, a firing on the first round only |
 | `OrbCmd.Channel<T>(owner)` | `ChannelStep` (`SimEngine.ChannelKind`) |
+| the players' side's turn-end hooks (BeforeSideTurnEndVeryEarly, Early, BeforeSideTurnEnd, AfterSideTurnEnd, AfterSideTurnEndLate) | run where the engine runs every model's (decision #51) |
+| `base.Owner.Creature.Block`, `PileType.Hand.GetPile(base.Owner).Cards.Count` / `.IsEmpty` | `HookFact.OwnerBlock`, `HookFact.OwnerHandCount` |
+| `new PowerVar<T>(n)`, `new PowerVar<T>("Name", n)` in CanonicalVars | the value keyed by T's class (the constructor's type argument: `CodeMember.TypeArguments`) or by its name |
 | a power whose copies act on their own (`PowerInstanceType.Instanced`), a game object's property set or field stored where no step is read (a `DynamicVar.BaseValue--`) | a gap, so a class is never read whole while part of what it does is dropped |
 | a temporary Strength or Dexterity power applied | the Strength or Dexterity its base class's BeforeApplied applies, by its sign |
 

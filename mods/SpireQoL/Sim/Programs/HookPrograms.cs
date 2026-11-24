@@ -20,7 +20,11 @@ public enum HookName
     AfterEnergySpent,
     AfterArrowDislodged,
     AfterPowerAmountChanged,
+    BeforeSideTurnEndVeryEarly,
+    BeforeSideTurnEndEarly,
+    BeforeSideTurnEnd,
     AfterSideTurnEnd,
+    AfterSideTurnEndLate,
     ModifyDamageAdditive,
     ModifyDamageMultiplicative,
     ModifyDamageMultiplicativeLate,
@@ -87,6 +91,10 @@ public enum HookFact
     TakeBound,
     /// <summary>The amount this hook run took from what the model bound to the play (Remove's out value; 0 when none was).</summary>
     BoundTaken,
+    /// <summary>The owner's block (base.Owner.Creature.Block).</summary>
+    OwnerBlock,
+    /// <summary>The cards in the owner's hand (PileType.Hand.GetPile(base.Owner).Cards.Count; IsEmpty is this at 0).</summary>
+    OwnerHandCount,
 }
 
 /// <summary>An operation of the code on two values (decimal throughout; a true-or-false is 1 or 0).</summary>

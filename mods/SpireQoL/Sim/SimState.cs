@@ -335,16 +335,12 @@ public sealed class SimPlayer
     [JsonIgnore] public int Inferno { get => Powers[PowerId.Inferno]; set => Set(PowerId.Inferno, value); }
 
     // Relics (amount: their block or damage; Data where said).
-    [JsonIgnore] public int OrichalcumBlock { get => Relics[RelicId.Orichalcum]; set => SetRelic(RelicId.Orichalcum, value); }
     [JsonIgnore] public int CloakClaspPerCard { get => Relics[RelicId.CloakClasp]; set => SetRelic(RelicId.CloakClasp, value); }
     [JsonIgnore] public int RippleBasinBlock { get => Relics[RelicId.RippleBasin]; set => SetRelic(RelicId.RippleBasin, value); }
-    [JsonIgnore] public int ScreamingFlagonDamage { get => Relics[RelicId.ScreamingFlagon]; set => SetRelic(RelicId.ScreamingFlagon, value); }
     /// <summary>Stone Calendar's damage when this is its turn (Data: turns until then), else 0.</summary>
     [JsonIgnore] public int StoneCalendarDamage { get => Relics.DataOf(RelicId.StoneCalendar) == 0 ? Relics[RelicId.StoneCalendar] : 0; set => SetRelic(RelicId.StoneCalendar, value); }
     /// <summary>Obsidian Vice: damage per card in hand to a random enemy at end of turn (v0.113.0).</summary>
     [JsonIgnore] public int ObsidianViceDamage { get => Relics[RelicId.ObsidianVice]; set => SetRelic(RelicId.ObsidianVice, value); }
-    [JsonIgnore] public int CharonsAshesDamage { get => Relics[RelicId.CharonsAshes]; set => SetRelic(RelicId.CharonsAshes, value); }
-    [JsonIgnore] public int ForgottenSoulDamage { get => Relics[RelicId.ForgottenSoul]; set => SetRelic(RelicId.ForgottenSoul, value); }
     /// <summary>Parrying Shield (amount: its damage; Data: the block it needs).</summary>
     [JsonIgnore] public int ParryingShieldDamage { get => Relics[RelicId.ParryingShield]; set => Relics = Relics.With(RelicId.ParryingShield, value, Relics.DataOf(RelicId.ParryingShield)); }
     [JsonIgnore] public int ParryingShieldBlock { get => Relics.DataOf(RelicId.ParryingShield); set => Relics = Relics.With(RelicId.ParryingShield, Relics[RelicId.ParryingShield], value); }

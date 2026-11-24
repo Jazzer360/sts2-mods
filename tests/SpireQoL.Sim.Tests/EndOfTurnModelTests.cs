@@ -29,8 +29,8 @@ public class EndOfTurnModelTests
         // Vice picks its random target, so the Vice can only hit E1: no branch on E0.
         var state = new SimState { Enemies = { Attacker(id: 0, hp: 5, hit: 3), Attacker(id: 1, hp: 30, hit: 3) }, TeammatesBeforeMe = 1 };
         var mate = new SimPlayer { Hp = 30, HandCount = 0 };
-        mate.ScreamingFlagonDamage = 5;
         state.Teammates.Add(mate);
+        state.WithRelic(Who.Teammate(0), RelicId.ScreamingFlagon, "Damage", value: 5);
         state.You.HandCount = 2;
         state.You.ObsidianViceDamage = 4;
         var outcome = SimEngine.Run(state);
@@ -80,7 +80,7 @@ public class EndOfTurnModelTests
         // Flagon kills it at BeforeSideTurnEnd), neither hurts you. Data: the applier's id + 100.
         var state = new SimState { Enemies = { Attacker(id: 0, hp: 5), Attacker(id: 1, hp: 50) } };
         state.You.HandCount = 0;
-        state.You.ScreamingFlagonDamage = 5;
+        state.WithRelic(Who.You, RelicId.ScreamingFlagon, "Damage", value: 5);
         state.You.Powers = state.You.Powers.With(PowerId.Constrict, amount: 4, data: 100).With(PowerId.MagicBomb, amount: 6, data: 100);
         Assert.Equal(0, SimEngine.Run(state).TakenMax);
 

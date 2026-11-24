@@ -222,7 +222,7 @@ public static class HookReader
                 if (instruction.IsCall && ChangesAGameObject(instruction.Member)) return $"gap: changes a game object outside a command ({instruction.Member!.FullName})";
                 // A property set on one of the game's objects the reader reads no store for (Panache's DynamicVars["CardsLeft"].BaseValue--).
                 if (instruction.IsCall && instruction.Member is { Kind: CodeMemberKind.Method, HasThis: true } setter && setter.Name.StartsWith("set_", StringComparison.Ordinal)
-                    && setter.Namespace.StartsWith("MegaCrit", StringComparison.Ordinal) && !stepsAt.Contains(instruction.Offset))
+                    && setter.Namespace.StartsWith("MegaCrit", StringComparison.Ordinal) && !setter.Namespace.Contains(".Nodes", StringComparison.Ordinal) && !stepsAt.Contains(instruction.Offset))
                     return $"gap: sets {setter.DeclaringType}.{setter.Name[4..]} where the reader reads no store";
                 // A field stored on one of the game's objects (not the hook's own locals) the reader reads no store for.
                 if (instruction.OpCode == System.Reflection.Emit.OpCodes.Stfld && instruction.Member is { } storedField && !storedField.DeclaringType.StartsWith('<') && !storedField.Name.StartsWith('<')
@@ -242,7 +242,7 @@ public static class HookReader
             && (member.ValueType == typeof(void).Name || member.ValueType.StartsWith("Task", StringComparison.Ordinal))
             && !member.Name.StartsWith("get_", StringComparison.Ordinal) && !member.Name.StartsWith("set_", StringComparison.Ordinal) && !member.Name.StartsWith('<') && member.Name != ".ctor"
             && member.DeclaringType != _type.Name && !member.Namespace.StartsWith("MegaCrit.Sts2.Core.Commands", StringComparison.Ordinal)
-            && member.Name is not ("Flash" or "InvokeDisplayAmountChanged" or "AssertMutable" or "SetResult" or "Start" or "AwaitUnsafeOnCompleted" or "SetStateMachine" or "SetException");
+            && !member.Namespace.Contains(".Nodes", StringComparison.Ordinal) && member.Name is not ("Flash" or "InvokeDisplayAmountChanged" or "AssertMutable" or "SetResult" or "Start" or "AwaitUnsafeOnCompleted" or "SetStateMachine" or "SetException");
 
         /// <summary>A turn-start body: past a simulation's horizon when each of its steps waits on its owner, a player, taking part; else a gap.</summary>
         private string? PastTheHorizon(MethodInfo hook)
@@ -515,6 +515,11 @@ public static class HookReader
             {
                 case CompareValue compare:
                     return Compare(compare);
+                // The owner's hand is empty (GetPile(Hand, owner).IsEmpty), or has cards (its Count tested as true or false).
+                case QueryValue { Name: "IsEmpty", Of: { } emptyPile } when IsOwnersHand(emptyPile):
+                    return new HookMath(HookOperation.Equal, new HookFactValue(HookFact.OwnerHandCount), new HookConstant(0m));
+                case QueryValue { Name: "Count", Of: QueryValue { Name: "Cards", Of: { } countedPile } } when IsOwnersHand(countedPile):
+                    return new HookMath(HookOperation.NotEqual, new HookFactValue(HookFact.OwnerHandCount), new HookConstant(0m));
                 // Its own data's Remove(cardPlay.Card, out value): what it bound to the play is taken, 1 when there was one.
                 case var take when IsTakeBound(take):
                     return new HookFactValue(HookFact.TakeBound);
@@ -670,6 +675,12 @@ public static class HookReader
                     return Value(stored.Value);
                 case CompareValue compare:
                     return Compare(compare);
+                // The owner's block (base.Owner.Creature.Block).
+                case QueryValue { Name: "Block", Of: { } blockOf } when IsOwner(blockOf):
+                    return new HookFactValue(HookFact.OwnerBlock);
+                // The cards in the owner's hand (PileType.Hand.GetPile(base.Owner).Cards.Count).
+                case QueryValue { Name: "Count", Of: QueryValue { Name: "Cards", Of: { } pile } } when IsOwnersHand(pile):
+                    return new HookFactValue(HookFact.OwnerHandCount);
                 // What its own data's Remove(cardPlay.Card, out value) took: the amount bound to the play.
                 case OutValue { Call: var take, Parameter: 1 } when IsTakeBound(take):
                     return new HookFactValue(HookFact.BoundTaken);
@@ -716,7 +727,12 @@ public static class HookReader
                 if (value is not QueryValue { Name: ".ctor", Type: var varType, Arguments: var arguments } || arguments.Count == 0) continue;
                 decimal? Number(ProgramValue argument) { try { return Value(argument) is HookConstant constant ? constant.Value : null; } catch (Gap) { return null; } }
                 if (varType == "DynamicVar" && arguments is [NamedValue name, var named] && Number(named) is { } namedValue) { found[name.Name.Trim('"')] = namedValue; continue; }
+                // A PowerVar<T> named in its constructor (new PowerVar<AimPower>("EndOfTurnAim", 3)): its key is that name.
+                if (varType.StartsWith("PowerVar", StringComparison.Ordinal) && arguments is [NamedValue { Name: var powerVarName }, var powerVarValue] && powerVarName.StartsWith('"')
+                    && Number(powerVarValue) is { } namedPower) { found[powerVarName.Trim('"')] = namedPower; continue; }
                 if (Number(arguments[0]) is not { } number) continue;
+                // A PowerVar<T>'s key is its power's class (its generic argument, as the var's own constructor names it).
+                if (varType.StartsWith("PowerVar", StringComparison.Ordinal) && value is QueryValue { GenericArguments: [var power] }) { found[power] = number; continue; }
                 if (varType.StartsWith("PowerVar", StringComparison.Ordinal)) { powerVars.Add(number); continue; }
                 var key = VarClassKey(varType);
                 found[key] = number;
@@ -782,6 +798,11 @@ public static class HookReader
             QueryValue { Name: "Player" or "Creature", Of: { } of } => IsOwner(of),
             _ => false,
         };
+
+        /// <summary>The owner's hand: PileType.Hand.GetPile(base.Owner) (the pile type read by its name on this branch).</summary>
+        private bool IsOwnersHand(ProgramValue value) =>
+            (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "GetPile", Arguments: [ConstantValue pileType, var whose] }
+            && EnumName(_type.Assembly, "PileType", pileType.Value) == "Hand" && IsOwner(whose);
 
         /// <summary>The card whose owner a value is (card.Owner, card.Owner.Creature); null otherwise.</summary>
         private static ProgramValue? CardOwnerOf(ProgramValue value) => value switch

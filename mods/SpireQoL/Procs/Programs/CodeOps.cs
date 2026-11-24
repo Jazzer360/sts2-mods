@@ -14,6 +14,8 @@ public sealed record CodeMember(CodeMemberKind Kind, string DeclaringType, strin
 {
     /// <summary>A generic method's type arguments (PowerCmd.Apply&lt;VulnerablePower&gt;: "VulnerablePower").</summary>
     public IReadOnlyList<string> GenericArguments { get; init; } = Array.Empty<string>();
+    /// <summary>The declaring type's generic arguments (new PowerVar&lt;AimPower&gt;(12): "AimPower"); empty for a type that isn't generic.</summary>
+    public IReadOnlyList<string> TypeArguments { get; init; } = Array.Empty<string>();
     /// <summary>A method's parameters (without its instance).</summary>
     public int ParameterCount { get; init; }
     /// <summary>A method's parameters' types, in order (simple names: "Decimal", "BlockVar").</summary>
@@ -241,6 +243,7 @@ public static class RuntimeCode
         MethodBase method => new CodeMember(CodeMemberKind.Method, method.DeclaringType?.Name ?? "", method.Name)
         {
             GenericArguments = method.IsGenericMethod ? method.GetGenericArguments().Select(type => type.Name).ToArray() : Array.Empty<string>(),
+            TypeArguments = method.DeclaringType is { IsGenericType: true } generic ? generic.GetGenericArguments().Select(type => type.Name).ToArray() : Array.Empty<string>(),
             ParameterCount = method.GetParameters().Length,
             ParameterTypes = method.GetParameters().Select(parameter => parameter.ParameterType.Name).ToArray(),
             ParameterNames = method.GetParameters().Select(parameter => parameter.Name ?? "").ToArray(),

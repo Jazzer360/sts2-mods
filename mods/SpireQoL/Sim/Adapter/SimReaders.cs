@@ -200,13 +200,8 @@ public static class SimReaders
         [nameof(TheBoot)] = Var("DamageMinimum", fallback: 5),
         [nameof(SneckoSkull)] = Var("PoisonPower", fallback: 1),
         // End-of-turn relics: their block, damage or stars.
-        [nameof(Orichalcum)] = Var("Block"),
-        [nameof(FakeOrichalcum)] = Var("Block"),
         [nameof(CloakClasp)] = Var("Block"),
         [nameof(RippleBasin)] = Var("Block"),
-        [nameof(ScreamingFlagon)] = Var("Damage"),
-        [nameof(CharonsAshes)] = Var("Damage"),
-        [nameof(ForgottenSoul)] = Var("Damage"),
         [nameof(ObsidianVice)] = Var("Damage", fallback: 1),
         [nameof(StoneCalendar)] = Var("Damage"),
         [nameof(ParryingShield)] = Var("Damage"),

@@ -14,7 +14,7 @@ public class SimParryingShieldTests
         var state = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 50, Hits = { 3 } } } };
         state.You.Block = block;
         state.You.Plating = 4;          // Gorget's Plating on turn one
-        state.You.OrichalcumBlock = 6;  // only when you end your turn with no block
+        state.WithRelic(Who.You, RelicId.Orichalcum, "Block", value: 6);  // only when you end your turn with no block
         state.You.ParryingShieldBlock = 10;
         state.You.ParryingShieldDamage = 6;
         return state;

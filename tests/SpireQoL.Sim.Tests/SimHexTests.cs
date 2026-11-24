@@ -21,7 +21,7 @@ public class SimHexTests
     private static SimState Knights()
     {
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, hits: 10), Enemy(id: 2, hp: 6, hits: 35) } };
-        state.You.CharonsAshesDamage = 3;
+        state.WithRelic(Who.You, RelicId.CharonsAshes, "Damage", value: 3);
         state.You.Fading = 2;
         state.You.HexFading = 2;
         state.You.HexFrom = 1;

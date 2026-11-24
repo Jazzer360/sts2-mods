@@ -874,6 +874,111 @@
     ]
   },
   {
+    "Name": "FakeOrichalcum",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "ShouldTrigger",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeSideTurnEnd\u003Ed__13.MoveNext:0017",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "NotEqual",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "ShouldTrigger"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                }
+              }
+            }
+          },
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Block",
+              "Canonical": 3
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Block.Props",
+              "Canonical": 4
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeSideTurnEnd\u003Ed__13.MoveNext:0017",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "NotEqual",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "ShouldTrigger"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeSideTurnEndVeryEarly",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "ShouldTrigger",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "FakeOrichalcum.BeforeSideTurnEndVeryEarly:0011",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "FakeOrichalcum.BeforeSideTurnEndVeryEarly:002A",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerBlock"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
     "Name": "FeelNoPainPower",
     "Kind": "Power",
     "Hooks": [
@@ -2162,6 +2267,111 @@
     "Tab": "Energy"
   },
   {
+    "Name": "Orichalcum",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "ShouldTrigger",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeSideTurnEnd\u003Ed__11.MoveNext:0017",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "NotEqual",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "ShouldTrigger"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                }
+              }
+            }
+          },
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Block",
+              "Canonical": 6
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Block.Props",
+              "Canonical": 4
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeSideTurnEnd\u003Ed__11.MoveNext:0017",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "NotEqual",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "ShouldTrigger"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeSideTurnEndVeryEarly",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "ShouldTrigger",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "Orichalcum.BeforeSideTurnEndVeryEarly:0011",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "Orichalcum.BeforeSideTurnEndVeryEarly:002A",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerBlock"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
     "Name": "OrnamentalFan",
     "Kind": "Relic",
     "Hooks": [
@@ -2806,7 +3016,7 @@
             "Amount": {
               "$kind": "HookVar",
               "Key": "StrengthPower",
-              "Canonical": 0
+              "Canonical": 1
             },
             "Debuff": false,
             "When": {
@@ -2914,7 +3124,7 @@
             "Amount": {
               "$kind": "HookVar",
               "Key": "DexterityPower",
-              "Canonical": 0
+              "Canonical": 1
             },
             "Debuff": false,
             "When": {
@@ -3114,6 +3324,60 @@
       }
     ],
     "Tab": "Block"
+  },
+  {
+    "Name": "ScreamingFlagon",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Damage",
+              "Canonical": 20
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Damage.Props",
+              "Canonical": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__4.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__4.MoveNext:0042",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerHandCount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
   },
   {
     "Name": "ShroudPower",
@@ -3723,6 +3987,36 @@
       }
     ],
     "Tab": "Trigger"
+  },
+  {
+    "Name": "Storyteller",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "AimPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "EndOfTurnAim",
+              "Canonical": 3
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeSideTurnEnd\u003Ed__8.MoveNext:002A",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ]
   },
   {
     "Name": "StrengthPower",

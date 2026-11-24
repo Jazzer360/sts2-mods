@@ -35,7 +35,10 @@ public class ReadModelParityTests
     /// The relics whose hand-written model's amount the adapter read from one of their values (SimReaders.RelicAmountVars), by that value's key:
     /// the board gives the amount as the adapter did, so the two read the same number.
     /// </summary>
-    private static readonly Dictionary<string, string> RelicAmountVars = new(StringComparer.Ordinal) { [RelicId.CharonsAshes.Name] = "Damage", [RelicId.ForgottenSoul.Name] = "Damage" };
+    private static readonly Dictionary<string, string> RelicAmountVars = new(StringComparer.Ordinal) {
+        [RelicId.CharonsAshes.Name] = "Damage", [RelicId.ForgottenSoul.Name] = "Damage", [RelicId.Orichalcum.Name] = "Block", [RelicId.FakeOrichalcum.Name] = "Block",
+        [RelicId.ScreamingFlagon.Name] = "Damage",
+    };
 
     public static TheoryData<string> Models() => new(HandWritten.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
@@ -101,7 +104,8 @@ public class ReadModelParityTests
         nameof(SimModel.ModifyDamageAdditive), nameof(SimModel.ModifyDamageMultiplicative), nameof(SimModel.ModifyDamageMultiplicativeLate),
         nameof(SimModel.ModifyBlockAdditive), nameof(SimModel.ModifyBlockMultiplicative),
         nameof(SimModel.BeforeCardPlayed), nameof(SimModel.AfterCardPlayed), nameof(SimModel.AfterCardEvent), nameof(SimModel.AfterPowerApplied),
-        nameof(SimModel.AfterSideTurnEnd),
+        nameof(SimModel.BeforeSideTurnEndVeryEarly), nameof(SimModel.BeforeSideTurnEndEarly), nameof(SimModel.BeforeSideTurnEnd), nameof(SimModel.AfterSideTurnEnd),
+        nameof(SimModel.AfterSideTurnEndLate),
     };
 
     [Fact]
@@ -128,7 +132,9 @@ public class ReadModelParityTests
         foreach (var variable in VarsOf(model.Spec))
             state.Vars[$"{owner}:{model.Name}:{variable.Key}"] = variable.Key.EndsWith(".Props", StringComparison.Ordinal) ? (int)variable.Canonical : (int)variable.Canonical + 1;
         var amount = RelicAmountVars.TryGetValue(model.Name, out var amountVar) ? state.Vars[$"{owner}:{model.Name}:{amountVar}"] : 0;
-        if (model.Spec.Kind == ModelKind.Relic) SimEngine.SetRelics(state, owner, SimEngine.RelicsOf(state, owner).With(new RelicId(model.Name), amount, data: (int)RelicUse.Armed));
+        // A relic whose amount is its value keeps no flag (SimReaders.Relics); any other starts armed.
+        var data = RelicAmountVars.ContainsKey(model.Name) ? 0 : (int)RelicUse.Armed;
+        if (model.Spec.Kind == ModelKind.Relic) SimEngine.SetRelics(state, owner, SimEngine.RelicsOf(state, owner).With(new RelicId(model.Name), amount, data));
         return state;
     }
 
@@ -210,11 +216,27 @@ public class ReadModelParityTests
                                     yield return ($"{power.Name} {amount} by {applier} on {target}, debuff {debuff}", (model, state) =>
                                         Branches(model.AfterPowerApplied(state, owner, power, amount, applier, target, debuff)));
                 break;
-            case nameof(SimModel.AfterSideTurnEnd):
-                yield return ("the players' turn ending", (model, state) => Branches(model.AfterSideTurnEnd(state, owner)));
+            case nameof(SimModel.BeforeSideTurnEndVeryEarly) or nameof(SimModel.BeforeSideTurnEndEarly) or nameof(SimModel.BeforeSideTurnEnd) or nameof(SimModel.AfterSideTurnEnd)
+                or nameof(SimModel.AfterSideTurnEndLate):
+                // The players' turn ending, every hook in the game's order (what an earlier one sets, a later one reads), on the board and with no
+                // block and an empty hand; each hook's outcome compared.
+                foreach (var (scenario, emptied) in new[] { ("the board", false), ("no block, an empty hand", true) })
+                    yield return ($"the players' turn ending, {scenario}", (model, state) =>
+                    {
+                        if (emptied) foreach (var id in state.PlayerIds) { var player = state.MutablePlayer(id); player.Block = 0; player.HandCount = 0; }
+                        return Sequence(state, TurnEndHooks, (branch, turnEndHook) => turnEndHook(model, branch, owner));
+                    });
                 break;
         }
     }
+
+    /// <summary>The hooks of the players' side's turn ending, in the game's order (decision #51).</summary>
+    private static readonly Func<SimModel, SimState, int, IEnumerable<SimState>>[] TurnEndHooks =
+    {
+        (model, state, owner) => model.BeforeSideTurnEndVeryEarly(state, owner), (model, state, owner) => model.BeforeSideTurnEndEarly(state, owner),
+        (model, state, owner) => model.BeforeSideTurnEnd(state, owner), (model, state, owner) => model.AfterSideTurnEnd(state, owner),
+        (model, state, owner) => model.AfterSideTurnEndLate(state, owner),
+    };
 
     private static IEnumerable<SimCardPlay> Plays(int[] players)
     {

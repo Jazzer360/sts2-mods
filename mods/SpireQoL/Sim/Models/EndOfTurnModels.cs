@@ -103,28 +103,6 @@ public sealed class ConsumingShadowPower : EndOfTurnModel
     }
 }
 
-/// <summary>
-/// Orichalcum (and its fake): BeforeSideTurnEndVeryEarly arms it when its owner has no block (RelicUse.Armed); BeforeSideTurnEnd then
-/// gives its block (amount, unpowered).
-/// </summary>
-public abstract class OrichalcumBase : EndOfTurnRelic
-{
-    public override IEnumerable<SimState> BeforeSideTurnEndVeryEarly(SimState state, int owner)
-    {
-        if (state.TakesPart(owner) && state.Player(owner) is { Block: <= 0 }) Set(state, owner, Amount(state, owner), (int)RelicUse.Armed); // armed: it gives its block
-        return One(state);
-    }
-    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner)
-    {
-        if (!Armed(state, owner)) return One(state);
-        Disarm(state, owner);
-        return Block(state, owner, Amount(state, owner));
-    }
-}
-
-public sealed class Orichalcum : OrichalcumBase { }
-public sealed class FakeOrichalcum : OrichalcumBase { }
-
 /// <summary>CloakClasp.BeforeSideTurnEnd: its block (amount) per card in its owner's hand (unpowered).</summary>
 public sealed class CloakClasp : EndOfTurnRelic
 {
@@ -133,13 +111,6 @@ public sealed class CloakClasp : EndOfTurnRelic
         if (!state.TakesPart(owner) || state.Player(owner) is not { HandCount: > 0 } player) return One(state);
         return SimEngine.ProcBlock(state, owner, Name, player.HandCount * Amount(state, owner), Unpowered, label: $"{SimEngine.Title(state, owner, Name)} ×{player.HandCount}");
     }
-}
-
-/// <summary>ScreamingFlagon.BeforeSideTurnEnd: its damage (amount) to every hittable enemy when its owner's hand is empty.</summary>
-public sealed class ScreamingFlagon : EndOfTurnRelic
-{
-    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner) =>
-        state.TakesPart(owner) && state.Player(owner) is { HandCount: 0 } ? DamageAll(state, owner, Amount(state, owner)) : One(state);
 }
 
 /// <summary>StoneCalendar.BeforeSideTurnEnd: its damage (amount) to every hittable enemy on its DamageTurn (Data: turns until then).</summary>
