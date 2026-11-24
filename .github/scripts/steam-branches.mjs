@@ -82,10 +82,12 @@ export function updateBody(change, notes) {
       "- [ ] `node scripts/game-names.mjs`\n" +
       "- [ ] `dotnet test tests/SpireQoL.Catalog.Tests`: take off every gate main has caught up on; gate anything main now lacks\n" +
       "- [ ] Diff the old and new main decompiles for what else the mod reads\n" +
+      "- [ ] Diff the game methods the method list names (`Snapshots/hand-modelled.txt`): each change is a hand-kept rule to update\n" +
       "- [ ] Set `MainReviewed` in GameBranchTests to the new version\n"
     : "\n### Steps (docs/DEVELOPMENT.md \"After a game patch\")\n" +
       "- [ ] Let Steam update the game, `./scripts/decompile.ps1`\n" +
       "- [ ] `node scripts/game-names.mjs` and `node scripts/coverage-ledger.mjs`; review every class and relic it lists\n" +
+      "- [ ] Diff the game methods the method list names (`Snapshots/hand-modelled.txt`): each change is a hand-kept rule to update\n" +
       "- [ ] Rebuild, `./scripts/check.ps1`\n";
   return body + "\nClose this once the steps are done.\n";
 }

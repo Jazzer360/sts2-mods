@@ -1,0 +1,301 @@
+# The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
+# A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
+# 18 engine rules naming 133 game methods; 5 adapter rules; 110 hand-written models.
+
+## The engine's rules (HandModelled.Engine)
+
+A card play: its shape (play count, result location), each play's hooks and its body in its program's order
+  game: CardModel.OnPlayWrapper, Hook.ModifyCardPlayCount, Hook.AfterModifyingCardPlayCount, Hook.ModifyCardPlayResultLocation, Hook.BeforeCardPlayed, Hook.AfterCardPlayed, CardCmd.AutoPlay
+  simulator: SimEngine.RunCardPlay, SimEngine.DecideCardPlay, SimEngine.ApplyPlay, SimEngine.ApplyPlayTo, SimEngine.RunScript, SimEngine.RunScriptTo, SimEngine.Count, SimEngine.CardResolved, SimEngine.RunFixedHits
+Damage to a creature: the damage math, block, the HP-loss pipeline, a death held back, the hit's reactions
+  game: CreatureCmd.Damage, Hook.ModifyDamage, Hook.AfterModifyingDamageAmount, Hook.BeforeDamageReceived, Hook.ModifyHpLost, Hook.AfterModifyingHpLostBeforeOsty, Hook.AfterModifyingHpLostAfterOsty, Hook.ModifyPreBlockDamageTarget (beta only), Hook.ModifyUnblockedDamageTarget, Hook.AfterBlockBroken, Hook.AfterDamageGiven, Hook.AfterDamageReceived, Hook.ShouldDie, Hook.AfterPreventingDeath, Creature.DamageBlockInternal, Creature.LoseHpInternal
+  simulator: SimEngine.Damage, SimEngine.ModifiedDamage, SimEngine.CalcDamage, SimEngine.PlainDamage, SimEngine.AnyListensToDamage, SimEngine.HpLossPipeline, SimEngine.HpLoss, SimEngine.PlayerDamaged, SimEngine.LandBlockable, SimEngine.LandOnPlayer, SimEngine.LandUnblockable, SimEngine.Lose, SimEngine.PlayHp, SimEngine.BiggestHit, SimEngine.HitOnce, SimEngine.HitAll, SimEngine.HitRandom, SimEngine.RandomTarget, SimEngine.ProcHitOn, SimEngine.ProcDamageAll, SimEngine.ProcDamageRandom, SimEngine.ProcDamageOn, SimEngine.ProcDamagePlayer, SimEngine.RunDamage, SimEngine.IntentDamage, SimEngine.WithoutEnchantment, SimEngine.DamageAllEnemies
+An attack: its hits, their targets (a random one a branch each), the attack's hooks
+  game: AttackCommand.Execute, DamageCmd.Attack, Hook.BeforeAttack, Hook.AfterAttack, Hook.ModifyAttackHitCount
+  simulator: SimEngine.RunAttack, SimEngine.HitCount
+Block: the block math, its hooks, a power's or relic's block, block lost
+  game: CreatureCmd.GainBlock, Hook.ModifyBlock, Hook.AfterModifyingBlockAmount, Hook.BeforeBlockGained, Hook.AfterBlockGained, CreatureCmd.LoseBlock, Creature.GainBlockInternal
+  simulator: SimEngine.BlockOnce, SimEngine.BlockBaseNow, SimEngine.CalcBlock, SimEngine.GainBlock, SimEngine.ShareBlock, SimEngine.ProcBlock, SimEngine.ProcBlockFor, SimEngine.EnemyBlock, SimEngine.RunBlock, SimEngine.StripBlock
+A power lands: the amount given, Artifact, its instances and copies, the listeners told; a power decremented or removed
+  game: PowerCmd.Apply, PowerCmd.FindExistingInstanceForStacking, PowerCmd.Decrement, PowerCmd.Remove, PowerCmd.TickDownDuration, Hook.ModifyPowerAmountGiven, Hook.AfterModifyingPowerAmountGiven, Hook.BeforePowerAmountChanged, Hook.AfterPowerAmountChanged, Creature.ApplyPowerInternal
+  simulator: SimEngine.ApplyPower, SimEngine.ApplyAndTell, SimEngine.ApplyInHit, SimEngine.Tell, SimEngine.RunApplyPower, SimEngine.AmountOf, SimEngine.MovePowers, SimEngine.DecrementPower
+Draws: a full hand, No Draw, the discard pile shuffled in, the drawn card's reactions
+  game: CardPileCmd.Draw, CardPileCmd.DrawInternal, CardPileCmd.Shuffle, CardPileCmd.ShuffleIfNecessary, Hook.ShouldDraw, Hook.AfterPreventingDraw, Hook.AfterCardDrawn, Hook.ModifyShuffleOrder, Hook.AfterShuffle
+  simulator: SimEngine.DrawCards, SimEngine.DrawOne, SimEngine.DrawsStopped, SimEngine.DrawPrevented, SimEngine.Drawn, SimEngine.DrawReactions, SimEngine.DrawsFromPile, SimEngine.RoomIn, SimEngine.JoinHand, SimEngine.RunDrawnCard, SimDrawPile.Shuffled, SimDrawPile.ShuffledWithDiscard
+Cards leaving and joining piles mid-play: taken, discarded, exhausted, made; the card events and their listeners
+  game: CardCmd.Discard, CardCmd.Exhaust, CardPileCmd.Add, CardPileCmd.AddGeneratedCardToCombat, Hook.AfterCardDiscarded, Hook.AfterCardExhausted, Hook.AfterCardChangedPiles, Hook.AfterCardGeneratedForCombat, PlayerCmd.GainEnergy, Hook.AfterEnergySpent, PlayerCmd.GainStars, Hook.AfterStarsGained, Hook.AfterStarsSpent
+  simulator: SimEngine.RunTakeFromHand, SimEngine.TakeFromHand, SimEngine.TakenEvents, SimEngine.TakenKey, SimEngine.ZeroedMatching, SimEngine.JoinsTakes, SimEngine.RunLeaveHand, SimEngine.RunExhaustFromHand, SimEngine.ExhaustChosenFromDrawPile, SimEngine.RunTakeToHand, SimEngine.TakeToHand, SimEngine.TakeOne, SimEngine.Less, SimEngine.InPile, SimEngine.ProfileIn, SimEngine.TakenId, SimEngine.Discarded, SimEngine.IntoDrawPile, SimEngine.AddToHand, SimEngine.CardEvents, SimEngine.OneCardEvent, SimEngine.RunCardEvent, SimEngine.FireCardEvent, SimEngine.CountEvent, SimEngine.ProcCardEvent, SimEngine.Raise, SimEngine.DrainPending
+Auto-plays: from the top of the draw pile, from the hand at the turn's end, the cards that play themselves
+  game: CardPileCmd.AutoPlayFromDrawPile, CardCmd.AutoPlay, Hook.BeforeCardAutoPlayed, Hook.AfterAutoPostPlayPhaseEntered, HellraiserPower.AfterCardDrawnEarly, IAmInvincible.AfterAutoPostPlayPhaseEntered
+  simulator: SimEngine.AutoPlayFromDraw, SimEngine.AutoPlayTop, SimEngine.PlayFromPile, SimEngine.HellraiserPlays, SimEngine.InvincibleFromPile, SimEngine.AutoPlayFromHand, SimEngine.AutoPostPlay, SimEngine.AutoPostPlayOf
+Orbs: channelled, evoked, their passives at the turn's end, Focus on their values, the slots
+  game: OrbCmd.Channel, OrbCmd.Evoke, OrbCmd.EvokeLast, OrbCmd.EvokeNext, OrbCmd.Passive, OrbCmd.AddSlots, OrbQueue.BeforeTurnEnd, OrbModel.GetRandomOrb, OrbModel.TriggerPassive, LightningOrb.Passive, LightningOrb.Evoke, FrostOrb.Passive, FrostOrb.Evoke, DarkOrb.Passive, DarkOrb.Evoke, GlassOrb.Passive, GlassOrb.Evoke, PlasmaOrb.AfterTurnStartOrbTrigger, PlasmaOrb.Evoke, FocusPower.ModifyOrbValue, Hook.ModifyOrbValue, Hook.AfterOrbChanneled, Hook.AfterOrbEvoked, Hook.ModifyOrbPassiveTriggerCount
+  simulator: SimEngine.FreshOrb, SimEngine.ChannelOrb, SimEngine.ChannelKind, SimEngine.RunOrb, SimEngine.Evoke, SimEngine.EvokeLast, SimEngine.OrbPassives, SimEngine.ChangeFocus
+Arrows: shot, impaled, knocked loose
+  game: ArrowCmd.ShootArrowAtTarget (beta only), ArrowCmd.ImpaleTarget (beta only), ArrowCmd.DislodgeArrow (beta only), ArrowCmd.RetrieveArrow (beta only), Hook.AfterArrowShot (beta only), Hook.AfterArrowImpaled (beta only), Hook.AfterArrowDislodged (beta only)
+  simulator: SimEngine.IsImpaled, SimEngine.RunShoot, SimEngine.RunImpale, SimEngine.RunDislodgeAll, SimEngine.Dislodge, SimEngine.PlaysStartingImpaled, SimEngine.TakeArrows
+Osty: the HP he loses for his player
+  game: Hook.AfterCurrentHpChanged, Hook.ModifyUnblockedDamageTarget
+  simulator: SimEngine.OstyLoses
+Poison: Outbreak's trigger of every enemy's poison, and the game's preview of the next tick (the tick itself is PoisonPower's code: decision #201)
+  game: PoisonPower.Trigger, PoisonPower.CalculateTotalDamageNextTurn
+  simulator: SimEngine.TriggerPoison, SimEngine.PoisonTick
+Deaths: the hooks told as each happens, a dead enemy's powers gone, Explosive, the creatures a death adds, a kill, a stun
+  game: CreatureCmd.Kill, Hook.AfterDeath, Creature.RemoveAllPowersAfterDeath, Hook.ShouldPowerBeRemovedOnDeath, ExplosivePower.AfterDeath (beta only), CreatureCmd.Add, CreatureCmd.Stun
+  simulator: SimEngine.AllyDeaths, SimEngine.ExplosionCheck, SimEngine.Explosions, SimEngine.Spawn, SimEngine.Stun, SimEngine.RunExecute
+The players' turn's end: its hooks in their places, Ethereal cards, the cards that act in hand, the hand flushed
+  game: CombatManager.EndPlayerTurnPhaseOneInternal, CombatManager.EndPlayerTurnPhaseTwoInternal, CombatManager.DoTurnEnd, CombatManager.FlushPlayerHand, Hook.BeforeSideTurnEnd, Hook.AfterSideTurnEnd, Hook.ShouldEtherealTrigger, Hook.ShouldFlush, Hook.BeforeFlush
+  simulator: SimEngine.EndOfTurn, SimEngine.Exhausting, SimEngine.CardsActInHand
+The enemies' turn: its start's hooks, block cleared, each move in turn order, the intents read after a play
+  game: CombatManager.StartTurn, CombatManager.ExecuteEnemyTurn, MonsterModel.PerformMove, Hook.BeforeSideTurnStart, Hook.AfterSideTurnStart, Hook.ShouldClearBlock, Creature.ClearBlock
+  simulator: SimEngine.EnemyTurnStart, SimEngine.StartTheEnemiesTurn, SimEngine.EnemyTurn, SimEngine.IntentsAfter
+A heal: up to max HP
+  game: CreatureCmd.Heal, Creature.HealInternal
+  simulator: SimEngine.Heal
+The fight's log: what each event adds, the counts the questions to it read
+  game: CombatHistory.Add
+  simulator: SimEngine.Record, SimEngine.HistoryCount, SimEngine.RecordCardEvent, SimEngine.RecordPlay, SimEngine.DrawnType, SimEngine.RecordDamageReceived, SimEngine.TurnCountsStartOver
+The listeners: who hears a hook, in the game's order, a dead enemy's powers left out
+  game: CombatState.IterateHookListeners
+  simulator: SimEngine.Listeners, SimEngine.ListenersWith, SimEngine.BuildListeners, SimEngine.ListenerOrder, SimEngine.DeadMask, SimEngine.Listening, SimEngine.CurrentSets, SimEngine.SameSets, SimEngine.AnyModelled, SimEngine.Hook, SimEngine.HookStep, SimEngine.Listens
+
+## The adapter's per-class rules (HandModelled.Adapter)
+
+Enchantments acting on a play, after the card (EnchantmentModel.OnPlay): Adroit's block, Corrupted's damage to you, Inky's Weak, Swift's draw, Sown's energy
+  game: Adroit.OnPlay, Corrupted.OnPlay, Inky.OnPlay, Swift.OnPlay, Swift.AfterCardPlayed, Sown.OnPlay, Sown.AfterCardPlayed
+  simulator: SimAdapter.Play, SimAdapter.SwiftDraws, SimAdapter.SownEnergy
+Enchantments' damage and block math on a replay (the game's own math, called live, for the first play): Momentum, Goopy, Vigorous
+  game: Momentum.OnPlay, Goopy.AfterCardPlayed, Vigorous.AfterCardPlayed, EnchantmentModel.EnchantDamageAdditive, EnchantmentModel.EnchantBlockAdditive
+  simulator: PlayGrowth.Of
+Perfect Fit: a shuffle puts its card on top
+  game: PerfectFit.ModifyShuffleOrder
+  simulator: SimDrawPile.Shuffled
+Afflictions on a card, by kind (SimAffliction): Hexed's Ethereal, Tainted and Galvanized tested by the powers that read them
+  game: Hexed.AfterCardEnteredCombat, Tainted.CanAfflictCardType
+  simulator: SimReaders.Card, SimAdapter.EtherealOnlyFromHex, SimEngine.Exhausting
+Fairy in a Bottle and Lizard Tail: a death held back, healed from 0
+  game: FairyInABottle.ShouldDie, FairyInABottle.AfterPreventingDeath, LizardTail.ShouldDieLate, LizardTail.AfterPreventingDeath
+  simulator: SimEngine.Lose
+
+## The hand-written models (Sim/Models): each game class's hooks, and what its model answers
+
+AimPower: AimPower.AfterAttack (beta only), AimPower.BeforeAttack (beta only), AimPower.InitInternalData (beta only), AimPower.ModifyDamageAdditive (beta only)
+  model: AfterAttack, ModifyDamageAdditive, Qualifies
+ArtOfWar: ArtOfWar.AfterCardPlayed, ArtOfWar.AfterCombatEnd, ArtOfWar.AfterEnergyReset, ArtOfWar.AfterSideTurnEnd
+  model: nothing it overrides
+AsleepPower: AsleepPower.AfterDamageReceived, AsleepPower.AfterSideTurnEnd, AsleepPower.BeforeSideTurnEndVeryEarly
+  model: AfterDamageReceived, OutcomeTab
+BeatingRemnant: BeatingRemnant.AfterDamageReceived, BeatingRemnant.AfterModifyingHpLostAfterOsty, BeatingRemnant.BeforeSideTurnStart, BeatingRemnant.ModifyHpLostAfterOsty
+  model: AfterDamageReceived, ModifyHpLostAfterOsty
+BiiigHug: BiiigHug.AfterObtained, BiiigHug.AfterShuffle
+  model: AfterCardEvent
+BlackHolePower: BlackHolePower.AfterCardPlayed, BlackHolePower.AfterStarsGained
+  model: AfterCardEvent, AfterCardPlayed
+BoneFlute: BoneFlute.AfterAttack
+  model: AfterAttack
+BufferPower: BufferPower.AfterModifyingHpLostAfterOsty, BufferPower.GetScaledAmountForMultiplayer, BufferPower.ModifyHpLostAfterOstyLate
+  model: AfterModifyingHpLost, ModifyHpLostAfterOstyLate
+BurningSticks: BurningSticks.AfterCardExhausted, BurningSticks.AfterCombatEnd, BurningSticks.AfterRoomEntered
+  model: AfterCardEvent
+BurrowedPower: BurrowedPower.AfterBlockBroken, BurrowedPower.AfterRemoved, BurrowedPower.ShouldClearBlock
+  model: AfterBlockBroken, OutcomeTab
+CalamityPower: CalamityPower.AfterCardPlayed, CalamityPower.BeforeCardPlayed, CalamityPower.InitInternalData
+  model: Act, Binds
+CentennialPuzzle: CentennialPuzzle.AfterCombatEnd, CentennialPuzzle.AfterDamageReceived
+  model: AfterDamageReceived
+ChemicalX: ChemicalX.BeforeCardPlayed, ChemicalX.ModifyXValue
+  model: BeforeCardPlayed
+CompostPower: CompostPower.AfterDeath (beta only)
+  model: AfterDeath, OutcomeTab
+ConquerorPower: ConquerorPower.AfterSideTurnEnd, ConquerorPower.ModifyDamageMultiplicative
+  model: AfterCardPlayed, ModifyDamageMultiplicative
+ConsumingShadowPower: ConsumingShadowPower.AfterSideTurnEnd
+  model: AfterSideTurnEnd
+CorruptionPower: CorruptionPower.AfterModifyingCardPlayResultLocation, CorruptionPower.ModifyCardPlayResultLocation, CorruptionPower.TryModifyEnergyCostInCombatLate
+  model: ModifyCardPlayResultLocation
+CoveredPower: CoveredPower.AfterApplied, CoveredPower.AfterDeath, CoveredPower.AfterRemoved, CoveredPower.AfterSideTurnEnd, CoveredPower.ModifyDamageMultiplicative
+  model: AfterApplied, ModifyDamageMultiplicative
+CoveringFirePower: CoveringFirePower.AfterArrowShot (beta only)
+  model: AfterArrowShot
+CurlUpPower: CurlUpPower.AfterCardPlayed, CurlUpPower.AfterDamageReceived, CurlUpPower.InitInternalData
+  model: AfterCardPlayed, AfterDamageReceived
+DarkEmbracePower: DarkEmbracePower.AfterCardExhausted, DarkEmbracePower.AfterSideTurnEnd, DarkEmbracePower.InitInternalData
+  model: AfterCardEvent
+DemonTongue: DemonTongue.AfterDamageReceived, DemonTongue.BeforeSideTurnStart
+  model: AfterDamageReceived, OutcomeTab
+DevourLifePower: DevourLifePower.AfterCardPlayed
+  model: AfterCardPlayed
+EmotionChip: EmotionChip.AfterCombatEnd, EmotionChip.AfterDamageReceived, EmotionChip.AfterPlayerTurnStart
+  model: nothing it overrides
+ExplosiveArrowsPower: ExplosiveArrowsPower.AfterArrowImpaled (beta only)
+  model: AfterArrowImpaled
+ExplosivePower: ExplosivePower.AfterDeath (beta only)
+  model: nothing it overrides
+FeralPower: FeralPower.AfterApplied, FeralPower.AfterModifyingCardPlayResultLocation, FeralPower.AfterSideTurnStart, FeralPower.InitInternalData, FeralPower.ModifyCardPlayResultLocation
+  model: AfterApplied, AfterModifyingCardPlayResultLocation, ModifyCardPlayResultLocation
+FlutterPower: FlutterPower.AfterDamageReceived, FlutterPower.ModifyDamageMultiplicative
+  model: AfterDamageReceived, ModifyDamageMultiplicative, OutcomeTab
+GalvanicPower: GalvanicPower.AfterCardEnteredCombat, GalvanicPower.AfterCardPlayed, GalvanicPower.BeforeCombatStart
+  model: AfterCardPlayed
+GigantificationPower: GigantificationPower.AfterAttack, GigantificationPower.BeforeAttack, GigantificationPower.InitInternalData, GigantificationPower.ModifyDamageMultiplicative
+  model: AfterAttack, ModifyDamageMultiplicative, Qualifies
+HandDrill: HandDrill.AfterBlockBroken
+  model: AfterBlockBroken, OutcomeTab
+HardToKillPower: HardToKillPower.AfterModifyingDamageAmount, HardToKillPower.ModifyDamageCap
+  model: ModifyDamageCap
+HardenedShellPower: HardenedShellPower.AfterDamageReceived, HardenedShellPower.AfterModifyingHpLostBeforeOsty, HardenedShellPower.BeforeSideTurnStart, HardenedShellPower.InitInternalData, HardenedShellPower.ModifyHpLostBeforeOstyLate
+  model: AfterDamageReceived, BeforeSideTurnStart, ModifyHpLostBeforeOstyLate
+HauntPower: HauntPower.AfterCardPlayed
+  model: AfterCardPlayed
+ImbalancedPower: ImbalancedPower.AfterDamageGiven
+  model: OutcomeTab
+ImitationLearningPower: ImitationLearningPower.AfterCardPlayed, ImitationLearningPower.BeforeCardPlayed, ImitationLearningPower.InitInternalData
+  model: AfterCardPlayed
+ImpaledPower: ImpaledPower.AfterApplied (beta only), ImpaledPower.AfterDamageReceived (beta only), ImpaledPower.AfterDeath (beta only), ImpaledPower.InitInternalData (beta only)
+  model: AfterDamageReceived, AfterDeath
+ImpaledPowerOther: no game class by its name (the simulator's own)
+  model: AfterDeath
+InfestedPower: InfestedPower.AfterDeath, InfestedPower.ShouldStopCombatFromEnding
+  model: nothing it overrides
+InsatiableDominionPower: InsatiableDominionPower.AfterApplied (beta only), InsatiableDominionPower.AfterSideTurnEndLate (beta only), InsatiableDominionPower.AfterSideTurnStart (beta only)
+  model: AfterSideTurnEndLate
+IntangiblePower: IntangiblePower.AfterModifyingDamageAmount, IntangiblePower.AfterModifyingHpLostAfterOsty, IntangiblePower.AfterSideTurnEnd, IntangiblePower.ModifyDamageCap, IntangiblePower.ModifyHpLostAfterOsty
+  model: ModifyDamageCap, ModifyHpLostAfterOsty
+InterceptPower: InterceptPower.AfterRemoved, InterceptPower.AfterSideTurnEnd, InterceptPower.InitInternalData, InterceptPower.ModifyDamageMultiplicative
+  model: ModifyDamageMultiplicative
+JossPaper: JossPaper.AfterCardExhausted, JossPaper.AfterCombatEnd, JossPaper.AfterSideTurnEnd
+  model: AfterCardEvent
+JugglingPower: JugglingPower.AfterApplied, JugglingPower.AfterCardPlayed, JugglingPower.AfterSideTurnEnd, JugglingPower.BeforeCardPlayed, JugglingPower.InitInternalData
+  model: AfterCardPlayed, BeforeCardPlayed
+LethalityPower: LethalityPower.ModifyDamageMultiplicative
+  model: ModifyDamageMultiplicative
+LostLutePower: LostLutePower.AfterCardPlayed (beta only)
+  model: AfterCardPlayed
+MagicBombPower: MagicBombPower.AfterDeath, MagicBombPower.AfterSideTurnEnd
+  model: AfterSideTurnEnd
+MasterPlannerPower: MasterPlannerPower.AfterCardPlayed
+  model: AfterCardPlayed
+MonarchsGazePower: MonarchsGazePower.AfterDamageGiven
+  model: AfterDamageGiven
+MummifiedHand: MummifiedHand.AfterCardPlayed
+  model: AfterCardPlayed
+MusicBox: MusicBox.AfterCardPlayed, MusicBox.AfterCombatEnd, MusicBox.BeforeCardPlayed, MusicBox.BeforeSideTurnStart
+  model: AfterCardPlayed, BeforeCardPlayed
+NecroMasteryPower: NecroMasteryPower.AfterCurrentHpChanged
+  model: AfterOstyHpLost
+NoBlockPower: NoBlockPower.AfterSideTurnEnd, NoBlockPower.ModifyBlockMultiplicative
+  model: ModifyBlockMultiplicative
+NostalgiaPower: NostalgiaPower.AfterModifyingCardPlayResultLocation, NostalgiaPower.ModifyCardPlayResultLocation
+  model: AfterModifyingCardPlayResultLocation, ModifyCardPlayResultLocation
+PaelsEye: PaelsEye.AfterCombatEnd, PaelsEye.AfterObtained, PaelsEye.AfterSideTurnStart, PaelsEye.AfterTakingExtraTurn, PaelsEye.BeforeCardPlayed, PaelsEye.BeforeSideTurnEndEarly, PaelsEye.ShouldTakeExtraTurnEarly (beta only)
+  model: BeforeCardPlayed, BeforeSideTurnEndEarly
+PaelsLegion: PaelsLegion.AfterCardPlayed, PaelsLegion.AfterCombatEnd, PaelsLegion.AfterModifyingBlockAmount, PaelsLegion.AfterObtained, PaelsLegion.AfterSideTurnStart, PaelsLegion.BeforeCombatStart, PaelsLegion.ModifyBlockMultiplicative
+  model: AfterCardPlayed, AfterModifyingBlockAmount, ModifyBlockMultiplicative
+PaelsTears: PaelsTears.AfterCombatEnd, PaelsTears.AfterSideTurnStart, PaelsTears.BeforeSideTurnEnd
+  model: AfterCardEvent, AfterPlayResolved
+ParryPower: no hooks of its own
+  model: nothing it overrides
+ParryingShield: ParryingShield.AfterSideTurnEnd
+  model: AfterSideTurnEnd, OutcomeTab
+PenNib: PenNib.AfterCardPlayed, PenNib.BeforeCardPlayed, PenNib.ModifyDamageMultiplicative
+  model: AfterCardPlayed, BeforeCardPlayed, ModifyDamageMultiplicative
+PersonalHivePower: PersonalHivePower.AfterDamageReceived
+  model: AfterDamageReceived
+PhantomBladesPower: PhantomBladesPower.AfterApplied, PhantomBladesPower.AfterRemoved, PhantomBladesPower.ModifyDamageAdditive, PhantomBladesPower.TryModifyKeywordsInCombat
+  model: ModifyDamageAdditive
+PlatingPower: PlatingPower.AfterApplied, PlatingPower.AfterSideTurnStart, PlatingPower.BeforeSideTurnEndEarly, PlatingPower.BeforeSideTurnStart, PlatingPower.GetScaledAmountForMultiplayer
+  model: BeforeSideTurnEndEarly
+PlowPower: PlowPower.AfterDamageReceived
+  model: AfterDamageReceived, OutcomeTab
+Pocketwatch: Pocketwatch.AfterCardPlayed, Pocketwatch.AfterCombatEnd, Pocketwatch.AfterModifyingHandDraw, Pocketwatch.AfterSideTurnStart, Pocketwatch.BeforeSideTurnStart, Pocketwatch.ModifyHandDraw
+  model: AfterCardPlayed
+QuietusPower: QuietusPower.AfterArrowShot (beta only), QuietusPower.AfterAttack (beta only), QuietusPower.AfterSideTurnEnd (beta only), QuietusPower.BeforeAttack (beta only), QuietusPower.InitInternalData (beta only), QuietusPower.ModifyDamageMultiplicative (beta only)
+  model: AfterAttack, ModifyDamageMultiplicative, Qualifies
+RavenousPower: RavenousPower.AfterDeath
+  model: AfterDeath, OutcomeTab
+RazorTooth: RazorTooth.AfterCardPlayed
+  model: AfterCardPlayed
+ReboundPower: ReboundPower.AfterModifyingCardPlayResultLocation, ReboundPower.AfterSideTurnEnd, ReboundPower.ModifyCardPlayResultLocation
+  model: AfterModifyingCardPlayResultLocation, ModifyCardPlayResultLocation
+RedSkull: RedSkull.AfterCombatEnd, RedSkull.AfterCurrentHpChanged, RedSkull.AfterRoomEntered
+  model: AfterDamageReceived, OutcomeTab
+Regret: no game class by its name (the simulator's own)
+  model: BeforeSideTurnEnd
+RippleBasin: RippleBasin.AfterCardPlayed, RippleBasin.AfterCombatEnd, RippleBasin.BeforeSideTurnEnd, RippleBasin.BeforeSideTurnStart
+  model: BeforeSideTurnEnd
+RupturePower: RupturePower.AfterCardPlayed, RupturePower.AfterDamageReceived, RupturePower.BeforeCardPlayed, RupturePower.InitInternalData
+  model: nothing it overrides
+SeekingEdgePower: no hooks of its own
+  model: nothing it overrides
+SelfFormingClay: SelfFormingClay.AfterDamageReceived
+  model: nothing it overrides
+SerpentFormPower: SerpentFormPower.AfterApplied, SerpentFormPower.AfterCardPlayed, SerpentFormPower.AfterRemoved, SerpentFormPower.BeforeCardPlayed, SerpentFormPower.InitInternalData
+  model: Act
+ShadowmeldPower: ShadowmeldPower.AfterSideTurnEnd, ShadowmeldPower.ModifyBlockMultiplicative
+  model: ModifyBlockMultiplicative
+ShriekPower: ShriekPower.AfterDamageReceived
+  model: AfterDamageReceived, OutcomeTab
+SicEmPower: SicEmPower.AfterDamageGiven, SicEmPower.AfterSideTurnEnd
+  model: AfterDamageGiven
+SkittishPower: SkittishPower.AfterAttack, SkittishPower.AfterSideTurnEnd, SkittishPower.GetScaledAmountForMultiplayer, SkittishPower.InitInternalData
+  model: AfterAttack, AfterDamageReceived, BeforeAttack
+SlipperyPower: SlipperyPower.AfterDamageReceived, SlipperyPower.GetScaledAmountForMultiplayer, SlipperyPower.ModifyHpLostAfterOsty
+  model: AfterDamageReceived, AfterModifyingHpLost, ModifyHpLostAfterOsty, OutcomeTab
+SlowPower: SlowPower.AfterCardPlayed, SlowPower.AfterModifyingDamageAmount, SlowPower.AfterSideTurnStart, SlowPower.ModifyDamageMultiplicative
+  model: AfterCardPlayed, ModifyDamageMultiplicative
+SlumberPower: SlumberPower.AfterDamageReceived, SlumberPower.AfterRemoved, SlumberPower.AfterSideTurnEnd
+  model: AfterDamageReceived, OutcomeTab
+SmoggyPower: SmoggyPower.AfterCardEnteredCombat, SmoggyPower.AfterCardPlayed, SmoggyPower.AfterSideTurnEnd, SmoggyPower.ShouldPlay
+  model: AfterCardPlayed
+SneckoSkull: SneckoSkull.AfterModifyingPowerAmountGiven, SneckoSkull.ModifyPowerAmountGivenAdditive
+  model: ModifyPowerAmountGiven
+SongPathPower: SongPathPower.AfterCardPlayed (beta only)
+  model: AfterCardPlayed
+SteamEruptionPower: SteamEruptionPower.AfterDeath, SteamEruptionPower.ShouldCreatureBeRemovedFromCombatAfterDeath, SteamEruptionPower.ShouldPowerBeRemovedAfterOwnerDeath, SteamEruptionPower.ShouldStopCombatFromEnding
+  model: nothing it overrides
+StockPower: StockPower.AfterDeath, StockPower.ShouldStopCombatFromEnding
+  model: OutcomeTab
+StratagemPower: StratagemPower.AfterShuffle
+  model: AfterCardEvent
+StretchPower: StretchPower.AfterCardPlayed (beta only), StretchPower.BeforeCardPlayed (beta only), StretchPower.InitInternalData (beta only), StretchPower.ModifyBlockAdditive (beta only)
+  model: AfterCardPlayed, AfterModifyingBlockAmount, BeforeCardPlayed, ModifyBlockAdditive
+SurprisePower: SurprisePower.AfterDeath, SurprisePower.ShouldStopCombatFromEnding
+  model: AfterDeath
+SurroundedPower: SurroundedPower.AfterDeath, SurroundedPower.BeforeCardPlayed, SurroundedPower.BeforePotionUsed, SurroundedPower.ModifyDamageMultiplicative
+  model: AfterDeath, BeforeCardPlayed, ModifyDamageMultiplicative
+SwordSagePower: SwordSagePower.AfterCardEnteredCombat, SwordSagePower.AfterPowerAmountChanged, SwordSagePower.AfterRemoved
+  model: nothing it overrides
+TagTeamPower: TagTeamPower.AfterModifyingCardPlayCount, TagTeamPower.ModifyCardPlayCount
+  model: AfterApplied, AfterModifyingCardPlayCount, ModifyCardPlayCount
+TheBoot: TheBoot.AfterModifyingHpLostAfterOsty, TheBoot.ModifyHpLostAfterOstyLate
+  model: ModifyHpLostAfterOstyLate
+TheGambitPower: TheGambitPower.AfterDamageReceived
+  model: AfterDamageReceived, OutcomeTab
+ThornsPower: ThornsPower.BeforeDamageReceived
+  model: BeforeDamageReceived
+TrashToTreasurePower: TrashToTreasurePower.AfterCardGeneratedForCombat
+  model: AfterCardEvent
+TungstenRod: TungstenRod.AfterModifyingHpLostAfterOsty, TungstenRod.ModifyHpLostAfterOsty
+  model: ModifyHpLostAfterOsty
+Twine: Twine.AfterArrowDislodged (beta only)
+  model: AfterCardEvent
+UnceasingTop: UnceasingTop.AfterHandEmptied
+  model: AfterPlayResolved
+UnmovablePower: UnmovablePower.ModifyBlockMultiplicative
+  model: ModifyBlockMultiplicative
+UnsettlingLamp: UnsettlingLamp.AfterCardPlayed, UnsettlingLamp.AfterCombatEnd, UnsettlingLamp.BeforeCombatStart, UnsettlingLamp.BeforePowerAmountChanged, UnsettlingLamp.ModifyPowerAmountGivenMultiplicative
+  model: AfterCardPlayed, ModifyPowerAmountGiven
+Vambrace: Vambrace.AfterCardPlayed, Vambrace.AfterCombatEnd, Vambrace.AfterModifyingBlockAmount, Vambrace.BeforeCombatStart, Vambrace.ModifyBlockMultiplicative
+  model: AfterCardPlayed, AfterModifyingBlockAmount, ModifyBlockMultiplicative
+VigorPower: VigorPower.AfterAttack, VigorPower.BeforeAttack, VigorPower.InitInternalData, VigorPower.ModifyDamageAdditive
+  model: AfterAttack, ModifyDamageAdditive, Qualifies
+ViolentChordPower: ViolentChordPower.AfterCardPlayed (beta only)
+  model: AfterCardPlayed
+VitalSparkPower: VitalSparkPower.AfterCardEnteredCombat, VitalSparkPower.AfterCardPlayed, VitalSparkPower.AfterPowerAmountChanged, VitalSparkPower.AfterRemoved, VitalSparkPower.BeforeCombatStart
+  model: AfterCardPlayed
+Void: no game class by its name (the simulator's own)
+  model: AfterCardEvent
+WitheringPresencePower: WitheringPresencePower.AfterCardPlayed
+  model: AfterCardPlayed
+YahPower: YahPower.AfterArrowDislodged (beta only), YahPower.BeforeSideTurnStart (beta only), YahPower.InitInternalData (beta only)
+  model: AfterCardEvent
