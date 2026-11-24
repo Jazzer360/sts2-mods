@@ -1,5 +1,5 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by the capability the reader names.
-# 87 hand-written models.
+# 86 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
@@ -7,10 +7,10 @@ read whole: a parity proof (its hand-written model does more than its hooks: a t
 its own data: a card or a play kept, a field used directly: 10 classes, 7 alone: BlackHolePower, CalamityPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, PaelsLegion, RupturePower*, SerpentFormPower*, StretchPower*, WitheringPresencePower*
 arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd): 6 classes, 5 alone: CoveringFirePower*, ExplosiveArrowsPower*, ImpaledPower, QuietusPower*, Twine*, YahPower*
 a monster's own state set (its flag, its next move): 10 classes, 4 alone: AsleepPower, CurlUpPower, FlutterPower*, ImbalancedPower*, InfestedPower, PlowPower*, RavenousPower*, SlumberPower, SteamEruptionPower, StockPower
-queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 7 classes, 3 alone: AimPower*, CurlUpPower, PaelsEye, PenNib*, PhantomBladesPower, TagTeamPower*, Vambrace
 commands: a card made (AddGeneratedCardToCombat, a made card): 3 classes, 3 alone: BiiigHug*, BurningSticks*, PersonalHivePower*
 the fight's log (the history ledger, decision #191): 3 classes, 3 alone: SongPathPower*, UnmovablePower*, ViolentChordPower*
 the simulator's own model (no game class by its name): 3 classes, 3 alone: ImpaledPowerOther*, Regret*, Void*
+queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 6 classes, 2 alone: CurlUpPower, PaelsEye, PenNib*, PhantomBladesPower, TagTeamPower*, Vambrace
 a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 4 classes, 2 alone: InsatiableDominionPower*, PlatingPower, ShadowmeldPower*, SkittishPower
 hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount): 4 classes, 2 alone: BurrowedPower*, HandDrill*, PaelsLegion, Vambrace
 the play's result location (ModifyCardPlayResultLocation): 4 classes, 2 alone: CorruptionPower, FeralPower, NostalgiaPower*, ReboundPower*
@@ -43,7 +43,6 @@ queries: the hook's amount: 1 classes, 0 alone: BlackHolePower
 
 ## Classes, each hook body's gap in reading order
 
-AimPower: [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyDamageAdditive: gap: the value cardSource is HeavyShot.ModifyAimAmount(this.Amount)
 ArtOfWar: [read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule)] read whole
 AsleepPower: [a monster's own state set (its flag, its next move)] AfterDamageReceived: gap: sets LagavulinMatriarch.IsAwake where the reader reads no store | [a monster's own state set (its flag, its next move)] AfterSideTurnEnd: gap: changes a game object outside a command (LagavulinMatriarch.WakeUpMove) | [a command on another power (PowerCmd.Remove of another)] BeforeSideTurnEndVeryEarly: gap: PowerCmd.Remove of another power
 BiiigHug: [commands: a card made (AddGeneratedCardToCombat, a made card)] AfterShuffle: gap: makes a Soot

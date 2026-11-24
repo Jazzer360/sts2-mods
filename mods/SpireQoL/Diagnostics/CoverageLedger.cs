@@ -307,7 +307,7 @@ internal static partial class CoverageLedger
         ["WeakPower"] = "covered: read from its code (ReadModel, decision #195): ModifyDamageMultiplicative with the target's Paper Krane and its owner's Debilitate, each read from the method it calls; AfterSideTurnEnd ticks down as the enemies' turn ends (never simulated)",
         ["WitheringPresencePower"] = "covered: AfterCardPlayed Wither every N of its Target's cards (crossed proc tab, tracker); the Aeonglass has one per player, and the simulator reads only yours",
         // v0.113.0
-        ["AimPower"] = "ignore: ModifyDamageAdditive adds to your arrow attacks (read through the game's damage hooks); BeforeAttack/AfterAttack spend it after that attack",
+        ["AimPower"] = "covered: read from its code (ReadModel, decision #232): BeforeAttack keeps its owner's first powered arrow attack and its amount then, ModifyDamageAdditive adds its amount to that attack's hits (Heavy Shot's own ModifyAimAmount read from its code), AfterAttack takes back what it started with",
         ["AllIsWellPower"] = "covered: read from its code (ReadModel, decision #195): AfterCardGeneratedForCombat gains block for each Sadness you create: proc tab with the block on cards that create one (MadeCards: a made Sadness; the simulator lands it)",
         ["AmnesiaPower"] = "ignore: AfterPlayerTurnStart energy loss and ModifyHandDraw at the start of your turn; AfterSideTurnEnd removes it",
         ["CompostPower"] = "covered: AfterDeath gives every player on your side energy when an enemy dies: proc tab (yours or a teammate's) when the play kills in every branch",

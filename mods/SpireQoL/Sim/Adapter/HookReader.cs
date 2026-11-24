@@ -2065,6 +2065,14 @@ public static class HookReader
                 case NamedValue { Name: "Decimal.Zero" }: return new HookConstant(0m);
                 case NamedValue { Name: "Decimal.One" }: return new HookConstant(1m);
                 case NamedValue { Name: "Decimal.MinusOne" }: return new HookConstant(-1m);
+                // A card's own value in its own method's code, read for the damage's card (ModelCall: Heavy Shot's AimMultiplier).
+                case CardValue sourceVar when _inSourceCardCall:
+                    return new HookFactValue(HookFact.SourceCardVar) { Of = OwnVarKey(sourceVar.Key) };
+                // One of the damage's card's own values (heavyShot.DynamicVars["AimMultiplier"].BaseValue, on cardSource is HeavyShot, or cardSource's
+                // own): the card's (SimCard.Vars), never the model's.
+                case QueryValue { Name: "BaseValue" or "IntValue", Of: QueryValue { Type: "DynamicVarSet", Name: "Item", Arguments: [NamedValue cardVar], Of: QueryValue { Name: "DynamicVars", Of: { } cardVarsOf } } }
+                    when IsSourceCard(Unstored(cardVarsOf)) || Unstored(cardVarsOf) is QueryValue { Name: "is", Of: { } isOf } && IsSourceCard(Unstored(isOf)):
+                    return new HookFactValue(HookFact.SourceCardVar) { Of = cardVar.Name.Trim('"') };
                 // A true-or-false the code worked out and kept as a number (int num2 = (a && b) ? 1 : 0: Lethality's): its condition, 1 or 0.
                 case ConditionValue condition:
                     return Condition(condition.Condition) ?? new HookConstant(1m);
@@ -2228,6 +2236,9 @@ public static class HookReader
             return query.Name == "GetPower" ? (holder, PowerClass(model), false) : (holder, RelicClass(model), true);
         }
 
+        /// <summary>While the damage's card's own method is read (ModelCall): its own values are that card's.</summary>
+        private bool _inSourceCardCall;
+
         /// <summary>
         /// A call into another model's own method on a model got from a creature (paperPhrog.ModifyVulnerableMultiplier(target, num, ...), on
         /// dealer.Player?.GetRelic&lt;PaperPhrog&gt;(); debilitate.ModifyWeakMultiplier(dealer, num, ...)): the method's returned value read from its
@@ -2236,6 +2247,27 @@ public static class HookReader
         /// </summary>
         private HookValue? ModelCall(QueryValue call, ProgramValue receiver)
         {
+            // The damage's card's own method, on it as its class (heavyShot.ModifyAimAmount(num) on cardSource is HeavyShot: decision #232): its
+            // returned value read from its code, its parameters the caller's arguments, its own values the card's (HookFact.SourceCardVar).
+            if (Unstored(receiver) is QueryValue { Name: "is", Of: { } cardOf, Type: var cardClass } && IsSourceCard(Unstored(cardOf)))
+            {
+                var cardType = _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Cards." + cardClass) ?? throw new Gap(ReaderCapability.ModelCall, $"gap: no card class {cardClass}");
+                var cardMethod = cardType.GetMethods(Declared).FirstOrDefault(candidate => candidate.Name == call.Name && candidate.GetParameters().Length == call.Arguments.Count)
+                    ?? throw new Gap(ReaderCapability.ModelCall, $"gap: {cardClass}.{call.Name} not found");
+                if (cardMethod.ReturnType.Name != "Decimal") throw new Gap(ReaderCapability.ModelCall, $"gap: {cardClass}.{call.Name} gives a {cardMethod.ReturnType.Name}");
+                var cardParameters = cardMethod.GetParameters().Select((parameter, index) => (parameter.Name!, call.Arguments[index])).ToDictionary(pair => pair.Item1, pair => pair.Item2, StringComparer.Ordinal);
+                var cardReturned = (WaysValue)ProgramReader.ReadReturnedWays(cardType, cardMethod, _read).Map(part => part switch
+                {
+                    NamedValue { Name: "this" } => receiver,
+                    ParameterValue { Name: var name } when cardParameters.TryGetValue(name, out var argument) => argument,
+                    NamedValue { Name: var name } when cardParameters.TryGetValue(name, out var argument) => argument,
+                    _ => null,
+                });
+                // The card's own values in its code (CardValue: base.DynamicVars["AimMultiplier"]) are the damage's card's, read as they run.
+                _inSourceCardCall = true;
+                try { return Ways(cardReturned); }
+                finally { _inSourceCardCall = false; }
+            }
             var receivers = (receiver is StoredValue stored ? stored.Value : receiver) is WaysValue receiverWays
                 ? receiverWays.Ways.Where(way => way.Value is not NullValue).Select(way => (When: (ProgramCondition?)way.When, Getter: way.Value)).ToList()
                 : new List<(ProgramCondition? When, ProgramValue Getter)> { (null, receiver) };

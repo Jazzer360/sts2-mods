@@ -288,6 +288,8 @@ public enum HookFact
     SourcePlayIndex,
     /// <summary>The Modify hook is given a card play (cardPlay != null): the damage's or block's.</summary>
     FromPlay,
+    /// <summary>One of the damage's card's own values, by its key in Of (heavyShot.DynamicVars["AimMultiplier"]: SimCard.Vars); 0 when it has none.</summary>
+    SourceCardVar,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>

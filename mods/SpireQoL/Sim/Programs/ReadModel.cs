@@ -1533,6 +1533,11 @@ public sealed class ReadModel : SimModel
             case HookFact.SourceInPlay: return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card) != null && (args.Damage?.Play ?? args.Block?.Play) != null ? 1m : 0m;
             case HookFact.SourcePlayIndex: return (in HookArgs args) => (args.Damage?.Play ?? args.Block?.Play)?.PlayIndex ?? 0;
             case HookFact.FromPlay: return (in HookArgs args) => (args.Damage?.Play ?? args.Block?.Play) != null ? 1m : 0m;
+            case HookFact.SourceCardVar:
+            {
+                var key = named ?? throw new InvalidOperationException($"{Name}: a card value with no key");
+                return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card)?.Vars.TryGetValue(key, out var cardValue) == true ? cardValue : 0m;
+            }
             case HookFact.CardIsOwners: return (in HookArgs args) => (args.Damage?.Play ?? args.Block?.Play)?.Owner == args.Owner ? 1m : 0m;
             // The side whose turn ends is the players' (a living player takes part); the side whose turn starts, the enemies' (a living enemy).
             case HookFact.TakesPart: return (in HookArgs args) => (args.Hook is HookName.BeforeSideTurnStart or HookName.AfterSideTurnStart or HookName.AfterSideTurnStartLate

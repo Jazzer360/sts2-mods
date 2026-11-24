@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 132 game methods; 3 adapter rules; 87 hand-written models.
+# 20 engine rules naming 132 game methods; 3 adapter rules; 86 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -79,8 +79,6 @@ Fairy in a Bottle and Lizard Tail: a death held back, healed from 0
 
 ## The hand-written models (Sim/Models): each game class's hooks, and what its model answers
 
-AimPower: AimPower.AfterAttack (beta only), AimPower.BeforeAttack (beta only), AimPower.InitInternalData (beta only), AimPower.ModifyDamageAdditive (beta only)
-  model: AfterAttack, ModifyDamageAdditive, Qualifies
 ArtOfWar: ArtOfWar.AfterCardPlayed, ArtOfWar.AfterCombatEnd, ArtOfWar.AfterEnergyReset, ArtOfWar.AfterSideTurnEnd
   model: nothing it overrides
 AsleepPower: AsleepPower.AfterDamageReceived, AsleepPower.AfterSideTurnEnd, AsleepPower.BeforeSideTurnEndVeryEarly

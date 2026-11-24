@@ -14,6 +14,7 @@ public static partial class ReadModels
     {
         nameof(MegaCrit.Sts2.Core.Models.Enchantments.Adroit),
         PowerId.Afterimage.Name,
+        PowerId.Aim.Name,
         PowerId.AllIsWell.Name,
         PowerId.Archery.Name,
         PowerId.Arsenal.Name,

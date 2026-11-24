@@ -28,4 +28,21 @@ public class ReadModelSourceTests
         state.You.Turn = state.You.Turn.Add(started.Key, delta: 1);
         Assert.Equal(1m, lethality.ModifyDamageMultiplicative(state, Who.You, new DamageCtx(Who.You, Target: 0, SimProps.Move, strike, Play(index: 0))));
     }
+
+    [Fact]
+    public void AimReadsHeavyShotsOwnMethod()
+    {
+        // AimPower.ModifyDamageAdditive: cardSource is HeavyShot heavyShot ? heavyShot.ModifyAimAmount(Amount) : Amount, on its owner's powered
+        // arrow attacks; HeavyShot.ModifyAimAmount: originalAmount * DynamicVars["AimMultiplier"].BaseValue, the card's own value (decision #232).
+        var aim = Assert.IsType<ReadModel>(SimModels.Get(PowerId.Aim.Name));
+        var state = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = 30 } } };
+        state.You.Powers = state.You.Powers.With(PowerId.Aim, amount: 4);
+        var arrow = SimProps.Move | SimProps.FromArrow;
+        var heavy = new SimCard(CardId.HeavyShot.Name, SimCardType.Attack) { Vars = new Dictionary<string, decimal> { ["AimMultiplier"] = 3m } };
+        var other = new SimCard("Shot", SimCardType.Attack);
+        DamageCtx From(SimCard card) => new(Who.You, Target: 0, arrow, card, new SimCardPlay(card, Who.You, Target: 0, PlayIndex: 0, PlayCount: 1, AutoPlay: false));
+        Assert.Equal(12m, aim.ModifyDamageAdditive(state, Who.You, From(heavy)));
+        Assert.Equal(4m, aim.ModifyDamageAdditive(state, Who.You, From(other)));
+        Assert.Equal(0m, aim.ModifyDamageAdditive(state, Who.You, new DamageCtx(Who.You, Target: 0, SimProps.Move, other, Play: null)));
+    }
 }

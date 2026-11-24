@@ -94,7 +94,7 @@ public static class SimReaders
             // Once a turn (PowerUse.UsedThisTurn: already this turn).
             case nameof(YahPower): data = Internal(power, "triggeredThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
             // Bound to the attack under way (BeforeAttack set commandToModify): every other card's damage gets nothing from it.
-            case nameof(AimPower) or nameof(QuietusPower):
+            case nameof(QuietusPower):
                 data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } bound && Sts2State.Private<object?>(bound, "commandToModify", fallback: null) != null
                     ? Models.AttackBoundPower.BoundOutside : 0;
                 break;

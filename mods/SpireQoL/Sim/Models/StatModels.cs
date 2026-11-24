@@ -41,31 +41,7 @@ public abstract class AttackBoundPower : SimModel
 
 // Vigor and Gigantification are read from their code (ReadModel, decision #228).
 
-/// <summary>
-/// AimPower: like Vigor, on the owner's powered arrow attacks (FromArrow); Heavy Shot multiplies it by its AimMultiplier.
-/// </summary>
-public sealed class AimPower : AttackBoundPower
-{
-    protected override bool Qualifies(SimState state, int owner, AttackInfo attack) =>
-        attack.Dealer == owner && attack.Props.IsPoweredAttack() && attack.Props.HasFlag(SimProps.FromArrow);
-    public override decimal ModifyDamageAdditive(SimState state, int owner, DamageCtx damage)
-    {
-        if (damage.Dealer != owner || !damage.Props.IsPoweredAttack() || !damage.Props.HasFlag(SimProps.FromArrow) || !AppliesNow(state, owner, ThisPower)) return 0m;
-        decimal num = SimEngine.PowerOn(state, owner, ThisPower);
-        if (damage.Card is { } heavy && heavy.Name == CardId.HeavyShot.Name && heavy.Vars.TryGetValue("AimMultiplier", out var mul)) num *= mul;
-        return num;
-    }
-    public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack)
-    {
-        var powers = SimEngine.PowersOf(state, owner);
-        var data = powers.DataOf(ThisPower);
-        if (!powers.Has(ThisPower) || BoundAttack(data) != attack.Id) return One(state);
-        var left = powers[ThisPower] - AmountAtStart(data);
-        SimEngine.SetPowers(state, owner, left == 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, data: 0));
-        state.LogFired(Name, amount: 0, owner);
-        return One(state);
-    }
-}
+// Aim is read from its code (ReadModel, decision #232).
 
 /// <summary>QuietusPower: multiplies the owner's powered arrow attack by its amount; the attack bound to it removes it.</summary>
 public sealed class QuietusPower : AttackBoundPower

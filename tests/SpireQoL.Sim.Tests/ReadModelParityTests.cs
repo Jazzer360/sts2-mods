@@ -144,7 +144,7 @@ public class ReadModelParityTests
     /// The powers whose hand-written model kept the attack bound to it in its Data (the attack's id and the amount it started with) where the read
     /// model keeps them in its own data's fields (decision #228): two ways of keeping one thing, left out of the key; the hits compare what each does with it.
     /// </summary>
-    private static readonly HashSet<string> KeptAttackData = new(StringComparer.Ordinal) { PowerId.Vigor.Name, PowerId.Gigantification.Name };
+    private static readonly HashSet<string> KeptAttackData = new(StringComparer.Ordinal) { PowerId.Vigor.Name, PowerId.Gigantification.Name, PowerId.Aim.Name };
 
     public static TheoryData<string> Models() => new(HandWritten.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
