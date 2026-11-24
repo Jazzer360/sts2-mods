@@ -43,8 +43,20 @@ internal readonly struct HookArgs
     /// <summary>The copy of an instanced power this run is (ReadModel: its id among its owner's copies, from 1); 0 for a model kept as one.</summary>
     public int Copy { get; init; }
 
+    /// <summary>The orb a hook is told of (ModifyOrbValue, the trigger count, AfterOrbEvoked), or the orb whose own program runs (Passive, Evoke).</summary>
+    public OrbCtx Orb { get; init; }
+    /// <summary>The orb whose own program runs, out of its slots (an evoke: OrbCmd removes it first); null: it's at Orb.Index.</summary>
+    public SimOrb? Evoked { get; init; }
+    /// <summary>The orb value so far (ModifyOrbValue's value), the trigger count so far (ModifyOrbPassiveTriggerCounts').</summary>
+    public decimal OrbValue { get; init; }
+    public int TriggerCount { get; init; }
+    /// <summary>The item of the loop the step is in (HookWho.Each): a player's or an enemy's id.</summary>
+    public int Each { get; init; }
+    /// <summary>The locals this run kept (LetStep, by its slot); null: it keeps none.</summary>
+    public decimal[]? Locals { get; init; }
+
     /// <summary>The same hook on another branch (its answers so far its own).</summary>
-    public HookArgs On(SimState branch) => this with { State = branch, Asked = (int[]?)Asked?.Clone(), Taken = (int[]?)Taken?.Clone() };
+    public HookArgs On(SimState branch) => this with { State = branch, Asked = (int[]?)Asked?.Clone(), Taken = (int[]?)Taken?.Clone(), Locals = (decimal[]?)Locals?.Clone() };
 }
 
 /// <summary>
@@ -92,6 +104,22 @@ public sealed class ReadModel : SimModel
         HasCopies = spec.Kind == ModelKind.Power && spec.Copies != PowerCopies.One;
         _copyPrefix = spec.Name + "@";
         foreach (var test in spec.Values().OfType<HookTest>()) _testSlots.TryAdd(test.At, _testSlots.Count);
+        foreach (var let in spec.Steps().OfType<LetStep>()) _localSlots.TryAdd(let.Name, _localSlots.Count);
+        if (spec.Kind == ModelKind.Orb)
+        {
+            if (spec.Orb is not { } orbKind) throw new InvalidOperationException($"{spec.Name}: an orb with no kind");
+            OrbKind = orbKind;
+            _orbAliases = spec.OrbAliases ?? new Dictionary<string, string>();
+            _orbStarts = spec.Starts ?? new Dictionary<string, decimal>();
+            // In the getters' order of dependence: an EvokeVal may read PassiveVal (Glass's PassiveVal * 2), so PassiveVal first.
+            _orbValues = (spec.OrbValues ?? new Dictionary<string, HookValue>()).OrderBy(pair => pair.Key == "PassiveVal" ? 0 : 1).ThenBy(pair => pair.Key, StringComparer.Ordinal)
+                .Select(pair => (pair.Key, Compile(pair.Value))).ToArray();
+            foreach (var (field, start) in _orbStarts.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            {
+                if (_orbAliases.TryGetValue(field, out var property)) _startValues = _startValues.Append((property, (int)start)).ToArray();
+                else _startFields = _startFields.With(field, (int)start);
+            }
+        }
         foreach (var program in spec.Hooks)
         {
             var one = new ModelSpec(spec.Name, spec.Kind, new[] { program });
@@ -109,6 +137,72 @@ public sealed class ReadModel : SimModel
             _commands[command.Method] = (CompileSteps(command.Steps, new List<HookStep>(), firstRound: true), one.Steps().Any(step => step is StoreFieldStep) || GuardsSeveral(one));
         }
     }
+
+    // ---- an orb's own programs (ModelKind.Orb: decision #214)
+
+    /// <summary>The orb kind this is the program of (ModelKind.Orb).</summary>
+    public OrbKind OrbKind { get; }
+
+    private readonly IReadOnlyDictionary<string, string> _orbAliases = new Dictionary<string, string>();
+    private readonly (string Property, Evaluate Value)[] _orbValues = Array.Empty<(string, Evaluate)>();
+    private readonly IReadOnlyDictionary<string, decimal> _orbStarts = new Dictionary<string, decimal>();
+
+    /// <summary>Its passive goes off as its owner's turn ends (OrbQueue.BeforeTurnEnd), the one turn end a simulation covers.</summary>
+    public bool PassiveAtTurnEnd => Spec.PassiveAt == OrbTrigger.TurnEnd;
+
+    /// <summary>A new orb of this kind for <paramref name="player"/> (OrbCmd.Channel's ToMutable): its fields as they start, its values worked out.</summary>
+    public SimOrb NewOrb(SimState state, int player)
+    {
+        var orb = new SimOrb { Kind = OrbKind, Fields = _startFields };
+        foreach (var (property, start) in _startValues) SetOrbProperty(orb, property, start);
+        ValuesAgain(state, player, index: -1, orb);
+        return orb;
+    }
+
+    /// <summary>A new orb's own fields (its constructor's), and the values that are fields (Dark's EvokeVal, _evokeVal at 6): made once.</summary>
+    private readonly NamedCounts _startFields = NamedCounts.Empty;
+    private readonly (string Property, int Start)[] _startValues = Array.Empty<(string, int)>();
+
+    /// <summary>
+    /// An orb's values worked out again from its getters' code (ModelSpec.OrbValues: Hook.ModifyOrbValue on its base), as the game's getters work
+    /// them out each time they're read: after a store to its own fields, a change to what the pipeline reads (Focus), as it's channelled.
+    /// </summary>
+    public void ValuesAgain(SimState state, int player, int index, SimOrb orb)
+    {
+        if (_orbValues.Length == 0) return;
+        var args = new HookArgs { State = state, Owner = player, Orb = new OrbCtx(player, index, OrbKind), Evoked = orb };
+        foreach (var (property, value) in _orbValues) SetOrbProperty(orb, property, (int)value(in args));
+    }
+
+    private static void SetOrbProperty(SimOrb orb, string property, int value)
+    {
+        if (property == "PassiveVal") orb.Passive = value;
+        else if (property == "EvokeVal") orb.Evoke = value;
+    }
+
+    private static int OrbProperty(SimOrb orb, string property) => property == "PassiveVal" ? orb.Passive : property == "EvokeVal" ? orb.Evoke : 0;
+
+    /// <summary>
+    /// One of the orb's own programs (its Passive, as TriggerPassive runs it once per trigger; its Evoke, as OrbCmd runs it on the orb taken out of
+    /// its slots), on the state given: <paramref name="index"/> its slot, or -1 with <paramref name="evoked"/> the orb out of them.
+    /// </summary>
+    public IEnumerable<SimState> RunOrb(HookName hook, SimState state, int player, int index, SimOrb? evoked)
+    {
+        if (_steps[(int)hook] is not { } steps) return One(state);
+        var args = new HookArgs
+        {
+            State = state, Owner = player, Hook = hook, Play = state.CurrentPlay, Orb = new OrbCtx(player, index, OrbKind), Evoked = evoked,
+            Asked = _asksOnce[(int)hook] ? new int[_testSlots.Count] : null, Locals = _localSlots.Count > 0 ? new decimal[_localSlots.Count] : null,
+        };
+        return RunSteps(steps, args);
+    }
+
+    /// <summary>The orb a run of its own program is: out of its slots (an evoke's), or in them at its index.</summary>
+    private static SimOrb? OrbOf(in HookArgs args) =>
+        args.Evoked ?? (args.State.Player(args.Orb.Player) is { } player && args.Orb.Index >= 0 && args.Orb.Index < player.Orbs.Count ? player.Orbs[args.Orb.Index] : null);
+
+    /// <summary>The slots of the locals its programs keep (LetStep), by name.</summary>
+    private readonly Dictionary<string, int> _localSlots = new(StringComparer.Ordinal);
 
     /// <summary>Its own commands another class calls (ModelSpec.Commands), compiled, and whether a run asks each test once.</summary>
     private readonly Dictionary<string, (CompiledStep[] Steps, bool AsksOnce)> _commands = new(StringComparer.Ordinal);
@@ -129,6 +223,7 @@ public sealed class ReadModel : SimModel
         return RunSteps(command.Steps, new HookArgs
         {
             State = state, Owner = owner, Play = state.CurrentPlay, Hook = HookName.OwnCommand, Copy = copy, Asked = command.AsksOnce ? new int[_testSlots.Count] : null,
+            Locals = _localSlots.Count > 0 ? new decimal[_localSlots.Count] : null,
         });
     }
 
@@ -197,6 +292,12 @@ public sealed class ReadModel : SimModel
         HookName.ModifyHpLostAfterOsty => nameof(ModifyHpLostAfterOsty),
         HookName.ModifyHpLostAfterOstyLate => nameof(ModifyHpLostAfterOstyLate),
         HookName.AfterModifyingHpLostBeforeOsty or HookName.AfterModifyingHpLostAfterOsty => nameof(AfterModifyingHpLost),
+        HookName.ModifyOrbValue => nameof(ModifyOrbValue),
+        HookName.ModifyOrbPassiveTriggerCounts => nameof(ModifyOrbPassiveTriggerCounts),
+        HookName.AfterModifyingOrbPassiveTriggerCount => nameof(AfterModifyingOrbPassiveTriggerCount),
+        HookName.AfterOrbEvoked => nameof(AfterOrbEvoked),
+        // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook.
+        HookName.Passive or HookName.Evoke => "",
         _ => nameof(AfterCardEvent),
     };
 
@@ -244,6 +345,42 @@ public sealed class ReadModel : SimModel
     /// <summary>Hook.AfterOrbChanneled: an orb was channeled for <paramref name="player"/> (the hook's player, EventIsOwners).</summary>
     public override IEnumerable<SimState> AfterOrbChanneled(SimState state, int owner, int player) =>
         Run(HookName.AfterOrbChanneled, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Player = player });
+
+    /// <summary>Hook.ModifyOrbValue: the value of its code's first way that holds (Focus: max(value + Amount, 0) on its owner's orbs).</summary>
+    public override decimal ModifyOrbValue(SimState state, int owner, OrbCtx orb, decimal value)
+    {
+        if (_returns[(int)HookName.ModifyOrbValue] is not { } returns) return value;
+        foreach (var copy in HasCopies ? CopiesOrOne(state, owner) : AsOne)
+        {
+            var args = new HookArgs { State = state, Owner = owner, Hook = HookName.ModifyOrbValue, Orb = orb, OrbValue = value, Copy = copy };
+            value = returns(in args);
+        }
+        return value;
+    }
+
+    /// <summary>Hook.ModifyOrbPassiveTriggerCount: the value of its code's first way that holds (Gold-Plated Cables: one more on its owner's front orb).</summary>
+    public override int ModifyOrbPassiveTriggerCounts(SimState state, int owner, OrbCtx orb, int count)
+    {
+        if (_returns[(int)HookName.ModifyOrbPassiveTriggerCounts] is not { } returns) return count;
+        foreach (var copy in HasCopies ? CopiesOrOne(state, owner) : AsOne)
+        {
+            var args = new HookArgs { State = state, Owner = owner, Hook = HookName.ModifyOrbPassiveTriggerCounts, Orb = orb, TriggerCount = count, Copy = copy };
+            count = (int)returns(in args);
+        }
+        return count;
+    }
+
+    /// <summary>Hook.AfterModifyingOrbPassiveTriggerCount: it changed the count (it acted), then its code's steps (a flash), on the state given.</summary>
+    public override void AfterModifyingOrbPassiveTriggerCount(SimState state, int owner, OrbCtx orb)
+    {
+        state.LogFired(Name, amount: 0, owner);
+        foreach (var branch in Run(HookName.AfterModifyingOrbPassiveTriggerCount, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Orb = orb }))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingOrbPassiveTriggerCount branched");
+    }
+
+    /// <summary>Hook.AfterOrbEvoked: an orb was evoked, its targets SimState.OrbTargets (Thunder's damage on the living ones).</summary>
+    public override IEnumerable<SimState> AfterOrbEvoked(SimState state, int owner, OrbCtx orb) =>
+        Run(HookName.AfterOrbEvoked, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Orb = orb, Player = orb.Player });
 
     /// <summary>Hook.ModifyCardPlayCount: the value of its code's first way that holds (playCount, playCount + 1...), decided once before the plays.</summary>
     public override int ModifyCardPlayCount(SimState state, int owner, SimCardPlay play, int count)
@@ -398,7 +535,11 @@ public sealed class ReadModel : SimModel
     private IEnumerable<SimState> Run(HookName hook, HookArgs args)
     {
         if (_steps[(int)hook] is not { } steps) return One(args.State);
-        args = args with { Hook = hook, Asked = _asksOnce[(int)hook] ? new int[_testSlots.Count] : null, Taken = _takes[(int)hook] ? new int[1] : null };
+        args = args with
+        {
+            Hook = hook, Asked = _asksOnce[(int)hook] ? new int[_testSlots.Count] : null, Taken = _takes[(int)hook] ? new int[1] : null,
+            Locals = _localSlots.Count > 0 ? new decimal[_localSlots.Count] : null,
+        };
         if (!HasCopies) return RunSteps(steps, args);
         // Each copy runs the hook on its own, in the order they landed (each a listener of its own in the game), on every branch the one before
         // it left; a copy a branch no longer has (it went) runs nothing there.
@@ -408,7 +549,11 @@ public sealed class ReadModel : SimModel
         {
             var start = args;
             states = SimEngine.Then(states, branch => HasCopy(branch, start.Owner, copy)
-                ? RunSteps(steps, start with { State = branch, Copy = copy, Asked = start.Asked == null ? null : new int[start.Asked.Length], Taken = start.Taken == null ? null : new int[1] })
+                ? RunSteps(steps, start with
+                {
+                    State = branch, Copy = copy, Asked = start.Asked == null ? null : new int[start.Asked.Length], Taken = start.Taken == null ? null : new int[1],
+                    Locals = start.Locals == null ? null : new decimal[start.Locals.Length],
+                })
                 : One(branch));
         }
         return states;
@@ -602,6 +747,82 @@ public sealed class ReadModel : SimModel
                     return states;
                 };
             }
+            case LetStep let:
+            {
+                // A local kept: worked out here, read later as it was (HookLocal).
+                var value = Compile(let.Value);
+                var slot = _localSlots[let.Name];
+                return args =>
+                {
+                    if (args.Locals is { } locals) locals[slot] = value(in args);
+                    return One(args.State);
+                };
+            }
+            case ForEachStep each:
+            {
+                // foreach over the items as the loop starts (the players in their order, the hittable enemies): its body once for each, the item Each.
+                var body = CompileSteps(each.Steps, new List<HookStep>(), firstRound: true);
+                var over = each.Over;
+                return args =>
+                {
+                    var items = over == HookItems.Players ? args.State.PlayerIds.ToList() : args.State.Targetable.Select(enemy => enemy.Id).ToList();
+                    IEnumerable<SimState> states = One(args.State);
+                    foreach (var item in items)
+                    {
+                        var current = args with { Each = item };
+                        states = SimEngine.Then(states, branch => RunSteps(body, current.On(branch)));
+                    }
+                    return states;
+                };
+            }
+            case GainBlockStep orbBlock when Spec.Kind == ModelKind.Orb:
+            {
+                // An orb's block (CreatureCmd.GainBlock of its value, Unpowered: to its owner, or a loop's player), logged as the orb's.
+                var amount = Compile(orbBlock.Amount);
+                var toEach = orbBlock.To == HookTarget.Each;
+                return args => SimEngine.OrbBlock(args.State, args.Orb, evoke: args.Hook == HookName.Evoke, toEach ? args.Each : args.Orb.Player, (int)amount(in args));
+            }
+            case DamageStep orbDamage when Spec.Kind == ModelKind.Orb:
+            {
+                // An orb's damage (CreatureCmd.Damage of its value from its owner, Unpowered): a roll's, every enemy's, the weakest's; its targets kept
+                // for AfterOrbEvoked.
+                var amount = Compile(orbDamage.Amount);
+                var props = Compile(orbDamage.Props);
+                var target = orbDamage.Target;
+                if (target is not (HookTarget.RandomEnemy or HookTarget.AllEnemies or HookTarget.WeakestEnemy)) throw new InvalidOperationException($"{Name}: no orb damage to {target}");
+                return args => SimEngine.OrbDamage(args.State, args.Orb, evoke: args.Hook == HookName.Evoke, target, (int)amount(in args), (SimProps)(int)props(in args));
+            }
+            case GainEnergyStep orbEnergy when Spec.Kind == ModelKind.Orb:
+            {
+                // An orb's energy (PlayerCmd.GainEnergy of its value: Plasma's), for its owner.
+                var amount = Compile(orbEnergy.Amount);
+                return args => SimEngine.ProcCardEvent(args.State, CardEvent.EnergyGained, (int)amount(in args), args.Orb.Player, indirect: false);
+            }
+            case StoreFieldStep orbStore when Spec.Kind == ModelKind.Orb:
+            {
+                // A store to the orb's own field (Glass's _passiveVal, Dark's _evokeVal: its EvokeVal), in its slot; its values then worked out again.
+                var value = Compile(orbStore.Value);
+                var field = orbStore.Field;
+                var aliased = _orbAliases.GetValueOrDefault(field);
+                return args =>
+                {
+                    var stored = (int)value(in args);
+                    var index = args.Orb.Index;
+                    if (index < 0 || args.State.Player(args.Orb.Player) is not { } owner || index >= owner.Orbs.Count) return One(args.State);
+                    var orb = args.State.MutablePlayer(args.Orb.Player).OwnOrbs()[index];
+                    if (aliased != null) SetOrbProperty(orb, aliased, stored);
+                    else orb.Fields = orb.Fields.With(field, stored);
+                    ValuesAgain(args.State, args.Orb.Player, index, orb);
+                    return One(args.State);
+                };
+            }
+            case GainBlockStep gain when gain.To == HookTarget.Each:
+            {
+                // Block for the loop's player (a player's model's: the item each round), through the block pipeline on them, logged under its owner.
+                var amount = Compile(gain.Amount);
+                var props = Compile(gain.Props);
+                return args => SimEngine.ProcBlockFor(args.State, args.Owner, Name, args.Each, amount(in args), (SimProps)(int)props(in args));
+            }
             case GainBlockStep gain:
             {
                 var amount = Compile(gain.Amount);
@@ -622,6 +843,20 @@ public sealed class ReadModel : SimModel
                     HookTarget.AllEnemies => args => SimEngine.ProcDamageAll(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer, label: perCard ? PerCardLabel(in args) : null),
                     HookTarget.RandomEnemy => args => SimEngine.ProcDamageRandom(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer, label: perCard ? PerCardLabel(in args) : null),
                     HookTarget.PowerOwner => args => SimEngine.ProcDamageOn(args.State, args.Owner, Name, args.Target, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer),
+                    // A loop's enemy (the item each round).
+                    HookTarget.Each => args => Who.IsEnemy(args.Each) ? SimEngine.ProcDamageOn(args.State, args.Owner, Name, args.Each, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer) : One(args.State),
+                    // The living creatures an evoke acted on (AfterOrbEvoked's targets.Where(c => c.IsAlive): Thunder), each in turn.
+                    HookTarget.EvokeTargets => args =>
+                    {
+                        IEnumerable<SimState> states = One(args.State);
+                        foreach (var id in args.State.OrbTargets ?? Array.Empty<int>())
+                        {
+                            var hit = args;
+                            states = SimEngine.Then(states, branch => branch.Enemy(id) is { Alive: true }
+                                ? SimEngine.ProcDamageOn(branch, hit.Owner, Name, id, amount(hit.On(branch)), (SimProps)(int)props(hit.On(branch)), noDealer: noDealer) : One(branch));
+                        }
+                        return states;
+                    },
                     // Its owner: a player through the damage on a player (Incoming Damage's breakdown names it as the game does), an enemy as any.
                     HookTarget.Owner => args => Who.IsPlayer(args.Owner)
                         ? SimEngine.ProcDamagePlayer(args.State, args.Owner, Name, args.Owner, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer, label: SimEngine.Title(args.State, args.Owner, Name))
@@ -846,6 +1081,30 @@ public sealed class ReadModel : SimModel
                     return asked[slot] == 1 ? 1m : 0m;
                 };
             }
+            // An orb's own field (its fields, or the value it is: Dark's _evokeVal is its EvokeVal), and its values as the game shows them.
+            case HookField orbField when Spec.Kind == ModelKind.Orb:
+            {
+                var name = orbField.Field;
+                if (_orbAliases.TryGetValue(name, out var aliased)) return (in HookArgs args) => OrbOf(in args) is { } orb ? OrbProperty(orb, aliased) : 0m;
+                var start = _orbStarts.GetValueOrDefault(name);
+                return (in HookArgs args) => OrbOf(in args) is { } orb && orb.Fields.Has(name) ? orb.Fields[name] : start;
+            }
+            case HookOrbProperty property:
+            {
+                var name = property.Property;
+                return (in HookArgs args) => OrbOf(in args) is { } orb ? OrbProperty(orb, name) : 0m;
+            }
+            case HookOrbValue orbValue:
+            {
+                // OrbModel.ModifyOrbValue: Hook.ModifyOrbValue on the value, every listener's term in turn.
+                var inner = Compile(orbValue.Base);
+                return (in HookArgs args) => SimEngine.OrbValue(args.State, args.Orb, inner(in args));
+            }
+            case HookLocal local:
+            {
+                var slot = _localSlots[local.Name];
+                return (in HookArgs args) => args.Locals?[slot] ?? 0m;
+            }
             case HookField field:
             {
                 // Its state, or a copy's; one never stored is where a new instance starts (0, or a value's canonical one).
@@ -928,6 +1187,22 @@ public sealed class ReadModel : SimModel
                 return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card)?.Name == named ? 1m : 0m;
             case HookFact.OwnersTurn: return (in HookArgs args) => Who.IsPlayer(args.Owner) != args.State.EnemyTurnNow ? 1m : 0m;
             case HookFact.EnemiesTurn: return (in HookArgs args) => args.State.EnemyTurnNow ? 1m : 0m;
+            case HookFact.OrbIsOwners: return (in HookArgs args) => args.Orb.Player == args.Owner ? 1m : 0m;
+            case HookFact.OrbIs:
+            {
+                var kind = Enum.Parse<OrbKind>(named!);
+                return (in HookArgs args) => args.Orb.Kind == kind ? 1m : 0m;
+            }
+            case HookFact.OrbValueSoFar: return (in HookArgs args) => args.OrbValue;
+            case HookFact.TriggerCountSoFar: return (in HookArgs args) => args.TriggerCount;
+            case HookFact.OrbIsFront: return (in HookArgs args) => args.Orb.Index == 0 ? 1m : 0m;
+            case HookFact.HittableEnemyCount:
+                return (in HookArgs args) =>
+                {
+                    var count = 0;
+                    foreach (var enemy in args.State.Enemies) if (enemy.Hittable && enemy.Alive) count++;
+                    return count;
+                };
             case HookFact.OpponentsPowerAmount:
             {
                 // GetOpponentsOf(owner) where alive: the living players (a pet keeps no powers in the simulator) for an enemy, the living enemies for a player.
@@ -1063,6 +1338,7 @@ public sealed class ReadModel : SimModel
             HookWho.Target => args.Damage?.Target ?? args.Block?.Target ?? args.Hit?.Target ?? Who.None,
             HookWho.Dead or HookWho.PowerOwner => args.Target,
             HookWho.Applier => ApplierOf(in args),
+            HookWho.Each => args.Each,
             _ => Who.None,
         };
         return creature.PetOwner ? id == Who.YourOsty ? Who.You : Who.None : id;

@@ -154,6 +154,7 @@ public class SimJsonTests
             return values.GetValue(values.Length > 1 ? 1 : 0)!;
         }
         if (type.GetMethod("Of", BindingFlags.Static | BindingFlags.Public, [typeof(string)]) is { } named && named.ReturnType == type) return named.Invoke(null, ["Probe"])!;
+        if (type == typeof(NamedCounts)) return NamedCounts.Empty.With("Probe", amount: 3);
         if (type == typeof(SimAction)) return new HitYouAction(Name: "Probe", Amount: 3);
         if (type == typeof(SimCondition)) return new CountCondition(SimCounted.HandMatching, SimCompare.Greater, Than: 3) { Filter = "Probe", At = "Probe", Matching = 3, Before = 3 };
         if (type.IsGenericType && type.Name.StartsWith("ValueTuple", StringComparison.Ordinal))

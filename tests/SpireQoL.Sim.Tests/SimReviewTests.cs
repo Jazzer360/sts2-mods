@@ -110,7 +110,7 @@ public class SimReviewTests
         // GlassOrb.EvokeVal => PassiveVal * 2; the passive loses 1 per trigger. Consuming Shadow evokes
         // after the passives (AfterSideTurnEnd): Glass 4 → passive 4, then evoke (3*2)=6, total 10.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 11) } };
-        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 4, Evoke = 8, GlassBase = 4 } };
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 4, Evoke = 8, Fields = NamedCounts.Empty.With("_passiveVal", amount: 4) } };
         state.You.OrbCapacity = 3;
         state.You.ConsumingShadow = 1;
         var outcome = SimEngine.Run(state);
@@ -151,8 +151,10 @@ public class SimReviewTests
     {
         // GlassOrb: PassiveVal = base + Focus; only the base decays (to 0). Base 0 with Focus 2 keeps
         // dealing 2 to every enemy each time it fires, and its evoke stays 4.
-        var glass = new SimOrb { Kind = OrbKind.Glass, Passive = 2, Evoke = 4, GlassBase = 0, GlassBonus = 2, Triggers = 2 };
+        var glass = new SimOrb { Kind = OrbKind.Glass, Passive = 2, Evoke = 4, Fields = NamedCounts.Empty.With("_passiveVal", amount: 0) };
         var state = new SimState { Enemies = { new SimEnemy { Id = 1, Hp = 4 } } };
+        state.You.Focus = 2;
+        state.You.Relics = state.You.Relics.With(RelicId.GoldPlatedCables, amount: 1); // two triggers
         state.You.Orbs = new() { glass };
         state.You.OrbCapacity = 3;
         var outcome = SimEngine.Run(state);
@@ -164,8 +166,10 @@ public class SimReviewTests
     public void GlassDecaysItsBaseNotItsFocusIncludedValue()
     {
         // Base 3 with Focus 2: fires for 5, then 4 (base 2 + 2).
-        var glass = new SimOrb { Kind = OrbKind.Glass, Passive = 5, Evoke = 10, GlassBase = 3, GlassBonus = 2, Triggers = 2 };
+        var glass = new SimOrb { Kind = OrbKind.Glass, Passive = 5, Evoke = 10, Fields = NamedCounts.Empty.With("_passiveVal", amount: 3) };
         var state = new SimState { Enemies = { new SimEnemy { Id = 1, Hp = 20 } } };
+        state.You.Focus = 2;
+        state.You.Relics = state.You.Relics.With(RelicId.GoldPlatedCables, amount: 1); // two triggers
         state.You.Orbs = new() { glass };
         state.You.OrbCapacity = 3;
         var outcome = SimEngine.Run(state);
@@ -181,7 +185,7 @@ public class SimReviewTests
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 7, block: 0, hits: 10) } };
         state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 0 }, new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
         state.You.OrbCapacity = 2;
-        state.You.FrontOrbBonusTriggers = 1;
+        state.You.Relics = state.You.Relics.With(RelicId.GoldPlatedCables, amount: 1);
         var zap = new SimPlay { OrbOps = { new OrbOp { Op = OrbOp.Kind.Channel, Orb = new SimOrb { Kind = OrbKind.Lightning, Passive = 0, Evoke = 0 } } } };
         var outcome = SimEngine.Run(state, zap);
         Assert.Equal(1, outcome.Worst.Enemy(id: 1)!.Hp); // the front Lightning fires twice: 3 + 3

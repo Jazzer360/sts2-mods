@@ -177,6 +177,53 @@ public static class HookReader
         return Hooks(type).OrderBy(method => method.Name, StringComparer.Ordinal).Select(reader.Effect).ToList();
     }
 
+    /// <summary>The game's orb classes among <paramref name="types"/>.</summary>
+    public static IEnumerable<Type> Orbs(IEnumerable<Type> types) => types.Where(type => type.Namespace == "MegaCrit.Sts2.Core.Models.Orbs" && !type.IsNested && !type.IsAbstract && Derives(type, "OrbModel"));
+
+    /// <summary>The engine's kind for an orb class (its name less "Orb", as ChannelStep names it), or null for a class the engine has no kind for.</summary>
+    public static OrbKind? OrbKindOf(string orbClass) =>
+        Enum.TryParse<OrbKind>(orbClass.EndsWith("Orb", StringComparison.Ordinal) ? orbClass[..^3] : orbClass, out var kind) && kind is not (OrbKind.Unknown or OrbKind.Random) ? kind : null;
+
+    /// <summary>
+    /// An orb's code read whole (decision #214): its Passive and its Evoke as programs, when its passive goes off (the trigger hook that calls
+    /// OrbModel.TriggerPassive), its values' getters (PassiveVal, EvokeVal: OrbModel's abstract values) and its own fields as its constructor starts
+    /// them. Anything else it overrides, or a body the reader stops in, is a gap.
+    /// </summary>
+    public static ModelReading ReadOrb(Type type, Func<MethodBase, List<CodeOp>> read)
+    {
+        var reader = new Translation(type, ModelKind.Orb, read);
+        var programs = new List<HookProgram>();
+        var readings = new List<HookReading>();
+        OrbTrigger? passiveAt = null;
+        var kind = OrbKindOf(type.Name);
+        if (kind == null) readings.Add(new HookReading("(the class)", $"gap: the engine has no orb kind for {type.Name}") { Capability = ReaderCapability.Orbs });
+        foreach (var hook in Hooks(type).OrderBy(method => method.Name, StringComparer.Ordinal))
+        {
+            // A trigger hook (OrbQueue calls it): the passive goes off then, when its body is OrbModel.TriggerPassive with no target.
+            if (OrbTriggers.TryGetValue(hook.Name, out var trigger))
+            {
+                if (reader.CallsTriggerPassive(hook)) { passiveAt = trigger; readings.Add(new HookReading(hook.Name, null)); }
+                else readings.Add(new HookReading(hook.Name, $"gap: {hook.Name} does more than OrbModel.TriggerPassive") { Capability = ReaderCapability.OwnMethod });
+                continue;
+            }
+            var (program, gap, notRun) = reader.Hook(hook);
+            readings.Add(new HookReading(hook.Name, gap?.Text) { NotRun = notRun, Capability = gap?.Capability });
+            if (program != null) programs.Add(program);
+        }
+        var (values, aliases, starts, valueGap) = reader.OrbValuesOf();
+        if (valueGap != null) readings.Add(new HookReading("(its values)", valueGap.Value.Text) { Capability = valueGap.Value.Capability });
+        // An own field no program reads, but a value's getter (Glass's _passiveVal in its PassiveVal) is still its state: every store to it is kept.
+        var spec = new ModelSpec(type.Name, ModelKind.Orb, programs) { Orb = kind, PassiveAt = passiveAt, OrbValues = values, OrbAliases = aliases, Starts = starts };
+        return new ModelReading(spec, readings);
+    }
+
+    /// <summary>The hooks OrbQueue calls an orb's passive from (OrbModel's virtual trigger methods), and when each runs.</summary>
+    private static readonly IReadOnlyDictionary<string, OrbTrigger> OrbTriggers = new Dictionary<string, OrbTrigger>(StringComparer.Ordinal)
+    {
+        ["BeforeTurnEndOrbTrigger"] = OrbTrigger.TurnEnd,
+        ["AfterTurnStartOrbTrigger"] = OrbTrigger.TurnStart,
+    };
+
     /// <summary>The prefix of one of a model's own values kept as its state ("Var.CardsLeft"), where its code stores it.</summary>
     public const string VarFieldPrefix = HookField.VarPrefix;
 
@@ -322,6 +369,88 @@ public static class HookReader
         /// <summary>The place of the step being read (its offset in its method).</summary>
         private int _at;
 
+        /// <summary>The locals a hook body keeps before a store (each a LetStep at its place); null where none can be kept (a value's getter).</summary>
+        private List<(string Name, int Offset, HookValue Value)>? _lets;
+
+        /// <summary>An orb's body is being read: its values (this.PassiveVal) are the values as shown (HookOrbProperty), not their getters' code.</summary>
+        private bool _shownValues;
+
+        /// <summary>OrbModel's own values (its abstract decimal properties: PassiveVal, EvokeVal), read from the base class.</summary>
+        private IReadOnlySet<string> OrbValueProperties()
+        {
+            for (var type = _type.BaseType; type != null; type = type.BaseType)
+                if (type.Name == "OrbModel")
+                    return type.GetProperties(Declared).Where(property => property.GetMethod is { IsAbstract: true } && property.PropertyType.Name == "Decimal")
+                        .Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
+            return new HashSet<string>();
+        }
+
+        /// <summary>A method of the model's base class whose code returns Hook.<paramref name="hook"/>'s value (OrbModel.ModifyOrbValue: Hook.ModifyOrbValue).</summary>
+        private bool CallsHook(string method, string hook)
+        {
+            for (var type = _type.BaseType; type != null; type = type.BaseType)
+                if (type.GetMethods(Declared).FirstOrDefault(candidate => candidate.Name == method && !candidate.IsAbstract) is { } found)
+                {
+                    try { return ProgramReader.ReadReturnedValue(type, found, _read) is QueryValue { Type: "Hook", Name: var called } && called == hook; }
+                    catch (InvalidOperationException) { return false; }
+                }
+            return false;
+        }
+
+        /// <summary>
+        /// An orb's trigger hook whose code only calls OrbModel.TriggerPassive with no target (TriggerPassive(choiceContext, null)): its passive goes
+        /// off then, Hook.ModifyOrbPassiveTriggerCount's count of times (the engine's rule for OrbModel.TriggerPassive).
+        /// </summary>
+        public bool CallsTriggerPassive(MethodInfo hook)
+        {
+            List<CodeOp> ops;
+            try { ops = _read(ProgramReader.BodyOf(hook)); }
+            catch { return false; }
+            var call = ops.FindIndex(instruction => instruction.IsCall && instruction.Member is { Name: "TriggerPassive" });
+            if (call < 1 || ops[call - 1].OpCode != System.Reflection.Emit.OpCodes.Ldnull) return false;
+            var program = ProgramReader.Read(_type, _read, hook.Name);
+            return !program.All().Any() && !program.Unknowns.Any()
+                && !ops.Any(instruction => instruction.IsCall && instruction.Member is { } member && member.Name != "TriggerPassive" && ChangesAGameObject(member));
+        }
+
+        /// <summary>
+        /// An orb's values (OrbModel's PassiveVal and EvokeVal), each its getter's code; one that's just one of its own fields (Dark's EvokeVal is
+        /// _evokeVal) is that field (an alias); and its own fields as its constructor starts them. A getter the reader can't follow is a gap.
+        /// </summary>
+        public (IReadOnlyDictionary<string, HookValue>? Values, IReadOnlyDictionary<string, string>? Aliases, IReadOnlyDictionary<string, decimal>? Starts, GapOf? Gap) OrbValuesOf()
+        {
+            var values = new Dictionary<string, HookValue>(StringComparer.Ordinal);
+            var aliases = new Dictionary<string, string>(StringComparer.Ordinal);
+            try
+            {
+                foreach (var property in OrbValueProperties().Order(StringComparer.Ordinal))
+                {
+                    _hook = "get_" + property;
+                    var getter = FindGetter(property) ?? throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: no {property} getter");
+                    var value = Value(ProgramReader.ReadReturnedValue(_type, getter, _read) ?? throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: the value {property}"));
+                    if (value is HookField { Field: var field } && _type.GetField(field, Declared) != null) aliases[field] = property;
+                    else values[property] = value;
+                }
+                var starts = new Dictionary<string, decimal>(StringComparer.Ordinal);
+                foreach (var store in ProgramReader.ReadConstructor(_type, _read).All().OfType<StoreStep>())
+                    if (_type.GetField(store.Field, Declared) != null && Value(store.Value) is HookConstant { Value: var start }) starts[store.Field] = start;
+                    else throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: its constructor stores {store.Field} = {store.Value}");
+                // Every own field its code reads starts where its constructor puts it (or at 0, a field's default).
+                return (values.Count > 0 ? values : null, aliases.Count > 0 ? aliases : null, starts.Count > 0 ? starts : null, null);
+            }
+            catch (Gap gap)
+            {
+                return (null, null, null, new GapOf(gap.Capability, gap.Message));
+            }
+        }
+
+        private MethodInfo? FindGetter(string property)
+        {
+            for (var type = _type; type != null; type = type.BaseType)
+                if (type.GetProperty(property, Declared)?.GetMethod is { IsAbstract: false } getter) return getter;
+            return null;
+        }
+
         /// <summary>
         /// Its own values a method of its own that isn't a hook stores (The Bomb's SetDamage: DynamicVars.Damage.BaseValue = damage, which its card
         /// calls as it lands), as state fields ("Var.Damage"): each instance has its own.
@@ -418,14 +547,35 @@ public static class HookReader
                 if (StartsATurn(hook.Name) && PastTheHorizon(hook) is { } horizon)
                     return horizon.Length == 0 ? (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers") : (null, new GapOf(ReaderCapability.ValueNotFollowed, horizon), null);
                 if (!Enum.TryParse<HookName>(hook.Name, out var name)) return (null, new GapOf(ReaderCapabilities.OfHook(hook.Name), $"gap: the simulator runs no read model's {hook.Name}"), null);
-                if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name == HookName.ModifyCardPlayCount)
+                if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name is HookName.ModifyCardPlayCount or HookName.ModifyOrbPassiveTriggerCounts)
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(Ways(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
                 var program = ProgramReader.Read(_type, _read, hook.Name);
                 _stores = program.All().OfType<StoreStep>().ToList();
                 if (program.Unknowns.FirstOrDefault() is { } unknown) return (null, new GapOf(ReaderCapability.ValueNotFollowed, "gap: the reader can't follow it: " + unknown), null);
                 if (OwnData(hook, program) is { } data) return (null, data, null);
                 var steps = new List<HookStep>();
-                foreach (var step in program.Steps) steps.AddRange(Step(step));
+                var placed = new List<(int Offset, int Index)>();
+                _lets = new List<(string Name, int Offset, HookValue Value)>();
+                _shownValues = true;
+                try
+                {
+                    foreach (var step in program.Steps)
+                    {
+                        placed.Add((step.Offset, steps.Count));
+                        steps.AddRange(Step(step));
+                    }
+                    // Each local kept (a let) worked out where the code keeps it: before the first step after its place.
+                    foreach (var (local, offset, value) in _lets.OrderByDescending(let => let.Offset))
+                    {
+                        var at = placed.Where(place => place.Offset > offset).Select(place => place.Index).DefaultIfEmpty(steps.Count).Min();
+                        steps.Insert(at, new LetStep(local, value));
+                    }
+                }
+                finally
+                {
+                    _lets = null;
+                    _shownValues = false;
+                }
                 // A step its code runs on a side the simulator never ends (AfterSideTurnEnd of the enemies' side) never runs: left out.
                 var never = steps.RemoveAll(step => step.When is HookConstant { Value: 0m });
                 if (steps.Count == 0) return (null, null, never == 0 ? null : StartsATurn(hook.Name) ? "its commands wait on the players' side's turn starting, past the turns a simulation covers" : "its commands wait on the enemies' side's turn ending, which no simulation reaches");
@@ -506,7 +656,35 @@ public static class HookReader
             && (member.ValueType == typeof(void).Name || member.ValueType.StartsWith("Task", StringComparison.Ordinal))
             && !member.Name.StartsWith("get_", StringComparison.Ordinal) && !member.Name.StartsWith("set_", StringComparison.Ordinal) && !member.Name.StartsWith('<') && member.Name != ".ctor"
             && member.DeclaringType != _type.Name && !member.Namespace.StartsWith("MegaCrit.Sts2.Core.Commands", StringComparison.Ordinal)
-            && !member.Namespace.Contains(".Nodes", StringComparison.Ordinal) && member.Name is not ("Flash" or "InvokeDisplayAmountChanged" or "AssertMutable" or "SetResult" or "Start" or "AwaitUnsafeOnCompleted" or "SetStateMachine" or "SetException");
+            && !member.Namespace.Contains(".Nodes", StringComparison.Ordinal) && member.Name is not ("Flash" or "InvokeDisplayAmountChanged" or "AssertMutable" or "SetResult" or "Start" or "AwaitUnsafeOnCompleted" or "SetStateMachine" or "SetException")
+            && !ShowsOnly(member, depth: 0);
+
+        /// <summary>
+        /// A method of the model's own base class whose code only shows something (OrbModel.ActivatePassive: an event the orb's node hears;
+        /// PlayEvokeSfx: a sound): it stores nothing, and every call in it asks (a getter), shows (a show-only command, a node, a sound) or invokes
+        /// a delegate, or is such a method itself.
+        /// </summary>
+        private bool ShowsOnly(CodeMember member, int depth)
+        {
+            if (depth > 2 || !Derives(_type, member.DeclaringType)) return false;
+            MethodInfo? method = null;
+            for (var type = _type.BaseType; type != null && method == null; type = type.BaseType)
+                if (type.Name == member.DeclaringType) method = type.GetMethods(Declared).FirstOrDefault(candidate => candidate.Name == member.Name && !candidate.IsAbstract);
+            if (method == null) return false;
+            List<CodeOp> ops;
+            try { ops = _read(ProgramReader.BodyOf(method)); }
+            catch { return false; }
+            foreach (var instruction in ops)
+            {
+                if (instruction.OpCode == System.Reflection.Emit.OpCodes.Stfld || instruction.OpCode == System.Reflection.Emit.OpCodes.Stsfld) return false;
+                if (!instruction.IsCall || instruction.Member is not { } called) continue;
+                if (called.Name.StartsWith("get_", StringComparison.Ordinal) || called.Name == nameof(Action.Invoke) || called.Namespace.StartsWith("System", StringComparison.Ordinal)
+                    || called.Namespace.Contains(".Nodes", StringComparison.Ordinal) || called.Namespace.Contains(".Audio", StringComparison.Ordinal)
+                    || called.DeclaringType is "SfxCmd" or "VfxCmd") continue;
+                if (called.DeclaringType != member.DeclaringType || !ShowsOnly(called, depth + 1)) return false;
+            }
+            return true;
+        }
 
         /// <summary>
         /// A side's turn-start body of a relic whose every step waits on its owner, a player, taking part: it acts only as the players' next turn
@@ -517,7 +695,8 @@ public static class HookReader
             var program = ProgramReader.Read(_type, _read, hook.Name);
             if (program.Unknowns.Any()) return "gap: the reader can't follow it: " + program.Unknowns.First();
             if (!program.All().Any()) return "";
-            if (_kind == ModelKind.Relic && program.All().All(step => step.Condition?.Terms is { Count: > 0 } terms && terms.All(term => term.Any(literal => literal.Holds && IsTakingPart(literal.Test)))))
+            // Its every step at the top waits on it (a loop's body under the loop's condition: Infused Core's channels on its first turn).
+            if (_kind == ModelKind.Relic && program.Steps.All(step => step.Condition?.Terms is { Count: > 0 } terms && terms.All(term => term.Any(literal => literal.Holds && IsTakingPart(literal.Test)))))
                 return "";
             return null;
         }
@@ -541,6 +720,12 @@ public static class HookReader
                     return new[] { Data(data) with { When = Condition(step.Condition) } };
                 case LoopStep loop:
                 {
+                    // A loop over the fight's players or its hittable enemies (foreach): its body once for each, the item Each inside it.
+                    if (loop.Items is { } items && ItemsOf(items) is { } over)
+                    {
+                        var each = loop.Body.SelectMany(Step).ToList();
+                        return each.Count == 0 ? Array.Empty<HookStep>() : new[] { new ForEachStep(over, each) { When = Condition(step.Condition) } };
+                    }
                     // A counter loop (for i < n): its body n times, n worked out as the loop starts (the card programs read it the same way:
                     // ProgramEvaluator.Rounds). Any other loop is a gap.
                     if (loop.Items != null || loop.While is not { Terms: [[{ Holds: true, Test: CompareValue { Op: Comparison.Less or Comparison.LessOrEqual } bound }]] })
@@ -601,6 +786,9 @@ public static class HookReader
             {
                 case "CreatureCmd.GainBlock":
                 {
+                    // Block for a loop's player (each.Creature: Frost's for each other player with Hibernate).
+                    if (CreatureOf(values[0]) is { Who: HookWho.Each, PetOwner: false } && types[1] != "BlockVar")
+                        return new GainBlockStep(Value(values[1]), Value(values[2])) { To = HookTarget.Each };
                     if (!IsOwner(values[0])) throw new Gap(Other(values[0]), $"gap: block for {values[0]}");
                     if (types[1] == "BlockVar")
                     {
@@ -626,7 +814,8 @@ public static class HookReader
                     if (!noDealer && !IsOwner(values[dealerAt])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: damage dealt by {values[dealerAt]}");
                     // Damage the simulator's procs deal: to every hittable enemy, a roll over them, the creature a power landed on, or its owner.
                     var damaged = Targets(values[targetAt]);
-                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.PowerOwner or HookTarget.Owner)) throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: damage to {values[targetAt]}");
+                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.PowerOwner or HookTarget.Owner or HookTarget.WeakestEnemy or HookTarget.EvokeTargets or HookTarget.Each))
+                        throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: damage to {values[targetAt]}");
                     return new DamageStep(damaged, amount, props) { NoDealer = noDealer };
                 }
                 case "CardPileCmd.Draw":
@@ -745,6 +934,23 @@ public static class HookReader
         private HookTarget Targets(ProgramValue value)
         {
             if (value is StoredValue stored) return Targets(stored.Value);
+            // A list of one (new ReadOnlySingleElementList(x)): x.
+            if (value is QueryValue { Name: ".ctor", Arguments: [var single] } listOfOne && listOfOne.Type.StartsWith("<>z__ReadOnlySingleElementList", StringComparison.Ordinal)) return Targets(single);
+            // A value of several ways (Lightning's target ?? a roll): the ways that can hold, all naming the same creatures.
+            if (value is WaysValue ways)
+            {
+                var named = ways.Ways.Where(way => Simplified(Condition(way.When) ?? new HookConstant(1m)) is not HookConstant { Value: 0m }).Select(way => Targets(way.Value)).Distinct().ToList();
+                return named.Count == 1 ? named[0] : throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: acts on {value}");
+            }
+            // The loop's item (each, each.Creature).
+            if (CreatureOf(value) is { Who: HookWho.Each, PetOwner: false }) return HookTarget.Each;
+            if (IsHittableEnemies(value)) return HookTarget.AllEnemies;
+            if (value is QueryValue { Name: "NextItem", Arguments: [var rolled] } && IsHittableEnemies(rolled)) return HookTarget.RandomEnemy;
+            // The hittable enemy with the least HP (MinBy(HittableEnemies, c => c.CurrentHp)).
+            if (value is QueryValue { Type: "Enumerable" or "MoreEnumerable", Name: "MinBy", Arguments: [var among, LambdaValue byHp] } && IsHittableEnemies(among) && LambdaReads(byHp, "CurrentHp")) return HookTarget.WeakestEnemy;
+            // The living creatures an evoke acted on (AfterOrbEvoked's targets.Where(c => c.IsAlive)).
+            if (_hook == "AfterOrbEvoked" && Unstored(value) is QueryValue { Name: "ToList", Arguments: [QueryValue { Type: "Enumerable", Name: "Where", Arguments: [ParameterValue { Name: "targets" } or NamedValue { Name: "targets" }, LambdaValue alive] }] }
+                && LambdaReads(alive, "IsAlive")) return HookTarget.EvokeTargets;
             // The creature a hit landed on (AfterDamageGiven's, AfterDamageReceived's target).
             if (value is ParameterValue { Name: "target" } or NamedValue { Name: "target" } && _hook is "AfterDamageGiven" or "AfterDamageReceived") return HookTarget.HitTarget;
             if (IsOwner(value)) return HookTarget.Owner;
@@ -954,6 +1160,15 @@ public static class HookReader
                     return new HookMath(HookOperation.NotEqual, Value(test), new HookConstant(0m));
                 case var creatureTest when CreatureTest(creatureTest) is { } creatureFact:
                     return creatureFact;
+                // An orb's Passive's target: TriggerPassive passes none (its trigger hook's code: CallsTriggerPassive).
+                case ParameterValue { Name: "target" } or NamedValue { Name: "target" } when _kind == ModelKind.Orb && _hook == "Passive":
+                    return new HookConstant(0m);
+                // The enemies that can be hit are there (HittableEnemies.Count, a list of them kept: its Count).
+                case QueryValue { Name: "Count", Of: { } hittable } when IsHittableEnemies(hittable):
+                    return new HookMath(HookOperation.NotEqual, new HookFactValue(HookFact.HittableEnemyCount), new HookConstant(0m));
+                // The orb a hook is given is of a class (orb is LightningOrb).
+                case QueryValue { Name: "is", Of: { } orbOf, Type: var orbClass } when IsHookOrb(orbOf):
+                    return OrbKindOf(orbClass) is { } orbKind ? new HookFactValue(HookFact.OrbIs) { Of = orbKind.ToString() } : throw new Gap(ReaderCapability.Orbs, $"gap: tests the orb is {orbClass}");
                 default:
                     throw new Gap(ReaderCapabilities.OfValue(test), $"gap: tests {test}");
             }
@@ -1001,6 +1216,8 @@ public static class HookReader
         {
             if (value is StoredValue stored) return CreatureOf(stored.Value);
             if (IsOwner(value)) return new HookCreature(HookWho.Owner);
+            // A foreach's item (each: a player, an enemy).
+            if (value is NamedValue { Name: "each" }) return new HookCreature(HookWho.Each);
             if (IsDead(value)) return new HookCreature(HookWho.Dead);
             if (IsDealer(value) && DamageHooks.Contains(_hook)) return new HookCreature(HookWho.Dealer);
             if (value is ParameterValue { Name: "target" } or NamedValue { Name: "target" } && DamageHooks.Contains(_hook)) return new HookCreature(HookWho.Target);
@@ -1056,6 +1273,18 @@ public static class HookReader
         /// <summary>A comparison: of the owner with what the hook was given (a fact), of the card's type, of a power's type for its amount, or of values.</summary>
         private HookValue Compare(CompareValue compare)
         {
+            if (compare.Op is Comparison.Equal or Comparison.NotEqual)
+            {
+                // The orb a hook is given is its owner's (orb.Owner == base.Owner, base.Owner.Player).
+                var orbOwner = IsOrbOwner(compare.Left) && IsOwner(compare.Right) || IsOrbOwner(compare.Right) && IsOwner(compare.Left);
+                // It's its owner's front orb (orb == base.Owner.PlayerCombatState.OrbQueue.Orbs[0]).
+                var front = IsHookOrb(compare.Left) && IsOwnersFrontOrb(compare.Right) || IsHookOrb(compare.Right) && IsOwnersFrontOrb(compare.Left);
+                if (orbOwner || front)
+                {
+                    var orbFact = new HookFactValue(orbOwner ? HookFact.OrbIsOwners : HookFact.OrbIsFront);
+                    return compare.Op == Comparison.Equal ? orbFact : Not(orbFact);
+                }
+            }
             // A value of several ways compared (a null-conditional chain: dealer.PetOwner?.Creature == base.Owner): the comparison of the first way
             // that holds, way by way.
             if (compare.Op is Comparison.Equal or Comparison.NotEqual && (Unstored(compare.Left) is WaysValue || Unstored(compare.Right) is WaysValue))
@@ -1151,6 +1380,17 @@ public static class HookReader
         {
             switch (value)
             {
+                // An orb's value read in its own programs (this.PassiveVal): the value as the game shows it, which its getter's code works out.
+                case QueryValue { Of: NamedValue { Name: "this" }, IsProperty: true, Name: var shown } when _kind == ModelKind.Orb && _shownValues && OrbValueProperties().Contains(shown):
+                    return new HookOrbProperty(shown);
+                // OrbModel.ModifyOrbValue(x): the base class's own code, Hook.ModifyOrbValue on this orb's x (the pipeline: Focus, Infused Core).
+                case QueryValue { Of: NamedValue { Name: "this" }, Arguments: [var orbBase] } ownCall when _kind == ModelKind.Orb && CallsHook(ownCall.Name, "ModifyOrbValue"):
+                    return new HookOrbValue(Value(orbBase));
+                // ModifyOrbValue's value and ModifyOrbPassiveTriggerCounts' count: what the listeners before this one left.
+                case NamedValue { Name: "value" } or ParameterValue { Name: "value" } when _hook == "ModifyOrbValue":
+                    return new HookFactValue(HookFact.OrbValueSoFar);
+                case NamedValue { Name: "triggerCount" } or ParameterValue { Name: "triggerCount" } when _hook == "ModifyOrbPassiveTriggerCounts":
+                    return new HookFactValue(HookFact.TriggerCountSoFar);
                 // A question to the fight's log (Count or Any of its entries): the history ledger's count (decision #191).
                 case QueryValue { Name: "Count" or "Any" } logged when ProgramReader.ReadsHistory(logged):
                     return History(logged);
@@ -1239,7 +1479,19 @@ public static class HookReader
                 // A local kept before a store to its own state it read, used after that store (Joss Paper's int cardsExhausted = CardsExhausted, then
                 // CardsExhausted %= ExhaustAmount, then Draw(cardsExhausted / ExhaustAmount)): the value as it was, which the reader doesn't keep.
                 case StoredValue stored when _stores.Any(store => store.Offset > stored.Offset && store.Offset < _at && ReadsOwn(stored.Value, store.Field)):
-                    throw new Gap(ReaderCapability.LocalKeptBeforeAStore, $"gap: a local keeps {stored.Value} from before it's stored, and is used after");
+                {
+                    // A let: the local worked out where the code keeps it (a LetStep there, before the store), read here as it was then.
+                    if (_lets == null) throw new Gap(ReaderCapability.LocalKeptBeforeAStore, $"gap: a local keeps {stored.Value} from before it's stored, and is used after");
+                    var name = "local" + stored.Offset.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                    if (!_lets.Any(let => let.Name == name))
+                    {
+                        var at = _at;
+                        _at = stored.Offset;
+                        try { _lets.Add((name, stored.Offset, Value(stored.Value))); }
+                        finally { _at = at; }
+                    }
+                    return new HookLocal(name);
+                }
                 case StoredValue stored:
                     return Value(stored.Value);
                 case CompareValue compare:
@@ -1542,9 +1794,56 @@ public static class HookReader
             (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Orbs", Of: QueryValue { Name: "OrbQueue", Of: QueryValue { Name: "PlayerCombatState", Of: { } player } } }
             && IsOwner(player);
 
-        /// <summary>The value reads its model's own field or property by this name (this.CardsExhausted; its data's field, Data.name).</summary>
-        private static bool ReadsOwn(ProgramValue value, string field) => value.Parts().Any(part => part is QueryValue { Name: var name, Of: var receiver }
-            && (receiver is NamedValue { Name: "this" } && name == field || receiver != null && ProgramReader.IsOwnData(receiver) && ProgramReader.OwnDataPrefix + name == field));
+        /// <summary>
+        /// The value reads its model's own field or property by this name (this.CardsExhausted; its data's field, Data.name), or one of its own
+        /// properties whose getter does (Glass's PassiveVal reads _passiveVal).
+        /// </summary>
+        private bool ReadsOwn(ProgramValue value, string field) => value.Parts().Any(part => part is QueryValue { Name: var name, Of: var receiver } query
+            && (receiver is NamedValue { Name: "this" } && name == field || receiver != null && ProgramReader.IsOwnData(receiver) && ProgramReader.OwnDataPrefix + name == field
+                || receiver is NamedValue { Name: "this" } && query.IsProperty && GetterReadsOwn(name, field)));
+
+        private bool GetterReadsOwn(string property, string field)
+        {
+            if (_type.GetProperty(property, Declared)?.GetMethod is not { } getter || !_inlining.Add("reads:" + property)) return false;
+            try { return ProgramReader.ReadReturnedValue(_type, getter, _read) is { } returned && ReadsOwn(returned, field); }
+            catch (InvalidOperationException) { return false; }
+            finally { _inlining.Remove("reads:" + property); }
+        }
+
+        /// <summary>
+        /// The enemies that can be hit: CombatState.HittableEnemies, filtered on IsHittable or not, or (for a player's model: an orb's, a relic's) its
+        /// owner's opponents that can be hit (ToList(Where(GetOpponentsOf(base.Owner), e => e.IsHittable))), kept in a local or not.
+        /// </summary>
+        private bool IsHittableEnemies(ProgramValue value)
+        {
+            value = Unstored(value);
+            if (value is QueryValue { Name: "ToList", Arguments: [var listed] }) value = Unstored(listed);
+            if (value is QueryValue { Type: "Enumerable", Name: "Where", Arguments: [var filtered, LambdaValue hittable] } && LambdaReads(hittable, "IsHittable")) value = Unstored(filtered);
+            return value is QueryValue { Name: "HittableEnemies" }
+                || _kind is ModelKind.Orb or ModelKind.Relic && value is QueryValue { Name: "GetOpponentsOf", Arguments: [var whose] } && IsOwner(whose);
+        }
+
+        /// <summary>A lambda that gives its parameter's property by this name (e => e.IsHittable, c => c.CurrentHp).</summary>
+        private static bool LambdaReads(LambdaValue lambda, string property) =>
+            lambda.Body.Terms is [[{ Holds: true, Test: QueryValue { Name: var name, Of: ParameterValue { Name: var given } } }]] && name == property && given == lambda.Parameter;
+
+        /// <summary>The hooks given an orb (its parameter orb).</summary>
+        private static readonly HashSet<string> OrbHooks = new(StringComparer.Ordinal) { "ModifyOrbValue", "ModifyOrbPassiveTriggerCounts", "AfterModifyingOrbPassiveTriggerCount", "AfterOrbEvoked", "AfterOrbChanneled" };
+
+        /// <summary>The orb a hook is given (its orb parameter).</summary>
+        private bool IsHookOrb(ProgramValue value) => Unstored(value) is ParameterValue { Name: "orb" } or NamedValue { Name: "orb" } && OrbHooks.Contains(_hook);
+
+        /// <summary>The player whose the hook's orb is (orb.Owner).</summary>
+        private bool IsOrbOwner(ProgramValue value) => value is QueryValue { Name: "Owner", Of: { } orb } && IsHookOrb(orb);
+
+        /// <summary>The owner's front orb (base.Owner.PlayerCombatState.OrbQueue.Orbs[0]).</summary>
+        private static bool IsOwnersFrontOrb(ProgramValue value) =>
+            Unstored(value) is QueryValue { Name: "Item" or "get_Item", Of: { } orbs, Arguments: [ConstantValue { Value: 0 }] } && IsOwnersOrbs(orbs);
+
+        /// <summary>What a foreach of the code goes over: the fight's players (CombatState.Players), its hittable enemies; null for anything else.</summary>
+        private HookItems? ItemsOf(ProgramValue items) =>
+            Unstored(items) is QueryValue { Name: "Players", Of: QueryValue { Name: "CombatState" } } ? HookItems.Players
+            : IsHittableEnemies(items) ? HookItems.HittableEnemies : null;
 
         /// <summary>A value as kept in a local or not (a StoredValue's value).</summary>
         private static ProgramValue Unstored(ProgramValue value) => value is StoredValue stored ? Unstored(stored.Value) : value;

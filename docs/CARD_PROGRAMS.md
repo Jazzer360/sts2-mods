@@ -532,6 +532,11 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 | `new PowerVar<T>(n)`, `new PowerVar<T>("Name", n)` in CanonicalVars | the value keyed by T's class (the constructor's type argument: `CodeMember.TypeArguments`) or by its name |
 | a power whose copies act on their own (`PowerInstanceType.Instanced`), a game object's property set or field stored where no step is read (a `DynamicVar.BaseValue--`) | a gap, so a class is never read whole while part of what it does is dropped |
 | a temporary Strength or Dexterity power applied | the Strength or Dexterity its base class's BeforeApplied applies, by its sign |
+| an orb's `Passive` and `Evoke`, its `PassiveVal`/`EvokeVal` getters, its constructor's field stores (decision #214) | `HookReader.ReadOrb`: `ModelKind.Orb` programs (`HookName.Passive`, `Evoke`), `ModelSpec.OrbValues` (`HookOrbValue` for `OrbModel.ModifyOrbValue`), `OrbAliases`, `Starts`; run by `ReadModel.RunOrb` where OrbCmd and OrbQueue run them |
+| `ModifyOrbValue(orb, value)`, `ModifyOrbPassiveTriggerCounts(orb, triggerCount)`, `AfterOrbEvoked(orb, targets)`; `orb.Owner == base.Owner`, `orb is LightningOrb`, `orb == OrbQueue.Orbs[0]` | read hooks (`HookFact.OrbIsOwners`, `OrbIs`, `OrbIsFront`, `OrbValueSoFar`, `TriggerCountSoFar`); an evoke's living targets `HookTarget.EvokeTargets` |
+| `foreach (Player p in CombatState.Players)`, a foreach over the hittable enemies; `each.Creature` | `ForEachStep` (`HookItems`), `HookWho.Each`, `GainBlockStep.To` / `DamageStep` on `HookTarget.Each` |
+| a local kept before a store to what it read, used after (Glass's `passiveVal`, Joss Paper's count) | `LetStep` at the local's place, `HookLocal` after |
+| a base class's method that only shows (`OrbModel.ActivatePassive`, `PowerModel.StartPulsing`: no store, only getters, delegates, sounds, nodes) | nothing (the reader reads its body to tell) |
 
 What isn't read is a named gap (a store to the model's own state, its internal data, a hook no read model runs yet, a query with no fact), and a
 hook the simulator never runs says why (outside fights: `OutOfCombatHooks.txt`; a relic's turn-start body that waits on its owner's next turn).

@@ -67,7 +67,8 @@ Non-goals:
   `ListenerOrderTests` (catalog tests) compares it with the game's list for a fight built from the game's own objects.
   - Cards with a model: Void (its `AfterCardDrawn` loses energy after your powers' and relics' draw reactions: Automation,
     Iteration, Pagestorm) and Regret (its `BeforeSideTurnEnd` counts the hand before the Ethereal cards exhaust).
-  - No potion, orb or monster has a model: no orb class overrides a hook (passives run from `DoTurnEnd`, `OrbQueue`), the
+  - No potion, orb or monster is a listener: no orb class overrides a hook (passives run from `DoTurnEnd`, `OrbQueue`; each orb's own
+    Passive, Evoke and values are read from its code and run there: decision #214, `ReadModel.RunOrb`), the
     one potion with combat hooks (Fairy in a Bottle: `ShouldDie`) has no power or relic answering the same hook before it
     (Lizard Tail's is `ShouldDieLate`), and the monsters' hooks only change music, textures or talk, or (Queen) a flag and a move
     that change no hit this turn: each read as a program, its coverage ledger entry held to what its code does (`MonsterHookTests`,

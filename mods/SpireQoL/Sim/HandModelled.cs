@@ -54,11 +54,14 @@ public static class HandModelled
         new("Auto-plays: from the top of the draw pile, from the hand at the turn's end, the cards that play themselves",
             new[] { "SimEngine.AutoPlayFromDraw", "SimEngine.AutoPlayTop", "SimEngine.PlayFromPile", "SimEngine.HellraiserPlays", "SimEngine.InvincibleFromPile", "SimEngine.AutoPlayFromHand", "SimEngine.AutoPostPlay", "SimEngine.AutoPostPlayOf" },
             new[] { "CardPileCmd.AutoPlayFromDrawPile", "CardCmd.AutoPlay", "Hook.BeforeCardAutoPlayed", "Hook.AfterAutoPostPlayPhaseEntered", "HellraiserPower.AfterCardDrawnEarly", "IAmInvincible.AfterAutoPostPlayPhaseEntered" }),
-        new("Orbs: channelled, evoked, their passives at the turn's end, Focus on their values, the slots",
-            new[] { "SimEngine.FreshOrb", "SimEngine.ChannelOrb", "SimEngine.ChannelKind", "SimEngine.RunOrb", "SimEngine.Evoke", "SimEngine.EvokeLast", "SimEngine.OrbPassives", "SimEngine.ChangeFocus" },
-            new[] { "OrbCmd.Channel", "OrbCmd.Evoke", "OrbCmd.EvokeLast", "OrbCmd.EvokeNext", "OrbCmd.Passive", "OrbCmd.AddSlots", "OrbQueue.BeforeTurnEnd", "OrbModel.GetRandomOrb", "OrbModel.TriggerPassive",
-                "LightningOrb.Passive", "LightningOrb.Evoke", "FrostOrb.Passive", "FrostOrb.Evoke", "DarkOrb.Passive", "DarkOrb.Evoke", "GlassOrb.Passive", "GlassOrb.Evoke", "PlasmaOrb.AfterTurnStartOrbTrigger",
-                "PlasmaOrb.Evoke", "FocusPower.ModifyOrbValue", "Hook.ModifyOrbValue", "Hook.AfterOrbChanneled", "Hook.AfterOrbEvoked", "Hook.ModifyOrbPassiveTriggerCount" }),
+        new("Orbs: the slots, a channel into them (the front one evoked when they're full), an evoke out of them, the passives' order at the turn's end, " +
+            "TriggerPassive's count and its loop, a random orb, and the orb hooks' pipelines; an orb's damage and block as its code's commands run them " +
+            "(each orb's own Passive, Evoke and values are read from its code, and Focus, Infused Core, Thunder and Gold-Plated Cables from theirs: decision #214)",
+            new[] { "SimEngine.FreshOrb", "SimEngine.ChannelOrb", "SimEngine.ChannelKind", "SimEngine.RunOrb", "SimEngine.Evoke", "SimEngine.EvokeLast", "SimEngine.OrbPassives", "SimEngine.ChangeFocus",
+                "SimEngine.OrbValue", "SimEngine.OrbValuesAgain", "SimEngine.OrbDamage", "SimEngine.OrbBlock" },
+            new[] { "OrbCmd.Channel", "OrbCmd.Evoke", "OrbCmd.EvokeLast", "OrbCmd.EvokeNext", "OrbCmd.Passive", "OrbCmd.AddSlots", "OrbCmd.RemoveSlots", "OrbQueue.BeforeTurnEnd", "OrbModel.GetRandomOrb",
+                "OrbModel.TriggerPassive", "OrbModel.ModifyOrbValue", "Hook.ModifyOrbValue", "Hook.AfterOrbChanneled", "Hook.AfterOrbEvoked", "Hook.ModifyOrbPassiveTriggerCount",
+                "Hook.AfterModifyingOrbPassiveTriggerCount" }),
         new("Arrows: shot, impaled, knocked loose",
             new[] { "SimEngine.IsImpaled", "SimEngine.RunShoot", "SimEngine.RunImpale", "SimEngine.RunDislodgeAll", "SimEngine.Dislodge", "SimEngine.PlaysStartingImpaled", "SimEngine.TakeArrows" },
             new[] { "ArrowCmd.ShootArrowAtTarget", "ArrowCmd.ImpaleTarget", "ArrowCmd.DislodgeArrow", "ArrowCmd.RetrieveArrow", "Hook.AfterArrowShot", "Hook.AfterArrowImpaled", "Hook.AfterArrowDislodged" }),
@@ -118,7 +121,7 @@ public static class HandModelled
     /// </summary>
     public static readonly IReadOnlyList<string> Plumbing = new[]
     {
-        "SimEngine.Run", "SimEngine.Then", "SimEngine.Merge", "SimEngine.Detached", "SimEngine.Scratch", "SimEngine.Capped", "SimEngine.MarkUnread", "SimEngine.PlayResults", "SimEngine.Breakdown",
+        "SimEngine.Run", "SimEngine.Then", "SimEngine.AnyListens", "SimEngine.OrbLabel", "SimEngine.Merge", "SimEngine.Detached", "SimEngine.Scratch", "SimEngine.Capped", "SimEngine.MarkUnread", "SimEngine.PlayResults", "SimEngine.Breakdown",
         "SimEngine.Title", "SimEngine.Var", "SimEngine.VarValue", "SimEngine.VarTotal", "SimEngine.PowersOf", "SimEngine.SetPowers", "SimEngine.RelicsOf", "SimEngine.SetRelics", "SimEngine.PowerOn",
         "SimEngine.HasPower", "SimEngine.FieldsOf", "SimEngine.SetField", "SimEngine.SetFields", "SimEngine.TurnOf", "SimEngine.TallyFor", "SimEngine.CountOf", "SimEngine.MostOf", "SimEngine.RunWhen",
         "SimEngine.RunAsk", "SimEngine.Holds", "SimEngine.HoldsNow", "SimEngine.Compares", "SimEngine.IsConditionFilter", "SimEngine.HandFilters", "SimEngine.Flattened", "SimEngine.ConditionParts",

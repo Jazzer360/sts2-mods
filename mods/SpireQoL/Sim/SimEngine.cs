@@ -563,11 +563,11 @@ public static partial class SimEngine
     }
 
     /// <summary>One hit on a random living enemy: a branch per possible target.</summary>
-    private static IEnumerable<SimState> HitRandom(SimState state, Func<SimEnemy, int> amount, Action<SimState, SimEnemy>? then = null)
+    private static IEnumerable<SimState> HitRandom(SimState state, Func<SimEnemy, int> amount, Action<SimState, SimEnemy>? then = null, int? dealer = Who.You, SimProps props = SimProps.Unpowered)
     {
         void Hit(SimState branch, SimEnemy enemy)
         {
-            Damage(branch, enemy, amount(enemy));
+            Damage(branch, enemy, amount(enemy), dealer, props);
             then?.Invoke(branch, enemy);
         }
         var targets = state.Targetable.Select(enemy => enemy.Id).ToList();
@@ -599,7 +599,7 @@ public static partial class SimEngine
 
     /// <summary>Gaining block (amount &gt; 0) sets off Juggernaut on a random enemy.</summary>
     /// <param name="player">Who gains it (Who.You, Who.Teammate(k)).</param>
-    private static IEnumerable<SimState> GainBlock(SimState state, int amount, string? log, int player = Who.You)
+    internal static IEnumerable<SimState> GainBlock(SimState state, int amount, string? log, int player = Who.You)
     {
         if (amount <= 0) return new[] { state };
         var simPlayer = state.MutablePlayer(player);
@@ -635,52 +635,6 @@ public static partial class SimEngine
             branch.MutablePlayer(giver).BeaconGiving = false;
             return branch;
         }).ToList();
-    }
-
-    /// <param name="player">Whose orb it is: their Thunder hits again, and a teammate's Frost blocks for them, not you.</param>
-    private static IEnumerable<SimState> Evoke(SimState state, SimOrb orb, int player = Who.You)
-    {
-        // An evoke at your end of turn (Consuming Shadow) is in the breakdown with the orbs' passives: its block is what the forecast
-        // check compares with the block the game gave, its damage what the forecast log lists.
-        var listed = state.Log && state.EndOfTurnNow && player == Who.You;
-        // During a play: what its damage dealt the enemies (block and HP), for the play audit's damage with no card (SimKeys.OrbEvokeDamage).
-        var inPlay = state.CurrentPlay != null && !state.EndOfTurnNow;
-        var dealtBefore = state.AttackDealt;
-        void LogDealt(SimState branch)
-        {
-            if (inPlay && branch.AttackDealt > dealtBefore) branch.LogFired(SimKeys.OrbEvokeDamage, branch.AttackDealt - dealtBefore);
-        }
-        switch (orb.Kind)
-        {
-            // Thunder hits the evoke's target again if it's still alive.
-            case OrbKind.Lightning:
-                if (listed && state.Targetable.Any()) state.EndOfTurnDamage.Add(("Lightning (evoked)", orb.Evoke));
-                return HitRandom(state, _ => orb.Evoke, then: (branch, enemy) =>
-                {
-                    LogDealt(branch);
-                    var thunder = branch.Player(player)!.Thunder;
-                    if (thunder > 0 && enemy.Alive) { Damage(branch, enemy, thunder); branch.LogFired(PowerId.Thunder.Name, thunder, player); }
-                });
-            case OrbKind.Frost:
-                // During a play: its block, for the play audit (an orb the play channels and pushes out too: Chill into full slots).
-                if (state.CurrentPlay != null && !state.EndOfTurnNow && orb.Evoke > 0) state.LogFired(SimKeys.FrostEvokeBlock, orb.Evoke, player);
-                return GainBlock(state, orb.Evoke, listed ? "Frost (evoked)" : null, player);
-            case OrbKind.Dark:
-            {
-                var weakest = state.Targetable.OrderBy(enemy => enemy.Hp).FirstOrDefault();
-                if (listed && weakest != null) state.EndOfTurnDamage.Add(("Dark (evoked)", orb.Evoke));
-                if (weakest != null) Damage(state, weakest, orb.Evoke);
-                LogDealt(state);
-                return new[] { state };
-            }
-            case OrbKind.Glass:
-                if (listed && state.Targetable.Any()) state.EndOfTurnDamage.Add(("Glass (evoked, all)", orb.Evoke));
-                HitAll(state, _ => orb.Evoke);
-                LogDealt(state);
-                return new[] { state };
-            default:
-                return new[] { state };
-        }
     }
 
     /// <summary>
@@ -963,64 +917,6 @@ public static partial class SimEngine
 
     // ------------------------------------------------------------------ end of turn
 
-    /// <summary>One player's orb passives at end of turn, front first (yours, or a teammate's: their Frost blocks for them).</summary>
-    private static void OrbPassives(BranchSet branches, int player)
-    {
-        var maxOrbs = branches.States.Max(branch => branch.Player(player)!.Orbs.Count);
-        for (var i = 0; i < maxOrbs; i++)
-        {
-            var index = i;
-            int Triggers(SimState state)
-            {
-                var simPlayer = state.Player(player)!;
-                return index < simPlayer.Orbs.Count ? simPlayer.Orbs[index].Triggers + (index == 0 ? simPlayer.FrontOrbBonusTriggers : 0) : 0;
-            }
-            var maxTriggers = branches.States.Max(Triggers);
-            for (var triggerIndex = 0; triggerIndex < maxTriggers; triggerIndex++)
-            {
-                var trigger = triggerIndex;
-                branches.Each(branch =>
-                {
-                    var simPlayer = branch.Player(player)!;
-                    if (index >= simPlayer.Orbs.Count) return new[] { branch };
-                    var orb = simPlayer.Orbs[index];
-                    if (trigger >= Triggers(branch)) return new[] { branch };
-                    switch (orb.Kind)
-                    {
-                        case OrbKind.Lightning:
-                            if (branch.Log) branch.EndOfTurnDamage.Add(("Lightning", orb.Passive));
-                            return HitRandom(branch, _ => orb.Passive);
-                        case OrbKind.Frost:
-                            return GainBlock(branch, orb.Passive, player == Who.You ? "Frost" : null, player);
-                        case OrbKind.Dark:
-                            branch.MutablePlayer(player).OwnOrbs()[index].Evoke += orb.Passive;
-                            return new[] { branch };
-                        case OrbKind.Glass:
-                            // GlassOrb.Passive: if PassiveVal (base + Focus) > 0, the base drops by 1
-                            // (not below 0) and every enemy takes the value from before the drop.
-                            if (orb.Passive > 0)
-                            {
-                                orb = branch.MutablePlayer(player).OwnOrbs()[index];
-                                var passive = orb.Passive;
-                                if (branch.Log) branch.EndOfTurnDamage.Add(("Glass (all)", passive));
-                                HitAll(branch, _ => passive);
-                                orb.GlassBase = Math.Max(0, orb.GlassBase - 1);
-                                orb.Passive = Math.Max(0, orb.GlassBase + orb.GlassBonus);
-                                orb.Evoke = orb.Passive * 2; // GlassOrb.EvokeVal => PassiveVal * 2
-                            }
-                            return new[] { branch };
-                        case OrbKind.Unknown:
-                            // An orb the simulator doesn't know (another mod's): what its passive does isn't modelled.
-                            branch.Unmodelled ??= "an orb the simulator doesn't know acts at the end of the turn";
-                            return new[] { branch };
-                        default:
-                            return new[] { branch }; // Plasma: its energy comes at the start of your turn
-                    }
-                });
-            }
-        }
-    }
-
     /// <summary>
     /// The auto-play phase of the players' end of turn (CombatManager.EndPlayerTurnPhaseOneInternal: PlayerTurnPhase.AutoPostPlay,
     /// Hook.AfterAutoPostPlayPhaseEntered for each player ending the turn, in player order), before BeforeSideTurnEnd. For each
@@ -1226,32 +1122,6 @@ public static partial class SimEngine
     }
 
     // ------------------------------------------------------------------ enemy turn
-
-    /// <summary>
-    /// Your Focus changes: each orb's values move by what Focus does to its base value
-    /// (FocusPower.ModifyOrbValue: base + Focus, not below 0), so other modifiers on it stay.
-    /// Lightning 3/8, Frost 2/5, Dark's passive 6 (its evoke is what it stored), Glass from its base
-    /// (evoke twice the passive). Plasma doesn't use Focus.
-    /// </summary>
-    private static void ChangeFocus(SimState state, int delta)
-    {
-        int Shift(int value, int baseValue) => value + Math.Max(0, baseValue + state.You.Focus + delta) - Math.Max(0, baseValue + state.You.Focus);
-        foreach (var orb in state.You.OwnOrbs())
-        {
-            switch (orb.Kind)
-            {
-                case OrbKind.Lightning: orb.Passive = Shift(orb.Passive, baseValue: 3); orb.Evoke = Shift(orb.Evoke, baseValue: 8); break;
-                case OrbKind.Frost: orb.Passive = Shift(orb.Passive, baseValue: 2); orb.Evoke = Shift(orb.Evoke, baseValue: 5); break;
-                case OrbKind.Dark: orb.Passive = Shift(orb.Passive, baseValue: 6); break;
-                case OrbKind.Glass:
-                    orb.Passive = Shift(orb.Passive, orb.GlassBase);
-                    orb.GlassBonus += delta;
-                    orb.Evoke = orb.Passive * 2;
-                    break;
-            }
-        }
-        state.You.Focus += delta;
-    }
 
     private static void StripBlock(SimState state, StripBlockAction stripBlockAction)
     {

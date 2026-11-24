@@ -600,9 +600,9 @@ public sealed class CardPredictions
         }
         foreach (var src in sources)
             if (SimOwner(src, out var ownerId)) LogTab(src, ownerId, outcomes, tabs);
-        // Effects the engine logs itself (Juggernaut on every block gain, Thunder on Lightning evokes): logged under their power's
+        // Effects the engine logs itself (Juggernaut on every block gain; Thunder is read from its code: decision #214): logged under their power's
         // name, yours and every teammate's.
-        foreach (var src in sources.OfType<PowerModel>().Where(power => OwnerOf(power) is { IsPlayer: true } && power.GetType().Name is nameof(JuggernautPower) or nameof(ThunderPower)))
+        foreach (var src in sources.OfType<PowerModel>().Where(power => OwnerOf(power) is { IsPlayer: true } && power.GetType().Name is nameof(JuggernautPower)))
             LogTab(src, TeammateOf(src, _me, _cs), outcomes, tabs, TabKind.Damage);
 
         // ---- end-of-turn comparisons: what the play changes by the time the enemies act

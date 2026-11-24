@@ -55,6 +55,36 @@ public enum HookName
     /// <summary>Hook.AfterModifyingHpLostBeforeOsty and AfterOsty: told to the models whose pass changed the HP lost (a flash, Buffer's stack).</summary>
     AfterModifyingHpLostBeforeOsty,
     AfterModifyingHpLostAfterOsty,
+    /// <summary>Hook.ModifyOrbValue: an orb's value as each listener in turn leaves it (FocusPower, InfusedCore), HookFact.OrbValueSoFar the amount so far.</summary>
+    ModifyOrbValue,
+    /// <summary>Hook.ModifyOrbPassiveTriggerCount (each listener's ModifyOrbPassiveTriggerCounts): how many times an orb's passive goes off (Gold-Plated Cables).</summary>
+    ModifyOrbPassiveTriggerCounts,
+    /// <summary>Hook.AfterModifyingOrbPassiveTriggerCount: told to the listeners whose term changed the count (a flash).</summary>
+    AfterModifyingOrbPassiveTriggerCount,
+    /// <summary>Hook.AfterOrbEvoked: an orb was evoked, with the creatures its evoke acted on (Thunder hits the living ones again).</summary>
+    AfterOrbEvoked,
+    /// <summary>An orb's own Passive (OrbModel.Passive), run each time OrbModel.TriggerPassive goes off: ModelKind.Orb's program.</summary>
+    Passive,
+    /// <summary>An orb's own Evoke (OrbModel.Evoke), run by OrbCmd's evoke: ModelKind.Orb's program.</summary>
+    Evoke,
+}
+
+/// <summary>When an orb's passive goes off: the OrbModel trigger hook its class overrides with a call of TriggerPassive (OrbQueue calls them).</summary>
+public enum OrbTrigger
+{
+    /// <summary>BeforeTurnEndOrbTrigger: as its owner's turn ends (OrbQueue.BeforeTurnEnd, in CombatManager.DoTurnEnd), front orb first.</summary>
+    TurnEnd,
+    /// <summary>AfterTurnStartOrbTrigger: as its owner's next turn starts, past the turns a simulation covers.</summary>
+    TurnStart,
+}
+
+/// <summary>What a loop of a model's code goes over (foreach): each item is HookWho.Each inside it.</summary>
+public enum HookItems
+{
+    /// <summary>Every player in the fight (CombatState.Players), in their order.</summary>
+    Players,
+    /// <summary>Every enemy that can be hit (CombatState.HittableEnemies), as the loop starts.</summary>
+    HittableEnemies,
 }
 
 /// <summary>A command of a model's own (a public method of its class that returns a Task and takes nothing: PoisonPower.Trigger), read as a program.</summary>
@@ -192,6 +222,18 @@ public enum HookFact
     CausedByEthereal,
     /// <summary>The HP the hit would take as the HP-loss pipeline reaches this pass (Hook.ModifyHpLost*'s amount: the passes before it applied).</summary>
     HpLostSoFar,
+    /// <summary>The orb a hook is given is its owner's (orb.Owner == base.Owner, base.Owner.Player).</summary>
+    OrbIsOwners,
+    /// <summary>The orb a hook is given is of the kind named in Of (orb is LightningOrb: an OrbKind's name).</summary>
+    OrbIs,
+    /// <summary>The orb's value as the listeners before this one left it (ModifyOrbValue's value).</summary>
+    OrbValueSoFar,
+    /// <summary>An orb passive's trigger count as the listeners before this one left it (ModifyOrbPassiveTriggerCounts' triggerCount).</summary>
+    TriggerCountSoFar,
+    /// <summary>The orb is its owner's front orb (orb == base.Owner.PlayerCombatState.OrbQueue.Orbs[0]).</summary>
+    OrbIsFront,
+    /// <summary>The enemies that can be hit (CombatState.HittableEnemies.Count; a player's model's hittable opponents).</summary>
+    HittableEnemyCount,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>
@@ -211,6 +253,8 @@ public enum HookWho
     Applier,
     /// <summary>No creature (a null the code passes: PowerCmd.Apply with no applier).</summary>
     NoOne,
+    /// <summary>The item of the loop the step is in (a ForEachStep's: each player, each enemy).</summary>
+    Each,
 }
 
 /// <summary>A creature a hook's code names (HookWho), or the player who owns it when it's a pet (creature.PetOwner.Creature: Osty's player).</summary>
@@ -281,6 +325,21 @@ public sealed record HookHistory(HistoryQuery Query) : HookValue
     public bool Any { get; init; }
 }
 
+/// <summary>
+/// An orb's value through the game's pipeline (OrbModel.ModifyOrbValue: Hook.ModifyOrbValue over the listeners, Focus and Infused Core), for the
+/// orb whose value it is: its PassiveVal or EvokeVal getter's code (ModelSpec.OrbValues).
+/// </summary>
+public sealed record HookOrbValue(HookValue Base) : HookValue;
+
+/// <summary>
+/// One of the orb's values as the game shows them (its PassiveVal, its EvokeVal: SimOrb.Passive, SimOrb.Evoke), the pipeline's output, which the
+/// engine works out again from the getter's code (ModelSpec.OrbValues) whenever what it reads changes.
+/// </summary>
+public sealed record HookOrbProperty(string Property) : HookValue;
+
+/// <summary>A local the code keeps (a LetStep's), read after a store changed what it was worked out from (Glass's passiveVal, Joss Paper's count).</summary>
+public sealed record HookLocal(string Name) : HookValue;
+
 /// <summary>Two values the code combines or compares.</summary>
 public sealed record HookMath(HookOperation Operation, HookValue Left, HookValue Right) : HookValue;
 
@@ -312,6 +371,12 @@ public enum HookTarget
     PowerOwner,
     /// <summary>The creature a hit landed on (AfterDamageGiven's and AfterDamageReceived's target).</summary>
     HitTarget,
+    /// <summary>The enemy that can be hit with the least HP (MinBy(HittableEnemies, c => c.CurrentHp): the first such, as MinBy keeps it).</summary>
+    WeakestEnemy,
+    /// <summary>The living creatures an evoke acted on (AfterOrbEvoked's targets.Where(c => c.IsAlive)).</summary>
+    EvokeTargets,
+    /// <summary>The item of the loop the step is in (HookWho.Each: each player, each enemy).</summary>
+    Each,
 }
 
 /// <summary>One command of a hook's code, on the condition its code runs it on (null: always).</summary>
@@ -321,7 +386,12 @@ public abstract record HookStep
 }
 
 /// <summary>CreatureCmd.GainBlock to the owner: its amount and props through the block pipeline (SimEngine.ProcBlock).</summary>
-public sealed record GainBlockStep(HookValue Amount, HookValue Props) : HookStep;
+public sealed record GainBlockStep(HookValue Amount, HookValue Props) : HookStep
+{
+    /// <summary>Who gains it, when it isn't the owner (a loop's item: Frost's block for each other player with Hibernate). Null: the owner.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public HookTarget? To { get; init; }
+}
 
 /// <summary>CreatureCmd.Damage to <paramref name="Target"/> through the damage pipeline, from the owner unless NoDealer.</summary>
 public sealed record DamageStep(HookTarget Target, HookValue Amount, HookValue Props) : HookStep
@@ -394,6 +464,15 @@ public sealed record UnbindStep : HookStep;
 /// <summary>A counter loop (for i &lt; Times): its commands, in order, Times times; a firing logged on the first round only (the game's one Flash).</summary>
 public sealed record RepeatStep(HookValue Times, IReadOnlyList<HookStep> Steps) : HookStep;
 
+/// <summary>
+/// A local the code works out and keeps (int count = CardsExhausted) before a store changes what it read: worked out here, read after (HookLocal)
+/// as it was then.
+/// </summary>
+public sealed record LetStep(string Name, HookValue Value) : HookStep;
+
+/// <summary>A loop over items (foreach): its steps once for each item, in order, the item HookWho.Each (HookTarget.Each) inside it.</summary>
+public sealed record ForEachStep(HookItems Over, IReadOnlyList<HookStep> Steps) : HookStep;
+
 /// <summary>OrbCmd.Channel&lt;T&gt; for the owner: one orb of the kind named (SimEngine.ChannelKind).</summary>
 public sealed record ChannelStep(OrbKind Orb) : HookStep;
 
@@ -417,8 +496,11 @@ public sealed record HookProgram(HookName Hook, IReadOnlyList<HookStep> Steps)
 /// </summary>
 public enum HookOutcome { KillsIt, KillsAnother, KillsOne }
 
-/// <summary>Whether a model is a power (on a creature: its PowerSet entry) or a relic (on a player: its RelicSet entry).</summary>
-public enum ModelKind { Power, Relic }
+/// <summary>
+/// Whether a model is a power (on a creature: its PowerSet entry), a relic (on a player: its RelicSet entry) or an orb (in a player's orb slots: a
+/// SimOrb, its programs run where OrbCmd and OrbQueue run them, never a listener).
+/// </summary>
+public enum ModelKind { Power, Relic, Orb }
 
 /// <summary>
 /// A power or a relic as its code says (decision #195): its hooks' programs, read from the game's code by the adapter
@@ -460,6 +542,29 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<CommandProgram>? Commands { get; init; }
 
+    /// <summary>An orb's kind (the engine's name for its class, OrbKind); null for a power or a relic.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public OrbKind? Orb { get; init; }
+
+    /// <summary>When an orb's passive goes off (the trigger hook its class overrides with TriggerPassive); null: never.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public OrbTrigger? PassiveAt { get; init; }
+
+    /// <summary>
+    /// An orb's values (PassiveVal, EvokeVal), each its getter's code: what SimOrb.Passive and Evoke are worked out from. A value whose getter is one
+    /// of its own fields (Dark's EvokeVal is _evokeVal) is that field: <see cref="OrbAliases"/>, and isn't here.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyDictionary<string, HookValue>? OrbValues { get; init; }
+
+    /// <summary>An orb's own fields that are one of its values (Dark's _evokeVal is its EvokeVal): a store to the field stores the value.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyDictionary<string, string>? OrbAliases { get; init; }
+
+    /// <summary>An orb's own fields as a new one starts (its field initializers: Glass's _passiveVal 4, Dark's _evokeVal 6).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyDictionary<string, decimal>? Starts { get; init; }
+
     /// <summary>
     /// Why its hooks weren't read, for a class whose hooks read whole at the reviewed builds and no longer do (a game update): no program, and
     /// every simulation it's in is unknown (SimState.Unmodelled, decision #92). Null: read.
@@ -476,6 +581,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             HookNot not => new[] { value }.Concat(Inside(not.Inner)),
             HookTest test => new[] { value }.Concat(Inside(test.Test)),
             HookWays ways => new[] { value }.Concat(ways.Ways.SelectMany(way => Inside(way.When).Concat(Inside(way.Value)))),
+            HookOrbValue orbValue => new[] { value }.Concat(Inside(orbValue.Base)),
             _ => new[] { value },
         };
         static IEnumerable<HookValue> OfStep(HookStep step) => Inside(step.When).Concat(step switch
@@ -490,15 +596,24 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             StoreFieldStep store => Inside(store.Value),
             BindStep bind => Inside(bind.Value),
             RepeatStep repeat => Inside(repeat.Times).Concat(repeat.Steps.SelectMany(OfStep)),
+            ForEachStep each => each.Steps.SelectMany(OfStep),
+            LetStep let => Inside(let.Value),
             _ => Array.Empty<HookValue>(),
         });
-        return Hooks.SelectMany(program => Inside(program.Returns).Concat(program.Steps.SelectMany(OfStep))).Concat((Commands ?? Array.Empty<CommandProgram>()).SelectMany(command => command.Steps.SelectMany(OfStep)));
+        return Hooks.SelectMany(program => Inside(program.Returns).Concat(program.Steps.SelectMany(OfStep)))
+            .Concat((Commands ?? Array.Empty<CommandProgram>()).SelectMany(command => command.Steps.SelectMany(OfStep)))
+            .Concat((OrbValues ?? new Dictionary<string, HookValue>()).Values.SelectMany(Inside));
     }
 
     /// <summary>Every step of its programs, a counter loop's included.</summary>
     public IEnumerable<HookStep> Steps()
     {
-        static IEnumerable<HookStep> All(HookStep step) => step is RepeatStep repeat ? new[] { step }.Concat(repeat.Steps.SelectMany(All)) : new[] { step };
+        static IEnumerable<HookStep> All(HookStep step) => step switch
+        {
+            RepeatStep repeat => new[] { step }.Concat(repeat.Steps.SelectMany(All)),
+            ForEachStep each => new[] { step }.Concat(each.Steps.SelectMany(All)),
+            _ => new[] { step },
+        };
         return Hooks.SelectMany(program => program.Steps).Concat((Commands ?? Array.Empty<CommandProgram>()).SelectMany(command => command.Steps)).SelectMany(All);
     }
 

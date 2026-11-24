@@ -250,7 +250,7 @@ public sealed partial class ProcAudit
         var frostSpread = 0; // more Frost block some outcomes give (a random evoke deciding which orb goes)
         var evokes = Procs.Programs.CardEffects.TouchesOrbs(window.Card.GetType());
         var orbsUnread = evokes && window.Prediction?.OutcomeAt(window.Target) == null;
-        if (window.Prediction?.LoggedAmount(SimKeys.FrostEvokeBlock, window.Target) is { } frost)
+        if (window.Prediction?.LoggedAmount(SimKeys.OrbEvokeBlock, window.Target) is { } frost)
         {
             frostBlock = frost.Least;
             frostSpread = frost.Most - frost.Least;

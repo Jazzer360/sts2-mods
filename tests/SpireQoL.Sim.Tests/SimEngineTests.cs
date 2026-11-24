@@ -9,7 +9,7 @@ public class SimEngineTests
 
     private static SimOrb Lightning(int passive = 3, int evoke = 8) => new() { Kind = OrbKind.Lightning, Passive = passive, Evoke = evoke };
     private static SimOrb Frost(int passive = 2, int evoke = 5) => new() { Kind = OrbKind.Frost, Passive = passive, Evoke = evoke };
-    private static SimOrb Glass(int passive = 4, int focus = 0) => new() { Kind = OrbKind.Glass, Passive = passive, Evoke = passive * 2, GlassBase = passive - focus, GlassBonus = focus };
+    private static SimOrb Glass(int passive = 4) => new() { Kind = OrbKind.Glass, Passive = passive, Evoke = passive * 2, Fields = NamedCounts.Empty.With("_passiveVal", passive) };
 
     [Fact]
     public void TwoLightningOrbsKillBothThreeHpEnemiesWhateverTheTargets()
@@ -78,8 +78,8 @@ public class SimEngineTests
     public void GlassPassiveLosesOnePerTrigger()
     {
         var glass = Glass(passive: 4);
-        glass.Triggers = 2;
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 7, block: 0, hits: 5) } };
+        state.You.Relics = state.You.Relics.With(RelicId.GoldPlatedCables, amount: 1); // two triggers on the front orb (GoldPlatedCables.ModifyOrbPassiveTriggerCounts)
         state.You.Orbs = new() { glass };
         state.You.OrbCapacity = 3;
         var outcome = SimEngine.Run(state);

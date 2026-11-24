@@ -83,7 +83,7 @@ public class SinglePlayerGoldenTests
                     OrbKind.Lightning => new SimOrb { Kind = orbKind, Passive = 3, Evoke = 8 },
                     OrbKind.Frost => new SimOrb { Kind = orbKind, Passive = 2, Evoke = 5 },
                     OrbKind.Dark => new SimOrb { Kind = orbKind, Passive = 6, Evoke = random.Next(6, 20) },
-                    _ => new SimOrb { Kind = orbKind, Passive = 4, Evoke = 8, GlassBase = 4 },
+                    _ => new SimOrb { Kind = orbKind, Passive = 4, Evoke = 8, Fields = NamedCounts.Empty.With("_passiveVal", amount: 4) },
                 });
             }
         }

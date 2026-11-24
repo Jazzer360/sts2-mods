@@ -5,7 +5,6 @@ using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Localization.DynamicVars;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Orbs;
 using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using Sts2Mods.Core.Game;
@@ -659,7 +658,6 @@ public static partial class SimAdapter
                     player.PaelsEyeExhaust = relic.Status == MegaCrit.Sts2.Core.Entities.Relics.RelicStatus.Active
                         && !(Sts2State.TurnNumber == 1 && me.Relics.Any(otherRelic => otherRelic is WhisperingEarring));
                     break;
-                case nameof(GoldPlatedCables): player.FrontOrbBonusTriggers += 1; break; // +1 for the front orb (ModifyOrbPassiveTriggerCounts)
             }
         }
 
@@ -681,14 +679,10 @@ public static partial class SimAdapter
         foreach (var card in hand)
             if (TurnEndOf(card) is { } turnEnd) player.TurnEndCards.Add(turnEnd);
 
-        player.Focus = creature.GetPower<FocusPower>()?.Amount ?? 0;
+        // Focus and Thunder are in their powers (read from their code: ModifyOrbValue, AfterOrbEvoked); Gold-Plated Cables in its relic.
         player.OrbCapacity = pcs.OrbQueue.Capacity;
         player.SlotOnFirstChannel = SafeInt(() => me.Character.BaseOrbSlotCount) == 0;
-        player.Thunder = me.Creature.GetPower<ThunderPower>()?.Amount ?? 0;
-        foreach (var orb in pcs.OrbQueue.Orbs) player.Orbs.Add(ToSim(orb, combat));
-        // The game's trigger count includes Gold-Plated Cables' bonus on the current front orb; the
-        // simulator gives that bonus to whichever orb is in front when passives fire.
-        if (player.Orbs.Count > 0) player.Orbs[0].Triggers = Math.Max(1, player.Orbs[0].Triggers - player.FrontOrbBonusTriggers);
+        foreach (var orb in pcs.OrbQueue.Orbs) player.Orbs.Add(ToSim(orb));
 
         var osty = me.Osty;
         player.OstyHp = osty != null && osty.IsAlive ? osty.CurrentHp : 0;
@@ -748,29 +742,21 @@ public static partial class SimAdapter
         }
     }
 
-    /// <summary>An orb's kind to the simulator, by its class.</summary>
-    internal static OrbKind KindOf(OrbModel orb) => orb switch
-    {
-        LightningOrb => OrbKind.Lightning,
-        FrostOrb => OrbKind.Frost,
-        DarkOrb => OrbKind.Dark,
-        GlassOrb => OrbKind.Glass,
-        PlasmaOrb => OrbKind.Plasma,
-        _ => OrbKind.Unknown,
-    };
+    /// <summary>An orb's kind to the simulator: the game's orb class's (HookReader.OrbKindOf, as its code is read); another mod's is Unknown.</summary>
+    internal static OrbKind KindOf(OrbModel orb) =>
+        orb.GetType() is { Namespace: "MegaCrit.Sts2.Core.Models.Orbs" } type && HookReader.OrbKindOf(type.Name) is { } kind ? kind : OrbKind.Unknown;
 
-    private static SimOrb ToSim(OrbModel orb, ICombatState combat)
+    /// <summary>
+    /// An orb as the simulator keeps it (decision #214): its values as the game shows them (PassiveVal, EvokeVal through the game's pipeline) and
+    /// the fields its code reads and stores (Glass's _passiveVal), each named by its class's code (ModelSpec.Starts, but a value's own).
+    /// </summary>
+    private static SimOrb ToSim(OrbModel orb)
     {
         var kind = KindOf(orb);
-        var triggers = 1;
-        try { triggers = Hook.ModifyOrbPassiveTriggerCount(combat, orb, 1, out _); } catch { /* 1 */ }
-        var sim = new SimOrb { Kind = kind, Passive = (int)orb.PassiveVal, Evoke = (int)orb.EvokeVal, Triggers = triggers };
-        if (orb is GlassOrb)
-        {
-            // Base and bonus separately: the base decays, the bonus (Focus) doesn't.
-            sim.GlassBase = (int)Sts2State.Private(orb, "_passiveVal", fallback: 4m);
-            sim.GlassBonus = sim.Passive - sim.GlassBase;
-        }
+        var sim = new SimOrb { Kind = kind, Passive = (int)orb.PassiveVal, Evoke = (int)orb.EvokeVal };
+        if (SimModels.Orb(kind)?.Spec is { Starts: { } starts } spec)
+            foreach (var (field, start) in starts.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+                if (spec.OrbAliases?.ContainsKey(field) != true) sim.Fields = sim.Fields.With(field, (int)Sts2State.Private(orb, field, fallback: start));
         return sim;
     }
 

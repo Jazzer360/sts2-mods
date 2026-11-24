@@ -206,6 +206,16 @@ public static class ProgramReader
     }
 
     /// <summary>
+    /// A model's constructor (the one taking nothing), as its code runs it: its field initializers' stores (GlassOrb's _passiveVal = 4m), the
+    /// fields a new instance starts with.
+    /// </summary>
+    public static ModelProgram ReadConstructor(Type owner, Func<MethodBase, List<CodeOp>> read)
+    {
+        var constructor = owner.GetConstructors(All).FirstOrDefault(candidate => !candidate.IsStatic && candidate.GetParameters().Length == 0);
+        return constructor == null ? new ModelProgram(owner.Name, Array.Empty<ProgramStep>()) : new ModelProgram(owner.Name, new Reader(owner, read).Steps(constructor, depth: 0));
+    }
+
+    /// <summary>
     /// What a property of a card's type (or a base type's) returns, as a condition, read from its getter's code (Ftl.CanDrawCard: the plays
     /// finished this turn, fewer than PlayMax); null when there's no such property.
     /// </summary>

@@ -209,12 +209,14 @@ public class ReadModelParityTests
         nameof(SimModel.BeforeSideTurnStart), nameof(SimModel.AfterSideTurnStart), nameof(SimModel.AfterSideTurnStartLate), nameof(SimModel.AfterOrbChanneled),
         nameof(SimModel.ModifyHpLostBeforeOsty), nameof(SimModel.ModifyHpLostBeforeOstyLate), nameof(SimModel.ModifyHpLostAfterOsty), nameof(SimModel.ModifyHpLostAfterOstyLate),
         nameof(SimModel.AfterModifyingHpLost),
+        nameof(SimModel.ModifyOrbValue), nameof(SimModel.ModifyOrbPassiveTriggerCounts), nameof(SimModel.AfterModifyingOrbPassiveTriggerCount), nameof(SimModel.AfterOrbEvoked),
     };
 
     [Fact]
     public void EveryHookAReadModelAnswersHasScenarios()
     {
-        var answered = ReadModelsFile.Specs().SelectMany(spec => spec.Hooks).Select(program => ReadModel.SimHookOf(program.Hook)).Distinct();
+        // An orb's own programs aren't a listener's hooks (the engine runs them where OrbCmd and OrbQueue do): OrbParityTests holds them.
+        var answered = ReadModelsFile.Specs().Where(spec => spec.Kind != ModelKind.Orb).SelectMany(spec => spec.Hooks).Select(program => ReadModel.SimHookOf(program.Hook)).Distinct();
         Assert.All(answered, hook => Assert.Contains(hook, Hooks));
     }
 
@@ -477,8 +479,46 @@ public class ReadModelParityTests
                 foreach (var player in others.Where(Who.IsPlayer))
                     yield return ($"an orb channeled for {player}", (model, state) => Branches(model.AfterOrbChanneled(state, owner, player)));
                 break;
+            // The orbs' hooks (decision #214): every orb kind, each player's, front or not, from every value and count.
+            case nameof(SimModel.ModifyOrbValue):
+                foreach (var orb in Orbs(others))
+                    foreach (var value in new[] { -2m, 0m, 3m, 8m })
+                        yield return ($"{orb}, value {value}", (model, state) => Number(model.ModifyOrbValue(state, owner, orb, value)));
+                break;
+            case nameof(SimModel.ModifyOrbPassiveTriggerCounts):
+                foreach (var orb in Orbs(others))
+                    foreach (var count in new[] { 1, 2 })
+                        yield return ($"{orb}, count {count}", (model, state) => Number(model.ModifyOrbPassiveTriggerCounts(state, owner, orb, count)));
+                break;
+            case nameof(SimModel.AfterModifyingOrbPassiveTriggerCount):
+                foreach (var orb in Orbs(others))
+                    yield return ($"{orb}", (model, state) =>
+                    {
+                        model.AfterModifyingOrbPassiveTriggerCount(state, owner, orb);
+                        return Branches(new[] { state });
+                    });
+                break;
+            case nameof(SimModel.AfterOrbEvoked):
+                // An evoke of each kind by each player, its target alive, dead, or none.
+                foreach (var orb in Orbs(others))
+                    foreach (var targets in new[] { new[] { 0 }, new[] { 0, 1 }, Array.Empty<int>() })
+                        foreach (var killed in new[] { false, true })
+                            yield return ($"{orb}, targets {string.Join(",", targets)}{(killed ? ", the first dead" : "")}", (model, state) =>
+                            {
+                                if (killed && state.Enemy(0) is { } first) first.Hp = 0;
+                                state.OrbTargets = targets;
+                                return Branches(model.AfterOrbEvoked(state, owner, orb));
+                            });
+                break;
         }
     }
+
+    /// <summary>An orb of each kind of each player's, in front or not.</summary>
+    private static IEnumerable<OrbCtx> Orbs(IEnumerable<int> creatures) =>
+        from player in creatures.Where(Who.IsPlayer)
+        from kind in new[] { OrbKind.Lightning, OrbKind.Frost, OrbKind.Dark, OrbKind.Glass, OrbKind.Plasma }
+        from index in new[] { 0, 1 }
+        select new OrbCtx(player, index, kind);
 
     /// <summary>The hooks of the enemies' side's turn starting, in the game's order (CombatManager.StartTurn).</summary>
     private static readonly Func<SimModel, SimState, int, IEnumerable<SimState>>[] TurnStartHooks =

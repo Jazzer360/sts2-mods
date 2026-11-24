@@ -12,7 +12,7 @@ namespace SpireQoL.Combat;
 /// the cards its hooks bring back), its simulations' inputs (SimInputs: the start state and each aim's play) and their results per aim
 /// (each outcome, each enemy's death chance, the tabbed sources it sets off, its Frost block and evoke damage). Proc Indicators draws its
 /// tabs from it, Play Preview shows its outcome, and the play check holds what happened to it: every count the check compares is its
-/// simulation's (the play log: SimKeys.PlayEvent, PlayOrbChanneled, FrostEvokeBlock, OrbEvokeDamage), never a count decided on the
+/// simulation's (the play log: SimKeys.PlayEvent, PlayOrbChanneled, OrbEvokeBlock, OrbEvokeDamage), never a count decided on the
 /// board before the play.
 /// </summary>
 public sealed class CardPrediction

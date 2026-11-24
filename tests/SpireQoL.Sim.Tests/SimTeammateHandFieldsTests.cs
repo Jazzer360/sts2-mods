@@ -42,10 +42,8 @@ public class SimTeammateHandFieldsTests
         // Auto-plays from their piles: Howl from Beyond in their exhaust pile (you can view it), I Am Invincible when every card
         // in their draw pile is one (its count and contents are viewable; the order doesn't matter then).
         nameof(SimPlayer.ExhaustAutoPlays), nameof(SimPlayer.InvincibleBlock), nameof(SimPlayer.InvincibleDrawPile),
-        nameof(SimPlayer.Orbs), nameof(SimPlayer.OrbCapacity), nameof(SimPlayer.SlotOnFirstChannel), nameof(SimPlayer.Thunder),
-        nameof(SimPlayer.FrontOrbBonusTriggers),
+        nameof(SimPlayer.Orbs), nameof(SimPlayer.OrbCapacity), nameof(SimPlayer.SlotOnFirstChannel),
         nameof(SimPlayer.BlockGains), 
-        nameof(SimPlayer.Focus), 
         nameof(SimPlayer.OstyHp), nameof(SimPlayer.OstyShields), nameof(SimPlayer.WuppyHp), nameof(SimPlayer.Hp), nameof(SimPlayer.MaxHp),
         nameof(SimPlayer.Fairies), nameof(SimPlayer.FairyHeal), nameof(SimPlayer.LizardTailHeal), // their potions and relics are on screen
         nameof(SimPlayer.Taken), nameof(SimPlayer.Through), nameof(SimPlayer.OstyTaken), nameof(SimPlayer.Incoming),

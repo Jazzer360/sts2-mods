@@ -124,7 +124,17 @@ public class HookGapTests
                 var type = betaTypes.GetValueOrDefault(name) ?? mainTypes[name];
                 var code = betaTypes.ContainsKey(name) ? beta : main;
                 var (category, how) = HandledBy(name, kind, sources);
-                var readings = HookReader.ReadEffects(type, code.Read);
+                // An orb is read from its code (decision #214): read whole, the engine runs its programs; else its gaps, where the reader stops.
+                if (kind == "orb" && HookReader.ReadOrb(type, code.Read) is var orbReading)
+                {
+                    if (orbReading.Whole)
+                    {
+                        handled["read from its code"] = handled.GetValueOrDefault("read from its code") + 1;
+                        lines.Add($"{name} ({branches}; read from its code (ReadModel); {how}): {string.Join(" | ", orbReading.Hooks.Select(hook => hook.NotRun != null ? $"{hook.Hook}: not run ({hook.NotRun})" : $"{hook.Hook}: read"))}");
+                        continue;
+                    }
+                }
+                var readings = kind == "orb" ? HookReader.ReadOrb(type, code.Read).Hooks : HookReader.ReadEffects(type, code.Read);
                 var gaps = new List<(string Capability, string Gap)>();
                 var parts = new List<string>();
                 foreach (var reading in readings)
@@ -182,9 +192,9 @@ public class HookGapTests
     {
         var how = new List<string>();
         var category = "not modelled by name";
-        if (kind == "orb" && Enum.TryParse<OrbKind>(name.EndsWith("Orb", StringComparison.Ordinal) ? name[..^3] : name, out var orb) && orb is not (OrbKind.Unknown or OrbKind.Random))
+        if (kind == "orb" && HookReader.OrbKindOf(name) is { } orb)
         {
-            how.Add($"the engine's rules for OrbKind.{orb}");
+            how.Add($"OrbKind.{orb}");
             category = "a simulator kind of its own";
         }
         if (kind == "affliction" && Enum.TryParse<SimAffliction>(name, out var affliction) && affliction != SimAffliction.Other)

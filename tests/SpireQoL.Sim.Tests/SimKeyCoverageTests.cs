@@ -28,10 +28,10 @@ public class SimKeyCoverageTests
         ["SimEnemy.Name"] = Constant, ["SimEnemy.Hittable"] = Constant, ["SimEnemy.Imbalanced"] = Constant, ["SimEnemy.Intent"] = Constant,
         ["SimEnemy.TeammateHits"] = Constant, ["SimEnemy.StartedAlive"] = Constant,
         ["SimEnemy.Explosive"] = Constant, ["SimEnemy.ExplosiveOnTeammates"] = Constant, ["SimEnemy.PoisonTriggers"] = Constant,
-        ["SimPlayer.Reflect"] = Constant, ["SimPlayer.SlotOnFirstChannel"] = Constant, ["SimPlayer.FrontOrbBonusTriggers"] = Constant,
+        ["SimPlayer.Reflect"] = Constant, ["SimPlayer.SlotOnFirstChannel"] = Constant,
         ["SimPlayer.OstyShields"] = Constant, ["SimPlayer.FairyHeal"] = Constant, ["SimPlayer.BeaconOfHope"] = Constant,
         ["SimPlayer.Stampede"] = Constant, ["SimPlayer.Simpleton"] = Constant, ["SimPlayer.ExhaustAutoPlays"] = Constant,
-        ["SimOrb.Triggers"] = Constant, ["SimPlayer.MadeCards"] = Constant, ["SimEnemy.Spawns"] = Constant, ["SimEnemy.Move"] = Constant, ["SimPlayer.Cards"] = Constant,
+        ["SimPlayer.MadeCards"] = Constant, ["SimEnemy.Spawns"] = Constant, ["SimEnemy.Move"] = Constant, ["SimPlayer.Cards"] = Constant,
         // Per-play results, merged.
         ["SimState.PlayHpReached"] = Merged, ["SimState.PlayHpLosses"] = Merged, ["SimState.PlayHpLost"] = Merged,
         ["SimState.PlayBiggestHit"] = Merged, ["SimState.Fired"] = Merged, ["SimState.FiredAny"] = Merged, ["SimState.Flashed"] = Merged, ["SimState.FlashedAny"] = Merged,
@@ -41,6 +41,7 @@ public class SimKeyCoverageTests
         ["SimState.EndOfTurnNow"] = Scratch, ["SimState.Bound"] = Scratch, ["SimState.Pending"] = Scratch, ["SimState.PendingIntoDraw"] = Scratch, ["SimState.PendingSpawns"] = Scratch, ["SimState.PendingPowers"] = Scratch, ["SimState.AttackDealt"] = Scratch, ["SimState.ArrowAwayAt"] = Scratch,
         ["SimState.EventCard"] = Scratch, ["SimState.PlayEvents"] = Scratch, ["SimState.PlayCardBlockGains"] = Scratch,
         ["SimState.DrawRecord"] = "in the key while it's set (as a set: decision #120); null between steps",
+        ["SimState.OrbTargets"] = "in the key while it's set (an evoke's targets until AfterOrbEvoked); null between steps",
         ["SimState.FirstHits"] = "the damage-formula audit's first hit on each enemy: the outcome keeps it only when every branch has the same",
         // Display logs: the first merged branch's breakdown is shown (Incoming Damage's own run).
         ["SimState.EndOfTurnBlock"] = "Incoming Damage's breakdown: the first merged branch's", ["SimState.Blockable"] = "Incoming Damage's breakdown",

@@ -51,8 +51,8 @@ public static class SimKeys
     /// <summary>Block gains from card plays this turn (Unmovable counts the earlier ones).</summary>
     public const string CardBlock = "CardBlock";
 
-    /// <summary>Block a play gave its player from evoking Frost orbs (the log's amount), for the play audit's block check.</summary>
-    public const string FrostEvokeBlock = "FrostOrb";
+    /// <summary>Block a play gave its player from evoking orbs (Frost's: the log's amount), for the play audit's block check.</summary>
+    public const string OrbEvokeBlock = "OrbEvokeBlock";
 
     /// <summary>Damage a play's orb evokes dealt the enemies (block and HP: the log's amount), for the play audit's damage with no card.</summary>
     public const string OrbEvokeDamage = "OrbEvokeDamage";

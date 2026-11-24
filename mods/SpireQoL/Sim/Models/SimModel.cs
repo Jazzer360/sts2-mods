@@ -351,6 +351,14 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> AfterArrowImpaled(SimState state, int owner, int target, int shooter) => One(state);
     /// <summary>An orb was channeled for a player (AfterOrbChanneled): Metronome.</summary>
     public virtual IEnumerable<SimState> AfterOrbChanneled(SimState state, int owner, int player) => One(state);
+    /// <summary>Hook.ModifyOrbValue: an orb's value as this listener leaves it (Focus, Infused Core). Pure: reads the state, changes nothing.</summary>
+    public virtual decimal ModifyOrbValue(SimState state, int owner, OrbCtx orb, decimal value) => value;
+    /// <summary>Hook.ModifyOrbPassiveTriggerCount: how many times an orb's passive goes off (Gold-Plated Cables on the front orb). Pure.</summary>
+    public virtual int ModifyOrbPassiveTriggerCounts(SimState state, int owner, OrbCtx orb, int count) => count;
+    /// <summary>Hook.AfterModifyingOrbPassiveTriggerCount: this listener changed the count (a flash).</summary>
+    public virtual void AfterModifyingOrbPassiveTriggerCount(SimState state, int owner, OrbCtx orb) { }
+    /// <summary>Hook.AfterOrbEvoked: an orb was evoked, having acted on <see cref="SimState.OrbTargets"/> (Thunder).</summary>
+    public virtual IEnumerable<SimState> AfterOrbEvoked(SimState state, int owner, OrbCtx orb) => One(state);
     /// <summary>A power landed on a creature (after Artifact): Sleight of Flesh, Vicious, Shroud.</summary>
     public virtual IEnumerable<SimState> AfterPowerApplied(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff) => One(state);
     /// <summary>A creature died (AfterDeath; once per death): Crab Rage, Ravenous.</summary>
@@ -441,8 +449,11 @@ public static class SimModels
         catch (AggregateException) { return true; } // a failed read is rethrown by the first ask
     }
 
-    /// <summary>The models and the classes whose hooks couldn't be read, made once and never changed after (shared by every thread).</summary>
-    private sealed record LoadedModels(IReadOnlyDictionary<string, SimModel> ByName, IReadOnlyDictionary<string, string> Unread);
+    /// <summary>
+    /// The models and the classes whose hooks couldn't be read, made once and never changed after (shared by every thread); the orbs' programs by
+    /// their kind (an orb is never a listener: the engine runs its programs where OrbCmd and OrbQueue do).
+    /// </summary>
+    private sealed record LoadedModels(IReadOnlyDictionary<string, SimModel> ByName, IReadOnlyDictionary<string, string> Unread, IReadOnlyDictionary<OrbKind, ReadModel> Orbs);
 
     private static readonly Lazy<LoadedModels> Models = new(() => _reading?.GetAwaiter().GetResult() ?? Load(), LazyThreadSafetyMode.ExecutionAndPublication);
 
@@ -468,18 +479,32 @@ public static class SimModels
     {
         var byName = new Dictionary<string, SimModel>(HandWrittenByName.Value, StringComparer.Ordinal);
         var unread = new Dictionary<string, string>(StringComparer.Ordinal);
+        var orbs = new Dictionary<OrbKind, ReadModel>();
         // A read model never stands in for a hand-written one: a class is one or the other (the reader skips a hand-written class: ReadModels).
         foreach (var spec in Read?.Invoke() ?? Enumerable.Empty<ModelSpec>())
         {
             if (byName.ContainsKey(spec.Name)) continue;
             if (spec.Unread != null) { unread[spec.Name] = spec.Unread; continue; }
+            if (spec.Kind == ModelKind.Orb)
+            {
+                try { if (spec.Orb is { } kind) orbs[kind] = new ReadModel(spec); }
+                catch (InvalidOperationException exception) { unread[spec.Name] = $"{spec.Name}'s code couldn't be compiled ({exception.Message}): what it does isn't simulated"; }
+                continue;
+            }
             // A program the simulator can't compile (a command on a creature its engine functions don't name) is the class unread, never a
             // failure of every model (decision #92).
             try { byName.Add(spec.Name, new ReadModel(spec)); }
             catch (InvalidOperationException exception) { unread[spec.Name] = $"{spec.Name}'s hooks couldn't be compiled ({exception.Message}): what it does isn't simulated"; }
         }
-        return new LoadedModels(byName, unread);
+        return new LoadedModels(byName, unread, orbs);
     }
+
+    /// <summary>An orb kind's programs read from its class's code (ModelKind.Orb), or null: not read (an unread class: <see cref="OrbUnreadReason"/>).</summary>
+    public static ReadModel? Orb(OrbKind kind) => Models.Value.Orbs.GetValueOrDefault(kind);
+
+    /// <summary>Why an orb kind's class couldn't be read (its class's name: the kind and "Orb"), or a reason the orb isn't simulated.</summary>
+    public static string OrbUnreadReason(OrbKind kind) =>
+        UnreadReason(kind + "Orb") ?? $"{kind}Orb's code isn't read: what it does isn't simulated";
 
     /// <summary>The class has a hand-written model (Sim/Models): it keeps it until a parity proof converts it (decision #195), so it isn't read.</summary>
     public static bool IsHandWritten(string name) => HandWrittenByName.Value.ContainsKey(name);

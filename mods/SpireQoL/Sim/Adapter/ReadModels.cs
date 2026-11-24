@@ -52,6 +52,25 @@ public static partial class ReadModels
             specs.Add(new ModelSpec(type.Name, reading.Spec.Kind, Array.Empty<HookProgram>()) { Unread = why });
             unread?.Invoke(type.Name, why);
         }
+        // The orbs (decision #214): every orb class read whole is the engine's to run; one read whole at the reviewed builds that isn't now is unread.
+        foreach (var type in HookReader.Orbs(all).OrderBy(type => type.Name, StringComparer.Ordinal))
+        {
+            ModelReading reading;
+            try { reading = HookReader.ReadOrb(type, read); }
+            catch (Exception exception)
+            {
+                reading = new ModelReading(new ModelSpec(type.Name, ModelKind.Orb, Array.Empty<HookProgram>()), new[] { new HookReading("(the class)", $"gap: not read ({exception.GetType().Name}: {exception.Message})") });
+            }
+            if (reading.Whole && Compiles(reading.Spec) is null)
+            {
+                specs.Add(reading.Spec);
+                continue;
+            }
+            if (!ReadWholeAtReview.Contains(type.Name)) continue;
+            var why = $"{type.Name}'s code couldn't be read from the game (a game update?): what it does isn't simulated ({string.Join("; ", reading.Gaps)})";
+            specs.Add(new ModelSpec(type.Name, ModelKind.Orb, Array.Empty<HookProgram>()) { Orb = HookReader.OrbKindOf(type.Name), Unread = why });
+            unread?.Invoke(type.Name, why);
+        }
         return specs;
     }
 

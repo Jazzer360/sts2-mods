@@ -7,7 +7,7 @@ namespace SpireQoL.Sim;
 public static partial class ReadModels
 {
     /// <summary>
-    /// The power and relic classes modelled from their code whose hooks read whole on both reviewed builds (SupportedVersions): one that
+    /// The power, relic and orb classes modelled from their code whose hooks read whole on both reviewed builds (SupportedVersions): one that
     /// doesn't read whole in the running game is a game update's change, reported, and every simulation it's in is unknown (decision #92).
     /// </summary>
     internal static readonly IReadOnlySet<string> ReadWholeAtReview = new HashSet<string>(StringComparer.Ordinal)
@@ -33,6 +33,7 @@ public static partial class ReadModels
         PowerId.CrabRage.Name,
         PowerId.DanseMacabre.Name,
         PowerId.DarkEmbrace.Name,
+        nameof(MegaCrit.Sts2.Core.Models.Orbs.DarkOrb),
         RelicId.DaughterOfTheWind.Name,
         PowerId.Debilitate.Name,
         PowerId.Demise.Name,
@@ -44,14 +45,19 @@ public static partial class ReadModels
         PowerId.EchoForm.Name,
         PowerId.Enrage.Name,
         PowerId.Envenom.Name,
+        PowerId.EscapeArtist.Name,
         RelicId.FakeOrichalcum.Name,
         PowerId.FeelNoPain.Name,
         RelicId.Fertilizer.Name,
         PowerId.Flanking.Name,
+        PowerId.Focus.Name,
         RelicId.ForgottenSoul.Name,
         PowerId.Frail.Name,
+        nameof(MegaCrit.Sts2.Core.Models.Orbs.FrostOrb),
         RelicId.GalacticDust.Name,
         RelicId.GamePiece.Name,
+        nameof(MegaCrit.Sts2.Core.Models.Orbs.GlassOrb),
+        RelicId.GoldPlatedCables.Name,
         PowerId.Gravity.Name,
         RelicId.GremlinHorn.Name,
         PowerId.Guarded.Name,
@@ -62,6 +68,7 @@ public static partial class ReadModels
         PowerId.HiddenRoots.Name,
         PowerId.HighVoltage.Name,
         PowerId.Inferno.Name,
+        RelicId.InfusedCore.Name,
         RelicId.IntimidatingHelmet.Name,
         RelicId.IronClub.Name,
         PowerId.Iteration.Name,
@@ -73,6 +80,7 @@ public static partial class ReadModels
         PowerId.LagavulinMatriarchDominion.Name,
         PowerId.Leadership.Name,
         RelicId.LetterOpener.Name,
+        nameof(MegaCrit.Sts2.Core.Models.Orbs.LightningOrb),
         RelicId.LostWisp.Name,
         PowerId.Lullaby.Name,
         RelicId.LunarPastry.Name,
@@ -95,6 +103,7 @@ public static partial class ReadModels
         PowerId.Panache.Name,
         RelicId.Permafrost.Name,
         PowerId.PillarOfCreation.Name,
+        nameof(MegaCrit.Sts2.Core.Models.Orbs.PlasmaOrb),
         PowerId.Poison.Name,
         PowerId.PrepTime.Name,
         PowerId.Rage.Name,
@@ -129,6 +138,7 @@ public static partial class ReadModels
         RelicId.TheBoot.Name,
         PowerId.TheSealedThrone.Name,
         RelicId.ThrowingAxe.Name,
+        PowerId.Thunder.Name,
         RelicId.Tingsha.Name,
         RelicId.ToughBandages.Name,
         PowerId.Tracking.Name,

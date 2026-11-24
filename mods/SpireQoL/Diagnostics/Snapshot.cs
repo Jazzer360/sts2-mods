@@ -87,7 +87,7 @@ public static class Snapshot
 
     /// <summary>
     /// What the mod expects a play of a card to do (CardPrediction), for reports: the card play it simulated, and at the target given (none: its
-    /// first aim) its simulation's counts over its outcomes, fewest-most (SimKeys.PlayEvent, PlayOrbChanneled, FrostEvokeBlock, OrbEvokeDamage).
+    /// first aim) its simulation's counts over its outcomes, fewest-most (SimKeys.PlayEvent, PlayOrbChanneled, OrbEvokeBlock, OrbEvokeDamage).
     /// </summary>
     public static string PredictionLine(SpireQoL.Combat.CardPrediction prediction, Creature? target = null)
     {
@@ -100,7 +100,7 @@ public static class Snapshot
                     + Range("created", prediction.Logged(SpireQoL.Sim.SimKeys.PlayEvent(SpireQoL.Sim.CardEvent.Generated), target))
                     + Range("orbs channeled", prediction.Logged(SpireQoL.Sim.SimKeys.PlayOrbChanneled, target))
                     + Range("orb evoke damage", prediction.LoggedAmount(SpireQoL.Sim.SimKeys.OrbEvokeDamage, target))
-                    + Range("orb evoke block", prediction.LoggedAmount(SpireQoL.Sim.SimKeys.FrostEvokeBlock, target));
+                    + Range("orb evoke block", prediction.LoggedAmount(SpireQoL.Sim.SimKeys.OrbEvokeBlock, target));
     }
 
     private static string Powers(Creature creature) => creature.Powers.Count == 0 ? "none" : string.Join(", ", creature.Powers.Select(power => $"{power.GetType().Name} {power.Amount}"));

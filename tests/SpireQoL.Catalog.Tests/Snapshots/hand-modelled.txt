@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 18 engine rules naming 133 game methods; 5 adapter rules; 106 hand-written models.
+# 18 engine rules naming 125 game methods; 5 adapter rules; 106 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -28,9 +28,9 @@ Cards leaving and joining piles mid-play: taken, discarded, exhausted, made; the
 Auto-plays: from the top of the draw pile, from the hand at the turn's end, the cards that play themselves
   game: CardPileCmd.AutoPlayFromDrawPile, CardCmd.AutoPlay, Hook.BeforeCardAutoPlayed, Hook.AfterAutoPostPlayPhaseEntered, HellraiserPower.AfterCardDrawnEarly, IAmInvincible.AfterAutoPostPlayPhaseEntered
   simulator: SimEngine.AutoPlayFromDraw, SimEngine.AutoPlayTop, SimEngine.PlayFromPile, SimEngine.HellraiserPlays, SimEngine.InvincibleFromPile, SimEngine.AutoPlayFromHand, SimEngine.AutoPostPlay, SimEngine.AutoPostPlayOf
-Orbs: channelled, evoked, their passives at the turn's end, Focus on their values, the slots
-  game: OrbCmd.Channel, OrbCmd.Evoke, OrbCmd.EvokeLast, OrbCmd.EvokeNext, OrbCmd.Passive, OrbCmd.AddSlots, OrbQueue.BeforeTurnEnd, OrbModel.GetRandomOrb, OrbModel.TriggerPassive, LightningOrb.Passive, LightningOrb.Evoke, FrostOrb.Passive, FrostOrb.Evoke, DarkOrb.Passive, DarkOrb.Evoke, GlassOrb.Passive, GlassOrb.Evoke, PlasmaOrb.AfterTurnStartOrbTrigger, PlasmaOrb.Evoke, FocusPower.ModifyOrbValue, Hook.ModifyOrbValue, Hook.AfterOrbChanneled, Hook.AfterOrbEvoked, Hook.ModifyOrbPassiveTriggerCount
-  simulator: SimEngine.FreshOrb, SimEngine.ChannelOrb, SimEngine.ChannelKind, SimEngine.RunOrb, SimEngine.Evoke, SimEngine.EvokeLast, SimEngine.OrbPassives, SimEngine.ChangeFocus
+Orbs: the slots, a channel into them (the front one evoked when they're full), an evoke out of them, the passives' order at the turn's end, TriggerPassive's count and its loop, a random orb, and the orb hooks' pipelines; an orb's damage and block as its code's commands run them (each orb's own Passive, Evoke and values are read from its code, and Focus, Infused Core, Thunder and Gold-Plated Cables from theirs: decision #214)
+  game: OrbCmd.Channel, OrbCmd.Evoke, OrbCmd.EvokeLast, OrbCmd.EvokeNext, OrbCmd.Passive, OrbCmd.AddSlots, OrbCmd.RemoveSlots, OrbQueue.BeforeTurnEnd, OrbModel.GetRandomOrb, OrbModel.TriggerPassive, OrbModel.ModifyOrbValue, Hook.ModifyOrbValue, Hook.AfterOrbChanneled, Hook.AfterOrbEvoked, Hook.ModifyOrbPassiveTriggerCount, Hook.AfterModifyingOrbPassiveTriggerCount
+  simulator: SimEngine.FreshOrb, SimEngine.ChannelOrb, SimEngine.ChannelKind, SimEngine.RunOrb, SimEngine.Evoke, SimEngine.EvokeLast, SimEngine.OrbPassives, SimEngine.ChangeFocus, SimEngine.OrbValue, SimEngine.OrbValuesAgain, SimEngine.OrbDamage, SimEngine.OrbBlock
 Arrows: shot, impaled, knocked loose
   game: ArrowCmd.ShootArrowAtTarget (beta only), ArrowCmd.ImpaleTarget (beta only), ArrowCmd.DislodgeArrow (beta only), ArrowCmd.RetrieveArrow (beta only), Hook.AfterArrowShot (beta only), Hook.AfterArrowImpaled (beta only), Hook.AfterArrowDislodged (beta only)
   simulator: SimEngine.IsImpaled, SimEngine.RunShoot, SimEngine.RunImpale, SimEngine.RunDislodgeAll, SimEngine.Dislodge, SimEngine.PlaysStartingImpaled, SimEngine.TakeArrows

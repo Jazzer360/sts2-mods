@@ -194,7 +194,7 @@ public class SimReactionTests
         // From a real fight: Lightning 3/8 and Glass 2/4 at 0 Focus; Hyperbeam takes 3 Focus:
         // the game showed Lightning 0/5 and Glass 0/0 afterwards.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 60) } };
-        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 2, Evoke = 4, GlassBase = 2 }, new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 2, Evoke = 4, Fields = NamedCounts.Empty.With("_passiveVal", amount: 2) }, new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
         state.You.OrbCapacity = 3;
         SimEngine.ApplyPlayTo(state, new SimPlay { Name = "Hyperbeam", FocusDelta = -3 }, out var states, out _);
         var orbs = states[0].You.Orbs;

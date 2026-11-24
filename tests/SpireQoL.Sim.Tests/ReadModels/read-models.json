@@ -2119,6 +2119,89 @@
     "HelpsOwner": false
   },
   {
+    "Name": "DarkOrb",
+    "Kind": "Orb",
+    "Hooks": [
+      {
+        "Hook": "Evoke",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "WeakestEnemy",
+            "Amount": {
+              "$kind": "HookOrbProperty",
+              "Property": "EvokeVal"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CEvoke\u003Ed__11.MoveNext:0026",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "NotEqual",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "HittableEnemyCount"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "Passive",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "_evokeVal",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "_evokeVal"
+              },
+              "Right": {
+                "$kind": "HookOrbProperty",
+                "Property": "PassiveVal"
+              }
+            },
+            "When": {
+              "$kind": "HookConstant",
+              "Value": 1
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Orb": "Dark",
+    "PassiveAt": "TurnEnd",
+    "OrbValues": {
+      "PassiveVal": {
+        "$kind": "HookOrbValue",
+        "Base": {
+          "$kind": "HookConstant",
+          "Value": 6
+        }
+      }
+    },
+    "OrbAliases": {
+      "_evokeVal": "EvokeVal"
+    },
+    "Starts": {
+      "_evokeVal": 6
+    }
+  },
+  {
     "Name": "DaughterOfTheWind",
     "Kind": "Relic",
     "Hooks": [
@@ -3145,6 +3228,52 @@
     "HelpsOwner": false
   },
   {
+    "Name": "EscapeArtistPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__4.MoveNext:0022",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__4.MoveNext:0030",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "Amount"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "FakeOrichalcum",
     "Kind": "Relic",
     "Hooks": [
@@ -3477,6 +3606,65 @@
     "Copies": "EachApplication"
   },
   {
+    "Name": "FocusPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ModifyOrbValue",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "FocusPower.ModifyOrbValue:0011",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OrbIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "OrbValueSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Max",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "Add",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OrbValueSoFar"
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "ForgottenSoul",
     "Kind": "Relic",
     "Hooks": [
@@ -3582,6 +3770,167 @@
       }
     ],
     "HelpsOwner": false
+  },
+  {
+    "Name": "FrostOrb",
+    "Kind": "Orb",
+    "Hooks": [
+      {
+        "Hook": "Evoke",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookOrbProperty",
+              "Property": "EvokeVal"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            }
+          },
+          {
+            "$kind": "ForEachStep",
+            "Over": "Players",
+            "Steps": [
+              {
+                "$kind": "GainBlockStep",
+                "Amount": {
+                  "$kind": "HookOrbProperty",
+                  "Property": "EvokeVal"
+                },
+                "Props": {
+                  "$kind": "HookConstant",
+                  "Value": 4
+                },
+                "To": "Each",
+                "When": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CEvoke\u003Ed__10.MoveNext:00F1",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "SameCreature",
+                      "Creature": {
+                        "Who": "Each",
+                        "PetOwner": false
+                      },
+                      "Other": {
+                        "Who": "Owner",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CEvoke\u003Ed__10.MoveNext:00B7",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "CreatureHasPower",
+                "Of": "HibernatePower",
+                "Creature": {
+                  "Who": "Owner",
+                  "PetOwner": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "Passive",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookOrbProperty",
+              "Property": "PassiveVal"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "When": {
+              "$kind": "HookConstant",
+              "Value": 1
+            }
+          },
+          {
+            "$kind": "ForEachStep",
+            "Over": "Players",
+            "Steps": [
+              {
+                "$kind": "GainBlockStep",
+                "Amount": {
+                  "$kind": "HookOrbProperty",
+                  "Property": "PassiveVal"
+                },
+                "Props": {
+                  "$kind": "HookConstant",
+                  "Value": 4
+                },
+                "To": "Each",
+                "When": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CPassive\u003Ed__9.MoveNext:00EE",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "SameCreature",
+                      "Creature": {
+                        "Who": "Each",
+                        "PetOwner": false
+                      },
+                      "Other": {
+                        "Who": "Owner",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CPassive\u003Ed__9.MoveNext:00B6",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "CreatureHasPower",
+                "Of": "HibernatePower",
+                "Creature": {
+                  "Who": "Owner",
+                  "PetOwner": false
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Orb": "Frost",
+    "PassiveAt": "TurnEnd",
+    "OrbValues": {
+      "EvokeVal": {
+        "$kind": "HookOrbValue",
+        "Base": {
+          "$kind": "HookConstant",
+          "Value": 5
+        }
+      },
+      "PassiveVal": {
+        "$kind": "HookOrbValue",
+        "Base": {
+          "$kind": "HookConstant",
+          "Value": 2
+        }
+      }
+    }
   },
   {
     "Name": "GalacticDust",
@@ -3860,6 +4209,243 @@
       }
     ],
     "Tab": "Draw",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "GlassOrb",
+    "Kind": "Orb",
+    "Hooks": [
+      {
+        "Hook": "Evoke",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookOrbProperty",
+              "Property": "EvokeVal"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookNot",
+              "Inner": {
+                "$kind": "HookTest",
+                "At": "\u003CEvoke\u003Ed__11.MoveNext:005E",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookOrbProperty",
+                    "Property": "EvokeVal"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "Passive",
+        "Steps": [
+          {
+            "$kind": "LetStep",
+            "Name": "local79",
+            "Value": {
+              "$kind": "HookOrbProperty",
+              "Property": "PassiveVal"
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "_passiveVal",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Max",
+              "Left": {
+                "$kind": "HookConstant",
+                "Value": 0
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "Subtract",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "_passiveVal"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                }
+              }
+            },
+            "When": {
+              "$kind": "HookNot",
+              "Inner": {
+                "$kind": "HookTest",
+                "At": "\u003CPassive\u003Ed__10.MoveNext:005B",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookOrbProperty",
+                    "Property": "PassiveVal"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookLocal",
+              "Name": "local79"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookNot",
+              "Inner": {
+                "$kind": "HookTest",
+                "At": "\u003CPassive\u003Ed__10.MoveNext:005B",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookLocal",
+                    "Name": "local79"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Orb": "Glass",
+    "PassiveAt": "TurnEnd",
+    "OrbValues": {
+      "EvokeVal": {
+        "$kind": "HookMath",
+        "Operation": "Multiply",
+        "Left": {
+          "$kind": "HookOrbValue",
+          "Base": {
+            "$kind": "HookField",
+            "Field": "_passiveVal"
+          }
+        },
+        "Right": {
+          "$kind": "HookConstant",
+          "Value": 2
+        }
+      },
+      "PassiveVal": {
+        "$kind": "HookOrbValue",
+        "Base": {
+          "$kind": "HookField",
+          "Field": "_passiveVal"
+        }
+      }
+    },
+    "Starts": {
+      "_passiveVal": 4
+    }
+  },
+  {
+    "Name": "GoldPlatedCables",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterModifyingOrbPassiveTriggerCount",
+        "Steps": [
+          {
+            "$kind": "FlashStep"
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyOrbPassiveTriggerCounts",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "GoldPlatedCables.ModifyOrbPassiveTriggerCounts:000C",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OrbIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "TriggerCountSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "GoldPlatedCables.ModifyOrbPassiveTriggerCounts:002C",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OrbIsFront"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "TriggerCountSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Add",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TriggerCountSoFar"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
     "HelpsOwner": false
   },
   {
@@ -4515,6 +5101,76 @@
       }
     ],
     "Tab": "Damage",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "InfusedCore",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "ModifyOrbValue",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "InfusedCore.ModifyOrbValue:000C",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OrbIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "OrbValueSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "InfusedCore.ModifyOrbValue:0016",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OrbIs",
+                    "Of": "Lightning"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "OrbValueSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Add",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OrbValueSoFar"
+                },
+                "Right": {
+                  "$kind": "HookVar",
+                  "Key": "ExtraDamage",
+                  "Canonical": 1
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
     "HelpsOwner": false
   },
   {
@@ -5995,6 +6651,99 @@
     ],
     "Tab": "Damage",
     "HelpsOwner": false
+  },
+  {
+    "Name": "LightningOrb",
+    "Kind": "Orb",
+    "Hooks": [
+      {
+        "Hook": "Evoke",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "RandomEnemy",
+            "Amount": {
+              "$kind": "HookOrbProperty",
+              "Property": "EvokeVal"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CApplyLightningDamage\u003Ed__15.MoveNext:005A",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "NotEqual",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "HittableEnemyCount"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "Passive",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "RandomEnemy",
+            "Amount": {
+              "$kind": "HookOrbProperty",
+              "Property": "PassiveVal"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CApplyLightningDamage\u003Ed__15.MoveNext:005A",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "NotEqual",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "HittableEnemyCount"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Orb": "Lightning",
+    "PassiveAt": "TurnEnd",
+    "OrbValues": {
+      "EvokeVal": {
+        "$kind": "HookOrbValue",
+        "Base": {
+          "$kind": "HookConstant",
+          "Value": 8
+        }
+      },
+      "PassiveVal": {
+        "$kind": "HookOrbValue",
+        "Base": {
+          "$kind": "HookConstant",
+          "Value": 3
+        }
+      }
+    }
   },
   {
     "Name": "LostWisp",
@@ -11228,6 +11977,53 @@
     "HelpsOwner": false
   },
   {
+    "Name": "PlasmaOrb",
+    "Kind": "Orb",
+    "Hooks": [
+      {
+        "Hook": "Evoke",
+        "Steps": [
+          {
+            "$kind": "GainEnergyStep",
+            "Amount": {
+              "$kind": "HookOrbProperty",
+              "Property": "EvokeVal"
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "Passive",
+        "Steps": [
+          {
+            "$kind": "GainEnergyStep",
+            "Amount": {
+              "$kind": "HookOrbProperty",
+              "Property": "PassiveVal"
+            },
+            "When": {
+              "$kind": "HookConstant",
+              "Value": 1
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Orb": "Plasma",
+    "PassiveAt": "TurnStart",
+    "OrbValues": {
+      "EvokeVal": {
+        "$kind": "HookConstant",
+        "Value": 2
+      },
+      "PassiveVal": {
+        "$kind": "HookConstant",
+        "Value": 1
+      }
+    }
+  },
+  {
     "Name": "PoisonPower",
     "Kind": "Power",
     "Hooks": [
@@ -15897,6 +16693,77 @@
         }
       }
     ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "ThunderPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterOrbEvoked",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterOrbEvoked\u003Ed__6.MoveNext:0031",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OrbIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterOrbEvoked\u003Ed__6.MoveNext:0043",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OrbIs",
+                  "Of": "Lightning"
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DamageStep",
+            "Target": "EvokeTargets",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterOrbEvoked\u003Ed__6.MoveNext:0031",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OrbIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterOrbEvoked\u003Ed__6.MoveNext:0043",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OrbIs",
+                  "Of": "Lightning"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage",
     "HelpsOwner": false
   },
   {

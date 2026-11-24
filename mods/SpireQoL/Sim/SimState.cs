@@ -38,28 +38,28 @@ public enum OrbKind
     Random,
 }
 
+/// <summary>
+/// An orb in a player's slots, as its class's code keeps it (decision #214): its kind, its own fields (GlassOrb's _passiveVal, the number its passive
+/// lowers), and its values as the game shows them (its PassiveVal and EvokeVal getters through Hook.ModifyOrbValue: the adapter reads them, and the
+/// engine works them out again from the getters' code, ModelSpec.OrbValues, when an orb is channelled and whenever what they read changes). A value
+/// whose getter is one of its fields (DarkOrb's EvokeVal is _evokeVal) is kept only as the value.
+/// </summary>
 public sealed class SimOrb
 {
     public OrbKind Kind;
+    /// <summary>Its PassiveVal as the game shows it now.</summary>
     public int Passive;
+    /// <summary>Its EvokeVal as the game shows it now.</summary>
     public int Evoke;
-    /// <summary>Passive triggers at end of turn (Hook.ModifyOrbPassiveTriggerCount).</summary>
-    public int Triggers = 1;
-
-    /// <summary>
-    /// Glass only: the stored base value (GlassOrb._passiveVal, starts at 4) and what Focus adds to it.
-    /// Passive = max(0, base + bonus); each passive firing lowers the BASE by 1 (not below 0), so a fully
-    /// decayed Glass orb still deals your Focus. Evoke = 2 x passive.
-    /// </summary>
-    public int GlassBase;
-    public int GlassBonus;
+    /// <summary>Its own fields its code reads and stores (GlassOrb's _passiveVal), but a value's own (ModelSpec.OrbAliases).</summary>
+    public NamedCounts Fields = NamedCounts.Empty;
 
     public SimOrb Clone() => (SimOrb)MemberwiseClone();
 
     /// <summary>For branch keys (SimState.Key): every number of the orb.</summary>
     internal void Hash(Action<long> add)
     {
-        add((int)Kind); add(Passive); add(Evoke); add(Triggers); add(GlassBase); add(GlassBonus);
+        add((int)Kind); add(Passive); add(Evoke); Fields.Hash(add);
     }
 }
 
@@ -416,10 +416,8 @@ public sealed class SimPlayer
     /// (OrbCmd.Channel → AddSlots 1). A Defect whose slots are all gone channels nothing.
     /// </summary>
     public bool SlotOnFirstChannel;
-    /// <summary>Thunder: damage (unpowered) to each Lightning evoke's target that's still alive (ThunderPower.AfterOrbEvoked; 0 = none).</summary>
-    public int Thunder;
-    /// <summary>Extra passive triggers for whichever orb is in front when it fires (Gold-Plated Cables).</summary>
-    public int FrontOrbBonusTriggers;
+    /// <summary>Thunder (ThunderPower, its amount): read from its code, its AfterOrbEvoked hits each Lightning evoke's living targets again.</summary>
+    [JsonIgnore] public int Thunder { get => Powers[PowerId.Thunder]; set => Set(PowerId.Thunder, value); }
 
     // What happens to damage reaching your HP.
     /// <summary>Tungsten Rod on the player (its code reads its HpLossReduction value: read from its code, its amount isn't read).</summary>
@@ -434,8 +432,8 @@ public sealed class SimPlayer
     [JsonIgnore] public int PoisonBonus { get => Relics[RelicId.SneckoSkull]; set => SetRelic(RelicId.SneckoSkull, value); }
     /// <summary>The Boot on the player (its code reads its DamageMinimum value: read from its code, its amount isn't read; 0 = no relic).</summary>
     [JsonIgnore] public int BootMinimum { get => Relics[RelicId.TheBoot]; set => SetRelic(RelicId.TheBoot, value); }
-    /// <summary>Your Focus now (orb values already include it), for Focus changes during a play.</summary>
-    public int Focus;
+    /// <summary>Focus (FocusPower, its amount): read from its code, its ModifyOrbValue is in every orb value (SimOrb.Passive and Evoke).</summary>
+    [JsonIgnore] public int Focus { get => Powers[PowerId.Focus]; set => Set(PowerId.Focus, value); }
     [JsonIgnore] public int Buffer { get => Powers[PowerId.Buffer]; set => Set(PowerId.Buffer, value); }
     public int OstyHp;
     /// <summary>Osty takes the hits aimed at his owner first (DieForYouPower).</summary>
@@ -523,7 +521,7 @@ public sealed class SimPlayer
         add(Block); add(Hp); add(MaxHp); add(Taken); add(Through); add(OstyTaken); add(UnblockableTaken); add(Incoming); add(BlockGained);
         add(WuppyHp); add(WuppyTaken); add(OstyHp); add(Died ? 1 : 0); add(LizardTailUsed ? 1 : 0); add(LizardTailHeal); add(FairiesUsed); add(Fairies);
         add(BlockGains); add(Energy); add(HandCount); add(PlayingFromHand); add(Arrows); add(Fading); add(HexFading); add(HexFrom); add(Drawn); add(ExhaustPile); add(TakenToHand);
-        add(AttacksThisTurn); add(Focus); add(Thunder); add(OrbCapacity); add(BeaconGiving ? 1 : 0); add(InvincibleBlock); add(InvincibleDrawPile);
+        add(AttacksThisTurn); add(OrbCapacity); add(BeaconGiving ? 1 : 0); add(InvincibleBlock); add(InvincibleDrawPile);
         Draw?.Hash(add);
         add(TurnEndCards.Count);
         foreach (var turnEndCard in TurnEndCards) { add(turnEndCard.Card.GetHashCode()); add(turnEndCard.Amount); }
@@ -830,6 +828,11 @@ public sealed class SimState
     /// card and gives the outer one back.
     /// </summary>
     internal SimDrawCard? DrawnCard;
+    /// <summary>
+    /// The enemies the orb being evoked acted on (OrbModel.Evoke's targets: its hit's, each roll's own), until AfterOrbEvoked is told them
+    /// (SimEngine.Evoke): branches that hit different ones stay apart until then. Null: no evoke in progress.
+    /// </summary>
+    internal int[]? OrbTargets;
     /// <summary>Card events during the current card play, for its player (Unceasing Top: nothing drawn or created).</summary>
     internal CardEventCounts PlayEvents = CardEventCounts.None;
     /// <summary>Block gains from the current card play (Unmovable doesn't count them).</summary>
@@ -1035,6 +1038,8 @@ public sealed class SimState
         }
         // Mid-draw (between AfterCardDrawn listeners), branches that drew different cards stay apart.
         if (DrawnCard != null) Add(DrawnCard.Key.GetHashCode());
+        // Mid-evoke (before AfterOrbEvoked), branches whose evoke hit different enemies stay apart.
+        if (OrbTargets != null) { Add(-OrbTargets.Length - 1); foreach (var target in OrbTargets) Add(target); }
         // What a take in the play took and what's left for the next (decision #189): a later play reads them.
         Add(PlayTaken); TakeMatching.Hash(Add);
         // What the play's conditions read later (decision #190): the last attack's kill, the code's tests already asked.

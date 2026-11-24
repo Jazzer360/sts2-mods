@@ -88,8 +88,8 @@ public class HookProgramTests
         using var beta = new BranchCode(BranchCode.BetaPath);
         using var main = new BranchCode(BranchCode.MainPath);
         var (betaRead, mainRead) = (ReadOn(beta), ReadOn(main));
-        var betaClasses = HookReader.Powers(beta.Assembly.GetTypes()).Concat(HookReader.Relics(beta.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
-        var mainClasses = HookReader.Powers(main.Assembly.GetTypes()).Concat(HookReader.Relics(main.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
+        var betaClasses = HookReader.Powers(beta.Assembly.GetTypes()).Concat(HookReader.Relics(beta.Assembly.GetTypes())).Concat(HookReader.Orbs(beta.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
+        var mainClasses = HookReader.Powers(main.Assembly.GetTypes()).Concat(HookReader.Relics(main.Assembly.GetTypes())).Concat(HookReader.Orbs(main.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
         var differ = betaRead.Where(mainClasses.Contains).Except(mainRead).Concat(mainRead.Where(betaClasses.Contains).Except(betaRead)).Order(StringComparer.Ordinal).ToList();
         Assert.True(differ.Count == 0, "read whole on one branch, not the other (review it: the reader on the other branch's code): " + string.Join(", ", differ));
         var record = betaRead.Union(mainRead).Order(StringComparer.Ordinal).ToList();
@@ -112,6 +112,8 @@ public class HookProgramTests
             foreach (var (holder, kind) in new[] { (typeof(PowerId), nameof(PowerId)), (typeof(RelicId), nameof(RelicId)) })
                 foreach (var field in holder.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static))
                     if (field.GetValue(null) is { } value && value.ToString() == name) return $"{kind}.{field.Name}.Name";
+            // An orb class (the engine's OrbKind, no typed name of its own): the game's class by nameof.
+            if (HookReader.OrbKindOf(name) != null) return $"nameof(MegaCrit.Sts2.Core.Models.Orbs.{name})";
             throw new InvalidOperationException($"{name} has no typed name: run scripts/game-names.mjs");
         }
         var text = new StringBuilder();
@@ -119,7 +121,7 @@ public class HookProgramTests
         text.Append("// HookProgramTests (catalog tests) writes this from the decompiled game, beta and main: SPIREQOL_UPDATE_SNAPSHOT=1. Don't edit.\n");
         text.Append("// </auto-generated>\n\nnamespace SpireQoL.Sim;\n\npublic static partial class ReadModels\n{\n");
         text.Append("    /// <summary>\n");
-        text.Append("    /// The power and relic classes modelled from their code whose hooks read whole on both reviewed builds (SupportedVersions): one that\n");
+        text.Append("    /// The power, relic and orb classes modelled from their code whose hooks read whole on both reviewed builds (SupportedVersions): one that\n");
         text.Append("    /// doesn't read whole in the running game is a game update's change, reported, and every simulation it's in is unknown (decision #92).\n");
         text.Append("    /// </summary>\n");
         text.Append("    internal static readonly IReadOnlySet<string> ReadWholeAtReview = new HashSet<string>(StringComparer.Ordinal)\n    {\n");
@@ -153,7 +155,8 @@ public class HookProgramTests
     {
         var read = ReadModels.Specs(CoverageLedger.ModelTypes(), RuntimeCode.Read);
         Assert.DoesNotContain(read, spec => SimModels.IsHandWritten(spec.Name));
-        Assert.All(read.Where(spec => spec.Unread == null), spec => Assert.IsType<ReadModel>(SimModels.Get(spec.Name)));
+        Assert.All(read.Where(spec => spec.Unread == null && spec.Kind != ModelKind.Orb), spec => Assert.IsType<ReadModel>(SimModels.Get(spec.Name)));
+        Assert.All(read.Where(spec => spec.Unread == null && spec.Kind == ModelKind.Orb), spec => Assert.IsType<ReadModel>(SimModels.Orb(spec.Orb!.Value)));
     }
 
     /// <summary>A read class's coverage ledger entry says it's read from its code (its hooks, translated: the scan's), and only a read class's does.</summary>
