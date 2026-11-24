@@ -136,6 +136,8 @@ public sealed class SimOutcome
     public int PlayHpReachedMin, PlayHpLossesMin, PlayHpLostMin;
     /// <summary>What fired during the play (its log): the counts in every branch (smallest), and in some branch (largest).</summary>
     public NamedCounts PlayFiredEvery = NamedCounts.Empty, PlayFiredAny = NamedCounts.Empty;
+    /// <summary>Where read models' code flashed during the play (SimState.Flashed, decision #199): in every branch, and in some.</summary>
+    public NamedCounts PlayFlashedEvery = NamedCounts.Empty, PlayFlashedAny = NamedCounts.Empty;
     /// <summary>The first hit of the card's attack on each enemy (enemy enemyId: damage), the same in every branch; empty when it isn't.</summary>
     public IReadOnlyDictionary<int, int> PlayFirstHits = System.Collections.Immutable.ImmutableSortedDictionary<int, int>.Empty;
 
@@ -263,6 +265,9 @@ public static partial class SimEngine
         var firedEvery = !complete || states.Count == 0 ? NamedCounts.Empty
             : states.Skip(1).Aggregate(states[0].Fired, (acc, branch) => SimState.MergeLog(acc, branch.Fired, every: true));
         var firedAny = states.Aggregate(NamedCounts.Empty, (acc, branch) => SimState.MergeLog(acc, branch.FiredAny, every: false));
+        var flashedEvery = !complete || states.Count == 0 ? NamedCounts.Empty
+            : states.Skip(1).Aggregate(states[0].Flashed, (acc, branch) => SimState.MergeLog(acc, branch.Flashed, every: true));
+        var flashedAny = states.Aggregate(NamedCounts.Empty, (acc, branch) => SimState.MergeLog(acc, branch.FlashedAny, every: false));
         // The first hit of the card's attack on each enemy, when nothing random came before it (the damage-formula audit).
         var firstHits = complete && states.Count > 0 && states.All(branch => ReferenceEquals(branch.FirstHits, states[0].FirstHits) || branch.FirstHits.SequenceEqual(states[0].FirstHits)) ? states[0].FirstHits : System.Collections.Immutable.ImmutableSortedDictionary<int, int>.Empty;
         return new SimOutcome
@@ -280,6 +285,8 @@ public static partial class SimEngine
             PlayHpLostMin = PlayMin(branch => branch.PlayHpLost),
             PlayFiredEvery = firedEvery,
             PlayFiredAny = firedAny,
+            PlayFlashedEvery = flashedEvery,
+            PlayFlashedAny = flashedAny,
             PlayFirstHits = firstHits,
             IntentsAfterPlay = complete ? IntentsAfter(states, start) : new Dictionary<int, IntentAfterPlay>(),
         };

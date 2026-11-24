@@ -91,6 +91,30 @@
         "Hook": "AfterCardGeneratedForCombat",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardGeneratedForCombat\u003Ed__6.MoveNext:002D",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardGeneratedForCombat\u003Ed__6.MoveNext:003F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardIs",
+                  "Of": "Sadness"
+                }
+              }
+            }
+          },
+          {
             "$kind": "GainBlockStep",
             "Amount": {
               "$kind": "HookFactValue",
@@ -136,6 +160,17 @@
         "Hook": "AfterSideTurnStart",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__6.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
             "$kind": "ApplyPowerStep",
             "Power": "AimPower",
             "Target": "Owner",
@@ -165,6 +200,17 @@
       {
         "Hook": "AfterCardGeneratedForCombat",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardGeneratedForCombat\u003Ed__6.MoveNext:002A",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          },
           {
             "$kind": "ApplyPowerStep",
             "Power": "StrengthPower",
@@ -218,6 +264,40 @@
               "Test": {
                 "$kind": "HookFactValue",
                 "Fact": "EventIsOwners"
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDrawn\u003Ed__14.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardDrawn\u003Ed__14.MoveNext:0062",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Greater",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "Data.cardsLeft"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
               }
             }
           },
@@ -312,6 +392,17 @@
       {
         "Hook": "AfterSideTurnStart",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__6.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
           {
             "$kind": "ApplyPowerStep",
             "Power": "FocusPower",
@@ -556,6 +647,17 @@
         "Hook": "AfterCardExhausted",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardExhausted\u003Ed__4.MoveNext:0025",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          },
+          {
             "$kind": "DamageStep",
             "Target": "AllEnemies",
             "Amount": {
@@ -591,6 +693,37 @@
       {
         "Hook": "AfterStarsSpent",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterStarsSpent\u003Ed__4.MoveNext:0018",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Greater",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "StarsSpent"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterStarsSpent\u003Ed__4.MoveNext:0030",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              }
+            }
+          },
           {
             "$kind": "GainBlockStep",
             "Amount": {
@@ -651,6 +784,37 @@
       {
         "Hook": "BeforeSideTurnEnd",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__6.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__6.MoveNext:0049",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerHandCount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          },
           {
             "$kind": "GainBlockStep",
             "Amount": {
@@ -908,6 +1072,132 @@
               "$kind": "HookConstant",
               "Value": 1
             },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0048",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "_triggeredThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:005B",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "GreaterOrEqual",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "Add",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Add",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "Add",
+                        "Left": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Greater",
+                          "Left": {
+                            "$kind": "HookHistory",
+                            "Query": {
+                              "Kind": "CardPlayFinished",
+                              "Scope": "ThisTurn",
+                              "Whose": "Owner",
+                              "Details": "None",
+                              "CardType": "None",
+                              "CardTag": "Wah"
+                            },
+                            "Any": true
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "Greater",
+                        "Left": {
+                          "$kind": "HookHistory",
+                          "Query": {
+                            "Kind": "CardPlayFinished",
+                            "Scope": "ThisTurn",
+                            "Whose": "Owner",
+                            "Details": "None",
+                            "CardType": "None",
+                            "CardTag": "Cho"
+                          },
+                          "Any": true
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "Greater",
+                      "Left": {
+                        "$kind": "HookHistory",
+                        "Query": {
+                          "Kind": "CardPlayFinished",
+                          "Scope": "ThisTurn",
+                          "Whose": "Owner",
+                          "Details": "None",
+                          "CardType": "None",
+                          "CardTag": "Ki"
+                        },
+                        "Any": true
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 3
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
             "When": {
               "$kind": "HookMath",
               "Operation": "And",
@@ -1305,6 +1595,17 @@
         "Hook": "AfterCardDrawn",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardDrawn\u003Ed__6.MoveNext:002A",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          },
+          {
             "$kind": "ApplyPowerStep",
             "Power": "PoisonPower",
             "Target": "AllEnemies",
@@ -1351,6 +1652,40 @@
       {
         "Hook": "AfterDeath",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDeath\u003Ed__8.MoveNext:002C",
+                "Test": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookFactValue",
+                    "Fact": "DeadIsOwner"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDeath\u003Ed__8.MoveNext:0049",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "SameSide",
+                  "Creature": {
+                    "Who": "Dead",
+                    "PetOwner": false
+                  },
+                  "Other": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          },
           {
             "$kind": "ApplyPowerStep",
             "Power": "StrengthPower",
@@ -1486,6 +1821,38 @@
         "Hook": "BeforeCardPlayed",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeCardPlayed\u003Ed__8.MoveNext:002F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeCardPlayed\u003Ed__8.MoveNext:005B",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "GreaterOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardEnergy"
+                  },
+                  "Right": {
+                    "$kind": "HookVar",
+                    "Key": "Energy",
+                    "Canonical": 2
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "GainBlockStep",
             "Amount": {
               "$kind": "HookFactValue",
@@ -1538,6 +1905,37 @@
       {
         "Hook": "AfterCardPlayed",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__4.MoveNext:0025",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__4.MoveNext:0042",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              }
+            }
+          },
           {
             "$kind": "GainBlockStep",
             "Amount": {
@@ -1616,6 +2014,17 @@
         "Hook": "AfterSideTurnEnd",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__4.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
             "$kind": "DamageStep",
             "Target": "Owner",
             "Amount": {
@@ -1648,6 +2057,17 @@
       {
         "Hook": "AfterSideTurnStart",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__12.MoveNext:0025",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
           {
             "$kind": "ApplyPowerStep",
             "Power": "StrengthPower",
@@ -2296,6 +2716,14 @@
     "Kind": "Power",
     "Hooks": [
       {
+        "Hook": "AfterModifyingCardPlayCount",
+        "Steps": [
+          {
+            "$kind": "FlashStep"
+          }
+        ]
+      },
+      {
         "Hook": "ModifyCardPlayCount",
         "Steps": [],
         "Returns": {
@@ -2528,6 +2956,25 @@
             }
           },
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeSideTurnEnd\u003Ed__13.MoveNext:0017",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "NotEqual",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "ShouldTrigger"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                }
+              }
+            }
+          },
+          {
             "$kind": "GainBlockStep",
             "Amount": {
               "$kind": "HookVar",
@@ -2641,6 +3088,30 @@
       {
         "Hook": "AfterCardGeneratedForCombat",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardGeneratedForCombat\u003Ed__6.MoveNext:0020",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardGeneratedForCombat\u003Ed__6.MoveNext:0032",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardIs",
+                  "Of": "Sadness"
+                }
+              }
+            }
+          },
           {
             "$kind": "ApplyPowerStep",
             "Power": "StrengthPower",
@@ -2793,6 +3264,17 @@
         "Hook": "AfterCardExhausted",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardExhausted\u003Ed__4.MoveNext:0025",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          },
+          {
             "$kind": "DamageStep",
             "Target": "RandomEnemy",
             "Amount": {
@@ -2909,6 +3391,41 @@
               "Test": {
                 "$kind": "HookFactValue",
                 "Fact": "EventIsOwners"
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterStarsSpent\u003Ed__19.MoveNext:0020",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterStarsSpent\u003Ed__19.MoveNext:0050",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "StarsSpent"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "Stars",
+                      "Canonical": 10
+                    }
+                  }
+                }
               }
             }
           },
@@ -3053,6 +3570,37 @@
         "Hook": "AfterCardPlayed",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0053",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 3
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "DrawStep",
             "Count": {
               "$kind": "HookVar",
@@ -3139,6 +3687,17 @@
         "Hook": "AfterSideTurnEnd",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__8.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
             "$kind": "RemovePowerStep",
             "When": {
               "$kind": "HookTest",
@@ -3182,6 +3741,28 @@
       {
         "Hook": "AfterDeath",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterDeath\u003Ed__6.MoveNext:0033",
+              "Test": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookFactValue",
+                  "Fact": "SameSide",
+                  "Creature": {
+                    "Who": "Dead",
+                    "PetOwner": false
+                  },
+                  "Other": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          },
           {
             "$kind": "GainEnergyStep",
             "Amount": {
@@ -3328,6 +3909,42 @@
         "Hook": "BeforeSideTurnEnd",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__10.MoveNext:0025",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeSideTurnEnd\u003Ed__10.MoveNext:0081",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "OwnerOrbCount",
+                      "Of": "Frost"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "FrostOrbs",
+                      "Canonical": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "DamageStep",
             "Target": "AllEnemies",
             "Amount": {
@@ -3409,6 +4026,30 @@
         "Hook": "AfterCardPlayed",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0047",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardTag",
+                  "Of": "Shiv"
+                }
+              }
+            }
+          },
+          {
             "$kind": "ApplyPowerStep",
             "Power": "DexterityPower",
             "Target": "Owner",
@@ -3454,6 +4095,17 @@
         "Hook": "AfterSideTurnStart",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__6.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
             "$kind": "ApplyPowerStep",
             "Power": "StretchPower",
             "Target": "Owner",
@@ -3483,6 +4135,17 @@
       {
         "Hook": "AfterSideTurnEnd",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
           {
             "$kind": "ApplyPowerStep",
             "Power": "StrengthPower",
@@ -3581,6 +4244,38 @@
         "Hook": "BeforeCardPlayed",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeCardPlayed\u003Ed__6.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeCardPlayed\u003Ed__6.MoveNext:0054",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "GreaterOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardEnergy"
+                  },
+                  "Right": {
+                    "$kind": "HookVar",
+                    "Key": "Energy",
+                    "Canonical": 2
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "GainBlockStep",
             "Amount": {
               "$kind": "HookVar",
@@ -3660,6 +4355,49 @@
             }
           },
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0069",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Remainder",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "CardsPlayed"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "Cards",
+                        "Canonical": 4
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "DrawStep",
             "Count": {
               "$kind": "HookConstant",
@@ -3719,6 +4457,64 @@
       {
         "Hook": "AfterCardDrawn",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardDrawn\u003Ed__4.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardDrawn\u003Ed__4.MoveNext:003D",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 4
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDrawn\u003Ed__4.MoveNext:006C",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookHistory",
+                    "Query": {
+                      "Kind": "CardDrawn",
+                      "Scope": "ThisTurn",
+                      "Whose": "Owner",
+                      "Details": "None",
+                      "CardType": "Status"
+                    },
+                    "Any": false
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          },
           {
             "$kind": "DrawStep",
             "Count": {
@@ -3794,6 +4590,38 @@
         "Hook": "AfterCardPlayed",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__7.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__7.MoveNext:0059",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "GreaterOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardEnergy"
+                  },
+                  "Right": {
+                    "$kind": "HookVar",
+                    "Key": "EnergyThreshold",
+                    "Canonical": 0
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "GainEnergyStep",
             "Amount": {
               "$kind": "HookVar",
@@ -3843,6 +4671,9 @@
       {
         "Hook": "AfterModifyingCardPlayCount",
         "Steps": [
+          {
+            "$kind": "FlashStep"
+          },
           {
             "$kind": "DecrementPowerStep"
           }
@@ -4149,6 +4980,69 @@
             }
           },
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0053",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0083",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Remainder",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AttacksPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "Cards",
+                        "Canonical": 3
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "ApplyPowerStep",
             "Power": "DexterityPower",
             "Target": "Owner",
@@ -4272,6 +5166,69 @@
                   "Right": {
                     "$kind": "HookConstant",
                     "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0053",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0083",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Remainder",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AttacksPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "Cards",
+                        "Canonical": 3
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
                   }
                 }
               }
@@ -4519,6 +5476,69 @@
             }
           },
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0053",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 2
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0083",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Remainder",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "SkillsPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "Cards",
+                        "Canonical": 3
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "DamageStep",
             "Target": "AllEnemies",
             "Amount": {
@@ -4606,6 +5626,37 @@
       {
         "Hook": "AfterCardPlayed",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__4.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__4.MoveNext:0053",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 3
+                  }
+                }
+              }
+            }
+          },
           {
             "$kind": "DamageStep",
             "Target": "AllEnemies",
@@ -4731,6 +5782,100 @@
       {
         "Hook": "AfterCardPlayed",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:002F",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlayIsOwners"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:004D",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "ProccdThisTurn"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:0064",
+                    "Test": {
+                      "$kind": "HookHistory",
+                      "Query": {
+                        "Kind": "CardPlayFinished",
+                        "Scope": "ThisTurn",
+                        "Whose": "Owner",
+                        "Details": "None",
+                        "CardType": "None",
+                        "CardTag": "Cho"
+                      },
+                      "Any": true
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:0079",
+                  "Test": {
+                    "$kind": "HookHistory",
+                    "Query": {
+                      "Kind": "CardPlayFinished",
+                      "Scope": "ThisTurn",
+                      "Whose": "Owner",
+                      "Details": "None",
+                      "CardType": "None",
+                      "CardTag": "Wah"
+                    },
+                    "Any": true
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:008E",
+                "Test": {
+                  "$kind": "HookHistory",
+                  "Query": {
+                    "Kind": "CardPlayFinished",
+                    "Scope": "ThisTurn",
+                    "Whose": "Owner",
+                    "Details": "None",
+                    "CardType": "None",
+                    "CardTag": "Ki"
+                  },
+                  "Any": true
+                }
+              }
+            }
+          },
           {
             "$kind": "StoreFieldStep",
             "Field": "ProccdThisTurn",
@@ -5034,6 +6179,40 @@
             }
           },
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterStarsSpent\u003Ed__10.MoveNext:0020",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterStarsSpent\u003Ed__10.MoveNext:002D",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "UsedThisTurn"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "ApplyPowerStep",
             "Power": "StrengthPower",
             "Target": "Owner",
@@ -5089,6 +6268,29 @@
       {
         "Hook": "AfterCardPlayed",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__16.MoveNext:002F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__16.MoveNext:0053",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakeBound"
+                }
+              }
+            }
+          },
           {
             "$kind": "ApplyPowerStep",
             "Power": "StrengthPower",
@@ -5235,6 +6437,689 @@
       {
         "Hook": "AfterCardPlayed",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0107",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookWays",
+                      "Ways": [
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "PlayIsOwners"
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                    "Test": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardTag",
+                                      "Of": "Wah"
+                                    }
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardTag",
+                                    "Of": "Cho"
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:00D6",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardTag",
+                                  "Of": "Ki"
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "PlayIsOwners"
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardTag",
+                                    "Of": "Wah"
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardTag",
+                                    "Of": "Cho"
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:00D6",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardTag",
+                                  "Of": "Ki"
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookMath",
+                            "Operation": "Add",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "Greater",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookHistory",
+                                  "Query": {
+                                    "Kind": "CardPlayStarted",
+                                    "Scope": "ThisTurn",
+                                    "Whose": "Owner",
+                                    "Details": "None",
+                                    "CardType": "None",
+                                    "CardTag": "Wah"
+                                  },
+                                  "Any": false
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 1
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "PlayIsOwners"
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardTag",
+                                  "Of": "Cho"
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:00D6",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardTag",
+                                  "Of": "Ki"
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookMath",
+                            "Operation": "Add",
+                            "Left": {
+                              "$kind": "HookWays",
+                              "Ways": [
+                                {
+                                  "When": {
+                                    "$kind": "HookMath",
+                                    "Operation": "And",
+                                    "Left": {
+                                      "$kind": "HookTest",
+                                      "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                      "Test": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "PlayIsOwners"
+                                      }
+                                    },
+                                    "Right": {
+                                      "$kind": "HookNot",
+                                      "Inner": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CardTag",
+                                          "Of": "Wah"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "Value": {
+                                    "$kind": "HookConstant",
+                                    "Value": 0
+                                  }
+                                },
+                                {
+                                  "When": {
+                                    "$kind": "HookMath",
+                                    "Operation": "And",
+                                    "Left": {
+                                      "$kind": "HookTest",
+                                      "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                      "Test": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "PlayIsOwners"
+                                      }
+                                    },
+                                    "Right": {
+                                      "$kind": "HookTest",
+                                      "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                      "Test": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardTag",
+                                        "Of": "Wah"
+                                      }
+                                    }
+                                  },
+                                  "Value": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Add",
+                                    "Left": {
+                                      "$kind": "HookConstant",
+                                      "Value": 0
+                                    },
+                                    "Right": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Greater",
+                                      "Left": {
+                                        "$kind": "HookMath",
+                                        "Operation": "Equal",
+                                        "Left": {
+                                          "$kind": "HookHistory",
+                                          "Query": {
+                                            "Kind": "CardPlayStarted",
+                                            "Scope": "ThisTurn",
+                                            "Whose": "Owner",
+                                            "Details": "None",
+                                            "CardType": "None",
+                                            "CardTag": "Wah"
+                                          },
+                                          "Any": false
+                                        },
+                                        "Right": {
+                                          "$kind": "HookConstant",
+                                          "Value": 1
+                                        }
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 0
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "Greater",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookHistory",
+                                  "Query": {
+                                    "Kind": "CardPlayStarted",
+                                    "Scope": "ThisTurn",
+                                    "Whose": "Owner",
+                                    "Details": "None",
+                                    "CardType": "None",
+                                    "CardTag": "Cho"
+                                  },
+                                  "Any": false
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 1
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "PlayIsOwners"
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:00D6",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardTag",
+                                "Of": "Ki"
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookMath",
+                            "Operation": "Add",
+                            "Left": {
+                              "$kind": "HookWays",
+                              "Ways": [
+                                {
+                                  "When": {
+                                    "$kind": "HookMath",
+                                    "Operation": "And",
+                                    "Left": {
+                                      "$kind": "HookMath",
+                                      "Operation": "And",
+                                      "Left": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "PlayIsOwners"
+                                        }
+                                      },
+                                      "Right": {
+                                        "$kind": "HookNot",
+                                        "Inner": {
+                                          "$kind": "HookTest",
+                                          "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                          "Test": {
+                                            "$kind": "HookFactValue",
+                                            "Fact": "CardTag",
+                                            "Of": "Wah"
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "Right": {
+                                      "$kind": "HookNot",
+                                      "Inner": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CardTag",
+                                          "Of": "Cho"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "Value": {
+                                    "$kind": "HookConstant",
+                                    "Value": 0
+                                  }
+                                },
+                                {
+                                  "When": {
+                                    "$kind": "HookMath",
+                                    "Operation": "And",
+                                    "Left": {
+                                      "$kind": "HookMath",
+                                      "Operation": "And",
+                                      "Left": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "PlayIsOwners"
+                                        }
+                                      },
+                                      "Right": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CardTag",
+                                          "Of": "Wah"
+                                        }
+                                      }
+                                    },
+                                    "Right": {
+                                      "$kind": "HookNot",
+                                      "Inner": {
+                                        "$kind": "HookTest",
+                                        "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CardTag",
+                                          "Of": "Cho"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "Value": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Add",
+                                    "Left": {
+                                      "$kind": "HookConstant",
+                                      "Value": 0
+                                    },
+                                    "Right": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Greater",
+                                      "Left": {
+                                        "$kind": "HookMath",
+                                        "Operation": "Equal",
+                                        "Left": {
+                                          "$kind": "HookHistory",
+                                          "Query": {
+                                            "Kind": "CardPlayStarted",
+                                            "Scope": "ThisTurn",
+                                            "Whose": "Owner",
+                                            "Details": "None",
+                                            "CardType": "None",
+                                            "CardTag": "Wah"
+                                          },
+                                          "Any": false
+                                        },
+                                        "Right": {
+                                          "$kind": "HookConstant",
+                                          "Value": 1
+                                        }
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 0
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "When": {
+                                    "$kind": "HookMath",
+                                    "Operation": "And",
+                                    "Left": {
+                                      "$kind": "HookTest",
+                                      "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                      "Test": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "PlayIsOwners"
+                                      }
+                                    },
+                                    "Right": {
+                                      "$kind": "HookTest",
+                                      "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0091",
+                                      "Test": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardTag",
+                                        "Of": "Cho"
+                                      }
+                                    }
+                                  },
+                                  "Value": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Add",
+                                    "Left": {
+                                      "$kind": "HookWays",
+                                      "Ways": [
+                                        {
+                                          "When": {
+                                            "$kind": "HookMath",
+                                            "Operation": "And",
+                                            "Left": {
+                                              "$kind": "HookTest",
+                                              "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                              "Test": {
+                                                "$kind": "HookFactValue",
+                                                "Fact": "PlayIsOwners"
+                                              }
+                                            },
+                                            "Right": {
+                                              "$kind": "HookNot",
+                                              "Inner": {
+                                                "$kind": "HookTest",
+                                                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                                "Test": {
+                                                  "$kind": "HookFactValue",
+                                                  "Fact": "CardTag",
+                                                  "Of": "Wah"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "Value": {
+                                            "$kind": "HookConstant",
+                                            "Value": 0
+                                          }
+                                        },
+                                        {
+                                          "When": {
+                                            "$kind": "HookMath",
+                                            "Operation": "And",
+                                            "Left": {
+                                              "$kind": "HookTest",
+                                              "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                                              "Test": {
+                                                "$kind": "HookFactValue",
+                                                "Fact": "PlayIsOwners"
+                                              }
+                                            },
+                                            "Right": {
+                                              "$kind": "HookTest",
+                                              "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004E",
+                                              "Test": {
+                                                "$kind": "HookFactValue",
+                                                "Fact": "CardTag",
+                                                "Of": "Wah"
+                                              }
+                                            }
+                                          },
+                                          "Value": {
+                                            "$kind": "HookMath",
+                                            "Operation": "Add",
+                                            "Left": {
+                                              "$kind": "HookConstant",
+                                              "Value": 0
+                                            },
+                                            "Right": {
+                                              "$kind": "HookMath",
+                                              "Operation": "Greater",
+                                              "Left": {
+                                                "$kind": "HookMath",
+                                                "Operation": "Equal",
+                                                "Left": {
+                                                  "$kind": "HookHistory",
+                                                  "Query": {
+                                                    "Kind": "CardPlayStarted",
+                                                    "Scope": "ThisTurn",
+                                                    "Whose": "Owner",
+                                                    "Details": "None",
+                                                    "CardType": "None",
+                                                    "CardTag": "Wah"
+                                                  },
+                                                  "Any": false
+                                                },
+                                                "Right": {
+                                                  "$kind": "HookConstant",
+                                                  "Value": 1
+                                                }
+                                              },
+                                              "Right": {
+                                                "$kind": "HookConstant",
+                                                "Value": 0
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    },
+                                    "Right": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Greater",
+                                      "Left": {
+                                        "$kind": "HookMath",
+                                        "Operation": "Equal",
+                                        "Left": {
+                                          "$kind": "HookHistory",
+                                          "Query": {
+                                            "Kind": "CardPlayStarted",
+                                            "Scope": "ThisTurn",
+                                            "Whose": "Owner",
+                                            "Details": "None",
+                                            "CardType": "None",
+                                            "CardTag": "Cho"
+                                          },
+                                          "Any": false
+                                        },
+                                        "Right": {
+                                          "$kind": "HookConstant",
+                                          "Value": 1
+                                        }
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 0
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "Greater",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookHistory",
+                                  "Query": {
+                                    "Kind": "CardPlayStarted",
+                                    "Scope": "ThisTurn",
+                                    "Whose": "Owner",
+                                    "Details": "None",
+                                    "CardType": "None",
+                                    "CardTag": "Ki"
+                                  },
+                                  "Any": false
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 1
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
           {
             "$kind": "DrawStep",
             "Count": {
@@ -6623,6 +8508,17 @@
         "Hook": "AfterSideTurnStart",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__6.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
             "$kind": "ApplyPowerStep",
             "Power": "PoisonPower",
             "Target": "AllEnemies",
@@ -6691,6 +8587,69 @@
                   "Right": {
                     "$kind": "HookConstant",
                     "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0042",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0081",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Remainder",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AttacksPlayed"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "Cards",
+                        "Canonical": 10
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
                   }
                 }
               }
@@ -6777,6 +8736,37 @@
       {
         "Hook": "BeforeSideTurnEnd",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__4.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__4.MoveNext:0049",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerHandCount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          },
           {
             "$kind": "DamageStep",
             "Target": "RandomEnemy",
@@ -6990,6 +8980,92 @@
                   "Right": {
                     "$kind": "HookConstant",
                     "Value": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterEnergySpent\u003Ed__15.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterEnergySpent\u003Ed__15.MoveNext:0038",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Greater",
+                    "Left": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterEnergySpent\u003Ed__15.MoveNext:0089",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Subtract",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "Divide",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "Subtract",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.energySpent"
+                          },
+                          "Right": {
+                            "$kind": "HookMath",
+                            "Operation": "Remainder",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "Data.energySpent"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 4
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 4
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookField",
+                        "Field": "Data.triggerCount"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
                   }
                 }
               }
@@ -7295,6 +9371,25 @@
             }
           },
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeSideTurnEnd\u003Ed__11.MoveNext:0017",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "NotEqual",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "ShouldTrigger"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                }
+              }
+            }
+          },
+          {
             "$kind": "GainBlockStep",
             "Amount": {
               "$kind": "HookVar",
@@ -7415,6 +9510,69 @@
                   "Right": {
                     "$kind": "HookConstant",
                     "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0053",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0083",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Remainder",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AttacksPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "Cards",
+                        "Canonical": 3
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
                   }
                 }
               }
@@ -7902,6 +10060,60 @@
         "Hook": "AfterCardPlayed",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__9.MoveNext:003B",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__9.MoveNext:0053",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__9.MoveNext:0060",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "ActivatedThisCombat"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "StoreFieldStep",
             "Field": "ActivatedThisCombat",
             "Value": {
@@ -8037,6 +10249,17 @@
       {
         "Hook": "AfterCardGeneratedForCombat",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardGeneratedForCombat\u003Ed__6.MoveNext:002A",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          },
           {
             "$kind": "GainBlockStep",
             "Amount": {
@@ -8318,6 +10541,106 @@
                   "Right": {
                     "$kind": "HookConstant",
                     "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:0031",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlayIsOwners"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:0050",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Less",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "ActivationCountThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:00BE",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "LessOrEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "AttacksPlayedThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:00CA",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "SkillsPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:00D6",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "PowersPlayedThisTurn"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
                   }
                 }
               }
@@ -8707,6 +11030,40 @@
             }
           },
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardGeneratedForCombat\u003Ed__8.MoveNext:0028",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardGeneratedForCombat\u003Ed__8.MoveNext:0035",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "UsedThisTurn"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "GainBlockStep",
             "Amount": {
               "$kind": "HookVar",
@@ -8763,6 +11120,32 @@
       {
         "Hook": "BeforeSideTurnEndEarly",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEndEarly\u003Ed__6.MoveNext:002C",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeSideTurnEndEarly\u003Ed__6.MoveNext:003E",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerDead"
+                  }
+                }
+              }
+            }
+          },
           {
             "$kind": "HealStep",
             "Amount": {
@@ -8931,6 +11314,40 @@
             }
           },
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__11.MoveNext:0025",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__11.MoveNext:0032",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "WasJustAppliedByEnemy"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "ApplyPowerStep",
             "Power": "StrengthPower",
             "Target": "Owner",
@@ -8984,6 +11401,37 @@
       {
         "Hook": "BeforeSideTurnEnd",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__4.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__4.MoveNext:0042",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerHandCount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          },
           {
             "$kind": "DamageStep",
             "Target": "AllEnemies",
@@ -9471,6 +11919,69 @@
             }
           },
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0053",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0083",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Remainder",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AttacksPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "Cards",
+                        "Canonical": 3
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "ApplyPowerStep",
             "Power": "StrengthPower",
             "Target": "Owner",
@@ -9652,6 +12163,80 @@
         "Hook": "AfterPowerAmountChanged",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:0024",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PowerAmount"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:003D",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PowerIsDebuff"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:0054",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PowerOnEnemy"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:0067",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "ApplierIsOwner"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:0079",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PowerIn",
+                    "Of": "AnticipatePower,ChoBarbsPower,CoordinatePower,CrushUnderPower,DarkShacklesPower,DyingStarPower,EnfeeblingTouchPower,FadePower,FeedingFrenzyPower,FlexPotionPower,FocusedStrikePower,HelicalDartPower,HotfixPower,HyperbeamFocusDownPower,ManglePower,MonarchsGazeStrengthDownPower,PiercingWailPower,ReptileTrinketPower,SetupStrikePower,ShacklingPotionPower,SpeedPotionPower,SynchronizePower"
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "DamageStep",
             "Target": "PowerOwner",
             "Amount": {
@@ -9749,6 +12334,37 @@
         "Hook": "AfterCardGeneratedForCombat",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardGeneratedForCombat\u003Ed__4.MoveNext:0020",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 4
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardGeneratedForCombat\u003Ed__4.MoveNext:0040",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              }
+            }
+          },
+          {
             "$kind": "DamageStep",
             "Target": "AllEnemies",
             "Amount": {
@@ -9802,6 +12418,40 @@
       {
         "Hook": "AfterCardPlayed",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                "Test": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0047",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          },
           {
             "$kind": "GainBlockStep",
             "Amount": {
@@ -10017,6 +12667,41 @@
         "Hook": "BeforeSideTurnEnd",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__14.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeSideTurnEnd\u003Ed__14.MoveNext:0061",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "TurnNumber"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "DamageTurn",
+                      "Canonical": 7
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
             "$kind": "DamageStep",
             "Target": "AllEnemies",
             "Amount": {
@@ -10075,6 +12760,49 @@
       {
         "Hook": "AfterCardPlayed",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__9.MoveNext:002F",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__9.MoveNext:0057",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TakeBound"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__9.MoveNext:0065",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Greater",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "BoundTaken"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          },
           {
             "$kind": "RepeatStep",
             "Times": {
@@ -10182,6 +12910,17 @@
         "Hook": "BeforeSideTurnEnd",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeSideTurnEnd\u003Ed__8.MoveNext:002A",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
             "$kind": "ApplyPowerStep",
             "Power": "AimPower",
             "Target": "Owner",
@@ -10212,6 +12951,17 @@
       {
         "Hook": "AfterCardPlayed",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__9.MoveNext:002E",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakeBound"
+              }
+            }
+          },
           {
             "$kind": "DamageStep",
             "Target": "Owner",
@@ -10367,6 +13117,49 @@
       {
         "Hook": "AfterCardPlayed",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__7.MoveNext:002F",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__7.MoveNext:0057",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TakeBound"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__7.MoveNext:0065",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Greater",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "BoundTaken"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          },
           {
             "$kind": "RepeatStep",
             "Times": {
@@ -10537,6 +13330,17 @@
         "Hook": "AfterSideTurnEnd",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
             "$kind": "ApplyPowerStep",
             "Power": "StrengthPower",
             "Target": "Owner",
@@ -10567,6 +13371,17 @@
       {
         "Hook": "AfterShuffle",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterShuffle\u003Ed__6.MoveNext:001D",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          },
           {
             "$kind": "GainBlockStep",
             "Amount": {
@@ -10630,6 +13445,37 @@
                       "$kind": "HookConstant",
                       "Value": 1
                     }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__9.MoveNext:0039",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__9.MoveNext:0047",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
                   }
                 }
               }
@@ -10723,6 +13569,17 @@
         "Hook": "BeforeCardPlayed",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeCardPlayed\u003Ed__4.MoveNext:002C",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              }
+            }
+          },
+          {
             "$kind": "GainStarsStep",
             "Amount": {
               "$kind": "HookFactValue",
@@ -10757,6 +13614,9 @@
               "$kind": "HookConstant",
               "Value": 1
             }
+          },
+          {
+            "$kind": "FlashStep"
           }
         ]
       },
@@ -10887,6 +13747,29 @@
         "Hook": "AfterCardDiscarded",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDiscarded\u003Ed__4.MoveNext:0025",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDiscarded\u003Ed__4.MoveNext:0051",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OwnersTurn"
+                }
+              }
+            }
+          },
+          {
             "$kind": "DamageStep",
             "Target": "RandomEnemy",
             "Amount": {
@@ -10934,6 +13817,29 @@
       {
         "Hook": "AfterCardDiscarded",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDiscarded\u003Ed__6.MoveNext:0025",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDiscarded\u003Ed__6.MoveNext:0051",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OwnersTurn"
+                }
+              }
+            }
+          },
           {
             "$kind": "GainBlockStep",
             "Amount": {
@@ -11299,6 +14205,25 @@
         "Hook": "AfterSideTurnEnd",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:002F",
+              "Test": {
+                "$kind": "HookHistory",
+                "Query": {
+                  "Kind": "CardPlayFinished",
+                  "Scope": "ThisTurn",
+                  "Whose": "Owner",
+                  "Details": "None",
+                  "CardType": "None",
+                  "CardTag": "Ki"
+                },
+                "Any": true
+              }
+            }
+          },
+          {
             "$kind": "ApplyPowerStep",
             "Power": "FreeCardPower",
             "Target": "Owner",
@@ -11375,6 +14300,61 @@
                   "Right": {
                     "$kind": "HookConstant",
                     "Value": 2
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__22.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__22.MoveNext:0042",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 2
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__22.MoveNext:0065",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "SkillsPlayed"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "Cards",
+                      "Canonical": 10
+                    }
                   }
                 }
               }
@@ -11527,6 +14507,53 @@
       {
         "Hook": "AfterPowerAmountChanged",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:0024",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PowerAmount"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:0037",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "ApplierIsOwner"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:0049",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PowerIs",
+                  "Of": "VulnerablePower"
+                }
+              }
+            }
+          },
           {
             "$kind": "DrawStep",
             "Count": {
@@ -15631,6 +18658,17 @@
         "Hook": "AfterShuffle",
         "Steps": [
           {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterShuffle\u003Ed__6.MoveNext:0020",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          },
+          {
             "$kind": "ApplyPowerStep",
             "Power": "AimPower",
             "Target": "Owner",
@@ -15662,6 +18700,17 @@
       {
         "Hook": "AfterSideTurnStart",
         "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__6.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
           {
             "$kind": "ApplyPowerStep",
             "Power": "DexterityPower",

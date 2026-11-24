@@ -429,6 +429,9 @@ public static class HookReader
                     var body = loop.Body.SelectMany(Step).ToList();
                     return body.Count == 0 ? Array.Empty<HookStep>() : new[] { new RepeatStep(times, body) { When = Condition(step.Condition) } };
                 }
+                case FlashCall:
+                    // Its own Flash(): where the game shows it acting, for the play check (decision #199).
+                    return new HookStep[] { new FlashStep { When = Condition(step.Condition) } };
                 case ChoiceStep:
                     throw new Gap("gap: a pick");
                 case CreateStep create:

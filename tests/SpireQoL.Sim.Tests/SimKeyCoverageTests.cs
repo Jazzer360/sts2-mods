@@ -34,7 +34,7 @@ public class SimKeyCoverageTests
         ["SimOrb.Triggers"] = Constant, ["SimPlayer.MadeCards"] = Constant, ["SimEnemy.Spawns"] = Constant, ["SimEnemy.Move"] = Constant, ["SimPlayer.Cards"] = Constant,
         // Per-play results, merged.
         ["SimState.PlayHpReached"] = Merged, ["SimState.PlayHpLosses"] = Merged, ["SimState.PlayHpLost"] = Merged,
-        ["SimState.PlayBiggestHit"] = Merged, ["SimState.Fired"] = Merged, ["SimState.FiredAny"] = Merged,
+        ["SimState.PlayBiggestHit"] = Merged, ["SimState.Fired"] = Merged, ["SimState.FiredAny"] = Merged, ["SimState.Flashed"] = Merged, ["SimState.FlashedAny"] = Merged,
         // Inside one step only.
         ["SimState.IndirectNow"] = Scratch, ["SimState.CurrentPlay"] = Scratch, ["SimState.AttackSerial"] = Scratch,
         ["SimState.CurrentAttack"] = Scratch, ["SimState.EnemyTurnNow"] = Scratch,

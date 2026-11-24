@@ -117,7 +117,7 @@ public class SimDrawTests
         var status = new SimDrawCard("status") { Status = true };
         var state = You();
         state.You.Powers = state.You.Powers.With(PowerId.Iteration, amount: 2, data: 0);
-        var question = Assert.Single(Assert.IsType<ReadModel>(SimModels.Get(PowerId.Iteration.Name)).Spec.Values().OfType<HookHistory>()).Query;
+        var question = Assert.Single(Assert.IsType<ReadModel>(SimModels.Get(PowerId.Iteration.Name)).Spec.Values().OfType<HookHistory>().Distinct()).Query; // its Flash() and its draw ask the same
         state.History = new[] { question };
         state.You.Draw = Pile((status, 6));
         var outcome = SimEngine.Run(state, Draws(cards: 1));

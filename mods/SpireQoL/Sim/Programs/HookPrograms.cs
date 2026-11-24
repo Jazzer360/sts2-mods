@@ -309,6 +309,12 @@ public sealed record GainEnergyStep(HookValue Amount) : HookStep;
 /// </summary>
 public sealed record GainStarsStep(HookValue Amount) : HookStep;
 
+/// <summary>
+/// Its own Flash() at its place in the code: logged in the flash log (SimState.Flashed), which the play check holds to the game's flashes;
+/// the tabs read the acting log, so a model that acts without flashing keeps its tab (decision #199).
+/// </summary>
+public sealed record FlashStep : HookStep;
+
 /// <summary>PowerCmd.Apply of <paramref name="Power"/> on <paramref name="Target"/>, applied by the owner.</summary>
 public sealed record ApplyPowerStep(string Power, HookTarget Target, HookValue Amount) : HookStep
 {

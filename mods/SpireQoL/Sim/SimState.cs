@@ -680,6 +680,12 @@ public sealed class SimState
     /// the largest (in some). Not in the branch key.
     /// </summary>
     public NamedCounts Fired = NamedCounts.Empty, FiredAny = NamedCounts.Empty;
+    /// <summary>
+    /// Where read models' code called its own Flash() (decision #199, FlashStep), under the play log's names: times flashed, smallest over
+    /// merged branches (Flashed) and largest (FlashedAny), as Fired. The play check holds a read model to the game's flashes from this; the
+    /// tabs read Fired, so a model that acts without flashing keeps its tab. Not in the branch key.
+    /// </summary>
+    public NamedCounts Flashed = NamedCounts.Empty, FlashedAny = NamedCounts.Empty;
     /// <summary>What kept you alive this turn: Fairy in a Bottle potions used, and Lizard Tail.</summary>
     [JsonIgnore] public int FairiesUsed { get => You.FairiesUsed; set => You.FairiesUsed = value; }
     [JsonIgnore] public bool LizardTailUsed { get => You.LizardTailUsed; set => You.LizardTailUsed = value; }
@@ -917,6 +923,8 @@ public sealed class SimState
         PlayBiggestHit = Math.Min(PlayBiggestHit, state.PlayBiggestHit);
         Fired = MergeLog(Fired, state.Fired, every: true);
         FiredAny = MergeLog(FiredAny, state.FiredAny, every: false);
+        Flashed = MergeLog(Flashed, state.Flashed, every: true);
+        FlashedAny = MergeLog(FlashedAny, state.FlashedAny, every: false);
     }
 
     /// <summary>Two play logs as one: every (the smaller of each, gone when either lacks it) or any (the larger).</summary>
@@ -943,6 +951,22 @@ public sealed class SimState
     /// another firing.
     /// </summary>
     public void LogAmount(string source, int amount, int? owner) => LogAs(source, amount, owner, times: 0);
+
+    /// <summary>
+    /// A read model's own Flash() ran (decision #199): logged in the flash log under the play log's names (yours and an enemy's under the plain
+    /// name, an enemy's and a teammate's also as "Name@id").
+    /// </summary>
+    public void LogFlash(string source, int owner)
+    {
+        void Under(string key)
+        {
+            Flashed = Flashed.Add(key, delta: 1);
+            FlashedAny = FlashedAny.Add(key, delta: 1);
+        }
+        var kind = Who.KindOf(owner);
+        if (kind != CreatureKind.Teammate) Under(source);
+        if (kind is CreatureKind.Teammate or CreatureKind.Enemy) Under(SimKeys.Owned(source, owner));
+    }
 
     private void LogAs(string source, int amount, int? owner, int times)
     {

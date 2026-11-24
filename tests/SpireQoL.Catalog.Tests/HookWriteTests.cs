@@ -72,7 +72,7 @@ public class HookWriteTests
                 var translated = spec.Of(name)?.Steps ?? Array.Empty<HookStep>();
                 var flat = new ModelSpec(spec.Name, spec.Kind, new[] { new HookProgram(name, translated) }).Steps().ToList();
                 var commands = steps.OfType<CommandStep>().Count(step => step.Condition is not { IsNever: true });
-                var commandSteps = flat.Count(step => step is not (StoreFieldStep or BindStep or UnbindStep or RepeatStep));
+                var commandSteps = flat.Count(step => step is not (StoreFieldStep or BindStep or UnbindStep or RepeatStep or FlashStep));
                 if (commands != commandSteps) dropped.Add($"{type.Name}.{hook.Name}: {commands} commands, {commandSteps} translated");
                 foreach (var store in steps.OfType<StoreStep>())
                     if (!flat.OfType<StoreFieldStep>().Any(step => step.Field == store.Field) && spec.Fields().Contains(store.Field))

@@ -111,6 +111,15 @@ public sealed record DataStep(int Offset, string Data, string Operation, IReadOn
     public override string ToString() => $"data {Data}.{Operation}({string.Join(", ", Values)})" + When;
 }
 
+/// <summary>
+/// A power's or relic's own Flash() (this.Flash()): what the game shows as it acts, at its place in the code. Not a change, but where the
+/// play check holds a prediction to a flash (decision #199).
+/// </summary>
+public sealed record FlashCall(int Offset) : ProgramStep(Offset)
+{
+    public override string ToString() => "flash" + When;
+}
+
 /// <summary>Something the reader couldn't follow: the steps it holds or stands for aren't known.</summary>
 public sealed record UnknownStep(int Offset, string Reason) : ProgramStep(Offset)
 {
@@ -586,6 +595,12 @@ public static class ProgramReader
                         var inner = new Reader(_card, _read).Steps(implementation, depth + 1);
                         into.AddRange(condition == null ? inner : inner.Select(step => step with { Condition = And(condition, step.Condition) }));
                     }
+                    continue;
+                }
+                // Its own Flash() (a power's or a relic's, on itself): where the game shows it acting.
+                if (member is { Kind: CodeMemberKind.Method, HasThis: true, Name: "Flash" } && IsPowerOrRelic && flow.ReceiverValue(i, member.ParameterCount) is NamedValue { Name: "this" })
+                {
+                    into.Add(new FlashCall(instruction.Offset) { Condition = condition });
                     continue;
                 }
                 if (IsModelAction(member))

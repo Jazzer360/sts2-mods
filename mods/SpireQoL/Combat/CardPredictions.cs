@@ -717,10 +717,12 @@ public sealed class CardPredictions
         static int Data(NamedCounts log, string logKey) => log.DataOf(logKey);
         bool Fired(NamedCounts log) => log.Has(key) && (_indirect || log[key] > log[SimKeys.Indirect(key)]);
         {
-            // For the audits, direct or not (the game flashes either way), whether or not a tab shows.
+            // For the audits, direct or not (the game flashes either way), whether or not a tab shows. A read model by where its code flashes
+            // (the flash log, decision #199); a hand-written one by its acting log.
+            var flashLog = model is ReadModel;
             var srcName = src.GetType().Name;
-            var every = outcomes.Select(outcome => outcome.PlayFiredEvery.Has(key)).ToArray();
-            var any = outcomes.Select(outcome => outcome.PlayFiredAny.Has(key)).ToArray();
+            var every = outcomes.Select(outcome => (flashLog ? outcome.PlayFlashedEvery : outcome.PlayFiredEvery).Has(key)).ToArray();
+            var any = outcomes.Select(outcome => (flashLog ? outcome.PlayFlashedAny : outcome.PlayFiredAny).Has(key)).ToArray();
             if (_firesBy.TryGetValue(srcName, out var had) && had.Every.Length == every.Length)
                 for (var i = 0; i < every.Length; i++) { every[i] |= had.Every[i]; any[i] |= had.Any[i]; }
             _firesBy[srcName] = (src.GetType(), every, any);

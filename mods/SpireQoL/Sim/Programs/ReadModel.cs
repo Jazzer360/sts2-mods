@@ -573,6 +573,13 @@ public sealed class ReadModel : SimModel
                 var amount = Compile(energy.Amount);
                 return args => Cause(args, CardEvent.EnergyGained, (int)amount(in args), fires);
             }
+            case FlashStep:
+                // Its own Flash(): the flash log the play check reads (decision #199); the tabs read the acting log.
+                return args =>
+                {
+                    args.State.LogFlash(Name, args.Owner);
+                    return One(args.State);
+                };
             case GainStarsStep:
                 // One stars-gained event, as the game calls AfterStarsGained once (the simulator keeps no count of stars).
                 return args => Cause(args, CardEvent.StarsGained, 1, fires);
