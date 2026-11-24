@@ -865,7 +865,9 @@ public class ProcModelTests
         Assert.Equal(97, after.Enemy(id: 0)!.Hp);
         Assert.Equal(9, after.You.Block);
         Assert.True(after.Fired.Has("BurningSticks"));
-        var joss = Relic(State(), RelicId.JossPaper, amount: 4, vars: ("ExhaustAmount", 5));
+        // Joss Paper (read from its code: its count is its CardsExhausted field) at 4 of its 5: the fifth exhaust draws.
+        var joss = Relic(State(), RelicId.JossPaper, amount: 0, vars: ("ExhaustAmount", 5));
+        SimEngine.SetField(joss, Who.You, RelicId.JossPaper.Name + ".CardsExhausted", 4);
         Assert.True(One(joss, Events(Card("A", SimCardType.Skill), plays: 1, new CardEventAction(CardEvent.Exhausted, Count: 1))).Fired.Has("JossPaper"));
     }
 

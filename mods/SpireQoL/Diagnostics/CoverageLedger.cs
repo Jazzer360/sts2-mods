@@ -76,7 +76,7 @@ internal static partial class CoverageLedger
         ["IntimidatingHelmet"] = "covered: read from its code (ReadModel, decision #195): BeforeCardPlayed block on costly cards (proc block)",
         ["IronClub"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed draws every N cards (simulator model, tracker; its draws in the play's log)",
         ["IvoryTile"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed energy on costly cards (proc tab)",
-        ["JossPaper"] = "covered: AfterCardExhausted counts its owner's exhausts toward a draw at its ExhaustAmount, an Ethereal one at the turn's end into its EtherealCount; AfterSideTurnEnd adds that count and draws if met (simulator model, hand-written: its code keeps the count in a local before the store that takes the draws off; its draws in the play's log)",
+        ["JossPaper"] = "covered: read from its code (ReadModel, decision #214): AfterCardExhausted counts its owner's exhausts (CardsExhausted) and draws one per ExhaustAmount (a let keeps the count before the store takes the draws off); an Ethereal one its turn end exhausts counts in its EtherealCount, which AfterSideTurnEnd adds before drawing (after the cards in hand act)",
         ["Kunai"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed Dexterity every N attacks (proc tab, tracker)",
         ["Kusarigama"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed damages a random enemy every N attacks (proc damage, tracker)",
         ["LavaLamp"] = "ignore: AfterDamageReceived only notes you took damage (end-of-combat upgrades)",

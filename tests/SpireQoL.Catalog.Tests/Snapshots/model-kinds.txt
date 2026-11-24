@@ -4,9 +4,9 @@
 ## Powers and relics
 
 beta powers: 304 classes, 273 with hooks; read from code 90, hand-written 76, neither 109 (each by its first gap: Snapshots/hook-readings.txt)
-beta relics: 316 classes, 310 with hooks; read from code 44, hand-written 27, neither 239 (each by its first gap: Snapshots/hook-readings.txt)
+beta relics: 316 classes, 310 with hooks; read from code 45, hand-written 26, neither 239 (each by its first gap: Snapshots/hook-readings.txt)
 main powers: 265 classes, 235 with hooks; read from code 80, hand-written 63, neither 94 (each by its first gap: Snapshots/hook-readings.txt)
-main relics: 299 classes, 293 with hooks; read from code 38, hand-written 26, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
+main relics: 299 classes, 293 with hooks; read from code 39, hand-written 25, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: a per-name rule 9, not modelled by name 6, the game's own code, called live 6, no hooks 2
 
@@ -149,7 +149,6 @@ SimReaders.Relics: PenNib: hand-written; reads its own field AttacksPlayed, its 
 SimReaders.Relics: Vambrace: hand-written; reads its own field TriggeringCard, its own field BlockGainedThisCombat: a read model's own fields and values replace it
 SimReaders.Relics: PaelsLegion: hand-written; reads its own field Cooldown, its own field AffectedCardPlay: a read model's own fields and values replace it
 SimReaders.Relics: CentennialPuzzle: hand-written; reads its own field UsedThisCombat: a read model's own fields and values replace it
-SimReaders.Relics: JossPaper: hand-written; reads its own field CardsExhausted, its own field EtherealCount: a read model's own fields and values replace it
 SimReaders.Relics: Pocketwatch: hand-written; reads its own field _cardsPlayedThisTurn, its own value CardThreshold: a read model's own fields and values replace it
 SimReaders.Relics: DemonTongue: hand-written; reads its own field _triggeredThisTurn: a read model's own fields and values replace it
 SimReaders.Relics: RedSkull: hand-written; reads its own value HpThreshold, its own field StrengthApplied, the game's MaxHp: needs more than its own fields and values
@@ -204,7 +203,7 @@ a potion's chosen target (OnUse's target, as a card play's): 28 classes, 27 alon
 commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn): 21 classes, 16 alone: MasterPlannerPower*, MummifiedHand*, MusicBox, RazorTooth*, Goopy (enchantment), RoyallyApproved (enchantment), Slither (enchantment), SlumberingEssence (enchantment)*, SoulsPower (enchantment), Steady (enchantment)*, TezcatarasEmber (enchantment)*, AttackPotion (potion)*, BottledSong (potion)*, ColorlessPotion (potion)*, LiquidMemories (potion)*, OrobicAcid (potion)*, PowerPotion (potion)*, SkillPotion (potion)*, SneckoOil (potion)*, SoldiersStew (potion)*, TouchOfInsanity (potion)*
 its own data: a card or a play kept, a field used directly: 20 classes, 9 alone: BlackHolePower, CalamityPower*, HauntPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, MusicBox, PaelsLegion, PenNib, RupturePower*, SerpentFormPower*, StretchPower*, UnsettlingLamp, Vambrace, WitheringPresencePower*, Glam (enchantment), Sown (enchantment), Swift (enchantment), Vigorous (enchantment), Ashwater (potion)*
 a command on another creature (the players, a card's owner, a roll's list): 11 classes, 9 alone: ExplosivePower*, GalvanicPower, VitalSparkPower, Clarity (potion)*, CureAll (potion)*, Duplicator (potion)*, EnergyPotion (potion)*, ExplosiveAmpoule (potion)*, FocusPotion (potion)*, RadiantTincture (potion)*, SwiftPotion (potion)*
-read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 9 classes, 9 alone: ArtOfWar*, ConquerorPower*, DemonTongue*, EmotionChip*, JossPaper*, MonarchsGazePower*, ParryingShield*, RippleBasin*, SelfFormingClay*
+read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 8 classes, 8 alone: ArtOfWar*, ConquerorPower*, DemonTongue*, EmotionChip*, MonarchsGazePower*, ParryingShield*, RippleBasin*, SelfFormingClay*
 a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 14 classes, 7 alone: InsatiableDominionPower*, ShadowmeldPower*, Corrupted (enchantment), Glam (enchantment), Imbued (enchantment), Instinct (enchantment)*, Momentum (enchantment)*, RoyallyApproved (enchantment), Sharp (enchantment)*, Sown (enchantment), Spiral (enchantment)*, Swift (enchantment), Vigorous (enchantment), Tainted (affliction)*
 a loop over items (creatures, cards): 10 classes, 7 alone: CentennialPuzzle*, CompostPower*, ImpaledPower, PaelsEye, SmoggyPower, BlessingOfTheForge (potion)*, CosmicConcoction (potion)*, CrystallineEuphoria (potion)*, EntropicBrew (potion)*, GlowwaterPotion (potion)*
 commands: a card made (AddGeneratedCardToCombat, a made card): 5 classes, 5 alone: BiiigHug*, BurningSticks*, PersonalHivePower*, CunningPotion (potion)*, PotOfGhouls (potion)*

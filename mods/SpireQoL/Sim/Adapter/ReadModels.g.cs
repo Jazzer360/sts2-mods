@@ -73,6 +73,7 @@ public static partial class ReadModels
         RelicId.IronClub.Name,
         PowerId.Iteration.Name,
         RelicId.IvoryTile.Name,
+        RelicId.JossPaper.Name,
         PowerId.KiVerse.Name,
         PowerId.Knockdown.Name,
         RelicId.Kunai.Name,

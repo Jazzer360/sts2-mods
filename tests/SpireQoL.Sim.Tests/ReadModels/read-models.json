@@ -5602,6 +5602,464 @@
     "HelpsOwner": false
   },
   {
+    "Name": "JossPaper",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardExhausted",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "EtherealCount",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "EtherealCount"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardExhausted\u003Ed__25.MoveNext:0022",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardExhausted\u003Ed__25.MoveNext:002F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CausedByEthereal"
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "CardsExhausted",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "CardsExhausted"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardExhausted\u003Ed__25.MoveNext:0022",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardExhausted\u003Ed__25.MoveNext:002F",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CausedByEthereal"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardExhausted\u003Ed__25.MoveNext:0022",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterCardExhausted\u003Ed__25.MoveNext:002F",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CausedByEthereal"
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CDrawIfThresholdMet\u003Ed__27.MoveNext:0039",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "CardsExhausted"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "ExhaustAmount",
+                      "Canonical": 5
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "LetStep",
+            "Name": "local82",
+            "Value": {
+              "$kind": "HookField",
+              "Field": "CardsExhausted"
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "CardsExhausted",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Remainder",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "CardsExhausted"
+              },
+              "Right": {
+                "$kind": "HookVar",
+                "Key": "ExhaustAmount",
+                "Canonical": 5
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardExhausted\u003Ed__25.MoveNext:0022",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterCardExhausted\u003Ed__25.MoveNext:002F",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CausedByEthereal"
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CDrawIfThresholdMet\u003Ed__27.MoveNext:0039",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "CardsExhausted"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "ExhaustAmount",
+                      "Canonical": 5
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DrawStep",
+            "Count": {
+              "$kind": "HookMath",
+              "Operation": "Divide",
+              "Left": {
+                "$kind": "HookLocal",
+                "Name": "local82"
+              },
+              "Right": {
+                "$kind": "HookVar",
+                "Key": "ExhaustAmount",
+                "Canonical": 5
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardExhausted\u003Ed__25.MoveNext:0022",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterCardExhausted\u003Ed__25.MoveNext:002F",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CausedByEthereal"
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CDrawIfThresholdMet\u003Ed__27.MoveNext:0039",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "CardsExhausted"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "ExhaustAmount",
+                      "Canonical": 5
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "CardsExhausted",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "CardsExhausted"
+              },
+              "Right": {
+                "$kind": "HookField",
+                "Field": "EtherealCount"
+              }
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__26.MoveNext:0027",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "EtherealCount",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__26.MoveNext:0027",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__26.MoveNext:0027",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CDrawIfThresholdMet\u003Ed__27.MoveNext:0039",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "CardsExhausted"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "ExhaustAmount",
+                      "Canonical": 5
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "LetStep",
+            "Name": "local82",
+            "Value": {
+              "$kind": "HookField",
+              "Field": "CardsExhausted"
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "CardsExhausted",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Remainder",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "CardsExhausted"
+              },
+              "Right": {
+                "$kind": "HookVar",
+                "Key": "ExhaustAmount",
+                "Canonical": 5
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__26.MoveNext:0027",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CDrawIfThresholdMet\u003Ed__27.MoveNext:0039",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "CardsExhausted"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "ExhaustAmount",
+                      "Canonical": 5
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DrawStep",
+            "Count": {
+              "$kind": "HookMath",
+              "Operation": "Divide",
+              "Left": {
+                "$kind": "HookLocal",
+                "Name": "local82"
+              },
+              "Right": {
+                "$kind": "HookVar",
+                "Key": "ExhaustAmount",
+                "Canonical": 5
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__26.MoveNext:0027",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CDrawIfThresholdMet\u003Ed__27.MoveNext:0039",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "CardsExhausted"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "ExhaustAmount",
+                      "Canonical": 5
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Draw",
+    "HelpsOwner": false
+  },
+  {
     "Name": "KiVersePower",
     "Kind": "Power",
     "Hooks": [

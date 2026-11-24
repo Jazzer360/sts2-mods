@@ -204,8 +204,6 @@ public static class SimReaders
                     data = Sts2State.Private<object?>(relic, "AffectedCardPlay", fallback: null) != null ? Models.PaelsLegion.BoundToPlay : 0;
                     break;
                 case nameof(CentennialPuzzle): amount = Sts2State.Private(relic, "UsedThisCombat", fallback: false) ? 1 : 0; break; // used up this combat
-                // Its count toward the next draw, and the Ethereal exhausts counted as the turn ends (its EtherealCount: 0 mid-turn).
-                case nameof(JossPaper): amount = Sts2State.Private(relic, "CardsExhausted", fallback: 0); data = Sts2State.Private(relic, "EtherealCount", fallback: 0); break;
                 case nameof(Pocketwatch): amount = Sts2State.Private(relic, "_cardsPlayedThisTurn", fallback: 0); data = Sts2State.Var(relic, "CardThreshold", fallback: 3); break;
                 case nameof(DemonTongue): data = Sts2State.Private(relic, "_triggeredThisTurn", fallback: true) ? (int)RelicUse.UsedThisTurn : 0; break;
                 // The HP at or below which it gives Strength (its threshold of your max HP).

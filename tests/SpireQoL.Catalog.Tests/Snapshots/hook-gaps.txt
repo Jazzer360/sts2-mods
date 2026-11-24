@@ -1,10 +1,10 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by the capability the reader names.
-# 106 hand-written models.
+# 105 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
-read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 9 classes, 9 alone: ArtOfWar*, ConquerorPower*, DemonTongue*, EmotionChip*, JossPaper*, MonarchsGazePower*, ParryingShield*, RippleBasin*, SelfFormingClay*
 its own data: a card or a play kept, a field used directly: 15 classes, 8 alone: BlackHolePower, CalamityPower*, HauntPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, MusicBox, PaelsLegion, PenNib, RupturePower*, SerpentFormPower*, StretchPower*, UnsettlingLamp, Vambrace, WitheringPresencePower*
+read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 8 classes, 8 alone: ArtOfWar*, ConquerorPower*, DemonTongue*, EmotionChip*, MonarchsGazePower*, ParryingShield*, RippleBasin*, SelfFormingClay*
 a monster's own state set (its flag, its next move): 10 classes, 4 alone: AsleepPower, CurlUpPower, FlutterPower*, ImbalancedPower*, InfestedPower, PlowPower*, RavenousPower*, SlumberPower, SteamEruptionPower, StockPower
 arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd): 6 classes, 4 alone: CoveringFirePower*, ExplosiveArrowsPower*, ImpaledPower, QuietusPower, Twine*, YahPower*
 hooks: BeforeAttack and AfterAttack: 6 classes, 3 alone: AimPower, BoneFlute*, GigantificationPower*, QuietusPower, SkittishPower, VigorPower*
@@ -89,7 +89,6 @@ InfestedPower: [a monster's own state set (its flag, its next move)] AfterDeath:
 InsatiableDominionPower: [a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)] AfterApplied: gap: the value ?stloc.0 | [a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)] AfterSideTurnStart: gap: the value ?stloc.0
 IntangiblePower: [the damage cap and AfterModifyingDamageAmount] AfterModifyingDamageAmount: gap: the simulator runs no read model's AfterModifyingDamageAmount | [the damage cap and AfterModifyingDamageAmount] ModifyDamageCap: gap: the simulator runs no read model's ModifyDamageCap
 InterceptPower: [queries: the owner's powers] AfterSideTurnEnd: gap: tests Contains(this.Owner.Powers, this) | [its own data: a card or a play kept, a field used directly] ModifyDamageMultiplicative: gap: the value this.GetInternalData<Data>().coveredCreatures().Count
-JossPaper: [read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule)] read whole
 JugglingPower: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: the value this.GetInternalData<Data>().cardToClone() | [its own data: a card or a play kept, a field used directly] BeforeCardPlayed: gap: the value cardPlay.Card
 LethalityPower: [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyDamageMultiplicative: gap: tests cardSource.Pile
 LostLutePower: [commands: AutoPlayFromDrawPile] AfterCardPlayed: gap: CardPileCmd.AutoPlayFromDrawPile isn't translated

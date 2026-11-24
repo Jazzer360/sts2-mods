@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Xunit;
 
 namespace SpireQoL.Sim.Tests;
@@ -26,7 +26,7 @@ public class ReadModelParityTests
     };
 
     /// <summary>
-    /// Differences reviewed: "Model.Hook" → the game's line the read model follows and the hand-written one didn't, and why it changes no
+    /// Differences reviewed: "Model.Hook" â†’ the game's line the read model follows and the hand-written one didn't, and why it changes no
     /// prediction (or which, a fix).
     /// </summary>
     private static readonly Dictionary<string, string> Reviewed = new(StringComparer.Ordinal)
@@ -50,7 +50,7 @@ public class ReadModelParityTests
         ["OblivionPower.AfterCardPlayed"] = "PowerCmd.Apply<DoomPower>(base.Owner, value, base.Applier): as BeforeCardPlayed's review",
         ["OblivionPower.AfterSideTurnEnd"] = "side == CombatSide.Player: PowerCmd.Remove(this), it goes as your turn ends. No card of yours plays after it: no prediction changes",
         ["TenderPower.AfterSideTurnEnd"] = "participants.Contains(base.Owner): Strength and Dexterity back by its own CardsPlayedThisTurn, applied by its applier, as your turn ends. No card of yours plays after it, nothing predicted reads them: no prediction changes",
-        ["ReaperFormPower.AfterDamageGiven"] = "dealer == base.Owner (or its pet's PetOwner) && props.IsPoweredAttack() && result.TotalDamage > 0: PowerCmd.Apply<DoomPower>(target, TotalDamage × Amount, base.Owner): the Doom lands on the hit's target (the hand-written model only logged its tab), whoever it is, and on a fully blocked hit too (TotalDamage counts block, where the hand-written model wanted HP through): its tab shows on such a hit, as the game acts on it (a fix). Doom acts as its owner's side's turn ends, which no simulation reaches; Shroud's block on the Doom you apply now follows it",
+        ["ReaperFormPower.AfterDamageGiven"] = "dealer == base.Owner (or its pet's PetOwner) && props.IsPoweredAttack() && result.TotalDamage > 0: PowerCmd.Apply<DoomPower>(target, TotalDamage Ã— Amount, base.Owner): the Doom lands on the hit's target (the hand-written model only logged its tab), whoever it is, and on a fully blocked hit too (TotalDamage counts block, where the hand-written model wanted HP through): its tab shows on such a hit, as the game acts on it (a fix). Doom acts as its owner's side's turn ends, which no simulation reaches; Shroud's block on the Doom you apply now follows it",
         ["PagestormPower.AfterCardEvent"] = "card.Keywords.Contains(Ethereal): Flash(), then CardPileCmd.Draw: the read model logs its firing (its acting step) where the hand-written model logged none. It has no tab (no Proc Tags row): what's shown doesn't change; the play check now holds its flash to the game's",
         ["LunarPastry.AfterSideTurnEnd"] = "PlayerCmd.GainStars as your turn ends: the read model logs its firing, as every read model's acting step does, where the hand-written model logged only the stars. It has no tab, and the checks read from its code that it never flashes (decision #181): nothing shown changes",
         ["PaleBlueDotPower.AfterCardPlayed"] = "PowerCmd.Apply<DrawCardsNextTurnPower>(base.Owner, base.Amount): the read model puts Draw Cards Next Turn on its owner where the hand-written model only fired. It acts as its owner's next turn starts, outside a simulation: no prediction changes",
@@ -122,6 +122,17 @@ public class ReadModelParityTests
     private static readonly Dictionary<string, (int Data, string Field)> RelicCounterFields = new(StringComparer.Ordinal)
     {
         [RelicId.BeatingRemnant.Name] = (6, "DamageReceivedThisTurn"),
+        // Joss Paper: the Ethereal exhausts its turn end counted (its EtherealCount; the hand-written model's Data).
+        [RelicId.JossPaper.Name] = (1, "EtherealCount"),
+    };
+
+    /// <summary>
+    /// The counts a hand-written relic model kept as its amount (the adapter read it there: SimReaders.Relics) and the field the read model keeps the
+    /// same count in: Joss Paper's exhausts toward its next draw (CardsExhausted), one short of the board's ExhaustAmount (6).
+    /// </summary>
+    private static readonly Dictionary<string, (int Amount, string Field)> RelicAmountFields = new(StringComparer.Ordinal)
+    {
+        [RelicId.JossPaper.Name] = (5, "CardsExhausted"),
     };
 
     public static TheoryData<string> Models() => new(HandWritten.Keys.OrderBy(name => name, StringComparer.Ordinal));
@@ -292,7 +303,9 @@ public class ReadModelParityTests
         var powerData = PowerDataVars.TryGetValue(model.Name, out var dataVar) ? state.Vars[$"{owner}:{model.Name}:{dataVar}"] : CounterFields.TryGetValue(model.Name, out var counted) ? counted.Data
             : model.UsesApplier ? DataCreature.Of(playersApplier ? Who.You : 0) : 0;
         if (model.Spec.Kind == ModelKind.Power) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).With(new PowerId(model.Name), amount: PowerAmountVars.TryGetValue(model.Name, out var amountKey) ? state.Vars[$"{owner}:{model.Name}:{amountKey}"] : 3, data: powerData));
-        var amount = RelicAmountVars.TryGetValue(model.Name, out var amountVar) ? state.Vars[$"{owner}:{model.Name}:{amountVar}"] : 0;
+        var amount = RelicAmountVars.TryGetValue(model.Name, out var amountVar) ? state.Vars[$"{owner}:{model.Name}:{amountVar}"]
+            : RelicAmountFields.TryGetValue(model.Name, out var amountField) ? amountField.Amount : 0;
+        if (RelicAmountFields.TryGetValue(model.Name, out var countField)) SimEngine.SetField(state, owner, model.FieldKey(countField.Field), countField.Amount);
         // A relic whose amount is its value keeps no flag (SimReaders.Relics); any other starts armed.
         var data = RelicDataVars.TryGetValue(model.Name, out var relicDataVar) ? state.Vars[$"{owner}:{model.Name}:{relicDataVar}"]
             : RelicCounterFields.TryGetValue(model.Name, out var relicCounter) ? relicCounter.Data : RelicAmountVars.ContainsKey(model.Name) ? 0 : (int)RelicUse.Armed;
@@ -469,7 +482,7 @@ public class ReadModelParityTests
                     state.EnemyTurnNow = true;
                     var after = Sequence(state, TurnStartHooks, (branch, turnStartHook) => turnStartHook(model, branch, owner));
                     var attacks = string.Join(", ", new[] { 0, Who.You }.Select(dealer => model.ModifyDamageMultiplicative(state, owner, new DamageCtx(dealer, owner, SimProps.Move, Card: null, Play: null))));
-                    return after + " // attacks on its owner × " + attacks;
+                    return after + " // attacks on its owner Ã— " + attacks;
                 });
                 break;
             case nameof(SimModel.AfterOrbChanneled):
