@@ -132,7 +132,7 @@ public static partial class SimEngine
                 return state.Player(owner)?.ExhaustPile ?? 0;
             case SimCounted.TargetPower:
                 if (counted.Power is not { } power || state.Enemy(state.CurrentPlay?.Target ?? Who.None) is not { Alive: true } aimedAt) return 0;
-                return power == PowerId.Poison ? aimedAt.PoisonStacks : aimedAt.Powers[power];
+                return aimedAt.Powers[power];
             case SimCounted.OwnerPower:
                 return counted.Power is { } owned ? PowerOn(state, owner, owned) : 0;
             case SimCounted.TargetHp:
@@ -144,7 +144,7 @@ public static partial class SimEngine
             case SimCounted.MonsterHp:
                 return state.Enemy(monster) is { Alive: true } asking ? asking.Hp : 0;
             case SimCounted.MonsterPower:
-                return counted.Power is { } its && state.Enemy(monster) is { Alive: true } holder ? (its == PowerId.Poison ? holder.PoisonStacks : holder.Powers[its]) : 0;
+                return counted.Power is { } its && state.Enemy(monster) is { Alive: true } holder ? holder.Powers[its] : 0;
             case SimCounted.MonsterSideAlive:
                 return state.Enemies.Count(enemy => enemy.Alive && !(counted.ExcludingItself && enemy.Id == monster));
             case SimCounted.History:

@@ -47,7 +47,7 @@ public class HookGapTests
         (@"AutoPlayFromDrawPile", "commands: AutoPlayFromDrawPile"),
         (@"OstyCmd\.", "commands: OstyCmd.Summon"),
         (@"CreatureCmd\.Stun|CreatureCmd\.Kill|SetStunned", "outcomes: a stun or a kill (outcome tabs)"),
-        (@"(\w+)\.\w+ isn't translated|the value value$", "a model's own method (its body read where it's called)"),
+        (@"(\w+)\.\w+ isn't translated|the value value$|the value direction$", "a model's own method (its body read where it's called)"),
         (@"the value \?\w", "a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)"),
         (@"applied by someone else", "a power applied by someone other than its owner"),
         (@"PowerCmd\.\w+ of another power", "a command on another power (PowerCmd.Remove of another)"),

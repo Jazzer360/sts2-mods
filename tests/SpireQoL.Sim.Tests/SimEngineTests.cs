@@ -90,7 +90,7 @@ public class SimEngineTests
     public void PoisonKillsBeforeItAttacks()
     {
         var enemy = Enemy(id: 1, hp: 5, block: 0, hits: 20);
-        enemy.Poison = 5;
+        enemy.AddPoison(5);
         var outcome = SimEngine.Run(new SimState { Enemies = { enemy } });
         Assert.Equal(0, outcome.TakenMax);
         Assert.Equal(1, outcome.Worst.SkippedPoisoned);

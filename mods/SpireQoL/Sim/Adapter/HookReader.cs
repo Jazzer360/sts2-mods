@@ -777,6 +777,9 @@ public static class HookReader
                 // Its owner is dead (base.Owner.IsDead).
                 case QueryValue { Name: "IsDead", Of: { } deadOf } when IsOwner(deadOf):
                     return new HookFactValue(HookFact.OwnerDead);
+                // Its owner is alive (base.Owner.IsAlive: Creature.IsDead is !IsAlive; PoisonPower.Trigger's Decrement after each tick).
+                case QueryValue { Name: "IsAlive", Of: { } aliveOf } when IsOwner(aliveOf):
+                    return Not(new HookFactValue(HookFact.OwnerDead));
                 case QueryValue { Type: "CombatManager", Name: "IsInProgress" }:
                     return new HookConstant(1m);
                 // Its owner's or its own fight is there (base.Owner.Creature.CombatState != null): in a simulation, always.
@@ -1062,6 +1065,12 @@ public static class HookReader
                     return new HookMath(operation, Value(left), Value(right));
                 case QueryValue { Type: "Decimal", Name: "op_Implicit", Arguments: [var inner] }:
                     return Value(inner);
+                // Math.Min and Math.Max of two values (PoisonPower.TriggerCount: Min(Amount, 1 + its opponents' Accelerant)).
+                case QueryValue { Type: "Math", Name: "Min" or "Max", Arguments: [var left, var right] } bounded:
+                    return new HookMath(bounded.Name == "Min" ? HookOperation.Min : HookOperation.Max, Value(left), Value(right));
+                // A power summed over the owner's living opponents (Sum(Where(GetOpponentsOf(base.Owner), c => c.IsAlive), a => a.GetPowerAmount<T>())).
+                case QueryValue { Type: "Enumerable", Name: "Sum", Arguments: [var opponents, LambdaValue each] } when LivingOpponents(opponents) && PowerAmountOf(each) is { } summed:
+                    return new HookFactValue(HookFact.OpponentsPowerAmount) { Of = PowerClass(summed) };
                 // x-- and x++ on a decimal (Panache's DynamicVars["CardsLeft"].BaseValue--).
                 case QueryValue { Type: "Decimal", Name: "op_Decrement" or "op_Increment", Arguments: [var stepped] } step:
                     return new HookMath(step.Name == "op_Decrement" ? HookOperation.Subtract : HookOperation.Add, Value(stepped), new HookConstant(1m));
@@ -1365,6 +1374,15 @@ public static class HookReader
         private static bool IsOwnersOrbs(ProgramValue value) =>
             (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Orbs", Of: QueryValue { Name: "OrbQueue", Of: QueryValue { Name: "PlayerCombatState", Of: { } player } } }
             && IsOwner(player);
+
+        /// <summary>The owner's living opponents (Where(CombatState.GetOpponentsOf(base.Owner), c => c.IsAlive)), kept in a local or not.</summary>
+        private static bool LivingOpponents(ProgramValue value) =>
+            (value is StoredValue stored ? stored.Value : value) is QueryValue { Type: "Enumerable", Name: "Where", Arguments: [QueryValue { Name: "GetOpponentsOf", Arguments: [var whose] }, LambdaValue alive] }
+            && IsOwner(whose) && alive.Body.Terms is [[{ Holds: true, Test: QueryValue { Name: "IsAlive", Of: ParameterValue { Name: var tested } } }]] && tested == alive.Parameter;
+
+        /// <summary>The power whose amount a lambda gives for its creature (a => a.GetPowerAmount&lt;T&gt;()), or null for any other lambda.</summary>
+        private static string? PowerAmountOf(LambdaValue lambda) =>
+            lambda.Body.Terms is [[{ Holds: true, Test: QueryValue { Name: "GetPowerAmount", GenericArguments: [var power], Of: ParameterValue { Name: var asked } } }]] && asked == lambda.Parameter ? power : null;
 
         /// <summary>The kind of orb a lambda tests its orb for (o => o is FrostOrb), or null for any other lambda.</summary>
         private static OrbKind? OrbKindTested(LambdaValue lambda)

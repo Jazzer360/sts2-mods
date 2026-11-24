@@ -533,7 +533,8 @@ Recorded before the first runs with 0.26–0.31; revisit with real reports.
 - [x] Round three, safety: every write in a read hook maps to a step (`HookWriteTests`, catalog, both branches: stores, property sets, collection changes, commands, calls that change a game object, in the body and what it calls); nothing dropped found.
 - [x] Round three, safety: a test that guards several steps is asked once a hook run (`ReadModel.GuardsSeveral`), and in a counter loop's body once a round (`ReadModelTestTests`).
 - [ ] Verify in game: the relic counters' fields read from the game mid-turn (Kunai at 2, then a third Attack: Dexterity), Rainbow Ring after an Attack and a Skill, Mini Regent once a turn.
-- [ ] Turn-start hooks of powers on enemies (they act as the enemies' turn starts: the enemy turn runs no read model there yet).
+- [x] Turn-start hooks of powers on enemies: the enemies' turn start runs read models (round six); round seven: an enemy's poison ticks from PoisonPower's code in its listener place (decision #201), Hardened Shell's reset at its BeforeSideTurnStart.
+- [ ] The poison preview (`SimEnemy.Poison`, PoisonTriggers) is still the engine's, for the play check's comparison with the game's CalculateTotalDamageNextTurn; Outbreak's `PoisonPower.Trigger` (TriggerPoisonAction) is still hand-coded where PoisonPower's own Trigger() is now read: run it through the read model's method.
 ## 21. Model programs: enemies (decision #195, 2026-11-24)
 
 - [x] The reader reads any game method (`ProgramReader`, `ModelProgram`, `ModelPrograms`): a monster's moves and hooks, found by shape (`MonsterCode`). Stores to the model's own state are steps (`StoreStep`), a monster's calls into MonsterModel that change it too (`SetMoveImmediate`), `base.` hook calls are their base code.

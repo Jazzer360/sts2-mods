@@ -112,7 +112,6 @@ public static partial class SimAdapter
                 Stunned = creature.IsStunned,
                 Imbalanced = creature.HasPower<ImbalancedPower>(),
                 Poison = SafeInt(() => creature.GetPower<PoisonPower>()?.CalculateTotalDamageNextTurn() ?? 0),
-                PoisonStacks = creature.GetPower<PoisonPower>()?.Amount ?? 0,
                 PoisonTriggers = PoisonTriggers(creature, combat),
                 IntendsToAttack = creature.IsAlive && SafeBool(() => creature.Monster?.IntendsToAttack == true),
             };

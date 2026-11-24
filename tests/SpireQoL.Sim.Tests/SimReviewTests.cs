@@ -16,7 +16,7 @@ public class SimReviewTests
         // PoisonPower.AfterSideTurnStart ticks for every enemy on its side's turn start, stunned or not.
         var enemy = Enemy(id: 1, hp: 4, block: 0, hits: 10);
         enemy.Stunned = true;
-        enemy.Poison = 4;
+        enemy.AddPoison(4);
         var outcome = SimEngine.Run(new SimState { Enemies = { enemy } });
         Assert.True(outcome.DeadInAll(enemyId: 1));
         Assert.Equal(0, outcome.TakenMax); // stunned: it wouldn't have attacked anyway
@@ -41,7 +41,7 @@ public class SimReviewTests
     {
         // Poison and retaliation happen on its turn: not in HpAtTurnEnd.
         var enemy = Enemy(id: 1, hp: 10, block: 0, hits: 5);
-        enemy.Poison = 3;
+        enemy.AddPoison(3);
         var state = new SimState { Enemies = { enemy } };
         state.You.Thorns = 2;
         var outcome = SimEngine.Run(state);

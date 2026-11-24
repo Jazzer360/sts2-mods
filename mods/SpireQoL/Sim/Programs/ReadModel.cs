@@ -789,6 +789,8 @@ public sealed class ReadModel : SimModel
         HookOperation.Greater => (in HookArgs args) => left(in args) > right(in args) ? 1m : 0m,
         HookOperation.GreaterOrEqual => (in HookArgs args) => left(in args) >= right(in args) ? 1m : 0m,
         HookOperation.And => (in HookArgs args) => left(in args) != 0m && right(in args) != 0m ? 1m : 0m,
+        HookOperation.Min => (in HookArgs args) => Math.Min(left(in args), right(in args)),
+        HookOperation.Max => (in HookArgs args) => Math.Max(left(in args), right(in args)),
         _ => (in HookArgs args) => left(in args) != 0m || right(in args) != 0m ? 1m : 0m,
     };
 
@@ -815,6 +817,25 @@ public sealed class ReadModel : SimModel
                 return (in HookArgs args) => args.State.EventCard?.Name == named ? 1m : 0m;
             case HookFact.OwnersTurn: return (in HookArgs args) => Who.IsPlayer(args.Owner) != args.State.EnemyTurnNow ? 1m : 0m;
             case HookFact.EnemiesTurn: return (in HookArgs args) => args.State.EnemyTurnNow ? 1m : 0m;
+            case HookFact.OpponentsPowerAmount:
+            {
+                // GetOpponentsOf(owner) where alive: the living players (a pet keeps no powers in the simulator) for an enemy, the living enemies for a player.
+                var power = new PowerId(named!);
+                return (in HookArgs args) =>
+                {
+                    var state = args.State;
+                    var total = 0;
+                    if (Who.IsEnemy(args.Owner))
+                    {
+                        foreach (var id in state.PlayerIds)
+                            if (state.Player(id) is { Hp: > 0, Died: false } player) total += player.Powers[power];
+                    }
+                    else
+                        foreach (var enemy in state.Enemies)
+                            if (enemy.Alive) total += enemy.Powers[power];
+                    return total;
+                };
+            }
             case HookFact.ApplierIsOwner: return (in HookArgs args) => args.Applier == args.Owner ? 1m : 0m;
             case HookFact.PowerIs: return (in HookArgs args) => args.Power.Name == named ? 1m : 0m;
             case HookFact.PowerIn:

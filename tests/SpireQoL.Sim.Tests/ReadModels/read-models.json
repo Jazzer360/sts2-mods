@@ -10286,6 +10286,79 @@
     "HelpsOwner": false
   },
   {
+    "Name": "PoisonPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "RepeatStep",
+            "Times": {
+              "$kind": "HookMath",
+              "Operation": "Min",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "Add",
+                "Left": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                },
+                "Right": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OpponentsPowerAmount",
+                  "Of": "AccelerantPower"
+                }
+              }
+            },
+            "Steps": [
+              {
+                "$kind": "DamageStep",
+                "Target": "Owner",
+                "Amount": {
+                  "$kind": "HookFactValue",
+                  "Fact": "Amount"
+                },
+                "Props": {
+                  "$kind": "HookConstant",
+                  "Value": 6
+                },
+                "NoDealer": true
+              },
+              {
+                "$kind": "DecrementPowerStep",
+                "When": {
+                  "$kind": "HookTest",
+                  "At": "\u003CTrigger\u003Ed__10.MoveNext:00B7",
+                  "Test": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookFactValue",
+                      "Fact": "OwnerDead"
+                    }
+                  }
+                }
+              }
+            ],
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__9.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "PrepTimePower",
     "Kind": "Power",
     "Hooks": [

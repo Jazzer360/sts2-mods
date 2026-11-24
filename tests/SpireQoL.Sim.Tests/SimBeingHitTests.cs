@@ -64,9 +64,9 @@ public class SimBeingHitTests
         // 60 (Shriek 75) was stunned and skipped its hits, which the forecast still counted.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 82, block: 0, hits: 10) } };
         state.Enemies[0].StunAtHp = 75;
-        state.Enemies[0].Poison = 6;
+        state.Enemies[0].AddPoison(6);
         Assert.Equal(10, SimEngine.Run(state).TakenMax); // 76: above it
-        state.Enemies[0].Poison = 22;
+        state.Enemies[0].AddPoison(22);
         Assert.Equal(0, SimEngine.Run(state).TakenMax);
     }
 
@@ -76,7 +76,7 @@ public class SimBeingHitTests
         // Poison through the HP-loss pipeline: Slippery lets 1 HP of a 30-poison tick through, so it lives to attack.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, block: 0, hits: 10) } };
         state.Enemies[0].Slippery = 1;
-        state.Enemies[0].Poison = 30;
+        state.Enemies[0].AddPoison(30);
         var outcome = SimEngine.Run(state);
         Assert.False(outcome.DeadInAll(enemyId: 1));
         Assert.Equal(10, outcome.TakenMax);

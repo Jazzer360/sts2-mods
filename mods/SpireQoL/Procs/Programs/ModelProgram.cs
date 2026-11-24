@@ -623,7 +623,9 @@ public static class ProgramReader
                     into.Add(Attack(flow, i, member) with { Condition = condition });
                     continue;
                 }
-                if (IsCommand(member) || IsPowerAction(member))
+                // A power's action on itself (PoisonPower.AfterSideTurnStart's Trigger(), Black Hole's DealDamageToAllEnemies) is its own method, read
+                // where it's called below; another's (Outbreak's PoisonPower.Trigger on each enemy's poison) is a step named by its power and method.
+                if (IsCommand(member) || IsPowerAction(member) && (member.DeclaringType != _card.Name || OwnMethod(member) == null))
                 {
                     into.Add(new CommandStep(instruction.Offset, member, Arguments(flow, i, member))
                         { Condition = condition, Values = flow.ArgumentValues(i, member), Inner = callback ?? (IReadOnlyList<ProgramStep>)Array.Empty<ProgramStep>() });

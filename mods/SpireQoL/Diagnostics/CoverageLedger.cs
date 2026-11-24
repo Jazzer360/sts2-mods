@@ -196,7 +196,7 @@ internal static partial class CoverageLedger
         ["GravityPower"] = "covered: read from its code (ReadModel, decision #195): BeforeCardPlayed binds its amount to the play, AfterCardPlayed damages all enemies with it (proc damage); AfterSideTurnEnd removes it",
         ["GuardedPower"] = "covered: read from its code (ReadModel, decision #195): ModifyDamageMultiplicative its DamageDecrease on powered attacks on its owner, each copy its own; AfterDeath removes the copy whose applier died",
         ["HailstormPower"] = "covered: read from its code (ReadModel, decision #195): BeforeSideTurnEnd deals its amount to every hittable enemy when its owner has its FrostOrbs Frost orbs",
-        ["HardenedShellPower"] = "covered: ModifyHpLostBeforeOstyLate caps HP lost per turn (simulator ShellLeft)",
+        ["HardenedShellPower"] = "covered: ModifyHpLostBeforeOstyLate caps HP lost per turn (simulator ShellLeft), its budget whole again at BeforeSideTurnStart (the enemies' turn start, before their poison ticks)",
         ["HatchPower"] = "ignore: read from its code (ReadModel, decision #195): AfterSideTurnEnd counts down as its owner's side's turn ends, which no simulation reaches for an enemy (hatching is a later turn)",
         ["HauntPower"] = "covered: AfterCardPlayed damages a random enemy on Souls (proc damage)",
         ["HeistPower"] = "ignore: BeforeDeath returns stolen gold",

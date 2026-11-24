@@ -138,8 +138,11 @@ public sealed class SimEnemy
     /// <summary>Dead before it could act (your turn, your end of turn, or its poison tick).</summary>
     public bool DiedBeforeActing;
 
-    /// <summary>Poison stacks and how many times they tick (Accelerant): Poison above is their damage.</summary>
-    public int PoisonStacks;
+    /// <summary>
+    /// Its Poison's stacks: the power (PoisonPower, read from its code: it ticks as the enemies' turn starts), in its place among its powers.
+    /// Poison above is the game's preview of their next tick, PoisonTriggers how many times they tick as read (Accelerant), for the preview.
+    /// </summary>
+    [JsonIgnore] public int PoisonStacks { get => Powers[PowerId.Poison]; set => Set(PowerId.Poison, value); }
     public int PoisonTriggers = 1;
 
     // Reactions to your card plays (block it gains during your turn; decompile v0.111.0).
@@ -215,14 +218,15 @@ public sealed class SimEnemy
     public void AddPoison(int stacks)
     {
         if (stacks <= 0) return;
-        int Tick(int stackCount)
-        {
-            var sum = 0;
-            for (var i = 0; i < Math.Min(stackCount, Math.Max(1, PoisonTriggers)); i++) sum += stackCount - i;
-            return sum;
-        }
-        Poison += Tick(PoisonStacks + stacks) - Tick(PoisonStacks);
+        RaisePoisonPreview(stacks);
         PoisonStacks += stacks;
+    }
+
+    /// <summary>The preview of its next tick (Poison) raised by what <paramref name="stacks"/> more stacks add, before they land.</summary>
+    internal void RaisePoisonPreview(int stacks)
+    {
+        if (stacks <= 0) return;
+        Poison += SimEngine.PoisonTick(PoisonStacks + stacks, PoisonTriggers) - SimEngine.PoisonTick(PoisonStacks, PoisonTriggers);
     }
 
     /// <summary>Its HP when your end of turn is over (before its turn), for the outcome audit.</summary>
@@ -250,7 +254,7 @@ public sealed class SimEnemy
     internal void Hash(Action<long> add)
     {
         add(Id); add(Hp); add(Block); add(UnblockedInstances); add(FirstHitFullyBlocked ? 1 : 0); add(Poison); add(DiedBeforeActing ? 1 : 0);
-        add(PoisonStacks); add(Stunned ? 1 : 0); add(IntendsToAttack ? 1 : 0); add(BlockBroken ? 1 : 0); add(GambitTriggered ? 1 : 0);
+        add(Stunned ? 1 : 0); add(IntendsToAttack ? 1 : 0); add(BlockBroken ? 1 : 0); add(GambitTriggered ? 1 : 0);
         add(SlipperyTriggered ? 1 : 0); add(Exploded ? 1 : 0); add(MoveBlock);
         Powers.Hash(add); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         Fields.Hash(add);

@@ -161,6 +161,11 @@ public enum HookFact
     CreatureOnPlayersSide,
     /// <summary>It's the enemies' turn (CombatState.CurrentSide == CombatSide.Enemy): from the enemy turn's start.</summary>
     EnemiesTurn,
+    /// <summary>
+    /// The power named in Of summed over the owner's living opponents (Sum(Where(CombatState.GetOpponentsOf(base.Owner), c =&gt; c.IsAlive),
+    /// a =&gt; a.GetPowerAmount&lt;T&gt;()): PoisonPower.TriggerCount's Accelerant): the living players for an enemy, the living enemies for a player.
+    /// </summary>
+    OpponentsPowerAmount,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>
@@ -188,8 +193,11 @@ public sealed record HookCreature(HookWho Who)
     public override string ToString() => PetOwner ? Who + ".PetOwner" : Who.ToString();
 }
 
-/// <summary>An operation of the code on two values (decimal throughout; a true-or-false is 1 or 0).</summary>
-public enum HookOperation { Add, Subtract, Multiply, Divide, Remainder, Equal, NotEqual, Less, LessOrEqual, Greater, GreaterOrEqual, And, Or }
+/// <summary>
+/// An operation of the code on two values (decimal throughout; a true-or-false is 1 or 0). Min and Max are Math.Min and Math.Max
+/// (PoisonPower.TriggerCount's Min(Amount, 1 + Accelerant)).
+/// </summary>
+public enum HookOperation { Add, Subtract, Multiply, Divide, Remainder, Equal, NotEqual, Less, LessOrEqual, Greater, GreaterOrEqual, And, Or, Min, Max }
 
 /// <summary>A value a hook's code works out (an amount, a test), read from its instructions: decimal, a true-or-false is 1 or 0.</summary>
 public abstract record HookValue;

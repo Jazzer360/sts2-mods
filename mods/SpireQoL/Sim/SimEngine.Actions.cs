@@ -585,13 +585,11 @@ public static partial class SimEngine
         }
         // The game's log has it now (PowerReceivedEntry: the power, who applied it), before its hooks (decision #191).
         if (state.History.Count > 0) Record(state, new HistoryEvent(HistoryKind.PowerReceived, applier) { Power = power });
-        if (target >= 0 && power == PowerId.Poison)
-        {
-            state.Enemy(target)?.AddPoison(amount);
-            return true;
-        }
-        // Accelerant on any player: every enemy's poison ticks that many more times (PoisonPower.TriggerCount sums every
-        // living player's), and its next tick deals that much more.
+        // The game's preview of an enemy's next poison tick (PoisonPower.CalculateTotalDamageNextTurn, read by the adapter: the play check
+        // compares it) follows the stacks landing; the stacks are the power's entry, landing below as any power's.
+        if (target >= 0 && power == PowerId.Poison) state.Enemy(target)?.RaisePoisonPreview(amount);
+        // Accelerant on any player: every enemy's poison preview ticks that many more times (PoisonPower.TriggerCount sums every living
+        // player's; the tick itself reads it from the board as it runs).
         if (Who.IsPlayer(target) && power == PowerId.Accelerant)
             foreach (var enemy in state.Enemies)
             {
@@ -625,9 +623,9 @@ public static partial class SimEngine
     /// </summary>
     private static int AmountOf(SimState state, ApplyPowerAction apply, int applier, int target) =>
         apply.CopiesOwn ? PowerOn(state, applier, apply.Power)
-        : apply.CopiesTarget ? (apply.Power == PowerId.Poison ? state.Enemy(target)?.PoisonStacks ?? 0 : PowerOn(state, target, apply.Power))
+        : apply.CopiesTarget ? PowerOn(state, target, apply.Power)
         : apply.TargetsAmountOf is { } other ? (state.CurrentPlay?.Target ?? Who.None) is var aimedAt && state.Enemy(aimedAt) is { Alive: true } aimedEnemy
-            ? (other == PowerId.Poison ? aimedEnemy.PoisonStacks : PowerOn(state, aimedAt, other)) : 0
+            ? PowerOn(state, aimedEnemy.Id, other) : 0
         : apply.Amount;
 
     /// <summary>The power on each creature it reaches, then AfterPowerApplied for each that landed (Artifact took none of it).</summary>

@@ -60,7 +60,7 @@ public class SimExplosiveTests
         // so the other enemy survives and attacks for 7.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 3), Enemy(id: 2, hp: 4, hits: 7) } };
         state.Enemies[0].Explosive = 5;
-        state.Enemies[0].Poison = 3;
+        state.Enemies[0].AddPoison(3);
         state.Enemies[0].PoisonStacks = 3;
         state.You.Inferno = 10;
         var outcome = SimEngine.Run(state);

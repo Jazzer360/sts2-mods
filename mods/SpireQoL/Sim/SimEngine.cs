@@ -1310,7 +1310,8 @@ public static partial class SimEngine
     /// <summary>
     /// The enemies' side's turn starts (CombatManager.StartTurn, the one turn start a simulation reaches): the deaths at your end of turn are
     /// handled, it's the enemies' turn, then every listener's BeforeSideTurnStart and AfterSideTurnStart (then Late), its participants the
-    /// living enemies. Each enemy's poison ticks in EnemyTurn, after the read models' AfterSideTurnStart.
+    /// living enemies: Hardened Shell's budget resets (its BeforeSideTurnStart), each enemy's poison ticks (PoisonPower.AfterSideTurnStart, read
+    /// from its code) in its place among the listeners, as the game's listener order has it.
     /// </summary>
     private static void EnemyTurnStart(BranchSet branches)
     {
@@ -1333,27 +1334,22 @@ public static partial class SimEngine
     {
         if (!state.EnemyTurnNow) StartTheEnemiesTurn(state);
         AllyDeaths(state); // deaths in the enemies' turn start
-        // Every enemy's poison ticks as the enemies' turn starts (PoisonPower.AfterSideTurnStart, before ExecuteEnemyTurn), stunned
-        // or not, and Hardened Shell's budget resets then. The tick is damage (PoisonPower.Trigger: CreatureCmd.Damage, Unblockable |
-        // Unpowered, no dealer): the HP-loss pipeline caps it (Hardened Shell, Slippery) and the damage hooks hear it (Shriek stuns at
-        // its threshold, Asleep wakes, Slumber and Plow count it). Its deaths run their hooks before any enemy moves (Ravenous stuns
-        // the other Corpse Slug; Crab Rage).
-        var poisoned = new HashSet<int>();
-        foreach (var enemy in state.Enemies.ToList())
-        {
-            if (!enemy.Alive) continue;
-            enemy.ShellLeft = enemy.ShellPerTurn;
-            if (enemy.Poison > 0) Damage(state, enemy, enemy.Poison, dealer: null, SimProps.Unblockable | SimProps.Unpowered);
-            if (enemy.Alive) continue;
-            poisoned.Add(enemy.Id);
-            enemy.DiedBeforeActing = true;
-            if (HitCount(enemy) > 0) state.SkippedPoisoned++;
-            Explosions(state);
-        }
-        if (poisoned.Count > 0) AllyDeaths(state);
+        // The enemies the turn's start killed never act: each one's poison ticked then (PoisonPower.AfterSideTurnStart, read from its code, in
+        // the game's listener order: EnemyTurnStart), stunned or not, after Hardened Shell's BeforeSideTurnStart reset its budget. Each tick is
+        // damage (PoisonPower.Trigger: CreatureCmd.Damage, Unblockable | Unpowered, no dealer): the HP-loss pipeline caps it (Hardened Shell,
+        // Slippery) and the damage hooks hear it (Shriek stuns at its threshold, Asleep wakes, Slumber and Plow count it); its deaths ran their
+        // hooks as they happened, before any enemy moves (Ravenous stuns the other Corpse Slug; Crab Rage).
+        HashSet<int>? poisoned = null;
         foreach (var enemy in state.Enemies)
         {
-            if (poisoned.Contains(enemy.Id)) continue;
+            if (enemy.Alive || enemy.HpAtTurnEnd <= 0 || enemy.DiedBeforeActing) continue;
+            (poisoned ??= new HashSet<int>()).Add(enemy.Id);
+            enemy.DiedBeforeActing = true;
+            if (HitCount(enemy) > 0) state.SkippedPoisoned++;
+        }
+        foreach (var enemy in state.Enemies)
+        {
+            if (poisoned?.Contains(enemy.Id) == true) continue;
             if (!enemy.Alive)
             {
                 enemy.DiedBeforeActing = true;

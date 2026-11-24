@@ -129,7 +129,8 @@ machinery.)
 
 A run is the play, the end of your turn, the enemies' turn start, then the enemy turn. The enemies' turn start
 (`SimEngine.EnemyTurnStart`, CombatManager.StartTurn) runs every listener's BeforeSideTurnStart, AfterSideTurnStart and
-AfterSideTurnStartLate, its participants the living enemies; each enemy's poison then ticks and the enemies move. The
+AfterSideTurnStartLate, its participants the living enemies, in the game's listener order: Hardened Shell's budget resets, each
+enemy's poison ticks (PoisonPower read from its code: a damage per tick, TriggerCount of them), then the enemies move. The
 players' next turn start (AfterEnergyReset, AfterPlayerTurnStart, BeforeHandDraw) is past every simulation.
 
 ### Pipelines

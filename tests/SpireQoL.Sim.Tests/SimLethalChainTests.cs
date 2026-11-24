@@ -59,7 +59,7 @@ public class SimLethalChainTests
     public void PoisonThatKillsAtTheEnemyTurn()
     {
         var state = new SimState { Enemies = { E(id: 1, hp: 10, hits: 10) } };
-        state.Enemies[0].Poison = 5;
+        state.Enemies[0].AddPoison(5);
         Agrees(state, Strike(target: 1, damage: 6));
         Assert.True(SimEngine.Run(state, Strike(target: 1, damage: 6)).DeadChanceRange(enemyId: 1).Certain);
         Assert.False(SimEngine.Run(state).DeadChanceRange(enemyId: 1).Possible);

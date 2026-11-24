@@ -87,6 +87,7 @@ public static partial class ReadModels
         PowerId.Panache.Name,
         RelicId.Permafrost.Name,
         PowerId.PillarOfCreation.Name,
+        PowerId.Poison.Name,
         PowerId.PrepTime.Name,
         PowerId.Rage.Name,
         RelicId.RainbowRing.Name,

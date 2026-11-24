@@ -67,6 +67,13 @@ public sealed class HardenedShellPower : SimModel
         var powers = SimEngine.PowersOf(state, owner);
         SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], Math.Max(0, powers.DataOf(ThisPower) - hit.Unblocked)));
     }
+    /// <summary>BeforeSideTurnStart: what it took this turn starts over as any side's turn starts (no test of the side), before any AfterSideTurnStart.</summary>
+    public override IEnumerable<SimState> BeforeSideTurnStart(SimState state, int owner)
+    {
+        var powers = SimEngine.PowersOf(state, owner);
+        if (powers.Has(ThisPower)) SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], powers[ThisPower]));
+        return One(state);
+    }
 }
 
 /// <summary>SlipperyPower: at most 1 HP per damage to its owner (AfterOsty); each that loses HP flashes and takes a charge.</summary>
