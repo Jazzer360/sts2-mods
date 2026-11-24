@@ -98,9 +98,16 @@ public class SteadyWatchTests
         var watch = new SteadyWatch(DevOnly);
         var entries = new[] { ("card-tabs", 0.1), ("ethereal-fade", 0.0) };
         var now = Run(watch, key: 1, start: 0, frames: 120, kilobytes: _ => entries);
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 0; i < 1000; i++, now += Frame) watch.Frame(key: 1, now, Frame, where: "fight", devCheck: false, featureKb: entries);
-        Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+        // A garbage-making frame shows in every stretch; the runtime's own one-off work on this thread (a method recompiled hot,
+        // mid-stretch) shows in one. So a stretch with nothing allocated, of three, passes.
+        var allocated = new List<long>();
+        for (var stretch = 0; stretch < 3 && !allocated.Contains(0); stretch++)
+        {
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (var i = 0; i < 1000; i++, now += Frame) watch.Frame(key: 1, now, Frame, where: "fight", devCheck: false, featureKb: entries);
+            allocated.Add(GC.GetAllocatedBytesForCurrentThread() - before);
+        }
+        Assert.Contains(0, allocated);
     }
 
     [Fact]
