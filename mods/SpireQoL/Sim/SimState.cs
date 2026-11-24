@@ -692,7 +692,7 @@ public sealed class SimState
     public bool ParryingShieldFired;
     /// <summary>
     /// The payouts whose condition held where their hook ran (ModelSpec.Payouts decided where they're paid: Parrying Shield's damage as your turn
-    /// ends, decision #238), each under its source's log key (SimKeys.Logged): what a tab judged on how the turn ends compares with ending it now.
+    /// ends, decision #239), each under its source's log key (SimKeys.Logged): what a tab judged on how the turn ends compares with ending it now.
     /// </summary>
     public NamedCounts Payouts = NamedCounts.Empty;
     public List<(string Name, int Amount)> EndOfTurnBlock = new();

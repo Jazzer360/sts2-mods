@@ -152,7 +152,7 @@ public static class HookReader
                 .Select(variable => VarFieldPrefix + variable.Key) : Array.Empty<string>())
             .ToHashSet(StringComparer.Ordinal);
         if (storedVars.Count > 0) programs = programs.Select(program => VarsAsState(program, storedVars)).ToList();
-        // What it pays out after the play, on what (decision #238): read from its turn-end hooks and its next turn's start, which never run.
+        // What it pays out after the play, on what (decision #239): read from its turn-end hooks and its next turn's start, which never run.
         var nextTurn = Hooks(type).Where(hook => PlayersTurnStartHooks.Contains(hook.Name)).OrderBy(hook => hook.Name, StringComparer.Ordinal)
             .Select(hook => (hook.Name, Steps: reader.NextTurnSteps(hook))).ToList();
         // A model whose commands act during the play too (Joss Paper's draw as a card exhausts) keeps its play tab: its payouts give none.
@@ -176,7 +176,7 @@ public static class HookReader
         // A crossed tab carries no amount (only the four core resources' plain tabs do: decision #132): a trigger, as it is for every owner of a
         // class one owner's is crossed for (a teammate's Sneaky keeps the trigger an enemy's would have). A tab judged on the outcome is its only one.
         // A payout decided where it's paid is a tab judged on the outcome, its only one; one the play decides is a crossed trigger on the play
-        // that gives it up (decision #238).
+        // that gives it up (decision #239).
         var spec = new ModelSpec(type.Name, kind, programs)
         {
             Tab = outcome != null || payouts.Any(payout => payout.DuringTheTurn == null) ? null : payouts.Count > 0 ? TabKind.Trigger
@@ -453,7 +453,7 @@ public static class HookReader
         { HookName.BeforeSideTurnEndVeryEarly, HookName.BeforeSideTurnEndEarly, HookName.BeforeSideTurnEnd, HookName.AfterSideTurnEnd, HookName.AfterSideTurnEndLate };
 
     /// <summary>
-    /// What a model pays out after the play (decision #238): each command that gives (block for its owner, damage to the enemies, energy, cards, an
+    /// What a model pays out after the play (decision #239): each command that gives (block for its owner, damage to the enemies, energy, cards, an
     /// orb, a heal, stars, a buff on its owner or a debuff on the enemies) in a hook of the players' turn's end or of their next turn's start
     /// (<paramref name="nextTurn"/>: those hooks' commands, null where the reader stops), on a test of its code beyond its owner taking part:
     /// that test is the payout's condition. A payout whose condition only a play changes (DuringTheTurn) is decided by the play; one in the
@@ -956,7 +956,7 @@ public static class HookReader
 
         /// <summary>
         /// The commands of a hook that runs as the players' next turn starts (AfterEnergyReset, AfterPlayerTurnStart...): never run (past a simulation's
-        /// horizon), read for what it pays out and on what (ModelSpec.Payouts, decision #238). Null where the reader stops.
+        /// horizon), read for what it pays out and on what (ModelSpec.Payouts, decision #239). Null where the reader stops.
         /// </summary>
         public IReadOnlyList<HookStep>? NextTurnSteps(MethodInfo hook)
         {
@@ -2237,7 +2237,7 @@ public static class HookReader
             // The player an event happened to (AfterOrbChanneled's player, AfterShuffle's): the event's player is its owner.
             if (other is NamedValue { Name: "player" or "shuffler" } or ParameterValue { Name: "player" or "shuffler" } && _hook is "AfterOrbChanneled" or "AfterShuffle")
                 return new HookFactValue(HookFact.EventIsOwners);
-            // The player whose next turn starts (AfterEnergyReset's, AfterPlayerTurnStart's player: a payout's hook, decision #238): asked of its owner's.
+            // The player whose next turn starts (AfterEnergyReset's, AfterPlayerTurnStart's player: a payout's hook, decision #239): asked of its owner's.
             if (other is NamedValue { Name: "player" } or ParameterValue { Name: "player" } && PlayersTurnStartHooks.Contains(_hook))
                 return new HookFactValue(HookFact.EventIsOwners);
             // Another creature the code names (a pet's player, a creature's player): the creatures' comparison (CreatureCompare).

@@ -210,7 +210,10 @@ Reads state only (CLAUDE.md: rules live in the simulator):
 - **Proc Indicators**: tabs from the hovered card's simulated play: a model that flashed in every branch (good) or in some
   branch (warning), with the amounts the log attributes to it. The 100-case `Evaluate` switch goes away; each rule becomes
   (part of) a model. Tabs that aren't about a model firing (Retain, Sly, replay, return, free card, shuffle, lethal) keep
-  their own code but read the simulated play where it has the answer.
+  their own code but read the simulated play where it has the answer. The rules are the simulator's (`CardTabs`): the play
+  log's tabs in the sources' order, then the rules judged on how the turn ends. A read model's rules come from its code: what
+  it pays out after the play and on what (a play that turns the condition off gives the bonus up: crossed; one that turns it on
+  sets it up: plain), its reaction to its owner losing HP, and what its AfterDeath waits on (decision #239).
 - **Proc check** (`ProcAudit`): compares the game's flashes and effects with the simulated play's event log (the same
   vocabulary on both sides).
 - **Forecast check**: unchanged interface (it compares the simulator's end-of-turn and enemy-turn outcome with the game's).

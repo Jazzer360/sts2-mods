@@ -58,7 +58,7 @@ internal readonly struct HookArgs
     public int Each { get; init; }
     /// <summary>The locals this run kept (LetStep, by its slot); null: it keeps none.</summary>
     public decimal[]? Locals { get; init; }
-    /// <summary>Asked of the players' next turn (a payout there: decision #238): the turn number is the next one.</summary>
+    /// <summary>Asked of the players' next turn (a payout there: decision #239): the turn number is the next one.</summary>
     public bool NextTurn { get; init; }
 
     /// <summary>The same hook on another branch (its answers so far its own).</summary>
@@ -96,13 +96,13 @@ public sealed class ReadModel : SimModel
     /// </summary>
     public override bool HarmfulFor(int owner) => GivesUpDuringTheTurn || Spec.HurtsPlayOwner || (Who.IsEnemy(owner) ? Spec.HelpsOwner : Spec.HurtsOwner);
 
-    /// <summary>Its play tab says a play gives a bonus up (a payout the play decides: decision #238): crossed for every owner.</summary>
+    /// <summary>Its play tab says a play gives a bonus up (a payout the play decides: decision #239): crossed for every owner.</summary>
     public override bool Harmful => GivesUpDuringTheTurn;
 
     /// <summary>A play hook of its code turns it dark (ModelSpec.DarkensOnPlay): the play check holds its crossed tab to that.</summary>
     public override ActedSeen Seen => Spec.DarkensOnPlay ? ActedSeen.StatusCleared : ActedSeen.Flash;
 
-    // ---- payouts (decision #238)
+    // ---- payouts (decision #239)
 
     /// <summary>Its payouts a play decides (Payout.DuringTheTurn), each compiled once: its condition during the turn, asked of its hook's turn.</summary>
     private readonly (Evaluate Condition, HookName? Hook, bool NextTurn)[] _duringTheTurn = Array.Empty<(Evaluate, HookName?, bool)>();
@@ -139,7 +139,7 @@ public sealed class ReadModel : SimModel
         return false;
     }
 
-    /// <summary>A payout that was on is off now: the play gave the bonus up (the crossed tab's firing, decision #238).</summary>
+    /// <summary>A payout that was on is off now: the play gave the bonus up (the crossed tab's firing, decision #239).</summary>
     public void GaveUp(SimState state, int owner, bool wasOn)
     {
         if (wasOn && !PayoutOn(state, owner)) state.LogFired(Name, amount: 0, owner);
@@ -615,7 +615,7 @@ public sealed class ReadModel : SimModel
     };
 
     /// <summary>
-    /// Its payout decided where it's paid (decision #238), yours: ending the turn now, does it pay in every outcome? If not, a bonus where the play
+    /// Its payout decided where it's paid (decision #239), yours: ending the turn now, does it pay in every outcome? If not, a bonus where the play
     /// makes it pay in every outcome (it sets it up); if so, a warning where the play stops it in some outcome (it gives it up), with the chance of
     /// those. Set off after the play (as your turn ends), so the play check can't see it. Not a teammate's: the play's bonus is its own player's.
     /// </summary>
@@ -629,7 +629,7 @@ public sealed class ReadModel : SimModel
     }
 
     /// <summary>
-    /// Its reaction to its owner losing HP (HookOutcome.ReactsToHpLoss, decision #238), as its acting or flash log says it acted: on you, a bonus when
+    /// Its reaction to its owner losing HP (HookOutcome.ReactsToHpLoss, decision #239), as its acting or flash log says it acted: on you, a bonus when
     /// the play sets it off in every outcome (you lose HP during the play); on an enemy, a warning when the play sets it off in some outcome of the turn
     /// and ending the turn now sets it off in none, with the chance of the outcomes that do. Not a teammate's: the play's HP loss is its own player's.
     /// </summary>
@@ -652,7 +652,7 @@ public sealed class ReadModel : SimModel
     {
         var args = new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay };
         // A payout decided where it's paid (Parrying Shield's block as your turn ends): whether its condition holds here, kept in the branch for the
-        // tab judged on how the turn ends (decision #238). Its tests are asked as the hook starts, before any of its steps.
+        // tab judged on how the turn ends (decision #239). Its tests are asked as the hook starts, before any of its steps.
         if (_paidWhere.TryGetValue(hook, out var conditions))
         {
             var asked = args with { Hook = hook };

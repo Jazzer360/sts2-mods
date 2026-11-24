@@ -5,7 +5,7 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// The bonus rule (decision #238) against the game's own label for a bonus given up: a relic's play hook setting its Status to Normal (it goes
+/// The bonus rule (decision #239) against the game's own label for a bonus given up: a relic's play hook setting its Status to Normal (it goes
 /// dark: Art of War's and Ripple Basin's AfterCardPlayed). On both branches, every relic whose play hook darkens it has a payout the play decides
 /// (ModelSpec.Payouts: the rule's crossed tab), and every relic with such a payout darkens on a play, or a reviewed reason says why not. And
 /// every class the rule would give a tab but that has no settings row to show it (ReadModels.HasTabRow) is listed: the owner's call, never shown.

@@ -42,7 +42,7 @@ public static partial class ReadModels
             {
                 if (Compiles(reading.Spec) is not { } notCompiled)
                 {
-                    // Its payouts too (decision #238): a class whose code pays out on a condition but has no row (Orichalcum) gets no tab from them.
+                    // Its payouts too (decision #239): a class whose code pays out on a condition but has no row (Orichalcum) gets no tab from them.
                     specs.Add(HasTabRow(type.Name) ? reading.Spec : reading.Spec with { Tab = null, Outcome = null, Payouts = null });
                     continue;
                 }

@@ -3,7 +3,7 @@ namespace SpireQoL.Sim.Models;
 // Relics that act on your plays and card events (decompile v0.113.1). Amount: the relic's counter; Data bit 1: armed (unused
 // this combat or turn, RelicCountersFeature.IsArmed), unless a model says otherwise.
 
-// ---- giving up a relic's bonus (crossed tabs; Art of War's and Ripple Basin's are read from their code: decision #238)
+// ---- giving up a relic's bonus (crossed tabs; Art of War's and Ripple Basin's are read from their code: decision #239)
 
 /// <summary>
 /// PaelsTears (BeforeSideTurnEnd: any energy left gives energy next turn): a play that spends energy and leaves you with none gives

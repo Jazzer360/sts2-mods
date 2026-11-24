@@ -103,7 +103,7 @@ public sealed class SimOutcome
     /// <summary>What teammate k's Osty takes: the worst branch and the best.</summary>
     public int TeammateOstyTakenMax(int teammateIndex) => Most(branch => branch.Teammates[teammateIndex].OstyTaken);
     public int TeammateOstyTakenMin(int teammateIndex) => Fewest(branch => branch.Teammates[teammateIndex].OstyTaken);
-    /// <summary>A payout decided where it's paid (SimState.Payouts: decision #238) held in every branch (the search finished) / in some branch.</summary>
+    /// <summary>A payout decided where it's paid (SimState.Payouts: decision #239) held in every branch (the search finished) / in some branch.</summary>
     public bool PaidInEvery(string model, int? owner) => InEvery(branch => branch.Payouts.Has(SimKeys.Logged(model, owner)));
     public bool PaidInSome(string model, int? owner) => InSome(branch => branch.Payouts.Has(SimKeys.Logged(model, owner)));
     /// <summary>Teammate k in the branch where they lose the most HP: their Incoming Damage.</summary>

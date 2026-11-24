@@ -608,13 +608,13 @@ public enum HookOutcome
     /// <summary>
     /// Its AfterDamageReceived acts on its owner losing HP (every step waits on target == base.Owner and result.UnblockedDamage &gt; 0) and gives
     /// nothing a tab counts (decision #132): on you, a bonus on a play you lose HP during in every outcome (Self-Forming Clay's block next turn);
-    /// on an enemy, a warning on a play that makes it act in some outcome where ending the turn now wouldn't (Slippery's 1 HP a hit): decision #238.
+    /// on an enemy, a warning on a play that makes it act in some outcome where ending the turn now wouldn't (Slippery's 1 HP a hit): decision #239.
     /// </summary>
     ReactsToHpLoss,
 }
 
 /// <summary>
-/// What a model pays out after the play, on a condition its code tests (decision #238): a command that gives (block, damage to the enemies, energy,
+/// What a model pays out after the play, on a condition its code tests (decision #239): a command that gives (block, damage to the enemies, energy,
 /// cards, an orb, a heal, a buff on its owner) in a hook of the players' turn's end or of their next turn's start, and the test it waits on.
 /// <paramref name="Hook"/>: the game's hook it's in; <paramref name="Condition"/>: its test as the code reads it there.
 /// </summary>
@@ -687,7 +687,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     public HookOutcome? Outcome { get; init; }
 
     /// <summary>
-    /// What it pays out after the play and on what (decision #238): its tab says a play gives the bonus up or sets it up. A payout decided by the
+    /// What it pays out after the play and on what (decision #239): its tab says a play gives the bonus up or sets it up. A payout decided by the
     /// play (Payout.DuringTheTurn) is a crossed play tab, logged as the play turns it off; one decided where it's paid is a tab judged on how
     /// the turn ends. Null: none (or no settings row to show its tab: ReadModels.Specs).
     /// </summary>
