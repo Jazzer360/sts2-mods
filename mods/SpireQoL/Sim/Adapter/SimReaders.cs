@@ -76,7 +76,6 @@ public static class SimReaders
                 data = power.Applier is { } nextCreature && idOf(nextCreature) is { } taId && Who.TeammateIndex(taId) is var teammateIndex and >= 0 and < 7 ? Math.Min(15, amount) << (4 * teammateIndex) : 0;
                 amount = Math.Max(1, amount);
                 break;
-            case nameof(TheBombPower): data = Sts2State.Var(power, "Damage"); break;
             case nameof(SlowPower): data = Sts2State.Var(power, "SlowAmount", fallback: 0); break;
             case nameof(SkittishPower): data = Sts2State.Private(power, "HasGainedBlockThisTurn", fallback: false) ? Models.SkittishPower.UsedThisTurn : 0; break;
             case nameof(HardenedShellPower): data = Math.Max(0, power.DisplayAmount); break;
@@ -133,22 +132,22 @@ public static class SimReaders
     /// <summary>
     /// Counter powers a creature can have several copies of (PowerInstanceType.Instanced: each Orbit card played makes its own), each
     /// copy with its own count and amount: read one by one into SimPlayer.Counters (Counters), each counted on its own by its model
-    /// (CounterPower). The Bomb too: each copy's turns left and its own Damage (TheBombPower). CountdownTests holds every countdown
+    /// (CounterPower). A read power kept in copies (The Bomb) is read into its owner's fields instead (Fields). CountdownTests holds every countdown
     /// model of an instanced power to this list.
     /// </summary>
-    internal static readonly HashSet<string> InstancedCounters = new() { nameof(OrbitPower), nameof(AutomationPower), nameof(CacophonyPower), nameof(PanachePower), nameof(TheBombPower) };
+    internal static readonly HashSet<string> InstancedCounters = new() { nameof(OrbitPower), nameof(AutomationPower), nameof(CacophonyPower), nameof(PanachePower) };
 
     /// <summary>Each copy of a counter power on this creature (InstancedCounters), in the game's order: its count and its amount.</summary>
     public static List<CounterCopy> Counters(Creature creature) =>
         creature.Powers.Where(power => InstancedCounters.Contains(power.GetType().Name))
             .Select(power => new CounterCopy(new PowerId(power.GetType().Name), CountOf(power), AmountOf(power))).ToList();
 
-    /// <summary>A counter power's count, as Powers reads it into its Data (The Bomb: its turns left, its amount).</summary>
+    /// <summary>A counter power's count, as Powers reads it into its Data.</summary>
     private static int CountOf(PowerModel power) =>
         power is PanachePower ? Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)) : Math.Max(0, power.DisplayAmount);
 
-    /// <summary>What a copy gives when its count runs out: its amount (The Bomb: its Damage; its amount is its turns).</summary>
-    private static int AmountOf(PowerModel power) => power is TheBombPower ? Sts2State.Var(power, "Damage") : power.Amount;
+    /// <summary>What a copy gives when its count runs out: its amount.</summary>
+    private static int AmountOf(PowerModel power) => power.Amount;
 
     /// <summary>A flag in a power's internal data (PowerModel._internalData), true when unreadable (so a once-a-turn proc isn't promised).</summary>
     private static bool Internal(PowerModel power, string field) =>

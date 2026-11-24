@@ -64,7 +64,9 @@ public class InstancedPowerTests
         first.SetDamage(40);
         var second = Power<TheBombPower>(gameFight.Me.Creature, amount: 3);
         second.SetDamage(50);
-        Assert.Equal(new[] { (1, 40), (3, 50) }, SimReaders.Counters(gameFight.Me.Creature).Select(copy => (copy.Left, copy.Amount)));
+        // Read from its code (decision #196): each copy in your fields, its turns its amount and its own Damage its state (SetDamage stores it).
+        var fields = SimReaders.Fields(gameFight.Me.Creature.Powers);
+        Assert.Equal(new[] { (1, 40), (3, 50) }, new[] { 1, 2 }.Select(copy => (fields[$"{PowerId.TheBomb.Name}@{copy}"], fields[$"{PowerId.TheBomb.Name}@{copy}.Var.Damage"])));
     }
 
     /// <summary>Three players in a fight (you first) and an enemy, with the adapter's ids (you, teammate 0, teammate 1).</summary>

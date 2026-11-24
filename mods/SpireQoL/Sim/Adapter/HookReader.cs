@@ -112,8 +112,9 @@ public static class HookReader
         }
         // One of its own values its code stores (DynamicVars["CardsLeft"].BaseValue--: Panache's count) is its state: every read of it reads
         // the state, from the canonical value for a new instance.
+        // Its own code may set it outside its hooks too (The Bomb's SetDamage, called as it lands: each copy its own Damage): state as well.
         var storedVars = new ModelSpec(type.Name, kind, programs).Steps().OfType<StoreFieldStep>().Select(store => store.Field)
-            .Where(field => field.StartsWith(VarFieldPrefix, StringComparison.Ordinal)).ToHashSet(StringComparer.Ordinal);
+            .Where(field => field.StartsWith(VarFieldPrefix, StringComparison.Ordinal)).Concat(reader.VarsStoredOutsideHooks()).ToHashSet(StringComparer.Ordinal);
         if (storedVars.Count > 0) programs = programs.Select(program => VarsAsState(program, storedVars)).ToList();
         // A store to a field no program reads changes only what the game shows (Kunai's IsActivating): left out.
         var fieldsRead = new ModelSpec(type.Name, kind, programs).Values().OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
@@ -251,6 +252,23 @@ public static class HookReader
         private readonly ModelKind _kind;
         private readonly Func<MethodBase, List<CodeOp>> _read;
         private string _hook = "";
+
+        /// <summary>
+        /// Its own values a method of its own that isn't a hook stores (The Bomb's SetDamage: DynamicVars.Damage.BaseValue = damage, which its card
+        /// calls as it lands), as state fields ("Var.Damage"): each instance has its own.
+        /// </summary>
+        public IEnumerable<string> VarsStoredOutsideHooks()
+        {
+            var hooks = Hooks(_type).Select(hook => hook.Name).ToHashSet(StringComparer.Ordinal);
+            foreach (var method in _type.GetMethods(Declared).Where(method => !method.IsSpecialName && !method.Name.StartsWith('<') && !hooks.Contains(method.Name) && !method.IsVirtual))
+            {
+                ModelProgram program;
+                try { program = ProgramReader.Read(_type, _read, method.Name); }
+                catch { continue; }
+                foreach (var store in program.All().OfType<StoreStep>().Where(store => store.Field.StartsWith(ProgramReader.OwnVarPrefix, StringComparison.Ordinal)))
+                    yield return VarFieldPrefix + OwnVarKey(store.Field[ProgramReader.OwnVarPrefix.Length..]);
+            }
+        }
 
         /// <summary>How the power's applications are kept: its InstanceType, read from its code.</summary>
         public PowerCopies Copies() =>

@@ -448,7 +448,10 @@ public class ReadModelParityTests
 
     private static string Number(decimal value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-    /// <summary>A copy without what models keep of their own: every relic entry's counter and flag, every read model's fields.</summary>
+    /// <summary>
+    /// A copy without what models keep of their own: every relic entry's counter and flag, every read model's fields (its copies' amounts
+    /// included), the hand-written models' copies (SimPlayer.Counters). The power's entry holds the copies' total either way.
+    /// </summary>
     private static SimState Stripped(SimState state)
     {
         var copy = state.Clone();
@@ -457,6 +460,7 @@ public class ReadModelParityTests
             var player = copy.MutablePlayer(id);
             foreach (var relic in player.Relics.Items) player.Relics = player.Relics.With(relic.Name, amount: 0, data: 0);
             player.Fields = NamedCounts.Empty;
+            player.Counters = new();
         }
         foreach (var enemy in copy.Enemies) enemy.Fields = NamedCounts.Empty;
         return copy;

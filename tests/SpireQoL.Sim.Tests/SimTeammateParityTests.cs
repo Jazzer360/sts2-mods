@@ -49,7 +49,7 @@ public class SimTeammateParityTests
                 player.Orbs.Add(new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 });
                 player.Hailstorm = 3;
                 break;
-            case "The Bomb": player.TheBombDamage = 12; break;
+            case "The Bomb": player.Powers = player.Powers.With(PowerId.TheBomb, amount: 1); player.Fields = player.Fields.With($"{PowerId.TheBomb.Name}@1", amount: 1).With($"{PowerId.TheBomb.Name}@1.Var.Damage", amount: 12); break;
             case "Stone Calendar": state.WithRelic(id, RelicId.StoneCalendar, "Damage", value: 9); state.TurnNumber = 7; break; // its DamageTurn (7)
             case "Screaming Flagon": state.WithRelic(id, RelicId.ScreamingFlagon, "Damage", value: 8); player.HandCount = 0; break;
             case "Lightning": player.Orbs.Add(new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 }); break;

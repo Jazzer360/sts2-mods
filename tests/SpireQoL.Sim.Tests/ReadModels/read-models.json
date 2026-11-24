@@ -8880,6 +8880,127 @@
     "Harmful": false
   },
   {
+    "Name": "TheBombPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__9.MoveNext:0039",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeSideTurnEnd\u003Ed__9.MoveNext:0047",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "Amount"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookField",
+              "Field": "Var.Damage",
+              "Canonical": 40
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Damage.Props",
+              "Canonical": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__9.MoveNext:0039",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__9.MoveNext:0047",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__9.MoveNext:0039",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__9.MoveNext:0047",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Harmful": false,
+    "Copies": "EachApplication"
+  },
+  {
     "Name": "TheSealedThronePower",
     "Kind": "Power",
     "Hooks": [

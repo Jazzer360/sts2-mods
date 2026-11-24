@@ -1,9 +1,9 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by capability.
-# 126 hand-written models.
+# 125 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
-read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 11 classes, 11 alone: AutomationPower*, CacophonyPower*, DemonTongue*, EchoFormPower*, MonarchsGazePower*, MonologuePower*, PanachePower*, ParryingShield*, RippleBasin*, SelfFormingClay*, TheBombPower*
+read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 10 classes, 10 alone: AutomationPower*, CacophonyPower*, DemonTongue*, EchoFormPower*, MonarchsGazePower*, MonologuePower*, PanachePower*, ParryingShield*, RippleBasin*, SelfFormingClay*
 its own data: a card or a play kept, a field used directly: 13 classes, 7 alone: CalamityPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, MusicBox, PaelsLegion, PenNib, RupturePower*, SerpentFormPower*, StretchPower*, UnsettlingLamp, Vambrace, WitheringPresencePower*
 queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 10 classes, 6 alone: ConquerorPower*, CurlUpPower, DarkEmbracePower*, JossPaper*, LethalityPower*, PaelsEye, PagestormPower*, PhantomBladesPower, TagTeamPower*, Vambrace
 a turn's start (the enemies' turn start, an extra turn): 11 classes, 5 alone: ArtOfWar*, ConductorsBatonPower*, EmotionChip*, FeralPower, InfernoPower*, InsatiableDominionPower, LullabyPower*, PaelsEye, PlatingPower, SlowPower, YahPower
@@ -159,7 +159,6 @@ SurroundedPower: [a model's own method (its body read where it's called)] AfterD
 SwordSagePower: [hooks: AfterCardEnteredCombat] AfterCardEnteredCombat: gap: the simulator runs no read model's AfterCardEnteredCombat
 TagTeamPower: [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyCardPlayCount: gap: the value card.Owner.Creature
 TenderPower: [a power applied by someone other than its owner] AfterCardPlayed: gap: StrengthPower applied by someone else | [a power applied by someone other than its owner] AfterSideTurnEnd: gap: StrengthPower applied by someone else
-TheBombPower: [read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule)] read whole
 TheBoot: [the HP-loss pipeline] AfterModifyingHpLostAfterOsty: gap: the simulator runs no read model's AfterModifyingHpLostAfterOsty | [the HP-loss pipeline] ModifyHpLostAfterOstyLate: gap: the simulator runs no read model's ModifyHpLostAfterOstyLate
 TheGambitPower: [outcomes: a stun or a kill (outcome tabs)] AfterDamageReceived: gap: CreatureCmd.Kill isn't translated
 ThornsPower: [hooks: BeforeDamageReceived] BeforeDamageReceived: gap: the simulator runs no read model's BeforeDamageReceived

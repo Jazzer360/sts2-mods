@@ -6,7 +6,7 @@ namespace SpireQoL.Sim.Tests;
 /// <summary>
 /// Powers whose every application is a copy of its own (PowerInstanceType.Instanced), each with its own amount and values, which the
 /// simulator holds as one Powers entry: each model says how its copies act (SimModel.Instanced). Monologue's copies each give their
-/// own Strength (the total over them: SimEngine.VarTotal), The Bomb's each tick and go off on their own (SimPlayer.Counters), and
+/// own Strength (the total over them: SimEngine.VarTotal), The Bomb's each tick and go off on their own (its copies in your fields), and
 /// each Covered gives its applier Intercept (AfterApplied on every copy).
 /// </summary>
 public class InstancedCopyTests
@@ -40,7 +40,18 @@ public class InstancedCopyTests
         Assert.Equal(3, after.You.Powers[PowerId.Strength]);
     }
 
-    // ---- The Bomb: each copy ticks and goes off on its own
+    // ---- The Bomb: each copy ticks and goes off on its own (read from its code: its copies in your fields, decision #196)
+
+    /// <summary>Your Bombs as the adapter lists them: each copy's turns left (its amount) and its own Damage (its DynamicVars, set as it landed).</summary>
+    private static void Bombs(SimState state, params (int Turns, int Damage)[] bombs)
+    {
+        state.You.Powers = state.You.Powers.With(PowerId.TheBomb, amount: bombs.Sum(bomb => bomb.Turns));
+        for (var copy = 1; copy <= bombs.Length; copy++)
+            state.You.Fields = state.You.Fields.With($"{PowerId.TheBomb.Name}@{copy}", bombs[copy - 1].Turns).With($"{PowerId.TheBomb.Name}@{copy}.Var.Damage", bombs[copy - 1].Damage);
+    }
+
+    private static IEnumerable<int> TurnsLeft(SimState state) =>
+        state.You.Fields.Items.Where(entry => entry.Name.StartsWith(PowerId.TheBomb.Name + "@", StringComparison.Ordinal) && !entry.Name.Contains('.', StringComparison.Ordinal)).Select(entry => entry.Amount);
 
     [Fact]
     public void ABombOnItsLastTurnGoesOffBesideOneThatIsNot()
@@ -48,11 +59,10 @@ public class InstancedCopyTests
         // TheBombPower.BeforeSideTurnEnd, per copy: one on its last turn (40) goes off, one with 3 turns ticks to 2. Merged (4 turns)
         // neither would.
         var state = new SimState { Enemies = { Attacker(id: 0, hp: 50) } };
-        state.You.Powers = state.You.Powers.With(PowerId.TheBomb, amount: 4, data: 50);
-        state.You.Counters = new() { new CounterCopy(PowerId.TheBomb, Left: 1, Amount: 40), new CounterCopy(PowerId.TheBomb, Left: 3, Amount: 50) };
+        Bombs(state, (1, 40), (3, 50));
         var after = Assert.Single(SimEngine.Run(state).Branches);
         Assert.Equal(10, after.Enemy(id: 0)!.Hp);
-        Assert.Equal(new[] { (2, 50) }, after.You.Counters.Select(copy => (copy.Left, copy.Amount)));
+        Assert.Equal(new[] { 2 }, TurnsLeft(after));
         Assert.Equal(2, after.You.Powers[PowerId.TheBomb]);
     }
 
@@ -60,12 +70,11 @@ public class InstancedCopyTests
     public void TwoBombsOnTheirLastTurnBothGoOff()
     {
         var state = new SimState { Enemies = { Attacker(id: 0, hp: 100) } };
-        state.You.Powers = state.You.Powers.With(PowerId.TheBomb, amount: 2, data: 50);
-        state.You.Counters = new() { new CounterCopy(PowerId.TheBomb, Left: 1, Amount: 40), new CounterCopy(PowerId.TheBomb, Left: 1, Amount: 50) };
+        Bombs(state, (1, 40), (1, 50));
         var after = Assert.Single(SimEngine.Run(state).Branches);
         Assert.Equal(10, after.Enemy(id: 0)!.Hp);
         Assert.False(after.You.Powers.Has(PowerId.TheBomb));
-        Assert.Empty(after.You.Counters);
+        Assert.Empty(TurnsLeft(after));
     }
 
     [Fact]
@@ -73,12 +82,23 @@ public class InstancedCopyTests
     {
         // The Bomb played this turn (3 turns) beside one on its last: a copy of its own, so the old one still goes off.
         var state = new SimState { Enemies = { Attacker(id: 0, hp: 50) } };
-        state.You.Powers = state.You.Powers.With(PowerId.TheBomb, amount: 1, data: 40);
+        Bombs(state, (1, 40));
         var play = Play(Card("TheBomb", SimCardType.Skill), target: Who.None, plays: 1, new ApplyPowerAction(PowerId.TheBomb, Amount: 3) { To = ApplyPowerAction.Where.You });
         var outcome = SimEngine.Run(state, play);
         var after = Assert.Single(outcome.Branches);
         Assert.Equal(10, after.Enemy(id: 0)!.Hp);
-        Assert.Equal(new[] { 2 }, after.You.Counters.Select(copy => copy.Left));
+        Assert.Equal(new[] { 2 }, TurnsLeft(after));
+    }
+
+    [Fact]
+    public void ABombKeptAsOneIsOneCopyWithItsCanonicalDamage()
+    {
+        // A state with the power's entry alone (no copies listed): one copy, its Damage the class's canonical 40 until something sets it.
+        var state = new SimState { Enemies = { Attacker(id: 0, hp: 50) } };
+        state.You.Powers = state.You.Powers.With(PowerId.TheBomb, amount: 1);
+        var after = Assert.Single(SimEngine.Run(state).Branches);
+        Assert.Equal(10, after.Enemy(id: 0)!.Hp);
+        Assert.False(after.You.Powers.Has(PowerId.TheBomb));
     }
 
     // ---- Covered: each Intercept played on a teammate is a copy, each giving its applier Intercept

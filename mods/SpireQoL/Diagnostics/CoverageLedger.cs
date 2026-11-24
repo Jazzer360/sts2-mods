@@ -289,7 +289,7 @@ internal static partial class CoverageLedger
         ["TemporaryStrengthPower"] = "ignore: expires at the end of the turn (Strength-loss cards: simulator intents)",
         ["TenderPower"] = "covered: AfterCardPlayed Strength and Dexterity down per card (crossed proc tab; a replay's later plays hit and block 1 less each in the simulator)",
         ["TerritorialPower"] = "ignore: read from its code (ReadModel, decision #195): AfterSideTurnEnd Strength as its owner's side's turn ends, which no simulation reaches for an enemy (later attacks)",
-        ["TheBombPower"] = "covered: BeforeSideTurnEnd ticks down, then damages all enemies on its last tick (model TheBombPower)",
+        ["TheBombPower"] = "covered: read from its code (ReadModel, decision #195): BeforeSideTurnEnd ticks each copy down, then a copy on its last tick damages all enemies by its own Damage (each copy its own: decision #196) and goes",
         ["TheGambitPower"] = "covered: AfterDamageReceived dies to an attack through block (simulator)",
         ["TheSealedThronePower"] = "covered: read from its code (ReadModel, decision #195): BeforeCardPlayed stars per card (proc tab, Black Hole second pass)",
         ["ThornsPower"] = "covered: BeforeDamageReceived damages attackers (crossed proc damage and simulator block loss for enemies' Thorns; simulator for yours)",

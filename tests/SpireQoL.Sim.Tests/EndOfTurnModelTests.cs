@@ -42,11 +42,12 @@ public class EndOfTurnModelTests
     public void TheBombTicksDownUntilItsLastTurn()
     {
         var state = new SimState { Enemies = { Attacker(id: 0, hp: 50) } };
-        state.You.Powers = state.You.Powers.With(PowerId.TheBomb, amount: 2, data: 40);
+        // Read from its code: one copy (no copies listed), its Damage the canonical 40.
+        state.You.Powers = state.You.Powers.With(PowerId.TheBomb, amount: 2);
         var after = Assert.Single(SimEngine.Run(state).Branches);
         Assert.Equal(50, after.Enemy(id: 0)!.Hp);
         Assert.Equal(1, after.You.Powers[PowerId.TheBomb]);
-        state.You.Powers = PowerSet.Empty.With(PowerId.TheBomb, amount: 1, data: 40);
+        state.You.Powers = PowerSet.Empty.With(PowerId.TheBomb, amount: 1);
         Assert.Equal(10, Assert.Single(SimEngine.Run(state).Branches).Enemy(id: 0)!.Hp);
     }
 

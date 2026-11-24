@@ -63,8 +63,6 @@ internal static class ModelAmountCheck
             "its amount × the HP Osty lost: AfterCurrentHpChanged's -delta in the game, AfterOstyHpLost's lost in the model",
         ["DarkEmbracePower Draw: game Amount | mul(Amount, ?field etherealCount); model Amount"] =
             "its amount per card exhausted; the Ethereal ones exhausted as the turn ends draw together at AfterSideTurnEnd (amount × etherealCount), the same number",
-        ["TheBombPower Damage: game Var Damage; model ?CounterCopy.get_Amount"] =
-            "each copy's own Damage value, which the adapter reads into the copy's Amount (SimReaders.Counters) or, with none listed, its entry's Data (SimReaders.Powers)",
     };
 
     /// <summary>The check on the loaded game.</summary>

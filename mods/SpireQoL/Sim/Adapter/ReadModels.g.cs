@@ -97,6 +97,7 @@ public static partial class ReadModels
         PowerId.Tainted.Name,
         PowerId.Territorial.Name,
         RelicId.TheAbacus.Name,
+        PowerId.TheBomb.Name,
         PowerId.TheSealedThrone.Name,
         RelicId.ThrowingAxe.Name,
         RelicId.Tingsha.Name,

@@ -65,7 +65,8 @@ public class SimTeammateTests
         // The Bomb (all enemies) and Consuming Shadow evoking their Glass orb (all enemies) at end of turn.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 30, hits: 5), Enemy(id: 2, hp: 30, hits: 5) } };
         var player = Defect(new SimOrb { Kind = OrbKind.Glass, Passive = 0, Evoke = 0, GlassBase = 0 });
-        player.TheBombDamage = 20;
+        player.Powers = player.Powers.With(PowerId.TheBomb, amount: 1);
+        player.Fields = player.Fields.With($"{PowerId.TheBomb.Name}@1", amount: 1).With($"{PowerId.TheBomb.Name}@1.Var.Damage", amount: 20);
         player.Orbs[0] = new SimOrb { Kind = OrbKind.Glass, Passive = 4, Evoke = 8, GlassBase = 4 };
         player.ConsumingShadow = 1;
         state.Teammates.Add(player);

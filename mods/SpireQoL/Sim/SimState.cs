@@ -320,7 +320,6 @@ public sealed class SimPlayer
     /// <summary>Hailstorm (amount; the Frost orbs it needs are its FrostOrbs value, read from its code).</summary>
     [JsonIgnore] public int Hailstorm { get => Powers[PowerId.Hailstorm]; set => Set(PowerId.Hailstorm, value); }
     /// <summary>The Bomb's damage when it goes off this turn end (its last tick: amount 1; Data = its damage), else 0.</summary>
-    [JsonIgnore] public int TheBombDamage { get => Powers.Has(PowerId.TheBomb) && Powers[PowerId.TheBomb] <= 1 ? Powers.DataOf(PowerId.TheBomb) : 0; set => Powers = value == 0 ? Powers.Without(PowerId.TheBomb) : Powers.With(PowerId.TheBomb, amount: 1, value); }
     [JsonIgnore] public int ConsumingShadow { get => Powers[PowerId.ConsumingShadow]; set => Set(PowerId.ConsumingShadow, value); }
     [JsonIgnore] public int Thorns { get => Powers[PowerId.Thorns]; set => Set(PowerId.Thorns, value); }
     [JsonIgnore] public int FlameBarrier { get => Powers[PowerId.FlameBarrier]; set => Set(PowerId.FlameBarrier, value); }
