@@ -205,7 +205,6 @@ public static class SimReaders
         [nameof(RippleBasin)] = Var("Block"),
         [nameof(StoneCalendar)] = Var("Damage"),
         [nameof(ParryingShield)] = Var("Damage"),
-        [nameof(LunarPastry)] = Var("Stars", fallback: 1),
     };
 
     /// <summary>A relic's value by its DynamicVars key, and what to take when it can't be read.</summary>

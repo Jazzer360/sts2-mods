@@ -114,7 +114,7 @@ public sealed class ReadModel : SimModel
         var compiled = new List<CompiledStep>();
         foreach (var step in steps)
         {
-            var acts = step is DrawStep or GainEnergyStep or ApplyPowerStep or ChannelStep;
+            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep;
             var fires = firstRound && acts && !firing.Any(earlier => Equals(earlier.When, step.When));
             if (acts) firing.Add(step);
             compiled.Add(new CompiledStep(step.When == null ? null : Compile(step.When), Runner(step, fires, firing)));
@@ -386,6 +386,9 @@ public sealed class ReadModel : SimModel
                 var amount = Compile(energy.Amount);
                 return args => Cause(args, CardEvent.EnergyGained, (int)amount(in args), fires);
             }
+            case GainStarsStep:
+                // One stars-gained event, as the game calls AfterStarsGained once (the simulator keeps no count of stars).
+                return args => Cause(args, CardEvent.StarsGained, 1, fires);
             case ApplyPowerStep apply:
             {
                 var amount = Compile(apply.Amount);

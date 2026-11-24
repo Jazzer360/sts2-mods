@@ -83,13 +83,6 @@ public sealed class OblivionPower : ProcModel
         TakeBound(state, owner) is not null ? Fire(state, owner) : One(state);
 }
 
-/// <summary>TheSealedThronePower.BeforeCardPlayed: each card its owner plays gains them stars (Black Hole reacts).</summary>
-public sealed class TheSealedThronePower : ProcModel
-{
-    public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && Amount(state, owner) > 0 ? Cause(Fire(state, owner), CardEvent.StarsGained, count: 1, owner) : One(state);
-}
-
 /// <summary>
 /// PanachePower.AfterCardPlayed: every card its owner plays counts its CardsLeft down (Data; 0 = just applied: the card that
 /// applied it doesn't count); at 0, its amount to every hittable enemy (unpowered), and the count starts over at 5.

@@ -272,6 +272,12 @@ public sealed record DrawStep(HookValue Count) : HookStep;
 /// <summary>PlayerCmd.GainEnergy for the owner.</summary>
 public sealed record GainEnergyStep(HookValue Amount) : HookStep;
 
+/// <summary>
+/// PlayerCmd.GainStars for the owner: one stars-gained event (the game's one AfterStarsGained), as a card's GainStars is (SimAdapter.Steps); the
+/// simulator keeps no count of stars.
+/// </summary>
+public sealed record GainStarsStep(HookValue Amount) : HookStep;
+
 /// <summary>PowerCmd.Apply of <paramref name="Power"/> on <paramref name="Target"/>, applied by the owner.</summary>
 public sealed record ApplyPowerStep(string Power, HookTarget Target, HookValue Amount) : HookStep
 {
@@ -362,6 +368,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             DamageStep damage => Inside(damage.Amount).Concat(Inside(damage.Props)),
             DrawStep draw => Inside(draw.Count),
             GainEnergyStep energy => Inside(energy.Amount),
+            GainStarsStep stars => Inside(stars.Amount),
             HealStep heal => Inside(heal.Amount),
             ApplyPowerStep apply => Inside(apply.Amount),
             StoreFieldStep store => Inside(store.Value),

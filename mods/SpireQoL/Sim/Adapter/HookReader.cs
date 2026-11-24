@@ -47,6 +47,7 @@ public static class HookReader
         ["CreatureCmd.Heal"] = "HealStep: the owner heals, up to its max HP",
         ["CardPileCmd.Draw"] = "DrawStep: cards drawn by the owner, each a card event",
         ["PlayerCmd.GainEnergy"] = "GainEnergyStep: energy for the owner, each a card event",
+        ["PlayerCmd.GainStars"] = "GainStarsStep: stars for the owner, one stars-gained event (as a card's)",
         ["PowerCmd.Apply"] = "ApplyPowerStep: the power on the owner, every hittable enemy or the creature a power landed on, applied by the owner",
         ["PowerCmd.Remove"] = "RemovePowerStep: the power itself goes (PowerCmd.Remove(this))",
         ["PowerCmd.Decrement"] = "DecrementPowerStep: the power itself goes down by one (PowerCmd.Decrement(this))",
@@ -169,7 +170,7 @@ public static class HookReader
                 case DrawStep: return TabKind.Draw;
                 case GainEnergyStep: return TabKind.Energy;
             }
-        return steps.Any(step => step is ApplyPowerStep or ChannelStep) ? TabKind.Trigger : null;
+        return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep) ? TabKind.Trigger : null;
     }
 
     /// <summary>
@@ -419,6 +420,9 @@ public static class HookReader
                 case "PlayerCmd.GainEnergy":
                     if (!IsOwner(values[1])) throw new Gap("gap: energy for someone else");
                     return new GainEnergyStep(Value(values[0]));
+                case "PlayerCmd.GainStars":
+                    if (!IsOwner(values[1])) throw new Gap("gap: stars for someone else");
+                    return new GainStarsStep(Value(values[0]));
                 case "PowerCmd.Apply":
                 {
                     var power = member.GenericArguments.Single();

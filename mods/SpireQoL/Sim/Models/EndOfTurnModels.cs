@@ -99,13 +99,6 @@ public sealed class ParryingShield : EndOfTurnRelic
     }
 }
 
-/// <summary>LunarPastry.AfterSideTurnEnd: its owner gains stars (Black Hole reacts: AfterStarsGained).</summary>
-public sealed class LunarPastry : EndOfTurnRelic
-{
-    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) =>
-        state.TakesPart(owner) ? SimEngine.ProcCardEvent(state, CardEvent.StarsGained, count: 1, owner, indirect: false) : One(state);
-}
-
 // ---- debuffs on a player that hurt them when their side's turn ends (AfterSideTurnEnd, AfterSideTurnEndLate), in listener order
 // with that player's other powers.
 

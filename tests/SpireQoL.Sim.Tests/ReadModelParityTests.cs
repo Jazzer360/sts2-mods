@@ -42,6 +42,7 @@ public class ReadModelParityTests
         ["CrabRagePower.AfterDeath"] = "CreatureCmd.GainBlock(base.Owner, Block): an enemy's block from a read model goes through the block math and is its reaction (SimEngine.EnemyBlock: logged, SimEnemy.ReactedWithBlock), where the hand-written model added it raw; with its Unpowered props nothing changes the 99, and nothing shown reads that flag: no prediction changes. Its Strength and its block are each logged, as each is a command of its code",
         ["GremlinHorn.AfterDeath"] = "Flash(), then PlayerCmd.GainEnergy and CardPileCmd.Draw (queued until the hit is over, as the hand-written model did): the read model logs its firing (the game's Flash). Its tab is judged on the outcome (a kill in every branch), not on the log: what's shown doesn't change",
         ["IterationPower.AfterCardEvent"] = "Flash(), then CardPileCmd.Draw: the read model logs its firing (the game's Flash) where the hand-written model logged none. It has no tab (no Proc Tags row): what's shown doesn't change; the play check now holds its flash to the game's",
+        ["LunarPastry.AfterSideTurnEnd"] = "PlayerCmd.GainStars as your turn ends: the read model logs its firing, as every read model's acting step does, where the hand-written model logged only the stars. It has no tab, and the checks read from its code that it never flashes (decision #181): nothing shown changes",
         ["PaleBlueDotPower.AfterCardPlayed"] = "PowerCmd.Apply<DrawCardsNextTurnPower>(base.Owner, base.Amount): the read model puts Draw Cards Next Turn on its owner where the hand-written model only fired. It acts as its owner's next turn starts, outside a simulation: no prediction changes",
         ["SerratedArrowsPower.ModifyDamageMultiplicative"] = "target.HasPower<ImpaledPower>(), with no test of the target's side: a player with Impaled would count (the hand-written model wanted an enemy). Only enemies are impaled (ArrowCmd.ImpaleTarget: an arrow in the shot's target, an enemy): no prediction changes",
         ["VulnerablePower.ModifyDamageMultiplicative"] = "dealer.Player?.GetRelic<PaperPhrog>(), and PaperPhrog's and CrueltyPower's own `target == base.Owner` returns: Osty's hits get no Paper Phrog (a pet's creature has no Player; the hand-written model gave him his player's), a fix where Osty hits a Vulnerable enemy with Paper Phrog; and a creature's own Phrog and Cruelty don't raise a powered attack on itself (none happens today)",
@@ -54,7 +55,7 @@ public class ReadModelParityTests
     /// </summary>
     private static readonly Dictionary<string, string> RelicAmountVars = new(StringComparer.Ordinal) {
         [RelicId.CharonsAshes.Name] = "Damage", [RelicId.ForgottenSoul.Name] = "Damage", [RelicId.Orichalcum.Name] = "Block", [RelicId.FakeOrichalcum.Name] = "Block",
-        [RelicId.ScreamingFlagon.Name] = "Damage", [RelicId.CloakClasp.Name] = "Block", [RelicId.ObsidianVice.Name] = "Damage",
+        [RelicId.ScreamingFlagon.Name] = "Damage", [RelicId.CloakClasp.Name] = "Block", [RelicId.ObsidianVice.Name] = "Damage", [RelicId.LunarPastry.Name] = "Stars",
     };
 
     /// <summary>

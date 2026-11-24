@@ -3279,6 +3279,34 @@
     "Harmful": false
   },
   {
+    "Name": "LunarPastry",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "GainStarsStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Stars",
+              "Canonical": 1
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__4.MoveNext:0027",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Harmful": false
+  },
+  {
     "Name": "MiniRegent",
     "Kind": "Relic",
     "Hooks": [
@@ -7848,6 +7876,34 @@
       }
     ],
     "Tab": "Block",
+    "Harmful": false
+  },
+  {
+    "Name": "TheSealedThronePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "BeforeCardPlayed",
+        "Steps": [
+          {
+            "$kind": "GainStarsStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeCardPlayed\u003Ed__4.MoveNext:002C",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger",
     "Harmful": false
   },
   {

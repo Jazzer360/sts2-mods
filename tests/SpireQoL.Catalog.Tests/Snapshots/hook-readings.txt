@@ -174,7 +174,7 @@ power TenderPower: AfterCardPlayed: gap: StrengthPower applied by someone else |
 power TerritorialPower: AfterSideTurnEnd: read
 power TheBombPower: BeforeSideTurnEnd: gap: each copy acts on its own (PowerInstanceType.Instanced): the simulator keeps their sum
 power TheGambitPower: AfterDamageReceived: gap: CreatureCmd.Kill isn't translated
-power TheSealedThronePower: BeforeCardPlayed: gap: PlayerCmd.GainStars isn't translated
+power TheSealedThronePower: BeforeCardPlayed: read
 power ThornsPower: BeforeDamageReceived: gap: the simulator runs no read model's BeforeDamageReceived
 power ThunderPower: AfterOrbEvoked: gap: the simulator runs no read model's AfterOrbEvoked
 power ToricToughnessPower: AfterBlockCleared: gap: each copy acts on its own (PowerInstanceType.Instanced): the simulator keeps their sum
@@ -237,7 +237,7 @@ relic LetterOpener: AfterCardPlayed: read | AfterCombatEnd: not run: after the f
 relic LizardTail: AfterPreventingDeath: gap: the simulator runs no read model's AfterPreventingDeath | ShouldDieLate: gap: the simulator runs no read model's ShouldDieLate
 relic LostWisp: AfterCardPlayed: read
 relic LuckyFysh: AfterCardChangedPiles: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
-relic LunarPastry: AfterSideTurnEnd: gap: PlayerCmd.GainStars isn't translated
+relic LunarPastry: AfterSideTurnEnd: read
 relic MeatOnTheBone: AfterCombatVictoryEarly: not run: after the fight: no prediction reaches it | AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged | BeforeCombatStart: not run: before the fight: the state is read after it
 relic Metronome: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterOrbChanneled: gap: the simulator runs no read model's AfterOrbChanneled | AfterRoomEntered: not run: entering a room: outside the fight's turns
 relic MightyWings: AfterDamageGiven: gap: StrengthPower applied by someone else

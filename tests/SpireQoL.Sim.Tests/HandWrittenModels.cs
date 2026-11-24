@@ -876,3 +876,19 @@ public sealed class GremlinHorn : SimModel
         SimEngine.Raise(state, CardEvent.Drawn, owner, SimEngine.Var(state, owner, Name, "Cards", fallback: 1));
     }
 }
+
+// ---- stars (round four: Sim/Models/EndOfTurnModels.cs, ProcPowerModels.cs, deleted 2026-11-24)
+
+/// <summary>LunarPastry.AfterSideTurnEnd: its owner gains stars (Black Hole reacts: AfterStarsGained).</summary>
+public sealed class LunarPastry : EndOfTurnRelic
+{
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) =>
+        state.TakesPart(owner) ? SimEngine.ProcCardEvent(state, CardEvent.StarsGained, count: 1, owner, indirect: false) : One(state);
+}
+
+/// <summary>TheSealedThronePower.BeforeCardPlayed: each card its owner plays gains them stars (Black Hole reacts).</summary>
+public sealed class TheSealedThronePower : ProcModel
+{
+    public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play) =>
+        Mine(play, owner) && Amount(state, owner) > 0 ? Cause(Fire(state, owner), CardEvent.StarsGained, count: 1, owner) : One(state);
+}
