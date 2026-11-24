@@ -349,25 +349,62 @@ public sealed class KiVersePower : ExtraPlayPower
 }
 
 /// <summary>
-/// TagTeamPower on an enemy (Data: who applied it, as Who names them). ModifyCardPlayCount: an Attack of another player's than its applier,
-/// aimed at this enemy or at every enemy (TargetType AnyEnemy at it, AllEnemies), plays its amount more times; AfterModifyingCardPlayCount
-/// removes it. Its tag is the double-play tag (CardPlays).
+/// TagTeamPower on an enemy, one copy per applier as the game's (PowerInstanceType.Instanced): Data holds each applier's amount, 4 bits each
+/// (you, each teammate, no one: DataFor), the power's amount their total. ModifyCardPlayCount: an Attack aimed at this enemy or at every
+/// enemy (TargetType AnyEnemy at it, AllEnemies) plays each other applier's amount more times (card.Owner.Creature == base.Applier: not its
+/// own); AfterModifyingCardPlayCount removes each copy that did (PowerCmd.Remove(this)). Its tag is the double-play tag (CardPlays).
 /// </summary>
 public sealed class TagTeamPower : SimModel
 {
-    /// <summary>One copy per applier (the game's is instanced): a copy's amount, its applier the last read (TRACKER).</summary>
     public override bool Instanced => true;
+
+    private const int Bits = 4;
+    private const int Most = (1 << Bits) - 1;
+    private const int Slots = 8;
+
+    /// <summary>The applier's slot in Data: you 0, each teammate 1 to 6, anyone else (no one) 7.</summary>
+    private static int SlotOf(int applier) => applier == Who.You ? 0 : Who.TeammateIndex(applier) is var teammateIndex and >= 0 and < Slots - 2 ? teammateIndex + 1 : Slots - 1;
+
+    private static int AmountIn(int data, int slot) => (data >> (Bits * slot)) & Most;
+
+    /// <summary>The Data of a copy applied by <paramref name="applier"/> with this amount (several copies' Data or together).</summary>
+    public static int DataFor(int applier, int amount) => Math.Min(Most, Math.Max(0, amount)) << (Bits * SlotOf(applier));
+
+    /// <summary>A new copy is its applier's (the game's PowerCmd.Apply of an instanced power sets its Applier).</summary>
+    public override void AfterApplied(SimState state, int owner, int applier, int amount)
+    {
+        var powers = SimEngine.PowersOf(state, owner);
+        var data = powers.DataOf(ThisPower);
+        var slot = SlotOf(applier);
+        var now = Math.Min(Most, AmountIn(data, slot) + amount);
+        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], data & ~(Most << (Bits * slot)) | now << (Bits * slot)));
+    }
+
+    /// <summary>The amounts of the copies another player than <paramref name="player"/> applied.</summary>
+    private static int OthersAmount(int data, int player)
+    {
+        var own = SlotOf(player);
+        var total = 0;
+        for (var slot = 0; slot < Slots; slot++)
+            if (slot != own) total += AmountIn(data, slot);
+        return total;
+    }
 
     public override int ModifyCardPlayCount(SimState state, int owner, SimCardPlay play, int count)
     {
         var powers = SimEngine.PowersOf(state, owner);
-        if (play.Card.Type != SimCardType.Attack || play.Owner == powers.DataOf(ThisPower)) return count;
+        if (play.Card.Type != SimCardType.Attack) return count;
         if (play.Card.Targets == SimPlay.Target.Single ? play.Target != owner : play.Card.Targets != SimPlay.Target.All) return count;
-        return count + powers[ThisPower];
+        return count + OthersAmount(powers.DataOf(ThisPower), play.Owner);
     }
 
-    public override void AfterModifyingCardPlayCount(SimState state, int owner, SimCardPlay play) =>
-        SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).Without(ThisPower));
+    public override void AfterModifyingCardPlayCount(SimState state, int owner, SimCardPlay play)
+    {
+        var powers = SimEngine.PowersOf(state, owner);
+        var slot = SlotOf(play.Owner);
+        var kept = AmountIn(powers.DataOf(ThisPower), slot);
+        SimEngine.SetPowers(state, owner, kept > 0 ? powers.With(ThisPower, kept, kept << (Bits * slot)) : powers.Without(ThisPower));
+    }
 }
 
 /// <summary>

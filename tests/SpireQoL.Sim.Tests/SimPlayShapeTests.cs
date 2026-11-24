@@ -161,15 +161,47 @@ public class SimPlayShapeTests
     {
         // Tag Team 1 on the enemy, applied by your teammate: your Attack at it plays once more and Tag Team goes; applied by you, it doesn't.
         var state = Board();
-        state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.TagTeam, amount: 1, data: Who.Teammate(teammateIndex: 0));
+        state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.TagTeam, amount: 1, data: Models.TagTeamPower.DataFor(Who.Teammate(teammateIndex: 0), amount: 1));
         var attack = FreeAttack();
         attack.Card = attack.Card! with { Card = attack.Card.Card with { Targets = SimPlay.Target.Single } };
         var after = After(state, attack, attack);
         Assert.Equal(500 - 3 * 3, after.Enemies[0].Hp);
         Assert.False(after.Enemies[0].Powers.Has(PowerId.TagTeam));
         var yours = Board();
-        yours.Enemies[0].Powers = yours.Enemies[0].Powers.With(PowerId.TagTeam, amount: 1, data: Who.You);
+        yours.Enemies[0].Powers = yours.Enemies[0].Powers.With(PowerId.TagTeam, amount: 1, data: Models.TagTeamPower.DataFor(Who.You, amount: 1));
         Assert.Equal(500 - 3, After(yours, attack).Enemies[0].Hp);
+    }
+
+    [Fact]
+    public void EachTagTeamIsItsAppliersOwn()
+    {
+        // TagTeamPower is instanced (PowerInstanceType.Instanced): each copy keeps its applier (card.Owner.Creature == base.Applier: no replay)
+        // and only a copy that replayed a card goes (AfterModifyingCardPlayCount: PowerCmd.Remove(this)). Yours and a teammate's on one enemy:
+        // your Attack plays once more for theirs, which goes; yours stays.
+        var state = Board();
+        state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.TagTeam, amount: 2,
+            data: Models.TagTeamPower.DataFor(Who.You, amount: 1) | Models.TagTeamPower.DataFor(Who.Teammate(teammateIndex: 0), amount: 1));
+        var attack = FreeAttack();
+        attack.Card = attack.Card! with { Card = attack.Card.Card with { Targets = SimPlay.Target.Single } };
+        var after = After(state, attack);
+        Assert.Equal(500 - 3 * 2, after.Enemies[0].Hp);
+        Assert.Equal(1, after.Enemies[0].Powers[PowerId.TagTeam]);
+        Assert.Equal(500 - 3 * 3, After(state, attack, attack).Enemies[0].Hp);
+    }
+
+    [Fact]
+    public void YourOwnTagTeamDoesntReplayYourAttacks()
+    {
+        // The Tag Team card applies TagTeamPower with you as its applier: your next Attack at the enemy plays once, as in the game.
+        var state = Board();
+        var tagTeam = FreeAttack();
+        tagTeam.Card = tagTeam.Card! with { Card = tagTeam.Card.Card with { Targets = SimPlay.Target.Single } };
+        tagTeam.Body.Add(new ApplyPowerAction(PowerId.TagTeam, Amount: 1) { Debuff = true });
+        var attack = FreeAttack();
+        attack.Card = attack.Card! with { Card = attack.Card.Card with { Targets = SimPlay.Target.Single } };
+        var after = After(state, tagTeam, attack);
+        Assert.Equal(500 - 3 * 2, after.Enemies[0].Hp);
+        Assert.Equal(1, after.Enemies[0].Powers[PowerId.TagTeam]);
     }
 
     [Fact]

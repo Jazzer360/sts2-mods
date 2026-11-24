@@ -14,6 +14,7 @@ public class SimModelOwnerScanTests
     /// <summary>A fragment of each reviewed line, and why naming you there is right.</summary>
     private static readonly Dictionary<string, string> Reviewed = new()
     {
+        ["private static int SlotOf(int applier) => applier == Who.You ? 0"] = "Tag Team's Data names each applier's slot (one copy per applier, instanced): you and each teammate by id, not the owner",
         ["if (owner == Who.You) state.ParryingShieldFired = true;"] = "the forecast audit's flag for your Parrying Shield; a teammate's still deals its damage",
         ["ProcBlockFor(branch, owner, Name, Who.You, amount, Unpowered)"] = "a teammate's power giving you block (Covering Fire gives every other player its block)",
         ["hit.Dealer != Who.You || !hit.Props.IsPoweredAttack()"] = "ImpaledPower is your arrows in an enemy (a teammate's are TeammatesImpaledPower)",

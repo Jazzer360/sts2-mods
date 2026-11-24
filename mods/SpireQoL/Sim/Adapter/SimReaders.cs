@@ -44,7 +44,8 @@ public static class SimReaders
             var (readName, amount, data) = Read(power, name, idOf);
             // After the read: a teammate's Impaled is its own power (ImpaledPowerOther).
             var id = new PowerId(readName);
-            set = set.Has(id) ? set.With(id, set[id] + amount, id == SimEngine.ImpaledOther ? set.DataOf(id) | data : data) : set.With(id, amount, data);
+            // Copies whose Data holds each one's own slot (a teammate's Impaled, each Tag Team's applier) are or'd together.
+            set = set.Has(id) ? set.With(id, set[id] + amount, id == SimEngine.ImpaledOther || id == PowerId.TagTeam ? set.DataOf(id) | data : data) : set.With(id, amount, data);
         }
         return set;
     }
@@ -59,9 +60,9 @@ public static class SimReaders
         int amount = power.Amount, data = 0;
         switch (name)
         {
-            // Who applied it (Data, as Who names them): their own Attacks don't play again (TagTeamPower.ModifyCardPlayCount).
+            // Its applier's amount in their slot (one copy per applier, instanced): their own Attacks don't play again (TagTeamPower.ModifyCardPlayCount).
             case nameof(TagTeamPower):
-                data = power.Applier is { } tagger && idOf(tagger) is { } taggerId ? taggerId : 0;
+                data = Models.TagTeamPower.DataFor(power.Applier is { } tagger && idOf(tagger) is { } taggerId ? taggerId : Who.None, amount);
                 break;
             // Your arrows in it (Amount) and its hit counter (Data); a teammate's Impaled only makes it Impaled.
             case nameof(ImpaledPower) when power.Applier is { } impaler && idOf(impaler) == Who.You:
