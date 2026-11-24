@@ -493,7 +493,7 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 
 | Game code | Read as |
 |---|---|
-| `CreatureCmd.GainBlock(base.Owner, amount or BlockVar, props)` | `GainBlockStep`: `SimEngine.ProcBlock`, as the hand-written models' `Block` |
+| `CreatureCmd.GainBlock(base.Owner, amount or BlockVar, props)` | `GainBlockStep`: `SimEngine.ProcBlock`, as the hand-written models' `Block`; on an enemy, `SimEngine.EnemyBlock` (its reaction to your play: `ReactedWithBlock`) |
 | `CreatureCmd.Damage(HittableEnemies / NextItem(HittableEnemies) / power.Owner, amount or DamageVar, props, base.Owner or null)` | `DamageStep`: `ProcDamageAll`, `ProcDamageRandom` (a branch per enemy), `ProcDamageOn` |
 | `CardPileCmd.Draw(count, base.Owner.Player)`, `PlayerCmd.GainEnergy(amount, base.Owner)` | `DrawStep`, `GainEnergyStep`: card events, each counted by a draw or energy tab |
 | `PowerCmd.Apply<T>(base.Owner / HittableEnemies / power.Owner, amount, base.Owner)` | `ApplyPowerStep` (its debuff from the power's own `Type`, or `AllowNegative` with less than 0) |

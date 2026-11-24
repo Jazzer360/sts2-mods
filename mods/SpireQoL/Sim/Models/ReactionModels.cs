@@ -261,17 +261,3 @@ public sealed class SkittishPower : SimModel
     }
 }
 
-/// <summary>SneakyPower.AfterCardPlayed: every Attack play by someone else gives its owner its amount of block.</summary>
-public sealed class SneakyPower : SimModel
-{
-    public override TabKind? Tab => TabKind.Trigger;
-    public override bool Harmful => true;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (play.Card.Type != SimCardType.Attack || play.Owner == owner || state.Enemy(owner) is not { } enemy) return One(state);
-        enemy.Block += enemy.Powers[ThisPower];
-        enemy.ReactedWithBlock = true;
-        state.LogFired(Name, amount: 0, owner);
-        return One(state);
-    }
-}

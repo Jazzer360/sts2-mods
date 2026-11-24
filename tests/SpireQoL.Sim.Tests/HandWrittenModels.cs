@@ -634,3 +634,20 @@ public sealed class DisintegrationPower : TurnEndDebuff
     public override IEnumerable<SimState> AfterSideTurnEndLate(SimState state, int owner) =>
         state.TakesPart(owner) ? Hurt(state, owner, Amount(state, owner), Unpowered, selfDealt: true) : One(state);
 }
+
+// ---- an enemy's block (Sim/Models/ReactionModels.cs, deleted 2026-11-24)
+
+/// <summary>SneakyPower.AfterCardPlayed: every Attack play by someone else gives its owner its amount of block.</summary>
+public sealed class SneakyPower : SimModel
+{
+    public override TabKind? Tab => TabKind.Trigger;
+    public override bool Harmful => true;
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (play.Card.Type != SimCardType.Attack || play.Owner == owner || state.Enemy(owner) is not { } enemy) return One(state);
+        enemy.Block += enemy.Powers[ThisPower];
+        enemy.ReactedWithBlock = true;
+        state.LogFired(Name, amount: 0, owner);
+        return One(state);
+    }
+}

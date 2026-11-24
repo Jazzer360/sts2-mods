@@ -321,7 +321,9 @@ public sealed class ReadModel : SimModel
             {
                 var amount = Compile(gain.Amount);
                 var props = Compile(gain.Props);
-                return args => SimEngine.ProcBlock(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args));
+                // An enemy's own block (Sneaky's) is its reaction to your play; a player's goes through the proc block, its tab counting it.
+                return args => Who.IsEnemy(args.Owner) ? SimEngine.EnemyBlock(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args))
+                    : SimEngine.ProcBlock(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args));
             }
             case DamageStep damage:
             {

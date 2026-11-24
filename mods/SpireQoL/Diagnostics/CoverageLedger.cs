@@ -266,7 +266,7 @@ internal static partial class CoverageLedger
         ["SlumberPower"] = "covered: AfterDamageReceived takes a stack per hit through block and wakes it stunned on the last (simulator: SimEnemy.Slumber; wake tab)",
         ["SmoggyPower"] = "covered: Smog makes Skills unplayable after one (crossed proc tab)",
         ["SmokestackPower"] = "covered: read from its code (ReadModel, decision #195): AfterCardGeneratedForCombat damages all enemies per status (proc damage)",
-        ["SneakyPower"] = "covered: AfterCardPlayed block on your attacks (simulator; crossed tab)",
+        ["SneakyPower"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed gives its owner block on another's Attack (an enemy's block reaction; crossed tab)",
         ["SoulboundPower"] = "ignore: AfterCardGeneratedForCombat gives the power's owner (a teammate you put it on, or you from a teammate's) Souls in their draw pile when its applier creates Souls: nothing a play or the forecast depends on",
         ["SpeedsterPower"] = "covered: read from its code (ReadModel, decision #195): AfterCardDrawn damages all enemies per draw (proc damage; the simulation's draws)",
         ["SpiritOfAshPower"] = "covered: read from its code (ReadModel, decision #195): BeforeCardPlayed block on Ethereal cards (proc block)",

@@ -63,6 +63,7 @@ public static partial class ReadModels
         PowerId.SignalBoost.Name,
         PowerId.SleightOfFlesh.Name,
         PowerId.Smokestack.Name,
+        PowerId.Sneaky.Name,
         PowerId.Soar.Name,
         PowerId.Speedster.Name,
         PowerId.SpiritOfAsh.Name,
