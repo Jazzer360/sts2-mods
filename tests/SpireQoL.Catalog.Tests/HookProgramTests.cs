@@ -29,7 +29,7 @@ public class HookProgramTests
     /// <summary>The simulator tests' read models: written from the installed game's code (SPIREQOL_UPDATE_SNAPSHOT=1 regenerates it).</summary>
     private static string ReadModelsFile => Path.Combine(RepoRoot(), "tests", "SpireQoL.Sim.Tests", "ReadModels", "read-models.json");
 
-    private static string RepoRoot()
+    internal static string RepoRoot()
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
             if (Directory.Exists(Path.Combine(directory.FullName, "mods")) && Directory.Exists(Path.Combine(directory.FullName, "core"))) return directory.FullName;

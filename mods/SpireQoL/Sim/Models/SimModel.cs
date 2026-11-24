@@ -471,6 +471,9 @@ public static class SimModels
     /// <summary>The class has a hand-written model (Sim/Models): it keeps it until a parity proof converts it (decision #195), so it isn't read.</summary>
     public static bool IsHandWritten(string name) => HandWrittenByName.Value.ContainsKey(name);
 
+    /// <summary>The hand-written models' names (Sim/Models), each a game class's or one of the simulator's own.</summary>
+    public static IEnumerable<string> HandWrittenNames => HandWrittenByName.Value.Keys;
+
     /// <summary>
     /// Why a class's hooks couldn't be read, when they read whole at the reviewed builds and don't now (a game update): a simulation it's in
     /// is unknown (SimState.Unmodelled), never exact without it (decision #92). Null: read, hand-written, or never modelled.

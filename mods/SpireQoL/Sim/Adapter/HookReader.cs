@@ -96,10 +96,11 @@ public static class HookReader
         .Where(method => method.IsVirtual && !method.Attributes.HasFlag(MethodAttributes.NewSlot) && !method.IsSpecialName && !NotHooks.Contains(method.Name));
 
     /// <summary>Reads a power's or a relic's hooks with <paramref name="read"/> (the loaded game's code, or an assembly file's).</summary>
-    public static ModelReading Read(Type type, Func<MethodBase, List<CodeOp>> read)
+    /// <param name="pastCopies">Reads an instanced power's bodies as if one copy (the measurement of what else they need: HookGapTests), never for a model.</param>
+    public static ModelReading Read(Type type, Func<MethodBase, List<CodeOp>> read, bool pastCopies = false)
     {
         var kind = Derives(type, "RelicModel") ? ModelKind.Relic : ModelKind.Power;
-        var reader = new Translation(type, kind, read);
+        var reader = new Translation(type, kind, read) { PastCopies = pastCopies };
         var programs = new List<HookProgram>();
         var readings = new List<HookReading>();
         foreach (var hook in Hooks(type).OrderBy(method => method.Name, StringComparer.Ordinal))
@@ -177,6 +178,9 @@ public static class HookReader
         private readonly Func<MethodBase, List<CodeOp>> _read;
         private string _hook = "";
 
+        /// <summary>An instanced power's bodies are read as one copy's (the measurement only).</summary>
+        public bool PastCopies { get; init; }
+
         public Translation(Type type, ModelKind kind, Func<MethodBase, List<CodeOp>> read)
         {
             _type = type;
@@ -192,7 +196,7 @@ public static class HookReader
             try
             {
                 // Each copy of an instanced power acts on its own amount and data; the simulator keeps their sum (decision #195: not read yet).
-                if (_kind == ModelKind.Power && Returned(_type, "get_InstanceType") is ConstantValue instance && EnumName(_type.Assembly, "PowerInstanceType", instance.Value) == "Instanced")
+                if (!PastCopies && _kind == ModelKind.Power && Returned(_type, "get_InstanceType") is ConstantValue instance && EnumName(_type.Assembly, "PowerInstanceType", instance.Value) == "Instanced")
                     return (null, "gap: each copy acts on its own (PowerInstanceType.Instanced): the simulator keeps their sum", null);
                 if (TurnStartHooks.Contains(hook.Name))
                     return PastTheHorizon(hook) is { } turnStartGap ? (null, turnStartGap, null) : (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers");
