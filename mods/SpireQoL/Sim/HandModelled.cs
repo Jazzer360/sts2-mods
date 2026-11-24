@@ -30,7 +30,7 @@ public static class HandModelled
             new[] { "SimEngine.Damage", "SimEngine.ModifiedDamage", "SimEngine.CalcDamage", "SimEngine.PlainDamage", "SimEngine.AnyListensToDamage", "SimEngine.HpLossPipeline", "SimEngine.HpLoss",
                 "SimEngine.PlayerDamaged", "SimEngine.LandBlockable", "SimEngine.LandOnPlayer", "SimEngine.LandUnblockable", "SimEngine.LoseHp", "SimEngine.Lose", "SimEngine.PlayHp", "SimEngine.BiggestHit",
                 "SimEngine.HitOnce", "SimEngine.HitAll", "SimEngine.HitRandom", "SimEngine.RandomTarget", "SimEngine.ProcHitOn", "SimEngine.ProcDamageAll", "SimEngine.ProcDamageRandom",
-                "SimEngine.ProcDamageOn", "SimEngine.ProcDamagePlayer", "SimEngine.RunDamage", "SimEngine.IntentDamage", "SimEngine.WithoutEnchantment", "SimEngine.DamageAllEnemies" },
+                "SimEngine.ProcDamageOn", "SimEngine.ProcDamagePlayer", "SimEngine.DamagePlayer", "SimEngine.RunDamage", "SimEngine.IntentDamage", "SimEngine.WithoutEnchantment", "SimEngine.DamageAllEnemies" },
             new[] { "CreatureCmd.Damage", "Hook.ModifyDamage", "Hook.AfterModifyingDamageAmount", "Hook.BeforeDamageReceived", "Hook.ModifyHpLost", "Hook.AfterModifyingHpLostBeforeOsty",
                 "Hook.AfterModifyingHpLostAfterOsty", "Hook.ModifyPreBlockDamageTarget", "Hook.ModifyUnblockedDamageTarget", "Hook.AfterBlockBroken", "Hook.AfterDamageGiven",
                 "Hook.AfterDamageReceived", "Hook.ShouldDie", "Hook.AfterPreventingDeath", "Creature.DamageBlockInternal", "Creature.LoseHpInternal" }),

@@ -128,16 +128,12 @@ public static partial class SimEngine
     /// <summary>
     /// Damage to a player from a creature's proc (Galvanic: the enemy's power hits you; Constrict: a debuff on you hits you), through
     /// the damage pipeline on that player, blocked unless Unblockable. Logged with the damage; <paramref name="label"/> names it
-    /// in Incoming Damage's breakdown (default: the source's class name).
+    /// in Incoming Damage's breakdown (default: the source's class name). A hook's CreatureCmd.Damage passes no card (its cardSource is
+    /// null): the one path for damage to a player (DamagePlayer, decision #219).
     /// </summary>
     public static IEnumerable<SimState> ProcDamagePlayer(SimState state, int owner, string name, int player, decimal baseDamage, SimProps props, bool noDealer = false, string? label = null)
     {
-        var dealer = noDealer ? null : (int?)owner;
-        var amount = CalcDamage(state, baseDamage, new DamageCtx(dealer, player, props, Card: null, Play: null));
-        state.LogFired(name, amount, owner);
-        if (amount <= 0) return new[] { state };
-        if (props.HasFlag(SimProps.Unblockable)) LandUnblockable(state, label ?? name, amount, player, dealer, props);
-        else LandBlockable(state, label ?? name, amount, player, dealer, props);
+        DamagePlayer(state, label ?? name, player, baseDamage, props, noDealer ? null : owner, card: null, fired: (name, owner));
         return new[] { state };
     }
 

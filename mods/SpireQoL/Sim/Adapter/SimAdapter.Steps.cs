@@ -482,7 +482,11 @@ public static partial class SimAdapter
         var command = found.Command;
         var card = play.Card;
         var whom = ValueAt(command, 1);
-        if (IsYou(whom)) return new List<SimAction> { new LoseHpAction(Number(play, ValueAt(command, 2), Sts2State.Var(card, "HpLoss"))) };
+        // Its HP cost: the engine lands it with the props every card's code passes (SimEngine.HpCostProps); one that passes others isn't that.
+        if (IsYou(whom))
+            return ValueAt(command, 3) is ConstantValue { Value: var flags } && SimReaders.Props((ValueProp)(int)flags) == SimEngine.HpCostProps
+                ? new List<SimAction> { new LoseHpAction(Number(play, ValueAt(command, 2), Sts2State.Var(card, "HpLoss"))) }
+                : new List<SimAction> { new NotModelledAction($"{card.GetType().Name} damages its owner with props its code doesn't give an HP cost") };
         var key = ValueKey(ValueAt(command, 2));
         // An attack card's damage to every enemy (Echoing Slash), or to its target (Omnislice, a shot's: Rain Shot) is simulated as its attack
         // (with the splash or the repeats its table names: docs/CARD_PROGRAMS.md A5), as the adapter has; CreatureCmd.Damage runs no

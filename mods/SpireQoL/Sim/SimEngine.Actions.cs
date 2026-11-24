@@ -764,8 +764,13 @@ public static partial class SimEngine
     /// <summary>A card play's card events on one branch (CardEvents), for a read enchantment's draws and energy (ReadModel: its card's).</summary>
     internal static IEnumerable<SimState> CardEventsOf(SimState state, CardEventAction cardEventAction) => CardEvents(state, cardEventAction);
 
-    /// <summary>The HP a card's play costs its owner (a LoseHpAction's), for a read enchantment's damage to its card's owner (Corrupted's).</summary>
-    internal static void LoseHp(SimState state, string name, int amount, int player) => LandUnblockable(state, name, amount, player);
+    /// <summary>
+    /// The HP a card's play costs its owner (a LoseHpAction's; a read enchantment's damage to its card's owner, Corrupted's): CreatureCmd.Damage of its
+    /// owner, dealt by them (the command's dealer is its cardSource's owner) from <paramref name="card"/>, through the one path for damage to a player
+    /// (DamagePlayer, decision #219), named by the card.
+    /// </summary>
+    internal static void LoseHp(SimState state, string name, int amount, int player, SimCard? card, SimProps props = HpCostProps) =>
+        DamagePlayer(state, name, player, amount, props, dealer: player, card);
 
     /// <summary>Card events, one card at a time, each through every listener's AfterCardEvent (indirect ones marked in the log).</summary>
     private static void RunCardEvent(BranchSet branches, CardEventAction cardEventAction)

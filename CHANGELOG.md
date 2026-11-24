@@ -32,6 +32,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Fixed
 - A replayed Attack or Skill that Razor Tooth upgrades hits (and blocks) for its upgraded numbers on its later plays in the predictions, as in the game: it kept its un-upgraded numbers.
+- The HP your cards cost you (Bloodletting, Offering, a Corrupted card) goes through the game's damage math in the predictions, as a power's damage to you does: a cap on damage to you counts for it. A teammate's HP-cost card auto-played hurts that teammate, not you. Buffer stops a power's damage to you while Brightest Flame is being played, as in the game (only Brightest Flame's own HP cost gets past it). The Play audit expects Intangible to flash when it caps a power's damage to you, as it does.
 - In multiplayer, a teammate's card enchanted with Corrupted hurts that teammate for 2 in the predictions, as in the game (it was shown as uncertain).
 - Evoking a Plasma orb gives you its 2 energy in the predictions, as in the game (Chaos, Fusion, Meteor Strike and any card that channels into full slots).
 - A Frost orb's block goes to every other player too while you have Hibernate, in the predictions (Teammate Incoming Damage), as in the game.

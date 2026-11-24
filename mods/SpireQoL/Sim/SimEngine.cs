@@ -641,21 +641,21 @@ public static partial class SimEngine
     /// HP a player loses from <paramref name="amount"/> past their block: the HP-loss pipeline (Tungsten Rod, Beating Remnant,
     /// Buffer, Intangible...). Apply it, then call PlayerDamaged.
     /// </summary>
-    private static int HpLoss(SimState state, int player, int amount, int? dealer, SimProps props)
+    private static int HpLoss(SimState state, int player, int amount, int? dealer, SimProps props, SimCard? card)
     {
         if (amount <= 0) return 0;
         if (Listeners(state).Count == 0) return amount;
-        return Math.Max(0, (int)HpLossPipeline(state, new DamageCtx(dealer, player, props, state.CurrentPlay?.Card, state.CurrentPlay), amount));
+        return Math.Max(0, (int)HpLossPipeline(state, new DamageCtx(dealer, player, props, card, card == null ? null : state.CurrentPlay), amount));
     }
 
     /// <summary>After a player took damage (their HP already lower): AfterDamageGiven and AfterDamageReceived (Beating Remnant counts, Inferno...).</summary>
-    private static void PlayerDamaged(SimState state, int player, int? dealer, SimProps props, int blocked, int lost)
+    private static void PlayerDamaged(SimState state, int player, int? dealer, SimProps props, int blocked, int lost, SimCard? card)
     {
         if (blocked <= 0 && lost <= 0) return;
         RecordDamageReceived(state, player, props, lost); // DamageReceivedEntry, before the damage hooks (decision #191)
         var listeners = Listeners(state);
         if (listeners.Count == 0) return;
-        var hit = new DamageEvent(dealer, player, props, state.CurrentPlay?.Card, blocked + lost, blocked, lost, Killed: false);
+        var hit = new DamageEvent(dealer, player, props, card, blocked + lost, blocked, lost, Killed: false);
         foreach (var (model, o) in listeners) model.AfterDamageGiven(state, o, hit);
         foreach (var (simModel, o) in Listeners(state)) simModel.AfterDamageReceived(state, o, hit);
     }
@@ -674,7 +674,7 @@ public static partial class SimEngine
     /// Blockable damage to a player: their block, then HP loss; Unpowered unless said. The same for every player (decision #93);
     /// yours also feeds the breakdown, Imbalanced's threshold and your play's HP-loss tabs.
     /// </summary>
-    private static void LandBlockable(SimState state, string name, int amount, int player = Who.You, int? dealer = null, SimProps props = SimProps.Unpowered)
+    private static void LandBlockable(SimState state, string name, int amount, int player = Who.You, int? dealer = null, SimProps props = SimProps.Unpowered, SimCard? card = null)
     {
         if (amount <= 0) return;
         var simPlayer = state.MutablePlayer(player);
@@ -688,10 +688,10 @@ public static partial class SimEngine
         var blocked = Math.Min(simPlayer.Block, amount);
         simPlayer.Block -= blocked;
         simPlayer.Through += amount - blocked;
-        var lost = HpLoss(state, player, amount - blocked, dealer, props);
+        var lost = HpLoss(state, player, amount - blocked, dealer, props, card);
         Lose(state, player, lost);
         if (yours) PlayHp(state, amount - blocked, lost);
-        PlayerDamaged(state, player, dealer, props, blocked, lost);
+        PlayerDamaged(state, player, dealer, props, blocked, lost, card);
     }
 
     /// <summary>An end-of-turn step's explosions, only in fights with an Explosive enemy (no extra step otherwise).</summary>
@@ -760,17 +760,41 @@ public static partial class SimEngine
     }
 
     /// <summary>Damage no block can stop, to a player (Regret, Beckon, Bad Luck): straight to the HP-loss pipeline.</summary>
-    private static void LandUnblockable(SimState state, string name, int amount, int player = Who.You, int? dealer = null, SimProps props = SimProps.Unblockable | SimProps.Unpowered)
+    private static void LandUnblockable(SimState state, string name, int amount, int player = Who.You, int? dealer = null, SimProps props = SimProps.Unblockable | SimProps.Unpowered, SimCard? card = null)
     {
         if (amount <= 0) return;
         var yours = player == Who.You;
         if (yours && state.Log) state.Unblockable.Add((name, amount));
-        var lost = HpLoss(state, player, amount, dealer, props);
+        var lost = HpLoss(state, player, amount, dealer, props, card);
         Lose(state, player, lost);
         state.MutablePlayer(player).UnblockableTaken += lost;
         if (yours) PlayHp(state, amount, lost);
-        PlayerDamaged(state, player, dealer, props, blocked: 0, lost);
+        PlayerDamaged(state, player, dealer, props, blocked: 0, lost, card);
     }
+
+    /// <summary>
+    /// CreatureCmd.Damage of a player, the one path for every such command a card's or a model's code runs (decision #219): Hook.ModifyDamage with
+    /// its caps (CalcDamage), Hook.AfterModifyingDamageAmount for each modelled source that changed the amount, then their block unless it's
+    /// Unblockable (Creature.DamageBlockInternal), the HP-loss pipeline and the hit's reactions, each told the command's own dealer, props and card
+    /// (its cardSource: the card for an HP cost, none for a hook's). <paramref name="fired"/>: the model whose command it is, logged with the amount
+    /// before the sources that changed it are told (its hook acts, then the command runs). <paramref name="label"/> names it in Incoming Damage's
+    /// breakdown. Returns the damage after the math.
+    /// </summary>
+    internal static int DamagePlayer(SimState state, string label, int player, decimal baseDamage, SimProps props, int? dealer, SimCard? card, (string Name, int Owner)? fired = null)
+    {
+        var damage = new DamageCtx(dealer, player, props, card, card == null ? null : state.CurrentPlay);
+        var modifiers = Listeners(state).Count == 0 ? null : new List<(SimModel Model, int Owner)>();
+        var amount = CalcDamage(state, baseDamage, damage, captured: null, modifiers);
+        if (fired is { } source) state.LogFired(source.Name, amount, source.Owner);
+        if (modifiers != null) foreach (var (model, owner) in modifiers) model.AfterModifyingDamageAmount(state, owner, card);
+        if (amount <= 0) return amount;
+        if (props.HasFlag(SimProps.Unblockable)) LandUnblockable(state, label, amount, player, dealer, props, card);
+        else LandBlockable(state, label, amount, player, dealer, props, card);
+        return amount;
+    }
+
+    /// <summary>The props every card's HP cost passes (CreatureCmd.Damage of its owner: Bloodletting's, Offering's, Corrupted's): LoseHpAction's.</summary>
+    internal const SimProps HpCostProps = SimProps.Unblockable | SimProps.Unpowered | SimProps.Move;
 
     // ------------------------------------------------------------------ card play
 
@@ -908,7 +932,7 @@ public static partial class SimEngine
                 break;
             case WhenAction whenAction: RunWhen(branches, whenAction); break;
             case AskAction askAction: RunAsk(branches, askAction); break;
-            case LoseHpAction loseHpAction: branches.Do(branch => LandUnblockable(branch, branch.CurrentPlay?.Card.Name ?? "HP cost", loseHpAction.Amount)); break;
+            case LoseHpAction loseHpAction: branches.Do(branch => LoseHp(branch, branch.CurrentPlay?.Card.Name ?? "HP cost", loseHpAction.Amount, branch.CurrentPlay?.Owner ?? Who.You, branch.CurrentPlay?.Card)); break;
             default: throw new NotSupportedException($"No runner for {action.GetType().Name}");
         }
         // Events raised inside its hits or deaths (an arrow knocked loose) run once the action is over.
@@ -1282,9 +1306,9 @@ public static partial class SimEngine
                 simPlayer = state.MutablePlayer(player);
                 simPlayer.OstyTaken += toOsty;
                 simPlayer.Through += through - toOsty;
-                var lost = HpLoss(state, player, through - toOsty, enemy.Id, SimProps.Move);
+                var lost = HpLoss(state, player, through - toOsty, enemy.Id, SimProps.Move, card: null);
                 Lose(state, player, lost);
-                PlayerDamaged(state, player, enemy.Id, SimProps.Move, blocked, lost);
+                PlayerDamaged(state, player, enemy.Id, SimProps.Move, blocked, lost, card: null);
                 if (yours)
                 {
                     // DamageResult.WasFullyBlocked: you had block and no damage got through after the AfterOsty modifiers (Tungsten

@@ -188,7 +188,10 @@ public sealed record MovePowerAction(PowerId Power, int Amount, IReadOnlyList<in
 /// </summary>
 public sealed record MoveBlockAction(int Amount, IReadOnlyList<int> To) : SimAction;
 
-/// <summary>HP the card costs you (CreatureCmd.Damage on you, Unblockable and Unpowered), through the HP-loss pipeline.</summary>
+/// <summary>
+/// HP the card costs its owner (CreatureCmd.Damage of its owner with the props every card's HP cost passes, SimEngine.HpCostProps), dealt by them
+/// from the card in play, through the one path for damage to a player (SimEngine.DamagePlayer, decision #219).
+/// </summary>
 public sealed record LoseHpAction(int Amount) : SimAction;
 
 /// <summary>

@@ -865,7 +865,7 @@ public sealed class ReadModel : SimModel
                 var amount = Compile(enchantmentDamage.Amount);
                 return args =>
                 {
-                    SimEngine.LoseHp(args.State, args.Card?.Name ?? Name, (int)amount(in args), args.Owner);
+                    SimEngine.LoseHp(args.State, args.Card?.Name ?? Name, (int)amount(in args), args.Owner, args.Card, (SimProps)(int)hpProps);
                     return One(args.State);
                 };
             }
