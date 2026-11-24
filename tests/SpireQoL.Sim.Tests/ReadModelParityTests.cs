@@ -29,22 +29,16 @@ public class ReadModelParityTests
         ["DuplicationPower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: as Burst's",
         ["OneTwoPunchPower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: as Burst's",
         ["KiVersePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: as Burst's",
-        ["EnragePower.AfterCardPlayed"] = "cardPlay.Card.Type == Skill, with no test of its owner's side: on a player it gives them Strength on every Skill too (the hand-written model wanted a living enemy). Only enemies have it in the game; on a dead enemy it answers nothing (its powers went with it): no prediction changes",
         ["CorrosiveWavePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. You draw nothing after it this turn: no prediction changes",
         ["SleightOfFleshPower.AfterPowerApplied"] = "!(power is ITemporaryPower): a temporary power landing (Dark Shackles) doesn't set it off, the Strength its BeforeApplied applies does. The simulator lands a temporary Strength power as that Strength (SimAdapter.PowersFrom), which both count: no prediction changes",
         ["ShroudPower.AfterPowerApplied"] = "applier == base.Owner && power is DoomPower, with no test of the target: Doom you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Doom on a player today",
         ["ConstrictPower.AfterDeath"] = "!wasRemovalPrevented && creature == base.Applier: PowerCmd.Remove(this), it goes as its applier dies, where the hand-written model kept it and dealt nothing as the turn ended with its applier dead. Nothing is dealt either way (the scenario's turn end shows it): no prediction changes",
-        ["StranglePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: on a player it goes as their turn ends. Only enemies have it in the game (an enemy takes no part in the players' turn ending): no prediction changes",
-        ["StranglePower.BeforeCardPlayed"] = "as its AfterCardPlayed (the plays' runs count both hooks)",
-        ["StranglePower.AfterCardPlayed"] = "CreatureCmd.Damage(base.Owner, ...), with no test of its owner's side: on a player it hurts them for their own plays (the hand-written model dealt damage to enemies only). Only enemies have it in the game (Strangle the card applies it to one): no prediction changes",
-        ["SneakyPower.AfterCardPlayed"] = "cardPlay.Card.Owner.Creature != base.Owner && cardPlay.Card.Type == Attack, with no test of its owner's side: on a player it gives them block on another's Attack (the hand-written model wanted an enemy). Only enemies have it in the game: no prediction changes",
-        ["ConcoctPower.AfterSideTurnEnd"] = "base.Owner.Side != side: PowerCmd.Remove(this) as the other side's turn ends, which for the players' turn the simulator ends is an enemy owner. The engine runs the turn's end for players' models only (SimEngine.EndOfTurn), and only players have it: no prediction changes",
+        ["SneakyPower.AfterCardPlayed"] = "cardPlay.Card.Owner.Creature != base.Owner && cardPlay.Card.Type == Attack: its owner gains block on another player's Attack. Only players have it (the owner board: the multiplayer card Sneaky puts it on its player), where the hand-written model acted only on an enemy, so it never followed the game's Sneaky; the read model does (a fix since round three, multiplayer only: the single-player golden can't reach it)",
         ["CrabRagePower.AfterDeath"] = "CreatureCmd.GainBlock(base.Owner, Block): an enemy's block from a read model goes through the block math and is its reaction (SimEngine.EnemyBlock: logged, SimEnemy.ReactedWithBlock), where the hand-written model added it raw; with its Unpowered props nothing changes the 99, and nothing shown reads that flag: no prediction changes. Its Strength and its block are each logged, as each is a command of its code",
         ["GremlinHorn.AfterDeath"] = "Flash(), then PlayerCmd.GainEnergy and CardPileCmd.Draw (queued until the hit is over, as the hand-written model did): the read model logs its firing (the game's Flash). Its tab is judged on the outcome (a kill in every branch), not on the log: what's shown doesn't change",
         ["IterationPower.AfterCardEvent"] = "Flash(), then CardPileCmd.Draw: the read model logs its firing (the game's Flash) where the hand-written model logged none. It has no tab (no Proc Tags row): what's shown doesn't change; the play check now holds its flash to the game's",
         ["LunarPastry.AfterSideTurnEnd"] = "PlayerCmd.GainStars as your turn ends: the read model logs its firing, as every read model's acting step does, where the hand-written model logged only the stars. It has no tab, and the checks read from its code that it never flashes (decision #181): nothing shown changes",
         ["PaleBlueDotPower.AfterCardPlayed"] = "PowerCmd.Apply<DrawCardsNextTurnPower>(base.Owner, base.Amount): the read model puts Draw Cards Next Turn on its owner where the hand-written model only fired. It acts as its owner's next turn starts, outside a simulation: no prediction changes",
-        ["SerratedArrowsPower.ModifyDamageMultiplicative"] = "target.HasPower<ImpaledPower>(), with no test of the target's side: a player with Impaled would count (the hand-written model wanted an enemy). Only enemies are impaled (ArrowCmd.ImpaleTarget: an arrow in the shot's target, an enemy): no prediction changes",
         ["VulnerablePower.ModifyDamageMultiplicative"] = "dealer.Player?.GetRelic<PaperPhrog>(), and PaperPhrog's and CrueltyPower's own `target == base.Owner` returns: Osty's hits get no Paper Phrog (a pet's creature has no Player; the hand-written model gave him his player's), a fix where Osty hits a Vulnerable enemy with Paper Phrog; and a creature's own Phrog and Cruelty don't raise a powered attack on itself (none happens today)",
         ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
     };
@@ -133,6 +127,7 @@ public class ReadModelParityTests
     [Fact]
     public void EveryReviewedDifferenceIsOne()
     {
+        var stale = new List<string>();
         foreach (var key in Reviewed.Keys)
         {
             var (name, hook) = (key[..key.IndexOf('.', StringComparison.Ordinal)], key[(key.IndexOf('.', StringComparison.Ordinal) + 1)..]);
@@ -140,8 +135,9 @@ public class ReadModelParityTests
             var read = Assert.IsType<ReadModel>(SimModels.Get(name));
             var differs = OwnersOf(read).SelectMany(owner => Calls(hook, owner).Select(entry => (owner, entry.Call)))
                 .Any(entry => entry.Call(HandWritten[name], Board(read, entry.owner)) != entry.Call(read, Board(read, entry.owner)));
-            Assert.True(differs, $"{key} is reviewed, but the read model does what the hand-written one did there");
+            if (!differs) stale.Add(key);
         }
+        Assert.True(stale.Count == 0, $"reviewed, but the read model does what the hand-written one did there: {string.Join(", ", stale)}");
     }
 
     // ---- the boards
@@ -164,7 +160,17 @@ public class ReadModelParityTests
         Assert.All(answered, hook => Assert.Contains(hook, Hooks));
     }
 
-    private static IEnumerable<int> OwnersOf(ReadModel model) => model.Spec.Kind == ModelKind.Relic ? new[] { Who.You, Who.Teammate(0) } : new[] { Who.You, Who.Teammate(0), 0 };
+    /// <summary>
+    /// The owners a model is compared on: the ones the game's code can give it (the owner board: ReadModels/power-owners.json, read from where
+    /// both branches apply each power; a relic is a player's), you and a teammate for a player, enemy 0 for an enemy. A pet's powers aren't
+    /// simulated (Osty's hits are captured).
+    /// </summary>
+    private static IEnumerable<int> OwnersOf(ReadModel model)
+    {
+        if (model.Spec.Kind == ModelKind.Relic) return new[] { Who.You, Who.Teammate(0) };
+        var kinds = OwnerBoardFile.KindsOf(model.Name);
+        return (kinds.Contains(OwnerBoardFile.Player) ? new[] { Who.You, Who.Teammate(0) } : Array.Empty<int>()).Concat(kinds.Contains(OwnerBoardFile.Enemy) ? new[] { 0 } : Array.Empty<int>());
+    }
 
     /// <summary>
     /// A board with the model on <paramref name="owner"/> (a power at 3, a relic armed), its values as the adapter reads them (each one its
@@ -195,7 +201,10 @@ public class ReadModelParityTests
         {
             if (fact is { Fact: HookFact.CreatureHasPower or HookFact.CreaturePowerAmount, Of: { } power })
             {
-                foreach (var holder in new[] { 1, Who.Teammate(0) }) SimEngine.SetPowers(state, holder, SimEngine.PowersOf(state, holder).With(new PowerId(power), amount: 2, data: 0));
+                // Only on a creature the game can give it (the owner board): Impaled on an enemy, never on the teammate.
+                var kinds = OwnerBoardFile.KindsOf(power);
+                foreach (var holder in new[] { 1, Who.Teammate(0) }.Where(holder => kinds.Contains(Who.IsEnemy(holder) ? OwnerBoardFile.Enemy : OwnerBoardFile.Player)))
+                    SimEngine.SetPowers(state, holder, SimEngine.PowersOf(state, holder).With(new PowerId(power), amount: 2, data: 0));
                 if (power == PowerId.Impaled.Name) SimEngine.SetPowers(state, 0, SimEngine.PowersOf(state, 0).With(SimEngine.ImpaledOther, amount: 1, data: 0));
             }
             if (fact is { Fact: HookFact.CreatureHasRelic, Of: { } relic })
