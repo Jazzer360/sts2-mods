@@ -226,8 +226,8 @@ public class ReadModelParityTests
     [Fact]
     public void EveryHookAReadModelAnswersHasScenarios()
     {
-        // An orb's own programs aren't a listener's hooks (the engine runs them where OrbCmd and OrbQueue do): OrbParityTests holds them.
-        var answered = ReadModelsFile.Specs().Where(spec => spec.Kind != ModelKind.Orb).SelectMany(spec => spec.Hooks).Select(program => ReadModel.SimHookOf(program.Hook)).Distinct();
+        // An orb's and an enchantment's own programs aren't a listener's hooks (the engine runs them where OrbCmd and OrbQueue do, and where its card plays): OrbParityTests and EnchantmentParityTests hold them.
+        var answered = ReadModelsFile.Specs().Where(spec => spec.Kind is ModelKind.Power or ModelKind.Relic).SelectMany(spec => spec.Hooks).Select(program => ReadModel.SimHookOf(program.Hook)).Distinct();
         Assert.All(answered, hook => Assert.Contains(hook, Hooks));
     }
 

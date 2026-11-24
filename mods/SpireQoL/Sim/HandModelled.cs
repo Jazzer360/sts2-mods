@@ -21,11 +21,11 @@ public static class HandModelled
     public static readonly IReadOnlyList<HandModelledRule> Engine = new HandModelledRule[]
     {
         new("A card play: its shape (play count, result location), each play's hooks and its body in its program's order",
-            new[] { "SimEngine.RunCardPlay", "SimEngine.DecideCardPlay", "SimEngine.ApplyPlay", "SimEngine.ApplyPlayTo", "SimEngine.RunScript", "SimEngine.RunScriptTo", "SimEngine.Count", "SimEngine.CardResolved", "SimEngine.RunFixedHits" },
-            new[] { "CardModel.OnPlayWrapper", "Hook.ModifyCardPlayCount", "Hook.AfterModifyingCardPlayCount", "Hook.ModifyCardPlayResultLocation", "Hook.BeforeCardPlayed", "Hook.AfterCardPlayed", "CardCmd.AutoPlay" }),
+            new[] { "SimEngine.RunCardPlay", "SimEngine.RunEnchantment", "SimEngine.DecideCardPlay", "SimEngine.ApplyPlay", "SimEngine.ApplyPlayTo", "SimEngine.RunScript", "SimEngine.RunScriptTo", "SimEngine.Count", "SimEngine.CardResolved", "SimEngine.RunFixedHits" },
+            new[] { "CardModel.OnPlayWrapper", "EnchantmentModel.OnPlay", "Hook.ModifyCardPlayCount", "Hook.AfterModifyingCardPlayCount", "Hook.ModifyCardPlayResultLocation", "Hook.BeforeCardPlayed", "Hook.AfterCardPlayed", "CardCmd.AutoPlay" }),
         new("Damage to a creature: the damage math, block, the HP-loss pipeline, a death held back, the hit's reactions",
             new[] { "SimEngine.Damage", "SimEngine.ModifiedDamage", "SimEngine.CalcDamage", "SimEngine.PlainDamage", "SimEngine.AnyListensToDamage", "SimEngine.HpLossPipeline", "SimEngine.HpLoss",
-                "SimEngine.PlayerDamaged", "SimEngine.LandBlockable", "SimEngine.LandOnPlayer", "SimEngine.LandUnblockable", "SimEngine.Lose", "SimEngine.PlayHp", "SimEngine.BiggestHit",
+                "SimEngine.PlayerDamaged", "SimEngine.LandBlockable", "SimEngine.LandOnPlayer", "SimEngine.LandUnblockable", "SimEngine.LoseHp", "SimEngine.Lose", "SimEngine.PlayHp", "SimEngine.BiggestHit",
                 "SimEngine.HitOnce", "SimEngine.HitAll", "SimEngine.HitRandom", "SimEngine.RandomTarget", "SimEngine.ProcHitOn", "SimEngine.ProcDamageAll", "SimEngine.ProcDamageRandom",
                 "SimEngine.ProcDamageOn", "SimEngine.ProcDamagePlayer", "SimEngine.RunDamage", "SimEngine.IntentDamage", "SimEngine.WithoutEnchantment", "SimEngine.DamageAllEnemies" },
             new[] { "CreatureCmd.Damage", "Hook.ModifyDamage", "Hook.AfterModifyingDamageAmount", "Hook.BeforeDamageReceived", "Hook.ModifyHpLost", "Hook.AfterModifyingHpLostBeforeOsty",
@@ -38,7 +38,7 @@ public static class HandModelled
             new[] { "SimEngine.BlockOnce", "SimEngine.BlockBaseNow", "SimEngine.CalcBlock", "SimEngine.GainBlock", "SimEngine.ShareBlock", "SimEngine.ProcBlock", "SimEngine.ProcBlockFor", "SimEngine.EnemyBlock", "SimEngine.RunBlock", "SimEngine.StripBlock" },
             new[] { "CreatureCmd.GainBlock", "Hook.ModifyBlock", "Hook.AfterModifyingBlockAmount", "Hook.BeforeBlockGained", "Hook.AfterBlockGained", "CreatureCmd.LoseBlock", "Creature.GainBlockInternal" }),
         new("A power lands: the amount given, Artifact, its instances and copies, the listeners told; a power decremented or removed",
-            new[] { "SimEngine.ApplyPower", "SimEngine.ApplyAndTell", "SimEngine.ApplyInHit", "SimEngine.Tell", "SimEngine.RunApplyPower", "SimEngine.AmountOf", "SimEngine.MovePowers", "SimEngine.DecrementPower" },
+            new[] { "SimEngine.ApplyPower", "SimEngine.ApplyAndTell", "SimEngine.ApplyInHit", "SimEngine.Tell", "SimEngine.RunApplyPower", "SimEngine.ApplyPowerOf", "SimEngine.AmountOf", "SimEngine.MovePowers", "SimEngine.DecrementPower" },
             new[] { "PowerCmd.Apply", "PowerCmd.FindExistingInstanceForStacking", "PowerCmd.Decrement", "PowerCmd.Remove", "PowerCmd.TickDownDuration", "Hook.ModifyPowerAmountGiven",
                 "Hook.AfterModifyingPowerAmountGiven", "Hook.BeforePowerAmountChanged", "Hook.AfterPowerAmountChanged", "Creature.ApplyPowerInternal" }),
         new("Draws: a full hand, No Draw, the discard pile shuffled in, the drawn card's reactions",
@@ -47,7 +47,7 @@ public static class HandModelled
         new("Cards leaving and joining piles mid-play: taken, discarded, exhausted, made; the card events and their listeners",
             new[] { "SimEngine.RunTakeFromHand", "SimEngine.TakeFromHand", "SimEngine.TakenEvents", "SimEngine.TakenKey", "SimEngine.ZeroedMatching", "SimEngine.JoinsTakes", "SimEngine.RunLeaveHand",
                 "SimEngine.RunExhaustFromHand", "SimEngine.ExhaustChosenFromDrawPile", "SimEngine.RunTakeToHand", "SimEngine.TakeToHand", "SimEngine.TakeOne", "SimEngine.Less", "SimEngine.InPile",
-                "SimEngine.ProfileIn", "SimEngine.TakenId", "SimEngine.Discarded", "SimEngine.IntoDrawPile", "SimEngine.AddToHand", "SimEngine.CardEvents", "SimEngine.OneCardEvent", "SimEngine.RunCardEvent",
+                "SimEngine.ProfileIn", "SimEngine.TakenId", "SimEngine.Discarded", "SimEngine.IntoDrawPile", "SimEngine.AddToHand", "SimEngine.CardEvents", "SimEngine.CardEventsOf", "SimEngine.OneCardEvent", "SimEngine.RunCardEvent",
                 "SimEngine.FireCardEvent", "SimEngine.CountEvent", "SimEngine.ProcCardEvent", "SimEngine.Raise", "SimEngine.DrainPending" },
             new[] { "CardCmd.Discard", "CardCmd.Exhaust", "CardPileCmd.Add", "CardPileCmd.AddGeneratedCardToCombat", "Hook.AfterCardDiscarded", "Hook.AfterCardExhausted", "Hook.AfterCardChangedPiles",
                 "Hook.AfterCardGeneratedForCombat", "PlayerCmd.GainEnergy", "Hook.AfterEnergySpent", "PlayerCmd.GainStars", "Hook.AfterStarsGained", "Hook.AfterStarsSpent" }),
@@ -98,9 +98,9 @@ public static class HandModelled
     /// </summary>
     public static readonly IReadOnlyList<HandModelledRule> Adapter = new HandModelledRule[]
     {
-        new("Enchantments acting on a play, after the card (EnchantmentModel.OnPlay): Adroit's block, Corrupted's damage to you, Inky's Weak, Swift's draw, Sown's energy",
-            new[] { "SimAdapter.Play", "SimAdapter.SwiftDraws", "SimAdapter.SownEnergy" },
-            new[] { "Adroit.OnPlay", "Corrupted.OnPlay", "Inky.OnPlay", "Swift.OnPlay", "Swift.AfterCardPlayed", "Sown.OnPlay", "Sown.AfterCardPlayed" }),
+        new("Swift's draws counted for the cards that come back to your hand (the Return tags' hand size, outside the simulation)",
+            new[] { "SimAdapter.SwiftDraws" },
+            new[] { "Swift.OnPlay" }),
         new("Enchantments' damage and block math on a replay (the game's own math, called live, for the first play): Momentum, Goopy, Vigorous",
             new[] { "PlayGrowth.Of" },
             new[] { "Momentum.OnPlay", "Goopy.AfterCardPlayed", "Vigorous.AfterCardPlayed", "EnchantmentModel.EnchantDamageAdditive", "EnchantmentModel.EnchantBlockAdditive" }),

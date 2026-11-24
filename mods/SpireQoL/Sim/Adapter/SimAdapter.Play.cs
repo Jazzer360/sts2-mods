@@ -3,7 +3,6 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Powers;
 using MegaCrit.Sts2.Core.ValueProps;
 using SpireQoL.Procs;
 using Sts2Mods.Core.Game;
@@ -28,9 +27,6 @@ public static partial class SimAdapter
         if (reads.Unread.Count > 0) play.Before.Insert(0, new UnreadAction(reads.Unread[0]));
         return play;
     }
-
-    /// <summary>What a Corrupted card deals its owner on every play (Corrupted._damageAmount, a constant in its code).</summary>
-    private const int CorruptedSelfDamage = 2;
 
     private static SimPlay PlayFromGame(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids,
         int targetId, int owner, int playCount)
@@ -65,7 +61,7 @@ public static partial class SimAdapter
         play.BlockToAlly = Procs.Programs.CardEffects.BlocksAnother(card.GetType());
         play.ChannelToAlly = Procs.Programs.CardEffects.ChannelsForTarget(card.GetType());
         play.TargetId = card.TargetType == TargetType.AnyAlly ? allyId : targetId;
-        play.Card = new SimCardPlay(SimReaders.Card(card, me), owner, play.TargetId, PlayIndex: 0, plays, CardPlays.ChoiceAutoPlayed(card));
+        play.Card = new SimCardPlay(WithEnchantmentBlock(SimReaders.Card(card, me), card, me, combat), owner, play.TargetId, PlayIndex: 0, plays, CardPlays.ChoiceAutoPlayed(card));
         // Osty makes its attack (an attack built FromOsty in its code).
         play.ByOsty = Procs.Programs.CardEffects.Attacks(card.GetType()).Any(attack => attack.Command.Builder.Contains("FromOsty"));
 
@@ -80,44 +76,26 @@ public static partial class SimAdapter
         AddCardEvents(play, card);
         // What it turns into once its last play is over (Mourning Blow's Sadness).
         play.After.AddRange(MadeAfterPlay(card));
-        // The card's enchantment acts after the card itself, on every play (CardModel: EnchantmentModel.OnPlay after OnPlay). The
-        // coverage ledger reviews every enchantment's OnPlay.
-        switch (card.Enchantment)
-        {
-            // Adroit: its block (EnchantmentModel.OnPlay → CreatureCmd.GainBlock).
-            case MegaCrit.Sts2.Core.Models.Enchantments.Adroit adroit:
-                var baseValue = adroit.DynamicVars.Block.BaseValue;
-                play.Body.Add(new GainBlockAction(Times: 1, baseValue, SimProps.Move) { Captured = SimReaders.Block(combat, card, me.Creature, baseValue, ValueProp.Move) });
-                break;
-            // Corrupted: damage to its owner, unblockable (Corrupted._damageAmount): your HP-loss modifiers and the damage hooks hear it
-            // (Centennial Puzzle).
-            case MegaCrit.Sts2.Core.Models.Enchantments.Corrupted when owner == Who.You:
-                play.Body.Add(new LoseHpAction(CorruptedSelfDamage));
-                break;
-            case MegaCrit.Sts2.Core.Models.Enchantments.Corrupted:
-                play.Body.Add(new NotModelledAction("a teammate's Corrupted card hurts them"));
-                break;
-            // Inky: Weak on the card's target, or on every enemy for a card that hits them all.
-            case MegaCrit.Sts2.Core.Models.Enchantments.Inky inky when inky.DynamicVars.Values.FirstOrDefault(dynamicVar => IsPowerVar(dynamicVar, typeof(WeakPower))) is { } weak:
-                play.Body.Add(new ApplyPowerAction(PowerId.Weak, (int)weak.BaseValue)
-                    { To = card.TargetType == TargetType.AllEnemies ? ApplyPowerAction.Where.AllEnemies : ApplyPowerAction.Where.Target, Debuff = true });
-                break;
-        }
-        // Swift (an enchantment): its draw, the first play's only (Swift turns itself off).
-        if (SwiftDraws(card) is > 0 and var swiftDraws)
-            play.Body.Add(new FirstPlayOnly(new SimAction[] { new CardEventAction(CardEvent.Drawn, swiftDraws) { Indirect = true, JoinsHand = true } }));
         // A teammate's card: the block it gives its player is theirs.
         if (owner != Who.You) play.Body = play.Body.Select(action => ToOwner(action, owner)).ToList();
         return play;
     }
 
+    /// <summary>
+    /// The card's enchantment (SimCard.Enchantment: the engine runs it after each play's own effects, from its class's code, decision #217) with the
+    /// game's own block math for a block its code gains, for what the simulator doesn't model (its base the enchantment's Block value, where it has one).
+    /// </summary>
+    private static SimCard WithEnchantmentBlock(SimCard simCard, CardModel card, Player me, ICombatState combat)
+    {
+        if (simCard.Enchantment is not { } enchantment || card.Enchantment is not { } gameEnchantment) return simCard;
+        var baseBlock = 0m;
+        try { if (gameEnchantment.DynamicVars.TryGetValue("Block", out var blockVar)) baseBlock = blockVar.BaseValue; } catch { /* none */ }
+        return simCard with { Enchantment = enchantment with { BlockTerms = SimReaders.Block(combat, card, me.Creature, baseBlock, ValueProp.Move) } };
+    }
+
     /// <summary>Swift (an enchantment): the cards it draws when its card is played, while it's on (Swift.AfterCardPlayed turns it off).</summary>
     internal static int SwiftDraws(CardModel card) =>
         card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Swift { Status: MegaCrit.Sts2.Core.Entities.Enchantments.EnchantmentStatus.Normal } swift ? swift.Amount : 0;
-
-    /// <summary>Sown (an enchantment): the energy its card's first play gives back (Sown.OnPlay while Normal).</summary>
-    internal static int SownEnergy(CardModel card) =>
-        card.Enchantment is MegaCrit.Sts2.Core.Models.Enchantments.Sown { Status: MegaCrit.Sts2.Core.Entities.Enchantments.EnchantmentStatus.Normal } sown ? sown.Amount : 0;
 
     /// <summary>A teammate's card's block to you is theirs (an action on a condition too).</summary>
     private static SimAction ToOwner(SimAction action, int owner) => action switch
@@ -163,7 +141,6 @@ public static partial class SimAdapter
     /// </summary>
     private static void AddCardEvents(SimPlay play, CardModel card)
     {
-        if (SownEnergy(card) is > 0 and var energyBack) play.Before.Add(new CardEventAction(CardEvent.EnergyGained, energyBack));
         if (CardPlays.EnergySpentOn(card) is > 0 and var energySpent) play.Before.Add(new CardEventAction(CardEvent.EnergySpent, energySpent));
         // Spent with the energy, before the card does anything (PlayCardAction: SpendResources, then OnPlay). Inside the play, as Galactic
         // Dust and Child of the Stars read its stars.

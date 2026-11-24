@@ -1,5 +1,29 @@
 [
   {
+    "Name": "Adroit",
+    "Kind": "Enchantment",
+    "Hooks": [
+      {
+        "Hook": "OnPlay",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Block.Props",
+              "Canonical": 8
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "AfterimagePower",
     "Kind": "Power",
     "Hooks": [
@@ -2003,6 +2027,31 @@
       }
     ],
     "Tab": "Trigger",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "Corrupted",
+    "Kind": "Enchantment",
+    "Hooks": [
+      {
+        "Hook": "OnPlay",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookConstant",
+              "Value": 2
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 14
+            },
+            "NoDealer": true
+          }
+        ]
+      }
+    ],
     "HelpsOwner": false
   },
   {
@@ -5499,6 +5548,95 @@
             }
           ]
         }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "Inky",
+    "Kind": "Enchantment",
+    "Hooks": [
+      {
+        "Hook": "OnPlay",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "WeakPower",
+            "Target": "PlayTarget",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "WeakPower",
+              "Canonical": 1
+            },
+            "Debuff": true,
+            "When": {
+              "$kind": "HookNot",
+              "Inner": {
+                "$kind": "HookTest",
+                "At": "\u003COnPlay\u003Ed__8.MoveNext:0026",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "ModelCardTargets"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 2
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "WeakPower",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "WeakPower",
+              "Canonical": 1
+            },
+            "Debuff": true,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003COnPlay\u003Ed__8.MoveNext:0026",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "ModelCardTargets"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 2
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003COnPlay\u003Ed__8.MoveNext:0026",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "ModelCardTargets"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 2
+                  }
+                }
+              }
+            }
+          }
+        ]
       }
     ],
     "HelpsOwner": false
@@ -15486,6 +15624,65 @@
     "HelpsOwner": false
   },
   {
+    "Name": "Sown",
+    "Kind": "Enchantment",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Status",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "Sown.AfterCardPlayed:000C",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsModelCard"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "OnPlay",
+        "Steps": [
+          {
+            "$kind": "GainEnergyStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "When": {
+              "$kind": "HookNot",
+              "Inner": {
+                "$kind": "HookTest",
+                "At": "\u003COnPlay\u003Ed__2.MoveNext:0017",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "Status"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "SpeedsterPower",
     "Kind": "Power",
     "Hooks": [
@@ -16176,6 +16373,65 @@
       }
     ],
     "Tab": "Energy",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "Swift",
+    "Kind": "Enchantment",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Status",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "Swift.AfterCardPlayed:000C",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsModelCard"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "OnPlay",
+        "Steps": [
+          {
+            "$kind": "DrawStep",
+            "Count": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "When": {
+              "$kind": "HookNot",
+              "Inner": {
+                "$kind": "HookTest",
+                "At": "\u003COnPlay\u003Ed__4.MoveNext:0017",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "Status"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
     "HelpsOwner": false
   },
   {

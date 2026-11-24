@@ -12,6 +12,7 @@ public static partial class ReadModels
     /// </summary>
     internal static readonly IReadOnlySet<string> ReadWholeAtReview = new HashSet<string>(StringComparer.Ordinal)
     {
+        nameof(MegaCrit.Sts2.Core.Models.Enchantments.Adroit),
         PowerId.Afterimage.Name,
         PowerId.AllIsWell.Name,
         PowerId.Archery.Name,
@@ -32,6 +33,7 @@ public static partial class ReadModels
         PowerId.ConductorsBaton.Name,
         PowerId.Constrict.Name,
         PowerId.CorrosiveWave.Name,
+        nameof(MegaCrit.Sts2.Core.Models.Enchantments.Corrupted),
         PowerId.CrabRage.Name,
         PowerId.DanseMacabre.Name,
         PowerId.DarkEmbrace.Name,
@@ -72,6 +74,7 @@ public static partial class ReadModels
         PowerId.HighVoltage.Name,
         PowerId.Inferno.Name,
         RelicId.InfusedCore.Name,
+        nameof(MegaCrit.Sts2.Core.Models.Enchantments.Inky),
         RelicId.IntimidatingHelmet.Name,
         RelicId.IronClub.Name,
         PowerId.Iteration.Name,
@@ -126,6 +129,7 @@ public static partial class ReadModels
         PowerId.Smokestack.Name,
         PowerId.Sneaky.Name,
         PowerId.Soar.Name,
+        nameof(MegaCrit.Sts2.Core.Models.Enchantments.Sown),
         PowerId.Speedster.Name,
         PowerId.SpiritOfAsh.Name,
         RelicId.StoneCalendar.Name,
@@ -134,6 +138,7 @@ public static partial class ReadModels
         PowerId.Strangle.Name,
         PowerId.Strength.Name,
         PowerId.Subroutine.Name,
+        nameof(MegaCrit.Sts2.Core.Models.Enchantments.Swift),
         PowerId.Tainted.Name,
         PowerId.Tender.Name,
         PowerId.Territorial.Name,

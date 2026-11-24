@@ -67,6 +67,11 @@ public enum HookName
     Passive,
     /// <summary>An orb's own Evoke (OrbModel.Evoke), run by OrbCmd's evoke: ModelKind.Orb's program.</summary>
     Evoke,
+    /// <summary>
+    /// An enchantment's own OnPlay (EnchantmentModel.OnPlay), run by the engine after each play's own effects (CardModel.OnPlayWrapper):
+    /// ModelKind.Enchantment's program.
+    /// </summary>
+    OnPlay,
 }
 
 /// <summary>When an orb's passive goes off: the OrbModel trigger hook its class overrides with a call of TriggerPassive (OrbQueue calls them).</summary>
@@ -234,6 +239,10 @@ public enum HookFact
     OrbIsFront,
     /// <summary>The enemies that can be hit (CombatState.HittableEnemies.Count; a player's model's hittable opponents).</summary>
     HittableEnemyCount,
+    /// <summary>The card played is the model's own card (cardPlay.Card == base.Card: an enchantment's card).</summary>
+    PlayIsModelCard,
+    /// <summary>Whom the model's own card is aimed at (base.Card.TargetType), as SimPlay.Target's number (an enchantment's card: Inky's every enemy).</summary>
+    ModelCardTargets,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>
@@ -377,6 +386,8 @@ public enum HookTarget
     EvokeTargets,
     /// <summary>The item of the loop the step is in (HookWho.Each: each player, each enemy).</summary>
     Each,
+    /// <summary>The card play's target (cardPlay.Target: the enemy an enchanted card is aimed at).</summary>
+    PlayTarget,
 }
 
 /// <summary>One command of a hook's code, on the condition its code runs it on (null: always).</summary>
@@ -500,7 +511,15 @@ public enum HookOutcome { KillsIt, KillsAnother, KillsOne }
 /// Whether a model is a power (on a creature: its PowerSet entry), a relic (on a player: its RelicSet entry) or an orb (in a player's orb slots: a
 /// SimOrb, its programs run where OrbCmd and OrbQueue run them, never a listener).
 /// </summary>
-public enum ModelKind { Power, Relic, Orb }
+public enum ModelKind
+{
+    Power, Relic, Orb,
+    /// <summary>
+    /// An enchantment on a card (SimCard.Enchantment): its OnPlay run by the engine after each play of its card, its AfterCardPlayed after the
+    /// play's listeners, never a listener of its own (decision #217).
+    /// </summary>
+    Enchantment,
+}
 
 /// <summary>
 /// A power or a relic as its code says (decision #195): its hooks' programs, read from the game's code by the adapter

@@ -71,6 +71,27 @@ public static partial class ReadModels
             specs.Add(new ModelSpec(type.Name, ModelKind.Orb, Array.Empty<HookProgram>()) { Orb = HookReader.OrbKindOf(type.Name), Unread = why });
             unread?.Invoke(type.Name, why);
         }
+        // The enchantments (decision #217): one read whole with a program to run is the engine's to run on its card's plays; one read whole at the
+        // reviewed builds that isn't now is unread.
+        foreach (var type in HookReader.Enchantments(all).OrderBy(type => type.Name, StringComparer.Ordinal))
+        {
+            ModelReading reading;
+            try { reading = HookReader.ReadEnchantment(type, read); }
+            catch (Exception exception)
+            {
+                reading = new ModelReading(new ModelSpec(type.Name, ModelKind.Enchantment, Array.Empty<HookProgram>()), new[] { new HookReading("(the class)", $"gap: not read ({exception.GetType().Name}: {exception.Message})") });
+            }
+            if (reading.Whole && reading.Spec.Hooks.Count == 0) continue;
+            if (reading.Whole && Compiles(reading.Spec) is null)
+            {
+                specs.Add(reading.Spec);
+                continue;
+            }
+            if (!ReadWholeAtReview.Contains(type.Name)) continue;
+            var why = $"{type.Name}'s code couldn't be read from the game (a game update?): what it does isn't simulated ({string.Join("; ", reading.Gaps)})";
+            specs.Add(new ModelSpec(type.Name, ModelKind.Enchantment, Array.Empty<HookProgram>()) { Unread = why });
+            unread?.Invoke(type.Name, why);
+        }
         return specs;
     }
 

@@ -134,19 +134,27 @@ public class HookGapTests
                         continue;
                     }
                 }
-                var readings = kind == "orb" ? HookReader.ReadOrb(type, code.Read).Hooks : HookReader.ReadEffects(type, code.Read);
+                // An enchantment is read from its code too (decision #217): read whole with a program, the engine runs it on its card's plays.
+                if (kind == "enchantment" && HookReader.ReadEnchantment(type, code.Read) is { Whole: true, Spec.Hooks.Count: > 0 } enchantmentReading)
+                {
+                    handled["read from its code"] = handled.GetValueOrDefault("read from its code") + 1;
+                    lines.Add($"{name} ({branches}; read from its code (ReadModel); {how}): {string.Join(" | ", enchantmentReading.Hooks.Select(hook => CalledLive(hook.Hook, sources) ? $"{hook.Hook}: called live (the adapter runs the game's own code)" : hook.NotRun != null ? $"{hook.Hook}: not run ({hook.NotRun})" : $"{hook.Hook}: read"))}");
+                    continue;
+                }
+                var readings = kind == "orb" ? HookReader.ReadOrb(type, code.Read).Hooks : kind == "enchantment" ? HookReader.ReadEnchantment(type, code.Read).Hooks : HookReader.ReadEffects(type, code.Read);
                 var gaps = new List<(string Capability, string Gap)>();
                 var parts = new List<string>();
                 foreach (var reading in readings)
                 {
-                    if (reading.NotRun != null) { parts.Add($"{reading.Hook}: not run ({reading.NotRun})"); continue; }
                     if (CalledLive(reading.Hook, sources)) { parts.Add($"{reading.Hook}: called live (the adapter runs the game's own code)"); continue; }
+                    if (reading.NotRun != null) { parts.Add($"{reading.Hook}: not run ({reading.NotRun})"); continue; }
+                    if (reading.Gap == null) { parts.Add($"{reading.Hook}: read"); continue; }
                     var capability = CapabilityOf(reading, kind);
                     if (branches != "main only") gaps.Add((capability, reading.Hook));
                     parts.Add($"{reading.Hook}: [{capability}] {Shortened(reading.Gap!)}");
                 }
                 if (branches != "main only" && gaps.Count > 0) byClass.Add(($"{name} ({kind})", gaps));
-                if (category == "not modelled by name" && readings.Any(reading => reading.NotRun == null && CalledLive(reading.Hook, sources))) category = "the game's own code, called live";
+                if (category == "not modelled by name" && readings.Any(reading => CalledLive(reading.Hook, sources))) category = "the game's own code, called live";
                 if (category == "not modelled by name" && readings.Count == 0) category = "no hooks";
                 handled[category] = handled.GetValueOrDefault(category) + 1;
                 lines.Add($"{name} ({branches}; {how}): {(parts.Count == 0 ? "no hooks" : string.Join(" | ", parts))}");
@@ -299,7 +307,7 @@ public class HookGapTests
             using var code = new BranchCode(path);
             var types = code.Assembly.GetTypes();
             var readings = HookReader.Powers(types).Concat(HookReader.Relics(types)).SelectMany(type => HookReader.Read(type, code.Read).Hooks.Select(hook => (type.Name, hook)))
-                .Concat(OtherKinds.SelectMany(kind => ClassesOf(code, kind.Folder, kind.Base).Values).SelectMany(type => HookReader.ReadEffects(type, code.Read).Select(hook => (type.Name, hook))));
+                .Concat(OtherKinds.SelectMany(kind => ClassesOf(code, kind.Folder, kind.Base).Values.Select(type => (Kind: kind.Kind, Type: type))).SelectMany(each => (each.Kind == "enchantment" ? HookReader.ReadEnchantment(each.Type, code.Read).Hooks : HookReader.ReadEffects(each.Type, code.Read)).Select(hook => (each.Type.Name, hook))));
             Assert.All(readings.Where(reading => !reading.hook.Read), reading => Assert.True(reading.hook.Capability != null, $"{reading.Name}.{reading.hook}"));
         }
     }

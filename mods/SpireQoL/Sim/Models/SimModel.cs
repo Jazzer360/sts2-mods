@@ -86,7 +86,32 @@ public sealed record SimCard(string Name, SimCardType Type)
     /// <summary>Its dynamic values a model reads (Heavy Shot's AimMultiplier...), by the game's var name.</summary>
     public IReadOnlyDictionary<string, decimal> Vars { get; init; } = new Dictionary<string, decimal>();
 
+    /// <summary>
+    /// Its enchantment, as the engine runs it from its class's code after each play's own effects (CardModel.OnPlayWrapper: the card's OnPlay,
+    /// then its enchantment's): null for none.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public SimEnchantment? Enchantment { get; init; }
+
     public bool Is(SimCardTag tag) => Tags.Contains(tag);
+}
+
+/// <summary>
+/// A card's enchantment (decision #217): its class, its amount (EnchantmentModel.Amount) and its own state its code reads and stores (its Status:
+/// Swift and Sown turn themselves off after their card's first play), as the game has them when the card is played. The engine runs its read
+/// programs (ModelKind.Enchantment) on its card's plays; its state through the play is kept in its owner's fields, under its card.
+/// </summary>
+public sealed record SimEnchantment(string Name, int Amount)
+{
+    /// <summary>Its own state as the game has it (its fields and properties its code reads: "Status" 0 Normal, 1 Disabled).</summary>
+    public NamedCounts Fields { get; init; } = NamedCounts.Empty;
+
+    /// <summary>
+    /// The captured terms of a block its card gains (the game's own math for the sources the simulator doesn't model, and the enchantment's own:
+    /// SimReaders.Block), for a block its code gains (Adroit's). Null: none captured.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public CapturedTerms? BlockTerms { get; init; }
 }
 
 /// <summary>How the game shows a model acted (SimModel.Seen).</summary>
@@ -453,7 +478,8 @@ public static class SimModels
     /// The models and the classes whose hooks couldn't be read, made once and never changed after (shared by every thread); the orbs' programs by
     /// their kind (an orb is never a listener: the engine runs its programs where OrbCmd and OrbQueue do).
     /// </summary>
-    private sealed record LoadedModels(IReadOnlyDictionary<string, SimModel> ByName, IReadOnlyDictionary<string, string> Unread, IReadOnlyDictionary<OrbKind, ReadModel> Orbs);
+    private sealed record LoadedModels(IReadOnlyDictionary<string, SimModel> ByName, IReadOnlyDictionary<string, string> Unread, IReadOnlyDictionary<OrbKind, ReadModel> Orbs,
+        IReadOnlyDictionary<string, ReadModel> Enchantments);
 
     private static readonly Lazy<LoadedModels> Models = new(() => _reading?.GetAwaiter().GetResult() ?? Load(), LazyThreadSafetyMode.ExecutionAndPublication);
 
@@ -480,6 +506,7 @@ public static class SimModels
         var byName = new Dictionary<string, SimModel>(HandWrittenByName.Value, StringComparer.Ordinal);
         var unread = new Dictionary<string, string>(StringComparer.Ordinal);
         var orbs = new Dictionary<OrbKind, ReadModel>();
+        var enchantments = new Dictionary<string, ReadModel>(StringComparer.Ordinal);
         // A read model never stands in for a hand-written one: a class is one or the other (the reader skips a hand-written class: ReadModels).
         foreach (var spec in Read?.Invoke() ?? Enumerable.Empty<ModelSpec>())
         {
@@ -491,13 +518,23 @@ public static class SimModels
                 catch (InvalidOperationException exception) { unread[spec.Name] = $"{spec.Name}'s code couldn't be compiled ({exception.Message}): what it does isn't simulated"; }
                 continue;
             }
+            // An enchantment (decision #217): its programs run where its card plays, never as a listener.
+            if (spec.Kind == ModelKind.Enchantment)
+            {
+                try { enchantments[spec.Name] = new ReadModel(spec); }
+                catch (InvalidOperationException exception) { unread[spec.Name] = $"{spec.Name}'s code couldn't be compiled ({exception.Message}): what it does isn't simulated"; }
+                continue;
+            }
             // A program the simulator can't compile (a command on a creature its engine functions don't name) is the class unread, never a
             // failure of every model (decision #92).
             try { byName.Add(spec.Name, new ReadModel(spec)); }
             catch (InvalidOperationException exception) { unread[spec.Name] = $"{spec.Name}'s hooks couldn't be compiled ({exception.Message}): what it does isn't simulated"; }
         }
-        return new LoadedModels(byName, unread, orbs);
+        return new LoadedModels(byName, unread, orbs, enchantments);
     }
+
+    /// <summary>An enchantment's programs read from its class's code (ModelKind.Enchantment), or null: none to run, or not read (UnreadReason).</summary>
+    public static ReadModel? Enchantment(string name) => Models.Value.Enchantments.GetValueOrDefault(name);
 
     /// <summary>An orb kind's programs read from its class's code (ModelKind.Orb), or null: not read (an unread class: <see cref="OrbUnreadReason"/>).</summary>
     public static ReadModel? Orb(OrbKind kind) => Models.Value.Orbs.GetValueOrDefault(kind);

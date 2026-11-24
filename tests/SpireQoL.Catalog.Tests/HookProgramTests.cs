@@ -88,8 +88,8 @@ public class HookProgramTests
         using var beta = new BranchCode(BranchCode.BetaPath);
         using var main = new BranchCode(BranchCode.MainPath);
         var (betaRead, mainRead) = (ReadOn(beta), ReadOn(main));
-        var betaClasses = HookReader.Powers(beta.Assembly.GetTypes()).Concat(HookReader.Relics(beta.Assembly.GetTypes())).Concat(HookReader.Orbs(beta.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
-        var mainClasses = HookReader.Powers(main.Assembly.GetTypes()).Concat(HookReader.Relics(main.Assembly.GetTypes())).Concat(HookReader.Orbs(main.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
+        var betaClasses = HookReader.Powers(beta.Assembly.GetTypes()).Concat(HookReader.Relics(beta.Assembly.GetTypes())).Concat(HookReader.Orbs(beta.Assembly.GetTypes())).Concat(HookReader.Enchantments(beta.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
+        var mainClasses = HookReader.Powers(main.Assembly.GetTypes()).Concat(HookReader.Relics(main.Assembly.GetTypes())).Concat(HookReader.Orbs(main.Assembly.GetTypes())).Concat(HookReader.Enchantments(main.Assembly.GetTypes())).Select(type => type.Name).ToHashSet(StringComparer.Ordinal);
         // A class whose code on the other branch has nothing the simulator runs (it reads whole with no program: main's Byrdpip counts no Swoops)
         // differs in the game's code, not in the reader.
         static HashSet<string> Nothing(BranchCode code) => HookReader.Powers(code.Assembly.GetTypes()).Concat(HookReader.Relics(code.Assembly.GetTypes()))
@@ -120,6 +120,9 @@ public class HookProgramTests
                     if (field.GetValue(null) is { } value && value.ToString() == name) return $"{kind}.{field.Name}.Name";
             // An orb class (the engine's OrbKind, no typed name of its own): the game's class by nameof.
             if (HookReader.OrbKindOf(name) != null) return $"nameof(MegaCrit.Sts2.Core.Models.Orbs.{name})";
+            // An enchantment class (no typed name of its own): the game's class by nameof (every one is on both branches: model-kinds.txt).
+            if (typeof(MegaCrit.Sts2.Core.Models.EnchantmentModel).Assembly.GetType("MegaCrit.Sts2.Core.Models.Enchantments." + name) != null)
+                return $"nameof(MegaCrit.Sts2.Core.Models.Enchantments.{name})";
             throw new InvalidOperationException($"{name} has no typed name: run scripts/game-names.mjs");
         }
         var text = new StringBuilder();
@@ -161,7 +164,8 @@ public class HookProgramTests
     {
         var read = ReadModels.Specs(CoverageLedger.ModelTypes(), RuntimeCode.Read);
         Assert.DoesNotContain(read, spec => SimModels.IsHandWritten(spec.Name));
-        Assert.All(read.Where(spec => spec.Unread == null && spec.Kind != ModelKind.Orb), spec => Assert.IsType<ReadModel>(SimModels.Get(spec.Name)));
+        Assert.All(read.Where(spec => spec.Unread == null && spec.Kind is ModelKind.Power or ModelKind.Relic), spec => Assert.IsType<ReadModel>(SimModels.Get(spec.Name)));
+        Assert.All(read.Where(spec => spec.Unread == null && spec.Kind == ModelKind.Enchantment), spec => Assert.IsType<ReadModel>(SimModels.Enchantment(spec.Name)));
         Assert.All(read.Where(spec => spec.Unread == null && spec.Kind == ModelKind.Orb), spec => Assert.IsType<ReadModel>(SimModels.Orb(spec.Orb!.Value)));
     }
 

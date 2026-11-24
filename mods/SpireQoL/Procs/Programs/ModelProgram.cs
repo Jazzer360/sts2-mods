@@ -591,7 +591,7 @@ public static class ProgramReader
                 }
                 // One of the model's own values set (base.DynamicVars["CardsLeft"].BaseValue = 5m, base.DynamicVars.Damage.BaseValue--): a store to
                 // its state, "DynamicVars." and the value's property or its key as the code writes it.
-                if (member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1, Name: "set_BaseValue" } && IsPowerOrRelic && OwnVarName(flow.StoreReceiver(i)) is { } ownVar)
+                if (member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1, Name: "set_BaseValue" } && KeepsOwnVars && OwnVarName(flow.StoreReceiver(i)) is { } ownVar)
                 {
                     into.Add(new StoreStep(instruction.Offset, OwnVarPrefix + ownVar, flow.ArgumentValues(i, member)[0]) { Condition = condition });
                     continue;
@@ -792,6 +792,20 @@ public static class ProgramReader
             {
                 for (var type = _card.BaseType; type != null; type = type.BaseType)
                     if (type.Name is "PowerModel" or "RelicModel") return true;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// The model read keeps its own values as state its code sets (a power, a relic; an enchantment, whose RecalculateValues sets them from its
+        /// Amount: Adroit's Block): a store to one is a step.
+        /// </summary>
+        private bool KeepsOwnVars
+        {
+            get
+            {
+                for (var type = _card.BaseType; type != null; type = type.BaseType)
+                    if (type.Name is "PowerModel" or "RelicModel" or "EnchantmentModel") return true;
                 return false;
             }
         }

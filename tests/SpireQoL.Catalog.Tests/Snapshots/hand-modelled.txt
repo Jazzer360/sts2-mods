@@ -1,15 +1,15 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 18 engine rules naming 125 game methods; 5 adapter rules; 103 hand-written models.
+# 18 engine rules naming 126 game methods; 5 adapter rules; 103 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
 A card play: its shape (play count, result location), each play's hooks and its body in its program's order
-  game: CardModel.OnPlayWrapper, Hook.ModifyCardPlayCount, Hook.AfterModifyingCardPlayCount, Hook.ModifyCardPlayResultLocation, Hook.BeforeCardPlayed, Hook.AfterCardPlayed, CardCmd.AutoPlay
-  simulator: SimEngine.RunCardPlay, SimEngine.DecideCardPlay, SimEngine.ApplyPlay, SimEngine.ApplyPlayTo, SimEngine.RunScript, SimEngine.RunScriptTo, SimEngine.Count, SimEngine.CardResolved, SimEngine.RunFixedHits
+  game: CardModel.OnPlayWrapper, EnchantmentModel.OnPlay, Hook.ModifyCardPlayCount, Hook.AfterModifyingCardPlayCount, Hook.ModifyCardPlayResultLocation, Hook.BeforeCardPlayed, Hook.AfterCardPlayed, CardCmd.AutoPlay
+  simulator: SimEngine.RunCardPlay, SimEngine.RunEnchantment, SimEngine.DecideCardPlay, SimEngine.ApplyPlay, SimEngine.ApplyPlayTo, SimEngine.RunScript, SimEngine.RunScriptTo, SimEngine.Count, SimEngine.CardResolved, SimEngine.RunFixedHits
 Damage to a creature: the damage math, block, the HP-loss pipeline, a death held back, the hit's reactions
   game: CreatureCmd.Damage, Hook.ModifyDamage, Hook.AfterModifyingDamageAmount, Hook.BeforeDamageReceived, Hook.ModifyHpLost, Hook.AfterModifyingHpLostBeforeOsty, Hook.AfterModifyingHpLostAfterOsty, Hook.ModifyPreBlockDamageTarget (beta only), Hook.ModifyUnblockedDamageTarget, Hook.AfterBlockBroken, Hook.AfterDamageGiven, Hook.AfterDamageReceived, Hook.ShouldDie, Hook.AfterPreventingDeath, Creature.DamageBlockInternal, Creature.LoseHpInternal
-  simulator: SimEngine.Damage, SimEngine.ModifiedDamage, SimEngine.CalcDamage, SimEngine.PlainDamage, SimEngine.AnyListensToDamage, SimEngine.HpLossPipeline, SimEngine.HpLoss, SimEngine.PlayerDamaged, SimEngine.LandBlockable, SimEngine.LandOnPlayer, SimEngine.LandUnblockable, SimEngine.Lose, SimEngine.PlayHp, SimEngine.BiggestHit, SimEngine.HitOnce, SimEngine.HitAll, SimEngine.HitRandom, SimEngine.RandomTarget, SimEngine.ProcHitOn, SimEngine.ProcDamageAll, SimEngine.ProcDamageRandom, SimEngine.ProcDamageOn, SimEngine.ProcDamagePlayer, SimEngine.RunDamage, SimEngine.IntentDamage, SimEngine.WithoutEnchantment, SimEngine.DamageAllEnemies
+  simulator: SimEngine.Damage, SimEngine.ModifiedDamage, SimEngine.CalcDamage, SimEngine.PlainDamage, SimEngine.AnyListensToDamage, SimEngine.HpLossPipeline, SimEngine.HpLoss, SimEngine.PlayerDamaged, SimEngine.LandBlockable, SimEngine.LandOnPlayer, SimEngine.LandUnblockable, SimEngine.LoseHp, SimEngine.Lose, SimEngine.PlayHp, SimEngine.BiggestHit, SimEngine.HitOnce, SimEngine.HitAll, SimEngine.HitRandom, SimEngine.RandomTarget, SimEngine.ProcHitOn, SimEngine.ProcDamageAll, SimEngine.ProcDamageRandom, SimEngine.ProcDamageOn, SimEngine.ProcDamagePlayer, SimEngine.RunDamage, SimEngine.IntentDamage, SimEngine.WithoutEnchantment, SimEngine.DamageAllEnemies
 An attack: its hits, their targets (a random one a branch each), the attack's hooks
   game: AttackCommand.Execute, DamageCmd.Attack, Hook.BeforeAttack, Hook.AfterAttack, Hook.ModifyAttackHitCount
   simulator: SimEngine.RunAttack, SimEngine.HitCount
@@ -18,13 +18,13 @@ Block: the block math, its hooks, a power's or relic's block, block lost
   simulator: SimEngine.BlockOnce, SimEngine.BlockBaseNow, SimEngine.CalcBlock, SimEngine.GainBlock, SimEngine.ShareBlock, SimEngine.ProcBlock, SimEngine.ProcBlockFor, SimEngine.EnemyBlock, SimEngine.RunBlock, SimEngine.StripBlock
 A power lands: the amount given, Artifact, its instances and copies, the listeners told; a power decremented or removed
   game: PowerCmd.Apply, PowerCmd.FindExistingInstanceForStacking, PowerCmd.Decrement, PowerCmd.Remove, PowerCmd.TickDownDuration, Hook.ModifyPowerAmountGiven, Hook.AfterModifyingPowerAmountGiven, Hook.BeforePowerAmountChanged, Hook.AfterPowerAmountChanged, Creature.ApplyPowerInternal
-  simulator: SimEngine.ApplyPower, SimEngine.ApplyAndTell, SimEngine.ApplyInHit, SimEngine.Tell, SimEngine.RunApplyPower, SimEngine.AmountOf, SimEngine.MovePowers, SimEngine.DecrementPower
+  simulator: SimEngine.ApplyPower, SimEngine.ApplyAndTell, SimEngine.ApplyInHit, SimEngine.Tell, SimEngine.RunApplyPower, SimEngine.ApplyPowerOf, SimEngine.AmountOf, SimEngine.MovePowers, SimEngine.DecrementPower
 Draws: a full hand, No Draw, the discard pile shuffled in, the drawn card's reactions
   game: CardPileCmd.Draw, CardPileCmd.DrawInternal, CardPileCmd.Shuffle, CardPileCmd.ShuffleIfNecessary, Hook.ShouldDraw, Hook.AfterPreventingDraw, Hook.AfterCardDrawn, Hook.ModifyShuffleOrder, Hook.AfterShuffle
   simulator: SimEngine.DrawCards, SimEngine.DrawOne, SimEngine.DrawsStopped, SimEngine.DrawPrevented, SimEngine.Drawn, SimEngine.DrawReactions, SimEngine.DrawsFromPile, SimEngine.RoomIn, SimEngine.JoinHand, SimEngine.RunDrawnCard, SimDrawPile.Shuffled, SimDrawPile.ShuffledWithDiscard
 Cards leaving and joining piles mid-play: taken, discarded, exhausted, made; the card events and their listeners
   game: CardCmd.Discard, CardCmd.Exhaust, CardPileCmd.Add, CardPileCmd.AddGeneratedCardToCombat, Hook.AfterCardDiscarded, Hook.AfterCardExhausted, Hook.AfterCardChangedPiles, Hook.AfterCardGeneratedForCombat, PlayerCmd.GainEnergy, Hook.AfterEnergySpent, PlayerCmd.GainStars, Hook.AfterStarsGained, Hook.AfterStarsSpent
-  simulator: SimEngine.RunTakeFromHand, SimEngine.TakeFromHand, SimEngine.TakenEvents, SimEngine.TakenKey, SimEngine.ZeroedMatching, SimEngine.JoinsTakes, SimEngine.RunLeaveHand, SimEngine.RunExhaustFromHand, SimEngine.ExhaustChosenFromDrawPile, SimEngine.RunTakeToHand, SimEngine.TakeToHand, SimEngine.TakeOne, SimEngine.Less, SimEngine.InPile, SimEngine.ProfileIn, SimEngine.TakenId, SimEngine.Discarded, SimEngine.IntoDrawPile, SimEngine.AddToHand, SimEngine.CardEvents, SimEngine.OneCardEvent, SimEngine.RunCardEvent, SimEngine.FireCardEvent, SimEngine.CountEvent, SimEngine.ProcCardEvent, SimEngine.Raise, SimEngine.DrainPending
+  simulator: SimEngine.RunTakeFromHand, SimEngine.TakeFromHand, SimEngine.TakenEvents, SimEngine.TakenKey, SimEngine.ZeroedMatching, SimEngine.JoinsTakes, SimEngine.RunLeaveHand, SimEngine.RunExhaustFromHand, SimEngine.ExhaustChosenFromDrawPile, SimEngine.RunTakeToHand, SimEngine.TakeToHand, SimEngine.TakeOne, SimEngine.Less, SimEngine.InPile, SimEngine.ProfileIn, SimEngine.TakenId, SimEngine.Discarded, SimEngine.IntoDrawPile, SimEngine.AddToHand, SimEngine.CardEvents, SimEngine.CardEventsOf, SimEngine.OneCardEvent, SimEngine.RunCardEvent, SimEngine.FireCardEvent, SimEngine.CountEvent, SimEngine.ProcCardEvent, SimEngine.Raise, SimEngine.DrainPending
 Auto-plays: from the top of the draw pile, from the hand at the turn's end, the cards that play themselves
   game: CardPileCmd.AutoPlayFromDrawPile, CardCmd.AutoPlay, Hook.BeforeCardAutoPlayed, Hook.AfterAutoPostPlayPhaseEntered, HellraiserPower.AfterCardDrawnEarly, IAmInvincible.AfterAutoPostPlayPhaseEntered
   simulator: SimEngine.AutoPlayFromDraw, SimEngine.AutoPlayTop, SimEngine.PlayFromPile, SimEngine.HellraiserPlays, SimEngine.InvincibleFromPile, SimEngine.AutoPlayFromHand, SimEngine.AutoPostPlay, SimEngine.AutoPostPlayOf
@@ -61,9 +61,9 @@ The listeners: who hears a hook, in the game's order, a dead enemy's powers left
 
 ## The adapter's per-class rules (HandModelled.Adapter)
 
-Enchantments acting on a play, after the card (EnchantmentModel.OnPlay): Adroit's block, Corrupted's damage to you, Inky's Weak, Swift's draw, Sown's energy
-  game: Adroit.OnPlay, Corrupted.OnPlay, Inky.OnPlay, Swift.OnPlay, Swift.AfterCardPlayed, Sown.OnPlay, Sown.AfterCardPlayed
-  simulator: SimAdapter.Play, SimAdapter.SwiftDraws, SimAdapter.SownEnergy
+Swift's draws counted for the cards that come back to your hand (the Return tags' hand size, outside the simulation)
+  game: Swift.OnPlay
+  simulator: SimAdapter.SwiftDraws
 Enchantments' damage and block math on a replay (the game's own math, called live, for the first play): Momentum, Goopy, Vigorous
   game: Momentum.OnPlay, Goopy.AfterCardPlayed, Vigorous.AfterCardPlayed, EnchantmentModel.EnchantDamageAdditive, EnchantmentModel.EnchantBlockAdditive
   simulator: PlayGrowth.Of

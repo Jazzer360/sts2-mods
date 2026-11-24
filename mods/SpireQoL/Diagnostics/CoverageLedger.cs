@@ -380,9 +380,9 @@ internal static partial class CoverageLedger
         // ======== potions, enchantments, afflictions
         ["FairyInABottle"] = "covered: ShouldDie (before Lizard Tail's ShouldDieLate)/AfterPreventingDeath heals you from 0 to 30% of max HP, used up (simulator: SimPlayer.Fairies; Incoming Damage's revive row)",
         // OnPlay: acts on every play of the card, after the card's own (CardModel: EnchantmentModel.OnPlay).
-        ["Adroit"] = "covered: OnPlay block on every play, after the card's own (SimAdapter.Play)",
-        ["Corrupted"] = "covered: OnPlay 2 unblockable damage to you on every play, through your HP-loss modifiers and damage hooks (SimAdapter.Play: LoseHpAction); its 1.5× damage is the game's damage math",
-        ["Inky"] = "covered: OnPlay Weak on the card's target, or every enemy for an all-enemies card, on every play (SimAdapter.Play)",
+        ["Adroit"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay block of its Amount (RecalculateValues) on every play, after the card's own",
+        ["Corrupted"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay 2 unblockable damage to its card's owner on every play (the HP a card costs); its 1.5× damage is the game's damage math, called live",
+        ["Inky"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay Weak on the play's target, or every enemy for a card aimed at them all, on every play",
         ["Momentum"] = "covered: OnPlay raises the card's damage by its Amount for its later plays; the game's math reads it on later turns, and a replay in the same play gets it (PlayGrowth, decision #160)",
         ["Glam"] = "ignore: AfterCardPlayed only marks it used (its replay is read through the game: replay tab)",
         ["Goopy"] = "covered: AfterCardPlayed grows its amount, so its block (Amount - 1) is read through the game on later turns and a replay in the same play gets 1 more (PlayGrowth, decision #160)",
@@ -390,8 +390,8 @@ internal static partial class CoverageLedger
         ["Slither"] = "ignore: AfterCardDrawn random cost on draw (costs read live)",
         ["Vigorous"] = "covered: AfterCardPlayed disables it after the first play (its bonus is read through the game on later turns), so a replay in the same play loses the bonus (PlayGrowth: EnchantFirstPlayOnly, decision #160)",
         // v0.113.0: OnPlay acts on every play of the card (replays too) until AfterCardPlayed disables it
-        ["Sown"] = "covered: OnPlay energy on the card's first play (Normal status): the card's own enchantment text; Pael's Tears counts it (SimAdapter.SownEnergy)",
-        ["Swift"] = "covered: OnPlay draws its amount the first time the card is played (AfterCardPlayed disables it): counted in the card's own draws",
+        ["Sown"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay energy while Normal, after the card's own; AfterCardPlayed (beta) or OnPlay (main) disables it",
+        ["Swift"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay draws its amount while Normal; AfterCardPlayed (beta) or OnPlay (main) disables it; the Return tags count it (SimAdapter.SwiftDraws)",
         ["Hexed"] = "ignore: clears itself",
     };
 

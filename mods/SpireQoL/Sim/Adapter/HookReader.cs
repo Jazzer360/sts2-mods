@@ -224,16 +224,96 @@ public static class HookReader
         ["AfterTurnStartOrbTrigger"] = OrbTrigger.TurnStart,
     };
 
+    /// <summary>The game's enchantment classes among <paramref name="types"/>.</summary>
+    public static IEnumerable<Type> Enchantments(IEnumerable<Type> types) => types.Where(type => type.Namespace == "MegaCrit.Sts2.Core.Models.Enchantments" && !type.IsNested && !type.IsAbstract && Derives(type, "EnchantmentModel"));
+
+    /// <summary>
+    /// The hooks of an enchantment the engine runs from its code (decision #217): its OnPlay after each play's own effects (CardModel.OnPlayWrapper),
+    /// its AfterCardPlayed after the play's listeners, for its own card's play.
+    /// </summary>
+    private static readonly HashSet<string> EnchantmentRuns = new(StringComparer.Ordinal) { "OnPlay", "AfterCardPlayed" };
+
+    /// <summary>An enchantment's hooks that act where the simulator never runs a read program, each with where it acts instead.</summary>
+    private static readonly IReadOnlyDictionary<string, string> EnchantmentNotRun = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["EnchantDamageAdditive"] = "its card's damage math: the adapter runs the game's own code (CapturedTerms.EnchantAdd)",
+        ["EnchantDamageMultiplicative"] = "its card's damage math: the adapter runs the game's own code (CapturedTerms.EnchantMul)",
+        ["EnchantBlockAdditive"] = "its card's block math: the adapter runs the game's own code (CapturedTerms.EnchantAdd)",
+        ["EnchantBlockMultiplicative"] = "its card's block math: the adapter runs the game's own code (CapturedTerms.EnchantMul)",
+        ["CanEnchant"] = "it decides which cards it can enchant, as a card is enchanted",
+        ["CanEnchantCardType"] = "it decides which cards it can enchant, as a card is enchanted",
+        ["OnEnchant"] = "it changes its card as it's enchanted (EnchantmentModel.ModifyCard): the card the adapter reads already shows it; a card enchanted in a fight is its command's (CardCmd.Enchant)",
+    };
+
+    /// <summary>
+    /// An enchantment's code read (decision #217): its OnPlay and AfterCardPlayed as programs, its values its RecalculateValues sets from its amount
+    /// (Adroit's Block is its Amount) read as what they're set to; the hooks that act where no read program runs (its card's damage and block math,
+    /// which the adapter runs live; what it can enchant; its OnEnchant, which the card already shows) not run. Any other hook, or a body the reader
+    /// stops in, is a gap.
+    /// </summary>
+    public static ModelReading ReadEnchantment(Type type, Func<MethodBase, List<CodeOp>> read)
+    {
+        var reader = new Translation(type, ModelKind.Enchantment, read);
+        var programs = new List<HookProgram>();
+        var readings = new List<HookReading>();
+        var setVars = new Dictionary<string, HookValue>(StringComparer.Ordinal);
+        foreach (var hook in Hooks(type).OrderBy(method => method.Name, StringComparer.Ordinal))
+        {
+            if (EnchantmentNotRun.TryGetValue(hook.Name, out var notRun)) { readings.Add(new HookReading(hook.Name, null) { NotRun = notRun }); continue; }
+            if (hook.Name == "RecalculateValues")
+            {
+                // Each of its own values set from what it reads (base.DynamicVars.Block.BaseValue = base.Amount): every read of it is that value.
+                var steps = reader.OwnCommand(hook);
+                if (steps != null && steps.All(step => step is StoreFieldStep { When: null, Field: var field } && field.StartsWith(VarFieldPrefix, StringComparison.Ordinal)))
+                {
+                    foreach (var store in steps.Cast<StoreFieldStep>()) setVars[store.Field[VarFieldPrefix.Length..]] = store.Value;
+                    readings.Add(new HookReading(hook.Name, null));
+                }
+                else readings.Add(new HookReading(hook.Name, "gap: RecalculateValues does more than set its own values") { Capability = ReaderCapability.OtherModelValueSet });
+                continue;
+            }
+            if (!EnchantmentRuns.Contains(hook.Name))
+            {
+                readings.Add(new HookReading(hook.Name, $"gap: the engine runs no read EnchantmentModel's {hook.Name}") { Capability = ReaderCapability.EffectNotRun });
+                continue;
+            }
+            var (program, gap, notRunHere) = reader.Hook(hook);
+            readings.Add(new HookReading(hook.Name, gap?.Text) { NotRun = notRunHere, Capability = gap?.Capability });
+            if (program != null) programs.Add(program);
+        }
+        if (setVars.Count > 0)
+            programs = programs.Select(program => Mapped(program, value => value switch
+            {
+                HookVar variable when setVars.TryGetValue(variable.Key, out var set) => set,
+                HookField { Field: var field } when field.StartsWith(VarFieldPrefix, StringComparison.Ordinal) && setVars.TryGetValue(field[VarFieldPrefix.Length..], out var set) => set,
+                _ => null,
+            })).ToList();
+        // A store to its own state none of its read programs reads is left out: what the game shows, or what its own card math reads, which the
+        // adapter runs live (Momentum's ExtraDamage, Vigorous' Status).
+        // A store that only feeds itself (Momentum's ExtraDamage += Amount) is read by nothing here.
+        var fieldsRead = new ModelSpec(type.Name, ModelKind.Enchantment, programs.Select(program => program with
+            {
+                Steps = program.Steps.Select(step => step is StoreFieldStep store ? store with { Value = Mapped(new HookProgram(program.Hook, Array.Empty<HookStep>()) { Returns = store.Value },
+                    value => value is HookField { Field: var read } && read == store.Field ? new HookConstant(0m) : null).Returns! } : step).ToList(),
+            }).ToList())
+            .Values().OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
+        programs = programs.Select(program => program with { Steps = program.Steps.Where(step => step is not StoreFieldStep store || fieldsRead.Contains(store.Field)).ToList() })
+            .Where(program => program.Steps.Count > 0).ToList();
+        return new ModelReading(new ModelSpec(type.Name, ModelKind.Enchantment, programs), readings);
+    }
+
     /// <summary>The prefix of one of a model's own values kept as its state ("Var.CardsLeft"), where its code stores it.</summary>
     public const string VarFieldPrefix = HookField.VarPrefix;
 
     /// <summary>A program with each read of a value its model stores (HookVar) read as that state (HookField "Var.key", from its canonical value).</summary>
-    private static HookProgram VarsAsState(HookProgram program, IReadOnlySet<string> stored)
+    private static HookProgram VarsAsState(HookProgram program, IReadOnlySet<string> stored) =>
+        Mapped(program, value => value is HookVar variable && stored.Contains(VarFieldPrefix + variable.Key) ? new HookField(VarFieldPrefix + variable.Key) { Canonical = variable.Canonical } : null);
+
+    /// <summary>A program with each value <paramref name="replace"/> gives another for (null: kept, looked inside) replaced, wherever it's worked out.</summary>
+    private static HookProgram Mapped(HookProgram program, Func<HookValue, HookValue?> replace)
     {
-        HookValue? Map(HookValue? value) => value switch
+        HookValue? Map(HookValue? value) => value == null ? null : replace(value) ?? value switch
         {
-            null => null,
-            HookVar variable when stored.Contains(VarFieldPrefix + variable.Key) => new HookField(VarFieldPrefix + variable.Key) { Canonical = variable.Canonical },
             HookMath math => math with { Left = Map(math.Left)!, Right = Map(math.Right)! },
             HookNot not => not with { Inner = Map(not.Inner)! },
             HookTest test => test with { Test = Map(test.Test)! },
@@ -706,6 +786,24 @@ public static class HookReader
             _at = step.Offset;
             switch (step)
             {
+                // A command whose creatures are a local of several ways naming different ones (Inky's targets: the play's target, or every enemy for a
+                // card aimed at them all): a step for each way, on its test and none of the earlier ways' (the first way that holds is the value).
+                case CommandStep command when _kind == ModelKind.Enchantment && CreatureWays(command) is { } split:
+                {
+                    var steps = new List<HookStep>();
+                    HookValue? earlier = null;
+                    foreach (var (when, at, creatures) in split)
+                    {
+                        var values = command.Values.ToList();
+                        values[at] = creatures;
+                        var way = Condition(when) ?? new HookConstant(1m);
+                        var guard = earlier == null ? way : new HookMath(HookOperation.And, way, Not(earlier));
+                        earlier = earlier == null ? way : new HookMath(HookOperation.Or, earlier, way);
+                        if (Command(command with { Values = values }) is { } wayStep)
+                            steps.Add(wayStep with { When = Condition(step.Condition) is { } outer ? new HookMath(HookOperation.And, outer, guard) : guard });
+                    }
+                    return steps;
+                }
                 case CommandStep command:
                     var translated = Command(command);
                     return translated == null ? Array.Empty<HookStep>() : new[] { translated with { When = Condition(step.Condition) } };
@@ -859,7 +957,7 @@ public static class HookReader
                         : values[applierAt] is NullValue ? new HookCreature(HookWho.NoOne)
                         : throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: {power} applied by someone else");
                     var amount = Value(values[amountAt]);
-                    if (Targets(values[targetAt]) is not (HookTarget.Owner or HookTarget.PowerOwner or HookTarget.AllEnemies or HookTarget.HitTarget)) throw new Gap(Other(values[targetAt]), $"gap: {power} on {values[targetAt]}");
+                    if (Targets(values[targetAt]) is not (HookTarget.Owner or HookTarget.PowerOwner or HookTarget.AllEnemies or HookTarget.HitTarget or HookTarget.PlayTarget)) throw new Gap(Other(values[targetAt]), $"gap: {power} on {values[targetAt]}");
                     // A temporary Strength or Dexterity power (Helical Dart's) lands as the Strength or Dexterity its BeforeApplied applies, by its sign
                     // (TemporaryStrengthPower, TemporaryDexterityPower: IsPositive), as the card programs land it (SimAdapter.PowersFrom).
                     if (TemporaryOf(power) is { } underlying)
@@ -965,6 +1063,8 @@ public static class HookReader
                 && LambdaReads(alive, "IsAlive")) return HookTarget.EvokeTargets;
             // The creature a hit landed on (AfterDamageGiven's, AfterDamageReceived's target).
             if (value is ParameterValue { Name: "target" } or NamedValue { Name: "target" } && _hook is "AfterDamageGiven" or "AfterDamageReceived") return HookTarget.HitTarget;
+            // The card play's target (an enchantment's OnPlay: Inky's Weak on cardPlay.Target).
+            if (IsPlayTarget(value)) return HookTarget.PlayTarget;
             if (IsOwner(value)) return HookTarget.Owner;
             if (value is QueryValue { Name: "HittableEnemies" }) return HookTarget.AllEnemies;
             if (value is QueryValue { Name: "NextItem", Arguments: [QueryValue { Name: "HittableEnemies" }] }) return HookTarget.RandomEnemy;
@@ -1068,6 +1168,9 @@ public static class HookReader
             {
                 case CompareValue compare:
                     return Compare(compare);
+                // An enchantment's status tested as true or false (Normal is 0: Swift's and Sown's status == Normal): its state, not 0.
+                case QueryValue { Name: "Status", Of: NamedValue { Name: "this" }, Type: "EnchantmentModel" } when _kind == ModelKind.Enchantment:
+                    return new HookMath(HookOperation.NotEqual, new HookField("Status"), new HookConstant(0m));
                 // A question to the fight's log tested: there's any (Any), or its count isn't 0.
                 case QueryValue { Name: "Count" or "Any" } logged when ProgramReader.ReadsHistory(logged):
                     return logged.Name == "Any" ? History(logged) : new HookMath(HookOperation.NotEqual, History(logged), new HookConstant(0m));
@@ -1307,6 +1410,23 @@ public static class HookReader
                 var each = new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), Equal(way.Value))).ToList());
                 return compare.Op == Comparison.Equal ? each : Not(each);
             }
+            // The card played is the enchantment's own card (cardPlay.Card == base.Card).
+            if (compare.Op is Comparison.Equal or Comparison.NotEqual && _kind == ModelKind.Enchantment
+                && (IsPlayCard(compare.Left) && IsModelCard(compare.Right) || IsPlayCard(compare.Right) && IsModelCard(compare.Left)))
+                return compare.Op == Comparison.Equal ? new HookFactValue(HookFact.PlayIsModelCard) : Not(new HookFactValue(HookFact.PlayIsModelCard));
+            // Whom the enchantment's card is aimed at against a target type named (base.Card.TargetType != TargetType.AllEnemies): SimPlay.Target's
+            // number for the game's, a type the simulator doesn't tell apart a gap.
+            if (_kind == ModelKind.Enchantment && IsModelCardTargets(compare.Left) && compare.Right is ConstantValue targetType)
+            {
+                var simTarget = EnumName(_type.Assembly, "TargetType", targetType.Value) switch
+                {
+                    "AnyEnemy" => SimPlay.Target.Single,
+                    "AllEnemies" => SimPlay.Target.All,
+                    "RandomEnemy" => SimPlay.Target.Random,
+                    var other => throw new Gap(ReaderCapability.CardFacts, $"gap: a target type {other}"),
+                };
+                return new HookMath(OperationOf(compare.Op), new HookFactValue(HookFact.ModelCardTargets), new HookConstant((int)simTarget));
+            }
             if (compare.Op is Comparison.Equal or Comparison.NotEqual && OwnerFact(compare.Left, compare.Right) is { } fact)
                 return compare.Op == Comparison.Equal ? fact : Not(fact);
             // The card played is its applier's (cardPlay.Card.Owner == base.Applier.Player).
@@ -1450,6 +1570,14 @@ public static class HookReader
                 }
                 case QueryValue { Name: "Amount", Of: NamedValue { Name: "this" }, Type: "PowerModel" }:
                     return new HookFactValue(HookFact.Amount);
+                // An enchantment's own amount (EnchantmentModel.Amount, its card's: the engine reads it from SimCard.Enchantment), its status (Normal 0,
+                // Disabled 1: its own state, stored by its code), and whom its card is aimed at (base.Card.TargetType).
+                case QueryValue { Name: "Amount", Of: NamedValue { Name: "this" }, Type: "EnchantmentModel" } when _kind == ModelKind.Enchantment:
+                    return new HookFactValue(HookFact.Amount);
+                case QueryValue { Name: "Status", Of: NamedValue { Name: "this" }, Type: "EnchantmentModel" } when _kind == ModelKind.Enchantment:
+                    return new HookField("Status");
+                case var targetType when _kind == ModelKind.Enchantment && IsModelCardTargets(targetType):
+                    return new HookFactValue(HookFact.ModelCardTargets);
                 // One of its own properties (Kunai's AttacksPlayedThisTurn): simulator state, seeded from the game.
                 case QueryValue { Of: NamedValue { Name: "this" }, IsProperty: true, Name: var property, Type: var declaring } when declaring == _type.Name && IsOwnMember(property):
                     return OwnProperty(property);
@@ -1891,6 +2019,36 @@ public static class HookReader
             QueryValue { Type: "Player", Name: "Creature", Of: QueryValue { Type: "CardModel", Name: "Owner", Of: { } card } } => card,
             _ => null,
         };
+
+        /// <summary>
+        /// The ways of a command's creatures when they're a local of several ways naming different creatures (each way's test, the argument's place,
+        /// the creatures it names), or null: one creature, or ways the reader can't name.
+        /// </summary>
+        private List<(ProgramCondition When, int At, ProgramValue Creatures)>? CreatureWays(CommandStep command)
+        {
+            var types = command.Command.ParameterTypes;
+            var at = IndexOf(types, "Creature", "IEnumerable`1");
+            if (at < 0 || at >= command.Values.Count || Unstored(command.Values[at]) is not WaysValue ways || ways.Ways.Count < 2) return null;
+            try
+            {
+                if (ways.Ways.Select(way => Targets(way.Value)).Distinct().Count() < 2) return null;
+            }
+            catch (Gap)
+            {
+                return null;
+            }
+            return ways.Ways.Select(way => (way.When, at, way.Value)).ToList();
+        }
+
+        /// <summary>An enchantment's own card (base.Card).</summary>
+        private static bool IsModelCard(ProgramValue value) => Unstored(value) is QueryValue { Name: "Card", Of: NamedValue { Name: "this" }, Type: "EnchantmentModel" };
+
+        /// <summary>Whom an enchantment's own card is aimed at (base.Card.TargetType).</summary>
+        private static bool IsModelCardTargets(ProgramValue value) => Unstored(value) is QueryValue { Name: "TargetType", Of: { } card } && IsModelCard(card);
+
+        /// <summary>The card play's target (cardPlay.Target), as an enchantment's OnPlay is given it.</summary>
+        private bool IsPlayTarget(ProgramValue value) =>
+            _kind == ModelKind.Enchantment && Unstored(value) is QueryValue { Name: "Target", Of: NamedValue { Name: "cardPlay" } or ParameterValue { Name: "cardPlay" } };
 
         /// <summary>The card played: cardPlay.Card, or a play-shape hook's card (ModifyCardPlayCount's card: the card whose play it decides).</summary>
         private bool IsPlayCard(ProgramValue value) =>

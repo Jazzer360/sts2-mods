@@ -48,8 +48,13 @@ public static partial class SimEngine
                 HookStep(branches, nameof(SimModel.BeforeCardPlayed), (model, owner, branch) => model.BeforeCardPlayed(branch, owner, branch.CurrentPlay!));
                 branches.Do(branch => Count(branch, branch.CurrentPlay!, PlayStage.Started));
                 foreach (var action in cardPlayAction.Body) Run(branches, action);
+                // Its enchantment's OnPlay, after the card's own (CardModel.OnPlayWrapper), read from its code (decision #217).
+                RunEnchantment(branches, cardPlayAction.Play.Card, HookName.OnPlay);
                 branches.Do(branch => Count(branch, branch.CurrentPlay!, PlayStage.Finished));
                 HookStep(branches, nameof(SimModel.AfterCardPlayed), (model, owner, branch) => model.AfterCardPlayed(branch, owner, branch.CurrentPlay!));
+                // Its enchantment hears its own card's play (Swift and Sown turn themselves off): it's a listener among its card's pile's cards, after
+                // its owner's powers and relics, and no other listener reads its state, so it runs once the play's listeners have.
+                RunEnchantment(branches, cardPlayAction.Play.Card, HookName.AfterCardPlayed);
             }
             finally
             {
@@ -86,6 +91,22 @@ public static partial class SimEngine
             branch.CurrentPlay = null; branch.PlayTaken = 0; branch.TakeMatching = NamedCounts.Empty; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty;
             branch.PlayCountNow = 0; branch.PlayResultLocation = SimResultLocation.Default;
         });
+    }
+
+    /// <summary>
+    /// One of a card's enchantment's programs on each branch (decision #217: SimModels.Enchantment, read from its class's code). An enchantment whose
+    /// code read whole at the reviewed builds and doesn't now makes the play unknown (decision #92); one with nothing to run, or whose code the
+    /// reader never read, does nothing here (its card's damage and block math is the game's own, called live by the adapter).
+    /// </summary>
+    private static void RunEnchantment(BranchSet branches, SimCard card, HookName hook)
+    {
+        if (card.Enchantment is not { } enchantment) return;
+        if (SimModels.Enchantment(enchantment.Name) is { } read)
+        {
+            if (read.Runs(hook)) branches.Each(branch => read.RunEnchantment(hook, branch, branch.CurrentPlay!));
+            return;
+        }
+        if (SimModels.UnreadReason(enchantment.Name) is { } why) branches.Do(branch => branch.Unmodelled ??= why);
     }
 
     /// <summary>
@@ -662,26 +683,41 @@ public static partial class SimEngine
             for (var i = 0; i < applyPowerAction.Times; i++) branches.Each(branch => RandomTarget(branch, (copy, id) => Apply(copy, branch.CurrentPlay?.Owner ?? Who.You, id)));
             return;
         }
-        branches.Each(branch =>
-        {
-            var applier = branch.CurrentPlay?.Owner ?? Who.You;
-            var targets = applyPowerAction.To switch
-            {
-                // The play's target: a living enemy, or a teammate (Ignition, Covered); aimed at no one, no one (never you: Who.None).
-                ApplyPowerAction.Where.Target => branch.CurrentPlay?.Target is { } aimed && (Who.KindOf(aimed) == CreatureKind.Teammate || branch.Enemy(aimed) is { Alive: true }) ? new List<int> { aimed } : new List<int>(),
-                ApplyPowerAction.Where.AllEnemies => branch.Targetable.Select(enemy => enemy.Id).ToList(),
-                ApplyPowerAction.Where.You => new List<int> { applier },
-                _ => new List<int> { applyPowerAction.Creature },
-            };
-            IEnumerable<SimState> states = new[] { branch };
-            foreach (var target in targets)
-            {
-                var aimedAt = target;
-                states = Then(states, copy => Apply(copy, applier, aimedAt));
-            }
-            return states;
-        });
+        branches.Each(branch => ApplyPowerOf(branch, applyPowerAction));
     }
+
+    /// <summary>
+    /// A card play's application (an ApplyPowerAction that isn't on a random enemy) on one branch: the power on each creature it reaches, then
+    /// AfterPowerApplied for each that landed. A read enchantment's PowerCmd.Apply runs it too (ReadModel: its card's application).
+    /// </summary>
+    internal static IEnumerable<SimState> ApplyPowerOf(SimState branch, ApplyPowerAction applyPowerAction)
+    {
+        IEnumerable<SimState> Apply(SimState state, int applier, int target) =>
+            ApplyPower(state, applier, target, applyPowerAction.Power, AmountOf(state, applyPowerAction, applier, target), applyPowerAction.Debuff)
+                ? Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, copy) => model.AfterPowerApplied(copy, owner, applyPowerAction.Power, applyPowerAction.Amount, applier, target, applyPowerAction.Debuff)) : new[] { state };
+        var applier = branch.CurrentPlay?.Owner ?? Who.You;
+        var targets = applyPowerAction.To switch
+        {
+            // The play's target: a living enemy, or a teammate (Ignition, Covered); aimed at no one, no one (never you: Who.None).
+            ApplyPowerAction.Where.Target => branch.CurrentPlay?.Target is { } aimed && (Who.KindOf(aimed) == CreatureKind.Teammate || branch.Enemy(aimed) is { Alive: true }) ? new List<int> { aimed } : new List<int>(),
+            ApplyPowerAction.Where.AllEnemies => branch.Targetable.Select(enemy => enemy.Id).ToList(),
+            ApplyPowerAction.Where.You => new List<int> { applier },
+            _ => new List<int> { applyPowerAction.Creature },
+        };
+        IEnumerable<SimState> states = new[] { branch };
+        foreach (var target in targets)
+        {
+            var aimedAt = target;
+            states = Then(states, copy => Apply(copy, applier, aimedAt));
+        }
+        return states;
+    }
+
+    /// <summary>A card play's card events on one branch (CardEvents), for a read enchantment's draws and energy (ReadModel: its card's).</summary>
+    internal static IEnumerable<SimState> CardEventsOf(SimState state, CardEventAction cardEventAction) => CardEvents(state, cardEventAction);
+
+    /// <summary>The HP a card's play costs its owner (a LoseHpAction's), for a read enchantment's damage to its card's owner (Corrupted's).</summary>
+    internal static void LoseHp(SimState state, string name, int amount, int player) => LandUnblockable(state, name, amount, player);
 
     /// <summary>Card events, one card at a time, each through every listener's AfterCardEvent (indirect ones marked in the log).</summary>
     private static void RunCardEvent(BranchSet branches, CardEventAction cardEventAction)

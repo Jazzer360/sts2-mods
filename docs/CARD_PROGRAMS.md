@@ -537,6 +537,8 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 | `foreach (Player p in CombatState.Players)`, a foreach over the hittable enemies; `each.Creature` | `ForEachStep` (`HookItems`), `HookWho.Each`, `GainBlockStep.To` / `DamageStep` on `HookTarget.Each` |
 | a local kept before a store to what it read, used after (Glass's `passiveVal`, Joss Paper's count) | `LetStep` at the local's place, `HookLocal` after |
 | a base class's method that only shows (`OrbModel.ActivatePassive`, `PowerModel.StartPulsing`: no store, only getters, delegates, sounds, nodes) | nothing (the reader reads its body to tell) |
+| an enchantment's `OnPlay` and `AfterCardPlayed` (decision #217); `base.Amount`, `base.Status`, `cardPlay.Card == base.Card`, `base.Card.TargetType`, `cardPlay.Target`; RecalculateValues' `DynamicVars.X.BaseValue = ...` | `HookReader.ReadEnchantment`: `ModelKind.Enchantment` programs (`HookName.OnPlay`), `HookFact.Amount` (its card's), `HookField("Status")`, `HookFact.PlayIsModelCard`, `HookFact.ModelCardTargets`, `HookTarget.PlayTarget`, the value X is set to; run by `SimEngine.RunEnchantment` after each play's own effects (OnPlay) and its listeners (AfterCardPlayed), each command as the card's own (`BlockOnce`, `LoseHp`, `ApplyPowerOf`, `CardEventsOf`) |
+| a command's creatures as a local of several ways naming different ones (Inky's play target or every enemy) | a step for each way, on its test and none of the earlier ways' |
 
 What isn't read is a named gap (a store to the model's own state, its internal data, a hook no read model runs yet, a query with no fact), and a
 hook the simulator never runs says why (outside fights: `OutOfCombatHooks.txt`; a relic's turn-start body that waits on its owner's next turn).

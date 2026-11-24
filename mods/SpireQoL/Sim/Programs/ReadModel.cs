@@ -12,6 +12,8 @@ internal readonly struct HookArgs
     public HookName Hook { get; init; }
     /// <summary>The card play (BeforeCardPlayed, AfterCardPlayed), else the play in progress.</summary>
     public SimCardPlay? Play { get; init; }
+    /// <summary>The card whose enchantment runs (ModelKind.Enchantment: its base.Card), or null.</summary>
+    public SimCard? Card { get; init; }
     /// <summary>A card event and who it happened to (AfterCardEvent).</summary>
     public CardEvent Event { get; init; }
     public int Player { get; init; }
@@ -197,6 +199,32 @@ public sealed class ReadModel : SimModel
         return RunSteps(steps, args);
     }
 
+    // ---- an enchantment's own programs (ModelKind.Enchantment: decision #217)
+
+    /// <summary>It has a program for the hook (an enchantment's OnPlay, its AfterCardPlayed).</summary>
+    public bool Runs(HookName hook) => _steps[(int)hook] != null;
+
+    /// <summary>
+    /// One of the enchantment's programs on its own card's play (its OnPlay after the play's own effects, its AfterCardPlayed after the play's
+    /// listeners: SimEngine.RunCardPlay), on the state given; its owner the card's.
+    /// </summary>
+    public IEnumerable<SimState> RunEnchantment(HookName hook, SimState state, SimCardPlay play)
+    {
+        if (_steps[(int)hook] is not { } steps) return One(state);
+        return RunSteps(steps, new HookArgs
+        {
+            State = state, Owner = play.Owner, Hook = hook, Play = play, Card = play.Card,
+            Asked = _asksOnce[(int)hook] ? new int[_testSlots.Count] : null, Locals = _localSlots.Count > 0 ? new decimal[_localSlots.Count] : null,
+        });
+    }
+
+    /// <summary>The enchantment's own field's key among its owner's: "Model#card.Field", its card's own (two cards with one enchantment keep apart).</summary>
+    private string EnchantmentFieldKey(in HookArgs args, string field) =>
+        _enchantmentKeys.GetOrAdd((args.Card?.HandId ?? 0, field), static (key, name) => name + "#" + key.Card.ToString(System.Globalization.CultureInfo.InvariantCulture) + "." + key.Field, Name);
+
+    /// <summary>The enchantment's field keys, each made once (a run reads them on every play; the model is shared by every worker thread).</summary>
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<(int Card, string Field), string> _enchantmentKeys = new();
+
     /// <summary>The orb a run of its own program is: out of its slots (an evoke's), or in them at its index.</summary>
     private static SimOrb? OrbOf(in HookArgs args) =>
         args.Evoked ?? (args.State.Player(args.Orb.Player) is { } player && args.Orb.Index >= 0 && args.Orb.Index < player.Orbs.Count ? player.Orbs[args.Orb.Index] : null);
@@ -254,7 +282,8 @@ public sealed class ReadModel : SimModel
         foreach (var step in steps)
         {
             var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep;
-            var fires = firstRound && acts && !firing.Any(earlier => Equals(earlier.When, step.When));
+            // An enchantment's effects are its card's (no tab of its own, nothing in the play log: its card's play shows them).
+            var fires = firstRound && acts && Spec.Kind != ModelKind.Enchantment && !firing.Any(earlier => Equals(earlier.When, step.When));
             if (acts) firing.Add(step);
             compiled.Add(new CompiledStep(step.When == null ? null : Compile(step.When), Runner(step, fires, firing)));
         }
@@ -296,8 +325,9 @@ public sealed class ReadModel : SimModel
         HookName.ModifyOrbPassiveTriggerCounts => nameof(ModifyOrbPassiveTriggerCounts),
         HookName.AfterModifyingOrbPassiveTriggerCount => nameof(AfterModifyingOrbPassiveTriggerCount),
         HookName.AfterOrbEvoked => nameof(AfterOrbEvoked),
-        // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook.
-        HookName.Passive or HookName.Evoke => "",
+        // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook; an enchantment's OnPlay
+        // where its card plays (RunEnchantment).
+        HookName.Passive or HookName.Evoke or HookName.OnPlay => "",
         _ => nameof(AfterCardEvent),
     };
 
@@ -816,6 +846,74 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
+            // An enchantment's commands are its card's (CardModel.OnPlayWrapper runs them as part of the play): each the simulator's card action for
+            // the same game command, as a card's program builds it (SimAdapter.Steps), on its card's owner.
+            case GainBlockStep enchantmentBlock when Spec.Kind == ModelKind.Enchantment:
+            {
+                if (enchantmentBlock.To != null) throw new InvalidOperationException($"{Name}: no enchantment block for {enchantmentBlock.To}");
+                var amount = Compile(enchantmentBlock.Amount);
+                var props = Compile(enchantmentBlock.Props);
+                return args => SimEngine.BlockOnce(args.State, new GainBlockAction(Times: 1, amount(in args), (SimProps)(int)props(in args))
+                    { To = args.Owner, Captured = args.Card?.Enchantment?.BlockTerms });
+            }
+            case DamageStep enchantmentDamage when Spec.Kind == ModelKind.Enchantment:
+            {
+                // CreatureCmd.Damage of its card's owner, unblockable: the HP its card costs (a card program's LoseHpAction), named by its card
+                // (the damage's cardSource is base.Card).
+                if (enchantmentDamage.Target != HookTarget.Owner || enchantmentDamage.Props is not HookConstant { Value: var hpProps } || !((SimProps)(int)hpProps).HasFlag(SimProps.Unblockable))
+                    throw new InvalidOperationException($"{Name}: no enchantment damage to {enchantmentDamage.Target}");
+                var amount = Compile(enchantmentDamage.Amount);
+                return args =>
+                {
+                    SimEngine.LoseHp(args.State, args.Card?.Name ?? Name, (int)amount(in args), args.Owner);
+                    return One(args.State);
+                };
+            }
+            case DrawStep enchantmentDraw when Spec.Kind == ModelKind.Enchantment:
+            {
+                // Its card's draws join the hand as they're drawn (decision #189), set off as a card event of the play's (indirect).
+                var count = Compile(enchantmentDraw.Count);
+                return args => (int)count(in args) is > 0 and var drawn
+                    ? SimEngine.CardEventsOf(args.State, new CardEventAction(CardEvent.Drawn, drawn) { Indirect = true, JoinsHand = true, Player = args.Owner })
+                    : One(args.State);
+            }
+            case GainEnergyStep enchantmentEnergy when Spec.Kind == ModelKind.Enchantment:
+            {
+                var amount = Compile(enchantmentEnergy.Amount);
+                return args => (int)amount(in args) is > 0 and var gained
+                    ? SimEngine.CardEventsOf(args.State, new CardEventAction(CardEvent.EnergyGained, gained) { Player = args.Owner })
+                    : One(args.State);
+            }
+            case ApplyPowerStep enchantmentPower when Spec.Kind == ModelKind.Enchantment:
+            {
+                // PowerCmd.Apply from its card (its cardSource): a card's application, on the play's target or every hittable enemy.
+                var amount = Compile(enchantmentPower.Amount);
+                var power = new PowerId(enchantmentPower.Power);
+                var debuff = enchantmentPower.Debuff;
+                var to = enchantmentPower.Target switch
+                {
+                    HookTarget.PlayTarget => ApplyPowerAction.Where.Target,
+                    HookTarget.AllEnemies => ApplyPowerAction.Where.AllEnemies,
+                    HookTarget.Owner => ApplyPowerAction.Where.You,
+                    _ => throw new InvalidOperationException($"{Name}: no enchantment power on {enchantmentPower.Target}"),
+                };
+                if (enchantmentPower.By != null || enchantmentPower.DebuffWhenNegative) throw new InvalidOperationException($"{Name}: no enchantment power applied by another");
+                return args => SimEngine.ApplyPowerOf(args.State, new ApplyPowerAction(power, (int)amount(in args)) { To = to, Debuff = debuff });
+            }
+            case StoreFieldStep enchantmentStore when Spec.Kind == ModelKind.Enchantment:
+            {
+                // Its own state (its Status), its card's own, in its owner's fields.
+                var value = Compile(enchantmentStore.Value);
+                var field = enchantmentStore.Field;
+                return args =>
+                {
+                    SimEngine.SetField(args.State, args.Owner, EnchantmentFieldKey(in args, field), (int)value(in args));
+                    return One(args.State);
+                };
+            }
+            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or UnbindStep or RemovePowerStep or DecrementPowerStep
+                when Spec.Kind == ModelKind.Enchantment:
+                throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
             {
                 // Block for the loop's player (a player's model's: the item each round), through the block pipeline on them, logged under its owner.
@@ -1106,6 +1204,19 @@ public sealed class ReadModel : SimModel
                 var slot = _localSlots[local.Name];
                 return (in HookArgs args) => args.Locals?[slot] ?? 0m;
             }
+            case HookField enchantmentField when Spec.Kind == ModelKind.Enchantment:
+            {
+                // Its own state through its card's plays (its owner's fields, under its card), from where the game had it as the card was played.
+                var name = enchantmentField.Field;
+                var canonical = enchantmentField.Canonical;
+                return (in HookArgs args) =>
+                {
+                    var fields = SimEngine.FieldsOf(args.State, args.Owner);
+                    var at = EnchantmentFieldKey(in args, name);
+                    if (fields.Has(at)) return fields[at];
+                    return args.Card?.Enchantment is { } enchantment && enchantment.Fields.Has(name) ? enchantment.Fields[name] : canonical;
+                };
+            }
             case HookField field:
             {
                 // Its state, or a copy's; one never stored is where a new instance starts (0, or a value's canonical one).
@@ -1164,6 +1275,10 @@ public sealed class ReadModel : SimModel
         var named = fact.Of;
         switch (fact.Fact)
         {
+            case HookFact.Amount when Spec.Kind == ModelKind.Enchantment:
+                return (in HookArgs args) => args.Card?.Enchantment?.Amount ?? 0;
+            case HookFact.PlayIsModelCard: return (in HookArgs args) => args.Card != null && ReferenceEquals(args.Play?.Card, args.Card) ? 1m : 0m;
+            case HookFact.ModelCardTargets: return (in HookArgs args) => (int)(args.Card?.Targets ?? SimPlay.Target.None);
             case HookFact.Amount:
                 return Spec.Kind == ModelKind.Power
                     ? (in HookArgs args) => args.Copy > 0 ? CopyOf(args.State, args.Owner, args.Copy).Amount : SimEngine.PowerOn(args.State, args.Owner, ThisPower)

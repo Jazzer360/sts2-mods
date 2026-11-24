@@ -360,7 +360,30 @@ public static class SimReaders
             HandId = card.Pile?.Type == PileType.Hand ? SimAdapter.HandId(card) : 0,
             Vars = vars,
             GainsBlock = gainsBlock,
+            Enchantment = EnchantmentOf(card),
         };
+    }
+
+    /// <summary>
+    /// A card's enchantment as the engine runs it (decision #217): its class, its amount and its own state its read programs read or store (its
+    /// Status), read from the game's object. Null: none.
+    /// </summary>
+    private static SimEnchantment? EnchantmentOf(CardModel card)
+    {
+        if (card.Enchantment is not { } enchantment) return null;
+        var name = enchantment.GetType().Name;
+        var fields = NamedCounts.Empty;
+        if (SimModels.Enchantment(name) is { } read)
+            foreach (var field in read.Spec.Fields())
+                fields = fields.With(field, FieldOf(enchantment, field) switch
+                {
+                    int number => number,
+                    bool flag => flag ? 1 : 0,
+                    decimal number => (int)number,
+                    Enum value => Convert.ToInt32(value, System.Globalization.CultureInfo.InvariantCulture),
+                    _ => 0,
+                });
+        return new SimEnchantment(name, enchantment.Amount) { Fields = fields };
     }
 
     // ------------------------------------------------------------------ captured terms
