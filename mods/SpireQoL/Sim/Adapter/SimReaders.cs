@@ -172,9 +172,6 @@ public static class SimReaders
     /// </summary>
     internal static readonly Dictionary<string, (string Var, int Fallback)> RelicAmountVars = new()
     {
-        [nameof(TungstenRod)] = Var("HpLossReduction", fallback: 1),
-        [nameof(BeatingRemnant)] = Var("MaxHpLoss", fallback: int.MaxValue),
-        [nameof(TheBoot)] = Var("DamageMinimum", fallback: 5),
         [nameof(SneckoSkull)] = Var("PoisonPower", fallback: 1),
         // End-of-turn relics: their block, damage or stars.
         [nameof(RippleBasin)] = Var("Block"),
@@ -211,7 +208,6 @@ public static class SimReaders
                 // Its count toward the next draw, and the Ethereal exhausts counted as the turn ends (its EtherealCount: 0 mid-turn).
                 case nameof(JossPaper): amount = Sts2State.Private(relic, "CardsExhausted", fallback: 0); data = Sts2State.Private(relic, "EtherealCount", fallback: 0); break;
                 case nameof(Pocketwatch): amount = Sts2State.Private(relic, "_cardsPlayedThisTurn", fallback: 0); data = Sts2State.Var(relic, "CardThreshold", fallback: 3); break;
-                case nameof(BeatingRemnant): data = (int)Sts2State.Private(relic, "DamageReceivedThisTurn", fallback: 0m); break;
                 // Once a turn: armed until used, used this turn (RelicUse).
                 case nameof(MiniRegent) or nameof(Regalite): data = Sts2State.Private(relic, "UsedThisTurn", fallback: true) ? 0 : (int)RelicUse.Armed; break;
                 case nameof(RainbowRing): data = Sts2State.Private(relic, "ActivationCountThisTurn", fallback: 0) >= 1 ? (int)RelicUse.UsedThisTurn : 0; break;

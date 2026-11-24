@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 18 engine rules naming 133 game methods; 5 adapter rules; 109 hand-written models.
+# 18 engine rules naming 133 game methods; 5 adapter rules; 106 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -85,8 +85,6 @@ ArtOfWar: ArtOfWar.AfterCardPlayed, ArtOfWar.AfterCombatEnd, ArtOfWar.AfterEnerg
   model: nothing it overrides
 AsleepPower: AsleepPower.AfterDamageReceived, AsleepPower.AfterSideTurnEnd, AsleepPower.BeforeSideTurnEndVeryEarly
   model: AfterDamageReceived, OutcomeTab
-BeatingRemnant: BeatingRemnant.AfterDamageReceived, BeatingRemnant.AfterModifyingHpLostAfterOsty, BeatingRemnant.BeforeSideTurnStart, BeatingRemnant.ModifyHpLostAfterOsty
-  model: AfterDamageReceived, ModifyHpLostAfterOsty
 BiiigHug: BiiigHug.AfterObtained, BiiigHug.AfterShuffle
   model: AfterCardEvent
 BlackHolePower: BlackHolePower.AfterCardPlayed, BlackHolePower.AfterStarsGained
@@ -265,16 +263,12 @@ SwordSagePower: SwordSagePower.AfterCardEnteredCombat, SwordSagePower.AfterPower
   model: nothing it overrides
 TagTeamPower: TagTeamPower.AfterModifyingCardPlayCount, TagTeamPower.ModifyCardPlayCount
   model: AfterApplied, AfterModifyingCardPlayCount, ModifyCardPlayCount
-TheBoot: TheBoot.AfterModifyingHpLostAfterOsty, TheBoot.ModifyHpLostAfterOstyLate
-  model: ModifyHpLostAfterOstyLate
 TheGambitPower: TheGambitPower.AfterDamageReceived
   model: AfterDamageReceived, OutcomeTab
 ThornsPower: ThornsPower.BeforeDamageReceived
   model: BeforeDamageReceived
 TrashToTreasurePower: TrashToTreasurePower.AfterCardGeneratedForCombat
   model: AfterCardEvent
-TungstenRod: TungstenRod.AfterModifyingHpLostAfterOsty, TungstenRod.ModifyHpLostAfterOsty
-  model: ModifyHpLostAfterOsty
 Twine: Twine.AfterArrowDislodged (beta only)
   model: AfterCardEvent
 UnceasingTop: UnceasingTop.AfterHandEmptied

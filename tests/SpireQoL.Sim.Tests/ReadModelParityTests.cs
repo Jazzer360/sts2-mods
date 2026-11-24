@@ -66,7 +66,7 @@ public class ReadModelParityTests
     private static readonly Dictionary<string, string> RelicAmountVars = new(StringComparer.Ordinal) {
         [RelicId.CharonsAshes.Name] = "Damage", [RelicId.ForgottenSoul.Name] = "Damage", [RelicId.Orichalcum.Name] = "Block", [RelicId.FakeOrichalcum.Name] = "Block",
         [RelicId.ScreamingFlagon.Name] = "Damage", [RelicId.CloakClasp.Name] = "Block", [RelicId.ObsidianVice.Name] = "Damage", [RelicId.LunarPastry.Name] = "Stars", [RelicId.StoneCalendar.Name] = "Damage",
-        [RelicId.MightyWings.Name] = "StrengthPower",
+        [RelicId.MightyWings.Name] = "StrengthPower", [RelicId.TungstenRod.Name] = "HpLossReduction", [RelicId.BeatingRemnant.Name] = "MaxHpLoss", [RelicId.TheBoot.Name] = "DamageMinimum",
     };
 
     /// <summary>
@@ -113,6 +113,15 @@ public class ReadModelParityTests
         [PowerId.Panache.Name] = (3, new[] { (HookField.VarPrefix + "CardsLeft", 3), ("Data.alreadyApplied", 1) }),
         // OrbitPower: DisplayAmount is 4 - energySpent % 4.
         [PowerId.Orbit.Name] = (3, new[] { ("Data.energySpent", 1), ("Data.triggerCount", 0) }),
+    };
+
+    /// <summary>
+    /// The counts a hand-written relic model kept as its Data (the adapter read it there: SimReaders.Relics) and the field the read model keeps the
+    /// same count in, as the adapter reads it from the game's object: Beating Remnant's HP lost this turn.
+    /// </summary>
+    private static readonly Dictionary<string, (int Data, string Field)> RelicCounterFields = new(StringComparer.Ordinal)
+    {
+        [RelicId.BeatingRemnant.Name] = (6, "DamageReceivedThisTurn"),
     };
 
     public static TheoryData<string> Models() => new(HandWritten.Keys.OrderBy(name => name, StringComparer.Ordinal));
@@ -198,6 +207,8 @@ public class ReadModelParityTests
         nameof(SimModel.AfterSideTurnEndLate), nameof(SimModel.ModifyCardPlayCount), nameof(SimModel.AfterModifyingCardPlayCount),
         nameof(SimModel.AfterDamageGiven), nameof(SimModel.AfterDamageReceived), nameof(SimModel.AfterDeath), nameof(SimModel.AfterApplied),
         nameof(SimModel.BeforeSideTurnStart), nameof(SimModel.AfterSideTurnStart), nameof(SimModel.AfterSideTurnStartLate), nameof(SimModel.AfterOrbChanneled),
+        nameof(SimModel.ModifyHpLostBeforeOsty), nameof(SimModel.ModifyHpLostBeforeOstyLate), nameof(SimModel.ModifyHpLostAfterOsty), nameof(SimModel.ModifyHpLostAfterOstyLate),
+        nameof(SimModel.AfterModifyingHpLost),
     };
 
     [Fact]
@@ -281,7 +292,9 @@ public class ReadModelParityTests
         if (model.Spec.Kind == ModelKind.Power) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).With(new PowerId(model.Name), amount: PowerAmountVars.TryGetValue(model.Name, out var amountKey) ? state.Vars[$"{owner}:{model.Name}:{amountKey}"] : 3, data: powerData));
         var amount = RelicAmountVars.TryGetValue(model.Name, out var amountVar) ? state.Vars[$"{owner}:{model.Name}:{amountVar}"] : 0;
         // A relic whose amount is its value keeps no flag (SimReaders.Relics); any other starts armed.
-        var data = RelicDataVars.TryGetValue(model.Name, out var relicDataVar) ? state.Vars[$"{owner}:{model.Name}:{relicDataVar}"] : RelicAmountVars.ContainsKey(model.Name) ? 0 : (int)RelicUse.Armed;
+        var data = RelicDataVars.TryGetValue(model.Name, out var relicDataVar) ? state.Vars[$"{owner}:{model.Name}:{relicDataVar}"]
+            : RelicCounterFields.TryGetValue(model.Name, out var relicCounter) ? relicCounter.Data : RelicAmountVars.ContainsKey(model.Name) ? 0 : (int)RelicUse.Armed;
+        if (RelicCounterFields.TryGetValue(model.Name, out var counterField)) SimEngine.SetField(state, owner, model.FieldKey(counterField.Field), counterField.Data);
         if (model.Spec.Kind == ModelKind.Relic) SimEngine.SetRelics(state, owner, SimEngine.RelicsOf(state, owner).With(new RelicId(model.Name), amount, data));
         return state;
     }
@@ -305,6 +318,27 @@ public class ReadModelParityTests
                         nameof(SimModel.ModifyDamageMultiplicative) => model.ModifyDamageMultiplicative(state, owner, damage),
                         _ => model.ModifyDamageMultiplicativeLate(state, owner, damage),
                     }));
+                break;
+            case nameof(SimModel.ModifyHpLostBeforeOsty) or nameof(SimModel.ModifyHpLostBeforeOstyLate) or nameof(SimModel.ModifyHpLostAfterOsty) or nameof(SimModel.ModifyHpLostAfterOstyLate):
+                // The HP a hit would take as the pass starts (none, one, some, more than a cap), for every dealer, target, kind and card.
+                foreach (var damage in Damages(owner))
+                    foreach (var amount in new[] { 0m, 1m, 3m, 12m, 30m })
+                        yield return ($"{damage}, {amount} HP", (model, state) => Number(hook switch
+                        {
+                            nameof(SimModel.ModifyHpLostBeforeOsty) => model.ModifyHpLostBeforeOsty(state, owner, damage, amount),
+                            nameof(SimModel.ModifyHpLostBeforeOstyLate) => model.ModifyHpLostBeforeOstyLate(state, owner, damage, amount),
+                            nameof(SimModel.ModifyHpLostAfterOsty) => model.ModifyHpLostAfterOsty(state, owner, damage, amount),
+                            _ => model.ModifyHpLostAfterOstyLate(state, owner, damage, amount),
+                        }));
+                break;
+            case nameof(SimModel.AfterModifyingHpLost):
+                // Its pass changed the HP lost, before Osty's passes or after: what it does then (a flash, a stack spent), inside the damage.
+                foreach (var afterOsty in new[] { false, true })
+                    yield return ($"after its pass {(afterOsty ? "after Osty" : "before Osty")}", (model, state) =>
+                    {
+                        model.AfterModifyingHpLost(state, owner, afterOsty);
+                        return Branches(new[] { state });
+                    });
                 break;
             case nameof(SimModel.ModifyBlockAdditive) or nameof(SimModel.ModifyBlockMultiplicative):
                 foreach (var block in Blocks(owner))

@@ -1310,3 +1310,49 @@ public sealed class DarkEmbracePower : ProcModel
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
         cardEvent == CardEvent.Exhausted && player == owner ? Cause(Fire(state, owner), CardEvent.Drawn, count: Amount(state, owner), owner) : One(state);
 }
+
+// ---- the HP-loss pipeline (Sim/Models/PlayerModels.cs and ReactionModels.cs, deleted 2026-11-24)
+
+/// <summary>Tungsten Rod (relic, amount = HpLossReduction): ModifyHpLostAfterOsty takes that much off HP its owner loses; it flashes when it does.</summary>
+public sealed class TungstenRod : SimModel
+{
+    public override TabKind? Tab => TabKind.Trigger;
+    public override decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount) =>
+        damage.Target != owner ? amount : Math.Max(0m, amount - SimEngine.RelicsOf(state, owner)[ThisRelic]);
+}
+
+/// <summary>
+/// Beating Remnant (relic: amount = MaxHpLoss, Data = HP lost since its owner's turn started): ModifyHpLostAfterOsty caps HP lost
+/// at what's left; AfterDamageReceived counts the HP actually lost (a hit Buffer stops counts nothing).
+/// </summary>
+public sealed class BeatingRemnant : SimModel
+{
+    public override decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount)
+    {
+        if (damage.Target != owner) return amount;
+        var relics = SimEngine.RelicsOf(state, owner);
+        return Math.Min(amount, relics[ThisRelic] - relics.DataOf(ThisRelic));
+    }
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Target != owner || hit.Unblocked == 0) return;
+        var relics = SimEngine.RelicsOf(state, owner);
+        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], relics.DataOf(ThisRelic) + hit.Unblocked));
+    }
+}
+
+/// <summary>The Boot (relic, amount = DamageMinimum): its owner's (or Osty's) powered hits that lose another creature 1+ HP lose it at least that. Its tab: a play with a hit it raises (one that gets past block for less than the minimum: 6 into 5 block loses the enemy 5, not 1).</summary>
+public sealed class TheBoot : SimModel
+{
+    public override TabKind? Tab => TabKind.Trigger;
+
+    public override decimal ModifyHpLostAfterOstyLate(SimState state, int owner, DamageCtx damage, decimal amount)
+    {
+        if (!(damage.Dealer == owner || (owner == Who.You && damage.Dealer == Who.YourOsty)) || damage.Target == owner) return amount;
+        if (!damage.Props.IsPoweredAttack() || amount < 1m) return amount;
+        var min = SimEngine.RelicsOf(state, owner)[ThisRelic];
+        if (amount >= min) return amount;
+        state.LogFired(Name, amount: 0, owner);
+        return min;
+    }
+}

@@ -322,8 +322,8 @@ public abstract class SimModel
     public virtual decimal ModifyHpLostBeforeOstyLate(SimState state, int owner, DamageCtx damage, decimal amount) => amount;
     public virtual decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount) => amount;
     public virtual decimal ModifyHpLostAfterOstyLate(SimState state, int owner, DamageCtx damage, decimal amount) => amount;
-    /// <summary>It changed an HP loss (the game's AfterModifyingHpLost*): most flash.</summary>
-    public virtual void AfterModifyingHpLost(SimState state, int owner) => state.LogFired(Name, amount: 0, owner);
+    /// <summary>It changed an HP loss (the game's AfterModifyingHpLostBeforeOsty, or AfterOsty when <paramref name="afterOsty"/>): most flash.</summary>
+    public virtual void AfterModifyingHpLost(SimState state, int owner, bool afterOsty) => state.LogFired(Name, amount: 0, owner);
     public virtual IEnumerable<SimState> BeforeAttack(SimState state, int owner, AttackInfo attack) => One(state);
     public virtual IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack) => One(state);
     public virtual IEnumerable<SimState> AfterBlockGained(SimState state, int owner, int gainer, int amount, SimCard? card) => One(state);

@@ -42,7 +42,7 @@ internal static partial class CoverageLedger
     {
         // ======== relics
         ["ArtOfWar"] = "covered: AfterCardPlayed/AfterSideTurnEnd track attacks per turn; crossed tab on the first attack (proc rule)",
-        ["BeatingRemnant"] = "covered: ModifyHpLostAfterOsty caps HP lost per turn; simulator (RemnantCap, carries over from your turn)",
+        ["BeatingRemnant"] = "covered: read from its code (ReadModel, decision #195): ModifyHpLostAfterOsty caps HP its owner loses at MaxHpLoss less its DamageReceivedThisTurn, which AfterDamageReceived counts (its BeforeSideTurnStart reset comes as its owner's next turn starts)",
         ["BiiigHug"] = "covered: AfterShuffle adds a Soot to the draw pile; crossed shuffle tab (its model; the Soot's own created-card event, AddGeneratedCardToCombat with you as its creator, isn't raised yet: TRACKER 22)",
         ["BingBong"] = "ignore: AfterCardChangedPiles copies cards added to your deck (deck, not combat piles)",
         ["BoneFlute"] = "covered: AfterAttack by Osty gains block; block tab for Osty-attack cards (proc rule, simulator block)",
@@ -113,10 +113,10 @@ internal static partial class CoverageLedger
         ["StoneCalendar"] = "covered: read from its code (ReadModel, decision #195): BeforeSideTurnEnd damages all enemies on the turn its DamageTurn names (the players' turn number, tracker)",
         ["SturdyClamp"] = "ignore: ShouldClearBlock keeps up to 10 block into your next turn",
         ["TheAbacus"] = "covered: read from its code (ReadModel, decision #195): AfterShuffle block (proc block on cards that shuffle)",
-        ["TheBoot"] = "covered: ModifyHpLostAfterOstyLate raises your attack hits below its minimum to it (simulator TheBoot, after Hardened Shell and Slippery; its tab on a play with a hit it raises)",
+        ["TheBoot"] = "covered: read from its code (ReadModel, decision #195): ModifyHpLostAfterOstyLate raises its owner's (or Osty's) powered attack hits that lose another creature 1+ HP to its DamageMinimum; AfterModifyingHpLostAfterOsty flashes (proc tab)",
         ["Tingsha"] = "covered: read from its code (ReadModel, decision #195): AfterCardDiscarded damages a random enemy on your turn (proc damage)",
         ["ToughBandages"] = "covered: read from its code (ReadModel, decision #195): AfterCardDiscarded block on your turn (proc block)",
-        ["TungstenRod"] = "covered: ModifyHpLostAfterOsty reduces HP lost (simulator; proc tab on cards that cost you HP, where it flashes)",
+        ["TungstenRod"] = "covered: read from its code (ReadModel, decision #195): ModifyHpLostAfterOsty takes its HpLossReduction off HP its owner loses; AfterModifyingHpLostAfterOsty flashes (proc tab on cards that cost you HP)",
         ["TuningFork"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed block every N skills (proc block, tracker)",
         ["UnceasingTop"] = "covered: AfterHandEmptied draws (proc tab)",
         ["UnsettlingLamp"] = "covered: proc tab on the card that arms it (temporary debuffs too); ModifyPowerAmountGivenMultiplicative doubles that card's first play's debuffs: the adapter doubles its Strength loss and poison (random poison, Bouncing Flask, isn't doubled)",

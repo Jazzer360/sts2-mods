@@ -386,6 +386,103 @@
     "Copies": "EachApplication"
   },
   {
+    "Name": "BeatingRemnant",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageReceived",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "DamageReceivedThisTurn",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "DamageReceivedThisTurn"
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "HitUnblocked"
+              }
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "BeatingRemnant.AfterDamageReceived:001E",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TargetIsOwner"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterModifyingHpLostAfterOsty",
+        "Steps": [
+          {
+            "$kind": "FlashStep"
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyHpLostAfterOsty",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "BeatingRemnant.ModifyHpLostAfterOsty:001A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Min",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "HpLostSoFar"
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "Subtract",
+                  "Left": {
+                    "$kind": "HookVar",
+                    "Key": "MaxHpLoss",
+                    "Canonical": 20
+                  },
+                  "Right": {
+                    "$kind": "HookField",
+                    "Field": "DamageReceivedThisTurn"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "BiasedCognitionPower",
     "Kind": "Power",
     "Hooks": [
@@ -14957,6 +15054,674 @@
     "Copies": "EachApplication"
   },
   {
+    "Name": "TheBoot",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterModifyingHpLostAfterOsty",
+        "Steps": [
+          {
+            "$kind": "FlashStep"
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyHpLostAfterOstyLate",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "TheBoot.ModifyHpLostAfterOstyLate:000D",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "DealerIsOwner"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "TheBoot.ModifyHpLostAfterOstyLate:001C",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "DealerIsOwnersPet"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "TheBoot.ModifyHpLostAfterOstyLate:000D",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "DealerIsOwner"
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "TheBoot.ModifyHpLostAfterOstyLate:002C",
+                      "Test": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookFactValue",
+                          "Fact": "TargetIsOwner"
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "TheBoot.ModifyHpLostAfterOstyLate:001C",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "DealerIsOwnersPet"
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "TheBoot.ModifyHpLostAfterOstyLate:002C",
+                      "Test": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookFactValue",
+                          "Fact": "TargetIsOwner"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "TheBoot.ModifyHpLostAfterOstyLate:000D",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwner"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "TheBoot.ModifyHpLostAfterOstyLate:002C",
+                      "Test": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookFactValue",
+                          "Fact": "TargetIsOwner"
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "TheBoot.ModifyHpLostAfterOstyLate:0036",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredAttack"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "TheBoot.ModifyHpLostAfterOstyLate:001C",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwnersPet"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "TheBoot.ModifyHpLostAfterOstyLate:002C",
+                      "Test": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookFactValue",
+                          "Fact": "TargetIsOwner"
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "TheBoot.ModifyHpLostAfterOstyLate:0036",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredAttack"
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "TheBoot.ModifyHpLostAfterOstyLate:000D",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "DealerIsOwner"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "TheBoot.ModifyHpLostAfterOstyLate:002C",
+                        "Test": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookFactValue",
+                            "Fact": "TargetIsOwner"
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "TheBoot.ModifyHpLostAfterOstyLate:0036",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredAttack"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "TheBoot.ModifyHpLostAfterOstyLate:0045",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Less",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "HpLostSoFar"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "TheBoot.ModifyHpLostAfterOstyLate:001C",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "DealerIsOwnersPet"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "TheBoot.ModifyHpLostAfterOstyLate:002C",
+                        "Test": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookFactValue",
+                            "Fact": "TargetIsOwner"
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "TheBoot.ModifyHpLostAfterOstyLate:0036",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredAttack"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "TheBoot.ModifyHpLostAfterOstyLate:0045",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Less",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "HpLostSoFar"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "TheBoot.ModifyHpLostAfterOstyLate:000D",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "DealerIsOwner"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "TheBoot.ModifyHpLostAfterOstyLate:002C",
+                          "Test": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookFactValue",
+                              "Fact": "TargetIsOwner"
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "TheBoot.ModifyHpLostAfterOstyLate:0036",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "TheBoot.ModifyHpLostAfterOstyLate:0045",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Less",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "HpLostSoFar"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "TheBoot.ModifyHpLostAfterOstyLate:0064",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "GreaterOrEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "HpLostSoFar"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "DamageMinimum",
+                        "Canonical": 5
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "TheBoot.ModifyHpLostAfterOstyLate:001C",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "DealerIsOwnersPet"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "TheBoot.ModifyHpLostAfterOstyLate:002C",
+                          "Test": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookFactValue",
+                              "Fact": "TargetIsOwner"
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "TheBoot.ModifyHpLostAfterOstyLate:0036",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "TheBoot.ModifyHpLostAfterOstyLate:0045",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Less",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "HpLostSoFar"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "TheBoot.ModifyHpLostAfterOstyLate:0064",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "GreaterOrEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "HpLostSoFar"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "DamageMinimum",
+                        "Canonical": 5
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "TheBoot.ModifyHpLostAfterOstyLate:000D",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "DealerIsOwner"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "TheBoot.ModifyHpLostAfterOstyLate:002C",
+                          "Test": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookFactValue",
+                              "Fact": "TargetIsOwner"
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "TheBoot.ModifyHpLostAfterOstyLate:0036",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "TheBoot.ModifyHpLostAfterOstyLate:0045",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Less",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "HpLostSoFar"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "TheBoot.ModifyHpLostAfterOstyLate:0064",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "GreaterOrEqual",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "HpLostSoFar"
+                        },
+                        "Right": {
+                          "$kind": "HookVar",
+                          "Key": "DamageMinimum",
+                          "Canonical": 5
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "TheBoot.ModifyHpLostAfterOstyLate:001C",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "DealerIsOwnersPet"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "TheBoot.ModifyHpLostAfterOstyLate:002C",
+                          "Test": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookFactValue",
+                              "Fact": "TargetIsOwner"
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "TheBoot.ModifyHpLostAfterOstyLate:0036",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "TheBoot.ModifyHpLostAfterOstyLate:0045",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Less",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "HpLostSoFar"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "TheBoot.ModifyHpLostAfterOstyLate:0064",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "GreaterOrEqual",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "HpLostSoFar"
+                        },
+                        "Right": {
+                          "$kind": "HookVar",
+                          "Key": "DamageMinimum",
+                          "Canonical": 5
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookVar",
+                "Key": "DamageMinimum",
+                "Canonical": 5
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false
+  },
+  {
     "Name": "TheSealedThronePower",
     "Kind": "Power",
     "Hooks": [
@@ -15647,6 +16412,75 @@
         ]
       }
     ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "TungstenRod",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterModifyingHpLostAfterOsty",
+        "Steps": [
+          {
+            "$kind": "FlashStep"
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyHpLostAfterOsty",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "TungstenRod.ModifyHpLostAfterOsty:000C",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Max",
+                "Left": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "Subtract",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HpLostSoFar"
+                  },
+                  "Right": {
+                    "$kind": "HookVar",
+                    "Key": "HpLossReduction",
+                    "Canonical": 1
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "Tab": "Trigger",
     "HelpsOwner": false
   },
   {

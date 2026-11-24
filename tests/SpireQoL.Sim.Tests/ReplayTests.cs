@@ -71,8 +71,7 @@ public class ReplayTests
         state.You.Juggernaut = 2;
         state.You.Plating = 4;
         state.You.TurnEndCards.Add(new TurnEndCard("Burn", "Burn", Amount: 2));
-        state.You.RemnantCap = 10;
-        state.You.RemnantLeftPlayerTurn = 6;
+        SimReviewTests.WithRemnant(state, maxHpLoss: 10, lost: 4);
 
         var back = SimState.FromJson(state.ToJson());
         var outcome = SimEngine.Run(state);

@@ -4,9 +4,9 @@
 ## Powers and relics
 
 beta powers: 304 classes, 273 with hooks; read from code 87, hand-written 76, neither 112 (each by its first gap: Snapshots/hook-readings.txt)
-beta relics: 316 classes, 310 with hooks; read from code 39, hand-written 30, neither 241 (each by its first gap: Snapshots/hook-readings.txt)
+beta relics: 316 classes, 310 with hooks; read from code 42, hand-written 27, neither 241 (each by its first gap: Snapshots/hook-readings.txt)
 main powers: 265 classes, 235 with hooks; read from code 77, hand-written 63, neither 97 (each by its first gap: Snapshots/hook-readings.txt)
-main relics: 299 classes, 293 with hooks; read from code 33, hand-written 29, neither 231 (each by its first gap: Snapshots/hook-readings.txt)
+main relics: 299 classes, 293 with hooks; read from code 36, hand-written 26, neither 231 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: a per-name rule 9, not modelled by name 6, the game's own code, called live 6, no hooks 2
 
@@ -152,7 +152,6 @@ SimReaders.Relics: PaelsLegion: hand-written; reads its own field Cooldown, its 
 SimReaders.Relics: CentennialPuzzle: hand-written; reads its own field UsedThisCombat: a read model's own fields and values replace it
 SimReaders.Relics: JossPaper: hand-written; reads its own field CardsExhausted, its own field EtherealCount: a read model's own fields and values replace it
 SimReaders.Relics: Pocketwatch: hand-written; reads its own field _cardsPlayedThisTurn, its own value CardThreshold: a read model's own fields and values replace it
-SimReaders.Relics: BeatingRemnant: hand-written; reads its own field DamageReceivedThisTurn: a read model's own fields and values replace it
 SimReaders.Relics: MiniRegent: read from code; reads its own field UsedThisTurn: a read model's own fields and values replace it
 SimReaders.Relics: Regalite: read from code; reads its own field UsedThisTurn: a read model's own fields and values replace it
 SimReaders.Relics: RainbowRing: read from code; reads its own field ActivationCountThisTurn: a read model's own fields and values replace it
@@ -161,9 +160,6 @@ SimReaders.Relics: RedSkull: hand-written; reads its own value HpThreshold, its 
 SimReaders.Relics: ParryingShield: hand-written; reads its own value Block: a read model's own fields and values replace it
 SimReaders.Relics: PaelsTears: hand-written; reads nothing named: needs more than its own fields and values
 SimReaders.Relics: UnsettlingLamp: hand-written; reads its own field TriggeringCard, its own field IsFinishedTriggering, the game's DisplayAmount: needs more than its own fields and values
-SimReaders.RelicAmountVars: TungstenRod: hand-written; reads its own value HpLossReduction: a read model's own fields and values replace it
-SimReaders.RelicAmountVars: BeatingRemnant: hand-written; reads its own value MaxHpLoss: a read model's own fields and values replace it
-SimReaders.RelicAmountVars: TheBoot: hand-written; reads its own value DamageMinimum: a read model's own fields and values replace it
 SimReaders.RelicAmountVars: SneckoSkull: hand-written; reads its own value PoisonPower: a read model's own fields and values replace it
 SimReaders.RelicAmountVars: RippleBasin: hand-written; reads its own value Block: a read model's own fields and values replace it
 SimReaders.RelicAmountVars: ParryingShield: hand-written; reads its own value Damage: a read model's own fields and values replace it
@@ -222,22 +218,22 @@ a model's own method (its body read where it's called): 8 classes, 4 alone: Fera
 arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd): 6 classes, 4 alone: CoveringFirePower*, ExplosiveArrowsPower*, ImpaledPower, QuietusPower, Twine*, YahPower*
 commands: another command (no translation): 5 classes, 4 alone: Imbued (enchantment), Hexed (affliction)*, BottledPotential (potion)*, FruitJuice (potion)*, KingsCourage (potion)*
 queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 11 classes, 3 alone: CurlUpPower, LethalityPower*, PaelsEye, PenNib, PhantomBladesPower, TagTeamPower*, Vambrace, Goopy (enchantment), Nimble (enchantment)*, Slither (enchantment), SoulsPower (enchantment)
-the HP-loss pipeline: 7 classes, 3 alone: BeatingRemnant*, BufferPower, HardenedShellPower, IntangiblePower, SlipperyPower, TheBoot*, TungstenRod*
 hooks: BeforeAttack and AfterAttack: 6 classes, 3 alone: AimPower, BoneFlute*, GigantificationPower*, QuietusPower, SkittishPower, VigorPower*
 a pick: 3 classes, 3 alone: StratagemPower*, DropletOfPrecognition (potion)*, GamblersBrew (potion)*
 commands: OstyCmd.Summon: 3 classes, 3 alone: DevourLifePower*, SicEmPower*, BoneBrew (potion)*
 orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first): 3 classes, 3 alone: ConsumingShadowPower*, TrashToTreasurePower*, PotionOfCapacity (potion)*
+the damage cap and AfterModifyingDamageAmount: 3 classes, 3 alone: HardToKillPower*, IntangiblePower*, SlowPower*
 the fight's log (the history ledger, decision #191): 3 classes, 3 alone: SongPathPower*, UnmovablePower*, ViolentChordPower*
 the simulator's own model (no game class by its name): 3 classes, 3 alone: ImpaledPowerOther*, Regret*, Void*
+another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 7 classes, 2 alone: CoveredPower, HardenedShellPower*, SurprisePower, VitalSparkPower, Adroit (enchantment), Goopy (enchantment), FoulPotion (potion)*
 hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount): 4 classes, 2 alone: BurrowedPower*, HandDrill*, PaelsLegion, Vambrace
+multiplayer scaling (GetScaledAmountForMultiplayer, the players' count): 4 classes, 2 alone: BufferPower*, PlatingPower, SkittishPower, SlipperyPower*
 the play's result location (ModifyCardPlayResultLocation): 4 classes, 2 alone: CorruptionPower, FeralPower, NostalgiaPower*, ReboundPower*
-the damage cap and AfterModifyingDamageAmount: 3 classes, 2 alone: HardToKillPower*, IntangiblePower, SlowPower*
 commands: AutoPlayFromDrawPile: 2 classes, 2 alone: LostLutePower*, DistilledChaos (potion)*
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
 outcomes: a stun or a kill (outcome tabs): 2 classes, 2 alone: ShriekPower*, TheGambitPower*
 the engine runs no read potion (its bodies read whole but for that): 2 classes, 2 alone: PotionOfBinding (potion)*, ShacklingPotion (potion)*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*
-another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 7 classes, 1 alone: CoveredPower, HardenedShellPower, SurprisePower, VitalSparkPower, Adroit (enchantment), Goopy (enchantment), FoulPotion (potion)*
 hooks: AfterCardEnteredCombat: 4 classes, 1 alone: GalvanicPower, SmoggyPower, SwordSagePower*, VitalSparkPower
 card costs and keywords (cards' own hooks, Part B3): 3 classes, 1 alone: ChemicalX*, CorruptionPower, PhantomBladesPower
 hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...): 3 classes, 1 alone: SmoggyPower, SurroundedPower, UnceasingTop*
@@ -252,7 +248,6 @@ hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
 queries: the power's applier (alive, its side): 1 classes, 1 alone: MagicBombPower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*
 a death the game holds back (ShouldStopCombatFromEnding, ShouldDie and the like): 4 classes, 0 alone: InfestedPower, SteamEruptionPower, StockPower, SurprisePower
-multiplayer scaling (GetScaledAmountForMultiplayer, the players' count): 4 classes, 0 alone: BufferPower, PlatingPower, SkittishPower, SlipperyPower
 queries: the owner's powers: 2 classes, 0 alone: CoveredPower, InterceptPower
 a command on another power (PowerCmd.Remove of another): 1 classes, 0 alone: AsleepPower
 a turn's start (an extra turn): 1 classes, 0 alone: PaelsEye

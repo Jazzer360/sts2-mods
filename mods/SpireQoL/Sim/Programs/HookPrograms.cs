@@ -47,6 +47,14 @@ public enum HookName
     AfterOrbChanneled,
     /// <summary>A command of the model's own another class calls (PoisonPower.Trigger, which Outbreak calls on each enemy's poison): ModelSpec.Commands.</summary>
     OwnCommand,
+    /// <summary>Hook.ModifyHpLost's passes (SimEngine.HpLossPipeline): each a Modify hook on the HP the hit would take, in the game's order.</summary>
+    ModifyHpLostBeforeOsty,
+    ModifyHpLostBeforeOstyLate,
+    ModifyHpLostAfterOsty,
+    ModifyHpLostAfterOstyLate,
+    /// <summary>Hook.AfterModifyingHpLostBeforeOsty and AfterOsty: told to the models whose pass changed the HP lost (a flash, Buffer's stack).</summary>
+    AfterModifyingHpLostBeforeOsty,
+    AfterModifyingHpLostAfterOsty,
 }
 
 /// <summary>A command of a model's own (a public method of its class that returns a Task and takes nothing: PoisonPower.Trigger), read as a program.</summary>
@@ -182,6 +190,8 @@ public enum HookFact
     /// it, to act as the turn ends), not one a play exhausts: SimState.EtherealNow.
     /// </summary>
     CausedByEthereal,
+    /// <summary>The HP the hit would take as the HP-loss pipeline reaches this pass (Hook.ModifyHpLost*'s amount: the passes before it applied).</summary>
+    HpLostSoFar,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>

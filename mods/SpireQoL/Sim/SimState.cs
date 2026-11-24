@@ -422,7 +422,7 @@ public sealed class SimPlayer
     public int FrontOrbBonusTriggers;
 
     // What happens to damage reaching your HP.
-    /// <summary>Tungsten Rod (relic, amount = HpLossReduction).</summary>
+    /// <summary>Tungsten Rod on the player (its code reads its HpLossReduction value: read from its code, its amount isn't read).</summary>
     [JsonIgnore] public int TungstenRod { get => Relics[RelicId.TungstenRod]; set => SetRelic(RelicId.TungstenRod, value); }
 
     /// <summary>Block gains so far (each sets off Juggernaut): counted for the Juggernaut tab.</summary>
@@ -432,26 +432,10 @@ public sealed class SimPlayer
     [JsonIgnore] public int Envenom { get => Powers[PowerId.Envenom]; set => Set(PowerId.Envenom, value); }
     /// <summary>Snecko Skull (relic, its amount): extra poison on every application of yours.</summary>
     [JsonIgnore] public int PoisonBonus { get => Relics[RelicId.SneckoSkull]; set => SetRelic(RelicId.SneckoSkull, value); }
-    /// <summary>The Boot (relic, its amount): your attack hits that lose an enemy any HP lose it at least this much (0 = no relic).</summary>
+    /// <summary>The Boot on the player (its code reads its DamageMinimum value: read from its code, its amount isn't read; 0 = no relic).</summary>
     [JsonIgnore] public int BootMinimum { get => Relics[RelicId.TheBoot]; set => SetRelic(RelicId.TheBoot, value); }
     /// <summary>Your Focus now (orb values already include it), for Focus changes during a play.</summary>
     public int Focus;
-    /// <summary>Beating Remnant (relic: amount = MaxHpLoss, Data = HP lost since your turn started).</summary>
-    [JsonIgnore] public int RemnantLeftPlayerTurn
-    {
-        get => Relics.Has(RelicId.BeatingRemnant) ? Math.Max(0, Relics[RelicId.BeatingRemnant] - Relics.DataOf(RelicId.BeatingRemnant)) : int.MaxValue;
-        set { if (value != int.MaxValue) Relics = Relics.With(RelicId.BeatingRemnant, Relics.Has(RelicId.BeatingRemnant) ? Relics[RelicId.BeatingRemnant] : value, (Relics.Has(RelicId.BeatingRemnant) ? Relics[RelicId.BeatingRemnant] : value) - value); }
-    }
-    [JsonIgnore] public int RemnantCap
-    {
-        get => Relics.Has(RelicId.BeatingRemnant) ? Relics[RelicId.BeatingRemnant] : int.MaxValue;
-        set
-        {
-            if (value == int.MaxValue) { Relics = Relics.Without(RelicId.BeatingRemnant); return; }
-            var left = RemnantLeftPlayerTurn;
-            Relics = Relics.With(RelicId.BeatingRemnant, value, left == int.MaxValue ? 0 : Math.Max(0, value - left));
-        }
-    }
     [JsonIgnore] public int Buffer { get => Powers[PowerId.Buffer]; set => Set(PowerId.Buffer, value); }
     public int OstyHp;
     /// <summary>Osty takes the hits aimed at his owner first (DieForYouPower).</summary>

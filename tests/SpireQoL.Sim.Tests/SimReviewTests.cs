@@ -64,13 +64,21 @@ public class SimReviewTests
         Assert.False(outcome.FirstHitBlockedInAll(enemyId: 2)); // it survived: its 4 hit used block first
     }
 
+    /// <summary>Beating Remnant on you: its MaxHpLoss as the adapter reads it, and the HP its own count says you lost this turn.</summary>
+    internal static SimState WithRemnant(SimState state, int maxHpLoss, int lost)
+    {
+        state.WithRelic(Who.You, RelicId.BeatingRemnant, "MaxHpLoss", maxHpLoss);
+        var remnant = Assert.IsType<ReadModel>(SimModels.Get(RelicId.BeatingRemnant.Name));
+        state.You.Fields = state.You.Fields.With(remnant.FieldKey("DamageReceivedThisTurn"), lost);
+        return state;
+    }
+
     [Fact]
     public void BeatingRemnantBudgetCarriesFromYourTurnIntoTheEnemyTurn()
     {
         // BeatingRemnant.BeforeSideTurnStart resets only at the start of YOUR turn.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, block: 0, hits: 10) } };
-        state.You.RemnantCap = 20;
-        state.You.RemnantLeftPlayerTurn = 5; // already lost 15 this turn
+        WithRemnant(state, maxHpLoss: 20, lost: 15); // already lost 15 this turn
         Assert.Equal(5, SimEngine.Run(state).TakenMax);
     }
 
@@ -79,8 +87,7 @@ public class SimReviewTests
     {
         // Remnant counts result.UnblockedDamage after Buffer (ModifyHpLostAfterOstyLate).
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, block: 0, hits: [6, 6]) } };
-        state.You.RemnantCap = 6;
-        state.You.RemnantLeftPlayerTurn = 6;
+        WithRemnant(state, maxHpLoss: 6, lost: 0);
         state.You.Buffer = 1;
         Assert.Equal(6, SimEngine.Run(state).TakenMax); // first hit buffered, second hit uses the full 6
     }

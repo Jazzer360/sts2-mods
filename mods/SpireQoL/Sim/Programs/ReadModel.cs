@@ -25,6 +25,8 @@ internal readonly struct HookArgs
     public DamageEvent? Hit { get; init; }
     /// <summary>The card play's count so far (ModifyCardPlayCount).</summary>
     public int PlayCount { get; init; }
+    /// <summary>The HP the hit would take as an HP-loss pass starts (Hook.ModifyHpLost*'s amount).</summary>
+    public decimal HpLost { get; init; }
     /// <summary>The damage or block being worked out (the Modify hooks).</summary>
     public DamageCtx? Damage { get; init; }
     public BlockCtx? Block { get; init; }
@@ -190,6 +192,11 @@ public sealed class ReadModel : SimModel
         HookName.AfterSideTurnStart => nameof(AfterSideTurnStart),
         HookName.AfterSideTurnStartLate => nameof(AfterSideTurnStartLate),
         HookName.AfterOrbChanneled => nameof(AfterOrbChanneled),
+        HookName.ModifyHpLostBeforeOsty => nameof(ModifyHpLostBeforeOsty),
+        HookName.ModifyHpLostBeforeOstyLate => nameof(ModifyHpLostBeforeOstyLate),
+        HookName.ModifyHpLostAfterOsty => nameof(ModifyHpLostAfterOsty),
+        HookName.ModifyHpLostAfterOstyLate => nameof(ModifyHpLostAfterOstyLate),
+        HookName.AfterModifyingHpLostBeforeOsty or HookName.AfterModifyingHpLostAfterOsty => nameof(AfterModifyingHpLost),
         _ => nameof(AfterCardEvent),
     };
 
@@ -316,6 +323,38 @@ public sealed class ReadModel : SimModel
     public override decimal ModifyDamageMultiplicativeLate(SimState state, int owner, DamageCtx damage) => Returned(HookName.ModifyDamageMultiplicativeLate, state, owner, damage, otherwise: 1m);
     public override decimal ModifyBlockAdditive(SimState state, int owner, BlockCtx block) => Returned(HookName.ModifyBlockAdditive, state, owner, block, otherwise: 0m);
     public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block) => Returned(HookName.ModifyBlockMultiplicative, state, owner, block, otherwise: 1m);
+
+    public override decimal ModifyHpLostBeforeOsty(SimState state, int owner, DamageCtx damage, decimal amount) => HpLost(HookName.ModifyHpLostBeforeOsty, state, owner, damage, amount);
+    public override decimal ModifyHpLostBeforeOstyLate(SimState state, int owner, DamageCtx damage, decimal amount) => HpLost(HookName.ModifyHpLostBeforeOstyLate, state, owner, damage, amount);
+    public override decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount) => HpLost(HookName.ModifyHpLostAfterOsty, state, owner, damage, amount);
+    public override decimal ModifyHpLostAfterOstyLate(SimState state, int owner, DamageCtx damage, decimal amount) => HpLost(HookName.ModifyHpLostAfterOstyLate, state, owner, damage, amount);
+
+    /// <summary>
+    /// An HP-loss pass (Hook.ModifyHpLost*): its code's return on the HP the hit would take, each copy a listener of its own, the amount passed from
+    /// one to the next as the game's pipeline passes it.
+    /// </summary>
+    private decimal HpLost(HookName hook, SimState state, int owner, DamageCtx damage, decimal amount)
+    {
+        if (_returns[(int)hook] is not { } returns) return amount;
+        foreach (var copy in HasCopies ? CopiesOrOne(state, owner) : AsOne)
+        {
+            var args = new HookArgs { State = state, Owner = owner, Hook = hook, Damage = damage, Play = damage.Play, Target = damage.Target, HpLost = amount, Copy = copy };
+            amount = returns(in args);
+        }
+        return amount;
+    }
+
+    /// <summary>
+    /// Its pass changed the HP lost (Hook.AfterModifyingHpLostBeforeOsty or AfterOsty, told to each model that did): it acted (its acting log, as every
+    /// model that changes an HP loss), then its code's after hook (a flash), on the state given.
+    /// </summary>
+    public override void AfterModifyingHpLost(SimState state, int owner, bool afterOsty)
+    {
+        state.LogFired(Name, amount: 0, owner);
+        var hook = afterOsty ? HookName.AfterModifyingHpLostAfterOsty : HookName.AfterModifyingHpLostBeforeOsty;
+        foreach (var branch in Run(hook, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay }))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: {hook} branched inside a hit");
+    }
 
     private decimal Returned(HookName hook, SimState state, int owner, DamageCtx damage, decimal otherwise)
     {
@@ -875,6 +914,7 @@ public sealed class ReadModel : SimModel
             case HookFact.CardEthereal: return (in HookArgs args) => (args.Hook == HookName.AfterCardDrawn ? args.State.DrawnCard?.Ethereal
                 : IsCardEventHook(args.Hook) ? args.State.EventCard?.Ethereal : args.Play?.Card.Ethereal) == true ? 1m : 0m;
             case HookFact.CardEnergy: return (in HookArgs args) => args.Play?.Card.Energy ?? 0;
+            case HookFact.HpLostSoFar: return (in HookArgs args) => args.HpLost;
             case HookFact.CausedByEthereal: return (in HookArgs args) => args.Hook == HookName.AfterCardExhausted && args.State.EtherealNow ? 1m : 0m;
             case HookFact.CardTag:
             {

@@ -40,22 +40,6 @@ public sealed class SneckoSkull : SimModel
     }
 }
 
-/// <summary>The Boot (relic, amount = DamageMinimum): its owner's (or Osty's) powered hits that lose another creature 1+ HP lose it at least that. Its tab: a play with a hit it raises (one that gets past block for less than the minimum: 6 into 5 block loses the enemy 5, not 1).</summary>
-public sealed class TheBoot : SimModel
-{
-    public override TabKind? Tab => TabKind.Trigger;
-
-    public override decimal ModifyHpLostAfterOstyLate(SimState state, int owner, DamageCtx damage, decimal amount)
-    {
-        if (!(damage.Dealer == owner || (owner == Who.You && damage.Dealer == Who.YourOsty)) || damage.Target == owner) return amount;
-        if (!damage.Props.IsPoweredAttack() || amount < 1m) return amount;
-        var min = SimEngine.RelicsOf(state, owner)[ThisRelic];
-        if (amount >= min) return amount;
-        state.LogFired(Name, amount: 0, owner);
-        return min;
-    }
-}
-
 /// <summary>HardenedShellPower: at most what's left this turn (Data) of HP lost (BeforeOstyLate); HP it loses uses that up (AfterDamageReceived).</summary>
 public sealed class HardenedShellPower : SimModel
 {
@@ -84,7 +68,7 @@ public sealed class SlipperyPower : SimModel
 
     public override decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount) =>
         damage.Target != owner || amount < 1m ? amount : 1m;
-    public override void AfterModifyingHpLost(SimState state, int owner) { } // it flashes when the damage lands
+    public override void AfterModifyingHpLost(SimState state, int owner, bool afterOsty) { } // it flashes when the damage lands
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
     {
         if (hit.Target != owner || hit.Unblocked < 1) return;

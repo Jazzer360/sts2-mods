@@ -254,7 +254,10 @@ public static class HookReader
                 case DrawStep: return TabKind.Draw;
                 case GainEnergyStep: return TabKind.Energy;
             }
-        return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep) ? TabKind.Trigger : null;
+        // A pass of the HP-loss pipeline changes the HP a hit takes: it acts (the hand-written models' trigger: Tungsten Rod, The Boot).
+        return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep)
+            || programs.Any(program => program.Returns != null && program.Hook is HookName.ModifyHpLostBeforeOsty or HookName.ModifyHpLostBeforeOstyLate or HookName.ModifyHpLostAfterOsty or HookName.ModifyHpLostAfterOstyLate)
+            ? TabKind.Trigger : null;
     }
 
     /// <summary>
@@ -1164,6 +1167,8 @@ public static class HookReader
                 case NamedValue { Name: "amount" } or ParameterValue { Name: "amount" } when _hook == "AfterEnergySpent": return new HookConstant(1m);
                 // The stars a spend took (AfterStarsSpent's amount): the play's stars, as the simulator spends them (one event a play).
                 case NamedValue { Name: "amount" } or ParameterValue { Name: "amount" } when _hook == "AfterStarsSpent": return new HookFactValue(HookFact.StarsSpent);
+                // An HP-loss pass's amount: the HP the hit would take as the passes before it left it (Hook.ModifyHpLost*).
+                case NamedValue { Name: "amount" } or ParameterValue { Name: "amount" } when _hook.StartsWith("ModifyHpLost", StringComparison.Ordinal): return new HookFactValue(HookFact.HpLostSoFar);
                 // The floor of a quotient (Mathf.FloorToInt((float)a / (float)b): Galactic Dust's blocks per Stars spent): (a - a rem b) / b, for counts.
                 case QueryValue { Type: "Mathf", Name: "FloorToInt", Arguments: [ArithmeticValue { Op: "div" } quotient] }:
                 {
