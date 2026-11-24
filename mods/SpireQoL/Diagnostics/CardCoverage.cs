@@ -49,11 +49,12 @@ internal static class CardCoverage
     }
 
     /// <summary>
-    /// Cards whose counts are calculated from the fight (orbs, statuses, history): handled in BoardCounts,
-    /// but they read 0 on the game's template card, so the scan can't test them by value.
-    /// Steady Cadence draws one per melody played this turn (MelodyCmd.MelodiesThisTurn of its owner).
+    /// A count its code takes from a calculated value of the card (a CalculatedVar: its multiplier reads the fight: Compile Driver's and
+    /// Steady Cadence's draws, Voltaic's channels): worked out as the play runs (the game's own Calculate; the ledger: decision #191), and 0 on
+    /// the game's template card, so the scan holds it to being such a value, not to a number.
     /// </summary>
-    private static readonly HashSet<string> Calculated = new() { nameof(CompileDriver), nameof(FlakCannon), nameof(Voltaic), nameof(SteadyCadence) };
+    private static bool CalculatedFromTheFight(CardModel card, Procs.Programs.ProgramValue? value) =>
+        value != null && value.Parts().Any(part => part is Procs.Programs.CardValue { Key: var key } && card.DynamicVars.TryGetValue(key, out var named) && named is CalculatedVar);
 
     /// <summary>
     /// Prefix of issues that only matter with teammates (multiplayer): CoverageWatch reports them only in a
@@ -144,7 +145,7 @@ internal static class CardCoverage
     private static List<string> Check(CardModel card, List<CardModel> others, List<CardModel> all)
     {
         var name = card.GetType().Name;
-        if (Reviewed.ContainsKey(name) || Calculated.Contains(name)) return new List<string>();
+        if (Reviewed.ContainsKey(name)) return new List<string>();
         var calls = OnPlayCalls(card.GetType());
         var issues = new List<string>();
         var upgraded = UpgradedCopy(card);
@@ -162,7 +163,8 @@ internal static class CardCoverage
             issues.Add(TeammatesOnly + "acts on every player (the simulator applies its effects to you only)");
 
         if ((Calls("CardPileCmd", "Draw") || Calls("CardCmd", "DiscardAndDraw"))
-            && None(otherCard => Procs.Programs.BoardCounts.CardsDrawn(otherCard, handCount: 5) + Procs.Programs.BoardCounts.CardsDrawn(otherCard, handCount: 1)) && !Procs.Programs.CardEffects.DrawsForTarget(card.GetType()))
+            && None(otherCard => Procs.Programs.BoardCounts.CardsDrawn(otherCard, handCount: 5) + Procs.Programs.BoardCounts.CardsDrawn(otherCard, handCount: 1)) && !Procs.Programs.CardEffects.DrawsForTarget(card.GetType())
+            && !Procs.Programs.CardEffects.DrawsForYou(card.GetType()).Any(draw => CalculatedFromTheFight(card, draw.Count)))
             issues.Add("draws cards (not counted: Shuffle Warning, draw procs)");
         // A card that takes block away: the simulator models a card taking its target's (Expose), read from its program.
         if (Calls("CreatureCmd", "LoseBlock") && !Procs.Programs.CardEffects.TakesTargetsBlock(card.GetType()))
@@ -190,7 +192,8 @@ internal static class CardCoverage
             issues.Add("attacks on a condition or with a hit count its program's evaluator can't read (its hits: Procs.Programs.BoardCounts.HitsPerPlay)");
         if (Calls("OrbCmd", "Channel") && !Procs.Programs.CardEffects.ChannelsKnownOrbs(card.GetType()))
             issues.Add("channels orbs (the simulator doesn't add them)");
-        if (Calls("OrbCmd", "Channel") && None(Procs.Programs.BoardCounts.ChannelCount))
+        if (Calls("OrbCmd", "Channel") && None(Procs.Programs.BoardCounts.ChannelCount)
+            && !Procs.Programs.CardEffects.OrbChannels(card.GetType()).Any(channel => channel.Loops.Any(loop => loop.While?.Literals.Any(literal => literal.Test is Procs.Programs.CompareValue compare && CalculatedFromTheFight(card, compare.Right)) == true)))
             issues.Add("channels orbs (not counted for Metronome)");
         if (Calls("CreatureCmd", "GainBlock") && Procs.Programs.CardEffects.BlockGains(card.GetType()).Count == 0)
             issues.Add("gains block its program doesn't show (not in the simulator or Juggernaut)");
