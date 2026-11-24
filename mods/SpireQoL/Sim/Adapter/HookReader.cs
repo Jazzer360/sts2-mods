@@ -232,6 +232,24 @@ public static class HookReader
         Enum.TryParse<OrbKind>(orbClass.EndsWith("Orb", StringComparison.Ordinal) ? orbClass[..^3] : orbClass, out var kind) && kind is not (OrbKind.Unknown or OrbKind.Random) ? kind : null;
 
     /// <summary>
+    /// What PowerCmd does with a power class's amounts, read from its code (PowerRule, decision #234): its AllowNegative, and, when its
+    /// ShouldScaleInMultiplayer is true, the value its GetScaledAmountForMultiplayer returns (its own or PowerModel's), or why it can't be read.
+    /// </summary>
+    public static PowerRule RuleOf(Type type, Func<MethodBase, List<CodeOp>> read)
+    {
+        var reader = new Translation(type, ModelKind.Power, read);
+        try
+        {
+            var (allowNegative, scaled) = reader.Rule();
+            return new PowerRule(type.Name) { AllowNegative = allowNegative, ScaledForPlayers = scaled };
+        }
+        catch (Exception exception) when (exception is Gap or InvalidOperationException or NotSupportedException)
+        {
+            return new PowerRule(type.Name) { Unread = $"{type.Name}'s scaling for the players couldn't be read from the game's code (a game update?): {exception.Message}" };
+        }
+    }
+
+    /// <summary>
     /// An orb's code read whole (decision #214): its Passive and its Evoke as programs, when its passive goes off (the trigger hook that calls
     /// OrbModel.TriggerPassive), its values' getters (PassiveVal, EvokeVal: OrbModel's abstract values) and its own fields as its constructor starts
     /// them. Anything else it overrides, or a body the reader stops in, is a gap.
@@ -712,9 +730,12 @@ public static class HookReader
             try
             {
                 if (PlayersTurnStartHooks.Contains(hook.Name)) return (null, null, "it runs as the players' next turn starts, past the turns a simulation covers");
-                // PowerCmd.Apply calls it only for a power whose ShouldScaleInMultiplayer is true (read from its code: PowerModel's is false).
-                if (hook.Name == "GetScaledAmountForMultiplayer" && Returned(_type, "get_ShouldScaleInMultiplayer") is not ConstantValue { Value: not 0 })
-                    return (null, null, "PowerCmd.Apply never calls it: the power's ShouldScaleInMultiplayer is false");
+                // PowerCmd.Apply calls it only for a power whose ShouldScaleInMultiplayer is true (read from its code: PowerModel's is false); then
+                // it's PowerCmd.Apply's own rule, read for every power class into its PowerRule (decision #234) and run by the engine as it lands one.
+                if (hook.Name == "GetScaledAmountForMultiplayer")
+                    return Returned(_type, "get_ShouldScaleInMultiplayer") is not ConstantValue { Value: not 0 }
+                        ? (null, null, "PowerCmd.Apply never calls it: the power's ShouldScaleInMultiplayer is false")
+                        : (null, null, "PowerCmd.Apply's scaling for the players: read into the class's PowerRule and run by the engine as it lands one (decision #234)");
                 // A card entering the fight afflicted (Galvanic's Galvanized, Vital Spark's Tainted on a Power or Skill made or added): every command an
                 // affliction on the entering card. An affliction is a fact of its card the adapter reads; no simulated play plays a card that
                 // entered the fight during the simulation. Any other change to the entering card (a keyword: Ghost Seed) stays a gap.
@@ -1552,6 +1573,20 @@ public static class HookReader
             return Returned(powerType, "get_Type") is ConstantValue type && EnumName(powerType.Assembly, "PowerType", type.Value) == "Debuff";
         }
 
+        /// <summary>
+        /// The class's own PowerCmd rules (PowerRule): its AllowNegative, and its GetScaledAmountForMultiplayer's returned value (its own or
+        /// PowerModel's) when its ShouldScaleInMultiplayer is true, else null. A value the reader can't follow throws (a Gap).
+        /// </summary>
+        public (bool AllowNegative, HookValue? Scaled) Rule()
+        {
+            var allowNegative = Returned(_type, "get_AllowNegative") is ConstantValue { Value: 1 };
+            if (Returned(_type, "get_ShouldScaleInMultiplayer") is not ConstantValue { Value: not 0 }) return (allowNegative, null);
+            var method = _type.GetMethod("GetScaledAmountForMultiplayer", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                ?? throw new Gap(ReaderCapability.MultiplayerScaling, "gap: no GetScaledAmountForMultiplayer");
+            _hook = method.Name;
+            return (allowNegative, Pruned(Ways(ProgramReader.ReadReturnedWays(_type, method, _read))));
+        }
+
         /// <summary>The power can go below 0 (its AllowNegative): given less than 0, it lands as a debuff.</summary>
         private bool AllowsNegative(string power) =>
             _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + power) is { } powerType && Returned(powerType, "get_AllowNegative") is ConstantValue { Value: 1 };
@@ -2100,6 +2135,13 @@ public static class HookReader
                 // What a hit dealt, its block included (result.TotalDamage: DamageResult's blocked plus unblocked).
                 case QueryValue { Name: "TotalDamage", Of: ParameterValue { Name: "result" } or NamedValue { Name: "result" } } when _hook is "AfterDamageGiven" or "AfterDamageReceived":
                     return new HookFactValue(HookFact.HitTotal);
+                // PowerCmd.Apply's scaling for the players (GetScaledAmountForMultiplayer: decision #234): the amount it's given, the players, the
+                // fight's scaling (MultiplayerScalingModel.GetMultiplayerScaling: a fight constant the adapter reads from the game's own math).
+                case NamedValue { Name: "amount" } or ParameterValue { Name: "amount" } when _hook == "GetScaledAmountForMultiplayer": return new HookFactValue(HookFact.ScaledAmount);
+                case QueryValue { Name: "Count", Of: QueryValue { Name: "Players", Of: NamedValue { Name: "combatState" } or ParameterValue { Name: "combatState" } } } when _hook == "GetScaledAmountForMultiplayer":
+                    return new HookFactValue(HookFact.PlayerCount);
+                case QueryValue { Type: "MultiplayerScalingModel", Name: "GetMultiplayerScaling" } when _hook == "GetScaledAmountForMultiplayer":
+                    return new HookFactValue(HookFact.EncounterScaling);
                 // The play count the listeners before it gave (ModifyCardPlayCount's playCount).
                 case ParameterValue { Name: "playCount" } or NamedValue { Name: "playCount" } when _hook == "ModifyCardPlayCount": return new HookFactValue(HookFact.PlayCountSoFar);
                 case QueryValue { Type: "Decimal", Name: ".ctor", Arguments: var parts } when parts.All(part => part is ConstantValue):

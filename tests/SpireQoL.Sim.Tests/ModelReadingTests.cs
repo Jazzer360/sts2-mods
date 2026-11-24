@@ -13,6 +13,7 @@ public class ModelReadingTests
     public void TheModelsAreLoadedOnceTheReadOnAWorkerIsOver()
     {
         var read = SimModels.Read!;
+        var readRules = SimModels.ReadRules!;
         using var gate = new ManualResetEventSlim();
         var reader = 0;
         SimModels.StartReading(() =>
@@ -20,7 +21,7 @@ public class ModelReadingTests
             reader = Environment.CurrentManagedThreadId;
             gate.Wait(TimeSpan.FromSeconds(30));
             return read();
-        });
+        }, readRules);
         try
         {
             Assert.False(SimModels.Loaded);

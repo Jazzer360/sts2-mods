@@ -116,6 +116,27 @@ public static partial class ReadModels
         return specs;
     }
 
+    /// <summary>The running game's power classes' rules (PowerRule, decision #234), for SimModels (on a worker, with the models).</summary>
+    public static IEnumerable<PowerRule> PowerRules() => PowerRules(Diagnostics.CoverageLedger.ModelTypes(), RuntimeCode.Read, unread: Unread);
+
+    /// <summary>
+    /// What PowerCmd does with each power class's amounts, read from its code (decision #234): whether it can go below 0, and its scaling for the
+    /// players. Every power class, whatever models it (hand-written, read or none); only the ones that differ from PowerModel's own are listed. A
+    /// class whose scaling can't be read is listed with why (PowerRule.Unread: a new one on an enemy in multiplayer makes the simulation unknown),
+    /// told to <paramref name="unread"/>.
+    /// </summary>
+    public static List<PowerRule> PowerRules(IEnumerable<Type> types, Func<MethodBase, List<CodeOp>> read, Action<string, string>? unread = null)
+    {
+        var rules = new List<PowerRule>();
+        foreach (var type in HookReader.Powers(types).OrderBy(type => type.Name, StringComparer.Ordinal))
+        {
+            var rule = HookReader.RuleOf(type, read);
+            if (rule.Unread is { } why) unread?.Invoke(type.Name, why);
+            if (rule.AllowNegative || rule.ScaledForPlayers != null || rule.Unread != null) rules.Add(rule);
+        }
+        return rules;
+    }
+
     /// <summary>Why the simulator can't compile a spec read whole (ReadModel's constructor refuses it), or null when it can.</summary>
     private static string? Compiles(ModelSpec spec)
     {

@@ -1,0 +1,319 @@
+[
+  {
+    "Name": "ArtifactPower",
+    "ScaledForPlayers": {
+      "$kind": "HookMath",
+      "Operation": "Subtract",
+      "Left": {
+        "$kind": "HookMath",
+        "Operation": "Add",
+        "Left": {
+          "$kind": "HookFactValue",
+          "Fact": "ScaledAmount"
+        },
+        "Right": {
+          "$kind": "HookFactValue",
+          "Fact": "PlayerCount"
+        }
+      },
+      "Right": {
+        "$kind": "HookConstant",
+        "Value": 1
+      }
+    }
+  },
+  {
+    "Name": "CurlUpPower",
+    "ScaledForPlayers": {
+      "$kind": "HookMath",
+      "Operation": "Multiply",
+      "Left": {
+        "$kind": "HookMath",
+        "Operation": "Multiply",
+        "Left": {
+          "$kind": "HookFactValue",
+          "Fact": "ScaledAmount"
+        },
+        "Right": {
+          "$kind": "HookFactValue",
+          "Fact": "PlayerCount"
+        }
+      },
+      "Right": {
+        "$kind": "HookFactValue",
+        "Fact": "EncounterScaling"
+      }
+    }
+  },
+  {
+    "Name": "DexterityPower",
+    "AllowNegative": true
+  },
+  {
+    "Name": "FlutterPower",
+    "ScaledForPlayers": {
+      "$kind": "HookMath",
+      "Operation": "Multiply",
+      "Left": {
+        "$kind": "HookMath",
+        "Operation": "Multiply",
+        "Left": {
+          "$kind": "HookFactValue",
+          "Fact": "ScaledAmount"
+        },
+        "Right": {
+          "$kind": "HookFactValue",
+          "Fact": "PlayerCount"
+        }
+      },
+      "Right": {
+        "$kind": "HookFactValue",
+        "Fact": "EncounterScaling"
+      }
+    }
+  },
+  {
+    "Name": "FocusPower",
+    "AllowNegative": true
+  },
+  {
+    "Name": "HardenedShellPower",
+    "ScaledForPlayers": {
+      "$kind": "HookMath",
+      "Operation": "Multiply",
+      "Left": {
+        "$kind": "HookMath",
+        "Operation": "Multiply",
+        "Left": {
+          "$kind": "HookFactValue",
+          "Fact": "ScaledAmount"
+        },
+        "Right": {
+          "$kind": "HookFactValue",
+          "Fact": "PlayerCount"
+        }
+      },
+      "Right": {
+        "$kind": "HookFactValue",
+        "Fact": "EncounterScaling"
+      }
+    }
+  },
+  {
+    "Name": "PlatingPower",
+    "ScaledForPlayers": {
+      "$kind": "HookMath",
+      "Operation": "Multiply",
+      "Left": {
+        "$kind": "HookMath",
+        "Operation": "Add",
+        "Left": {
+          "$kind": "HookMath",
+          "Operation": "Multiply",
+          "Left": {
+            "$kind": "HookMath",
+            "Operation": "Subtract",
+            "Left": {
+              "$kind": "HookFactValue",
+              "Fact": "PlayerCount"
+            },
+            "Right": {
+              "$kind": "HookConstant",
+              "Value": 1
+            }
+          },
+          "Right": {
+            "$kind": "HookConstant",
+            "Value": 2
+          }
+        },
+        "Right": {
+          "$kind": "HookConstant",
+          "Value": 1
+        }
+      },
+      "Right": {
+        "$kind": "HookFactValue",
+        "Fact": "ScaledAmount"
+      }
+    }
+  },
+  {
+    "Name": "PlowPower",
+    "ScaledForPlayers": {
+      "$kind": "HookMath",
+      "Operation": "Multiply",
+      "Left": {
+        "$kind": "HookMath",
+        "Operation": "Multiply",
+        "Left": {
+          "$kind": "HookFactValue",
+          "Fact": "ScaledAmount"
+        },
+        "Right": {
+          "$kind": "HookFactValue",
+          "Fact": "PlayerCount"
+        }
+      },
+      "Right": {
+        "$kind": "HookFactValue",
+        "Fact": "EncounterScaling"
+      }
+    }
+  },
+  {
+    "Name": "RampartPower",
+    "ScaledForPlayers": {
+      "$kind": "HookMath",
+      "Operation": "Multiply",
+      "Left": {
+        "$kind": "HookMath",
+        "Operation": "Multiply",
+        "Left": {
+          "$kind": "HookFactValue",
+          "Fact": "ScaledAmount"
+        },
+        "Right": {
+          "$kind": "HookFactValue",
+          "Fact": "PlayerCount"
+        }
+      },
+      "Right": {
+        "$kind": "HookFactValue",
+        "Fact": "EncounterScaling"
+      }
+    }
+  },
+  {
+    "Name": "ReattachPower",
+    "ScaledForPlayers": {
+      "$kind": "HookMath",
+      "Operation": "Multiply",
+      "Left": {
+        "$kind": "HookMath",
+        "Operation": "Multiply",
+        "Left": {
+          "$kind": "HookFactValue",
+          "Fact": "ScaledAmount"
+        },
+        "Right": {
+          "$kind": "HookFactValue",
+          "Fact": "PlayerCount"
+        }
+      },
+      "Right": {
+        "$kind": "HookFactValue",
+        "Fact": "EncounterScaling"
+      }
+    }
+  },
+  {
+    "Name": "RegenPower",
+    "ScaledForPlayers": {
+      "$kind": "HookMath",
+      "Operation": "Multiply",
+      "Left": {
+        "$kind": "HookMath",
+        "Operation": "Multiply",
+        "Left": {
+          "$kind": "HookFactValue",
+          "Fact": "ScaledAmount"
+        },
+        "Right": {
+          "$kind": "HookFactValue",
+          "Fact": "PlayerCount"
+        }
+      },
+      "Right": {
+        "$kind": "HookFactValue",
+        "Fact": "EncounterScaling"
+      }
+    }
+  },
+  {
+    "Name": "ShriekPower",
+    "AllowNegative": true,
+    "ScaledForPlayers": {
+      "$kind": "HookMath",
+      "Operation": "Multiply",
+      "Left": {
+        "$kind": "HookMath",
+        "Operation": "Multiply",
+        "Left": {
+          "$kind": "HookFactValue",
+          "Fact": "ScaledAmount"
+        },
+        "Right": {
+          "$kind": "HookFactValue",
+          "Fact": "PlayerCount"
+        }
+      },
+      "Right": {
+        "$kind": "HookFactValue",
+        "Fact": "EncounterScaling"
+      }
+    }
+  },
+  {
+    "Name": "ShrinkPower",
+    "AllowNegative": true
+  },
+  {
+    "Name": "SkittishPower",
+    "ScaledForPlayers": {
+      "$kind": "HookMath",
+      "Operation": "Multiply",
+      "Left": {
+        "$kind": "HookFactValue",
+        "Fact": "ScaledAmount"
+      },
+      "Right": {
+        "$kind": "HookMath",
+        "Operation": "Add",
+        "Left": {
+          "$kind": "HookConstant",
+          "Value": 1
+        },
+        "Right": {
+          "$kind": "HookMath",
+          "Operation": "Multiply",
+          "Left": {
+            "$kind": "HookMath",
+            "Operation": "Subtract",
+            "Left": {
+              "$kind": "HookFactValue",
+              "Fact": "PlayerCount"
+            },
+            "Right": {
+              "$kind": "HookConstant",
+              "Value": 1
+            }
+          },
+          "Right": {
+            "$kind": "HookConstant",
+            "Value": 0.5
+          }
+        }
+      }
+    }
+  },
+  {
+    "Name": "SlipperyPower",
+    "ScaledForPlayers": {
+      "$kind": "HookMath",
+      "Operation": "Multiply",
+      "Left": {
+        "$kind": "HookFactValue",
+        "Fact": "ScaledAmount"
+      },
+      "Right": {
+        "$kind": "HookFactValue",
+        "Fact": "PlayerCount"
+      }
+    }
+  },
+  {
+    "Name": "StrengthPower",
+    "AllowNegative": true
+  }
+]

@@ -152,6 +152,20 @@ public sealed class ReadModel : SimModel
         }
     }
 
+    /// <summary>
+    /// A power class's amount as PowerCmd.Apply scales a new one on an enemy for the players (PowerRule.ScaledForPlayers: decision #234), compiled
+    /// once: the state and the amount given, the scaled amount (before PowerModel.ApplyInternal's whole-number cast).
+    /// </summary>
+    internal static Func<SimState, int, decimal> CompileScaling(string power, HookValue scaled)
+    {
+        var evaluate = new ReadModel(new ModelSpec(power, ModelKind.Power, Array.Empty<HookProgram>())).Compile(scaled);
+        return (state, amount) =>
+        {
+            var args = new HookArgs { State = state, Owner = Who.None, PowerAmount = amount };
+            return evaluate(in args);
+        };
+    }
+
     // ---- an orb's own programs (ModelKind.Orb: decision #214)
 
     /// <summary>The orb kind this is the program of (ModelKind.Orb).</summary>
@@ -1434,6 +1448,16 @@ public sealed class ReadModel : SimModel
             // As the plays before left it: once upgraded, the card in play is its upgraded copy (decision #218).
             case HookFact.CardUpgradable: return (in HookArgs args) => args.Play?.Card.Upgradable == true ? 1m : 0m;
             case HookFact.HpLostSoFar: return (in HookArgs args) => args.HpLost;
+            // PowerCmd.Apply's scaling for the players (decision #234): the amount it's given, the players, the fight's scaling.
+            case HookFact.ScaledAmount: return (in HookArgs args) => args.PowerAmount;
+            case HookFact.PlayerCount: return (in HookArgs args) => 1 + args.State.Teammates.Count;
+            case HookFact.EncounterScaling:
+                return (in HookArgs args) =>
+                {
+                    if (args.State.EncounterScaling is { } scaling) return scaling;
+                    args.State.Unmodelled ??= "the fight's multiplayer scaling isn't read: a power scaled for the players can't be worked out";
+                    return 1m;
+                };
             case HookFact.CausedByEthereal: return (in HookArgs args) => args.Hook == HookName.AfterCardExhausted && args.State.EtherealNow ? 1m : 0m;
             case HookFact.CardTag:
             {

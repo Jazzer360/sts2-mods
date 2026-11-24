@@ -50,7 +50,7 @@ public static class ModEntry
         Combat.TurnEndModel.CountTeammateHands = settings.TeammateHands;
         // The powers and relics modelled from their code (decision #195): read from the running game on a worker, so the game's thread doesn't
         // spend the few tenths of a second; a prediction waits for them (SimWait.Models).
-        Sim.SimModels.StartReading(Sim.ReadModels.Specs);
+        Sim.SimModels.StartReading(Sim.ReadModels.Specs, Sim.ReadModels.PowerRules);
         DevMode = settings.DevMode ?? File.Exists(Path.Combine(Path.GetDirectoryName(typeof(ModEntry).Assembly.Location) ?? "", DevMarker));
         Log.DetailsToGameLog = DevMode;
         if (DevMode) Log.Info($"dev mode on ({(settings.DevMode == true ? "DevMode in the settings file" : DevMarker + " beside the DLL")})");

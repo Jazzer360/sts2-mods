@@ -35,6 +35,17 @@ internal static class ReadModelsFile
             new HookWay(new HookFactValue(HookFact.SourceCardIs) { Of = CardId.Burn.Name }, new HookConstant(0m)),
             new HookWay(new HookConstant(1m), new HookFactValue(HookFact.HpLostSoFar)) }) } });
 
+    /// <summary>Every power class's PowerCmd rules (decision #234), from ReadModels/power-rules.json, which the catalog tests write from the installed game.</summary>
+    public static List<PowerRule> Rules()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "ReadModels", "power-rules.json");
+        return File.Exists(path) ? HookProgramJson.ReadRules(File.ReadAllText(path)) : new List<PowerRule>();
+    }
+
     [ModuleInitializer]
-    internal static void Use() => SimModels.Read = () => Specs().Append(Unreadable).Append(Uncompilable).Append(StopsBurns);
+    internal static void Use()
+    {
+        SimModels.Read = () => Specs().Append(Unreadable).Append(Uncompilable).Append(StopsBurns);
+        SimModels.ReadRules = Rules;
+    }
 }

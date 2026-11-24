@@ -666,8 +666,19 @@ public static partial class SimEngine
     /// PowerCmd.Apply: the amount through ModifyPowerAmountGiven (Snecko Skull...), then Artifact takes a debuff (a charge
     /// each), else the power goes on (poison into the enemy's poison).
     /// </summary>
-    internal static bool ApplyPower(SimState state, int applier, int target, PowerId power, int amount, bool debuff)
+    internal static bool ApplyPower(SimState state, int applier, int target, PowerId power, int amount, bool debuff) =>
+        ApplyPower(state, applier, target, power, amount, debuff, out _);
+
+    /// <summary>
+    /// PowerCmd.Apply, as <see cref="ApplyPower(SimState, int, int, PowerId, int, bool)"/>, giving the amount that landed (<paramref name="landed"/>:
+    /// after ModifyPowerAmountGiven and the players' scaling, what Hook.AfterPowerAmountChanged is told). A new one on an enemy in a fight of more
+    /// than one player is scaled for the players (PowerModel.GetScaledAmountForMultiplayer, read from its code: SimModels.ScaledForPlayers); more
+    /// of one already there isn't (PowerCmd.ModifyAmount). One already there that the change leaves at 0 (or below, for a power that can't go below
+    /// 0) goes (PowerModel.ShouldRemoveDueToAmount, its AllowNegative read from its code).
+    /// </summary>
+    internal static bool ApplyPower(SimState state, int applier, int target, PowerId power, int amount, bool debuff, out int landed)
     {
+        landed = 0;
         if (amount == 0) return false;
         foreach (var (model, o) in Listeners(state)) amount = model.ModifyPowerAmountGiven(state, o, power, amount, applier, target, debuff);
         if (amount == 0) return false;
@@ -677,6 +688,12 @@ public static partial class SimEngine
             SetPowers(state, target, powers[PowerId.Artifact] > 1 ? powers.Add(PowerId.Artifact, delta: -1) : powers.Without(PowerId.Artifact));
             return false;
         }
+        if (Who.IsEnemy(target) && state.Teammates.Count > 0 && !powers.Has(power))
+        {
+            amount = SimModels.ScaledForPlayers(state, power, amount);
+            if (amount == 0) return false;
+        }
+        landed = amount;
         // The game's log has it now (PowerReceivedEntry: the power, who applied it), before its hooks (decision #191).
         if (state.History.Count > 0) Record(state, new HistoryEvent(HistoryKind.PowerReceived, applier) { Power = power });
         // The game's preview of an enemy's next poison tick (PoisonPower.CalculateTotalDamageNextTurn, read by the adapter: the play check
@@ -692,8 +709,13 @@ public static partial class SimEngine
                 enemy.PoisonTriggers = more;
             }
         var had = powers.Has(power);
-        SetPowers(state, target, powers.Add(power, amount));
         var powerModel = SimModels.Get(power.Name);
+        var after = powers.Add(power, amount);
+        // More of one already there (PowerCmd.ModifyAmount; a power kept in copies changes a copy, never the whole): gone once
+        // ShouldRemoveDueToAmount says so.
+        if (had && powerModel is not ReadModel { HasCopies: true } && powerModel?.Instanced != true && (SimModels.AllowsNegative(power) ? after[power] == 0 : after[power] <= 0))
+            after = after.Without(power);
+        SetPowers(state, target, after);
         // A power whose hooks a game update made unreadable lands where nothing follows what it does: unknown (decision #92).
         if (powerModel == null && SimModels.UnreadReason(power.Name) is { } unread) state.Unmodelled ??= unread;
         // A read power whose code asks who applied it (base.Applier) keeps its applier as its Data, as the adapter reads it (decision #195).
@@ -728,7 +750,7 @@ public static partial class SimEngine
     /// debuff you land).
     /// </summary>
     internal static IEnumerable<SimState> ApplyAndTell(SimState state, int applier, int target, PowerId power, int amount, bool debuff) =>
-        ApplyPower(state, applier, target, power, amount, debuff) ? Tell(state, power, amount, applier, target, debuff) : new[] { state };
+        ApplyPower(state, applier, target, power, amount, debuff, out var landed) ? Tell(state, power, landed, applier, target, debuff) : new[] { state };
 
     /// <summary>
     /// PowerCmd.Apply where hooks can't branch (a hook inside a hit or a death: Hand Drill's Vulnerable as it breaks block): the power lands now,
@@ -737,7 +759,7 @@ public static partial class SimEngine
     /// </summary>
     internal static void ApplyInHit(SimState state, int applier, int target, PowerId power, int amount, bool debuff)
     {
-        if (ApplyPower(state, applier, target, power, amount, debuff)) state.PendingPowers = state.PendingPowers.Add(new PendingPower(power, amount, applier, target, debuff));
+        if (ApplyPower(state, applier, target, power, amount, debuff, out var landed)) state.PendingPowers = state.PendingPowers.Add(new PendingPower(power, landed, applier, target, debuff));
     }
 
     /// <summary>A power that landed, told to every AfterPowerApplied listener (the game's Hook.AfterPowerAmountChanged).</summary>
@@ -748,8 +770,8 @@ public static partial class SimEngine
     private static void RunApplyPower(BranchSet branches, ApplyPowerAction applyPowerAction)
     {
         IEnumerable<SimState> Apply(SimState state, int applier, int target) =>
-            ApplyPower(state, applier, target, applyPowerAction.Power, AmountOf(state, applyPowerAction, applier, target), applyPowerAction.Debuff)
-                ? Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, branch) => model.AfterPowerApplied(branch, owner, applyPowerAction.Power, applyPowerAction.Amount, applier, target, applyPowerAction.Debuff)) : new[] { state };
+            ApplyPower(state, applier, target, applyPowerAction.Power, AmountOf(state, applyPowerAction, applier, target), applyPowerAction.Debuff, out var landed)
+                ? Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, branch) => model.AfterPowerApplied(branch, owner, applyPowerAction.Power, landed, applier, target, applyPowerAction.Debuff)) : new[] { state };
         if (applyPowerAction.To == ApplyPowerAction.Where.RandomEnemy)
         {
             // Each application to a random hittable enemy: a branch per target, one step each (the branch budget holds).
@@ -766,8 +788,8 @@ public static partial class SimEngine
     internal static IEnumerable<SimState> ApplyPowerOf(SimState branch, ApplyPowerAction applyPowerAction)
     {
         IEnumerable<SimState> Apply(SimState state, int applier, int target) =>
-            ApplyPower(state, applier, target, applyPowerAction.Power, AmountOf(state, applyPowerAction, applier, target), applyPowerAction.Debuff)
-                ? Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, copy) => model.AfterPowerApplied(copy, owner, applyPowerAction.Power, applyPowerAction.Amount, applier, target, applyPowerAction.Debuff)) : new[] { state };
+            ApplyPower(state, applier, target, applyPowerAction.Power, AmountOf(state, applyPowerAction, applier, target), applyPowerAction.Debuff, out var landed)
+                ? Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, copy) => model.AfterPowerApplied(copy, owner, applyPowerAction.Power, landed, applier, target, applyPowerAction.Debuff)) : new[] { state };
         var applier = branch.CurrentPlay?.Owner ?? Who.You;
         var targets = applyPowerAction.To switch
         {

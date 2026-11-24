@@ -11,7 +11,11 @@ namespace SpireQoL.Catalog.Tests;
 internal static class CatalogReadModels
 {
     [ModuleInitializer]
-    internal static void Use() => SimModels.Read = () => InstalledCode.Specs;
+    internal static void Use()
+    {
+        SimModels.Read = () => InstalledCode.Specs;
+        SimModels.ReadRules = () => ReadModels.PowerRules(CoverageLedger.ModelTypes(), RuntimeCode.Read);
+    }
 }
 
 /// <summary>The installed game's code as the mod reads it (RuntimeCode), read once a test run and shared, as BranchCode shares a branch's.</summary>

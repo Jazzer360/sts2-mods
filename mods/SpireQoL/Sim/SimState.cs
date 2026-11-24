@@ -771,6 +771,13 @@ public sealed class SimState
     public MainRule MainRules;
 
     /// <summary>
+    /// The fight's multiplayer scaling (MultiplayerScalingModel.GetMultiplayerScaling(encounter, act), the game's own math, read by the adapter):
+    /// what PowerModel's GetScaledAmountForMultiplayer multiplies by (decision #234). Never changed. Null: not read (a power it would scale
+    /// makes the simulation unknown).
+    /// </summary>
+    public decimal? EncounterScaling;
+
+    /// <summary>
     /// The players' turn number this turn (PlayerCombatState.TurnNumber: 1 on the fight's first), read from the game. Constant: a simulation
     /// never reaches the players' next turn.
     /// </summary>

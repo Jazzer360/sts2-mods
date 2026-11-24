@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 132 game methods; 3 adapter rules; 86 hand-written models.
+# 20 engine rules naming 135 game methods; 3 adapter rules; 86 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -22,8 +22,8 @@ An attack: its hits, their targets (a random one a branch each), the attack's ho
 Block: the block math, its hooks, a power's or relic's block, block lost
   game: CreatureCmd.GainBlock, Hook.ModifyBlock, Hook.AfterModifyingBlockAmount, Hook.BeforeBlockGained, Hook.AfterBlockGained, CreatureCmd.LoseBlock, Creature.GainBlockInternal
   simulator: SimEngine.BlockOnce, SimEngine.BlockBaseNow, SimEngine.CalcBlock, SimEngine.GainBlock, SimEngine.ShareBlock, SimEngine.ProcBlock, SimEngine.ProcBlockFor, SimEngine.EnemyBlock, SimEngine.RunBlock, SimEngine.StripBlock
-A power lands: the amount given, Artifact, its instances and copies, the listeners told; a power decremented or removed
-  game: PowerCmd.Apply, PowerCmd.FindExistingInstanceForStacking, PowerCmd.Decrement, PowerCmd.Remove, PowerCmd.TickDownDuration, Hook.ModifyPowerAmountGiven, Hook.AfterModifyingPowerAmountGiven, Hook.BeforePowerAmountChanged, Hook.AfterPowerAmountChanged, Creature.ApplyPowerInternal
+A power lands: the amount given, Artifact, the players' scaling of a new one on an enemy (its class's own scaling read from its code: decision #234), its instances and copies, the listeners told; a power changed, decremented or removed, gone at the amount its class's AllowNegative says
+  game: PowerCmd.Apply, PowerCmd.ModifyAmount, PowerModel.ShouldRemoveDueToAmount, PowerModel.ApplyInternal, PowerCmd.FindExistingInstanceForStacking, PowerCmd.Decrement, PowerCmd.Remove, PowerCmd.TickDownDuration, Hook.ModifyPowerAmountGiven, Hook.AfterModifyingPowerAmountGiven, Hook.BeforePowerAmountChanged, Hook.AfterPowerAmountChanged, Creature.ApplyPowerInternal
   simulator: SimEngine.ApplyPower, SimEngine.ApplyAndTell, SimEngine.ApplyInHit, SimEngine.Tell, SimEngine.RunApplyPower, SimEngine.ApplyPowerOf, SimEngine.AmountOf, SimEngine.MovePowers, SimEngine.DecrementPower
 Draws: a full hand, No Draw, the discard pile shuffled in (a card its enchantment puts on top, read from its code), the drawn card's reactions
   game: CardPileCmd.Draw, CardPileCmd.DrawInternal, CardPileCmd.Shuffle, CardPileCmd.ShuffleIfNecessary, Hook.ShouldDraw, Hook.AfterPreventingDraw, Hook.AfterCardDrawn, Hook.ModifyShuffleOrder, Hook.AfterShuffle
@@ -48,7 +48,7 @@ Poison: Outbreak's trigger of every enemy's poison, and the game's preview of th
   simulator: SimEngine.RunModelCommand, SimEngine.PoisonTick
 Deaths: the hooks told as each happens (an end-of-turn step's, and what they raise, before the next), a dead enemy's powers gone, the creatures a death adds, a kill, a stun
   game: CreatureCmd.Kill, Hook.AfterDeath, Creature.RemoveAllPowersAfterDeath, Hook.ShouldPowerBeRemovedOnDeath, CreatureCmd.Add, CreatureCmd.Stun
-  simulator: SimEngine.AllyDeaths, SimEngine.DeathCheck, SimEngine.Spawn, SimEngine.Stun, SimEngine.RunExecute
+  simulator: SimEngine.AllyDeaths, SimEngine.DeathCheck, SimEngine.Spawn, SimEngine.SpawnPowers, SimEngine.Stun, SimEngine.RunExecute
 The players' turn's end: its hooks in their places, Ethereal cards, the cards that act in hand, the hand flushed
   game: CombatManager.EndPlayerTurnPhaseOneInternal, CombatManager.EndPlayerTurnPhaseTwoInternal, CombatManager.DoTurnEnd, CombatManager.FlushPlayerHand, Hook.BeforeSideTurnEnd, Hook.AfterSideTurnEnd, Hook.ShouldEtherealTrigger, Hook.ShouldFlush, Hook.BeforeFlush
   simulator: SimEngine.EndOfTurn, SimEngine.Exhausting, SimEngine.CardsActInHand

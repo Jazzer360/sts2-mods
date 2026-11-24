@@ -143,10 +143,22 @@ public static partial class SimEngine
             {
                 var copy = index == spawn.Hp.Count - 1 ? branch : branch.Clone();
                 copy.Weight = branch.Weight / spawn.Hp.Count;
-                copy.Enemies.Add(new SimEnemy { Id = copy.Enemies.Max(enemy => enemy.Id) + 1, Name = spawn.Name, Hp = hp, Powers = spawn.Powers });
+                copy.Enemies.Add(new SimEnemy { Id = copy.Enemies.Max(enemy => enemy.Id) + 1, Name = spawn.Name, Hp = hp, Powers = SpawnPowers(copy, spawn.Powers) });
                 return copy;
             }).ToList());
         return states;
+    }
+
+    /// <summary>
+    /// The powers a creature added to the fight gives itself (its AfterAddedToRoom's PowerCmd.Apply, each a new one on an enemy): in a fight of
+    /// more than one player, each scaled for the players as PowerCmd.Apply scales it (SimModels.ScaledForPlayers, read from its class's code).
+    /// </summary>
+    private static PowerSet SpawnPowers(SimState state, PowerSet powers)
+    {
+        if (state.Teammates.Count == 0) return powers;
+        var scaled = powers;
+        foreach (var entry in powers.Items) scaled = scaled.With(entry.Name, SimModels.ScaledForPlayers(state, entry.Name, entry.Amount), entry.Data);
+        return scaled;
     }
 
     /// <summary>The events raised during a hit or an action, each through every listener.</summary>

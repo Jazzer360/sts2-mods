@@ -290,6 +290,15 @@ public enum HookFact
     FromPlay,
     /// <summary>One of the damage's card's own values, by its key in Of (heavyShot.DynamicVars["AimMultiplier"]: SimCard.Vars); 0 when it has none.</summary>
     SourceCardVar,
+    /// <summary>The amount a power is applied with as PowerCmd.Apply scales it for the players (GetScaledAmountForMultiplayer's amount: PowerRule).</summary>
+    ScaledAmount,
+    /// <summary>The players in the fight (combatState.Players.Count): you and your teammates.</summary>
+    PlayerCount,
+    /// <summary>
+    /// The fight's multiplayer scaling (MultiplayerScalingModel.GetMultiplayerScaling(encounter, act): SimState.EncounterScaling, read by the adapter
+    /// from the game's own math).
+    /// </summary>
+    EncounterScaling,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>
@@ -761,6 +770,30 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     }
 }
 
+/// <summary>
+/// What PowerCmd does with a power class's amounts, read from its code for every power class (decision #234), whatever models it: whether it can go
+/// below 0 (PowerModel.AllowNegative: ShouldRemoveDueToAmount takes it at 0, else at 0 or less), and its amount as PowerCmd.Apply scales a new one
+/// on an enemy for the players (GetScaledAmountForMultiplayer, when its ShouldScaleInMultiplayer is true). Pure data: the same in the game and in
+/// the tests (ReadModels/power-rules.json). Only a class that differs from PowerModel's own is listed: one not listed can't go below 0 and isn't scaled.
+/// </summary>
+public sealed record PowerRule(string Name)
+{
+    /// <summary>It can go below 0 (Strength, Dexterity, Focus): gone at exactly 0.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool AllowNegative { get; init; }
+
+    /// <summary>
+    /// Its amount as PowerCmd.Apply scales a new one on an enemy in a fight of more than one player (GetScaledAmountForMultiplayer's returned value:
+    /// HookFact.ScaledAmount, PlayerCount, EncounterScaling). Null: PowerCmd.Apply never scales it.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public HookValue? ScaledForPlayers { get; init; }
+
+    /// <summary>Why its scaling couldn't be read (a game update): a new one on an enemy in multiplayer makes the simulation unknown. Null: read.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Unread { get; init; }
+}
+
 /// <summary>How hook programs are written as JSON (the simulator tests' read models: Cases/read-models.json).</summary>
 public static class HookProgramJson
 {
@@ -789,4 +822,8 @@ public static class HookProgramJson
     public static string Write(IEnumerable<ModelSpec> specs) => System.Text.Json.JsonSerializer.Serialize(specs.OrderBy(spec => spec.Name, StringComparer.Ordinal).ToList(), Options);
 
     public static List<ModelSpec> Read(string json) => System.Text.Json.JsonSerializer.Deserialize<List<ModelSpec>>(json, Options) ?? new List<ModelSpec>();
+
+    public static string WriteRules(IEnumerable<PowerRule> rules) => System.Text.Json.JsonSerializer.Serialize(rules.OrderBy(rule => rule.Name, StringComparer.Ordinal).ToList(), Options);
+
+    public static List<PowerRule> ReadRules(string json) => System.Text.Json.JsonSerializer.Deserialize<List<PowerRule>>(json, Options) ?? new List<PowerRule>();
 }

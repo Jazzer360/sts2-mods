@@ -52,7 +52,6 @@ public static partial class SimAdapter
     {
         ["on a condition"] = "a step the move runs only on a condition (Plow's Strength while it has Plow, Pheromone Spit's by its Personal Hive, Dampen on a target without it): no simulator condition on a monster's own state yet; none of them comes before a later hit this turn",
         ["a power made first"] = "PowerCmd.Apply of a power the move makes and sets up first (Sandpit, Dampen, Swipe, Thievery): its own amounts and targets aren't read",
-        ["scaled for the players"] = "a power on an enemy the game scales for the number of players (PowerModel.ShouldScaleInMultiplayer): its scaled amount isn't read",
         ["unread value"] = "a target or an amount the evaluator can't work out on the board",
     };
 
@@ -178,12 +177,7 @@ public static partial class SimAdapter
             context.Gaps.Add("unread value");
             return Array.Empty<SimAction>();
         }
-        // PowerCmd.Apply scales a power on an enemy for the players (GetScaledAmountForMultiplayer) when the power says so.
-        if (context.Combat.Players.Count > 1 && targets.Any(creature => !creature.IsPlayer) && Canonical(powerType)?.ShouldScaleInMultiplayer == true)
-        {
-            context.Gaps.Add("scaled for the players");
-            return Array.Empty<SimAction>();
-        }
+        // PowerCmd.Apply's scaling of a new one on an enemy for the players is the engine's (SimEngine.ApplyPower, from the power's code: decision #234).
         var ids = targets.Select(context.IdOf).OfType<int>().ToList();
         return ids.Count == 0 ? Array.Empty<SimAction>()
             : new[] { new MovePowerAction(PowerId.Of(SimPowerName(powerType)), (int)amount, ids, SimReaders.IsDebuffType(powerType)) };

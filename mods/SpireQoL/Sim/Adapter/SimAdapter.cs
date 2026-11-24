@@ -84,11 +84,24 @@ public static partial class SimAdapter
         return state;
     }
 
+    /// <summary>
+    /// The fight's multiplayer scaling (MultiplayerScalingModel.GetMultiplayerScaling(encounter, act), what PowerModel's GetScaledAmountForMultiplayer
+    /// multiplies by: decision #234), from the game's own math: Creature.ScaleHpForMultiplayer is hp × players × it. Null in a fight of one player
+    /// (nothing is scaled) or where the game's math has no value (an act it doesn't scale).
+    /// </summary>
+    private static decimal? EncounterScaling(ICombatState combat)
+    {
+        var players = combat.Players.Count;
+        if (players <= 1) return null;
+        try { return Creature.ScaleHpForMultiplayer(1m, combat.Encounter, players, combat.RunState.CurrentActIndex) / players; }
+        catch (ArgumentOutOfRangeException) { return null; }
+    }
+
     private static SimState BuildFromGame(Player me, ICombatState combat, out Dictionary<Creature, int> ids)
     {
         var idMap = new Dictionary<Creature, int>();
         ids = idMap;
-        var state = new SimState { MainRules = BranchRules.MainRulesNow(), TurnNumber = me.PlayerCombatState?.TurnNumber ?? 0 };
+        var state = new SimState { MainRules = BranchRules.MainRulesNow(), TurnNumber = me.PlayerCombatState?.TurnNumber ?? 0, EncounterScaling = EncounterScaling(combat) };
         var mates = Teammates(me, combat);
         // Any creature's simulator id (Who): an enemy's, you, or teammate k.
         int? IdOf(Creature creature) => idMap.TryGetValue(creature, out var enemyId) ? enemyId : creature == me.Creature ? Who.You

@@ -454,6 +454,9 @@ public static class SimModels
     /// </summary>
     public static Func<IEnumerable<ModelSpec>>? Read { get; set; }
 
+    /// <summary>Where every power class's rules come from (PowerRule: decision #234), set with <see cref="Read"/>. Null: none (no class can go below 0, none scales).</summary>
+    public static Func<IEnumerable<PowerRule>>? ReadRules { get; set; }
+
     /// <summary>The read started on a worker (StartReading), or null: the models are read on the first ask, on its thread.</summary>
     private static volatile Task<LoadedModels>? _reading;
 
@@ -462,9 +465,10 @@ public static class SimModels
     /// a second, which the game's thread shouldn't spend). An ask before it's done waits for it (a search on a worker); the frame doesn't ask
     /// until it is (<see cref="Loaded"/>, SimWait.Models: a prediction is pending until then, never made without the models).
     /// </summary>
-    public static void StartReading(Func<IEnumerable<ModelSpec>> read)
+    public static void StartReading(Func<IEnumerable<ModelSpec>> read, Func<IEnumerable<PowerRule>> readRules)
     {
         Read = read;
+        ReadRules = readRules;
         _reading = Task.Run(Load);
     }
 
@@ -485,7 +489,10 @@ public static class SimModels
     /// their kind (an orb is never a listener: the engine runs its programs where OrbCmd and OrbQueue do).
     /// </summary>
     private sealed record LoadedModels(IReadOnlyDictionary<string, SimModel> ByName, IReadOnlyDictionary<string, string> Unread, IReadOnlyDictionary<OrbKind, ReadModel> Orbs,
-        IReadOnlyDictionary<string, ReadModel> Enchantments);
+        IReadOnlyDictionary<string, ReadModel> Enchantments, IReadOnlyDictionary<string, LoadedRule> Rules);
+
+    /// <summary>A power class's rules as the engine asks them (PowerRule), its scaling compiled once.</summary>
+    private sealed record LoadedRule(bool AllowNegative, Func<SimState, int, decimal>? Scaled, string? Unread);
 
     private static readonly Lazy<LoadedModels> Models = new(() => _reading?.GetAwaiter().GetResult() ?? Load(), LazyThreadSafetyMode.ExecutionAndPublication);
 
@@ -538,7 +545,31 @@ public static class SimModels
             try { byName.Add(spec.Name, new ReadModel(spec)); }
             catch (InvalidOperationException exception) { unread[spec.Name] = $"{spec.Name}'s hooks couldn't be compiled ({exception.Message}): what it does isn't simulated"; }
         }
-        return new LoadedModels(byName, unread, orbs, enchantments);
+        var rules = new Dictionary<string, LoadedRule>(StringComparer.Ordinal);
+        foreach (var rule in ReadRules?.Invoke() ?? Enumerable.Empty<PowerRule>())
+        {
+            Func<SimState, int, decimal>? scaled = null;
+            var unreadRule = rule.Unread;
+            try { if (rule.ScaledForPlayers is { } value) scaled = ReadModel.CompileScaling(rule.Name, value); }
+            catch (InvalidOperationException exception) { unreadRule = $"{rule.Name}'s scaling for the players couldn't be compiled ({exception.Message})"; }
+            rules[rule.Name] = new LoadedRule(rule.AllowNegative, scaled, unreadRule);
+        }
+        return new LoadedModels(byName, unread, orbs, enchantments, rules);
+    }
+
+    /// <summary>The power can go below 0 (PowerModel.AllowNegative, read from its code: decision #234): ShouldRemoveDueToAmount takes it at exactly 0.</summary>
+    public static bool AllowsNegative(PowerId power) => Models.Value.Rules.GetValueOrDefault(power.Name)?.AllowNegative == true;
+
+    /// <summary>
+    /// A new <paramref name="power"/> on an enemy as PowerCmd.Apply lands it in a fight of more than one player: <paramref name="amount"/> scaled by its
+    /// class's GetScaledAmountForMultiplayer (read from its code when its ShouldScaleInMultiplayer is true: decision #234), whole (ApplyInternal's
+    /// cast). Unscaled for one that isn't; one whose scaling couldn't be read makes the simulation unknown.
+    /// </summary>
+    public static int ScaledForPlayers(SimState state, PowerId power, int amount)
+    {
+        if (Models.Value.Rules.GetValueOrDefault(power.Name) is not { } rule) return amount;
+        if (rule.Unread is { } why) { state.Unmodelled ??= why; return amount; }
+        return rule.Scaled is { } scaled ? (int)scaled(state, amount) : amount;
     }
 
     /// <summary>An enchantment's programs read from its class's code (ModelKind.Enchantment), or null: none to run, or not read (UnreadReason).</summary>
