@@ -20,13 +20,6 @@ public sealed class ColossusPower : SimModel
         damage.Target == owner && damage.Props.IsPoweredAttack() && damage.Dealer is { } dealer && SimEngine.PowersOf(state, dealer).Has(PowerId.Vulnerable) ? 0.5m : 1m;
 }
 
-/// <summary>TaintedPower.ModifyDamageAdditive: its amount on powered attacks on its owner (Vital Spark gives it for Tainted cards).</summary>
-public sealed class TaintedPower : SimModel
-{
-    public override decimal ModifyDamageAdditive(SimState state, int owner, DamageCtx damage) =>
-        damage.Target == owner && damage.Props.IsPoweredAttack() ? SimEngine.PowerOn(state, owner, ThisPower) : 0m;
-}
-
 /// <summary>
 /// FlutterPower: powered attacks on its owner deal its DamageDecrease% (Data; 50 by default); each that gets HP through takes a
 /// stack (AfterDamageReceived), and the last stuns it.

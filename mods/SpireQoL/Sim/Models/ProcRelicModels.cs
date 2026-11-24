@@ -198,18 +198,6 @@ public sealed class UnsettlingLamp : RelicProc
 
 // ---- on play
 
-/// <summary>Permafrost.AfterCardPlayed: block for the first Power you play each combat.</summary>
-public sealed class Permafrost : RelicProc
-{
-    public override TabKind? Tab => TabKind.Block;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (!Mine(play, owner) || play.Card.Type != SimCardType.Power || !Armed(state, owner)) return One(state);
-        Disarm(state, owner);
-        return RelicBlock(state, owner);
-    }
-}
-
 /// <summary>
 /// MummifiedHand.AfterCardPlayed: each Power you play makes a random other card in your hand free this turn (it prefers one that
 /// still costs something; with none, nothing changes).
@@ -315,18 +303,6 @@ public sealed class GalacticDust : RelicProc
         var spent = Amount(state, owner) + stars;
         Set(state, owner, spent % per, Data(state, owner));
         return spent >= per ? Block(state, owner, spent / per * Var(state, owner, "Block", fallback: 0), Unpowered) : One(state);
-    }
-}
-
-/// <summary>Regalite.AfterCardGeneratedForCombat: once a turn (armed), block when you create a card.</summary>
-public sealed class Regalite : RelicProc
-{
-    public override TabKind? Tab => TabKind.Block;
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
-    {
-        if (!Generated(cardEvent) || player != owner || !Armed(state, owner)) return One(state);
-        Disarm(state, owner);
-        return RelicBlock(state, owner);
     }
 }
 

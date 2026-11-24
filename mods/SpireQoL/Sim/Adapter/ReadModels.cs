@@ -27,7 +27,8 @@ public static class ReadModels
         RelicId.WhittlingKnife.Name,
         // Relics that count what you play, or act once a turn: their own fields as simulator state (SimPlayer.Fields).
         RelicId.Kunai.Name, RelicId.Shuriken.Name, RelicId.Nunchaku.Name, RelicId.OrnamentalFan.Name, RelicId.Kusarigama.Name, RelicId.LetterOpener.Name,
-        RelicId.TuningFork.Name, RelicId.IronClub.Name, RelicId.RainbowRing.Name, RelicId.MiniRegent.Name,
+        RelicId.TuningFork.Name, RelicId.IronClub.Name, RelicId.RainbowRing.Name, RelicId.MiniRegent.Name, RelicId.Permafrost.Name, RelicId.Regalite.Name,
+        PowerId.Tainted.Name,
     };
 
     /// <summary>The read models of the running game's classes, for SimModels.</summary>

@@ -129,6 +129,31 @@ public class HookProgramTests
         Assert.Equal(fromGame, fromFile);
     }
 
+    /// <summary>
+    /// Every power and relic with combat hooks (the coverage ledger's), each hook body read, never run (with why) or a named gap, on beta: what
+    /// each ledger entry's class has read (Snapshots/hook-readings.txt, regenerated with SPIREQOL_UPDATE_SNAPSHOT=1). A game update or a reader
+    /// change that reads a body differently shows here, class by class.
+    /// </summary>
+    [Fact]
+    public void EachLedgerClassesReadingsAreTheSnapshots()
+    {
+        if (!File.Exists(BranchCode.BetaPath)) return;
+        using var code = new BranchCode(BranchCode.BetaPath);
+        var ledger = CoverageLedger.ReviewedEntries.Keys.ToHashSet(StringComparer.Ordinal);
+        var lines = Readings(code).Where(reading => ledger.Contains(reading.Class)).GroupBy(reading => (reading.Kind, reading.Class))
+            .Select(group => $"{group.Key.Kind} {group.Key.Class}: {string.Join(" | ", group.Select(reading => reading.Hook))}").ToList();
+        var path = Path.Combine(RepoRoot(), "tests", "SpireQoL.Catalog.Tests", "Snapshots", "hook-readings.txt");
+        if (Environment.GetEnvironmentVariable("SPIREQOL_UPDATE_SNAPSHOT") == "1")
+        {
+            File.WriteAllText(path, string.Join("\n", lines) + "\n");
+            return;
+        }
+        Assert.True(File.Exists(path), $"missing {path}: generate it with SPIREQOL_UPDATE_SNAPSHOT=1");
+        var expected = File.ReadAllText(path).ReplaceLineEndings("\n").TrimEnd().Split('\n');
+        var changed = lines.Except(expected).Take(10).ToList();
+        Assert.True(changed.Count == 0 && expected.Length == lines.Count, "hook readings changed (regenerate with SPIREQOL_UPDATE_SNAPSHOT=1 and explain):\n" + string.Join("\n", changed));
+    }
+
     /// <summary>Every power and relic, its hooks read or a gap, written to SPIREQOL_DUMP when set: the scan's whole list, for review.</summary>
     [Fact]
     public void ListEveryReading()

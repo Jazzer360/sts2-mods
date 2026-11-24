@@ -389,3 +389,36 @@ public sealed class WhittlingKnife : RelicProc
         return Fire(state, owner);
     }
 }
+
+// ---- once a combat, once a turn (Sim/Models/ProcRelicModels.cs), and Tainted (Sim/Models/TargetModels.cs), deleted 2026-11-24
+
+/// <summary>Permafrost.AfterCardPlayed: block for the first Power you play each combat.</summary>
+public sealed class Permafrost : RelicProc
+{
+    public override TabKind? Tab => TabKind.Block;
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (!Mine(play, owner) || play.Card.Type != SimCardType.Power || !Armed(state, owner)) return One(state);
+        Disarm(state, owner);
+        return RelicBlock(state, owner);
+    }
+}
+
+/// <summary>Regalite.AfterCardGeneratedForCombat: once a turn (armed), block when you create a card.</summary>
+public sealed class Regalite : RelicProc
+{
+    public override TabKind? Tab => TabKind.Block;
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
+    {
+        if (!Generated(cardEvent) || player != owner || !Armed(state, owner)) return One(state);
+        Disarm(state, owner);
+        return RelicBlock(state, owner);
+    }
+}
+
+/// <summary>TaintedPower.ModifyDamageAdditive: its amount on powered attacks on its owner (Vital Spark gives it for Tainted cards).</summary>
+public sealed class TaintedPower : SimModel
+{
+    public override decimal ModifyDamageAdditive(SimState state, int owner, DamageCtx damage) =>
+        damage.Target == owner && damage.Props.IsPoweredAttack() ? SimEngine.PowerOn(state, owner, ThisPower) : 0m;
+}
