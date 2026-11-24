@@ -355,6 +355,8 @@ public static partial class SimEngine
     private sealed class BranchSet
     {
         public List<SimState> States;
+        /// <summary>Branches set aside while a WhenAction's actions run on the others (they're held too).</summary>
+        public int Aside;
         /// <summary>Inside another branch set's step (an auto-play's own play): the outer set counts what's held.</summary>
         private readonly bool _nested;
 
@@ -399,10 +401,10 @@ public static partial class SimEngine
                     Stop(next, i);
                 }
                 foreach (var state in mine) Merge(next, seen, state);
-                if (work != null && !work.Hold(next.Count + States.Count)) Stop(next, i + 1);
+                if (work != null && !work.Hold(next.Count + States.Count + Aside)) Stop(next, i + 1);
             }
             States = next;
-            work?.Hold(next.Count);
+            work?.Hold(next.Count + Aside);
         }
 
         /// <summary>The search stops here: what's stepped and every branch from <paramref name="from"/> on not yet stepped.</summary>
@@ -905,6 +907,8 @@ public static partial class SimEngine
                 branches.Each(branch => (branch.CurrentPlay?.Owner ?? Who.You) is var playOwner && branch.Player(playOwner) is { Energy: > 0 } player
                     ? ProcCardEvent(branch, CardEvent.EnergyGained, player.Energy, playOwner, indirect: false) : new[] { branch });
                 break;
+            case WhenAction whenAction: RunWhen(branches, whenAction); break;
+            case AskAction askAction: RunAsk(branches, askAction); break;
             case LoseHpAction loseHpAction: branches.Do(branch => LandUnblockable(branch, branch.CurrentPlay?.Card.Name ?? "HP cost", loseHpAction.Amount)); break;
             default: throw new NotSupportedException($"No runner for {action.GetType().Name}");
         }

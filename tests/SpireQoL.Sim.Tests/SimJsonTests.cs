@@ -32,6 +32,24 @@ public class SimJsonTests
     }
 
     [Fact]
+    public void EveryConditionRoundTripsWithEveryMember()
+    {
+        // A WhenAction's condition (decision #190) is written as what it is, like an action.
+        Assert.NotEmpty(SimJson.ConditionKinds);
+        foreach (var kind in SimJson.ConditionKinds)
+        {
+            var condition = (SimCondition)Sample(kind);
+            var json = JsonSerializer.Serialize(condition, SimJson.Options);
+            var read = JsonSerializer.Deserialize<SimCondition>(json, SimJson.Options)!;
+            Assert.Equal(kind, read.GetType());
+            Assert.Equal(json, JsonSerializer.Serialize(read, SimJson.Options));
+            using var document = JsonDocument.Parse(json);
+            foreach (var member in Members(kind).Where(member => member.Name != nameof(SimCondition.Test)))
+                Assert.True(document.RootElement.TryGetProperty(member.Name, out _), $"{kind.Name}.{member.Name} isn't written");
+        }
+    }
+
+    [Fact]
     public void AStateWithAnAutoHandReplaysItsActions()
     {
         var state = new SimState();
@@ -121,6 +139,7 @@ public class SimJsonTests
         }
         if (type.GetMethod("Of", BindingFlags.Static | BindingFlags.Public, [typeof(string)]) is { } named && named.ReturnType == type) return named.Invoke(null, ["Probe"])!;
         if (type == typeof(SimAction)) return new HitYouAction(Name: "Probe", Amount: 3);
+        if (type == typeof(SimCondition)) return new CountCondition(SimCounted.HandMatching, SimCompare.Greater, Than: 3) { Filter = "Probe", At = "Probe", Matching = 3, Before = 3 };
         if (type.IsGenericType && type.Name.StartsWith("ValueTuple", StringComparison.Ordinal))
             return Activator.CreateInstance(type, type.GetGenericArguments().Select(element => Sample(element, depth + 1)).ToArray())!;
         if (type.IsGenericType && type.GetGenericArguments() is [var keyType, var valueType] && typeof(IEnumerable).IsAssignableFrom(type) && type.Name.Contains("Dictionary"))

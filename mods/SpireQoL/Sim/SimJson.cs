@@ -23,8 +23,23 @@ public static class SimJson
         TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { ActionsByKind } },
     };
 
+    /// <summary>Every kind of condition (each record deriving from SimCondition), by name, found the same way.</summary>
+    public static readonly IReadOnlyList<Type> ConditionKinds = typeof(SimCondition).Assembly.GetTypes()
+        .Where(type => !type.IsAbstract && typeof(SimCondition).IsAssignableFrom(type))
+        .OrderBy(type => type.Name, StringComparer.Ordinal).ToList();
+
     private static void ActionsByKind(JsonTypeInfo typeInfo)
     {
+        if (typeInfo.Type == typeof(SimCondition))
+        {
+            typeInfo.PolymorphismOptions = new JsonPolymorphismOptions
+            {
+                TypeDiscriminatorPropertyName = "$condition",
+                UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FailSerialization,
+            };
+            foreach (var kind in ConditionKinds) typeInfo.PolymorphismOptions.DerivedTypes.Add(new JsonDerivedType(kind, kind.Name));
+            return;
+        }
         if (typeInfo.Type != typeof(SimAction)) return;
         typeInfo.PolymorphismOptions = new JsonPolymorphismOptions
         {

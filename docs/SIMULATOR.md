@@ -138,6 +138,14 @@ into a program, and `PlayOrder` puts each action at the command it stands for (b
 before attack for Fiend Fire, round by round for Second Wind's loop). An action no command stands for keeps its place after
 the one it followed.
 
+A step the card's code runs only on a condition is an ordinary action inside a `WhenAction` (decision #190, `Sim/SimConditions.cs`):
+the condition is a `SimCondition` (the last attack killed, Osty missing, the target impaled, a count of your hand, of the cards a filter
+lets through, of the plays finished this turn, and not, all, any of those), asked of each branch's own state as the action runs, so a
+replay's later play asks it on the board the earlier plays left. A test of the card's code is asked once a play, where the code asks it
+(its `At`): the answer is kept for the rest of the play (an else, a later step under the same if), and a local the code stores before
+later steps is asked there (`AskAction`: Ki Hop's `wasImpaled`). Any condition guards any effect, so a new card's combination needs no
+code.
+
 ### Outputs
 `SimOutcome` keeps every field consumers read today (kills, block breaks, stuns, HP, taken, Death Skull chances...). New:
 the play's **event log** per branch (model flashes with their damage, block, summons; cards drawn, exhausted, created;

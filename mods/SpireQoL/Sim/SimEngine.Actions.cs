@@ -25,18 +25,21 @@ public static partial class SimEngine
         var matching = NamedCounts.Empty;
         foreach (var take in cardPlayAction.Body.OfType<TakeFromHandAction>())
             if (take.Filter != null && !matching.Has(take.Filter)) matching = matching.With(take.Filter, take.Matching);
+        // And each condition's on the kind of cards in your hand (decision #190: Impatience's Attacks), followed the same way.
+        foreach (var counted in HandFilters(cardPlayAction.Body))
+            if (!matching.Has(counted.Filter!)) matching = matching.With(counted.Filter!, counted.Matching);
         branches.Do(branch => branch.TakeMatching = matching);
         for (var i = 0; i < Math.Max(1, cardPlayAction.Play.PlayCount); i++)
         {
             var play = cardPlayAction.Play with { PlayIndex = i };
-            branches.Do(branch => { branch.CurrentPlay = play; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; branch.PlayTaken = 0; });
+            branches.Do(branch => { branch.CurrentPlay = play; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; branch.PlayTaken = 0; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty; });
             HookStep(branches, nameof(SimModel.BeforeCardPlayed), (model, owner, branch) => model.BeforeCardPlayed(branch, owner, play));
             branches.Do(branch => Count(branch, play, PlayStage.Started));
             foreach (var action in cardPlayAction.Body) Run(branches, action);
             branches.Do(branch => Count(branch, play, PlayStage.Finished));
             HookStep(branches, nameof(SimModel.AfterCardPlayed), (model, owner, branch) => model.AfterCardPlayed(branch, owner, play));
         }
-        branches.Do(branch => { branch.CurrentPlay = null; branch.PlayTaken = 0; branch.TakeMatching = NamedCounts.Empty; });
+        branches.Do(branch => { branch.CurrentPlay = null; branch.PlayTaken = 0; branch.TakeMatching = NamedCounts.Empty; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty; });
     }
 
     /// <summary>
@@ -110,7 +113,12 @@ public static partial class SimEngine
             // A take of some cards of the hand: the other filtered takes' cards may be among them (only a take of one kind follows its own).
             if (!wholeHand && take.Filter == null && state.Player(owner) is { } after)
                 foreach (var entry in state.TakeMatching.Items)
-                    state.TakeMatching = state.TakeMatching.With(entry.Name, Math.Min(entry.Amount, Math.Max(0, after.HandCount - after.PlayingFromHand)), entry.Data);
+                {
+                    var most = Math.Min(entry.Amount, Math.Max(0, after.HandCount - after.PlayingFromHand));
+                    // A condition's count (decision #190) is exact or not known: the cards taken may or may not have been the ones it counts.
+                    var exact = !IsConditionFilter(entry.Name) || most == Math.Max(0, entry.Amount - count);
+                    state.TakeMatching = state.TakeMatching.With(entry.Name, most, exact ? entry.Data : 1);
+                }
             if (wholeHand) state.TakeMatching = ZeroedMatching(state.TakeMatching);
         }
         state.PlayTaken = count;
@@ -306,6 +314,7 @@ public static partial class SimEngine
             branch.AttackSerial++;
             branch.CurrentAttack = branch.AttackSerial;
             branch.AttackDealt = 0;
+            branch.AttackKilled = false;
         });
         AttackInfo Info(SimState state) => new(state.CurrentAttack, state.CurrentPlay?.Owner is { } playOwner && !at.ByOsty ? playOwner : dealer, at.Damage.Props, state.CurrentPlay?.Card);
         HookStep(branches, nameof(SimModel.BeforeAttack), (model, owner, branch) => model.BeforeAttack(branch, owner, Info(branch)));
@@ -398,7 +407,12 @@ public static partial class SimEngine
         // can't know that).
         if (card != null && !at.ByOsty && !state.FirstHits.ContainsKey(target) && !state.Fired.Has(nameof(Models.MightyWings))) state.FirstHits = state.FirstHits.Add(target, amount);
         if (amount <= 0) return new[] { state };
-        if (state.Enemy(target) is { Alive: true } enemy) Damage(state, enemy, amount, dealer, spec.Props, card);
+        if (state.Enemy(target) is { Alive: true } enemy)
+        {
+            Damage(state, enemy, amount, dealer, spec.Props, card);
+            // The hit killed its target (its DamageResult's WasTargetKilled, a revive after it included): SimTest.AttackKilled.
+            if (enemy.Hp <= 0) state.AttackKilled = true;
+        }
         // Rain Shot, Omnislice: the target's damage to every other hittable enemy. Beta: a powered hit, only caps apply. Main (MainRule
         // .SplashIsUnpowered): unpowered (Unpowered | Move), through every damage modifier.
         if (at.Splash)
