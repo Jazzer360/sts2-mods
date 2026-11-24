@@ -56,7 +56,7 @@ public class SimKeyCoverageTests
     {
         var state = new SimState
         {
-            Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = 30, Hits = new() { 5 }, HitsAfterAllyDies = new() { 6 } } },
+            Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = 30, Hits = new() { 5 } } },
             You = { Hp = 40, Orbs = { new SimOrb { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } }, AutoHand = new() { new SimHandCard { Id = 3 } },
                   Draw = new SimDrawPile() },
         };

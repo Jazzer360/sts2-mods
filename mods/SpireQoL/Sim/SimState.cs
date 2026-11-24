@@ -181,8 +181,6 @@ public sealed class SimEnemy
     public bool StartedAlive = true;
     /// <summary>Ravenous: an ally dying stuns it (RavenousPower.AfterDeath).</summary>
     [JsonIgnore] public bool Ravenous { get => Powers.Has(PowerId.Ravenous); set => Set(PowerId.Ravenous, value ? 1 : 0); }
-    /// <summary>Crab Rage: its hits once an ally has died (its Strength; null = no Crab Rage).</summary>
-    public List<int>? HitsAfterAllyDies;
     /// <summary>
     /// Explosive: when it dies, this much damage to you (unpowered, blockable: ExplosivePower.AfterDeath hits every
     /// living player), after the game's damage math for you; 0 = none.
@@ -254,7 +252,7 @@ public sealed class SimEnemy
         Powers.Hash(add); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         Fields.Hash(add);
         add(Hits.Count); foreach (var hit in Hits) add(hit);
-        add(HitsAfterAllyDies?.Count ?? -1); if (HitsAfterAllyDies != null) foreach (var hit in HitsAfterAllyDies) add(hit);
+        add(-1); // where an enemy's hits after an ally died were (none): the keys stay as they were
     }
 }
 

@@ -28,10 +28,12 @@ public class SimAllyDeathTests
     [Fact]
     public void AnEnemysHitsChangeOnceAnAllyDies()
     {
+        // Crab Rage (read from its code) gives its Strength once an ally dies: its 8 lands as 14.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, hits: 4), Enemy(id: 2, hp: 30, hits: 8) } };
-        state.Enemies[1].HitsAfterAllyDies = new List<int> { 14 };
+        state.Enemies[1].Powers = state.Enemies[1].Powers.With(PowerId.CrabRage, 1);
+        state.Enemies[1].Intent = new List<IntentHit> { new(Base: 8) }; // its hit through the damage math: Strength raises it
         SimEngine.ApplyPlayTo(state, Strike(target: 1, damage: 5), out var after, out _);
-        Assert.Equal(new[] { 14 }, after[0].Enemy(id: 2)!.Hits);
+        Assert.Equal(6, after[0].Enemy(id: 2)!.Powers[PowerId.Strength]);
         Assert.Equal(14, SimEngine.Run(state, Strike(target: 1, damage: 5)).TakenMax);
     }
 
@@ -55,7 +57,8 @@ public class SimAllyDeathTests
     {
         // A Lightning orb kills the 3-HP ally at end of turn: Crab Rage's hits are up when it attacks.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 3, hits: 4), Enemy(id: 2, hp: 30, hits: 8) } };
-        state.Enemies[1].HitsAfterAllyDies = new List<int> { 14 };
+        state.Enemies[1].Powers = state.Enemies[1].Powers.With(PowerId.CrabRage, 1);
+        state.Enemies[1].Intent = new List<IntentHit> { new(Base: 8) }; // its hit through the damage math: Strength raises it
         state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
         state.You.OrbCapacity = 3;
         var outcome = SimEngine.Run(state);
@@ -67,12 +70,12 @@ public class SimAllyDeathTests
     [Fact]
     public void BranchesThatDifferOnlyInIntentAreNotMerged()
     {
-        // The key includes hits, so the Crab Rage branch and the other survive as two branches.
+        // The key includes powers, so the Crab Rage branch and the other survive as two branches.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 3, hits: 0), Enemy(id: 2, hp: 30, hits: 8) } };
-        state.Enemies[1].HitsAfterAllyDies = new List<int> { 14 };
+        state.Enemies[1].Powers = state.Enemies[1].Powers.With(PowerId.CrabRage, 1);
         var play = new SimPlay { Name = "Sword Boomerang", IsAttack = true, HitTarget = SimPlay.Target.Random, HitDamage = { [1] = 3, [2] = 0 }, Hits = 1 };
         SimEngine.ApplyPlayTo(state, play, out var branches, out _);
-        Assert.Contains(branches, branch => branch.Enemy(id: 2)!.Hits.SequenceEqual(new[] { 14 }));
-        Assert.Contains(branches, branch => branch.Enemy(id: 2)!.Hits.SequenceEqual(new[] { 8 }));
+        Assert.Contains(branches, branch => branch.Enemy(id: 2)!.Powers[PowerId.Strength] == 6);
+        Assert.Contains(branches, branch => branch.Enemy(id: 2)!.Powers[PowerId.Strength] == 0);
     }
 }

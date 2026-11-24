@@ -86,12 +86,14 @@ public class SimKillTests
     [Fact]
     public void CurlUpReactionOnlyInTheBranchThatHitsIt()
     {
-        // The Curl Up tab warns when the play makes it gain block in some branch (random target here).
+        // Curl Up gains its block in the branch where the play hits it (random target here).
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 30, hits: 4), Enemy(id: 2, hp: 30, hits: 4) } };
         state.Enemies[0].CurlUp = 5;
         var random = new SimPlay { Name = "Sword Boomerang", IsAttack = true, HitTarget = SimPlay.Target.Random, HitDamage = { [1] = 3, [2] = 3 }, Hits = 1 };
-        Assert.Contains(1, SimEngine.Run(state, random).BlockReactionInAny);
+        SimEngine.ApplyPlayTo(state, random, out var randomBranches, out _);
+        Assert.Contains(randomBranches, branch => branch.Enemy(id: 1)!.ReactedWithBlock);
         var other = new SimPlay { Name = "Strike", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 2, HitDamage = { [2] = 6 }, Hits = 1 };
-        Assert.Empty(SimEngine.Run(state, other).BlockReactionInAny);
+        SimEngine.ApplyPlayTo(state, other, out var otherBranches, out _);
+        Assert.DoesNotContain(otherBranches, branch => branch.Enemy(id: 1)!.ReactedWithBlock);
     }
 }

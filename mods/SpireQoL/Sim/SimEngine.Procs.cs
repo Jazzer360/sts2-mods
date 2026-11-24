@@ -37,7 +37,7 @@ public static partial class SimEngine
 
     /// <summary>
     /// Block an enemy's power gives it (CreatureCmd.GainBlock(base.Owner) on an enemy: Sneaky's on your Attack), through the block math, while
-    /// it lives: the enemy reacted with block (SimEnemy.ReactedWithBlock, what the play's results read). Logged with no amount: an enemy's block
+    /// it lives: the enemy reacted with block (SimEnemy.ReactedWithBlock, part of its branch's key). Logged with no amount: an enemy's block
     /// is no resource of yours, so its tab is crossed, a trigger (decision #132).
     /// </summary>
     public static IEnumerable<SimState> EnemyBlock(SimState state, int enemy, string name, decimal baseBlock, SimProps props)

@@ -119,8 +119,6 @@ public sealed class SimOutcome
     /// <summary>Enemies the play itself kills (before your end of turn) in some branch / in every branch.</summary>
     public HashSet<int> KilledByPlayInAny = new();
     public HashSet<int> KilledByPlayInAll = new();
-    /// <summary>Enemies that gain block from Curl Up, Sneaky or Skittish because of the play, in some branch.</summary>
-    public HashSet<int> BlockReactionInAny = new();
     /// <summary>The play breaks some enemy's block in every branch (Hand Drill).</summary>
     public bool PlayBreaksBlockInAll;
     /// <summary>Block gains during the play (each sets off Juggernaut): the most over branches.</summary>
@@ -255,7 +253,6 @@ public static partial class SimEngine
         // Kills during the play itself (its hits, orbs, procs, Juggernaut), for kill-reactive tabs.
         var killedPerBranch = states.Select(branch => aliveAtStart.Where(id => branch.Enemy(id) is not { Alive: true }).ToHashSet()).ToList();
         // Enemies that gained block from Curl Up, Sneaky or Skittish because of the play, in some branch.
-        var reacted = states.SelectMany(branch => branch.Enemies.Where(enemy => enemy.ReactedWithBlock).Select(enemy => enemy.Id)).ToHashSet();
         // Some enemy's block broken by the play, in every branch (Hand Drill).
         var breaksBlock = complete && states.All(branch => branch.Enemies.Any(enemy => enemy.BlockBroken && start.Enemy(enemy.Id) is { BlockBroken: false }));
         // Block gains during the play (each sets off Juggernaut).
@@ -274,7 +271,6 @@ public static partial class SimEngine
                 ? new HashSet<int>()
                 : killedPerBranch.Skip(1).Aggregate(new HashSet<int>(killedPerBranch[0]), (acc, killed) => { acc.IntersectWith(killed); return acc; }),
             PlayKillsInAll = complete && killedPerBranch.Count > 0 && killedPerBranch.All(killed => killed.Count > 0),
-            BlockReactionInAny = reacted,
             PlayBreaksBlockInAll = breaksBlock,
             PlayBlockGainsMax = gains.Count > 0 ? gains.Max() : 0,
             PlayBiggestHitMin = PlayMin(branch => branch.PlayBiggestHit),
@@ -1288,15 +1284,6 @@ public static partial class SimEngine
             if (mainDied && left.Count > 0 && left.All(enemy => PowersOf(state, enemy.Id).Has(PowerId.Minion)))
                 foreach (var minion in left) minion.Hp = 0;
         } while (handled);
-        foreach (var enemy in state.Enemies)
-        {
-            if (!enemy.Alive || !state.Enemies.Any(simEnemy => simEnemy != enemy && simEnemy.StartedAlive && !simEnemy.Alive)) continue;
-            if (enemy.HitsAfterAllyDies != null)
-            {
-                enemy.Hits = enemy.HitsAfterAllyDies;
-                enemy.HitsAfterAllyDies = null;
-            }
-        }
     }
 
     /// <summary>

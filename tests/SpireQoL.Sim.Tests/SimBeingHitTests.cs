@@ -135,8 +135,10 @@ public class SimBeingHitTests
     {
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 30, block: 0, hits: 5) } };
         state.Enemies[0].Sneaky = 4;
-        Assert.Contains(1, SimEngine.Run(state, Strike(target: 1, damage: 3)).BlockReactionInAny);
-        Assert.Empty(SimEngine.Run(state, new SimPlay { Name = "Defend", BlockAmount = 5, BlockGains = 1 }).BlockReactionInAny);
+        SimEngine.ApplyPlayTo(state, Strike(target: 1, damage: 3), out var attacked, out _);
+        Assert.All(attacked, branch => Assert.True(branch.Enemy(id: 1)!.ReactedWithBlock));
+        SimEngine.ApplyPlayTo(state, new SimPlay { Name = "Defend", BlockAmount = 5, BlockGains = 1 }, out var blocked, out _);
+        Assert.All(blocked, branch => Assert.False(branch.Enemy(id: 1)!.ReactedWithBlock));
     }
 
     [Fact]
