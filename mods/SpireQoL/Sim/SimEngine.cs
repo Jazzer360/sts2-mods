@@ -1241,15 +1241,18 @@ public static partial class SimEngine
             var landed = 0;
             var hitsLanded = 0;
             var dead = false;
-            void Retaliate(int amount)
+            // A player's power hitting it back (ThornsPower.BeforeDamageReceived, FlameBarrierPower and ReflectPower.AfterDamageReceived): each is
+            // CreatureCmd.Damage(dealer, amount, Unpowered, owner), so the damage math (the read caps: Intangible, Hard to Kill), its block this
+            // turn, the HP-loss pipeline (Hardened Shell, Slippery, Intangible) and its damage hooks apply as to any damage. The enemy's Block
+            // stays its block at your turn's end (what the outcome reads); this turn's block is the move's, kept here.
+            void Retaliate(int dealer, int amount)
             {
-                if (amount <= 0) return;
-                amount = Math.Min(amount, enemy.HitCap);
-                var absorbed = Math.Min(enemyBlock, amount);
-                enemyBlock -= absorbed;
-                var toHp = Math.Min(amount - absorbed, Math.Max(0, enemy.ShellLeft));
-                if (enemy.ShellLeft != int.MaxValue) enemy.ShellLeft -= toHp;
-                enemy.Hp -= toHp;
+                if (amount <= 0 || !enemy.Alive) return;
+                var (blockAtTurnEnd, unblockedAtTurnEnd, blockBrokenAtTurnEnd) = (enemy.Block, enemy.UnblockedInstances, enemy.BlockBroken);
+                enemy.Block = enemyBlock;
+                ProcHitOn(state, dealer, enemy, amount, SimProps.Unpowered);
+                enemyBlock = enemy.Block;
+                (enemy.Block, enemy.UnblockedInstances, enemy.BlockBroken) = (blockAtTurnEnd, unblockedAtTurnEnd, blockBrokenAtTurnEnd);
                 if (enemy.Hp <= 0) dead = true;
             }
 
@@ -1261,7 +1264,7 @@ public static partial class SimEngine
             {
                 var yours = player == Who.You;
                 var simPlayer = state.MutablePlayer(player);
-                if (simPlayer.Thorns > 0) Retaliate(simPlayer.Thorns);
+                if (simPlayer.Thorns > 0) Retaliate(player, simPlayer.Thorns);
                 if (simPlayer.WuppyHp > 0 && amount > 0)
                 {
                     var toWuppy = Math.Min(simPlayer.WuppyHp, amount);
@@ -1302,8 +1305,8 @@ public static partial class SimEngine
                     hitsLanded++;
                 }
                 simPlayer = state.MutablePlayer(player);
-                if (!dead && simPlayer.FlameBarrier > 0) Retaliate(simPlayer.FlameBarrier);
-                if (!dead && simPlayer.Reflect && blocked > 0) Retaliate(blocked);
+                if (!dead && simPlayer.FlameBarrier > 0) Retaliate(player, simPlayer.FlameBarrier);
+                if (!dead && simPlayer.Reflect && blocked > 0) Retaliate(player, blocked);
             }
             // A teammate takes each hit in their turn order (CreatureCmd.Damage over every living player: a hit still reaches
             // everyone even if one player's Thorns kills the attacker during it), through the game's damage math for them.

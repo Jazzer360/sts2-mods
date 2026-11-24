@@ -603,7 +603,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         {
             var enemy = forecast.State.Enemy(id);
             if (enemy == null) continue;
-            lines.Add($"{enemy.Name}: HP {enemy.Hp}, block {enemy.Block}, poison {enemy.Poison}, hits [{string.Join(", ", enemy.Hits)}]{(enemy.HitCap != int.MaxValue ? $", cap {enemy.HitCap}" : "")}" +
+            lines.Add($"{enemy.Name}: HP {enemy.Hp}, block {enemy.Block}, poison {enemy.Poison}, hits [{string.Join(", ", enemy.Hits)}]" +
                       $" → HP at turn end {outcome.HpAtTurnEndMin(id)}-{outcome.HpAtTurnEndMax(id)}, hits through block {outcome.UnblockedAtTurnEndMin(id)}-{outcome.UnblockedAtTurnEndMax(id)}, " +
                       $"dead before acting {(outcome.DeadInAll(id) ? "always" : outcome.DeadInAny(id) ? "sometimes" : "never")}" +
                       $"{(enemy.Imbalanced ? $", first hit fully blocked {(outcome.FirstHitBlockedInAll(id) ? "always" : outcome.FirstHitBlockedInAny(id) ? "sometimes" : "never")}" : "")}");

@@ -121,12 +121,6 @@ public sealed class SimEnemy
     /// </summary>
     public List<List<int>> TeammateHits = new();
     public bool Imbalanced;
-    /// <summary>Most damage one instance can deal it: Hard to Kill's cap, 1 while Intangible (int.MaxValue = none). Setting it sets Hard to Kill.</summary>
-    [JsonIgnore] public int HitCap
-    {
-        get => Powers.Has(PowerId.Intangible) ? 1 : Powers.Has(PowerId.HardToKill) ? Powers[PowerId.HardToKill] : int.MaxValue;
-        set => Set(PowerId.HardToKill, value == int.MaxValue ? 0 : value);
-    }
 
     // ---- per-branch results
     /// <summary>Damage instances that got through its block during your turn (incl. end of turn).</summary>

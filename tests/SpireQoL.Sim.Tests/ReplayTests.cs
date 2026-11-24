@@ -65,7 +65,8 @@ public class ReplayTests
     public void ReportedStateRoundTripsThroughJson()
     {
         // What a report carries (SimState.ToJson) must load back into the same simulation.
-        var state = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "A", Hp = 12, Block = 3, Hits = new() { 5, 5 }, Imbalanced = true, HitCap = 4 } } };
+        var state = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "A", Hp = 12, Block = 3, Hits = new() { 5, 5 }, Imbalanced = true } } };
+        state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.HardToKill, amount: 4);
         state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 5, Evoke = 10, Fields = NamedCounts.Empty.With("_passiveVal", amount: 3) } };
         state.You.Focus = 2;
         state.You.Relics = state.You.Relics.With(RelicId.GoldPlatedCables, amount: 1);

@@ -286,7 +286,7 @@ Beside the last number (the heart line when there is one): a skull when this mig
   - Thorns hits before each blow. The blow during which Thorns kills still lands.
   - Flame Barrier hits after each blow.
   - Reflect, after each blow, deals the damage you blocked.
-  - Retaliation damage goes through the game's damage hook, so the enemy's caps and Vulnerable apply. It hits the enemy's block first; enemy block is assumed cleared at its turn start unless it has Barricade.
+  - Retaliation is damage like any other (each is `CreatureCmd.Damage` in its power's code): the game's damage math (the enemy's caps, Intangible and Hard to Kill, read from their code), the enemy's block, then its HP-loss effects (Hardened Shell, Slippery, Intangible) and what reacts to the hit. It hits the enemy's block first; enemy block is assumed cleared at its turn start unless it has Barricade.
 - **Unblockable HP loss** (Regret, Bad Luck, Beckon: anything the simulator lands as unblockable on you) is its own line under the result (the heart), not part of the incoming or the result: block does nothing to it. It's what you lose to it after the HP-loss effects (Tungsten Rod...), the worst outcome's.
 
 **Sources:**

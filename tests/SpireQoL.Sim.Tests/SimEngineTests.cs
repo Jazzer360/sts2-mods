@@ -132,10 +132,10 @@ public class SimEngineTests
     }
 
     [Fact]
-    public void HitCapAppliesToEverySource()
+    public void ADamageCapAppliesToEverySource()
     {
         var enemy = Enemy(id: 1, hp: 10, block: 0, hits: 5);
-        enemy.HitCap = 1; // Intangible
+        enemy.Powers = enemy.Powers.With(PowerId.Intangible, amount: 1); // IntangiblePower.ModifyDamageCap: 1
         var state = new SimState { Enemies = { enemy } };
         state.You.Orbs = new() { Lightning(passive: 9, evoke: 9) };
         state.You.OrbCapacity = 3;

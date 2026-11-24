@@ -57,7 +57,7 @@ public class SinglePlayerGoldenTests
             if (random.Next(6) == 0) enemy.Barricade = true;
             if (random.Next(8) == 0) enemy.CurlUp = random.Next(3, 10);
             if (random.Next(8) == 0) enemy.Imbalanced = true;
-            if (random.Next(10) == 0) enemy.HitCap = 1;
+            if (random.Next(10) == 0) enemy.Powers = enemy.Powers.With(PowerId.HardToKill, amount: 1);
             if (random.Next(5) == 0) enemy.AddPoison(random.Next(1, 8));
             state.Enemies.Add(enemy);
         }
