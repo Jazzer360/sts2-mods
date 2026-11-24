@@ -809,7 +809,9 @@ public sealed class ReadModel : SimModel
                     : (in HookArgs args) => SimEngine.RelicsOf(args.State, args.Owner)[ThisRelic];
             case HookFact.PlayIsOwners: return (in HookArgs args) => args.Play?.Owner == args.Owner ? 1m : 0m;
             case HookFact.CardType: return (in HookArgs args) => (int)CardTypeOf(in args);
-            case HookFact.CardEthereal: return (in HookArgs args) => (args.Hook == HookName.AfterCardDrawn ? args.State.DrawnCard?.Ethereal : args.Play?.Card.Ethereal) == true ? 1m : 0m;
+            // Ethereal: the card drawn as its profile has it, the card played, or another event's card (one exhausted, made).
+            case HookFact.CardEthereal: return (in HookArgs args) => (args.Hook == HookName.AfterCardDrawn ? args.State.DrawnCard?.Ethereal
+                : IsCardEventHook(args.Hook) ? args.State.EventCard?.Ethereal : args.Play?.Card.Ethereal) == true ? 1m : 0m;
             case HookFact.CardEnergy: return (in HookArgs args) => args.Play?.Card.Energy ?? 0;
             case HookFact.CardTag:
             {
@@ -819,6 +821,8 @@ public sealed class ReadModel : SimModel
             case HookFact.EventIsOwners: return (in HookArgs args) => args.Player == args.Owner ? 1m : 0m;
             case HookFact.CardIs:
                 return (in HookArgs args) => args.State.EventCard?.Name == named ? 1m : 0m;
+            case HookFact.SourceCardIs:
+                return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card)?.Name == named ? 1m : 0m;
             case HookFact.OwnersTurn: return (in HookArgs args) => Who.IsPlayer(args.Owner) != args.State.EnemyTurnNow ? 1m : 0m;
             case HookFact.EnemiesTurn: return (in HookArgs args) => args.State.EnemyTurnNow ? 1m : 0m;
             case HookFact.OpponentsPowerAmount:
@@ -964,13 +968,22 @@ public sealed class ReadModel : SimModel
     private int ApplierOf(in HookArgs args) =>
         DataCreature.In(args.Copy > 0 ? CopyOf(args.State, args.Owner, args.Copy).Data : SimEngine.PowersOf(args.State, args.Owner).DataOf(ThisPower));
 
+    /// <summary>A card event's hook (the card drawn, exhausted, discarded, made...: SimState.EventCard, a draw's its profile).</summary>
+    private static bool IsCardEventHook(HookName hook) => hook is HookName.AfterCardDrawn or HookName.AfterCardExhausted or HookName.AfterCardDiscarded
+        or HookName.AfterCardGeneratedForCombat or HookName.AfterShuffle or HookName.AfterStarsSpent or HookName.AfterStarsGained or HookName.AfterEnergySpent
+        or HookName.AfterArrowDislodged;
+
+    /// <summary>A hook whose card is the card played (its play's or its count's), not an event's.</summary>
+    private static bool IsPlayHook(HookName hook) =>
+        hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed or HookName.ModifyCardPlayCount or HookName.AfterModifyingCardPlayCount;
+
     /// <summary>
     /// The type of the hook's card: the card played, or the event's card (a made card's, as the code that made it names it; one drawn as its
     /// profile says). A made card no code names (a roll) has none here: it isn't the card played.
     /// </summary>
     private static SimCardType CardTypeOf(in HookArgs args)
     {
-        if (args.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed or HookName.ModifyCardPlayCount or HookName.AfterModifyingCardPlayCount) return args.Play?.Card.Type ?? SimCardType.None;
+        if (IsPlayHook(args.Hook)) return args.Play?.Card.Type ?? SimCardType.None;
         return args.Event switch
         {
             CardEvent.Drawn => args.State.DrawnCard is { Status: true } ? SimCardType.Status : args.State.DrawnCard?.Type ?? args.State.EventCard?.Type ?? SimCardType.None,

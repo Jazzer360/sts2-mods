@@ -291,9 +291,17 @@ public static partial class SimAdapter
             && new ModelSpec(read.Name, read.Spec.Kind, new[] { drawn }).Values().Any(value => value is HookFactValue { Fact: HookFact.CardType }));
 
     /// <summary>
+    /// Whether a drawn card's being Ethereal changes what the board does: a hook of a model of yours read from its code tests the drawn card's
+    /// Ethereal (Pagestorm's `card.Keywords.Contains(CardKeyword.Ethereal)`). A rule from what's asked, never a power's name.
+    /// </summary>
+    internal static bool AsksDrawnEthereal(IEnumerable<AbstractModel> models) =>
+        models.Any(model => SimModels.Get(SimReaders.ModelName(model)) is ReadModel read && read.Spec.Of(HookName.AfterCardDrawn) is { } drawn
+            && new ModelSpec(read.Name, read.Spec.Kind, new[] { drawn }).Values().Any(value => value is HookFactValue { Fact: HookFact.CardEthereal }));
+
+    /// <summary>
     /// Your draw and discard piles by profile (decision #90): what about each card matters if you draw it on this board, never
     /// their order (hidden; only the cards known to be on top would be: none yet). What matters: acting in hand at end of
-    /// turn (always), exhausting as Ethereal (always), a Status when the board asks it (AsksDrawnStatus), Ethereal with Pagestorm, a Strike with
+    /// turn (always), exhausting as Ethereal (always), a Status or Ethereal when the board asks it (AsksDrawnStatus, AsksDrawnEthereal), a Strike with
     /// Hellraiser, and with Stampede or Simpleton the card itself (how it plays). Everything else is one plain profile.
     /// </summary>
     private static void FillDrawPile(SimPlayer player, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, IReadOnlyList<HistoryQuery> questions)
@@ -303,7 +311,7 @@ public static partial class SimAdapter
         {
             // A drawn card's being a Status matters when something on the board asks it (Iteration's count of the Statuses drawn this turn).
             var statusAsked = AsksDrawnStatus(questions, me.Creature.Powers.Cast<AbstractModel>().Concat(me.Relics));
-            var pagestorm = me.Creature.HasPower<PagestormPower>();
+            var etherealAsked = AsksDrawnEthereal(me.Creature.Powers.Cast<AbstractModel>().Concat(me.Relics));
             var hellraiser = me.Creature.HasPower<HellraiserPower>();
             var picks = player.AutoHand != null;
             // A card in your hand that acts on the cards it draws (decision #118): what it reads goes into the profile.
@@ -327,7 +335,7 @@ public static partial class SimAdapter
                 var fading = IsFading(card, combat);
                 var hexFading = fading && EtherealOnlyFromHex(card);
                 var status = statusAsked && card.Type == CardType.Status;
-                var ethereal = pagestorm && card.Keywords.Contains(CardKeyword.Ethereal);
+                var ethereal = etherealAsked && card.Keywords.Contains(CardKeyword.Ethereal);
                 var strike = hellraiser && card.Tags.Contains(CardTag.Strike);
                 // Hellraiser's auto-play is built like a picked card's (decision #121), except past the game's cap on endless
                 // auto-plays, when every enemy you could hit can't die (HellraiserPower: 9 a turn): then it isn't simulated.
@@ -496,7 +504,7 @@ public static partial class SimAdapter
         [nameof(SpeedsterPower)] = "any card: a count (CardEvent.Drawn)",
         [nameof(CorrosiveWavePower)] = "any card: a count (CardEvent.Drawn)",
         [nameof(IterationPower)] = "a Status (the profile's Status, as its question to the fight's log asks it: AsksDrawnStatus): draws more",
-        [nameof(PagestormPower)] = "Ethereal (the profile's Ethereal, with Pagestorm): draws more",
+        [nameof(PagestormPower)] = "Ethereal (the profile's Ethereal, when a read hook tests it: AsksDrawnEthereal): draws more",
         [nameof(HellraiserPower)] = "a Strike (the profile's Strike, with Hellraiser): its auto-play isn't simulated; later auto-plays aren't predicted",
         [nameof(ChainsOfBindingPower)] = "afflicts drawn cards Bound (playability, read live; nothing at end of turn)",
         [nameof(ConfusedPower)] = "a random cost (costs matter to Simpleton only: read live in hand; a drawn card keeps the cost it had)",

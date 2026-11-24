@@ -3996,6 +3996,67 @@
     "HelpsOwner": false
   },
   {
+    "Name": "HangPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "HangPower.ModifyDamageMultiplicative:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "HangPower.ModifyDamageMultiplicative:0016",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "SourceCardIs",
+                    "Of": "Hang"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "HatchPower",
     "Kind": "Power",
     "Hooks": [
@@ -9655,6 +9716,68 @@
       }
     ],
     "Tab": "Block",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "PagestormPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardDrawn",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDrawn\u003Ed__6.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDrawn\u003Ed__6.MoveNext:0042",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardEthereal"
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DrawStep",
+            "Count": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDrawn\u003Ed__6.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDrawn\u003Ed__6.MoveNext:0042",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardEthereal"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
     "HelpsOwner": false
   },
   {

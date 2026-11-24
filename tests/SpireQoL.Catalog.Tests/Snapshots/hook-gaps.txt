@@ -1,12 +1,12 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by capability.
-# 116 hand-written models.
+# 115 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
+read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 8 classes, 8 alone: ArtOfWar*, ConquerorPower*, DemonTongue*, EmotionChip*, MonarchsGazePower*, ParryingShield*, RippleBasin*, SelfFormingClay*
 its own data: a card or a play kept, a field used directly: 14 classes, 7 alone: BlackHolePower, CalamityPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, MusicBox, PaelsLegion, PenNib, RupturePower*, SerpentFormPower*, StretchPower*, UnsettlingLamp, Vambrace, WitheringPresencePower*
-read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 7 classes, 7 alone: ArtOfWar*, DemonTongue*, EmotionChip*, MonarchsGazePower*, ParryingShield*, RippleBasin*, SelfFormingClay*
-queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 10 classes, 6 alone: ConquerorPower*, CurlUpPower, DarkEmbracePower*, JossPaper*, LethalityPower*, PaelsEye, PagestormPower*, PhantomBladesPower, TagTeamPower*, Vambrace
 a monster's own state set (its flag, its next move): 10 classes, 4 alone: AsleepPower, CurlUpPower, FlutterPower*, ImbalancedPower*, InfestedPower, PlowPower*, RavenousPower*, SlumberPower, SteamEruptionPower, StockPower
+queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 8 classes, 4 alone: CurlUpPower, DarkEmbracePower*, JossPaper*, LethalityPower*, PaelsEye, PhantomBladesPower, TagTeamPower*, Vambrace
 arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner): 5 classes, 4 alone: CoveringFirePower*, ExplosiveArrowsPower*, QuietusPower, Twine*, YahPower*
 the HP-loss pipeline: 7 classes, 3 alone: BeatingRemnant*, BufferPower, HardenedShellPower, IntangiblePower, SlipperyPower, TheBoot*, TungstenRod*
 hooks: BeforeAttack and AfterAttack: 6 classes, 3 alone: AimPower, BoneFlute*, GigantificationPower*, QuietusPower, SkittishPower, VigorPower*
@@ -64,7 +64,7 @@ CalamityPower: [its own data: a card or a play kept, a field used directly] Afte
 CentennialPuzzle: [a loop over items (creatures, cards)] AfterDamageReceived: gap: a loop
 ChemicalX: [card costs and keywords (cards' own hooks, Part B3)] ModifyXValue: gap: the simulator runs no read model's ModifyXValue
 CompostPower: [a loop over items (creatures, cards)] AfterDeath: gap: a loop
-ConquerorPower: [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyDamageMultiplicative: gap: tests cardSource is SovereignBlade
+ConquerorPower: [read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule)] read whole
 ConsumingShadowPower: [orbs (AfterOrbChanneled, EvokeLast, an orb made first)] AfterSideTurnEnd: gap: OrbCmd.EvokeLast isn't translated
 CorruptionPower: [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation | [card costs and keywords (cards' own hooks, Part B3)] TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
 CoveredPower: [another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount)] AfterApplied: gap: changes a game object outside a command (InterceptPower.AddCoveredCreature) | [queries: the owner's powers] AfterSideTurnEnd: gap: tests Contains(this.Owner.Powers, this)
@@ -110,7 +110,6 @@ OblivionPower: [a power applied by someone other than its owner] AfterCardPlayed
 PaelsEye: [a turn's start (the enemies' turn start, an extra turn)] AfterTakingExtraTurn: gap: the simulator runs no read model's AfterTakingExtraTurn | [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] BeforeCardPlayed: gap: tests cardPlay.IsAutoPlay | [a loop over items (creatures, cards)] BeforeSideTurnEndEarly: gap: a loop | [a turn's start (the enemies' turn start, an extra turn)] ShouldTakeExtraTurnEarly: gap: the simulator runs no read model's ShouldTakeExtraTurnEarly
 PaelsLegion: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: the value cardPlay | [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount)] AfterModifyingBlockAmount: gap: the simulator runs no read model's AfterModifyingBlockAmount | [its own data: a card or a play kept, a field used directly] ModifyBlockMultiplicative: gap: the value cardPlay
 PaelsTears: [the owner's energy] BeforeSideTurnEnd: gap: the value this.Owner.PlayerCombatState.Energy
-PagestormPower: [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] AfterCardDrawn: gap: tests card.Keywords.Contains(2)
 ParryPower: [the simulator's own model (its game class has no hooks: another class's code reads it)] no hooks
 ParryingShield: [read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule)] read whole
 PenNib: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: the value cardPlay.Card | [its own data: a card or a play kept, a field used directly] BeforeCardPlayed: gap: the value cardPlay.Card | [queries: a creature's side or presence] ModifyDamageMultiplicative: gap: the value dealer

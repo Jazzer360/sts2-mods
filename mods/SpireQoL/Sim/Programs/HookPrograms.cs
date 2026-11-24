@@ -166,6 +166,8 @@ public enum HookFact
     /// a =&gt; a.GetPowerAmount&lt;T&gt;()): PoisonPower.TriggerCount's Accelerant): the living players for an enemy, the living enemies for a player.
     /// </summary>
     OpponentsPowerAmount,
+    /// <summary>The card a damage or block comes from is the class named in Of (`cardSource is SovereignBlade`: Conqueror's).</summary>
+    SourceCardIs,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>

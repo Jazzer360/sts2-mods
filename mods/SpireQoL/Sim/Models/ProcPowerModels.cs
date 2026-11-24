@@ -405,11 +405,16 @@ public sealed class SeekingEdgePower : SovereignBladeBuff { }
 public sealed class ParryPower : SovereignBladeBuff { }
 public sealed class SwordSagePower : SovereignBladeBuff { }
 
-/// <summary>ConquerorPower (on an enemy): Sovereign Blade deals it more damage.</summary>
+/// <summary>
+/// ConquerorPower (on an enemy): Sovereign Blade deals it double (ModifyDamageMultiplicative: `cardSource is SovereignBlade`, a powered attack,
+/// on its owner: 2), and its tab shows on a Sovereign Blade played (its code reads whole: the tab is what keeps this model).
+/// </summary>
 public sealed class ConquerorPower : ProcModel
 {
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
         owner >= 0 && play.Card.Name == CardId.SovereignBlade.Name && play.PlayIndex == 0 ? Fire(state, owner) : One(state);
+    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
+        damage.Card?.Name == CardId.SovereignBlade.Name && damage.Props.IsPoweredAttack() && damage.Target == owner ? 2m : 1m;
 }
 
 // ---- card events: exhausts, draws, discards, stars, energy, shuffles, created cards
@@ -420,15 +425,6 @@ public sealed class DarkEmbracePower : ProcModel
     public override TabKind? Tab => TabKind.Draw;
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
         cardEvent == CardEvent.Exhausted && player == owner ? Cause(Fire(state, owner), CardEvent.Drawn, count: Amount(state, owner), owner) : One(state);
-}
-
-/// <summary>PagestormPower.AfterCardDrawn: each Ethereal card its owner draws draws its amount more, in its place among the listeners. No tab.</summary>
-public sealed class PagestormPower : SimModel
-{
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.Drawn && player == owner && state.DrawnCard is { Ethereal: true }
-            ? SimEngine.ProcCardEvent(state, CardEvent.Drawn, count: SimEngine.PowerOn(state, owner, ThisPower), owner, indirect: true)
-            : One(state);
 }
 
 /// <summary>StratagemPower.AfterShuffle: a pick from the draw pile on each shuffle.</summary>

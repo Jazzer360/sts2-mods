@@ -1215,3 +1215,14 @@ public sealed class InfernoPower : SimModel
         SimEngine.DamageAllEnemies(state, amount, owner);
     }
 }
+
+// ---- the card's facts (round seven: Sim/Models/ProcPowerModels.cs, deleted 2026-11-24)
+
+/// <summary>PagestormPower.AfterCardDrawn: each Ethereal card its owner draws draws its amount more, in its place among the listeners. No tab.</summary>
+public sealed class PagestormPower : SimModel
+{
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
+        cardEvent == CardEvent.Drawn && player == owner && state.DrawnCard is { Ethereal: true }
+            ? SimEngine.ProcCardEvent(state, CardEvent.Drawn, count: SimEngine.PowerOn(state, owner, ThisPower), owner, indirect: true)
+            : One(state);
+}

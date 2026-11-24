@@ -803,12 +803,15 @@ public static class HookReader
                     return new HookFactValue(HookFact.PoweredBlock);
                 case QueryValue { Name: "IsCardOrMonsterMove", Arguments: [var props] } when IsProps(props):
                     return new HookFactValue(HookFact.CardOrMonsterMove);
-                case QueryValue { Name: "Contains", Of: QueryValue { Name: "Keywords", Of: { } keywordsOf }, Arguments: [ConstantValue keyword] } when IsPlayCard(keywordsOf):
+                case QueryValue { Name: "Contains", Of: QueryValue { Name: "Keywords", Of: { } keywordsOf }, Arguments: [ConstantValue keyword] } when IsPlayCard(keywordsOf) || IsEventCard(keywordsOf):
                     return EnumName(_type.Assembly, "CardKeyword", keyword.Value) == "Ethereal" ? new HookFactValue(HookFact.CardEthereal) : throw new Gap($"gap: tests the card's keyword {keyword.Value}");
                 case QueryValue { Name: "is", Of: NamedValue { Name: "power" }, Type: var powerClass }:
                     return PowerIs(powerClass);
                 case QueryValue { Name: "is", Of: { } cardOf, Type: var cardClass } when IsEventCard(cardOf):
                     return new HookFactValue(HookFact.CardIs) { Of = cardClass };
+                // The card a damage or block comes from is a class (cardSource is SovereignBlade).
+                case QueryValue { Name: "is", Of: { } sourceOf, Type: var sourceClass } when IsSourceCard(sourceOf):
+                    return new HookFactValue(HookFact.SourceCardIs) { Of = sourceClass };
                 case QueryValue { Type: "Decimal", Name: var operatorName, Arguments: [var left, var right] } when OperatorOf(operatorName) is { } operation:
                     return new HookMath(operation, Value(left), Value(right));
                 // One of its own true-or-false properties (MiniRegent's UsedThisTurn): its state, 1 when set.

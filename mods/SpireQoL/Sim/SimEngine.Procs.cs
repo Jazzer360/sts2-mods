@@ -166,12 +166,15 @@ public static partial class SimEngine
 
     /// <summary>
     /// One card event's bookkeeping and its listeners (AfterCardEvent), about <paramref name="card"/> when it's known (SimState.EventCard
-    /// while they run; a card event inside a listener's sets its own and gives the outer one back).
+    /// while they run; a card event inside a listener's sets its own and gives the outer one back). A draw's card is its profile
+    /// (<paramref name="drawn"/>, SimState.DrawnCard: from the draw pile; null, a draw whose card isn't read), never an outer draw's.
     /// </summary>
-    internal static List<SimState> FireCardEvent(SimState state, CardEvent cardEvent, int player, bool indirect, SimCard? card = null)
+    internal static List<SimState> FireCardEvent(SimState state, CardEvent cardEvent, int player, bool indirect, SimCard? card = null, SimDrawCard? drawn = null)
     {
         var outerCard = state.EventCard;
+        var outerDrawn = state.DrawnCard;
         state.EventCard = card;
+        if (cardEvent == CardEvent.Drawn) state.DrawnCard = drawn;
         CountEvent(state, cardEvent, player);
         var was = state.IndirectNow;
         state.IndirectNow = indirect || was;
@@ -180,6 +183,7 @@ public static partial class SimEngine
         {
             branch.IndirectNow = was;
             branch.EventCard = outerCard;
+            branch.DrawnCard = outerDrawn;
         }
         return after;
     }

@@ -497,12 +497,6 @@ public static partial class SimEngine
     }
 
     /// <summary>The AfterCardDrawn listeners on <paramref name="card"/>'s draw (SimState.DrawnCard while they run).</summary>
-    private static List<SimState> DrawReactions(SimState state, int player, SimDrawCard card, bool indirect)
-    {
-        var outer = state.DrawnCard;
-        state.DrawnCard = card;
-        var after = FireCardEvent(state, CardEvent.Drawn, player, indirect);
-        foreach (var branch in after) branch.DrawnCard = outer;
-        return after;
-    }
+    private static List<SimState> DrawReactions(SimState state, int player, SimDrawCard card, bool indirect) =>
+        FireCardEvent(state, CardEvent.Drawn, player, indirect, drawn: card);
 }
