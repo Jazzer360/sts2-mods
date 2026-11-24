@@ -1,5 +1,5 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by capability.
-# 128 hand-written models.
+# 127 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
@@ -39,7 +39,6 @@ a pick: 1 classes, 1 alone: StratagemPower*
 commands: AutoPlayFromDrawPile: 1 classes, 1 alone: LostLutePower*
 hooks: BeforeDamageReceived: 1 classes, 1 alone: ThornsPower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*
-the turn number: 1 classes, 1 alone: StoneCalendar*
 another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 7 classes, 0 alone: CacophonyPower, MonologuePower, PanachePower, SlowPower, SurprisePower, VitalSparkPower, WitheringPresencePower
 a death the game holds back (ShouldStopCombatFromEnding and the like): 4 classes, 0 alone: InfestedPower, SteamEruptionPower, StockPower, SurprisePower
 multiplayer scaling (GetScaledAmountForMultiplayer): 4 classes, 0 alone: BufferPower, PlatingPower, SkittishPower, SlipperyPower
@@ -155,7 +154,6 @@ SneckoSkull: [hooks: the power amount given] AfterModifyingPowerAmountGiven: gap
 SongPathPower: [the fight's log (the history ledger, decision #191)] AfterCardPlayed: gap: tests FirstOrDefault(Instance.History.CardPlaysStarted, e => e.HappenedThisTurn(cardPlay.Player.Creature.CombatState) and Contains(e.CardPlay.Card.Tags,...
 SteamEruptionPower: [a monster's own state set (its flag, its next move)] AfterDeath: gap: changes a game object outside a command (WaterfallGiant.TriggerAboutToBlowState) | [a death the game holds back (ShouldStopCombatFromEnding and the like)] ShouldCreatureBeRemovedFromCombatAfterDeath: gap: the simulator runs no read model's ShouldCreatureBeRemovedFromCombatAfterDeath | [a death the game holds back (ShouldStopCombatFromEnding and the like)] ShouldPowerBeRemovedAfterOwnerDeath: gap: the simulator runs no read model's ShouldPowerBeRemovedAfterOwnerDeath | [a death the game holds back (ShouldStopCombatFromEnding and the like)] ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding
 StockPower: [a monster's own state set (its flag, its next move)] AfterDeath: gap: sets Axebot.ShouldPlaySpawnAnimation where the reader reads no store | [a death the game holds back (ShouldStopCombatFromEnding and the like)] ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding
-StoneCalendar: [the turn number] BeforeSideTurnEnd: gap: the value this.Owner.PlayerCombatState.TurnNumber
 StratagemPower: [a pick] AfterShuffle: gap: a pick
 StretchPower: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: the value null | [its own data: a card or a play kept, a field used directly] BeforeCardPlayed: gap: the value cardPlay | [its own data: a card or a play kept, a field used directly] ModifyBlockAdditive: gap: tests this.GetInternalData<Data>().cardPlay()
 SurprisePower: [another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount)] AfterDeath: gap: sets PowerModel.Target where the reader reads no store | [a death the game holds back (ShouldStopCombatFromEnding and the like)] ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding

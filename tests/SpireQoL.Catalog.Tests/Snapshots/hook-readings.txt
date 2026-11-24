@@ -266,7 +266,7 @@ relic SelfFormingClay: AfterDamageReceived: read
 relic Shuriken: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers
 relic SneckoSkull: AfterModifyingPowerAmountGiven: gap: the simulator runs no read model's AfterModifyingPowerAmountGiven | ModifyPowerAmountGivenAdditive: gap: the simulator runs no read model's ModifyPowerAmountGivenAdditive
 relic SparklingRouge: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
-relic StoneCalendar: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns | AfterSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers | BeforeSideTurnEnd: gap: the value this.Owner.PlayerCombatState.TurnNumber
+relic StoneCalendar: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns | AfterSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers | BeforeSideTurnEnd: read
 relic Storyteller: AfterRoomEntered: not run: entering a room: outside the fight's turns | BeforeSideTurnEnd: read
 relic SturdyClamp: AfterPreventingBlockClear: gap: the simulator runs no read model's AfterPreventingBlockClear | ShouldClearBlock: gap: the simulator runs no read model's ShouldClearBlock
 relic TheAbacus: AfterShuffle: read

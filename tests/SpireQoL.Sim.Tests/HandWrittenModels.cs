@@ -916,3 +916,12 @@ public sealed class GalacticDust : RelicProc
         return spent >= per ? Block(state, owner, spent / per * Var(state, owner, "Block", fallback: 0), Unpowered) : One(state);
     }
 }
+
+// ---- the turn number (round four: Sim/Models/EndOfTurnModels.cs, deleted 2026-11-24)
+
+/// <summary>StoneCalendar.BeforeSideTurnEnd: its damage (amount) to every hittable enemy on its DamageTurn (Data: turns until then).</summary>
+public sealed class StoneCalendar : EndOfTurnRelic
+{
+    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner) =>
+        state.TakesPart(owner) && Data(state, owner) == 0 && Amount(state, owner) > 0 ? DamageAll(state, owner, Amount(state, owner)) : One(state);
+}

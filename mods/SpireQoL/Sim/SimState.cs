@@ -333,8 +333,6 @@ public sealed class SimPlayer
 
     // Relics (amount: their block or damage; Data where said).
     [JsonIgnore] public int RippleBasinBlock { get => Relics[RelicId.RippleBasin]; set => SetRelic(RelicId.RippleBasin, value); }
-    /// <summary>Stone Calendar's damage when this is its turn (Data: turns until then), else 0.</summary>
-    [JsonIgnore] public int StoneCalendarDamage { get => Relics.DataOf(RelicId.StoneCalendar) == 0 ? Relics[RelicId.StoneCalendar] : 0; set => SetRelic(RelicId.StoneCalendar, value); }
     /// <summary>Parrying Shield (amount: its damage; Data: the block it needs).</summary>
     [JsonIgnore] public int ParryingShieldDamage { get => Relics[RelicId.ParryingShield]; set => Relics = Relics.With(RelicId.ParryingShield, value, Relics.DataOf(RelicId.ParryingShield)); }
     [JsonIgnore] public int ParryingShieldBlock { get => Relics.DataOf(RelicId.ParryingShield); set => Relics = Relics.With(RelicId.ParryingShield, Relics[RelicId.ParryingShield], value); }
@@ -783,6 +781,12 @@ public sealed class SimState
 
     /// <summary>The rules the running game does main's way (decision #169); None: beta's. Read once from the game, never changed.</summary>
     public MainRule MainRules;
+
+    /// <summary>
+    /// The players' turn number this turn (PlayerCombatState.TurnNumber: 1 on the fight's first), read from the game. Constant: a simulation
+    /// never reaches the players' next turn.
+    /// </summary>
+    public int TurnNumber;
 
     /// <summary>
     /// The history ledger's questions (decision #191): every query of the game's log of the fight that the cards, relics and powers on this

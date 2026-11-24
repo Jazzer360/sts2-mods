@@ -75,13 +75,6 @@ public sealed class ConsumingShadowPower : EndOfTurnModel
     }
 }
 
-/// <summary>StoneCalendar.BeforeSideTurnEnd: its damage (amount) to every hittable enemy on its DamageTurn (Data: turns until then).</summary>
-public sealed class StoneCalendar : EndOfTurnRelic
-{
-    public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner) =>
-        state.TakesPart(owner) && Data(state, owner) == 0 && Amount(state, owner) > 0 ? DamageAll(state, owner, Amount(state, owner)) : One(state);
-}
-
 /// <summary>ParryingShield.AfterSideTurnEnd: its damage (amount) to a random hittable enemy when its owner has at least its Block (Data).</summary>
 public sealed class ParryingShield : EndOfTurnRelic
 {

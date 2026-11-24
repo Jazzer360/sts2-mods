@@ -53,11 +53,14 @@ public class EndOfTurnModelTests
     [Fact]
     public void StoneCalendarWaitsForItsTurn()
     {
-        var state = new SimState { Enemies = { Attacker(id: 0, hp: 70) } };
-        state.You.Relics = state.You.Relics.With(RelicId.StoneCalendar, amount: 52, data: 1);
+        // Read from its code: its Damage (52) on the turn its DamageTurn (7) names, the players' turn number this turn (SimState.TurnNumber).
+        var state = new SimState { Enemies = { Attacker(id: 0, hp: 70) }, TurnNumber = 6 };
+        state.You.Relics = state.You.Relics.With(RelicId.StoneCalendar, amount: 0, data: 0);
         Assert.Equal(70, Assert.Single(SimEngine.Run(state).Branches).Enemy(id: 0)!.Hp);
-        state.You.Relics = RelicSet.Empty.With(RelicId.StoneCalendar, amount: 52, data: 0);
+        state.TurnNumber = 7;
         Assert.Equal(18, Assert.Single(SimEngine.Run(state).Branches).Enemy(id: 0)!.Hp);
+        state.TurnNumber = 8;
+        Assert.Equal(70, Assert.Single(SimEngine.Run(state).Branches).Enemy(id: 0)!.Hp);
     }
 
     [Fact]

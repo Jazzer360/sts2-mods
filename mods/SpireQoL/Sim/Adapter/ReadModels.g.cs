@@ -83,6 +83,7 @@ public static partial class ReadModels
         PowerId.Soar.Name,
         PowerId.Speedster.Name,
         PowerId.SpiritOfAsh.Name,
+        RelicId.StoneCalendar.Name,
         PowerId.Storm.Name,
         RelicId.Storyteller.Name,
         PowerId.Strangle.Name,

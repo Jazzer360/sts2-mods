@@ -7579,6 +7579,65 @@
     "Harmful": false
   },
   {
+    "Name": "StoneCalendar",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Damage",
+              "Canonical": 52
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Damage.Props",
+              "Canonical": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEnd\u003Ed__14.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeSideTurnEnd\u003Ed__14.MoveNext:0061",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "TurnNumber"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "DamageTurn",
+                      "Canonical": 7
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Harmful": false
+  },
+  {
     "Name": "StormPower",
     "Kind": "Power",
     "Hooks": [

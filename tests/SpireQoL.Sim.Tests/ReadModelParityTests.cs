@@ -55,7 +55,7 @@ public class ReadModelParityTests
     /// </summary>
     private static readonly Dictionary<string, string> RelicAmountVars = new(StringComparer.Ordinal) {
         [RelicId.CharonsAshes.Name] = "Damage", [RelicId.ForgottenSoul.Name] = "Damage", [RelicId.Orichalcum.Name] = "Block", [RelicId.FakeOrichalcum.Name] = "Block",
-        [RelicId.ScreamingFlagon.Name] = "Damage", [RelicId.CloakClasp.Name] = "Block", [RelicId.ObsidianVice.Name] = "Damage", [RelicId.LunarPastry.Name] = "Stars",
+        [RelicId.ScreamingFlagon.Name] = "Damage", [RelicId.CloakClasp.Name] = "Block", [RelicId.ObsidianVice.Name] = "Damage", [RelicId.LunarPastry.Name] = "Stars", [RelicId.StoneCalendar.Name] = "Damage",
     };
 
     /// <summary>
@@ -69,6 +69,12 @@ public class ReadModelParityTests
     /// as the adapter did (Crab Rage's Strength).
     /// </summary>
     private static readonly Dictionary<string, string> PowerAmountVars = new(StringComparer.Ordinal) { [PowerId.CrabRage.Name] = "StrengthPower" };
+
+    /// <summary>
+    /// The relics whose hand-written model the adapter told whether this was its turn (Stone Calendar's Data: turns until), by the value naming
+    /// that turn: the board's turn is it, as the adapter's Data 0 was.
+    /// </summary>
+    private static readonly Dictionary<string, string> TurnVars = new(StringComparer.Ordinal) { [RelicId.StoneCalendar.Name] = "DamageTurn" };
 
     /// <summary>
     /// "Model.Var": values the hand-written model wrote as a constant (Colossus' 0.5) that the read model reads from its values: the board gives
@@ -195,11 +201,13 @@ public class ReadModelParityTests
             if (fact is { Fact: HookFact.CreatureHasRelic, Of: { } relic })
                 foreach (var holder in new[] { Who.You, Who.Teammate(0) }) SimEngine.SetRelics(state, holder, SimEngine.RelicsOf(state, holder).With(new RelicId(relic), amount: 0, data: 0));
         }
-        // A power whose code asks who applied it keeps its applier as its Data (DataCreature), as the adapter reads it: you, for one that asks
-        // whether its applier is a player or played the card; else enemy 0 (one that asks whether its applier died).
         // The questions its code asks of the fight's log, seeded as the adapter seeds the board's (HistoryLedger.Seed): none happened yet.
         var questions = model.Spec.Values().OfType<HookHistory>().Select(history => history.Query).Distinct().ToList();
         if (questions.Count > 0) state.History = questions;
+        // The turn the hand-written model was told was its own (Stone Calendar's Data 0: its turn): the turn its value names.
+        if (TurnVars.TryGetValue(model.Name, out var turnVar)) state.TurnNumber = state.Vars[$"{owner}:{model.Name}:{turnVar}"];
+        // A power whose code asks who applied it keeps its applier as its Data (DataCreature), as the adapter reads it: you, for one that asks
+        // whether its applier is a player or played the card; else enemy 0 (one that asks whether its applier died).
         var playersApplier = model.Spec.Values().Any(value => value is HookFactValue { Fact: HookFact.ApplierIsPlayer or HookFact.PlayIsAppliers });
         var powerData = PowerDataVars.TryGetValue(model.Name, out var dataVar) ? state.Vars[$"{owner}:{model.Name}:{dataVar}"]
             : model.UsesApplier ? DataCreature.Of(playersApplier ? Who.You : 0) : 0;

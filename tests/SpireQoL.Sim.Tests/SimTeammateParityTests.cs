@@ -50,7 +50,7 @@ public class SimTeammateParityTests
                 player.Hailstorm = 3;
                 break;
             case "The Bomb": player.TheBombDamage = 12; break;
-            case "Stone Calendar": player.StoneCalendarDamage = 9; break;
+            case "Stone Calendar": state.WithRelic(id, RelicId.StoneCalendar, "Damage", value: 9); state.TurnNumber = 7; break; // its DamageTurn (7)
             case "Screaming Flagon": state.WithRelic(id, RelicId.ScreamingFlagon, "Damage", value: 8); player.HandCount = 0; break;
             case "Lightning": player.Orbs.Add(new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 }); break;
             case "Juggernaut": player.Plating = 5; player.Juggernaut = 7; break;

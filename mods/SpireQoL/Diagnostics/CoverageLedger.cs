@@ -110,7 +110,7 @@ internal static partial class CoverageLedger
         ["Shuriken"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed Strength every N attacks (proc tab, tracker)",
         ["SneckoSkull"] = "covered: ModifyPowerAmountGivenAdditive +1 poison per application (simulator: card poison, Envenom)",
         ["SparklingRouge"] = "covered: AfterBlockCleared Strength and Dexterity on turn 3, at the start of your turn (tracker turn timer)",
-        ["StoneCalendar"] = "covered: BeforeSideTurnEnd damages all enemies on its turn (model StoneCalendar, tracker)",
+        ["StoneCalendar"] = "covered: read from its code (ReadModel, decision #195): BeforeSideTurnEnd damages all enemies on the turn its DamageTurn names (the players' turn number, tracker)",
         ["SturdyClamp"] = "ignore: ShouldClearBlock keeps up to 10 block into your next turn",
         ["TheAbacus"] = "covered: read from its code (ReadModel, decision #195): AfterShuffle block (proc block on cards that shuffle)",
         ["TheBoot"] = "covered: ModifyHpLostAfterOstyLate raises your attack hits below its minimum to it (simulator TheBoot, after Hardened Shell and Slippery; its tab on a play with a hit it raises)",

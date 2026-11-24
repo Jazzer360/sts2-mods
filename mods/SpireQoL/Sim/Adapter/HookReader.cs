@@ -901,6 +901,9 @@ public static class HookReader
                     return Value(stored.Value);
                 case CompareValue compare:
                     return Compare(compare);
+                // The players' turn number (base.Owner.PlayerCombatState.TurnNumber).
+                case QueryValue { Name: "TurnNumber", Of: QueryValue { Name: "PlayerCombatState", Of: { } turnOf } } when IsOwner(turnOf):
+                    return new HookFactValue(HookFact.TurnNumber);
                 // The owner's block (base.Owner.Creature.Block).
                 case QueryValue { Name: "Block", Of: { } blockOf } when IsOwner(blockOf):
                     return new HookFactValue(HookFact.OwnerBlock);

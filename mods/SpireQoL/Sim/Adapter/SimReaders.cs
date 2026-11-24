@@ -203,7 +203,6 @@ public static class SimReaders
         [nameof(SneckoSkull)] = Var("PoisonPower", fallback: 1),
         // End-of-turn relics: their block, damage or stars.
         [nameof(RippleBasin)] = Var("Block"),
-        [nameof(StoneCalendar)] = Var("Damage"),
         [nameof(ParryingShield)] = Var("Damage"),
     };
 
@@ -250,10 +249,6 @@ public static class SimReaders
                     data = Sts2State.Private(relic, "StrengthApplied", fallback: true) ? Models.RedSkull.StrengthGiven : 0; // its Strength already given
                     break;
                 // End-of-turn relics (their block, damage or stars: RelicAmountVars), and what they wait for (Data).
-                case nameof(StoneCalendar):
-                    data = Math.Max(0, Sts2State.Var(relic, "DamageTurn", fallback: 7) - Sts2State.TurnNumber); // turns until it fires (0: this one)
-                    if (Sts2State.TurnNumber > Sts2State.Var(relic, "DamageTurn", fallback: 7)) amount = 0; // its turn has passed
-                    break;
                 case nameof(ParryingShield): data = Sts2State.Var(relic, "Block"); break;
                 // Its Data is the model's own: energy spent during the play being simulated (PaelsTears), so none yet.
                 case nameof(PaelsTears): data = 0; break;

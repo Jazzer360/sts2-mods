@@ -640,6 +640,7 @@ public sealed class ReadModel : SimModel
             case HookFact.HasApplier: return (in HookArgs args) => ApplierOf(in args) != Who.None ? 1m : 0m;
             case HookFact.ApplierIsPlayer: return (in HookArgs args) => Who.IsPlayer(ApplierOf(in args)) ? 1m : 0m;
             case HookFact.PlayIsAppliers: return (in HookArgs args) => args.Play is { } play && ApplierOf(in args) is var applier && applier != Who.None && play.Owner == applier ? 1m : 0m;
+            case HookFact.TurnNumber: return (in HookArgs args) => args.State.TurnNumber;
             case HookFact.OwnerDead: return (in HookArgs args) => (args.State.Player(args.Owner) is { } player ? player.Died || player.Hp <= 0 : args.State.Enemy(args.Owner) is not { Alive: true }) ? 1m : 0m;
             case HookFact.CreatureThere:
             {
