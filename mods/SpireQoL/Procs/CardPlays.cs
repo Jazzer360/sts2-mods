@@ -12,7 +12,7 @@ namespace SpireQoL.Procs;
 
 /// <summary>
 /// Whether a card can be played, and how many times a play of it plays: the game's own rules, read through its hooks. Every
-/// prediction of a play starts here (the play facts, the simulator's plays, the tabs, the audits).
+/// prediction of a play starts here (the card's prediction, the simulator's plays, the tabs, the audits).
 /// </summary>
 public static class CardPlays
 {
