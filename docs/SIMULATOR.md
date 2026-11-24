@@ -127,6 +127,11 @@ deterministic and run synchronously inside `SimEngine.Damage`, so every source o
 gets them. (The first draft had an explicit per-branch work stack; composing over branch sets did the same with no new
 machinery.)
 
+A run is the play, the end of your turn, the enemies' turn start, then the enemy turn. The enemies' turn start
+(`SimEngine.EnemyTurnStart`, CombatManager.StartTurn) runs every listener's BeforeSideTurnStart, AfterSideTurnStart and
+AfterSideTurnStartLate, its participants the living enemies; each enemy's poison then ticks and the enemies move. The
+players' next turn start (AfterEnergyReset, AfterPlayerTurnStart, BeforeHandDraw) is past every simulation.
+
 ### Pipelines
 - **Damage on a hit** = the game's formula over: the base (the card's value, or a calculated value worked out by the
   adapter for that target), the enchantment's terms, the **modelled** sources' terms computed from the current state, and

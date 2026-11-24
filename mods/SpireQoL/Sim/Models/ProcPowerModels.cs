@@ -310,19 +310,6 @@ public sealed class SongPathPower : ProcModel
         Mine(play, owner) && Melodies.First(state, play, SimCardTag.Cho) ? Block(state, owner, Amount(state, owner)) : One(state);
 }
 
-/// <summary>LullabyPower.AfterCardPlayed: once a turn (Data 1: already), the play that completes Wah, Cho and Ki gains its amount of block.</summary>
-public sealed class LullabyPower : ProcModel
-{
-    public override TabKind? Tab => TabKind.Block;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (!Mine(play, owner) || UsedThisTurn(state, owner)) return One(state);
-        var (before, after) = Melodies.Finished(state, play);
-        if (before >= 3 || after < 3) return One(state);
-        MarkUsedThisTurn(state, owner);
-        return Block(state, owner, Amount(state, owner));
-    }
-}
 
 /// <summary>
 /// LostLutePower.AfterCardPlayed: each melody (Wah, Cho, Ki) the card is the first this turn to play auto-plays its amount of cards

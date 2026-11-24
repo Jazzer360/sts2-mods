@@ -347,7 +347,9 @@ public class ProcModelTests
         var after = One(state, Events(card, plays: 1));
         Assert.Equal(5, after.You.Block);
         Assert.True(after.Fired.Has("ConductorsBaton"));
-        state.You.Turn = state.You.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Ki), delta: 1); // already complete
+        // Already complete: Lullaby's own ProccdThisTurn is set (by the play that completed them, or its AfterApplied), as the adapter reads it.
+        state.You.Turn = state.You.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Ki), delta: 1);
+        SimEngine.SetField(state, Who.You, key: "LullabyPower.ProccdThisTurn", value: 1);
         Assert.Equal(0, One(state, Events(card, plays: 1)).You.Block);
     }
 

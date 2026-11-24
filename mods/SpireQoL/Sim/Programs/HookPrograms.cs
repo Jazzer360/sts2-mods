@@ -37,6 +37,12 @@ public enum HookName
     ModifyBlockMultiplicative,
     /// <summary>PowerModel.AfterApplied: a new instance of the power landed (a copy of an instanced one: each application).</summary>
     AfterApplied,
+    /// <summary>Hook.BeforeSideTurnStart as the enemies' turn starts (the one turn start a simulation reaches): its participants the enemies.</summary>
+    BeforeSideTurnStart,
+    /// <summary>Hook.AfterSideTurnStart as the enemies' turn starts: its participants the enemies.</summary>
+    AfterSideTurnStart,
+    /// <summary>Hook.AfterSideTurnStart's second pass (AfterSideTurnStartLate) as the enemies' turn starts.</summary>
+    AfterSideTurnStartLate,
 }
 
 /// <summary>
@@ -99,7 +105,7 @@ public enum HookFact
     FromCard,
     /// <summary>The damage's or block's card is the owner's (cardSource.Owner.Creature == base.Owner).</summary>
     CardIsOwners,
-    /// <summary>The owner takes part in the side's turn ending (participants.Contains(base.Owner)).</summary>
+    /// <summary>The owner takes part in the side's turn ending or starting (participants.Contains(base.Owner)): a living player as the players' turn ends, a living enemy as the enemies' starts.</summary>
     TakesPart,
     /// <summary>
     /// The amount the model bound to the play in progress is taken (its own data's Remove(cardPlay.Card, out amount), asked once a hook run):

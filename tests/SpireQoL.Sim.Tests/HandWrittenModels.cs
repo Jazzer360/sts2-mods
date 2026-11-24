@@ -1168,3 +1168,47 @@ internal static class CounterCopies
         state.MutablePlayer(owner).Counters = player.Counters.Where(copy => copy.Power != power).Concat(copies).ToList();
     }
 }
+
+// ---- the enemies' turn start (round six, deleted 2026-11-24)
+
+/// <summary>
+/// ConductorsBatonPower.ModifyDamageMultiplicative: its DamageDecrease (0.75) on powered attacks on its owner; it goes at the
+/// start of the owner's next turn (AfterSideTurnStart), so it lasts through the enemy turn.
+/// </summary>
+public sealed class ConductorsBatonPower : SimModel
+{
+    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
+        damage.Target == owner && damage.Props.IsPoweredAttack() ? 0.75m : 1m;
+}
+
+/// <summary>LullabyPower.AfterCardPlayed: once a turn (Data 1: already), the play that completes Wah, Cho and Ki gains its amount of block.</summary>
+public sealed class LullabyPower : ProcModel
+{
+    public override TabKind? Tab => TabKind.Block;
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (!Mine(play, owner) || UsedThisTurn(state, owner)) return One(state);
+        var (before, after) = Melodies.Finished(state, play);
+        if (before >= 3 || after < 3) return One(state);
+        MarkUsedThisTurn(state, owner);
+        return Block(state, owner, Amount(state, owner));
+    }
+}
+
+/// <summary>
+/// InfernoPower.AfterDamageReceived: each time its owner loses HP while it's their side's turn, every hittable enemy takes its
+/// amount (Unpowered: their block first).
+/// </summary>
+public sealed class InfernoPower : SimModel
+{
+    public override TabKind? Tab => TabKind.Damage;
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Target != owner || hit.Unblocked <= 0 || state.EnemyTurnNow) return;
+        var amount = SimEngine.PowerOn(state, owner, ThisPower);
+        if (amount <= 0) return;
+        state.LogFired(Name, amount * state.Targetable.Count(), owner);
+        if (state.Log) state.EndOfTurnDamage.Add(("Inferno (all)", amount));
+        SimEngine.DamageAllEnemies(state, amount, owner);
+    }
+}

@@ -204,16 +204,6 @@ public sealed class RazorTooth : RelicProc
         Mine(play, owner) && play.PlayIndex == 0 && play.Card.Type is SimCardType.Attack or SimCardType.Skill && play.Card.Upgradable ? Fire(state, owner) : One(state);
 }
 
-/// <summary>
-/// ConductorsBatonPower.ModifyDamageMultiplicative: its DamageDecrease (0.75) on powered attacks on its owner; it goes at the
-/// start of the owner's next turn (AfterSideTurnStart), so it lasts through the enemy turn.
-/// </summary>
-public sealed class ConductorsBatonPower : SimModel
-{
-    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
-        damage.Target == owner && damage.Props.IsPoweredAttack() ? 0.75m : 1m;
-}
-
 /// <summary>Twine.AfterArrowDislodged: block for each of your arrows that comes loose.</summary>
 public sealed class Twine : RelicProc
 {

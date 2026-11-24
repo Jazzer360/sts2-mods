@@ -220,6 +220,7 @@ public static partial class SimEngine
                 outcome = PlayResults(branches.States, start, aliveAtStart, complete: true);
                 AutoPostPlay(branches);
                 EndOfTurn(branches);
+                EnemyTurnStart(branches);
                 branches.Do(EnemyTurn);
             }
             catch (SimCapped)
@@ -1299,11 +1300,32 @@ public static partial class SimEngine
         }
     }
 
-    private static void EnemyTurn(SimState state)
+    /// <summary>
+    /// The enemies' side's turn starts (CombatManager.StartTurn, the one turn start a simulation reaches): the deaths at your end of turn are
+    /// handled, it's the enemies' turn, then every listener's BeforeSideTurnStart and AfterSideTurnStart (then Late), its participants the
+    /// living enemies. Each enemy's poison ticks in EnemyTurn, after the read models' AfterSideTurnStart.
+    /// </summary>
+    private static void EnemyTurnStart(BranchSet branches)
+    {
+        string[] hooks = { nameof(SimModel.BeforeSideTurnStart), nameof(SimModel.AfterSideTurnStart), nameof(SimModel.AfterSideTurnStartLate) };
+        if (!branches.States.Any(branch => hooks.Any(hook => Listens(branch, hook)))) return; // EnemyTurn starts it
+        branches.Do(StartTheEnemiesTurn);
+        HookStep(branches, nameof(SimModel.BeforeSideTurnStart), (model, owner, branch) => model.BeforeSideTurnStart(branch, owner));
+        HookStep(branches, nameof(SimModel.AfterSideTurnStart), (model, owner, branch) => model.AfterSideTurnStart(branch, owner));
+        HookStep(branches, nameof(SimModel.AfterSideTurnStartLate), (model, owner, branch) => model.AfterSideTurnStartLate(branch, owner));
+    }
+
+    private static void StartTheEnemiesTurn(SimState state)
     {
         AllyDeaths(state); // deaths at your end of turn
         state.EnemyTurnNow = true; // Inferno and the like react only on their owner's side's turn
         TurnCountsStartOver(state); // nothing of the players' turn happened "this turn" now (decision #191)
+    }
+
+    private static void EnemyTurn(SimState state)
+    {
+        if (!state.EnemyTurnNow) StartTheEnemiesTurn(state);
+        AllyDeaths(state); // deaths in the enemies' turn start
         // Every enemy's poison ticks as the enemies' turn starts (PoisonPower.AfterSideTurnStart, before ExecuteEnemyTurn), stunned
         // or not, and Hardened Shell's budget resets then. The tick is damage (PoisonPower.Trigger: CreatureCmd.Damage, Unblockable |
         // Unpowered, no dealer): the HP-loss pipeline caps it (Hardened Shell, Slippery) and the damage hooks hear it (Shriek stuns at

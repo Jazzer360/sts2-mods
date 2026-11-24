@@ -129,6 +129,36 @@
     "HelpsOwner": false
   },
   {
+    "Name": "ArcheryPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "AimPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__6.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "ArsenalPower",
     "Kind": "Power",
     "Hooks": [
@@ -274,6 +304,45 @@
     "Tab": "Energy",
     "HelpsOwner": false,
     "Copies": "EachApplication"
+  },
+  {
+    "Name": "BiasedCognitionPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "FocusPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": -1
+              }
+            },
+            "Debuff": false,
+            "DebuffWhenNegative": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__6.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
   },
   {
     "Name": "BurstPower",
@@ -1103,6 +1172,83 @@
     "HelpsOwner": false
   },
   {
+    "Name": "ConductorsBatonPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__8.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "ConductorsBatonPower.ModifyDamageMultiplicative:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "ConductorsBatonPower.ModifyDamageMultiplicative:0015",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookVar",
+                "Key": "DamageDecrease",
+                "Canonical": 0.75
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "ConstrictPower",
     "Kind": "Power",
     "Hooks": [
@@ -1484,6 +1630,37 @@
             "When": {
               "$kind": "HookTest",
               "At": "\u003CAfterSideTurnEnd\u003Ed__4.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "DemonFormPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": false,
+            "DebuffWhenNegative": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__12.MoveNext:0025",
               "Test": {
                 "$kind": "HookFactValue",
                 "Fact": "TakesPart"
@@ -3270,6 +3447,36 @@
     "HelpsOwner": false
   },
   {
+    "Name": "HiddenRootsPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StretchPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__6.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "HighVoltagePower",
     "Kind": "Power",
     "Hooks": [
@@ -3298,6 +3505,72 @@
         ]
       }
     ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "InfernoPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageReceived",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0020",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0033",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Greater",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HitUnblocked"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0055",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OwnersTurn"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage",
     "HelpsOwner": false
   },
   {
@@ -4380,6 +4653,310 @@
       }
     ],
     "Tab": "Damage",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "LullabyPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterApplied",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "ProccdThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "LullabyPower.AfterApplied:0010",
+                  "Test": {
+                    "$kind": "HookHistory",
+                    "Query": {
+                      "Kind": "CardPlayFinished",
+                      "Scope": "ThisTurn",
+                      "Whose": "Owner",
+                      "Details": "None",
+                      "CardType": "None",
+                      "CardTag": "Cho"
+                    },
+                    "Any": true
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "LullabyPower.AfterApplied:0022",
+                  "Test": {
+                    "$kind": "HookHistory",
+                    "Query": {
+                      "Kind": "CardPlayFinished",
+                      "Scope": "ThisTurn",
+                      "Whose": "Owner",
+                      "Details": "None",
+                      "CardType": "None",
+                      "CardTag": "Wah"
+                    },
+                    "Any": true
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "LullabyPower.AfterApplied:0034",
+                "Test": {
+                  "$kind": "HookHistory",
+                  "Query": {
+                    "Kind": "CardPlayFinished",
+                    "Scope": "ThisTurn",
+                    "Whose": "Owner",
+                    "Details": "None",
+                    "CardType": "None",
+                    "CardTag": "Ki"
+                  },
+                  "Any": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "ProccdThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:002F",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlayIsOwners"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:004D",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "ProccdThisTurn"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:0064",
+                    "Test": {
+                      "$kind": "HookHistory",
+                      "Query": {
+                        "Kind": "CardPlayFinished",
+                        "Scope": "ThisTurn",
+                        "Whose": "Owner",
+                        "Details": "None",
+                        "CardType": "None",
+                        "CardTag": "Cho"
+                      },
+                      "Any": true
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:0079",
+                  "Test": {
+                    "$kind": "HookHistory",
+                    "Query": {
+                      "Kind": "CardPlayFinished",
+                      "Scope": "ThisTurn",
+                      "Whose": "Owner",
+                      "Details": "None",
+                      "CardType": "None",
+                      "CardTag": "Wah"
+                    },
+                    "Any": true
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:008E",
+                "Test": {
+                  "$kind": "HookHistory",
+                  "Query": {
+                    "Kind": "CardPlayFinished",
+                    "Scope": "ThisTurn",
+                    "Whose": "Owner",
+                    "Details": "None",
+                    "CardType": "None",
+                    "CardTag": "Ki"
+                  },
+                  "Any": true
+                }
+              }
+            }
+          },
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:002F",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlayIsOwners"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:004D",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "ProccdThisTurn"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:0064",
+                    "Test": {
+                      "$kind": "HookHistory",
+                      "Query": {
+                        "Kind": "CardPlayFinished",
+                        "Scope": "ThisTurn",
+                        "Whose": "Owner",
+                        "Details": "None",
+                        "CardType": "None",
+                        "CardTag": "Cho"
+                      },
+                      "Any": true
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:0079",
+                  "Test": {
+                    "$kind": "HookHistory",
+                    "Query": {
+                      "Kind": "CardPlayFinished",
+                      "Scope": "ThisTurn",
+                      "Whose": "Owner",
+                      "Details": "None",
+                      "CardType": "None",
+                      "CardTag": "Wah"
+                    },
+                    "Any": true
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__12.MoveNext:008E",
+                "Test": {
+                  "$kind": "HookHistory",
+                  "Query": {
+                    "Kind": "CardPlayFinished",
+                    "Scope": "ThisTurn",
+                    "Whose": "Owner",
+                    "Details": "None",
+                    "CardType": "None",
+                    "CardTag": "Ki"
+                  },
+                  "Any": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "ProccdThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "LullabyPower.BeforeSideTurnStart:000C",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block",
     "HelpsOwner": false
   },
   {
@@ -6009,6 +6586,66 @@
     "HelpsOwner": false
   },
   {
+    "Name": "NeurosurgePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DoomPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__6.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "NoxiousFumesPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "PoisonPower",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__6.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "Nunchaku",
     "Kind": "Relic",
     "Hooks": [
@@ -7426,6 +8063,36 @@
     "HelpsOwner": false
   },
   {
+    "Name": "PrepTimePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "VigorPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__4.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "RagePower",
     "Kind": "Power",
     "Hooks": [
@@ -8662,6 +9329,47 @@
             }
           ]
         }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "ShadowStepPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DoubleDamagePower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__4.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__4.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
       }
     ],
     "HelpsOwner": false
@@ -14945,6 +15653,45 @@
       }
     ],
     "Tab": "Trigger",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "WraithFormPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DexterityPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": -1
+              }
+            },
+            "Debuff": false,
+            "DebuffWhenNegative": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__6.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
     "HelpsOwner": false
   }
 ]

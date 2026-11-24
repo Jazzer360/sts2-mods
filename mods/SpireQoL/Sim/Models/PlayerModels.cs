@@ -45,21 +45,3 @@ public sealed class BufferPower : SimModel
         state.LogFired(Name, amount: 0, owner);
     }
 }
-
-/// <summary>
-/// InfernoPower.AfterDamageReceived: each time its owner loses HP while it's their side's turn, every hittable enemy takes its
-/// amount (Unpowered: their block first).
-/// </summary>
-public sealed class InfernoPower : SimModel
-{
-    public override TabKind? Tab => TabKind.Damage;
-    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
-    {
-        if (hit.Target != owner || hit.Unblocked <= 0 || state.EnemyTurnNow) return;
-        var amount = SimEngine.PowerOn(state, owner, ThisPower);
-        if (amount <= 0) return;
-        state.LogFired(Name, amount * state.Targetable.Count(), owner);
-        if (state.Log) state.EndOfTurnDamage.Add(("Inferno (all)", amount));
-        SimEngine.DamageAllEnemies(state, amount, owner);
-    }
-}

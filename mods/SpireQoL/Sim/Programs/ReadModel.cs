@@ -158,6 +158,9 @@ public sealed class ReadModel : SimModel
         HookName.ModifyBlockAdditive => nameof(ModifyBlockAdditive),
         HookName.ModifyBlockMultiplicative => nameof(ModifyBlockMultiplicative),
         HookName.AfterApplied => nameof(AfterApplied),
+        HookName.BeforeSideTurnStart => nameof(BeforeSideTurnStart),
+        HookName.AfterSideTurnStart => nameof(AfterSideTurnStart),
+        HookName.AfterSideTurnStartLate => nameof(AfterSideTurnStartLate),
         _ => nameof(AfterCardEvent),
     };
 
@@ -198,6 +201,9 @@ public sealed class ReadModel : SimModel
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner) => TurnEnd(HookName.BeforeSideTurnEnd, state, owner);
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) => TurnEnd(HookName.AfterSideTurnEnd, state, owner);
     public override IEnumerable<SimState> AfterSideTurnEndLate(SimState state, int owner) => TurnEnd(HookName.AfterSideTurnEndLate, state, owner);
+    public override IEnumerable<SimState> BeforeSideTurnStart(SimState state, int owner) => TurnEnd(HookName.BeforeSideTurnStart, state, owner);
+    public override IEnumerable<SimState> AfterSideTurnStart(SimState state, int owner) => TurnEnd(HookName.AfterSideTurnStart, state, owner);
+    public override IEnumerable<SimState> AfterSideTurnStartLate(SimState state, int owner) => TurnEnd(HookName.AfterSideTurnStartLate, state, owner);
 
     /// <summary>Hook.ModifyCardPlayCount: the value of its code's first way that holds (playCount, playCount + 1...), decided once before the plays.</summary>
     public override int ModifyCardPlayCount(SimState state, int owner, SimCardPlay play, int count)
@@ -822,7 +828,9 @@ public sealed class ReadModel : SimModel
             case HookFact.CardOrMonsterMove: return (in HookArgs args) => (args.Damage?.Props ?? args.Block?.Props ?? args.Hit?.Props)?.IsCardOrMonsterMove() == true ? 1m : 0m;
             case HookFact.FromCard: return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card) != null ? 1m : 0m;
             case HookFact.CardIsOwners: return (in HookArgs args) => (args.Damage?.Play ?? args.Block?.Play)?.Owner == args.Owner ? 1m : 0m;
-            case HookFact.TakesPart: return (in HookArgs args) => args.State.TakesPart(args.Owner) ? 1m : 0m;
+            // The side whose turn ends is the players' (a living player takes part); the side whose turn starts, the enemies' (a living enemy).
+            case HookFact.TakesPart: return (in HookArgs args) => (args.Hook is HookName.BeforeSideTurnStart or HookName.AfterSideTurnStart or HookName.AfterSideTurnStartLate
+                ? args.State.Enemy(args.Owner) is { Alive: true } : args.State.TakesPart(args.Owner)) ? 1m : 0m;
             case HookFact.TakeBound: return (in HookArgs args) => Take(in args) ? 1m : 0m;
             case HookFact.BoundTaken: return (in HookArgs args) => args.Taken?[0] ?? 0;
             case HookFact.HitUnblocked: return (in HookArgs args) => args.Hit?.Unblocked ?? 0;

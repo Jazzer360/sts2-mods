@@ -335,6 +335,12 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner) => One(state);
     public virtual IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) => One(state);
     public virtual IEnumerable<SimState> AfterSideTurnEndLate(SimState state, int owner) => One(state);
+    // ---- the enemies' side's turn start (Hook.BeforeSideTurnStart, then Hook.AfterSideTurnStart: AfterSideTurnStart, then Late), the one
+    // turn start a simulation reaches: its participants are the enemies (CombatManager.StartTurn: CreaturesOnCurrentSide). Every listener.
+
+    public virtual IEnumerable<SimState> BeforeSideTurnStart(SimState state, int owner) => One(state);
+    public virtual IEnumerable<SimState> AfterSideTurnStart(SimState state, int owner) => One(state);
+    public virtual IEnumerable<SimState> AfterSideTurnStartLate(SimState state, int owner) => One(state);
     /// <summary>A player's Osty lost HP (AfterCurrentHpChanged with a loss on Osty): Necro Mastery. Runs inside the damage.</summary>
     public virtual void AfterOstyHpLost(SimState state, int owner, int player, int lost) { }
     /// <summary>A player tried a shot (AfterArrowShot: with or without an arrow): Covering Fire.</summary>

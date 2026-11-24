@@ -92,7 +92,6 @@ public static class SimReaders
             case nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)); break;
             // Once a turn (PowerUse.UsedThisTurn: already this turn).
             case nameof(PaleBlueDotPower): data = Internal(power, "alreadyActivatedThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
-            case nameof(LullabyPower): data = Sts2State.Private(power, "_proccdThisTurn", fallback: true) ? (int)PowerUse.UsedThisTurn : 0; break;
             case nameof(YahPower): data = Internal(power, "triggeredThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
             // Bound to the attack under way (BeforeAttack set commandToModify): every other card's damage gets nothing from it.
             case nameof(VigorPower) or nameof(AimPower) or nameof(QuietusPower) or nameof(GigantificationPower):

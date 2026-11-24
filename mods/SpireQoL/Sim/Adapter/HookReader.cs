@@ -73,10 +73,20 @@ public static class HookReader
     };
 
     /// <summary>
-    /// The turn-start hooks: they run as a side's turn starts. Only the players' next turn's start is after a simulation's horizon, so a body
-    /// whose every command and store waits on its owner (a player's relic) taking part is read as running past it; any other is a gap.
+    /// The hooks that run only as the players' turn starts (CombatManager.SetupPlayerTurn, for the players starting a turn): after a simulation's
+    /// horizon, which ends with the enemy turn, whatever their bodies do.
     /// </summary>
-    private static readonly HashSet<string> TurnStartHooks = new(StringComparer.Ordinal) { "BeforeSideTurnStart", "AfterSideTurnStart", "AfterSideTurnStartLate", "AfterPlayerTurnStartEarly", "AfterPlayerTurnStart", "AfterPlayerTurnStartLate", "AfterEnergyReset", "AfterEnergyResetLate", "BeforeHandDraw", "BeforeHandDrawLate" };
+    private static readonly HashSet<string> PlayersTurnStartHooks = new(StringComparer.Ordinal) { "AfterPlayerTurnStartEarly", "AfterPlayerTurnStart", "AfterPlayerTurnStartLate", "AfterEnergyReset", "AfterEnergyResetLate", "BeforeHandDraw", "BeforeHandDrawLate" };
+
+    /// <summary>
+    /// The hooks that run as either side's turn starts (CombatManager.StartTurn): a simulation reaches the enemies' (HookName.BeforeSideTurnStart,
+    /// AfterSideTurnStart, AfterSideTurnStartLate: its participants the enemies). A relic's body whose every command and store waits on its owner,
+    /// a player, taking part acts only as the players' next turn starts: past the horizon.
+    /// </summary>
+    private static readonly HashSet<string> SideTurnStartHooks = new(StringComparer.Ordinal) { "BeforeSideTurnStart", "AfterSideTurnStart", "AfterSideTurnStartLate" };
+
+    /// <summary>The hook runs as a side's turn starts (the side the simulator starts is the enemies').</summary>
+    private static bool StartsATurn(string hook) => SideTurnStartHooks.Contains(hook);
 
     /// <summary>A collection's methods that only ask (they change nothing of the model's own data).</summary>
     private static readonly HashSet<string> CollectionQueries = new(StringComparer.Ordinal)
@@ -299,8 +309,9 @@ public static class HookReader
             if (Diagnostics.CoverageLedger.OutOfCombatHooks.Contains(hook.Name)) return (null, null, "it acts outside fights (Diagnostics/OutOfCombatHooks.txt)");
             try
             {
-                if (TurnStartHooks.Contains(hook.Name))
-                    return PastTheHorizon(hook) is { } turnStartGap ? (null, turnStartGap, null) : (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers");
+                if (PlayersTurnStartHooks.Contains(hook.Name)) return (null, null, "it runs as the players' next turn starts, past the turns a simulation covers");
+                if (StartsATurn(hook.Name) && PastTheHorizon(hook) is { } horizon)
+                    return horizon.Length == 0 ? (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers") : (null, horizon, null);
                 if (!Enum.TryParse<HookName>(hook.Name, out var name)) return (null, $"gap: the simulator runs no read model's {hook.Name}", null);
                 if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name == HookName.ModifyCardPlayCount)
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(Ways(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
@@ -311,7 +322,7 @@ public static class HookReader
                 foreach (var step in program.Steps) steps.AddRange(Step(step));
                 // A step its code runs on a side the simulator never ends (AfterSideTurnEnd of the enemies' side) never runs: left out.
                 var never = steps.RemoveAll(step => step.When is HookConstant { Value: 0m });
-                if (steps.Count == 0) return (null, null, never > 0 ? "its commands wait on the enemies' side's turn ending, which no simulation reaches" : null);
+                if (steps.Count == 0) return (null, null, never == 0 ? null : StartsATurn(hook.Name) ? "its commands wait on the players' side's turn starting, past the turns a simulation covers" : "its commands wait on the enemies' side's turn ending, which no simulation reaches");
                 return (new HookProgram(name, steps), null, null);
             }
             catch (Gap gap)
@@ -377,14 +388,18 @@ public static class HookReader
             && member.DeclaringType != _type.Name && !member.Namespace.StartsWith("MegaCrit.Sts2.Core.Commands", StringComparison.Ordinal)
             && !member.Namespace.Contains(".Nodes", StringComparison.Ordinal) && member.Name is not ("Flash" or "InvokeDisplayAmountChanged" or "AssertMutable" or "SetResult" or "Start" or "AwaitUnsafeOnCompleted" or "SetStateMachine" or "SetException");
 
-        /// <summary>A turn-start body: past a simulation's horizon when each of its steps waits on its owner, a player, taking part; else a gap.</summary>
+        /// <summary>
+        /// A side's turn-start body of a relic whose every step waits on its owner, a player, taking part: it acts only as the players' next turn
+        /// starts, past a simulation's horizon (""). Null: read it as the enemies' turn start runs it; a gap when the reader can't follow it.
+        /// </summary>
         private string? PastTheHorizon(MethodInfo hook)
         {
             var program = ProgramReader.Read(_type, _read, hook.Name);
             if (program.Unknowns.Any()) return "gap: the reader can't follow it: " + program.Unknowns.First();
+            if (!program.All().Any()) return "";
             if (_kind == ModelKind.Relic && program.All().All(step => step.Condition?.Terms is { Count: > 0 } terms && terms.All(term => term.Any(literal => literal.Holds && IsTakingPart(literal.Test)))))
-                return null;
-            return program.All().Any() ? $"gap: {hook.Name} acts as a side's turn starts (the enemies' turn start runs no read model)" : null;
+                return "";
+            return null;
         }
 
         private IEnumerable<HookStep> Step(ProgramStep step)
@@ -872,9 +887,11 @@ public static class HookReader
             {
                 if (compare.Right is QueryValue { Name: "Side", Of: { } rightOf } && CreatureOf(rightOf) is { } rightSide)
                     holds = CreatureFact(HookFact.SameSide, leftSide) with { Other = rightSide };
-                // The side whose turn ends (AfterSideTurnEnd's side): the simulator ends the players'.
+                // The side whose turn ends (AfterSideTurnEnd's side): the simulator ends the players'; the side whose turn starts, the enemies'.
                 else if (compare.Right is ParameterValue { Name: "side" } or NamedValue { Name: "side" } && _hook.Contains("SideTurnEnd", StringComparison.Ordinal))
                     holds = CreatureFact(HookFact.CreatureOnPlayersSide, leftSide);
+                else if (compare.Right is ParameterValue { Name: "side" } or NamedValue { Name: "side" } && StartsATurn(_hook))
+                    holds = Not(CreatureFact(HookFact.CreatureOnPlayersSide, leftSide));
                 else if (compare.Right is ConstantValue side && EnumName(_type.Assembly, "CombatSide", side.Value) is { } sideName)
                     holds = sideName == "Player" ? CreatureFact(HookFact.CreatureOnPlayersSide, leftSide) : Not(CreatureFact(HookFact.CreatureOnPlayersSide, leftSide));
             }
@@ -920,11 +937,11 @@ public static class HookReader
                 };
                 return compare.Op == Comparison.Equal ? debuff : Not(debuff);
             }
-            // The side whose turn is ending (AfterSideTurnEnd): the simulator runs the players' side's.
+            // The side whose turn is ending or starting: the simulator ends the players' side's turn and starts the enemies'.
             if (compare.Left is NamedValue { Name: "side" } && compare.Right is ConstantValue side)
             {
-                var players = EnumName(_type.Assembly, "CombatSide", side.Value) == "Player";
-                return new HookConstant((compare.Op == Comparison.Equal) == players ? 1m : 0m);
+                var isSide = StartsATurn(_hook) ? EnumName(_type.Assembly, "CombatSide", side.Value) == "Enemy" : EnumName(_type.Assembly, "CombatSide", side.Value) == "Player";
+                return new HookConstant((compare.Op == Comparison.Equal) == isSide ? 1m : 0m);
             }
             if (CreatureCompare(compare) is { } creatures) return creatures;
             // The side whose turn it is against a side named (CombatState.CurrentSide == CombatSide.Enemy): the enemies' turn, or not.

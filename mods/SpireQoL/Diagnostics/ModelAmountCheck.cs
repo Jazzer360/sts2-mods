@@ -44,8 +44,6 @@ internal static class ModelAmountCheck
         // The same total, a loop in the game.
         ["CentennialPuzzle Draw: game 1; model Var Cards"] = "the game draws one card Cards times (a for loop up to DynamicVars.Cards); the model draws Cards",
         // After the turn the simulator predicts: nothing predicted reads them.
-        ["InfernoPower Damage: game Amount | Var SelfDamage; model Amount"] =
-            "its SelfDamage hits its owner at the start of their turn (AfterPlayerTurnStart): before anything predicted, the turn is under way",
         ["TenderPower Apply StrengthPower: game -1 | ?TenderPower.get_CardsPlayedThisTurn; model -1"] =
             "AfterSideTurnEnd gives back the Strength it took this turn (CardsPlayedThisTurn): nothing predicted after your turn ends deals your powered damage",
         ["TenderPower Apply DexterityPower: game -1 | ?TenderPower.get_CardsPlayedThisTurn; model -1"] =

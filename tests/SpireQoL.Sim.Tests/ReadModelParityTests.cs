@@ -84,7 +84,7 @@ public class ReadModelParityTests
     /// "Model.Var": values the hand-written model wrote as a constant (Colossus' 0.5) that the read model reads from its values: the board gives
     /// the game's value (its canonical one), so the two read the same number.
     /// </summary>
-    private static readonly HashSet<string> HandWrittenConstants = new(StringComparer.Ordinal) { $"{PowerId.Colossus.Name}.DamageDecrease", $"{PowerId.Vulnerable.Name}.DamageIncrease", $"{PowerId.Weak.Name}.DamageDecrease" };
+    private static readonly HashSet<string> HandWrittenConstants = new(StringComparer.Ordinal) { $"{PowerId.Colossus.Name}.DamageDecrease", $"{PowerId.ConductorsBaton.Name}.DamageDecrease", $"{PowerId.Vulnerable.Name}.DamageIncrease", $"{PowerId.Weak.Name}.DamageDecrease" };
 
     /// <summary>
     /// The counters a hand-written model kept as its power's Data (the adapter read each copy's count there: SimReaders.Powers, Counters) and the
@@ -184,6 +184,7 @@ public class ReadModelParityTests
         nameof(SimModel.BeforeSideTurnEndVeryEarly), nameof(SimModel.BeforeSideTurnEndEarly), nameof(SimModel.BeforeSideTurnEnd), nameof(SimModel.AfterSideTurnEnd),
         nameof(SimModel.AfterSideTurnEndLate), nameof(SimModel.ModifyCardPlayCount), nameof(SimModel.AfterModifyingCardPlayCount),
         nameof(SimModel.AfterDamageGiven), nameof(SimModel.AfterDamageReceived), nameof(SimModel.AfterDeath), nameof(SimModel.AfterApplied),
+        nameof(SimModel.BeforeSideTurnStart), nameof(SimModel.AfterSideTurnStart), nameof(SimModel.AfterSideTurnStartLate),
     };
 
     [Fact]
@@ -411,8 +412,26 @@ public class ReadModelParityTests
                         return Sequence(state, TurnEndHooks, (branch, turnEndHook) => turnEndHook(model, branch, owner));
                     });
                 break;
+            case nameof(SimModel.BeforeSideTurnStart) or nameof(SimModel.AfterSideTurnStart) or nameof(SimModel.AfterSideTurnStartLate):
+                // The enemies' turn starting, every hook in the game's order, then a powered attack on its owner from enemy 0 and from you (what
+                // a power that goes as a turn starts changed); each hook's outcome compared.
+                yield return ("the enemies' turn starting", (model, state) =>
+                {
+                    state.EnemyTurnNow = true;
+                    var after = Sequence(state, TurnStartHooks, (branch, turnStartHook) => turnStartHook(model, branch, owner));
+                    var attacks = string.Join(", ", new[] { 0, Who.You }.Select(dealer => model.ModifyDamageMultiplicative(state, owner, new DamageCtx(dealer, owner, SimProps.Move, Card: null, Play: null))));
+                    return after + " // attacks on its owner × " + attacks;
+                });
+                break;
         }
     }
+
+    /// <summary>The hooks of the enemies' side's turn starting, in the game's order (CombatManager.StartTurn).</summary>
+    private static readonly Func<SimModel, SimState, int, IEnumerable<SimState>>[] TurnStartHooks =
+    {
+        (model, state, owner) => model.BeforeSideTurnStart(state, owner), (model, state, owner) => model.AfterSideTurnStart(state, owner),
+        (model, state, owner) => model.AfterSideTurnStartLate(state, owner),
+    };
 
     /// <summary>
     /// A power landing on its owner as SimEngine.ApplyPower lands it, with the model given in place of the one registered: its amount added, then a
