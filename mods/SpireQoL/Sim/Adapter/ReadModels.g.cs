@@ -50,6 +50,7 @@ public static partial class ReadModels
         PowerId.Enrage.Name,
         PowerId.Envenom.Name,
         PowerId.EscapeArtist.Name,
+        PowerId.Explosive.Name,
         RelicId.FakeOrichalcum.Name,
         PowerId.FeelNoPain.Name,
         RelicId.Fertilizer.Name,

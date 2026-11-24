@@ -390,6 +390,11 @@ public enum HookTarget
     Each,
     /// <summary>The card play's target (cardPlay.Target: the enemy an enchanted card is aimed at).</summary>
     PlayTarget,
+    /// <summary>
+    /// Every living player creature, in player order, as the command starts (CombatState.PlayerCreatures.Where(c =&gt; c.IsAlive): Explosive's
+    /// targets); each skipped once dead, as CreatureCmd.Damage skips a dead target.
+    /// </summary>
+    LivingPlayers,
 }
 
 /// <summary>One command of a hook's code, on the condition its code runs it on (null: always).</summary>

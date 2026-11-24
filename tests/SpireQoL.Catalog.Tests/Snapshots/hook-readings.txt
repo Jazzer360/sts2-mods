@@ -52,7 +52,7 @@ power EnsemblePower: AfterCardPlayed: gap: compares the owner with cardPlay.Play
 power EnvenomPower: AfterDamageGiven: read
 power EscapeArtistPower: AfterSideTurnEnd: read
 power ExplosiveArrowsPower: AfterArrowImpaled: gap: the simulator runs no read model's AfterArrowImpaled
-power ExplosivePower: AfterDeath: gap: acts on ToList(Where(this.CombatState.PlayerCreatures, c => c.IsAlive))
+power ExplosivePower: AfterDeath: read
 power ExtraTurnPower: AfterTakingExtraTurn: gap: the simulator runs no read model's AfterTakingExtraTurn | ShouldTakeExtraTurn: gap: the simulator runs no read model's ShouldTakeExtraTurn
 power FeelNoPainPower: AfterCardExhausted: read
 power FeralPower: AfterApplied: gap: the value value | AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | AfterSideTurnStart: gap: the value value | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation

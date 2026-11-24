@@ -694,31 +694,15 @@ public static partial class SimEngine
         PlayerDamaged(state, player, dealer, props, blocked, lost, card);
     }
 
-    /// <summary>An end-of-turn step's explosions, only in fights with an Explosive enemy (no extra step otherwise).</summary>
-    private static void ExplosionCheck(BranchSet branches)
-    {
-        if (branches.States.Any(branch => branch.Enemies.Any(enemy => !enemy.Exploded && (enemy.Explosive > 0 || enemy.ExplosiveOnTeammates != null)))) branches.Do(branch => Explosions(branch));
-    }
-
     /// <summary>
-    /// Explosive (ExplosivePower.AfterDeath): an enemy holding it that died since the last check damages every living
-    /// player, blocked by the block they have then. Runs where deaths are handled (AllyDeaths) and after each
-    /// end-of-turn step, so the block it meets is the block at that point.
+    /// The deaths an end-of-turn step caused run their hooks before the next step (CreatureCmd.Kill runs Hook.AfterDeath as the creature dies:
+    /// Explosive's damage meets the block its players have then), only when one is waiting (no extra step otherwise). What their hooks raise
+    /// (a draw, energy) waits for the end of the turn's steps, as before.
     /// </summary>
-    private static void Explosions(SimState state)
+    private static void DeathCheck(BranchSet branches)
     {
-        foreach (var enemy in state.Enemies)
-        {
-            if (enemy.Alive || enemy.Exploded || !enemy.StartedAlive || (enemy.Explosive <= 0 && enemy.ExplosiveOnTeammates == null)) continue;
-            enemy.Exploded = true;
-            if (state.You.Hp > 0) LandBlockable(state, enemy.Name + " Explosive", enemy.Explosive, dealer: enemy.Id);
-            for (var teammateIndex = 0; teammateIndex < state.Teammates.Count; teammateIndex++)
-            {
-                if (state.Teammates[teammateIndex].Hp <= 0) continue;
-                var amount = enemy.ExplosiveOnTeammates is { } on && teammateIndex < on.Count ? on[teammateIndex] : enemy.Explosive;
-                LandBlockable(state, enemy.Name + " Explosive", amount, Who.Teammate(teammateIndex), enemy.Id);
-            }
-        }
+        if (!branches.States.Any(branch => branch.Enemies.Any(enemy => enemy.StartedAlive && !enemy.Alive && !enemy.DeathHandled))) return;
+        branches.Do(AllyDeaths);
     }
 
     /// <summary>Damage to every hittable enemy (Inferno and the like: Unpowered, their block first), dealt by <paramref name="dealer"/>.</summary>
@@ -1114,24 +1098,24 @@ public static partial class SimEngine
         branches.Do(branch => branch.EndOfTurnNow = true);
         HookStep(branches, nameof(SimModel.BeforeSideTurnEndVeryEarly), (model, owner, branch) => Who.IsPlayer(owner) ? model.BeforeSideTurnEndVeryEarly(branch, owner) : new[] { branch });
         HookStep(branches, nameof(SimModel.BeforeSideTurnEndEarly), (model, owner, branch) => Who.IsPlayer(owner) ? model.BeforeSideTurnEndEarly(branch, owner) : new[] { branch });
-        ExplosionCheck(branches);
+        DeathCheck(branches);
         HookStep(branches, nameof(SimModel.BeforeSideTurnEnd), (model, owner, branch) => Who.IsPlayer(owner) ? model.BeforeSideTurnEnd(branch, owner) : new[] { branch });
-        ExplosionCheck(branches);
+        DeathCheck(branches);
 
         // 2. Each player's DoTurnEnd, in player order.
         foreach (var player in branches.States[0].PlayerIds)
         {
             OrbPassives(branches, player);
-            ExplosionCheck(branches); // kills by orb passives
+            DeathCheck(branches); // kills by orb passives
             branches.Each(branch => branch.Player(player) is { } simPlayer && Exhausting(branch, simPlayer) is > 0 and var exhausting && branch.TakesPart(player) ? ProcCardEvent(branch, CardEvent.Exhausted, exhausting, player, indirect: false, causedByEthereal: true) : new[] { branch });
             branches.Do(branch => CardsActInHand(branch, player));
-            ExplosionCheck(branches);
+            DeathCheck(branches);
         }
 
         // 3. AfterSideTurnEnd (Constrict, Magic Bomb, Demise, Consuming Shadow, Parrying Shield, Lunar Pastry), then
         // AfterSideTurnEndLate (Disintegration, Insatiable Dominion).
         HookStep(branches, nameof(SimModel.AfterSideTurnEnd), (model, owner, branch) => Who.IsPlayer(owner) ? model.AfterSideTurnEnd(branch, owner) : new[] { branch });
-        ExplosionCheck(branches); // kills by Consuming Shadow's evokes, Parrying Shield, Black Hole
+        DeathCheck(branches); // kills by Consuming Shadow's evokes, Parrying Shield, Black Hole
         HookStep(branches, nameof(SimModel.AfterSideTurnEndLate), (model, owner, branch) => Who.IsPlayer(owner) ? model.AfterSideTurnEndLate(branch, owner) : new[] { branch });
 
         // Deaths at the end of your turn run their hooks before the enemies act (arrows coming back: Twine's block).
@@ -1165,7 +1149,6 @@ public static partial class SimEngine
     /// </summary>
     private static void AllyDeaths(SimState state)
     {
-        Explosions(state);
         // AfterDeath, once for each enemy that has died (Crab Rage, Ravenous as models). A main enemy's death kills the enemies left
         // when every one of them is a Minion (CreatureCmd.Kill: isPrimaryEnemy, teammates all IsSecondaryEnemy), whose deaths are
         // handled the same way, in turn.

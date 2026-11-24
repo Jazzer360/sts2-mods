@@ -119,8 +119,6 @@ public static partial class SimAdapter
             enemy.Powers = SimReaders.Powers(creature, IdOf);
             enemy.Fields = SimReaders.Fields(creature.Powers, IdOf);
             foreach (var power in creature.Powers) SimReaders.AddVars(state, id, power);
-            // Explosive: its death damages every living player (unpowered, blockable), through the game's damage math.
-            if (creature.IsAlive && (ExplosiveOf?.Invoke(creature) ?? 0) is > 0 and var explosive) enemy.Explosive = ExplosiveOn(creature, me.Creature, explosive, me, combat);
             enemy.StartedAlive = creature.IsAlive;
             // The creatures its death adds (Surprise's gremlins), read from its powers' AfterDeath code, with every HP each can start with.
             if (creature.IsAlive) enemy.Spawns = SpawnsOf(creature, combat);
@@ -200,8 +198,6 @@ public static partial class SimAdapter
             {
                 if (!creature.IsAlive || creature.Monster == null || state.Enemy(id) is not { } enemy) continue;
                 foreach (var teamCreature in teamCreatures) enemy.TeammateHits.Add(HitsOn(creature, teamCreature, me, combat) ?? enemy.Hits);
-                if ((ExplosiveOf?.Invoke(creature) ?? 0) is > 0 and var explosive)
-                    enemy.ExplosiveOnTeammates = teamCreatures.Select(teamCreature => ExplosiveOn(creature, teamCreature, explosive, me, combat)).ToList();
             }
         }
         return state;
@@ -601,23 +597,12 @@ public static partial class SimAdapter
         return play;
     }
 
-    /// <summary>The creature's Explosive (its death damages every player): beta only (decision #163); main has no Explosive.</summary>
-    [BetaOnly, System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-    private static int ExplosiveAmount(Creature creature) => creature.GetPower<ExplosivePower>()?.Amount ?? 0;
-
-    private static readonly Func<Creature, int>? ExplosiveOf = BetaOnly.Gate<Func<Creature, int>>(ExplosiveAmount);
 
     /// <summary>The creature's Simpleton (it auto-plays your cheapest cards): beta only (decision #163); main has no Simpleton.</summary>
     [BetaOnly, System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
     private static int SimpletonAmount(Creature creature) => creature.GetPower<SimpletonPower>()?.Amount ?? 0;
 
     internal static readonly Func<Creature, int>? SimpletonOf = BetaOnly.Gate<Func<Creature, int>>(SimpletonAmount);
-
-    /// <summary>Explosive's damage on a player (ExplosivePower.AfterDeath: CreatureCmd.Damage, Unpowered | SkipHurtAnim, no dealer card).</summary>
-    private static int ExplosiveOn(Creature enemy, Creature target, int amount, Player me, ICombatState combat)
-        => SafeInt(() => Math.Max(0, (int)Hook.ModifyDamage(me.RunState, combat, target, enemy, amount,
-            MegaCrit.Sts2.Core.ValueProps.ValueProp.Unpowered | MegaCrit.Sts2.Core.ValueProps.ValueProp.SkipHurtAnim, null, null,
-            ModifyDamageHookType.All, CardPreviewMode.None, out _)), amount);
 
     /// <summary>
     /// Teammates are simulated (the "Multiplayer predictions (experimental)" setting, read each frame).

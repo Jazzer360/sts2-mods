@@ -3586,6 +3586,40 @@
     "HelpsOwner": false
   },
   {
+    "Name": "ExplosivePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDeath",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "LivingPlayers",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 20
+            },
+            "NoDealer": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterDeath\u003Ed__4.MoveNext:0020",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "DeadIsOwner"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "KillsIt"
+  },
+  {
     "Name": "FakeOrichalcum",
     "Kind": "Relic",
     "Hooks": [

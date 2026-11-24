@@ -926,7 +926,7 @@ public static class HookReader
                     if (!noDealer && !IsOwner(values[dealerAt])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: damage dealt by {values[dealerAt]}");
                     // Damage the simulator's procs deal: to every hittable enemy, a roll over them, the creature a power landed on, or its owner.
                     var damaged = Targets(values[targetAt]);
-                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.PowerOwner or HookTarget.Owner or HookTarget.WeakestEnemy or HookTarget.EvokeTargets or HookTarget.Each))
+                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.PowerOwner or HookTarget.Owner or HookTarget.WeakestEnemy or HookTarget.EvokeTargets or HookTarget.Each or HookTarget.LivingPlayers))
                         throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: damage to {values[targetAt]}");
                     return new DamageStep(damaged, amount, props) { NoDealer = noDealer };
                 }
@@ -1090,6 +1090,8 @@ public static class HookReader
             // The card play's target (an enchantment's OnPlay: Inky's Weak on cardPlay.Target).
             if (IsPlayTarget(value)) return HookTarget.PlayTarget;
             if (IsOwner(value)) return HookTarget.Owner;
+            // Every living player creature (CombatState.PlayerCreatures.Where(c => c.IsAlive), listed or not: Explosive's).
+            if (LivingPlayerCreatures(value)) return HookTarget.LivingPlayers;
             if (value is QueryValue { Name: "HittableEnemies" }) return HookTarget.AllEnemies;
             if (value is QueryValue { Name: "NextItem", Arguments: [QueryValue { Name: "HittableEnemies" }] }) return HookTarget.RandomEnemy;
             if (value is QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } }) return HookTarget.PowerOwner;
@@ -2035,6 +2037,18 @@ public static class HookReader
 
         /// <summary>Its owner's Osty (base.Owner.Osty: its player's pet).</summary>
         private static bool IsOwnersOsty(ProgramValue value) => (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Osty", Of: { } ostyOf } && IsOwner(ostyOf);
+
+        /// <summary>
+        /// Every living player creature of the fight (Where(CombatState.PlayerCreatures, c => c.IsAlive), a ToList of it or not, kept in a local or not):
+        /// the fight's players, whoever's code asks.
+        /// </summary>
+        private static bool LivingPlayerCreatures(ProgramValue value)
+        {
+            var unstored = Unstored(value);
+            if (unstored is QueryValue { Type: "Enumerable", Name: "ToList", Arguments: [var listed] }) unstored = Unstored(listed);
+            return unstored is QueryValue { Type: "Enumerable", Name: "Where", Arguments: [QueryValue { Name: "PlayerCreatures", Of: QueryValue { Name: "CombatState" } }, LambdaValue alive] }
+                && alive.Body.Terms is [[{ Holds: true, Test: QueryValue { Name: "IsAlive", Of: ParameterValue { Name: var tested } } }]] && tested == alive.Parameter;
+        }
 
         /// <summary>The owner's living opponents (Where(CombatState.GetOpponentsOf(base.Owner), c => c.IsAlive)), kept in a local or not.</summary>
         private static bool LivingOpponents(ProgramValue value) =>

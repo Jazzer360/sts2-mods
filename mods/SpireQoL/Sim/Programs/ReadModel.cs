@@ -946,6 +946,18 @@ public sealed class ReadModel : SimModel
                     HookTarget.AllEnemies => args => SimEngine.ProcDamageAll(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer, label: perCard ? PerCardLabel(in args) : null),
                     HookTarget.RandomEnemy => args => SimEngine.ProcDamageRandom(args.State, args.Owner, Name, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer, label: perCard ? PerCardLabel(in args) : null),
                     HookTarget.PowerOwner => args => SimEngine.ProcDamageOn(args.State, args.Owner, Name, args.Target, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer),
+                    // Every living player, in player order (Explosive's: its owner's death hits each), each through the damage on a player (the one
+                    // path: SimEngine.DamagePlayer), named in Incoming Damage's breakdown by its owner and its title, as the game shows them.
+                    HookTarget.LivingPlayers => args =>
+                    {
+                        var label = OwnerLabel(in args);
+                        var dealt = amount(in args);
+                        var dealtProps = (SimProps)(int)props(in args);
+                        foreach (var player in args.State.PlayerIds)
+                            if (args.State.Player(player) is { Hp: > 0 })
+                                SimEngine.DamagePlayer(args.State, label, player, dealt, dealtProps, noDealer ? null : args.Owner, card: null);
+                        return One(args.State);
+                    },
                     // A loop's enemy (the item each round).
                     HookTarget.Each => args => Who.IsEnemy(args.Each) ? SimEngine.ProcDamageOn(args.State, args.Owner, Name, args.Each, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer) : One(args.State),
                     // The living creatures an evoke acted on (AfterOrbEvoked's targets.Where(c => c.IsAlive): Thunder), each in turn.
@@ -1109,6 +1121,10 @@ public sealed class ReadModel : SimModel
 
     /// <summary>Its name in Incoming Damage's breakdown with the cards its amount counts ("Cloak Clasp ×4").</summary>
     private string PerCardLabel(in HookArgs args) => $"{SimEngine.Title(args.State, args.Owner, Name)} ×{args.State.Player(args.Owner)?.HandCount ?? 0}";
+
+    /// <summary>Its name in Incoming Damage's breakdown: an enemy's power by its enemy and its title ("Exploding Slime Explosive"), a player's by its title.</summary>
+    private string OwnerLabel(in HookArgs args) =>
+        args.State.Enemy(args.Owner) is { } enemy ? $"{enemy.Name} {SimEngine.Title(args.State, args.Owner, Name)}" : SimEngine.Title(args.State, args.Owner, Name);
 
     /// <summary>
     /// What it bound to the play in progress (its own data's Remove(cardPlay.Card, out amount)): taken out of the state into this run's slot;

@@ -3,7 +3,7 @@
 
 ## Powers and relics
 
-beta powers: 304 classes, 273 with hooks; read from code 92, hand-written 74, neither 109 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 304 classes, 273 with hooks; read from code 93, hand-written 73, neither 109 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 48, hand-written 24, neither 238 (each by its first gap: Snapshots/hook-readings.txt)
 main powers: 265 classes, 235 with hooks; read from code 82, hand-written 61, neither 94 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 41, hand-written 23, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
@@ -200,8 +200,8 @@ name gate: WuppysLoyaltyPower in Sim/Adapter/SimAdapter.cs: not modelled from co
 
 a potion's chosen target (OnUse's target, as a card play's): 28 classes, 27 alone: Ambergris (potion)*, BeetleJuice (potion)*, BlockPotion (potion)*, BloodPotion (potion)*, DexterityPotion (potion)*, FairyInABottle (potion), FirePotion (potion)*, FlexPotion (potion)*, Fortifier (potion)*, FyshOil (potion)*, GhostInAJar (potion)*, GigantificationPotion (potion)*, HeartOfIron (potion)*, LiquidBronze (potion)*, LuckyTonic (potion)*, MazalethsGift (potion)*, PoisonPotion (potion)*, PotionOfDoom (potion)*, PotionShapedRock (potion)*, PowderedDemise (potion)*, PrecisionPotion (potion)*, RegenPotion (potion)*, ShipInABottle (potion)*, SpeedPotion (potion)*, StableSerum (potion)*, StrengthPotion (potion)*, VulnerablePotion (potion)*, WeakPotion (potion)*
 commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn): 12 classes, 11 alone: MummifiedHand*, MusicBox, AttackPotion (potion)*, BottledSong (potion)*, ColorlessPotion (potion)*, LiquidMemories (potion)*, OrobicAcid (potion)*, PowerPotion (potion)*, SkillPotion (potion)*, SneckoOil (potion)*, SoldiersStew (potion)*, TouchOfInsanity (potion)*
-a command on another creature (the players, a card's owner, a roll's list): 11 classes, 9 alone: ExplosivePower*, GalvanicPower, VitalSparkPower, Clarity (potion)*, CureAll (potion)*, Duplicator (potion)*, EnergyPotion (potion)*, ExplosiveAmpoule (potion)*, FocusPotion (potion)*, RadiantTincture (potion)*, SwiftPotion (potion)*
 its own data: a card or a play kept, a field used directly: 15 classes, 8 alone: BlackHolePower, CalamityPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, MusicBox, PaelsLegion, PenNib, RupturePower*, SerpentFormPower*, StretchPower*, UnsettlingLamp, Vambrace, WitheringPresencePower*, Ashwater (potion)*
+a command on another creature (the players, a card's owner, a roll's list): 10 classes, 8 alone: GalvanicPower, VitalSparkPower, Clarity (potion)*, CureAll (potion)*, Duplicator (potion)*, EnergyPotion (potion)*, ExplosiveAmpoule (potion)*, FocusPotion (potion)*, RadiantTincture (potion)*, SwiftPotion (potion)*
 read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 8 classes, 8 alone: ArtOfWar*, ConquerorPower*, DemonTongue*, EmotionChip*, MonarchsGazePower*, ParryingShield*, RippleBasin*, SelfFormingClay*
 commands: a card made (AddGeneratedCardToCombat, a made card): 6 classes, 6 alone: BiiigHug*, BurningSticks*, PersonalHivePower*, CrystallineEuphoria (potion)*, CunningPotion (potion)*, PotOfGhouls (potion)*
 the engine runs no read enchantment (its bodies read whole but for that): 6 classes, 6 alone: Glam (enchantment)*, Imbued (enchantment)*, PerfectFit (enchantment)*, Slither (enchantment)*, SlumberingEssence (enchantment)*, Spiral (enchantment)*

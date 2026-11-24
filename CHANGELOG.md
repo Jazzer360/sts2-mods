@@ -15,6 +15,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 #### Changed
 - Adroit, Corrupted, Inky, Swift and Sown are worked out from their own code (what each does when its card is played). What's shown is unchanged.
 - Razor Tooth and Master Planner are worked out from their own code (the upgrade and the Sly they give the card you play). What's shown is unchanged but for Razor Tooth's replay fix below.
+- An enemy's Explosive is worked out from its own code (its death damages every living player). What's shown is unchanged but for the fix below.
 - The predictions make less garbage: about half as much in the busiest multiplayer fights (four Defects), a fifth less in a typical one.
 - Orbs are worked out from their own code (Lightning, Frost, Dark, Glass and Plasma: what each passive and evoke does, and their values), and so are Focus, Infused Core, Thunder and Gold-Plated Cables. What's shown is unchanged but for the fixes below. Joss Paper, Haunt and Centennial Puzzle are worked out from their own code too, with what's shown unchanged.
 - Tungsten Rod, The Boot and Beating Remnant are worked out from their own code (what each does to the HP a hit takes). What's shown is unchanged.
@@ -34,6 +35,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 #### Fixed
 - A replayed Attack or Skill that Razor Tooth upgrades hits (and blocks) for its upgraded numbers on its later plays in the predictions, as in the game: it kept its un-upgraded numbers.
 - The HP your cards cost you (Bloodletting, Offering, a Corrupted card) goes through the game's damage math in the predictions, as a power's damage to you does: a cap on damage to you counts for it. A teammate's HP-cost card auto-played hurts that teammate, not you. Buffer stops a power's damage to you while Brightest Flame is being played, as in the game (only Brightest Flame's own HP cost gets past it). The Play audit expects Intangible to flash when it caps a power's damage to you, as it does.
+- With Intangible, an enemy's Explosive takes only 1 of your block in the predictions, as in the game (the cap comes before your block): it took as much block as its whole damage.
 - In multiplayer, a teammate's card enchanted with Corrupted hurts that teammate for 2 in the predictions, as in the game (it was shown as uncertain).
 - Evoking a Plasma orb gives you its 2 energy in the predictions, as in the game (Chaos, Fusion, Meteor Strike and any card that channels into full slots).
 - A Frost orb's block goes to every other player too while you have Hibernate, in the predictions (Teammate Incoming Damage), as in the game.

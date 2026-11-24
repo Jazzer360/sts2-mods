@@ -187,15 +187,6 @@ public sealed class SimEnemy
     public bool StartedAlive = true;
     /// <summary>Ravenous: an ally dying stuns it (RavenousPower.AfterDeath).</summary>
     [JsonIgnore] public bool Ravenous { get => Powers.Has(PowerId.Ravenous); set => Set(PowerId.Ravenous, value ? 1 : 0); }
-    /// <summary>
-    /// Explosive: when it dies, this much damage to you (unpowered, blockable: ExplosivePower.AfterDeath hits every
-    /// living player), after the game's damage math for you; 0 = none.
-    /// </summary>
-    public int Explosive;
-    /// <summary>Explosive's damage on teammate k (their own damage math); missing: the same as yours.</summary>
-    public List<int>? ExplosiveOnTeammates;
-    /// <summary>Its Explosive has gone off (it died during the simulation).</summary>
-    public bool Exploded;
 
     /// <summary>Its death has been handled (AfterDeath dispatched once).</summary>
     public bool DeathHandled;
@@ -262,7 +253,7 @@ public sealed class SimEnemy
     {
         key.Add(Id); key.Add(Hp); key.Add(Block); key.Add(UnblockedInstances); key.Add(FirstHitFullyBlocked ? 1 : 0); key.Add(Poison); key.Add(DiedBeforeActing ? 1 : 0);
         key.Add(Stunned ? 1 : 0); key.Add(IntendsToAttack ? 1 : 0); key.Add(BlockBroken ? 1 : 0); key.Add(GambitTriggered ? 1 : 0);
-        key.Add(SlipperyTriggered ? 1 : 0); key.Add(Exploded ? 1 : 0); key.Add(MoveBlock);
+        key.Add(SlipperyTriggered ? 1 : 0); key.Add(MoveBlock);
         Powers.Hash(ref key); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         Fields.Hash(ref key);
         key.Add(Hits.Count); foreach (var hit in Hits) key.Add(hit);

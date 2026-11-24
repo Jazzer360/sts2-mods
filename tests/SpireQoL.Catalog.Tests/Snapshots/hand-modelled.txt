@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 19 engine rules naming 131 game methods; 5 adapter rules; 101 hand-written models.
+# 19 engine rules naming 130 game methods; 5 adapter rules; 100 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -43,9 +43,9 @@ Osty: the HP he loses for his player
 Poison: Outbreak's trigger of every enemy's poison, and the game's preview of the next tick (the tick itself is PoisonPower's code: decision #201)
   game: PoisonPower.Trigger, PoisonPower.CalculateTotalDamageNextTurn
   simulator: SimEngine.RunModelCommand, SimEngine.PoisonTick
-Deaths: the hooks told as each happens, a dead enemy's powers gone, Explosive, the creatures a death adds, a kill, a stun
-  game: CreatureCmd.Kill, Hook.AfterDeath, Creature.RemoveAllPowersAfterDeath, Hook.ShouldPowerBeRemovedOnDeath, ExplosivePower.AfterDeath (beta only), CreatureCmd.Add, CreatureCmd.Stun
-  simulator: SimEngine.AllyDeaths, SimEngine.ExplosionCheck, SimEngine.Explosions, SimEngine.Spawn, SimEngine.Stun, SimEngine.RunExecute
+Deaths: the hooks told as each happens (an end-of-turn step's before the next), a dead enemy's powers gone, the creatures a death adds, a kill, a stun
+  game: CreatureCmd.Kill, Hook.AfterDeath, Creature.RemoveAllPowersAfterDeath, Hook.ShouldPowerBeRemovedOnDeath, CreatureCmd.Add, CreatureCmd.Stun
+  simulator: SimEngine.AllyDeaths, SimEngine.DeathCheck, SimEngine.Spawn, SimEngine.Stun, SimEngine.RunExecute
 The players' turn's end: its hooks in their places, Ethereal cards, the cards that act in hand, the hand flushed
   game: CombatManager.EndPlayerTurnPhaseOneInternal, CombatManager.EndPlayerTurnPhaseTwoInternal, CombatManager.DoTurnEnd, CombatManager.FlushPlayerHand, Hook.BeforeSideTurnEnd, Hook.AfterSideTurnEnd, Hook.ShouldEtherealTrigger, Hook.ShouldFlush, Hook.BeforeFlush
   simulator: SimEngine.EndOfTurn, SimEngine.Exhausting, SimEngine.CardsActInHand
@@ -126,8 +126,6 @@ EmotionChip: EmotionChip.AfterCombatEnd, EmotionChip.AfterDamageReceived, Emotio
   model: nothing it overrides
 ExplosiveArrowsPower: ExplosiveArrowsPower.AfterArrowImpaled (beta only)
   model: AfterArrowImpaled
-ExplosivePower: ExplosivePower.AfterDeath (beta only)
-  model: nothing it overrides
 FeralPower: FeralPower.AfterApplied, FeralPower.AfterModifyingCardPlayResultLocation, FeralPower.AfterSideTurnStart, FeralPower.InitInternalData, FeralPower.ModifyCardPlayResultLocation
   model: AfterApplied, AfterModifyingCardPlayResultLocation, ModifyCardPlayResultLocation
 FlutterPower: FlutterPower.AfterDamageReceived, FlutterPower.ModifyDamageMultiplicative

@@ -53,7 +53,6 @@ internal static class ModelEffectCheck
         ["OblivionPower"] = "Doom on each card played: Doom kills only after the enemy has acted",
         ["ReaperFormPower"] = "Doom for the damage dealt: Doom kills only after the enemy has acted",
         // The engine's own.
-        ["ExplosivePower"] = "its death damages every player: the engine's (SimEnemy.Explosive)",
         ["ImbalancedPower"] = "the stun when its first hit is fully blocked: the engine's (SimEnemy.FirstHitFullyBlocked)",
         ["RupturePower"] = "Strength after the card that lost you HP (AfterCardPlayed), or at once for HP lost to something else on your turn (end-of-turn damage: unpowered, Strength doesn't touch it): later plays read it from the game",
         // Not simulated yet.

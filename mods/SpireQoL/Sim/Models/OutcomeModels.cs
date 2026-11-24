@@ -50,9 +50,6 @@ public sealed class SurprisePower : DeathSetsOff
     }
 }
 
-/// <summary>ExplosivePower: its death damages every living player (the engine's: SimEnemy.Explosive).</summary>
-public sealed class ExplosivePower : DeathSetsOff { }
-
 /// <summary>StockPower: while stock is left, a new Axebot takes its place when it dies (and attacks this enemy turn).</summary>
 public sealed class StockPower : SimModel
 {
