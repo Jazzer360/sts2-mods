@@ -180,11 +180,4 @@ public sealed class UnceasingTop : RelicProc
 
 // ---- card events
 
-/// <summary>BoneFlute.AfterAttack: block for each attack your Osty makes.</summary>
-public sealed class BoneFlute : RelicProc
-{
-    public override TabKind? Tab => TabKind.Block;
-    public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack) =>
-        owner == Who.You && attack.Dealer == Who.YourOsty && state.You.OstyHp > 0 ? RelicBlock(state, owner) : One(state);
-}
 

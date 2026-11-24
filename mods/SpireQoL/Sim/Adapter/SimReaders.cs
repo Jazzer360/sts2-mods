@@ -1,3 +1,5 @@
+using System.Reflection;
+using MegaCrit.Sts2.Core.Commands.Builders;
 using MegaCrit.Sts2.Core.Entities.Powers;
 using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Models.Powers;
@@ -93,7 +95,7 @@ public static class SimReaders
             // Once a turn (PowerUse.UsedThisTurn: already this turn).
             case nameof(YahPower): data = Internal(power, "triggeredThisTurn") ? (int)PowerUse.UsedThisTurn : 0; break;
             // Bound to the attack under way (BeforeAttack set commandToModify): every other card's damage gets nothing from it.
-            case nameof(VigorPower) or nameof(AimPower) or nameof(QuietusPower) or nameof(GigantificationPower):
+            case nameof(AimPower) or nameof(QuietusPower):
                 data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } bound && Sts2State.Private<object?>(bound, "commandToModify", fallback: null) != null
                     ? Models.AttackBoundPower.BoundOutside : 0;
                 break;
@@ -482,6 +484,11 @@ public static class SimReaders
                     int number => number,
                     bool flag => flag ? 1 : 0,
                     decimal number => (int)number,
+                    // What an attack it keeps names (decision #228): its card by its identity (the HandId the simulator's cards carry), its attacker by id.
+                    CardModel card => SimAdapter.HandId(card),
+                    Creature creature => idOf?.Invoke(creature) ?? Who.None,
+                    // An attack it keeps (Vigor's commandToModify), one under way as the state was read: there, and no simulated attack's id.
+                    AttackCommand => KeptOutside,
                     _ => 0,
                 });
         }
@@ -494,9 +501,32 @@ public static class SimReaders
     /// </summary>
     private static object? FieldOf(AbstractModel model, string field) =>
         field.StartsWith(Procs.Programs.ProgramReader.OwnDataPrefix, StringComparison.Ordinal)
-            ? Sts2State.Private<object?>(model, "_internalData", fallback: null) is { } data ? Sts2State.Private<object?>(data, field[Procs.Programs.ProgramReader.OwnDataPrefix.Length..], fallback: null) : null
+            ? Sts2State.Private<object?>(model, "_internalData", fallback: null) is { } data ? DataPath(data, field[Procs.Programs.ProgramReader.OwnDataPrefix.Length..]) : null
             : field.StartsWith(HookReader.VarFieldPrefix, StringComparison.Ordinal) ? Sts2State.Var(model, field[HookReader.VarFieldPrefix.Length..])
             : Sts2State.Private<object?>(model, field, fallback: null);
+
+    /// <summary>
+    /// What a kept attack's field names in the simulator when the game's attack is under way as the state is read (Data.commandToModify set): there,
+    /// and never the id of an attack a simulation makes (they count from 1), so no simulated attack is it.
+    /// </summary>
+    public const int KeptOutside = int.MaxValue;
+
+    /// <summary>
+    /// A field of a model's own data, or what a member of it names ("commandToModify.ModelSource": the card of the attack it keeps, its properties
+    /// read in turn); null where one along the way is null.
+    /// </summary>
+    private static object? DataPath(object data, string path)
+    {
+        object? value = data;
+        foreach (var member in path.Split('.'))
+        {
+            if (value == null) return null;
+            var type = value.GetType();
+            value = type.GetProperty(member, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) is { } property ? property.GetValue(value)
+                : type.GetField(member, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.GetValue(value);
+        }
+        return value;
+    }
 
     /// <summary>The name a game model has in the simulator (temporary Thorns is Thorns).</summary>
     public static string ModelName(AbstractModel model) => model is PowerModel ? SimAdapter.SimPowerName(model.GetType()) : model.GetType().Name;

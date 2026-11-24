@@ -115,11 +115,16 @@ public class StatModelTests
         // VigorPower.BeforeAttack binds the first attack (commandToModify); until that attack spends it, ModifyDamageAdditive gives
         // every other card's damage 0. The adapter reads that as bound outside the simulation (a card mid-play).
         var state = WithPowers();
-        state.You.Powers = state.You.Powers.With(PowerId.Vigor, amount: 6, AttackBoundPower.BoundOutside);
+        state.You.Powers = state.You.Powers.With(PowerId.Vigor, amount: 6);
+        KeptOutside(state, PowerId.Vigor);
         var after = After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 9))).Single();
         Assert.Equal(91, after.Enemy(id: 0)!.Hp); // 9, not 15
         Assert.Equal(6, after.You.Powers[PowerId.Vigor]); // the attack under way spends it, not this one
     }
+
+    /// <summary>A read model's kept attack one under way as the state was read (the adapter's SimReaders.KeptOutside: no simulated attack's id).</summary>
+    private static void KeptOutside(SimState state, PowerId power) =>
+        SimEngine.SetField(state, Who.You, Assert.IsType<ReadModel>(SimModels.Get(power.Name)).FieldKey("Data.commandToModify"), int.MaxValue);
 
     [Fact]
     public void AimQuietusAndGigantificationReservedForAnAttackUnderWayAddNothing()
@@ -128,7 +133,9 @@ public class StatModelTests
         foreach (var name in new[] { PowerId.Aim, PowerId.Quietus, PowerId.Gigantification })
         {
             var state = WithPowers();
-            state.You.Powers = state.You.Powers.With(name, amount: 3, AttackBoundPower.BoundOutside);
+            // A read model keeps the attack in its own data (decision #228); a hand-written one in its Data.
+            state.You.Powers = state.You.Powers.With(name, amount: 3, SimModels.Get(name.Name) is ReadModel ? 0 : AttackBoundPower.BoundOutside);
+            if (SimModels.Get(name.Name) is ReadModel) KeptOutside(state, name);
             var after = After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 10, props: arrow))).Single();
             Assert.Equal(90, after.Enemy(id: 0)!.Hp);
             Assert.True(after.You.Powers.Has(name), name.Name);

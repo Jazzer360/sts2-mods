@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 132 game methods; 3 adapter rules; 95 hand-written models.
+# 20 engine rules naming 132 game methods; 3 adapter rules; 92 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -89,8 +89,6 @@ BiiigHug: BiiigHug.AfterObtained, BiiigHug.AfterShuffle
   model: AfterCardEvent
 BlackHolePower: BlackHolePower.AfterCardPlayed, BlackHolePower.AfterStarsGained
   model: AfterCardEvent, AfterCardPlayed
-BoneFlute: BoneFlute.AfterAttack
-  model: AfterAttack
 BufferPower: BufferPower.AfterModifyingHpLostAfterOsty, BufferPower.GetScaledAmountForMultiplayer, BufferPower.ModifyHpLostAfterOstyLate
   model: AfterModifyingHpLost, ModifyHpLostAfterOstyLate
 BurningSticks: BurningSticks.AfterCardExhausted, BurningSticks.AfterCombatEnd, BurningSticks.AfterRoomEntered
@@ -127,8 +125,6 @@ FeralPower: FeralPower.AfterApplied, FeralPower.AfterModifyingCardPlayResultLoca
   model: AfterApplied, AfterModifyingCardPlayResultLocation, ModifyCardPlayResultLocation
 FlutterPower: FlutterPower.AfterDamageReceived, FlutterPower.ModifyDamageMultiplicative
   model: AfterDamageReceived, ModifyDamageMultiplicative, OutcomeTab
-GigantificationPower: GigantificationPower.AfterAttack, GigantificationPower.BeforeAttack, GigantificationPower.InitInternalData, GigantificationPower.ModifyDamageMultiplicative
-  model: AfterAttack, ModifyDamageMultiplicative, Qualifies
 HandDrill: HandDrill.AfterBlockBroken
   model: AfterBlockBroken, OutcomeTab
 HardToKillPower: HardToKillPower.AfterModifyingDamageAmount, HardToKillPower.ModifyDamageCap
@@ -259,8 +255,6 @@ UnsettlingLamp: UnsettlingLamp.AfterCardPlayed, UnsettlingLamp.AfterCombatEnd, U
   model: AfterCardPlayed, ModifyPowerAmountGiven
 Vambrace: Vambrace.AfterCardPlayed, Vambrace.AfterCombatEnd, Vambrace.AfterModifyingBlockAmount, Vambrace.BeforeCombatStart, Vambrace.ModifyBlockMultiplicative
   model: AfterCardPlayed, AfterModifyingBlockAmount, ModifyBlockMultiplicative
-VigorPower: VigorPower.AfterAttack, VigorPower.BeforeAttack, VigorPower.InitInternalData, VigorPower.ModifyDamageAdditive
-  model: AfterAttack, ModifyDamageAdditive, Qualifies
 ViolentChordPower: ViolentChordPower.AfterCardPlayed (beta only)
   model: AfterCardPlayed
 Void: no game class by its name (the simulator's own)

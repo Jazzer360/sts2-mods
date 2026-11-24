@@ -202,6 +202,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "When": {
               "$kind": "HookTest",
@@ -243,6 +244,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -540,6 +542,7 @@
                 "Value": -1
               }
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -554,6 +557,483 @@
         ]
       }
     ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "BoneFlute",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterAttack",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "BoneFlute.AfterAttack:0017",
+                "Test": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "BoneFlute.AfterAttack:0007",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureThere",
+                            "Creature": {
+                              "Who": "Attacker",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "BoneFlute.AfterAttack:0007",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureThere",
+                          "Creature": {
+                            "Who": "Attacker",
+                            "PetOwner": false
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureIsPet",
+                        "Creature": {
+                          "Who": "Attacker",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "BoneFlute.AfterAttack:0041",
+                "Test": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "BoneFlute.AfterAttack:0017",
+                          "Test": {
+                            "$kind": "HookWays",
+                            "Ways": [
+                              {
+                                "When": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "BoneFlute.AfterAttack:0007",
+                                    "Test": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CreatureThere",
+                                      "Creature": {
+                                        "Who": "Attacker",
+                                        "PetOwner": false
+                                      }
+                                    }
+                                  }
+                                },
+                                "Value": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              },
+                              {
+                                "When": {
+                                  "$kind": "HookTest",
+                                  "At": "BoneFlute.AfterAttack:0007",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CreatureThere",
+                                    "Creature": {
+                                      "Who": "Attacker",
+                                      "PetOwner": false
+                                    }
+                                  }
+                                },
+                                "Value": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CreatureIsPet",
+                                  "Creature": {
+                                    "Who": "Attacker",
+                                    "PetOwner": false
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "BoneFlute.AfterAttack:002B",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureThere",
+                              "Creature": {
+                                "Who": "Attacker",
+                                "PetOwner": true
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "BoneFlute.AfterAttack:0017",
+                          "Test": {
+                            "$kind": "HookWays",
+                            "Ways": [
+                              {
+                                "When": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "BoneFlute.AfterAttack:0007",
+                                    "Test": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CreatureThere",
+                                      "Creature": {
+                                        "Who": "Attacker",
+                                        "PetOwner": false
+                                      }
+                                    }
+                                  }
+                                },
+                                "Value": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              },
+                              {
+                                "When": {
+                                  "$kind": "HookTest",
+                                  "At": "BoneFlute.AfterAttack:0007",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CreatureThere",
+                                    "Creature": {
+                                      "Who": "Attacker",
+                                      "PetOwner": false
+                                    }
+                                  }
+                                },
+                                "Value": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CreatureIsPet",
+                                  "Creature": {
+                                    "Who": "Attacker",
+                                    "PetOwner": false
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "BoneFlute.AfterAttack:002B",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureThere",
+                            "Creature": {
+                              "Who": "Attacker",
+                              "PetOwner": true
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookFactValue",
+                        "Fact": "SameCreature",
+                        "Creature": {
+                          "Who": "Attacker",
+                          "PetOwner": true
+                        },
+                        "Other": {
+                          "Who": "Owner",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Block",
+              "Canonical": 2
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Block.Props",
+              "Canonical": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "BoneFlute.AfterAttack:0017",
+                "Test": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "BoneFlute.AfterAttack:0007",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureThere",
+                            "Creature": {
+                              "Who": "Attacker",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "BoneFlute.AfterAttack:0007",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureThere",
+                          "Creature": {
+                            "Who": "Attacker",
+                            "PetOwner": false
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureIsPet",
+                        "Creature": {
+                          "Who": "Attacker",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "BoneFlute.AfterAttack:0041",
+                "Test": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "BoneFlute.AfterAttack:0017",
+                          "Test": {
+                            "$kind": "HookWays",
+                            "Ways": [
+                              {
+                                "When": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "BoneFlute.AfterAttack:0007",
+                                    "Test": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CreatureThere",
+                                      "Creature": {
+                                        "Who": "Attacker",
+                                        "PetOwner": false
+                                      }
+                                    }
+                                  }
+                                },
+                                "Value": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              },
+                              {
+                                "When": {
+                                  "$kind": "HookTest",
+                                  "At": "BoneFlute.AfterAttack:0007",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CreatureThere",
+                                    "Creature": {
+                                      "Who": "Attacker",
+                                      "PetOwner": false
+                                    }
+                                  }
+                                },
+                                "Value": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CreatureIsPet",
+                                  "Creature": {
+                                    "Who": "Attacker",
+                                    "PetOwner": false
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "BoneFlute.AfterAttack:002B",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureThere",
+                              "Creature": {
+                                "Who": "Attacker",
+                                "PetOwner": true
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "BoneFlute.AfterAttack:0017",
+                          "Test": {
+                            "$kind": "HookWays",
+                            "Ways": [
+                              {
+                                "When": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "BoneFlute.AfterAttack:0007",
+                                    "Test": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CreatureThere",
+                                      "Creature": {
+                                        "Who": "Attacker",
+                                        "PetOwner": false
+                                      }
+                                    }
+                                  }
+                                },
+                                "Value": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              },
+                              {
+                                "When": {
+                                  "$kind": "HookTest",
+                                  "At": "BoneFlute.AfterAttack:0007",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CreatureThere",
+                                    "Creature": {
+                                      "Who": "Attacker",
+                                      "PetOwner": false
+                                    }
+                                  }
+                                },
+                                "Value": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CreatureIsPet",
+                                  "Creature": {
+                                    "Who": "Attacker",
+                                    "PetOwner": false
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "BoneFlute.AfterAttack:002B",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureThere",
+                            "Creature": {
+                              "Who": "Attacker",
+                              "PetOwner": true
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookFactValue",
+                        "Fact": "SameCreature",
+                        "Creature": {
+                          "Who": "Attacker",
+                          "PetOwner": true
+                        },
+                        "Other": {
+                          "Who": "Owner",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block",
     "HelpsOwner": false
   },
   {
@@ -834,6 +1314,723 @@
     "Tab": "Damage",
     "HelpsOwner": false,
     "Copies": "EachApplication"
+  },
+  {
+    "Name": "CalcifyPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ModifyDamageAdditive",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "CalcifyPower.ModifyDamageAdditive:0013",
+                  "Test": {
+                    "$kind": "HookWays",
+                    "Ways": [
+                      {
+                        "When": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "CalcifyPower.ModifyDamageAdditive:0002",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureThere",
+                              "Creature": {
+                                "Who": "Dealer",
+                                "PetOwner": false
+                              }
+                            }
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      },
+                      {
+                        "When": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        },
+                        "Value": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureIsPet",
+                          "Creature": {
+                            "Who": "Dealer",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "CalcifyPower.ModifyDamageAdditive:0013",
+                  "Test": {
+                    "$kind": "HookWays",
+                    "Ways": [
+                      {
+                        "When": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "CalcifyPower.ModifyDamageAdditive:0002",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureThere",
+                              "Creature": {
+                                "Who": "Dealer",
+                                "PetOwner": false
+                              }
+                            }
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      },
+                      {
+                        "When": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        },
+                        "Value": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureIsPet",
+                          "Creature": {
+                            "Who": "Dealer",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "CalcifyPower.ModifyDamageAdditive:0034",
+                    "Test": {
+                      "$kind": "HookWays",
+                      "Ways": [
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "CalcifyPower.ModifyDamageAdditive:0013",
+                              "Test": {
+                                "$kind": "HookWays",
+                                "Ways": [
+                                  {
+                                    "When": {
+                                      "$kind": "HookNot",
+                                      "Inner": {
+                                        "$kind": "HookTest",
+                                        "At": "CalcifyPower.ModifyDamageAdditive:0002",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CreatureThere",
+                                          "Creature": {
+                                            "Who": "Dealer",
+                                            "PetOwner": false
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "Value": {
+                                      "$kind": "HookConstant",
+                                      "Value": 0
+                                    }
+                                  },
+                                  {
+                                    "When": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    },
+                                    "Value": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CreatureIsPet",
+                                      "Creature": {
+                                        "Who": "Dealer",
+                                        "PetOwner": false
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "CalcifyPower.ModifyDamageAdditive:0029",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CreatureThere",
+                                  "Creature": {
+                                    "Who": "Dealer",
+                                    "PetOwner": true
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "CalcifyPower.ModifyDamageAdditive:0013",
+                              "Test": {
+                                "$kind": "HookWays",
+                                "Ways": [
+                                  {
+                                    "When": {
+                                      "$kind": "HookNot",
+                                      "Inner": {
+                                        "$kind": "HookTest",
+                                        "At": "CalcifyPower.ModifyDamageAdditive:0002",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CreatureThere",
+                                          "Creature": {
+                                            "Who": "Dealer",
+                                            "PetOwner": false
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "Value": {
+                                      "$kind": "HookConstant",
+                                      "Value": 0
+                                    }
+                                  },
+                                  {
+                                    "When": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    },
+                                    "Value": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CreatureIsPet",
+                                      "Creature": {
+                                        "Who": "Dealer",
+                                        "PetOwner": false
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "CalcifyPower.ModifyDamageAdditive:0029",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreatureThere",
+                                "Creature": {
+                                  "Who": "Dealer",
+                                  "PetOwner": true
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SameCreature",
+                            "Creature": {
+                              "Who": "Dealer",
+                              "PetOwner": true
+                            },
+                            "Other": {
+                              "Who": "Owner",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "CalcifyPower.ModifyDamageAdditive:0013",
+                    "Test": {
+                      "$kind": "HookWays",
+                      "Ways": [
+                        {
+                          "When": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "CalcifyPower.ModifyDamageAdditive:0002",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreatureThere",
+                                "Creature": {
+                                  "Who": "Dealer",
+                                  "PetOwner": false
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Value": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureIsPet",
+                            "Creature": {
+                              "Who": "Dealer",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "CalcifyPower.ModifyDamageAdditive:0034",
+                    "Test": {
+                      "$kind": "HookWays",
+                      "Ways": [
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "CalcifyPower.ModifyDamageAdditive:0013",
+                              "Test": {
+                                "$kind": "HookWays",
+                                "Ways": [
+                                  {
+                                    "When": {
+                                      "$kind": "HookNot",
+                                      "Inner": {
+                                        "$kind": "HookTest",
+                                        "At": "CalcifyPower.ModifyDamageAdditive:0002",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CreatureThere",
+                                          "Creature": {
+                                            "Who": "Dealer",
+                                            "PetOwner": false
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "Value": {
+                                      "$kind": "HookConstant",
+                                      "Value": 0
+                                    }
+                                  },
+                                  {
+                                    "When": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    },
+                                    "Value": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CreatureIsPet",
+                                      "Creature": {
+                                        "Who": "Dealer",
+                                        "PetOwner": false
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "CalcifyPower.ModifyDamageAdditive:0029",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CreatureThere",
+                                  "Creature": {
+                                    "Who": "Dealer",
+                                    "PetOwner": true
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "CalcifyPower.ModifyDamageAdditive:0013",
+                              "Test": {
+                                "$kind": "HookWays",
+                                "Ways": [
+                                  {
+                                    "When": {
+                                      "$kind": "HookNot",
+                                      "Inner": {
+                                        "$kind": "HookTest",
+                                        "At": "CalcifyPower.ModifyDamageAdditive:0002",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CreatureThere",
+                                          "Creature": {
+                                            "Who": "Dealer",
+                                            "PetOwner": false
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "Value": {
+                                      "$kind": "HookConstant",
+                                      "Value": 0
+                                    }
+                                  },
+                                  {
+                                    "When": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    },
+                                    "Value": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CreatureIsPet",
+                                      "Creature": {
+                                        "Who": "Dealer",
+                                        "PetOwner": false
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "CalcifyPower.ModifyDamageAdditive:0029",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreatureThere",
+                                "Creature": {
+                                  "Who": "Dealer",
+                                  "PetOwner": true
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SameCreature",
+                            "Creature": {
+                              "Who": "Dealer",
+                              "PetOwner": true
+                            },
+                            "Other": {
+                              "Who": "Owner",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "CalcifyPower.ModifyDamageAdditive:0042",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PoweredAttack"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "CalcifyPower.ModifyDamageAdditive:0013",
+                    "Test": {
+                      "$kind": "HookWays",
+                      "Ways": [
+                        {
+                          "When": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "CalcifyPower.ModifyDamageAdditive:0002",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreatureThere",
+                                "Creature": {
+                                  "Who": "Dealer",
+                                  "PetOwner": false
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Value": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureIsPet",
+                            "Creature": {
+                              "Who": "Dealer",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "CalcifyPower.ModifyDamageAdditive:0034",
+                    "Test": {
+                      "$kind": "HookWays",
+                      "Ways": [
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "CalcifyPower.ModifyDamageAdditive:0013",
+                              "Test": {
+                                "$kind": "HookWays",
+                                "Ways": [
+                                  {
+                                    "When": {
+                                      "$kind": "HookNot",
+                                      "Inner": {
+                                        "$kind": "HookTest",
+                                        "At": "CalcifyPower.ModifyDamageAdditive:0002",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CreatureThere",
+                                          "Creature": {
+                                            "Who": "Dealer",
+                                            "PetOwner": false
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "Value": {
+                                      "$kind": "HookConstant",
+                                      "Value": 0
+                                    }
+                                  },
+                                  {
+                                    "When": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    },
+                                    "Value": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CreatureIsPet",
+                                      "Creature": {
+                                        "Who": "Dealer",
+                                        "PetOwner": false
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "CalcifyPower.ModifyDamageAdditive:0029",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CreatureThere",
+                                  "Creature": {
+                                    "Who": "Dealer",
+                                    "PetOwner": true
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "CalcifyPower.ModifyDamageAdditive:0013",
+                              "Test": {
+                                "$kind": "HookWays",
+                                "Ways": [
+                                  {
+                                    "When": {
+                                      "$kind": "HookNot",
+                                      "Inner": {
+                                        "$kind": "HookTest",
+                                        "At": "CalcifyPower.ModifyDamageAdditive:0002",
+                                        "Test": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CreatureThere",
+                                          "Creature": {
+                                            "Who": "Dealer",
+                                            "PetOwner": false
+                                          }
+                                        }
+                                      }
+                                    },
+                                    "Value": {
+                                      "$kind": "HookConstant",
+                                      "Value": 0
+                                    }
+                                  },
+                                  {
+                                    "When": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    },
+                                    "Value": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CreatureIsPet",
+                                      "Creature": {
+                                        "Who": "Dealer",
+                                        "PetOwner": false
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "CalcifyPower.ModifyDamageAdditive:0029",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreatureThere",
+                                "Creature": {
+                                  "Who": "Dealer",
+                                  "PetOwner": true
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SameCreature",
+                            "Creature": {
+                              "Who": "Dealer",
+                              "PetOwner": true
+                            },
+                            "Other": {
+                              "Who": "Owner",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "CalcifyPower.ModifyDamageAdditive:0042",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
   },
   {
     "Name": "CentennialPuzzle",
@@ -1377,6 +2574,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": true,
             "When": {
               "$kind": "HookMath",
@@ -1720,6 +2918,7 @@
               "$kind": "HookConstant",
               "Value": 1
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "When": {
               "$kind": "HookMath",
@@ -2003,6 +3202,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": true,
             "When": {
               "$kind": "HookTest",
@@ -2110,6 +3310,7 @@
               "Key": "StrengthPower",
               "Canonical": 6
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -2697,6 +3898,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -3563,6 +4765,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -3609,6 +4812,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": true,
             "When": {
               "$kind": "HookMath",
@@ -3934,6 +5138,7 @@
               "Key": "StrengthPower",
               "Canonical": 1
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -4718,6 +5923,519 @@
     "HelpsOwner": false
   },
   {
+    "Name": "GigantificationPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterAttack",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.commandToModify",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterAttack\u003Ed__8.MoveNext:0024",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "Data.commandToModify"
+                },
+                "Right": {
+                  "$kind": "HookFactValue",
+                  "Fact": "AttackId"
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.commandToModify.ModelSource",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterAttack\u003Ed__8.MoveNext:0024",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "Data.commandToModify"
+                },
+                "Right": {
+                  "$kind": "HookFactValue",
+                  "Fact": "AttackId"
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterAttack\u003Ed__8.MoveNext:0024",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "Data.commandToModify"
+                },
+                "Right": {
+                  "$kind": "HookFactValue",
+                  "Fact": "AttackId"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeAttack",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.commandToModify",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "AttackId"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "GigantificationPower.BeforeAttack:000D",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "AttackFromCard"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "GigantificationPower.BeforeAttack:0026",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "SameCreature",
+                        "Creature": {
+                          "Who": "AttackCardOwner",
+                          "PetOwner": false
+                        },
+                        "Other": {
+                          "Who": "Owner",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "GigantificationPower.BeforeAttack:0035",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardType"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "GigantificationPower.BeforeAttack:0048",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "GigantificationPower.BeforeAttack:005D",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "Data.commandToModify"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.commandToModify.ModelSource",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "AttackCardId"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "GigantificationPower.BeforeAttack:000D",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "AttackFromCard"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "GigantificationPower.BeforeAttack:0026",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "SameCreature",
+                        "Creature": {
+                          "Who": "AttackCardOwner",
+                          "PetOwner": false
+                        },
+                        "Other": {
+                          "Who": "Owner",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "GigantificationPower.BeforeAttack:0035",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardType"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "GigantificationPower.BeforeAttack:0048",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "GigantificationPower.BeforeAttack:005D",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "Data.commandToModify"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "GigantificationPower.ModifyDamageMultiplicative:0002",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "FromCard"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "GigantificationPower.ModifyDamageMultiplicative:001C",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "GigantificationPower.ModifyDamageMultiplicative:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "GigantificationPower.ModifyDamageMultiplicative:003F",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "Data.commandToModify"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "GigantificationPower.ModifyDamageMultiplicative:004E",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CurrentAttack"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify.ModelSource"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify.ModelSource"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SourceCardId"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "GigantificationPower.ModifyDamageMultiplicative:003F",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.commandToModify"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "GigantificationPower.ModifyDamageMultiplicative:004E",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.commandToModify"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.commandToModify"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CurrentAttack"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.commandToModify.ModelSource"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.commandToModify.ModelSource"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SourceCardId"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 3
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false
+  },
+  {
     "Name": "GlassOrb",
     "Kind": "Orb",
     "Hooks": [
@@ -5498,6 +7216,7 @@
               "Key": "DexterityPower",
               "Canonical": 1
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "When": {
               "$kind": "HookMath",
@@ -5559,6 +7278,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "When": {
               "$kind": "HookTest",
@@ -5600,6 +7320,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -5862,6 +7583,7 @@
               "Key": "WeakPower",
               "Canonical": 1
             },
+            "GoesAtZero": false,
             "Debuff": true,
             "When": {
               "$kind": "HookNot",
@@ -5892,6 +7614,7 @@
               "Key": "WeakPower",
               "Canonical": 1
             },
+            "GoesAtZero": false,
             "Debuff": true,
             "When": {
               "$kind": "HookMath",
@@ -7208,6 +8931,7 @@
               "Key": "DexterityPower",
               "Canonical": 1
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -7527,6 +9251,7 @@
                 "Value": -1
               }
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "By": {
@@ -7558,6 +9283,7 @@
                 "Value": -1
               }
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "By": {
@@ -8816,6 +10542,7 @@
               "Key": "StrengthPower",
               "Canonical": 2
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "By": {
@@ -9042,6 +10769,7 @@
               "Key": "StrengthPower",
               "Canonical": 1
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -9120,6 +10848,7 @@
               "$kind": "HookFactValue",
               "Fact": "BoundTaken"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -9212,6 +10941,7 @@
                 "Value": -1
               }
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -12098,6 +13828,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": true,
             "When": {
               "$kind": "HookTest",
@@ -12214,6 +13945,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": true,
             "When": {
               "$kind": "HookTest",
@@ -12443,6 +14175,7 @@
               "$kind": "HookFactValue",
               "Fact": "BoundTaken"
             },
+            "GoesAtZero": false,
             "Debuff": true,
             "By": {
               "Who": "Applier",
@@ -13595,6 +15328,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "When": {
               "$kind": "HookMath",
@@ -14341,6 +16075,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "When": {
               "$kind": "HookTest",
@@ -14809,6 +16544,7 @@
               "Key": "StrengthPower",
               "Canonical": 1
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -14918,6 +16654,7 @@
               "Key": "DexterityPower",
               "Canonical": 1
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -15141,6 +16878,7 @@
                 "Fact": "Amount"
               }
             },
+            "GoesAtZero": false,
             "Debuff": true,
             "When": {
               "$kind": "HookMath",
@@ -15753,6 +17491,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -16194,6 +17933,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "When": {
               "$kind": "HookTest",
@@ -16388,6 +18128,7 @@
               "Key": "StrengthPower",
               "Canonical": 1
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -17392,6 +19133,7 @@
               "Key": "EndOfTurnAim",
               "Canonical": 3
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "When": {
               "$kind": "HookTest",
@@ -17900,6 +19642,7 @@
               "$kind": "HookConstant",
               "Value": -1
             },
+            "GoesAtZero": false,
             "Debuff": true,
             "By": {
               "Who": "Applier",
@@ -17922,6 +19665,7 @@
               "$kind": "HookConstant",
               "Value": -1
             },
+            "GoesAtZero": false,
             "Debuff": true,
             "By": {
               "Who": "Applier",
@@ -17949,6 +19693,7 @@
               "$kind": "HookField",
               "Field": "CardsPlayedThisTurn"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "By": {
@@ -17972,6 +19717,7 @@
               "$kind": "HookField",
               "Field": "CardsPlayedThisTurn"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "By": {
@@ -18036,6 +19782,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {
@@ -19658,6 +21405,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "When": {
               "$kind": "HookTest",
@@ -20019,6 +21767,7 @@
                 "Fact": "Amount"
               }
             },
+            "GoesAtZero": false,
             "Debuff": true,
             "When": {
               "$kind": "HookMath",
@@ -20240,6 +21989,1479 @@
     "HelpsOwner": false
   },
   {
+    "Name": "VigorPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterAttack",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "VigorPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "Data.amountWhenAttackStarted"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": -1
+              }
+            },
+            "GoesAtZero": true,
+            "Debuff": false,
+            "By": {
+              "Who": "NoOne",
+              "PetOwner": false
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterAttack\u003Ed__8.MoveNext:0024",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "Data.commandToModify"
+                },
+                "Right": {
+                  "$kind": "HookFactValue",
+                  "Fact": "AttackId"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeAttack",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.commandToModify",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "AttackId"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "Or",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:000C",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SameCreature",
+                          "Creature": {
+                            "Who": "Attacker",
+                            "PetOwner": false
+                          },
+                          "Other": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:001F",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:0034",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "VigorPower.BeforeAttack:0042",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "AttackFromCard"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "VigorPower.BeforeAttack:0062",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:000C",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SameCreature",
+                          "Creature": {
+                            "Who": "Attacker",
+                            "PetOwner": false
+                          },
+                          "Other": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:001F",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:0034",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "VigorPower.BeforeAttack:004F",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "AttackFromCard"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "VigorPower.BeforeAttack:0062",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.commandToModify.ModelSource",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "AttackCardId"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "Or",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:000C",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SameCreature",
+                          "Creature": {
+                            "Who": "Attacker",
+                            "PetOwner": false
+                          },
+                          "Other": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:001F",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:0034",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "VigorPower.BeforeAttack:0042",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "AttackFromCard"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "VigorPower.BeforeAttack:0062",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:000C",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SameCreature",
+                          "Creature": {
+                            "Who": "Attacker",
+                            "PetOwner": false
+                          },
+                          "Other": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:001F",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:0034",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "VigorPower.BeforeAttack:004F",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "AttackFromCard"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "VigorPower.BeforeAttack:0062",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.commandToModify.Attacker",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "CreatureId",
+              "Creature": {
+                "Who": "Attacker",
+                "PetOwner": false
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "Or",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:000C",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SameCreature",
+                          "Creature": {
+                            "Who": "Attacker",
+                            "PetOwner": false
+                          },
+                          "Other": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:001F",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:0034",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "VigorPower.BeforeAttack:0042",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "AttackFromCard"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "VigorPower.BeforeAttack:0062",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:000C",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SameCreature",
+                          "Creature": {
+                            "Who": "Attacker",
+                            "PetOwner": false
+                          },
+                          "Other": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:001F",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:0034",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "VigorPower.BeforeAttack:004F",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "AttackFromCard"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "VigorPower.BeforeAttack:0062",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.amountWhenAttackStarted",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "Or",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:000C",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SameCreature",
+                          "Creature": {
+                            "Who": "Attacker",
+                            "PetOwner": false
+                          },
+                          "Other": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:001F",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:0034",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "VigorPower.BeforeAttack:0042",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "AttackFromCard"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "VigorPower.BeforeAttack:0062",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:000C",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SameCreature",
+                          "Creature": {
+                            "Who": "Attacker",
+                            "PetOwner": false
+                          },
+                          "Other": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:001F",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredAttack"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.BeforeAttack:0034",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "VigorPower.BeforeAttack:004F",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "AttackFromCard"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "VigorPower.BeforeAttack:0062",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyDamageAdditive",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "VigorPower.ModifyDamageAdditive:0008",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "DealerIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "VigorPower.ModifyDamageAdditive:0016",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "VigorPower.ModifyDamageAdditive:002B",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.commandToModify"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "VigorPower.ModifyDamageAdditive:002F",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "FromCard"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "VigorPower.ModifyDamageAdditive:003E",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CurrentAttack"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify.ModelSource"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify.ModelSource"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SourceCardId"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "VigorPower.ModifyDamageAdditive:002B",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "Data.commandToModify"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.ModifyDamageAdditive:004C",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.ModifyDamageAdditive:005B",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify.Attacker"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureId",
+                            "Creature": {
+                              "Who": "Dealer",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "VigorPower.ModifyDamageAdditive:002F",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "FromCard"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.ModifyDamageAdditive:004C",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.ModifyDamageAdditive:005B",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify.Attacker"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureId",
+                            "Creature": {
+                              "Who": "Dealer",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "VigorPower.ModifyDamageAdditive:003E",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Or",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "Data.commandToModify"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "Data.commandToModify"
+                            },
+                            "Right": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CurrentAttack"
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "Data.commandToModify.ModelSource"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "Data.commandToModify.ModelSource"
+                            },
+                            "Right": {
+                              "$kind": "HookFactValue",
+                              "Fact": "SourceCardId"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "VigorPower.ModifyDamageAdditive:004C",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.commandToModify"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "VigorPower.ModifyDamageAdditive:005B",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.commandToModify.Attacker"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureId",
+                          "Creature": {
+                            "Who": "Dealer",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "Or",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "VigorPower.ModifyDamageAdditive:002B",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "Data.commandToModify"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "VigorPower.ModifyDamageAdditive:004C",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "Data.commandToModify"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "VigorPower.ModifyDamageAdditive:002F",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "FromCard"
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "VigorPower.ModifyDamageAdditive:004C",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "Data.commandToModify"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "VigorPower.ModifyDamageAdditive:003E",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Or",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "Data.commandToModify"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "Data.commandToModify"
+                                },
+                                "Right": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CurrentAttack"
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "Data.commandToModify.ModelSource"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "Data.commandToModify.ModelSource"
+                                },
+                                "Right": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "SourceCardId"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "VigorPower.ModifyDamageAdditive:004C",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookField",
+                                "Field": "Data.commandToModify"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "VigorPower.ModifyDamageAdditive:002B",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "Data.commandToModify"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.ModifyDamageAdditive:005B",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify.Attacker"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureId",
+                            "Creature": {
+                              "Who": "Dealer",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VigorPower.ModifyDamageAdditive:002F",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "FromCard"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "VigorPower.ModifyDamageAdditive:005B",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.commandToModify.Attacker"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureId",
+                          "Creature": {
+                            "Who": "Dealer",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "VigorPower.ModifyDamageAdditive:003E",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CurrentAttack"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify.ModelSource"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.commandToModify.ModelSource"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SourceCardId"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "VigorPower.ModifyDamageAdditive:005B",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.commandToModify.Attacker"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureId",
+                        "Creature": {
+                          "Who": "Dealer",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false
+  },
+  {
     "Name": "VitalSparkPower",
     "Kind": "Power",
     "Hooks": [
@@ -20266,6 +23488,7 @@
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
+            "GoesAtZero": false,
             "Debuff": true,
             "By": {
               "Who": "NoOne",
@@ -24354,6 +27577,7 @@
               "Key": "AimPower",
               "Canonical": 5
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "When": {
               "$kind": "HookTest",
@@ -24404,6 +27628,7 @@
                 "Value": -1
               }
             },
+            "GoesAtZero": false,
             "Debuff": false,
             "DebuffWhenNegative": true,
             "When": {

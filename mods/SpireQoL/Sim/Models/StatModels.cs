@@ -39,24 +39,7 @@ public abstract class AttackBoundPower : SimModel
     }
 }
 
-/// <summary>VigorPower: its amount on the owner's powered attack from a card; the attack that started with it spends that much (AfterAttack).</summary>
-public sealed class VigorPower : AttackBoundPower
-{
-    public override TabKind? Tab => TabKind.Trigger;
-    protected override bool Qualifies(SimState state, int owner, AttackInfo attack) => attack.Dealer == owner && attack.Props.IsPoweredAttack();
-    public override decimal ModifyDamageAdditive(SimState state, int owner, DamageCtx damage) =>
-        damage.Dealer == owner && damage.Props.IsPoweredAttack() && AppliesNow(state, owner, ThisPower) ? SimEngine.PowerOn(state, owner, ThisPower) : 0m;
-    public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack)
-    {
-        var powers = SimEngine.PowersOf(state, owner);
-        var data = powers.DataOf(ThisPower);
-        if (!powers.Has(ThisPower) || BoundAttack(data) != attack.Id) return One(state);
-        var left = powers[ThisPower] - AmountAtStart(data);
-        SimEngine.SetPowers(state, owner, left == 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, data: 0));
-        state.LogFired(Name, amount: 0, owner);
-        return One(state);
-    }
-}
+// Vigor and Gigantification are read from their code (ReadModel, decision #228).
 
 /// <summary>
 /// AimPower: like Vigor, on the owner's powered arrow attacks (FromArrow); Heavy Shot multiplies it by its AimMultiplier.
@@ -97,28 +80,6 @@ public sealed class QuietusPower : AttackBoundPower
         var powers = SimEngine.PowersOf(state, owner);
         if (!powers.Has(ThisPower) || BoundAttack(powers.DataOf(ThisPower)) != attack.Id) return One(state);
         SimEngine.SetPowers(state, owner, powers.Without(ThisPower));
-        state.LogFired(Name, amount: 0, owner);
-        return One(state);
-    }
-}
-
-/// <summary>
-/// GigantificationPower: triples the owner's powered attacks from an Attack card; the first such attack takes a stack
-/// (AfterAttack: Decrement).
-/// </summary>
-public sealed class GigantificationPower : AttackBoundPower
-{
-    public override TabKind? Tab => TabKind.Trigger;
-    protected override bool Qualifies(SimState state, int owner, AttackInfo attack) =>
-        attack.Card is { Type: SimCardType.Attack } && state.CurrentPlay?.Owner == owner && attack.Props.IsPoweredAttack();
-    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
-        damage.Card != null && damage.Play?.Owner == owner && damage.Props.IsPoweredAttack() && AppliesNow(state, owner, ThisPower) ? 3m : 1m;
-    public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack)
-    {
-        var powers = SimEngine.PowersOf(state, owner);
-        if (!powers.Has(ThisPower) || BoundAttack(powers.DataOf(ThisPower)) != attack.Id) return One(state);
-        var left = powers[ThisPower] - 1;
-        SimEngine.SetPowers(state, owner, left <= 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, data: 0));
         state.LogFired(Name, amount: 0, owner);
         return One(state);
     }

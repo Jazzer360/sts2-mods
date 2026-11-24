@@ -72,6 +72,10 @@ public enum HookName
     /// ModelKind.Enchantment's program.
     /// </summary>
     OnPlay,
+    /// <summary>Hook.BeforeAttack: an attack (AttackCommand) is about to make its hits (SimEngine.RunAttack): its attacker, props and card.</summary>
+    BeforeAttack,
+    /// <summary>Hook.AfterAttack: an attack made its hits.</summary>
+    AfterAttack,
 }
 
 /// <summary>When an orb's passive goes off: the OrbModel trigger hook its class overrides with a call of TriggerPassive (OrbQueue calls them).</summary>
@@ -257,6 +261,23 @@ public enum HookFact
     /// or an attack's (command.DamageProps.HasFlag(ValueProp.FromArrow)).
     /// </summary>
     PropsHave,
+    /// <summary>The attack's id in this simulation (BeforeAttack's and AfterAttack's command: AttackInfo.Id), as a model keeps it (decision #228).</summary>
+    AttackId,
+    /// <summary>The id of the attack under way (SimState.CurrentAttack; 0 outside an attack): a Modify hook's damage is that attack's hit.</summary>
+    CurrentAttack,
+    /// <summary>The attack's card's identity (its HandId; 0 for none, or a card not read from a hand), as a model keeps it.</summary>
+    AttackCardId,
+    /// <summary>The identity of the card a damage comes from (cardSource: its HandId; 0 for none).</summary>
+    SourceCardId,
+    /// <summary>The attack is a card's (command.ModelSource is CardModel): the simulator's attacks are card plays', so whether it has a card.</summary>
+    AttackFromCard,
+    /// <summary>The id of a creature the code names (Creature), as a model keeps it (the attacker of the attack it keeps); Who.None for none.</summary>
+    CreatureId,
+    /// <summary>
+    /// A creature the code names (Creature) is a player's pet, the one the simulator keeps (Who.YourOsty): its monster is the class Player.Osty gets
+    /// (creature.Monster is Osty).
+    /// </summary>
+    CreatureIsPet,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>
@@ -278,6 +299,10 @@ public enum HookWho
     NoOne,
     /// <summary>The item of the loop the step is in (a ForEachStep's: each player, each enemy).</summary>
     Each,
+    /// <summary>The attack's attacker (BeforeAttack's and AfterAttack's command.Attacker).</summary>
+    Attacker,
+    /// <summary>The player whose card the attack is (command.ModelSource as a card, its Owner): the play's.</summary>
+    AttackCardOwner,
 }
 
 /// <summary>A creature a hook's code names (HookWho), or the player who owns it when it's a pet (creature.PetOwner.Creature: Osty's player).</summary>
@@ -463,6 +488,12 @@ public sealed record FlashStep : HookStep
 /// <summary>PowerCmd.Apply of <paramref name="Power"/> on <paramref name="Target"/>, applied by the owner.</summary>
 public sealed record ApplyPowerStep(string Power, HookTarget Target, HookValue Amount) : HookStep
 {
+    /// <summary>
+    /// Its own amount changed (PowerCmd.ModifyAmount of itself): once at 0 or less it goes, after its listeners heard the change (PowerModel.
+    /// ShouldRemoveDueToAmount: a power that can't go below 0). PowerCmd.Apply's own landing leaves that to the engine.
+    /// </summary>
+    public bool GoesAtZero { get; init; }
+
     /// <summary>It lands as a debuff (Artifact takes it): the power's type for its amount, as the adapter read it.</summary>
     public bool Debuff { get; init; }
 

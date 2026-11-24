@@ -440,11 +440,17 @@ public static class HookReader
                 case DrawStep: return TabKind.Draw;
                 case GainEnergyStep: return TabKind.Energy;
             }
-        // A pass of the HP-loss pipeline changes the HP a hit takes: it acts (the hand-written models' trigger: Tungsten Rod, The Boot).
+        // A pass of the HP-loss pipeline changes the HP a hit takes: it acts (the hand-written models' trigger: Tungsten Rod, The Boot). A power an
+        // attack spends (its AfterAttack takes its own stacks: Gigantification's Decrement) acts on that play (decision #228).
         return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep)
             || programs.Any(program => program.Returns != null && program.Hook is HookName.ModifyHpLostBeforeOsty or HookName.ModifyHpLostBeforeOstyLate or HookName.ModifyHpLostAfterOsty or HookName.ModifyHpLostAfterOstyLate)
+            || programs.Any(SpentByAnAttack)
             ? TabKind.Trigger : null;
     }
+
+    /// <summary>An AfterAttack that takes the power's own stacks (Decrement, Remove: Gigantification's, Quietus'): the attack spent it, the power acting.</summary>
+    internal static bool SpentByAnAttack(HookProgram program) =>
+        program.Hook == HookName.AfterAttack && new ModelSpec("", ModelKind.Power, new[] { program }).Steps().Any(step => step is DecrementPowerStep or RemovePowerStep);
 
     /// <summary>
     /// A play anyone makes sets off something that helps the model's owner: a play hook's block for its owner, or a buff on it, on a condition
@@ -869,6 +875,76 @@ public static class HookReader
         /// <summary>A field or property of its own class (not a base class's: an enchantment's base.Card is its card) that holds a card.</summary>
         private bool KeepsACard(string member) => (_type.GetProperty(member, Declared)?.PropertyType ?? _type.GetField(member, Declared)?.FieldType) is { Name: "CardModel" };
 
+        /// <summary>The hooks given an attack (Hook.BeforeAttack, AfterAttack: its AttackCommand): its attacker, props and card are the hook's.</summary>
+        private static readonly HashSet<string> AttackHooks = new(StringComparer.Ordinal) { "BeforeAttack", "AfterAttack" };
+
+        /// <summary>The attack a BeforeAttack or AfterAttack is given (its command).</summary>
+        private bool IsAttack(ProgramValue value) => AttackHooks.Contains(_hook) && Unstored(value) is ParameterValue { Name: "command" } or NamedValue { Name: "command" };
+
+        /// <summary>
+        /// An attack its own data keeps (a field of its data holding an AttackCommand: Vigor's commandToModify): its field's name ("Data.commandToModify"),
+        /// else null. The simulator keeps the attack's id there, and beside it what the code asks of it later: its card ("…ModelSource", the card's
+        /// HandId) and its attacker ("…Attacker", the creature's id).
+        /// </summary>
+        private static string? KeptAttack(ProgramValue value) =>
+            Unstored(value) is QueryValue { Name: var field, Of: { } dataOf, Arguments.Count: 0, ValueType: "AttackCommand" } && ProgramReader.IsOwnData(dataOf) ? ProgramReader.OwnDataPrefix + field : null;
+
+        /// <summary>
+        /// The class of the pet the simulator keeps for a player (Who.YourOsty): what Player.Osty gets (PlayerCombatState.GetPet&lt;T&gt;()), read from
+        /// its code; null when it can't be read.
+        /// </summary>
+        private string? OstyClass()
+        {
+            var getter = _type.Assembly.GetType("MegaCrit.Sts2.Core.Entities.Players.Player")?.GetProperty("Osty", BindingFlags.Instance | BindingFlags.Public)?.GetMethod;
+            if (getter == null) return null;
+            try { return _read(getter).FirstOrDefault(instruction => instruction.IsCall && instruction.Member is { Name: "GetPet", GenericArguments.Count: 1 })?.Member!.GenericArguments[0]; }
+            catch (InvalidOperationException) { return null; }
+        }
+
+        /// <summary>A field of its own data that holds an attack ("Data.commandToModify", its Data class's AttackCommand field).</summary>
+        private bool HoldsAnAttack(string field) => field.StartsWith(ProgramReader.OwnDataPrefix, StringComparison.Ordinal)
+            && Procs.CardCode.NestedTypes(_type).Any(nested => nested.GetField(field[ProgramReader.OwnDataPrefix.Length..], Declared)?.FieldType.Name == "AttackCommand");
+
+        /// <summary>The attack's card (command.ModelSource, or it as a card: command.ModelSource is CardModel cardModel).</summary>
+        private bool IsAttackCard(ProgramValue value) => Unstored(value) switch
+        {
+            QueryValue { Name: "ModelSource", Of: { } of } => IsAttack(of),
+            QueryValue { Name: "is", Type: "CardModel", Of: { } of } => IsAttackCard(of),
+            _ => false,
+        };
+
+        /// <summary>
+        /// The attack given or the one its data keeps, compared (decision #228): the same attack (command == commandToModify: their ids), the kept one
+        /// there (!= null), the damage's card the kept attack's (cardSource == commandToModify.ModelSource: the damage is that attack's, or its card is
+        /// the same card), the kept attack's attacker a creature the code names (commandToModify.Attacker == dealer). Null for anything else.
+        /// </summary>
+        private HookValue? AttackCompare(CompareValue compare)
+        {
+            if (compare.Op is not (Comparison.Equal or Comparison.NotEqual)) return null;
+            HookValue? holds = null;
+            static HookValue Equal(HookValue left, HookValue right) => new HookMath(HookOperation.Equal, left, right);
+            static HookValue There(string field) => new HookMath(HookOperation.NotEqual, new HookField(field), new HookConstant(0m));
+            foreach (var (one, other) in new[] { (compare.Left, compare.Right), (compare.Right, compare.Left) })
+            {
+                if (KeptAttack(one) is { } kept)
+                {
+                    if (IsAttack(other)) holds = Equal(new HookField(kept), new HookFactValue(HookFact.AttackId));
+                    else if (other is NullValue) holds = Equal(new HookField(kept), new HookConstant(0m));
+                }
+                else if (Unstored(one) is QueryValue { Name: "ModelSource", Of: { } sourceOf } && KeptAttack(sourceOf) is { } keptSource && IsSourceCard(other))
+                {
+                    var card = keptSource + ".ModelSource";
+                    holds = new HookMath(HookOperation.Or,
+                        new HookMath(HookOperation.And, There(keptSource), Equal(new HookField(keptSource), new HookFactValue(HookFact.CurrentAttack))),
+                        new HookMath(HookOperation.And, There(card), Equal(new HookField(card), new HookFactValue(HookFact.SourceCardId))));
+                }
+                else if (Unstored(one) is QueryValue { Name: "Attacker", Of: { } attackerOf } && KeptAttack(attackerOf) is { } keptAttacker && CreatureOf(other) is { } creature)
+                    holds = Equal(new HookField(keptAttacker + ".Attacker"), CreatureFact(HookFact.CreatureId, creature));
+                if (holds != null) break;
+            }
+            return holds == null ? null : compare.Op == Comparison.Equal ? holds : Not(holds);
+        }
+
         /// <summary>While a hand pick's step is read: its condition's tests of the pick hold (Test).</summary>
         private bool _handPickHolds;
 
@@ -1034,6 +1110,21 @@ public static class HookReader
                     if (IsPlayCard(cardStore.Value)) return new HookStep[] { new BindStep(new HookConstant(1m)) { When = Condition(step.Condition) } };
                     if (cardStore.Value is NullValue) return new HookStep[] { new UnbindStep { When = Condition(step.Condition) } };
                     throw new Gap(ReaderCapability.OwnData, $"gap: keeps {cardStore.Value} in {cardStore.Field}");
+                // An attack its data keeps (Vigor's commandToModify = command): the attack's id, its card and its attacker, each its state (KeptAttack);
+                // null lets it go. Any other attack kept is a gap.
+                case StoreStep attackStore when HoldsAnAttack(attackStore.Field):
+                {
+                    var keptWhen = Condition(step.Condition);
+                    HookStep[] Kept(HookValue id, HookValue card, HookValue attacker) => new HookStep[]
+                    {
+                        new StoreFieldStep(attackStore.Field, id) { When = keptWhen }, new StoreFieldStep(attackStore.Field + ".ModelSource", card) { When = keptWhen },
+                        new StoreFieldStep(attackStore.Field + ".Attacker", attacker) { When = keptWhen },
+                    };
+                    if (IsAttack(attackStore.Value))
+                        return Kept(new HookFactValue(HookFact.AttackId), new HookFactValue(HookFact.AttackCardId), CreatureFact(HookFact.CreatureId, new HookCreature(HookWho.Attacker)));
+                    if (attackStore.Value is NullValue) return Kept(new HookConstant(0m), new HookConstant(0m), new HookConstant(0m));
+                    throw new Gap(ReaderCapability.AttackHooks, $"gap: keeps {attackStore.Value} in {attackStore.Field}");
+                }
                 case StoreStep store:
                     // A store to its own state (a field or property of its class, a plain field of its data): simulator state its programs read (HookField).
                     // One of its own values set (DynamicVars["CardsLeft"].BaseValue = ...): its state too, under the value's key.
@@ -1228,6 +1319,25 @@ public static class HookReader
                     var orb = member.GenericArguments.SingleOrDefault() ?? throw new Gap(ReaderCapability.Orbs, "gap: an orb made first");
                     return Enum.TryParse<OrbKind>(orb.EndsWith("Orb", StringComparison.Ordinal) ? orb[..^3] : orb, out var kind) && kind is not (OrbKind.Unknown or OrbKind.Random)
                         ? new ChannelStep(kind) : throw new Gap(ReaderCapability.Orbs, $"gap: channels a {orb}");
+                }
+                // PowerCmd.ModifyAmount(this, offset, applier, cardSource): its own amount changed (Vigor's spent), as PowerCmd.Apply of itself on its owner
+                // changes an instance there (the same pipeline: the amount received, the log, AfterPowerAmountChanged; gone at 0 unless it can go below).
+                // Another power's, or one copy of a power kept in copies, is a gap.
+                case "PowerCmd.ModifyAmount":
+                {
+                    var powerAt = IndexOf(types, "PowerModel");
+                    if (powerAt < 0 || values[powerAt] is not NamedValue { Name: "this" }) throw new Gap(ReaderCapability.PowerAmountChanged, "gap: PowerCmd.ModifyAmount of another power");
+                    if (_kind != ModelKind.Power || Copies() != PowerCopies.One) throw new Gap(ReaderCapability.PowerAmountChanged, "gap: PowerCmd.ModifyAmount of one copy");
+                    var offsetAt = IndexOf(types, "Decimal");
+                    var applierAt = IndexOf(types, from: offsetAt + 1, "Creature");
+                    if (offsetAt < 0 || applierAt < 0) throw new Gap(ReaderCapability.PowerAmountChanged, "gap: PowerCmd.ModifyAmount with no offset or applier");
+                    HookCreature? by = IsOwner(values[applierAt]) ? null : values[applierAt] is NullValue ? new HookCreature(HookWho.NoOne)
+                        : IsApplier(values[applierAt]) ? new HookCreature(HookWho.Applier) : throw new Gap(ReaderCapability.CommandOnAnotherCreature, "gap: its amount changed by someone else");
+                    var offset = Value(values[offsetAt]);
+                    return new ApplyPowerStep(_type.Name, HookTarget.Owner, offset)
+                    {
+                        Debuff = LandsAsDebuff(_type.Name, offset), DebuffWhenNegative = offset is not HookConstant && AllowsNegative(_type.Name), By = by, GoesAtZero = !AllowsNegative(_type.Name),
+                    };
                 }
                 case "PowerCmd.Remove" or "PowerCmd.Decrement" or "PowerCmd.TickDownDuration":
                     if (values[0] is not NamedValue { Name: "this" }) throw new Gap(ReaderCapability.CommandOnAnotherPower, $"gap: {member.FullName} of another power");
@@ -1472,6 +1582,25 @@ public static class HookReader
                 // Its kept card tested as there (MusicBox's CardBeingPlayed): a play bound to it.
                 case var kept when IsKeptCard(kept):
                     return new HookFactValue(HookFact.BoundHeld);
+                // A creature's monster is a class (command.Attacker?.Monster is Osty, way by way for a null-conditional chain): the pet the simulator
+                // keeps for a player when it's the class Player.Osty gets (read from its code); any other class is a gap.
+                case QueryValue { Name: "is", Of: { } monsterOf, Type: var monsterClass } when Unstored(monsterOf) is WaysValue or QueryValue { Name: "Monster" }:
+                {
+                    HookValue MonsterIs(ProgramValue monster) => monster is NullValue ? new HookConstant(0m)
+                        : Unstored(monster) is QueryValue { Name: "Monster", Of: { } creatureOf } && CreatureOf(creatureOf) is { } creature && monsterClass == OstyClass()
+                            ? CreatureFact(HookFact.CreatureIsPet, creature)
+                            : throw new Gap(ReaderCapability.Osty, $"gap: tests {monster} is {monsterClass}");
+                    return Unstored(monsterOf) is WaysValue monsterWays
+                        ? new HookWays(monsterWays.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), MonsterIs(way.Value))).ToList())
+                        : MonsterIs(monsterOf);
+                }
+                // An attack its data keeps, tested as there (commandToModify as a truth): one is bound to it (decision #228).
+                case var keptAttack when KeptAttack(keptAttack) is { } keptField:
+                    return new HookMath(HookOperation.NotEqual, new HookField(keptField), new HookConstant(0m));
+                // The attack is a card's (command.ModelSource is CardModel), or has a model as its source at all (command.ModelSource): the simulator's
+                // attacks are its plays', each a card's.
+                case var attackSource when IsAttackCard(attackSource):
+                    return new HookFactValue(HookFact.AttackFromCard);
                 case CompareValue compare:
                     return Compare(compare);
                 // An enchantment's status tested as true or false (Normal is 0: Swift's and Sown's status == Normal): its state, not 0.
@@ -1658,6 +1787,9 @@ public static class HookReader
             if (value is QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } } && _hook == "AfterPowerAmountChanged") return new HookCreature(HookWho.PowerOwner);
             if (value is QueryValue { Name: "Player" or "Creature", Of: { } of }) return CreatureOf(of);
             if (value is QueryValue { Name: "PetOwner", Of: { } pet } && CreatureOf(pet) is { PetOwner: false } owned) return owned with { PetOwner = true };
+            // The attack's attacker (command.Attacker), and its card's owner (cardModel.Owner, the player whose card it is).
+            if (value is QueryValue { Name: "Attacker", Of: { } attackOf } && IsAttack(attackOf)) return new HookCreature(HookWho.Attacker);
+            if (value is QueryValue { Name: "Owner", Of: { } attackCardOf } && IsAttackCard(attackCardOf)) return new HookCreature(HookWho.AttackCardOwner);
             // The owner of a model got from a creature (a called model's base.Owner): that creature.
             if (value is QueryValue { Name: "Owner", Of: { } ownerOf } && Getter(ownerOf) is { } got) return got.Holder;
             return null;
@@ -1706,6 +1838,7 @@ public static class HookReader
         /// <summary>A comparison: of the owner with what the hook was given (a fact), of the card's type, of a power's type for its amount, or of values.</summary>
         private HookValue Compare(CompareValue compare)
         {
+            if (AttackCompare(compare) is { } attacks) return attacks;
             if (compare.Op is Comparison.Equal or Comparison.NotEqual)
             {
                 // Its kept card is there (CardBeingPlayed != null), or is the card played (cardPlay.Card == CardBeingPlayed): a play is bound to it,
@@ -1779,7 +1912,7 @@ public static class HookReader
                 }
                 return compare.Op == Comparison.LessOrEqual ? any! : Not(any!);
             }
-            if (compare.Left is QueryValue { Type: "CardModel", Name: "Type", Of: { } typeOf } && (IsPlayCard(typeOf) || IsEventCard(typeOf)) && compare.Right is ConstantValue cardType)
+            if (compare.Left is QueryValue { Type: "CardModel", Name: "Type", Of: { } typeOf } && (IsPlayCard(typeOf) || IsEventCard(typeOf) || IsAttackCard(typeOf)) && compare.Right is ConstantValue cardType)
             {
                 var simType = EnumName(_type.Assembly, "CardType", cardType.Value) is { } typeName && Enum.TryParse<SimCardType>(typeName, out var parsed) ? parsed
                     : throw new Gap(ReaderCapability.CardFacts, $"gap: a card type {cardType.Value}");
@@ -1819,7 +1952,7 @@ public static class HookReader
         {
             if (!IsOwner(left) && !IsOwner(right)) return null;
             var other = IsOwner(left) ? right : left;
-            if (CardOwnerOf(other) is { } card)
+            if (CardOwnerOf(other) is { } card && !IsAttackCard(card))
                 return IsPlayCard(card) ? new HookFactValue(HookFact.PlayIsOwners)
                     : IsEventCard(card) ? new HookFactValue(HookFact.EventIsOwners)
                     : IsSourceCard(card) ? new HookFactValue(HookFact.CardIsOwners)
@@ -2432,7 +2565,9 @@ public static class HookReader
 
         private static bool IsDealer(ProgramValue value) => value is ParameterValue { Name: "dealer" } or NamedValue { Name: "dealer" };
 
-        private static bool IsProps(ProgramValue value) => value is ParameterValue { Name: "props" } or NamedValue { Name: "props" };
+        private static bool IsProps(ProgramValue value) => value is ParameterValue { Name: "props" } or NamedValue { Name: "props" }
+            // An attack's props (BeforeAttack's and AfterAttack's command.DamageProps).
+            || value is QueryValue { Name: "DamageProps", Of: ParameterValue { Name: "command" } or NamedValue { Name: "command" } };
 
         /// <summary>participants.Contains(base.Owner): the owner takes part in the side's turn ending or starting.</summary>
         private static bool IsTakingPart(ProgramValue value) =>

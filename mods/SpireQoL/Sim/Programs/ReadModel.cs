@@ -32,6 +32,8 @@ internal readonly struct HookArgs
     /// <summary>The damage or block being worked out (the Modify hooks).</summary>
     public DamageCtx? Damage { get; init; }
     public BlockCtx? Block { get; init; }
+    /// <summary>The attack a BeforeAttack or AfterAttack is told of (its AttackCommand: id, attacker, props, card).</summary>
+    public AttackInfo? Attack { get; init; }
 
     /// <summary>
     /// The answers of the code's tests this hook run has asked (HookTest, by its slot: 0 not yet, 1 held, 2 didn't), for a program that stores to
@@ -136,7 +138,7 @@ public sealed class ReadModel : SimModel
             // changes what it tests (if (Block == 0) { GainBlock; GainEnergy }). One that guards a single step can't tell.
             _asksOnce[(int)program.Hook] = one.Steps().Any(step => step is StoreFieldStep) || _takes[(int)program.Hook] || GuardsSeveral(one);
             if (program.Returns != null) _returns[(int)program.Hook] = Compile(program.Returns);
-            _steps[(int)program.Hook] = CompileSteps(program.Steps, new List<HookStep>(), firstRound: true);
+            _steps[(int)program.Hook] = CompileSteps(program.Steps, new List<HookStep>(), firstRound: true, program.Hook);
         }
         foreach (var command in spec.Commands ?? Array.Empty<CommandProgram>())
         {
@@ -304,12 +306,14 @@ public sealed class ReadModel : SimModel
     /// Steps compiled in order. A hook that acts logs one firing (the hand-written models' Fire): a draw, energy, a power or an orb, once for the
     /// steps on one condition (<paramref name="firing"/>: the ones before); a counter loop's later rounds log none (<paramref name="firstRound"/>).
     /// </summary>
-    private CompiledStep[] CompileSteps(IReadOnlyList<HookStep> steps, List<HookStep> firing, bool firstRound)
+    private CompiledStep[] CompileSteps(IReadOnlyList<HookStep> steps, List<HookStep> firing, bool firstRound, HookName? hook = null)
     {
         var compiled = new List<CompiledStep>();
         foreach (var step in steps)
         {
-            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep;
+            // A power an attack spends (its AfterAttack takes its own stacks: Gigantification's Decrement) acts on that play too (decision #228).
+            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep
+                || hook == HookName.AfterAttack && step is DecrementPowerStep or RemovePowerStep;
             // An enchantment's effects are its card's (no tab of its own, nothing in the play log: its card's play shows them).
             var fires = firstRound && acts && Spec.Kind != ModelKind.Enchantment && !firing.Any(earlier => Equals(earlier.When, step.When));
             if (acts) firing.Add(step);
@@ -353,6 +357,8 @@ public sealed class ReadModel : SimModel
         HookName.ModifyOrbPassiveTriggerCounts => nameof(ModifyOrbPassiveTriggerCounts),
         HookName.AfterModifyingOrbPassiveTriggerCount => nameof(AfterModifyingOrbPassiveTriggerCount),
         HookName.AfterOrbEvoked => nameof(AfterOrbEvoked),
+        HookName.BeforeAttack => nameof(BeforeAttack),
+        HookName.AfterAttack => nameof(AfterAttack),
         // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook; an enchantment's OnPlay
         // where its card plays (RunEnchantment).
         HookName.Passive or HookName.Evoke or HookName.OnPlay => "",
@@ -381,6 +387,13 @@ public sealed class ReadModel : SimModel
 
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
         Run(HookName.AfterCardPlayed, new HookArgs { State = state, Owner = owner, Play = play });
+
+    /// <summary>An attack about to make its hits, and one that made them (SimEngine.RunAttack: Hook.BeforeAttack, Hook.AfterAttack), in the play in progress.</summary>
+    public override IEnumerable<SimState> BeforeAttack(SimState state, int owner, AttackInfo attack) =>
+        Run(HookName.BeforeAttack, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Attack = attack });
+
+    public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack) =>
+        Run(HookName.AfterAttack, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Attack = attack });
 
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
         HookOf(cardEvent) is { } hook ? Run(hook, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Event = cardEvent, Player = player }) : One(state);
@@ -1047,6 +1060,7 @@ public sealed class ReadModel : SimModel
                 var debuffWhenNegative = apply.DebuffWhenNegative;
                 var target = apply.Target;
                 var appliedBy = apply.By;
+                var goesAtZero = apply.GoesAtZero;
                 return args =>
                 {
                     var state = args.State;
@@ -1060,7 +1074,10 @@ public sealed class ReadModel : SimModel
                     {
                         switch (target)
                         {
-                            case HookTarget.Owner: SimEngine.ApplyInHit(state, applier, args.Owner, power, given, debuff); break;
+                            case HookTarget.Owner:
+                                SimEngine.ApplyInHit(state, applier, args.Owner, power, given, debuff);
+                                if (goesAtZero && SimEngine.PowersOf(state, args.Owner) is var inHitLeft && inHitLeft.Has(power) && inHitLeft[power] <= 0) SimEngine.SetPowers(state, args.Owner, inHitLeft.Without(power));
+                                break;
                             case HookTarget.PowerOwner or HookTarget.HitTarget: SimEngine.ApplyInHit(state, applier, args.Target, power, given, debuff); break;
                             case HookTarget.AllEnemies:
                                 foreach (var enemy in state.Targetable.ToList()) SimEngine.ApplyInHit(state, applier, enemy.Id, power, given, debuff);
@@ -1072,7 +1089,16 @@ public sealed class ReadModel : SimModel
                     // Each landing heard by the listeners (PowerCmd.Apply: Hook.AfterPowerAmountChanged), on each one's own creature in turn.
                     switch (target)
                     {
-                        case HookTarget.Owner: return SimEngine.ApplyAndTell(state, applier, args.Owner, power, given, debuff);
+                        case HookTarget.Owner:
+                        {
+                            if (!goesAtZero) return SimEngine.ApplyAndTell(state, applier, args.Owner, power, given, debuff);
+                            // Its own amount changed (PowerCmd.ModifyAmount): gone once it's at 0 or less, after its listeners heard it (ShouldRemoveDueToAmount).
+                            var owner = args.Owner;
+                            var changed = SimEngine.ApplyAndTell(state, applier, owner, power, given, debuff).ToList();
+                            foreach (var branch in changed)
+                                if (SimEngine.PowersOf(branch, owner) is var left && left.Has(power) && left[power] <= 0) SimEngine.SetPowers(branch, owner, left.Without(power));
+                            return changed;
+                        }
                         case HookTarget.PowerOwner or HookTarget.HitTarget: return SimEngine.ApplyAndTell(state, applier, args.Target, power, given, debuff);
                         // The player who played the card (cardPlay.Card.Owner.Creature: Vital Spark's Tainted on whoever plays a Tainted card).
                         case HookTarget.PlayOwner: return args.Play is { } played ? SimEngine.ApplyAndTell(state, applier, played.Owner, power, given, debuff) : One(state);
@@ -1107,6 +1133,7 @@ public sealed class ReadModel : SimModel
             case RemovePowerStep:
                 return args =>
                 {
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
                     if (args.Copy > 0) ChangeCopy(args.State, args.Owner, args.Copy, delta: null);
                     else SimEngine.SetPowers(args.State, args.Owner, SimEngine.PowersOf(args.State, args.Owner).Without(ThisPower));
                     return One(args.State);
@@ -1114,6 +1141,7 @@ public sealed class ReadModel : SimModel
             case DecrementPowerStep:
                 return args =>
                 {
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
                     if (args.Copy > 0) ChangeCopy(args.State, args.Owner, args.Copy, delta: -1);
                     else SimEngine.DecrementPower(args.State, args.Owner, ThisPower);
                     return One(args.State);
@@ -1413,7 +1441,23 @@ public sealed class ReadModel : SimModel
             {
                 // The game's flag by its name (ValueProp's and SimProps' numbers are the same, but the name is what the reader checked).
                 var flag = Enum.TryParse<SimProps>(named, out var parsedFlag) && parsedFlag != SimProps.None ? parsedFlag : throw new InvalidOperationException($"{Name}: no props flag {named}");
-                return (in HookArgs args) => (args.Damage?.Props ?? args.Block?.Props ?? args.Hit?.Props)?.HasFlag(flag) == true ? 1m : 0m;
+                return (in HookArgs args) => (args.Damage?.Props ?? args.Block?.Props ?? args.Hit?.Props ?? args.Attack?.Props)?.HasFlag(flag) == true ? 1m : 0m;
+            }
+            // An attack (decision #228): its id, the one under way, its card's and a damage's card's identity, whether it's a card's.
+            case HookFact.AttackId: return (in HookArgs args) => args.Attack?.Id ?? 0;
+            case HookFact.CurrentAttack: return (in HookArgs args) => args.State.CurrentAttack;
+            case HookFact.AttackCardId: return (in HookArgs args) => args.Attack?.Card?.HandId ?? 0;
+            case HookFact.SourceCardId: return (in HookArgs args) => (args.Damage?.Card ?? args.Hit?.Card)?.HandId ?? 0;
+            case HookFact.AttackFromCard: return (in HookArgs args) => args.Attack?.Card != null ? 1m : 0m;
+            case HookFact.CreatureIsPet:
+            {
+                var creature = CreatureNamed(fact);
+                return (in HookArgs args) => CreatureOf(in args, creature) == Who.YourOsty ? 1m : 0m;
+            }
+            case HookFact.CreatureId:
+            {
+                var creature = CreatureNamed(fact);
+                return (in HookArgs args) => CreatureOf(in args, creature);
             }
             case HookFact.OrbValueSoFar: return (in HookArgs args) => args.OrbValue;
             case HookFact.TriggerCountSoFar: return (in HookArgs args) => args.TriggerCount;
@@ -1458,7 +1502,7 @@ public sealed class ReadModel : SimModel
             case HookFact.DealerIsOwner: return (in HookArgs args) => (args.Damage?.Dealer ?? args.Hit?.Dealer) == args.Owner ? 1m : 0m;
             case HookFact.DealerIsOwnersPet: return (in HookArgs args) => args.Owner == Who.You && (args.Damage?.Dealer ?? args.Hit?.Dealer) == Who.YourOsty ? 1m : 0m;
             case HookFact.TargetIsOwner: return (in HookArgs args) => (args.Damage?.Target ?? args.Block?.Target ?? args.Hit?.Target) == args.Owner ? 1m : 0m;
-            case HookFact.PoweredAttack: return (in HookArgs args) => (args.Damage?.Props ?? args.Hit?.Props)?.IsPoweredAttack() == true ? 1m : 0m;
+            case HookFact.PoweredAttack: return (in HookArgs args) => (args.Damage?.Props ?? args.Hit?.Props ?? args.Attack?.Props)?.IsPoweredAttack() == true ? 1m : 0m;
             case HookFact.PoweredBlock: return (in HookArgs args) => args.Block?.Props.IsPoweredBlock() == true ? 1m : 0m;
             case HookFact.CardOrMonsterMove: return (in HookArgs args) => (args.Damage?.Props ?? args.Block?.Props ?? args.Hit?.Props)?.IsCardOrMonsterMove() == true ? 1m : 0m;
             case HookFact.FromCard: return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card) != null ? 1m : 0m;
@@ -1562,6 +1606,8 @@ public sealed class ReadModel : SimModel
             HookWho.Dead or HookWho.PowerOwner => args.Target,
             HookWho.Applier => ApplierOf(in args),
             HookWho.Each => args.Each,
+            HookWho.Attacker => args.Attack?.Dealer ?? Who.None,
+            HookWho.AttackCardOwner => args.Attack?.Card != null ? args.Play?.Owner ?? Who.None : Who.None,
             _ => Who.None,
         };
         return creature.PetOwner ? id == Who.YourOsty ? Who.You : Who.None : id;
@@ -1586,6 +1632,7 @@ public sealed class ReadModel : SimModel
     /// </summary>
     private static SimCardType CardTypeOf(in HookArgs args)
     {
+        if (args.Hook is HookName.BeforeAttack or HookName.AfterAttack) return args.Attack?.Card?.Type ?? SimCardType.None;
         if (IsPlayHook(args.Hook)) return args.Play?.Card.Type ?? SimCardType.None;
         return args.Event switch
         {

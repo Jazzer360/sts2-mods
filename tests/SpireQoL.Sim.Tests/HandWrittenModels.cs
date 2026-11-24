@@ -1510,3 +1510,82 @@ public sealed class NoBlockPower : SimModel
     public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block) =>
         block.Target == owner && !block.Props.HasFlag(SimProps.Unpowered) && block.Card != null ? 0m : 1m;
 }
+
+// ---- an attack's hooks (Sim/Models/StatModels.cs and ProcRelicModels.cs, deleted 2026-11-24)
+
+/// <summary>
+/// Powers bound to one attack (BeforeAttack binds the first attack that qualifies, AfterAttack spends them). Data is the bound
+/// attack's id and the amount when it started: (id &lt;&lt; 16) | amount. (Sim/Models/StatModels.cs' AttackBoundPower, as the frozen models had it.)
+/// </summary>
+public abstract class AttackBoundPower : SimModel
+{
+    protected static int BoundAttack(int data) => data >> 16;
+    protected static int AmountAtStart(int data) => data & 0xFFFF;
+
+    /// <summary>The attack qualifies: its dealer, props and card (the game's BeforeAttack checks).</summary>
+    protected abstract bool Qualifies(SimState state, int owner, AttackInfo attack);
+
+    public override IEnumerable<SimState> BeforeAttack(SimState state, int owner, AttackInfo attack)
+    {
+        var powers = SimEngine.PowersOf(state, owner);
+        if (!powers.Has(ThisPower) || powers.DataOf(ThisPower) != 0 || !Qualifies(state, owner, attack)) return One(state);
+        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], (attack.Id << 16) | Math.Clamp(powers[ThisPower], 0, 0xFFFF)));
+        return One(state);
+    }
+
+    /// <summary>It applies to this damage: not bound, or bound to the attack in progress.</summary>
+    protected static bool AppliesNow(SimState state, int owner, PowerId name)
+    {
+        var bound = BoundAttack(SimEngine.PowersOf(state, owner).DataOf(name));
+        return bound == 0 || bound == state.CurrentAttack;
+    }
+}
+
+/// <summary>VigorPower: its amount on the owner's powered attack from a card; the attack that started with it spends that much (AfterAttack).</summary>
+public sealed class VigorPower : AttackBoundPower
+{
+    public override TabKind? Tab => TabKind.Trigger;
+    protected override bool Qualifies(SimState state, int owner, AttackInfo attack) => attack.Dealer == owner && attack.Props.IsPoweredAttack();
+    public override decimal ModifyDamageAdditive(SimState state, int owner, DamageCtx damage) =>
+        damage.Dealer == owner && damage.Props.IsPoweredAttack() && AppliesNow(state, owner, ThisPower) ? SimEngine.PowerOn(state, owner, ThisPower) : 0m;
+    public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack)
+    {
+        var powers = SimEngine.PowersOf(state, owner);
+        var data = powers.DataOf(ThisPower);
+        if (!powers.Has(ThisPower) || BoundAttack(data) != attack.Id) return One(state);
+        var left = powers[ThisPower] - AmountAtStart(data);
+        SimEngine.SetPowers(state, owner, left == 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, data: 0));
+        state.LogFired(Name, amount: 0, owner);
+        return One(state);
+    }
+}
+
+/// <summary>
+/// GigantificationPower: triples the owner's powered attacks from an Attack card; the first such attack takes a stack
+/// (AfterAttack: Decrement).
+/// </summary>
+public sealed class GigantificationPower : AttackBoundPower
+{
+    public override TabKind? Tab => TabKind.Trigger;
+    protected override bool Qualifies(SimState state, int owner, AttackInfo attack) =>
+        attack.Card is { Type: SimCardType.Attack } && state.CurrentPlay?.Owner == owner && attack.Props.IsPoweredAttack();
+    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
+        damage.Card != null && damage.Play?.Owner == owner && damage.Props.IsPoweredAttack() && AppliesNow(state, owner, ThisPower) ? 3m : 1m;
+    public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack)
+    {
+        var powers = SimEngine.PowersOf(state, owner);
+        if (!powers.Has(ThisPower) || BoundAttack(powers.DataOf(ThisPower)) != attack.Id) return One(state);
+        var left = powers[ThisPower] - 1;
+        SimEngine.SetPowers(state, owner, left <= 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, data: 0));
+        state.LogFired(Name, amount: 0, owner);
+        return One(state);
+    }
+}
+
+/// <summary>BoneFlute.AfterAttack: block for each attack your Osty makes.</summary>
+public sealed class BoneFlute : RelicProc
+{
+    public override TabKind? Tab => TabKind.Block;
+    public override IEnumerable<SimState> AfterAttack(SimState state, int owner, AttackInfo attack) =>
+        owner == Who.You && attack.Dealer == Who.YourOsty && state.You.OstyHp > 0 ? RelicBlock(state, owner) : One(state);
+}

@@ -20,7 +20,6 @@ public class SimModelOwnerScanTests
         ["hit.Dealer != Who.You || !hit.Props.IsPoweredAttack()"] = "ImpaledPower is your arrows in an enemy (a teammate's are TeammatesImpaledPower)",
         ["CardEvent.ArrowDislodged, Who.You"] = "ImpaledPower is your arrows: they come back to you",
         ["play.Owner != Who.You"] = "Withering Presence counts its Target's cards; the adapter loads only the one aimed at you (SimReaders.Powers)",
-        ["owner == Who.You && attack.Dealer == Who.YourOsty && state.You.OstyHp"] = "your Osty's attacks (a teammate's Osty doesn't attack in your turn)",
         ["dealer == Who.YourOsty ? Who.You : dealer"] = "your Osty's damage counts as yours",
         ["(owner == Who.You && breaker == Who.YourOsty)"] = "Hand Drill: your Osty breaking block counts as you (only your Osty is a dealer in the simulator; a teammate's Osty's hits are captured numbers)",
         ["OstyLoses(state, Who.You, hit)"] = "Thorns hitting back at your Osty",

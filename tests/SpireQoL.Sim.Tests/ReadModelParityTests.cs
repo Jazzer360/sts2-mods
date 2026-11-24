@@ -56,6 +56,7 @@ public class ReadModelParityTests
         ["PaleBlueDotPower.AfterCardPlayed"] = "PowerCmd.Apply<DrawCardsNextTurnPower>(base.Owner, base.Amount): the read model puts Draw Cards Next Turn on its owner where the hand-written model only fired. It acts as its owner's next turn starts, outside a simulation: no prediction changes",
         ["VulnerablePower.ModifyDamageMultiplicative"] = "dealer.Player?.GetRelic<PaperPhrog>(), and PaperPhrog's and CrueltyPower's own `target == base.Owner` returns: Osty's hits get no Paper Phrog (a pet's creature has no Player; the hand-written model gave him his player's), a fix where Osty hits a Vulnerable enemy with Paper Phrog; and a creature's own Phrog and Cruelty don't raise a powered attack on itself (none happens today)",
         ["MonologuePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this), then Strength -StrengthApplied (what its copy gave this turn, taken back) when its owner takes part: it goes as your turn ends. No card of yours plays after it this turn (the auto-plays come before), so no damage reads that Strength: no prediction changes. Its Apply logs a firing there (the read models' acting steps do), outside any play's log, so no tab reads it",
+        ["BoneFlute.AfterAttack"] = "command.Attacker?.Monster is Osty && command.Attacker.PetOwner?.Creature == base.Owner.Creature: CreatureCmd.GainBlock, with no test of Osty alive: every attack Osty made gives the block, one he died during included (a hit back: Thorns), where the hand-written model wanted him above 0 HP after it (a fix)",
         ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
     };
 
@@ -134,6 +135,12 @@ public class ReadModelParityTests
     {
         [RelicId.JossPaper.Name] = (5, "CardsExhausted"),
     };
+
+    /// <summary>
+    /// The powers whose hand-written model kept the attack bound to it in its Data (the attack's id and the amount it started with) where the read
+    /// model keeps them in its own data's fields (decision #228): two ways of keeping one thing, left out of the key; the hits compare what each does with it.
+    /// </summary>
+    private static readonly HashSet<string> KeptAttackData = new(StringComparer.Ordinal) { PowerId.Vigor.Name, PowerId.Gigantification.Name };
 
     public static TheoryData<string> Models() => new(HandWritten.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
@@ -221,6 +228,7 @@ public class ReadModelParityTests
         nameof(SimModel.ModifyHpLostBeforeOsty), nameof(SimModel.ModifyHpLostBeforeOstyLate), nameof(SimModel.ModifyHpLostAfterOsty), nameof(SimModel.ModifyHpLostAfterOstyLate),
         nameof(SimModel.AfterModifyingHpLost),
         nameof(SimModel.ModifyOrbValue), nameof(SimModel.ModifyOrbPassiveTriggerCounts), nameof(SimModel.AfterModifyingOrbPassiveTriggerCount), nameof(SimModel.AfterOrbEvoked),
+        nameof(SimModel.BeforeAttack), nameof(SimModel.AfterAttack),
     };
 
     [Fact]
@@ -492,6 +500,42 @@ public class ReadModelParityTests
                 foreach (var player in others.Where(Who.IsPlayer))
                     yield return ($"an orb channeled for {player}", (model, state) => Branches(model.AfterOrbChanneled(state, owner, player)));
                 break;
+            case nameof(SimModel.BeforeAttack) or nameof(SimModel.AfterAttack):
+                // Two attacks in turn, as the engine runs one (SimEngine.RunAttack: BeforeAttack, its hits' damage worked out, AfterAttack), of every
+                // attacker, props and card: each step's outcome and the damage a hit of each attack gets compared (what an attack kept, the next one
+                // reads). Osty's attacks with him alive, and once at 0 HP (he died during it).
+                foreach (var attacker in new[] { owner, Who.You, Who.YourOsty, Who.Teammate(0) }.Distinct().Where(attacker => !Who.IsEnemy(attacker)))
+                    foreach (var props in new[] { SimProps.Move, SimProps.Move | SimProps.Unpowered, SimProps.Move | SimProps.FromArrow })
+                        foreach (var type in new SimCardType?[] { SimCardType.Attack, SimCardType.Skill, null })
+                            foreach (var ostyHp in attacker == Who.YourOsty ? new[] { 5, 0 } : new[] { 5 })
+                                yield return ($"two attacks by {attacker}, {props}, card {type?.ToString() ?? "none"}{(ostyHp == 0 ? ", Osty at 0 HP" : "")}", (model, state) =>
+                                {
+                                    state.You.OstyHp = ostyHp;
+                                    var player = attacker == Who.YourOsty ? Who.You : attacker;
+                                    var text = new StringBuilder();
+                                    IEnumerable<SimState> states = new[] { state };
+                                    foreach (var id in new[] { 1, 2 })
+                                    {
+                                        var card = type is { } cardType ? new SimCard(id == 1 ? "First" : "Second", cardType) : null;
+                                        var play = new SimCardPlay(card ?? new SimCard("Played", SimCardType.Skill), player, Target: 0, PlayIndex: 0, PlayCount: 1, AutoPlay: false);
+                                        var attack = new AttackInfo(id, attacker, props, card);
+                                        var hit = new DamageCtx(attacker, Target: 0, props, card, card == null ? null : play);
+                                        states = states.SelectMany(branch =>
+                                        {
+                                            branch.CurrentPlay = play;
+                                            branch.CurrentAttack = id;
+                                            return model.BeforeAttack(branch, owner, attack);
+                                        }).ToList();
+                                        text.Append(Branches(states)).Append(" // hit: ")
+                                            .Append(string.Join(",", states.Select(branch => $"{Number(model.ModifyDamageAdditive(branch, owner, hit))} x{Number(model.ModifyDamageMultiplicative(branch, owner, hit))}")))
+                                            .Append(" // ");
+                                        states = states.SelectMany(branch => model.AfterAttack(branch, owner, attack)).ToList();
+                                        foreach (var branch in states) branch.CurrentAttack = 0;
+                                        text.Append(Branches(states)).Append(" // ");
+                                    }
+                                    return text.ToString();
+                                });
+                break;
             // The orbs' hooks (decision #214): every orb kind, each player's, front or not, from every value and count.
             case nameof(SimModel.ModifyOrbValue):
                 foreach (var orb in Orbs(others))
@@ -632,7 +676,7 @@ public class ReadModelParityTests
             foreach (var relic in player.Relics.Items) player.Relics = player.Relics.With(relic.Name, amount: 0, data: 0);
             player.Fields = NamedCounts.Empty;
             // A hand-written counter's count in its power's Data (the read model keeps it in its fields).
-            foreach (var power in player.Powers.Items.Where(power => CounterFields.ContainsKey(power.Name.Name)))
+            foreach (var power in player.Powers.Items.Where(power => CounterFields.ContainsKey(power.Name.Name) || KeptAttackData.Contains(power.Name.Name)))
                 player.Powers = player.Powers.With(power.Name, power.Amount, data: 0);
         }
         foreach (var enemy in copy.Enemies) enemy.Fields = NamedCounts.Empty;
