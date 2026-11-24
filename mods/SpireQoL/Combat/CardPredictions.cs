@@ -606,7 +606,8 @@ public sealed class CardPredictions
         {
             if (!SimOwner(src, out var ownerId)) continue;
             var pass = src is PowerModel power && OwnerOf(power) is { IsEnemy: true } ? 0 : src is RelicModel ? 1 : 2;
-            _tabSources.Add(new TabSource(src.GetType().Name, SimReaders.ModelName(src), ownerId, pass, Logs: !(src is PowerModel && SimAdapter.IsTemporaryThorns(src.GetType()))));
+            _tabSources.Add(new TabSource(src.GetType().Name, SimReaders.ModelName(src), ownerId, pass, Logs: !(src is PowerModel && SimAdapter.IsTemporaryThorns(src.GetType())),
+                Shows: Menu.SettingsCatalog.ShowsOf(src.GetType().Name)));
             _tabSourceModels.TryAdd(src.GetType().Name, src);
         }
         // Effects the engine logs itself (Juggernaut on every block gain; Thunder is read from its code: decision #214): logged under their power's

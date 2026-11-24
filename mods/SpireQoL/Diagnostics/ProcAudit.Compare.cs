@@ -142,7 +142,15 @@ public sealed partial class ProcAudit
         // ---- relic tabs whose relic didn't fire (crossed ones mean "this breaks it": no flash)
         foreach (var (name, otherTab) in sourceOf)
         {
-            if (otherTab.Crossed || !otherTab.Key.StartsWith("proc:", StringComparison.Ordinal) || SimModels.Get(name) is ReadModel { PaysWhereItsDecided: true }) continue;
+            if (!otherTab.Key.StartsWith("proc:", StringComparison.Ordinal)) continue;
+            // A payout decided where it's paid (decision #239: Parrying Shield, Orichalcum, Cloak Clasp...): its tab is about how your turn ends, after
+            // the play, which the play can't show; the forecast check holds what it pays as the turn ends. Counted, not passed.
+            if (SimModels.Get(name) is ReadModel { PaysWhereItsDecided: true })
+            {
+                modelLines.Skip(otherTab.Crossed ? "given up" : "didn't fire", "a payout decided as your turn ends: the forecast check holds what it pays", name);
+                continue;
+            }
+            if (otherTab.Crossed) continue;
             // The play ended the fight: the game stops at the killing hit, so a relic that acts after it (Bone Flute after
             // Osty's attack) never gets to.
             if (window.FightEnded) continue;

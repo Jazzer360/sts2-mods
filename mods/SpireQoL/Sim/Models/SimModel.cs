@@ -131,7 +131,13 @@ public enum ActedSeen { Flash, StatusCleared, NoEnergyLeft, CounterPassedLimit }
 /// False for an effect the play only makes certain for later: the end of your turn (Parrying Shield) or the enemy turn (Imbalanced,
 /// stunned when its hit is fully blocked), which the play check can't see; the turn's own check holds those.
 /// </param>
-public sealed record OutcomeRule(bool Harmful, Func<SimOutcome, bool> SetOff, Func<SimState, bool>? InBranch = null, Func<SimOutcome, bool>? InSome = null, bool InPlay = true);
+/// <param name="Change">
+/// What one branch does to a bonus against ending the turn now (a payout decided where it's paid: decision #239), as the direction its source's
+/// settings row can show (TabShows: sets it up, gives it up, makes it smaller); null for a rule with one direction only. With it, the tab is
+/// judged on the branches whose change the row shows (CardTabs.FromRule): <see cref="Harmful"/> says which side the rule is on.
+/// </param>
+public sealed record OutcomeRule(bool Harmful, Func<SimOutcome, bool> SetOff, Func<SimState, bool>? InBranch = null, Func<SimOutcome, bool>? InSome = null, bool InPlay = true,
+    Func<SimState, TabShows>? Change = null);
 
 /// <summary>One card play as the hooks see it (the game's CardPlay): the card, its target, and which play of how many.</summary>
 public sealed record SimCardPlay(SimCard Card, int Owner, [property: JsonConverter(typeof(CreatureIdJson))] int Target, int PlayIndex, int PlayCount, bool AutoPlay)

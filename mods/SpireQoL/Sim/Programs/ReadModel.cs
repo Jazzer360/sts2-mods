@@ -107,8 +107,11 @@ public sealed class ReadModel : SimModel
     /// <summary>Its payouts a play decides (Payout.DuringTheTurn), each compiled once: its condition during the turn, asked of its hook's turn.</summary>
     private readonly (Evaluate Condition, HookName? Hook, bool NextTurn)[] _duringTheTurn = Array.Empty<(Evaluate, HookName?, bool)>();
 
-    /// <summary>Its payouts decided where they're paid, by their hook: each condition, asked as the engine runs the hook.</summary>
-    private readonly Dictionary<HookName, Evaluate[]> _paidWhere = new();
+    /// <summary>
+    /// Its payouts decided where they're paid, by their hook: each condition, asked as the engine runs the hook, and what it pays there (its giving
+    /// command's amount, worked out as the hook starts: Cloak Clasp's block per card in hand; 1 for a command with no amount: decision #250).
+    /// </summary>
+    private readonly Dictionary<HookName, (Evaluate Condition, Evaluate Amount)[]> _paidWhere = new();
 
     /// <summary>The fields its payouts a play decides read: a play hook's store to one can give the bonus up.</summary>
     private readonly HashSet<string> _payoutFields = new(StringComparer.Ordinal);
@@ -186,7 +189,8 @@ public sealed class ReadModel : SimModel
                 PayoutReadsThePlayLog |= new ModelSpec(Name, spec.Kind, Array.Empty<HookProgram>()) { Payouts = new[] { new Payout(payout.Hook, during) } }.Values().OfType<HookHistory>().Any();
             }
             else if (hook is { } paidIn && !payout.NextTurn)
-                _paidWhere[paidIn] = (_paidWhere.TryGetValue(paidIn, out var those) ? those : Array.Empty<Evaluate>()).Append(Compile(payout.Condition)).ToArray();
+                _paidWhere[paidIn] = (_paidWhere.TryGetValue(paidIn, out var those) ? those : Array.Empty<(Evaluate, Evaluate)>())
+                    .Append((Compile(payout.Condition), Compile(PaidAmount(spec, paidIn, payout.Condition)))).ToArray();
             else throw new InvalidOperationException($"{Name}: a payout in {payout.Hook} that can't be judged from a simulation");
         }
         if (spec.Kind == ModelKind.Orb)
@@ -639,14 +643,44 @@ public sealed class ReadModel : SimModel
     /// Its payout decided where it's paid (decision #239), yours: ending the turn now, does it pay in every outcome? If not, a bonus where the play
     /// makes it pay in every outcome (it sets it up); if so, a warning where the play stops it in some outcome (it gives it up), with the chance of
     /// those. Set off after the play (as your turn ends), so the play check can't see it. Not a teammate's: the play's bonus is its own player's.
+    /// Each branch's change against ending the turn now is told too (OutcomeRule.Change, decision #250): on the bonus's side, it pays where ending
+    /// now doesn't in every outcome (sets it up); on the warning's, it pays nothing (gives it up) or less than ending now pays in every outcome
+    /// (makes it smaller: Cloak Clasp's block for a card fewer in hand). The source's settings row shows the changes it names.
     /// </summary>
     private OutcomeRule? PaidWhere(SimOutcome now, int owner)
     {
         if (owner != Who.You) return null;
         var key = PaidKey(owner);
         bool Paid(SimState branch) => branch.Payouts.Has(key);
-        return !now.InEvery(Paid) ? new OutcomeRule(Harmful: false, outcome => outcome.InEvery(Paid), InPlay: false)
-            : new OutcomeRule(Harmful: true, outcome => !outcome.InEvery(Paid), branch => !Paid(branch), InPlay: false);
+        if (!now.InEvery(Paid))
+            return new OutcomeRule(Harmful: false, outcome => outcome.InEvery(Paid), InPlay: false, Change: branch => Paid(branch) ? TabShows.SetsUp : TabShows.None);
+        var least = now.Branches.Count == 0 ? 0 : now.Branches.Min(branch => branch.Payouts.DataOf(key));
+        return new OutcomeRule(Harmful: true, outcome => !outcome.InEvery(Paid), branch => !Paid(branch), InPlay: false,
+            Change: branch => !Paid(branch) ? TabShows.GivesUp | TabShows.Reduces : branch.Payouts.DataOf(key) < least ? TabShows.Reduces : TabShows.None);
+    }
+
+    /// <summary>
+    /// What a payout decided where it's paid pays (decision #250): the amount of its hook's first giving command on its condition (block, damage,
+    /// energy, cards drawn, a heal, stars, a power's amount), as its code works it out; 1 for one with no amount (a channel). Kept with the payout in
+    /// each branch, so a play that makes it smaller shows.
+    /// </summary>
+    private static HookValue PaidAmount(ModelSpec spec, HookName hook, HookValue condition)
+    {
+        foreach (var step in spec.Of(hook)?.Steps ?? (IReadOnlyList<HookStep>)Array.Empty<HookStep>())
+        {
+            if (!Equals(step.When, condition)) continue;
+            switch (step)
+            {
+                case GainBlockStep gain: return gain.Amount;
+                case DamageStep damage: return damage.Amount;
+                case GainEnergyStep energy: return energy.Amount;
+                case DrawStep draw: return draw.Count;
+                case HealStep heal: return heal.Amount;
+                case GainStarsStep stars: return stars.Amount;
+                case ApplyPowerStep apply: return apply.Amount;
+            }
+        }
+        return new HookConstant(1m);
     }
 
     /// <summary>
@@ -674,13 +708,14 @@ public sealed class ReadModel : SimModel
         var args = new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay };
         // A payout decided where it's paid (Parrying Shield's block as your turn ends): whether its condition holds here, kept in the branch for the
         // tab judged on how the turn ends (decision #239). Its tests are asked as the hook starts, before any of its steps.
-        if (_paidWhere.TryGetValue(hook, out var conditions))
+        if (_paidWhere.TryGetValue(hook, out var payouts))
         {
             var asked = args with { Hook = hook };
-            foreach (var condition in conditions)
+            foreach (var (condition, amount) in payouts)
                 if (condition(in asked) != 0m)
                 {
-                    state.Payouts = state.Payouts.With(PaidKey(owner), 1);
+                    // What it pays there too, so a play that makes it smaller shows (decision #250).
+                    state.Payouts = state.Payouts.With(PaidKey(owner), 1, data: (int)amount(in asked));
                     break;
                 }
         }

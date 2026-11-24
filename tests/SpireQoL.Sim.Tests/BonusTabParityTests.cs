@@ -32,7 +32,7 @@ public class BonusTabParityTests
             File.WriteAllLines(recordTo, actual);
             return;
         }
-        var expected = File.ReadAllLines(ParityPath);
+        var expected = File.ReadAllLines(ParityPath).Select(line => ReviewedTabs.Values.Aggregate(line, (rewritten, reviewed) => reviewed.Recorded(rewritten))).ToArray();
         var changed = actual.Zip(expected).Where(pair => Compared(pair.First) != Compared(pair.Second)).Select(pair => $"{pair.Second}\n  now: {pair.First}").ToList();
         Assert.True(expected.Length == actual.Count && changed.Count == 0, $"the tabs changed in {changed.Count} of {actual.Count} scenarios:\n{string.Join("\n", changed.Take(6))}");
     }
@@ -46,6 +46,17 @@ public class BonusTabParityTests
         ["MonarchsGazePower"] = "its code never flashes (MonarchsGazePower.AfterDamageGiven: PowerCmd.Apply alone), so the play check no longer expects a flash where its tab shows",
         ["ArtOfWar"] = "its crossed tab is held to the relic going dark (ActedSeen.StatusCleared: GivenUpIssues), never to a flash; a read model's entry here is its code's flashes during the play, of which it has none (ArtOfWar.AfterCardPlayed sets its Status alone)",
         ["RippleBasin"] = "its crossed tab is held to the relic going dark (ActedSeen.StatusCleared: GivenUpIssues), never to a flash; a read model's entry here is its code's flashes during the play, of which it has none (RippleBasin.AfterCardPlayed sets its Status alone)",
+    };
+
+    /// <summary>
+    /// The tabs the owner changed on purpose since the recording (decision #250: what each source's settings row shows), each class's tabs as the
+    /// recording had them, rewritten to what the row shows now: the class, why, and the rewrite of a recorded line. Every other tab of every
+    /// scenario stays as recorded, and each class's new tabs are held to the game's code on boards of their own (BonusTabRowTests).
+    /// </summary>
+    private static readonly Dictionary<string, (string Why, Func<string, string> Recorded)> ReviewedTabs = new(StringComparer.Ordinal)
+    {
+        ["ParryingShield"] = ("its row shows the play that sets it up only (TabShows.SetsUp): no crossed tab on a play that stops it",
+            line => System.Text.RegularExpressions.Regex.Replace(line, @"proc:ParryingShield crossed[^;]*; ", "")),
     };
 
     /// <summary>
@@ -68,8 +79,11 @@ public class BonusTabParityTests
         var lines = Enumerable.Range(0, Scenarios).Select(Tabs).ToList();
         foreach (var name in new[] { "ArtOfWar", "RippleBasin", "ParryingShield", "EmotionChip", "DemonTongue", "SelfFormingClay", "MonarchsGazePower", "ConquerorPower", "SlipperyPower", "RupturePower" })
             Assert.True(lines.Any(line => line.Contains($"proc:{name} ", StringComparison.Ordinal)), $"no scenario shows {name}'s tab");
-        Assert.Contains(lines, line => line.Contains("proc:ParryingShield crossed", StringComparison.Ordinal));
         Assert.Contains(lines, line => line.Contains("proc:ParryingShield plain", StringComparison.Ordinal));
+        // Each reviewed change took something the recording showed (the rewrite isn't idle).
+        var recorded = File.ReadAllLines(ParityPath);
+        foreach (var (name, reviewed) in ReviewedTabs)
+            Assert.True(recorded.Any(line => reviewed.Recorded(line) != line), $"{name}'s reviewed change rewrites nothing the recording has");
         Assert.Contains(lines, line => line.Contains("proc:SlipperyPower crossed chance", StringComparison.Ordinal));
         Assert.Contains(lines, line => line.Contains("aimed", StringComparison.Ordinal));
     }
@@ -117,15 +131,16 @@ public class BonusTabParityTests
         }).ToArray();
         var baseline = SimEngine.Run(state);
         // The sources as CardPredictions lists them: your powers, your relics, every enemy's powers, every teammate's powers and relics.
+        // Each with what its settings row shows of its bonus (decision #250), as CardPredictions gives it.
         var sources = new List<TabSource>();
         void Add(SimPlayer player, int? owner)
         {
-            foreach (var power in player.Powers.Items) sources.Add(new TabSource(power.Name.Name, power.Name.Name, owner, OutcomePass: 2));
-            foreach (var relic in player.Relics.Items) sources.Add(new TabSource(relic.Name.Name, relic.Name.Name, owner, OutcomePass: 1));
+            foreach (var power in player.Powers.Items) sources.Add(new TabSource(power.Name.Name, power.Name.Name, owner, OutcomePass: 2, Shows: TabRowsFile.ShowsOf(power.Name.Name)));
+            foreach (var relic in player.Relics.Items) sources.Add(new TabSource(relic.Name.Name, relic.Name.Name, owner, OutcomePass: 1, Shows: TabRowsFile.ShowsOf(relic.Name.Name)));
         }
         Add(state.You, owner: null);
         foreach (var enemy in state.Enemies)
-            foreach (var power in enemy.Powers.Items) sources.Add(new TabSource(power.Name.Name, power.Name.Name, enemy.Id, OutcomePass: 0));
+            foreach (var power in enemy.Powers.Items) sources.Add(new TabSource(power.Name.Name, power.Name.Name, enemy.Id, OutcomePass: 0, Shows: TabRowsFile.ShowsOf(power.Name.Name)));
         for (var i = 0; i < state.Teammates.Count; i++) Add(state.Teammates[i], Who.Teammate(i));
         var tabs = new CardTabs { Indirect = index % 2 == 0, Chances = true, ProcNumbers = true };
         tabs.Add(sources, state, baseline, outcomes);

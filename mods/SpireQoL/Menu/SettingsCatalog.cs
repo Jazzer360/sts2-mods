@@ -22,9 +22,13 @@ public enum SourceGroup { Relic, YourPower, EnemyPower, Card }
 /// <param name="Event">What its icon beside event options marks; null = none.</param>
 /// <param name="Shop">What its icon beside shop prices marks; null = none.</param>
 /// <param name="Map">What its icon beside the map legend marks (pathing, decision #65); null = none.</param>
+/// <param name="Shows">
+/// Which of what the simulator works out about its bonus its tab shows (decision #250: display configuration, never a gate on the simulation):
+/// a play that sets a payout up, gives it up, or makes it smaller (Sim.TabShows). Both directions of a payout unless it says otherwise.
+/// </param>
 public sealed record SourceEntry(string Type, SourceGroup Group, string? Tag, string? Tracker = null,
     string TagPrefix = "proc:", bool TrackerDefault = true, string? Reward = null, string? Event = null, string? Shop = null, string? Map = null,
-    bool TagDefault = true)
+    bool TagDefault = true, Sim.TabShows Shows = Sim.TabShows.Default)
 {
     public string? TagKey => Tag == null ? null : TagPrefix + Type;
 
@@ -98,6 +102,11 @@ public static class SettingsCatalog
     public static IReadOnlySet<string> TabsOffByDefault => _tabsOffByDefault ??= Sources.Where(source => !source.TagDefault && source.TagKey != null).Select(source => source.TagKey!).ToHashSet();
     private static HashSet<string>? _tabsOffByDefault;
 
+    /// <summary>What a class's Proc Tags row shows of its bonus (SourceEntry.Shows, decision #250); the default for a class with no such row.</summary>
+    public static Sim.TabShows ShowsOf(string type) => (_shows ??= Sources.Where(source => source.TagPrefix == "proc:" && source.Tag != null)
+        .ToDictionary(source => source.Type, source => source.Shows, StringComparer.Ordinal)).TryGetValue(type, out var shows) ? shows : Sim.TabShows.Default;
+    private static Dictionary<string, Sim.TabShows>? _shows;
+
     public static readonly IReadOnlyList<SourceEntry> Sources = new SourceEntry[]
     {
         // ------------------------------------------------------------------ relics
@@ -149,7 +158,7 @@ public static class SettingsCatalog
         new(nameof(BoneFlute), SourceGroup.Relic, "Cards that make Osty attack: block"),
         new(nameof(UnceasingTop), SourceGroup.Relic, "Your last card in hand, if it draws nothing"),
         new(nameof(HandDrill), SourceGroup.Relic, "Attacks that break an enemy's block"),
-        new(nameof(ParryingShield), SourceGroup.Relic, "Cards that make it fire at end of turn (your block reaches its threshold), crossed when they stop it"),
+        new(nameof(ParryingShield), SourceGroup.Relic, "Cards that make it fire at end of turn (your block reaches its threshold)", Shows: Sim.TabShows.SetsUp),
         new(nameof(GremlinHorn), SourceGroup.Relic, "Attacks that kill an enemy"),
         new(nameof(MightyWings), SourceGroup.Relic, "Attacks with a hit of 30 or more (block included), at the right target whatever random outcomes do: Strength"),
         new(nameof(Fertilizer), SourceGroup.Relic, "Cards that create a Sadness: Strength"),

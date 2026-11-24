@@ -9,13 +9,33 @@ public sealed record SourceTab(string Key, bool Crossed, int? Number = null, Tab
     string? Chance = null, bool Aimed = false);
 
 /// <summary>
+/// Which of what the simulator works out about a source's bonus its settings row shows (decision #250): display configuration, the row's
+/// (SettingsCatalog's SourceEntry.Shows), never a gate on what the simulation does. The simulator works out every direction from the code
+/// (a payout's condition before and after the play, its amount, a damage term); the row picks the ones that are tabs.
+/// </summary>
+[Flags]
+public enum TabShows
+{
+    None = 0,
+    /// <summary>A plain tab where the play sets a payout up: off ending the turn now, on in every outcome of the play (decision #239).</summary>
+    SetsUp = 1,
+    /// <summary>A crossed tab where the play gives a payout up: on ending the turn now, off in some outcome (decision #239).</summary>
+    GivesUp = 2,
+    /// <summary>A crossed tab where the play makes a payout smaller than ending the turn now pays, or stops it (Cloak Clasp's block per card in hand).</summary>
+    Reduces = 4,
+    /// <summary>Every row's unless it says otherwise: both directions of a payout, as decision #239 showed them.</summary>
+    Default = SetsUp | GivesUp,
+}
+
+/// <summary>
 /// A source of proc tabs on the board, as CardPredictions lists them (your powers and relics, every living enemy's powers, every living
 /// teammate's powers and relics), in that order: its game class, the model that stands for it, its owner in the simulation (an enemy's id, a
 /// teammate's; null for yours) and which pass of the outcome rules it's in (OutcomePass: an enemy's power 0, a relic 1, a player's power 2).
 /// </summary>
 /// <param name="LogKind">A tab from the play log of this kind whatever the model says (the engine's own logging: Juggernaut's damage).</param>
 /// <param name="Logs">It has a tab from the play log (a temporary Thorns hasn't: its Thorns has the ThornsPower tab).</param>
-public sealed record TabSource(string Class, string Model, int? Owner, int OutcomePass, TabKind? LogKind = null, bool Logs = true);
+/// <param name="Shows">What its settings row shows of its bonus (decision #250: display configuration).</param>
+public sealed record TabSource(string Class, string Model, int? Owner, int OutcomePass, TabKind? LogKind = null, bool Logs = true, TabShows Shows = TabShows.Default);
 
 /// <summary>
 /// The proc tabs of one card's simulations (decision #48, docs/SIMULATOR.md "Tabs from the log"), pure so the tests run the same rules the
@@ -68,7 +88,7 @@ public sealed class CardTabs
         {
             // A source listed again for the engine's own logging (LogKind) has its rules from its own entry.
             if (source.LogKind != null || SimModels.Get(source.Model) is not { JudgedOnOutcome: true } model) continue;
-            if (model.OutcomeTab(start, baseline, source.Owner ?? Who.You) is { } rule) FromRule(source.Class, rule, outcomes);
+            if (model.OutcomeTab(start, baseline, source.Owner ?? Who.You) is { } rule) FromRule(source.Class, rule, outcomes, source.Shows);
         }
     }
 
@@ -128,10 +148,13 @@ public sealed class CardTabs
 
     /// <summary>
     /// A source's rule judged on how the turn ends (SimModel.OutcomeRule): each aim (one simulation each) passes it or not; the tab shows when
-    /// some aim does, with the aim marker when not every aim does (several enemies with the same power: when no aim passes any of them).
+    /// some aim does, with the aim marker when not every aim does (several enemies with the same power: when no aim passes any of them). A rule
+    /// that tells each branch's change to a bonus (OutcomeRule.Change) is judged on the changes the source's row shows (<paramref name="shows"/>,
+    /// decision #250): none shown on its side, no tab.
     /// </summary>
-    private void FromRule(string sourceClass, OutcomeRule rule, SimOutcome[] outcomes)
+    private void FromRule(string sourceClass, OutcomeRule rule, SimOutcome[] outcomes, TabShows shows)
     {
+        if (rule.Change is { } change) rule = Shown(rule, change, shows);
         var key = "proc:" + sourceClass;
         var firesAt = outcomes.Select(rule.SetOff).ToArray();
         // For the audits, per aim, as the play-log tabs are: a bonus in every outcome where it's set off, in some where some outcome sets it
@@ -146,6 +169,21 @@ public sealed class CardTabs
         string? chance = null;
         if (rule.Harmful && rule.InBranch != null && Chances) chance = WarningChance(outcomes.Where(rule.SetOff).Select(outcome => outcome.Chance(rule.InBranch)));
         Tabs[key] = new SourceTab(key, rule.Harmful, Chance: chance, Aimed: firesAt.Length > 1 && !firesAt.All(fires => fires));
+    }
+
+    /// <summary>
+    /// A rule that tells each branch's change to a bonus, as its row shows it (decision #250): on its side (a warning where some outcome makes a
+    /// change the row shows, with the chance of those; a bonus where every outcome does), the changes the row leaves out as if none. A side the
+    /// row shows nothing of sets nothing off.
+    /// </summary>
+    private static OutcomeRule Shown(OutcomeRule rule, Func<SimState, TabShows> change, TabShows shows)
+    {
+        var side = shows & (rule.Harmful ? TabShows.GivesUp | TabShows.Reduces : TabShows.SetsUp);
+        if (side == TabShows.None) return rule with { SetOff = _ => false, InBranch = null, InSome = null, Change = null };
+        bool Made(SimState branch) => (change(branch) & side) != TabShows.None;
+        return rule.Harmful
+            ? rule with { SetOff = outcome => !outcome.InEvery(branch => !Made(branch)), InBranch = Made, Change = null }
+            : rule with { SetOff = outcome => outcome.InEvery(Made), Change = null };
     }
 
     /// <summary>A source's audit sets, merged with an earlier source of the same class's (several enemies with one power).</summary>
