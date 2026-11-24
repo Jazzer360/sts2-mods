@@ -20,13 +20,21 @@
               "$kind": "HookMath",
               "Operation": "And",
               "Left": {
-                "$kind": "HookFactValue",
-                "Fact": "EventIsOwners"
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardGeneratedForCombat\u003Ed__6.MoveNext:002D",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
               },
               "Right": {
-                "$kind": "HookFactValue",
-                "Fact": "CardIs",
-                "Of": "Sadness"
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardGeneratedForCombat\u003Ed__6.MoveNext:003F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardIs",
+                  "Of": "Sadness"
+                }
               }
             }
           }
@@ -52,8 +60,12 @@
             },
             "Debuff": false,
             "When": {
-              "$kind": "HookFactValue",
-              "Fact": "EventIsOwners"
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardGeneratedForCombat\u003Ed__6.MoveNext:002A",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
             }
           }
         ]
@@ -83,8 +95,12 @@
             },
             "NoDealer": false,
             "When": {
-              "$kind": "HookFactValue",
-              "Fact": "EventIsOwners"
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardExhausted\u003Ed__4.MoveNext:0025",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
             }
           }
         ]
@@ -109,8 +125,12 @@
             },
             "Debuff": true,
             "When": {
-              "$kind": "HookFactValue",
-              "Fact": "EventIsOwners"
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardDrawn\u003Ed__6.MoveNext:002A",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
             }
           }
         ]
@@ -121,8 +141,12 @@
           {
             "$kind": "RemovePowerStep",
             "When": {
-              "$kind": "HookFactValue",
-              "Fact": "TakesPart"
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__7.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
             }
           }
         ]
@@ -151,20 +175,28 @@
               "$kind": "HookMath",
               "Operation": "And",
               "Left": {
-                "$kind": "HookFactValue",
-                "Fact": "PlayIsOwners"
+                "$kind": "HookTest",
+                "At": "\u003CBeforeCardPlayed\u003Ed__8.MoveNext:002F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
               },
               "Right": {
-                "$kind": "HookMath",
-                "Operation": "GreaterOrEqual",
-                "Left": {
-                  "$kind": "HookFactValue",
-                  "Fact": "CardEnergy"
-                },
-                "Right": {
-                  "$kind": "HookVar",
-                  "Key": "Energy",
-                  "Canonical": 2
+                "$kind": "HookTest",
+                "At": "\u003CBeforeCardPlayed\u003Ed__8.MoveNext:005B",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "GreaterOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardEnergy"
+                  },
+                  "Right": {
+                    "$kind": "HookVar",
+                    "Key": "Energy",
+                    "Canonical": 2
+                  }
                 }
               }
             }
@@ -197,20 +229,28 @@
               "$kind": "HookMath",
               "Operation": "And",
               "Left": {
-                "$kind": "HookMath",
-                "Operation": "Equal",
-                "Left": {
-                  "$kind": "HookFactValue",
-                  "Fact": "CardType"
-                },
-                "Right": {
-                  "$kind": "HookConstant",
-                  "Value": 1
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__4.MoveNext:0025",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
                 }
               },
               "Right": {
-                "$kind": "HookFactValue",
-                "Fact": "PlayIsOwners"
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__4.MoveNext:0042",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
               }
             }
           }
@@ -234,14 +274,22 @@
                 "$kind": "HookMath",
                 "Operation": "And",
                 "Left": {
-                  "$kind": "HookFactValue",
-                  "Fact": "FromCard"
+                  "$kind": "HookTest",
+                  "At": "DexterityPower.ModifyBlockAdditive:0002",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "FromCard"
+                  }
                 },
                 "Right": {
                   "$kind": "HookNot",
                   "Inner": {
-                    "$kind": "HookFactValue",
-                    "Fact": "CardIsOwners"
+                    "$kind": "HookTest",
+                    "At": "DexterityPower.ModifyBlockAdditive:0016",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardIsOwners"
+                    }
                   }
                 }
               },
@@ -257,73 +305,22 @@
                 "Left": {
                   "$kind": "HookNot",
                   "Inner": {
-                    "$kind": "HookFactValue",
-                    "Fact": "FromCard"
+                    "$kind": "HookTest",
+                    "At": "DexterityPower.ModifyBlockAdditive:0002",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "FromCard"
+                    }
                   }
                 },
                 "Right": {
                   "$kind": "HookNot",
                   "Inner": {
-                    "$kind": "HookFactValue",
-                    "Fact": "TargetIsOwner"
-                  }
-                }
-              },
-              "Value": {
-                "$kind": "HookConstant",
-                "Value": 0
-              }
-            },
-            {
-              "When": {
-                "$kind": "HookMath",
-                "Operation": "Or",
-                "Left": {
-                  "$kind": "HookMath",
-                  "Operation": "And",
-                  "Left": {
-                    "$kind": "HookMath",
-                    "Operation": "And",
-                    "Left": {
-                      "$kind": "HookFactValue",
-                      "Fact": "FromCard"
-                    },
-                    "Right": {
-                      "$kind": "HookFactValue",
-                      "Fact": "CardIsOwners"
-                    }
-                  },
-                  "Right": {
-                    "$kind": "HookNot",
-                    "Inner": {
-                      "$kind": "HookFactValue",
-                      "Fact": "PoweredBlock"
-                    }
-                  }
-                },
-                "Right": {
-                  "$kind": "HookMath",
-                  "Operation": "And",
-                  "Left": {
-                    "$kind": "HookMath",
-                    "Operation": "And",
-                    "Left": {
-                      "$kind": "HookNot",
-                      "Inner": {
-                        "$kind": "HookFactValue",
-                        "Fact": "FromCard"
-                      }
-                    },
-                    "Right": {
+                    "$kind": "HookTest",
+                    "At": "DexterityPower.ModifyBlockAdditive:0025",
+                    "Test": {
                       "$kind": "HookFactValue",
                       "Fact": "TargetIsOwner"
-                    }
-                  },
-                  "Right": {
-                    "$kind": "HookNot",
-                    "Inner": {
-                      "$kind": "HookFactValue",
-                      "Fact": "PoweredBlock"
                     }
                   }
                 }
@@ -344,17 +341,32 @@
                     "$kind": "HookMath",
                     "Operation": "And",
                     "Left": {
-                      "$kind": "HookFactValue",
-                      "Fact": "FromCard"
+                      "$kind": "HookTest",
+                      "At": "DexterityPower.ModifyBlockAdditive:0002",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "FromCard"
+                      }
                     },
                     "Right": {
-                      "$kind": "HookFactValue",
-                      "Fact": "CardIsOwners"
+                      "$kind": "HookTest",
+                      "At": "DexterityPower.ModifyBlockAdditive:0016",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardIsOwners"
+                      }
                     }
                   },
                   "Right": {
-                    "$kind": "HookFactValue",
-                    "Fact": "PoweredBlock"
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "DexterityPower.ModifyBlockAdditive:0033",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredBlock"
+                      }
+                    }
                   }
                 },
                 "Right": {
@@ -366,18 +378,110 @@
                     "Left": {
                       "$kind": "HookNot",
                       "Inner": {
+                        "$kind": "HookTest",
+                        "At": "DexterityPower.ModifyBlockAdditive:0002",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "FromCard"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "DexterityPower.ModifyBlockAdditive:0025",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "TargetIsOwner"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "DexterityPower.ModifyBlockAdditive:0033",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredBlock"
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "DexterityPower.ModifyBlockAdditive:0002",
+                      "Test": {
                         "$kind": "HookFactValue",
                         "Fact": "FromCard"
                       }
                     },
                     "Right": {
-                      "$kind": "HookFactValue",
-                      "Fact": "TargetIsOwner"
+                      "$kind": "HookTest",
+                      "At": "DexterityPower.ModifyBlockAdditive:0016",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardIsOwners"
+                      }
                     }
                   },
                   "Right": {
-                    "$kind": "HookFactValue",
-                    "Fact": "PoweredBlock"
+                    "$kind": "HookTest",
+                    "At": "DexterityPower.ModifyBlockAdditive:0033",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PoweredBlock"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "DexterityPower.ModifyBlockAdditive:0002",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "FromCard"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "DexterityPower.ModifyBlockAdditive:0025",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "TargetIsOwner"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "DexterityPower.ModifyBlockAdditive:0033",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PoweredBlock"
+                    }
                   }
                 }
               },
@@ -401,8 +505,12 @@
           {
             "$kind": "DecrementPowerStep",
             "When": {
-              "$kind": "HookFactValue",
-              "Fact": "TakesPart"
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__5.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
             }
           }
         ]
@@ -420,15 +528,23 @@
                 "Left": {
                   "$kind": "HookNot",
                   "Inner": {
-                    "$kind": "HookFactValue",
-                    "Fact": "DealerIsOwner"
+                    "$kind": "HookTest",
+                    "At": "DoubleDamagePower.ModifyDamageMultiplicative:0008",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "DealerIsOwner"
+                    }
                   }
                 },
                 "Right": {
                   "$kind": "HookNot",
                   "Inner": {
-                    "$kind": "HookFactValue",
-                    "Fact": "DealerIsOwnersPet"
+                    "$kind": "HookTest",
+                    "At": "DoubleDamagePower.ModifyDamageMultiplicative:001C",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "DealerIsOwnersPet"
+                    }
                   }
                 }
               },
@@ -445,14 +561,22 @@
                   "$kind": "HookMath",
                   "Operation": "And",
                   "Left": {
-                    "$kind": "HookFactValue",
-                    "Fact": "DealerIsOwner"
+                    "$kind": "HookTest",
+                    "At": "DoubleDamagePower.ModifyDamageMultiplicative:0008",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "DealerIsOwner"
+                    }
                   },
                   "Right": {
                     "$kind": "HookNot",
                     "Inner": {
-                      "$kind": "HookFactValue",
-                      "Fact": "PoweredAttack"
+                      "$kind": "HookTest",
+                      "At": "DoubleDamagePower.ModifyDamageMultiplicative:002A",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredAttack"
+                      }
                     }
                   }
                 },
@@ -460,14 +584,22 @@
                   "$kind": "HookMath",
                   "Operation": "And",
                   "Left": {
-                    "$kind": "HookFactValue",
-                    "Fact": "DealerIsOwnersPet"
+                    "$kind": "HookTest",
+                    "At": "DoubleDamagePower.ModifyDamageMultiplicative:001C",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "DealerIsOwnersPet"
+                    }
                   },
                   "Right": {
                     "$kind": "HookNot",
                     "Inner": {
-                      "$kind": "HookFactValue",
-                      "Fact": "PoweredAttack"
+                      "$kind": "HookTest",
+                      "At": "DoubleDamagePower.ModifyDamageMultiplicative:002A",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredAttack"
+                      }
                     }
                   }
                 }
@@ -488,17 +620,106 @@
                     "$kind": "HookMath",
                     "Operation": "And",
                     "Left": {
-                      "$kind": "HookFactValue",
-                      "Fact": "DealerIsOwner"
+                      "$kind": "HookTest",
+                      "At": "DoubleDamagePower.ModifyDamageMultiplicative:0008",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwner"
+                      }
                     },
                     "Right": {
-                      "$kind": "HookFactValue",
-                      "Fact": "PoweredAttack"
+                      "$kind": "HookTest",
+                      "At": "DoubleDamagePower.ModifyDamageMultiplicative:002A",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredAttack"
+                      }
                     }
                   },
                   "Right": {
                     "$kind": "HookNot",
                     "Inner": {
+                      "$kind": "HookTest",
+                      "At": "DoubleDamagePower.ModifyDamageMultiplicative:0034",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "FromCard"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "DoubleDamagePower.ModifyDamageMultiplicative:001C",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwnersPet"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "DoubleDamagePower.ModifyDamageMultiplicative:002A",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredAttack"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "DoubleDamagePower.ModifyDamageMultiplicative:0034",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "FromCard"
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "DoubleDamagePower.ModifyDamageMultiplicative:0008",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwner"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "DoubleDamagePower.ModifyDamageMultiplicative:002A",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredAttack"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "DoubleDamagePower.ModifyDamageMultiplicative:0034",
+                    "Test": {
                       "$kind": "HookFactValue",
                       "Fact": "FromCard"
                     }
@@ -511,70 +732,29 @@
                     "$kind": "HookMath",
                     "Operation": "And",
                     "Left": {
-                      "$kind": "HookFactValue",
-                      "Fact": "DealerIsOwnersPet"
+                      "$kind": "HookTest",
+                      "At": "DoubleDamagePower.ModifyDamageMultiplicative:001C",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwnersPet"
+                      }
                     },
                     "Right": {
-                      "$kind": "HookFactValue",
-                      "Fact": "PoweredAttack"
+                      "$kind": "HookTest",
+                      "At": "DoubleDamagePower.ModifyDamageMultiplicative:002A",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredAttack"
+                      }
                     }
                   },
                   "Right": {
-                    "$kind": "HookNot",
-                    "Inner": {
+                    "$kind": "HookTest",
+                    "At": "DoubleDamagePower.ModifyDamageMultiplicative:0034",
+                    "Test": {
                       "$kind": "HookFactValue",
                       "Fact": "FromCard"
                     }
-                  }
-                }
-              },
-              "Value": {
-                "$kind": "HookConstant",
-                "Value": 1
-              }
-            },
-            {
-              "When": {
-                "$kind": "HookMath",
-                "Operation": "Or",
-                "Left": {
-                  "$kind": "HookMath",
-                  "Operation": "And",
-                  "Left": {
-                    "$kind": "HookMath",
-                    "Operation": "And",
-                    "Left": {
-                      "$kind": "HookFactValue",
-                      "Fact": "DealerIsOwner"
-                    },
-                    "Right": {
-                      "$kind": "HookFactValue",
-                      "Fact": "PoweredAttack"
-                    }
-                  },
-                  "Right": {
-                    "$kind": "HookFactValue",
-                    "Fact": "FromCard"
-                  }
-                },
-                "Right": {
-                  "$kind": "HookMath",
-                  "Operation": "And",
-                  "Left": {
-                    "$kind": "HookMath",
-                    "Operation": "And",
-                    "Left": {
-                      "$kind": "HookFactValue",
-                      "Fact": "DealerIsOwnersPet"
-                    },
-                    "Right": {
-                      "$kind": "HookFactValue",
-                      "Fact": "PoweredAttack"
-                    }
-                  },
-                  "Right": {
-                    "$kind": "HookFactValue",
-                    "Fact": "FromCard"
                   }
                 }
               },
@@ -606,8 +786,12 @@
               "Value": 4
             },
             "When": {
-              "$kind": "HookFactValue",
-              "Fact": "EventIsOwners"
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardExhausted\u003Ed__6.MoveNext:0027",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
             }
           }
         ]
@@ -636,13 +820,21 @@
               "$kind": "HookMath",
               "Operation": "And",
               "Left": {
-                "$kind": "HookFactValue",
-                "Fact": "EventIsOwners"
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardGeneratedForCombat\u003Ed__6.MoveNext:0020",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
               },
               "Right": {
-                "$kind": "HookFactValue",
-                "Fact": "CardIs",
-                "Of": "Sadness"
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardGeneratedForCombat\u003Ed__6.MoveNext:0032",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardIs",
+                  "Of": "Sadness"
+                }
               }
             }
           }
@@ -650,6 +842,41 @@
       }
     ],
     "Tab": "Trigger"
+  },
+  {
+    "Name": "ForgottenSoul",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardExhausted",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "RandomEnemy",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Damage",
+              "Canonical": 1
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Damage.Props",
+              "Canonical": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardExhausted\u003Ed__4.MoveNext:0025",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage"
   },
   {
     "Name": "FrailPower",
@@ -665,28 +892,11 @@
               "When": {
                 "$kind": "HookNot",
                 "Inner": {
-                  "$kind": "HookFactValue",
-                  "Fact": "TargetIsOwner"
-                }
-              },
-              "Value": {
-                "$kind": "HookConstant",
-                "Value": 1
-              }
-            },
-            {
-              "When": {
-                "$kind": "HookMath",
-                "Operation": "And",
-                "Left": {
-                  "$kind": "HookFactValue",
-                  "Fact": "TargetIsOwner"
-                },
-                "Right": {
-                  "$kind": "HookNot",
-                  "Inner": {
+                  "$kind": "HookTest",
+                  "At": "FrailPower.ModifyBlockMultiplicative:0007",
+                  "Test": {
                     "$kind": "HookFactValue",
-                    "Fact": "PoweredBlock"
+                    "Fact": "TargetIsOwner"
                   }
                 }
               },
@@ -700,12 +910,49 @@
                 "$kind": "HookMath",
                 "Operation": "And",
                 "Left": {
-                  "$kind": "HookFactValue",
-                  "Fact": "TargetIsOwner"
+                  "$kind": "HookTest",
+                  "At": "FrailPower.ModifyBlockMultiplicative:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
                 },
                 "Right": {
-                  "$kind": "HookFactValue",
-                  "Fact": "PoweredBlock"
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "FrailPower.ModifyBlockMultiplicative:0015",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PoweredBlock"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "FrailPower.ModifyBlockMultiplicative:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "FrailPower.ModifyBlockMultiplicative:0015",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredBlock"
+                  }
                 }
               },
               "Value": {
@@ -736,19 +983,27 @@
               "$kind": "HookMath",
               "Operation": "And",
               "Left": {
-                "$kind": "HookFactValue",
-                "Fact": "PlayIsOwners"
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
               },
               "Right": {
-                "$kind": "HookMath",
-                "Operation": "Equal",
-                "Left": {
-                  "$kind": "HookFactValue",
-                  "Fact": "CardType"
-                },
-                "Right": {
-                  "$kind": "HookConstant",
-                  "Value": 3
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0053",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 3
+                  }
                 }
               }
             }
@@ -757,6 +1012,646 @@
       }
     ],
     "Tab": "Draw"
+  },
+  {
+    "Name": "HelicalDart",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DexterityPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "DexterityPower",
+              "Canonical": 1
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0047",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardTag",
+                  "Of": "Shiv"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger"
+  },
+  {
+    "Name": "IntimidatingHelmet",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "BeforeCardPlayed",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Block",
+              "Canonical": 4
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Block.Props",
+              "Canonical": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeCardPlayed\u003Ed__6.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeCardPlayed\u003Ed__6.MoveNext:0054",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "GreaterOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardEnergy"
+                  },
+                  "Right": {
+                    "$kind": "HookVar",
+                    "Key": "Energy",
+                    "Canonical": 2
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block"
+  },
+  {
+    "Name": "IronClub",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "CardsPlayed",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "CardsPlayed"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:002A",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              }
+            }
+          },
+          {
+            "$kind": "DrawStep",
+            "Count": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0069",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Remainder",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "CardsPlayed"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "Cards",
+                        "Canonical": 4
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Draw"
+  },
+  {
+    "Name": "IvoryTile",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "GainEnergyStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Energy",
+              "Canonical": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__7.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__7.MoveNext:0059",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "GreaterOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardEnergy"
+                  },
+                  "Right": {
+                    "$kind": "HookVar",
+                    "Key": "EnergyThreshold",
+                    "Canonical": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Energy"
+  },
+  {
+    "Name": "Kunai",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AttacksPlayedThisTurn",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "AttacksPlayedThisTurn"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0053",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DexterityPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "DexterityPower",
+              "Canonical": 1
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0053",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0083",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Remainder",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AttacksPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "Cards",
+                        "Canonical": 3
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger"
+  },
+  {
+    "Name": "Kusarigama",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AttacksPlayedThisTurn",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "AttacksPlayedThisTurn"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0053",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DamageStep",
+            "Target": "RandomEnemy",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Damage",
+              "Canonical": 6
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Damage.Props",
+              "Canonical": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0053",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0083",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Remainder",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AttacksPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "Cards",
+                        "Canonical": 3
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AttacksPlayedThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "Kusarigama.AfterSideTurnEnd:0011",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage"
+  },
+  {
+    "Name": "LetterOpener",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "SkillsPlayedThisTurn",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "SkillsPlayedThisTurn"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0053",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 2
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Damage",
+              "Canonical": 5
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Damage.Props",
+              "Canonical": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0053",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 2
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0083",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Remainder",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "SkillsPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "Cards",
+                        "Canonical": 3
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage"
   },
   {
     "Name": "LostWisp",
@@ -783,19 +1678,27 @@
               "$kind": "HookMath",
               "Operation": "And",
               "Left": {
-                "$kind": "HookFactValue",
-                "Fact": "PlayIsOwners"
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__4.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
               },
               "Right": {
-                "$kind": "HookMath",
-                "Operation": "Equal",
-                "Left": {
-                  "$kind": "HookFactValue",
-                  "Fact": "CardType"
-                },
-                "Right": {
-                  "$kind": "HookConstant",
-                  "Value": 3
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__4.MoveNext:0053",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 3
+                  }
                 }
               }
             }
@@ -804,6 +1707,352 @@
       }
     ],
     "Tab": "Damage"
+  },
+  {
+    "Name": "MiniRegent",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterStarsSpent",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "UsedThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterStarsSpent\u003Ed__10.MoveNext:0020",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterStarsSpent\u003Ed__10.MoveNext:002D",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "UsedThisTurn"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "StrengthPower",
+              "Canonical": 1
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterStarsSpent\u003Ed__10.MoveNext:0020",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterStarsSpent\u003Ed__10.MoveNext:002D",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "UsedThisTurn"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger"
+  },
+  {
+    "Name": "Nunchaku",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AttacksPlayed",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "AttacksPlayed"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0042",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "GainEnergyStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Energy",
+              "Canonical": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0042",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__19.MoveNext:0081",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Remainder",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AttacksPlayed"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "Cards",
+                        "Canonical": 10
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Energy"
+  },
+  {
+    "Name": "OrnamentalFan",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AttacksPlayedThisTurn",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "AttacksPlayedThisTurn"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0053",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Block",
+              "Canonical": 4
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Block.Props",
+              "Canonical": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0053",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0083",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Remainder",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AttacksPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "Cards",
+                        "Canonical": 3
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block"
   },
   {
     "Name": "PillarOfCreationPower",
@@ -823,8 +2072,12 @@
               "Value": 4
             },
             "When": {
-              "$kind": "HookFactValue",
-              "Fact": "EventIsOwners"
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardGeneratedForCombat\u003Ed__6.MoveNext:002A",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
             }
           }
         ]
@@ -853,8 +2106,68 @@
               "$kind": "HookMath",
               "Operation": "And",
               "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0047",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__7.MoveNext:0022",
+              "Test": {
                 "$kind": "HookFactValue",
-                "Fact": "PlayIsOwners"
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block"
+  },
+  {
+    "Name": "RainbowRing",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AttacksPlayedThisTurn",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "AttacksPlayedThisTurn"
               },
               "Right": {
                 "$kind": "HookMath",
@@ -868,24 +2181,473 @@
                   "Value": 1
                 }
               }
-            }
-          }
-        ]
-      },
-      {
-        "Hook": "AfterSideTurnEnd",
-        "Steps": [
-          {
-            "$kind": "RemovePowerStep",
+            },
             "When": {
-              "$kind": "HookFactValue",
-              "Fact": "TakesPart"
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:0031",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:0050",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Less",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "ActivationCountThisTurn"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "SkillsPlayedThisTurn",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "SkillsPlayedThisTurn"
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardType"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 2
+                }
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:0031",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:0050",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Less",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "ActivationCountThisTurn"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "PowersPlayedThisTurn",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "PowersPlayedThisTurn"
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardType"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 3
+                }
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:0031",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:0050",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Less",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "ActivationCountThisTurn"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "ActivationCountThisTurn",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "ActivationCountThisTurn"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:0031",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlayIsOwners"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:0050",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Less",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "ActivationCountThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:00BE",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "LessOrEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "AttacksPlayedThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:00CA",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "SkillsPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:00D6",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "PowersPlayedThisTurn"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "StrengthPower",
+              "Canonical": 0
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:0031",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlayIsOwners"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:0050",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Less",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "ActivationCountThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:00BE",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "LessOrEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "AttacksPlayedThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:00CA",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "SkillsPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:00D6",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "PowersPlayedThisTurn"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DexterityPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "DexterityPower",
+              "Canonical": 0
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:0031",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlayIsOwners"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:0050",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Less",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "ActivationCountThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:00BE",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "LessOrEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "AttacksPlayedThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:00CA",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "SkillsPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__23.MoveNext:00D6",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "PowersPlayedThisTurn"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
             }
           }
         ]
       }
     ],
-    "Tab": "Block"
+    "Tab": "Trigger"
   },
   {
     "Name": "ShroudPower",
@@ -908,13 +2670,21 @@
               "$kind": "HookMath",
               "Operation": "And",
               "Left": {
-                "$kind": "HookFactValue",
-                "Fact": "ApplierIsOwner"
+                "$kind": "HookTest",
+                "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:001D",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "ApplierIsOwner"
+                }
               },
               "Right": {
-                "$kind": "HookFactValue",
-                "Fact": "PowerIs",
-                "Of": "DoomPower"
+                "$kind": "HookTest",
+                "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:002F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PowerIs",
+                  "Of": "DoomPower"
+                }
               }
             }
           }
@@ -922,6 +2692,133 @@
       }
     ],
     "Tab": "Block"
+  },
+  {
+    "Name": "Shuriken",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AttacksPlayedThisTurn",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "AttacksPlayedThisTurn"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0053",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "StrengthPower",
+              "Canonical": 1
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0053",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__20.MoveNext:0083",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Remainder",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AttacksPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookVar",
+                        "Key": "Cards",
+                        "Canonical": 3
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger"
   },
   {
     "Name": "SleightOfFleshPower",
@@ -957,39 +2854,59 @@
                     "Left": {
                       "$kind": "HookNot",
                       "Inner": {
-                        "$kind": "HookMath",
-                        "Operation": "Equal",
-                        "Left": {
-                          "$kind": "HookFactValue",
-                          "Fact": "PowerAmount"
-                        },
-                        "Right": {
-                          "$kind": "HookConstant",
-                          "Value": 0
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:0024",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PowerAmount"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
                         }
                       }
                     },
                     "Right": {
-                      "$kind": "HookFactValue",
-                      "Fact": "PowerIsDebuff"
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:003D",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PowerIsDebuff"
+                      }
                     }
                   },
                   "Right": {
-                    "$kind": "HookFactValue",
-                    "Fact": "PowerOnEnemy"
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:0054",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PowerOnEnemy"
+                    }
                   }
                 },
                 "Right": {
-                  "$kind": "HookFactValue",
-                  "Fact": "ApplierIsOwner"
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:0067",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "ApplierIsOwner"
+                  }
                 }
               },
               "Right": {
                 "$kind": "HookNot",
                 "Inner": {
-                  "$kind": "HookFactValue",
-                  "Fact": "PowerIn",
-                  "Of": "AnticipatePower,ChoBarbsPower,CoordinatePower,CrushUnderPower,DarkShacklesPower,DyingStarPower,EnfeeblingTouchPower,FadePower,FeedingFrenzyPower,FlexPotionPower,FocusedStrikePower,HelicalDartPower,HotfixPower,HyperbeamFocusDownPower,ManglePower,MonarchsGazeStrengthDownPower,PiercingWailPower,ReptileTrinketPower,SetupStrikePower,ShacklingPotionPower,SpeedPotionPower,SynchronizePower"
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:0079",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PowerIn",
+                    "Of": "AnticipatePower,ChoBarbsPower,CoordinatePower,CrushUnderPower,DarkShacklesPower,DyingStarPower,EnfeeblingTouchPower,FadePower,FeedingFrenzyPower,FlexPotionPower,FocusedStrikePower,HelicalDartPower,HotfixPower,HyperbeamFocusDownPower,ManglePower,MonarchsGazeStrengthDownPower,PiercingWailPower,ReptileTrinketPower,SetupStrikePower,ShacklingPotionPower,SpeedPotionPower,SynchronizePower"
+                  }
                 }
               }
             }
@@ -1022,20 +2939,28 @@
               "$kind": "HookMath",
               "Operation": "And",
               "Left": {
-                "$kind": "HookMath",
-                "Operation": "Equal",
-                "Left": {
-                  "$kind": "HookFactValue",
-                  "Fact": "CardType"
-                },
-                "Right": {
-                  "$kind": "HookConstant",
-                  "Value": 4
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardGeneratedForCombat\u003Ed__4.MoveNext:0020",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 4
+                  }
                 }
               },
               "Right": {
-                "$kind": "HookFactValue",
-                "Fact": "EventIsOwners"
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardGeneratedForCombat\u003Ed__4.MoveNext:0040",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
               }
             }
           }
@@ -1067,12 +2992,20 @@
               "$kind": "HookMath",
               "Operation": "And",
               "Left": {
-                "$kind": "HookFactValue",
-                "Fact": "EventIsOwners"
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDrawn\u003Ed__4.MoveNext:0037",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
               },
               "Right": {
-                "$kind": "HookFactValue",
-                "Fact": "OwnersTurn"
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDrawn\u003Ed__4.MoveNext:006D",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OwnersTurn"
+                }
               }
             }
           }
@@ -1102,12 +3035,20 @@
               "$kind": "HookMath",
               "Operation": "And",
               "Left": {
-                "$kind": "HookFactValue",
-                "Fact": "PlayIsOwners"
+                "$kind": "HookTest",
+                "At": "\u003CBeforeCardPlayed\u003Ed__6.MoveNext:002F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
               },
               "Right": {
-                "$kind": "HookFactValue",
-                "Fact": "CardEthereal"
+                "$kind": "HookTest",
+                "At": "\u003CBeforeCardPlayed\u003Ed__6.MoveNext:004C",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardEthereal"
+                }
               }
             }
           }
@@ -1130,28 +3071,11 @@
               "When": {
                 "$kind": "HookNot",
                 "Inner": {
-                  "$kind": "HookFactValue",
-                  "Fact": "DealerIsOwner"
-                }
-              },
-              "Value": {
-                "$kind": "HookConstant",
-                "Value": 0
-              }
-            },
-            {
-              "When": {
-                "$kind": "HookMath",
-                "Operation": "And",
-                "Left": {
-                  "$kind": "HookFactValue",
-                  "Fact": "DealerIsOwner"
-                },
-                "Right": {
-                  "$kind": "HookNot",
-                  "Inner": {
+                  "$kind": "HookTest",
+                  "At": "StrengthPower.ModifyDamageAdditive:0008",
+                  "Test": {
                     "$kind": "HookFactValue",
-                    "Fact": "PoweredAttack"
+                    "Fact": "DealerIsOwner"
                   }
                 }
               },
@@ -1165,12 +3089,49 @@
                 "$kind": "HookMath",
                 "Operation": "And",
                 "Left": {
-                  "$kind": "HookFactValue",
-                  "Fact": "DealerIsOwner"
+                  "$kind": "HookTest",
+                  "At": "StrengthPower.ModifyDamageAdditive:0008",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "DealerIsOwner"
+                  }
                 },
                 "Right": {
-                  "$kind": "HookFactValue",
-                  "Fact": "PoweredAttack"
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "StrengthPower.ModifyDamageAdditive:0016",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PoweredAttack"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "StrengthPower.ModifyDamageAdditive:0008",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "DealerIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "StrengthPower.ModifyDamageAdditive:0016",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
                 }
               },
               "Value": {
@@ -1182,6 +3143,86 @@
         }
       }
     ]
+  },
+  {
+    "Name": "TheAbacus",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterShuffle",
+        "Steps": [
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Block",
+              "Canonical": 6
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Block.Props",
+              "Canonical": 4
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterShuffle\u003Ed__6.MoveNext:001D",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block"
+  },
+  {
+    "Name": "Tingsha",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardDiscarded",
+        "Steps": [
+          {
+            "$kind": "DamageStep",
+            "Target": "RandomEnemy",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Damage",
+              "Canonical": 3
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Damage.Props",
+              "Canonical": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDiscarded\u003Ed__4.MoveNext:0025",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDiscarded\u003Ed__4.MoveNext:0051",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OwnersTurn"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage"
   },
   {
     "Name": "ToughBandages",
@@ -1206,12 +3247,210 @@
               "$kind": "HookMath",
               "Operation": "And",
               "Left": {
-                "$kind": "HookFactValue",
-                "Fact": "EventIsOwners"
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDiscarded\u003Ed__6.MoveNext:0025",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EventIsOwners"
+                }
               },
               "Right": {
-                "$kind": "HookFactValue",
-                "Fact": "OwnersTurn"
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardDiscarded\u003Ed__6.MoveNext:0051",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OwnersTurn"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block"
+  },
+  {
+    "Name": "TuningFork",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "SkillsPlayed",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "SkillsPlayed"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__22.MoveNext:002A",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__22.MoveNext:0042",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 2
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "Block",
+              "Canonical": 7
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Block.Props",
+              "Canonical": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__22.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__22.MoveNext:0042",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 2
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__22.MoveNext:0065",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "SkillsPlayed"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "Cards",
+                      "Canonical": 10
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "SkillsPlayed",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Subtract",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "SkillsPlayed"
+              },
+              "Right": {
+                "$kind": "HookVar",
+                "Key": "Cards",
+                "Canonical": 10
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__22.MoveNext:002A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__22.MoveNext:0042",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 2
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__22.MoveNext:0065",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "SkillsPlayed"
+                    },
+                    "Right": {
+                      "$kind": "HookVar",
+                      "Key": "Cards",
+                      "Canonical": 10
+                    }
+                  }
+                }
               }
             }
           }
@@ -1242,27 +3481,39 @@
                 "Left": {
                   "$kind": "HookNot",
                   "Inner": {
-                    "$kind": "HookMath",
-                    "Operation": "LessOrEqual",
-                    "Left": {
-                      "$kind": "HookFactValue",
-                      "Fact": "PowerAmount"
-                    },
-                    "Right": {
-                      "$kind": "HookConstant",
-                      "Value": 0
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:0024",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PowerAmount"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
                     }
                   }
                 },
                 "Right": {
-                  "$kind": "HookFactValue",
-                  "Fact": "ApplierIsOwner"
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:0037",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "ApplierIsOwner"
+                  }
                 }
               },
               "Right": {
-                "$kind": "HookFactValue",
-                "Fact": "PowerIs",
-                "Of": "VulnerablePower"
+                "$kind": "HookTest",
+                "At": "\u003CAfterPowerAmountChanged\u003Ed__6.MoveNext:0049",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PowerIs",
+                  "Of": "VulnerablePower"
+                }
               }
             }
           }
@@ -1270,5 +3521,36 @@
       }
     ],
     "Tab": "Draw"
+  },
+  {
+    "Name": "WhittlingKnife",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterShuffle",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "AimPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "AimPower",
+              "Canonical": 5
+            },
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterShuffle\u003Ed__6.MoveNext:0020",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Trigger"
   }
 ]

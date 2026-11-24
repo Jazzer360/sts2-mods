@@ -66,8 +66,8 @@ public class HookProgramTests
     }
 
     /// <summary>Hook bodies read at least, per kind, on each branch (raise them as the reader reads more; a drop is a regression).</summary>
-    private static readonly Dictionary<string, int> LeastReadOnBeta = new() { ["power"] = 73, ["relic"] = 9 };
-    private static readonly Dictionary<string, int> LeastReadOnMain = new() { ["power"] = 65, ["relic"] = 7 };
+    private static readonly Dictionary<string, int> LeastReadOnBeta = new() { ["power"] = 71, ["relic"] = 32 };
+    private static readonly Dictionary<string, int> LeastReadOnMain = new() { ["power"] = 63, ["relic"] = 29 };
 
     [Theory]
     [MemberData(nameof(Branches))]

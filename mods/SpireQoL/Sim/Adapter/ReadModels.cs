@@ -23,6 +23,11 @@ public static class ReadModels
         PowerId.Rage.Name, PowerId.Shroud.Name, PowerId.SleightOfFlesh.Name, PowerId.Smokestack.Name, PowerId.Speedster.Name, PowerId.SpiritOfAsh.Name,
         PowerId.Vicious.Name,
         RelicId.CharonsAshes.Name, RelicId.DaughterOfTheWind.Name, RelicId.Fertilizer.Name, RelicId.GamePiece.Name, RelicId.LostWisp.Name, RelicId.ToughBandages.Name,
+        RelicId.ForgottenSoul.Name, RelicId.Tingsha.Name, RelicId.HelicalDart.Name, RelicId.IntimidatingHelmet.Name, RelicId.IvoryTile.Name, RelicId.TheAbacus.Name,
+        RelicId.WhittlingKnife.Name,
+        // Relics that count what you play, or act once a turn: their own fields as simulator state (SimPlayer.Fields).
+        RelicId.Kunai.Name, RelicId.Shuriken.Name, RelicId.Nunchaku.Name, RelicId.OrnamentalFan.Name, RelicId.Kusarigama.Name, RelicId.LetterOpener.Name,
+        RelicId.TuningFork.Name, RelicId.IronClub.Name, RelicId.RainbowRing.Name, RelicId.MiniRegent.Name,
     };
 
     /// <summary>The read models of the running game's classes, for SimModels.</summary>

@@ -29,6 +29,13 @@ public class ProcModelTests
         return state;
     }
 
+    /// <summary>One of a relic's own fields, read from its code (decision #195), as the adapter seeds it from the game (SimReaders.Fields).</summary>
+    private static SimState Field(SimState state, RelicId relic, string field, int value)
+    {
+        state.You.Fields = state.You.Fields.With($"{relic.Name}.{field}", value);
+        return state;
+    }
+
 
     private static SimState One(SimState state, SimScript script) => Assert.Single(After(state, script));
 
@@ -762,15 +769,16 @@ public class ProcModelTests
     [Fact]
     public void CounterRelicsFireOnTheCardThatCompletesTheCount()
     {
-        var state = Relic(State(), RelicId.Kunai, amount: 2, vars: new[] { ("Cards", 3), ("DexterityPower", 1) });
+        // Each counts its own attacks or skills this turn (Kunai.AttacksPlayedThisTurn: two already); the third fires it.
+        var state = Field(Relic(State(), RelicId.Kunai, vars: new[] { ("Cards", 3), ("DexterityPower", 1) }), RelicId.Kunai, "AttacksPlayedThisTurn", value: 2);
         var after = One(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1)));
         Assert.True(after.Fired.Has("Kunai"));
         Assert.Equal(1, after.You.Powers[PowerId.Dexterity]);
-        Assert.Equal(0, after.You.Relics[RelicId.Kunai]);
-        var fan = Relic(State(), RelicId.OrnamentalFan, amount: 1, vars: new[] { ("Cards", 3), ("Block", 4) });
+        Assert.Equal(3, after.You.Fields["Kunai.AttacksPlayedThisTurn"]);
+        var fan = Field(Relic(State(), RelicId.OrnamentalFan, vars: new[] { ("Cards", 3), ("Block", 4) }), RelicId.OrnamentalFan, "AttacksPlayedThisTurn", value: 1);
         Assert.Equal(0, One(fan, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1))).You.Block);
         Assert.Equal(4, One(fan, Play(Card("Strike"), target: 0, plays: 2, Attack(baseDamage: 1))).You.Block);
-        var opener = Relic(State(enemies: 2), RelicId.LetterOpener, amount: 2, vars: new[] { ("Cards", 3), ("Damage", 5) });
+        var opener = Field(Relic(State(enemies: 2), RelicId.LetterOpener, vars: new[] { ("Cards", 3), ("Damage", 5) }), RelicId.LetterOpener, "SkillsPlayedThisTurn", value: 2);
         var opened = One(opener, Events(Card("Defend", SimCardType.Skill), plays: 1));
         Assert.Equal(95, opened.Enemy(id: 1)!.Hp);
         Assert.Equal(10, opened.Fired.DataOf("LetterOpener"));
@@ -781,9 +789,9 @@ public class ProcModelTests
     {
         // Kunai.AfterCardPlayed: PowerCmd.Apply<DexterityPower>(DynamicVars.Dexterity.BaseValue); Shuriken the same with Strength. Their
         // values are kept as "DexterityPower" and "StrengthPower" (PowerVar<T>): a model reading "Dexterity" got its fallback, 1.
-        var kunai = Relic(State(), RelicId.Kunai, amount: 2, vars: new[] { ("Cards", 3), ("DexterityPower", 2) });
+        var kunai = Field(Relic(State(), RelicId.Kunai, vars: new[] { ("Cards", 3), ("DexterityPower", 2) }), RelicId.Kunai, "AttacksPlayedThisTurn", value: 2);
         Assert.Equal(2, One(kunai, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1))).You.Powers[PowerId.Dexterity]);
-        var shuriken = Relic(State(), RelicId.Shuriken, amount: 2, vars: new[] { ("Cards", 3), ("StrengthPower", 2) });
+        var shuriken = Field(Relic(State(), RelicId.Shuriken, vars: new[] { ("Cards", 3), ("StrengthPower", 2) }), RelicId.Shuriken, "AttacksPlayedThisTurn", value: 2);
         Assert.Equal(2, One(shuriken, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1))).You.Powers[PowerId.Strength]);
     }
 
@@ -819,8 +827,8 @@ public class ProcModelTests
     [Fact]
     public void RainbowRingFiresOnTheTypeThatCompletesTheSet()
     {
-        var state = Relic(State(), RelicId.RainbowRing, data: 0);
-        state.You.Turn = state.You.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardType.Attack), delta: 1).Add(SimKeys.Plays(PlayStage.Finished, SimCardType.Skill), delta: 1);
+        // Its own counts of this turn's kinds (RainbowRing.AttacksPlayedThisTurn, SkillsPlayedThisTurn), as the game keeps them.
+        var state = Field(Field(Relic(State(), RelicId.RainbowRing, data: 0), RelicId.RainbowRing, "AttacksPlayedThisTurn", value: 1), RelicId.RainbowRing, "SkillsPlayedThisTurn", value: 1);
         Assert.True(One(state, Events(Card("Inflame", SimCardType.Power), plays: 1)).Fired.Has("RainbowRing"));
         Assert.False(One(state, Events(Card("Defend", SimCardType.Skill), plays: 1)).Fired.Has("RainbowRing"));
     }
@@ -927,7 +935,7 @@ public class ProcModelTests
         var after = One(Power(State(), PowerId.Subroutine, amount: 2), Events(Card("Defragment", SimCardType.Power), plays: 1));
         Assert.Equal(2, after.You.Energy);
         Assert.Equal(2, after.Fired.DataOf("SubroutinePower"));
-        var nun = One(Relic(State(), RelicId.Nunchaku, amount: 9, vars: new[] { ("Cards", 10), ("Energy", 1) }), Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1)));
+        var nun = One(Field(Relic(State(), RelicId.Nunchaku, vars: new[] { ("Cards", 10), ("Energy", 1) }), RelicId.Nunchaku, "AttacksPlayed", value: 9), Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1)));
         Assert.Equal(1, nun.Fired.DataOf("Nunchaku"));
     }
 }

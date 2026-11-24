@@ -140,7 +140,9 @@ public class SimPerformanceTests
     {
         // Measured (2026-11-19, decision #107: one merged search, nothing cut off): copies, stepped, steps, bytes, ms.
         new object[] { "branch-heavy hand", 3_600, 4_200, 32, 290_000_000L, 60 },                // 2,874, 3,363, 25, 192.7 MB, 10 ms (was cut off at 128 branches: 926 copies)
-        new object[] { "four Defects", 88_000, 45_000, 55, 1_140_000_000L, 1_500 },            // 70,192, 35,901, 44, 758.5 MB, 294 ms (six orbs each; ten: 460,000 copies, 2 s)
+        // four Defects' bytes: 1,170 MB from 1,140 (2026-11-24, decision #195): each SimPlayer and SimEnemy holds its models' fields (a reference more
+        // in each copy), 1,144.6 MB measured, 1.3% more.
+        new object[] { "four Defects", 88_000, 45_000, 55, 1_170_000_000L, 1_500 },            // 70,192, 35,901, 44, 758.5 MB, 294 ms (six orbs each; ten: 460,000 copies, 2 s)
         new object[] { "Beacon of Hope and Juggernaut", 1_510, 350, 29, 23_000_000L, 60 },       // 1,208, 281, 23, 15.4 MB, 7 ms (two players, two enemies)
         new object[] { "typical fight", 10, 48, 27, 610_000L, 10 },                             // 6, 30, 17, 0.41 MB, 0.05 ms
     };

@@ -90,7 +90,8 @@ Non-goals:
 don't change. Added:
 - `Powers` on each creature: power name → amount plus a small per-power data slot (counters a model keeps), for every
   power a model reads or changes (Strength, Dexterity, Vigor, Vulnerable, Weak, Frail, Slow, Impaled, Aim...).
-- `Models` on each player: the relic models with their counters (Pen Nib's count, Kunai's count, Pael's Legion armed...).
+- `Models` on each player: the relic models with their counters (Pen Nib's count, Pael's Legion armed...).
+- `Fields` on each player and enemy (decision #195): what the models read from their code keep of their own (Kunai's AttacksPlayedThisTurn), `Model.Field` → value, seeded from the game and part of the state key.
 - The play and attack in progress, players' turn counters (cards started and finished this turn, by type and tag), and an
   **event log** for the current play (which model flashed, damage and block it caused).
 - The **history ledger** (decision #191, `Sim/SimHistory.cs`, `SimEngine.History.cs`): the questions the board's models ask of the game's

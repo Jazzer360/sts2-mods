@@ -100,6 +100,10 @@ public static class HookReader
             readings.Add(new HookReading(hook.Name, gap) { NotRun = notRun });
             if (program != null) programs.Add(program);
         }
+        // A store to a field no program reads changes only what the game shows (Kunai's IsActivating): left out.
+        var fieldsRead = new ModelSpec(type.Name, kind, programs).Values().OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
+        programs = programs.Select(program => program with { Steps = program.Steps.Where(step => step is not StoreFieldStep store || fieldsRead.Contains(store.Field)).ToList() })
+            .Where(program => program.Returns != null || program.Steps.Count > 0).ToList();
         var spec = new ModelSpec(type.Name, kind, programs) { Tab = TabOf(programs) };
         return new ModelReading(spec, readings);
     }
@@ -164,7 +168,7 @@ public static class HookReader
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Ways(ProgramReader.ReadReturnedWays(_type, hook, _read)) }, null, null);
                 var program = ProgramReader.Read(_type, _read, hook.Name);
                 if (program.Unknowns.FirstOrDefault() is { } unknown) return (null, "gap: the reader can't follow it: " + unknown, null);
-                if (OwnData(hook) is { } data) return (null, $"gap: uses its own data ({data}): what a call on it changes isn't read", null);
+                if (OwnData(hook) is { } data) return (null, data, null);
                 var steps = new List<HookStep>();
                 foreach (var step in program.Steps) steps.AddRange(Step(step));
                 // A step its code runs on a side the simulator never ends (AfterSideTurnEnd of the enemies' side) never runs: left out.
@@ -193,11 +197,23 @@ public static class HookReader
             catch { return null; }
             foreach (var instruction in ops)
             {
-                if (instruction.IsCall && instruction.Member is { Name: "GetInternalData" }) return "GetInternalData";
-                if (instruction.Member is { Kind: CodeMemberKind.Field } field && field.DeclaringType == _type.Name && !field.Name.StartsWith('<')) return field.Name;
+                if (instruction.IsCall && instruction.Member is { Name: "GetInternalData" }) return "gap: uses its own data (GetInternalData): what a call on it changes isn't read";
+                if (instruction.IsCall && ChangesAGameObject(instruction.Member)) return $"gap: changes a game object outside a command ({instruction.Member!.FullName})";
+                if (instruction.Member is { Kind: CodeMemberKind.Field } field && field.DeclaringType == _type.Name && !field.Name.StartsWith('<')) return $"gap: uses its own field ({field.Name}) directly: what a call on it changes isn't read";
             }
             return null;
         }
+
+        /// <summary>
+        /// A call that changes one of the game's objects outside a command (a card made free this turn, a keyword added): an instance method of
+        /// the game's that gives nothing back and isn't a property, a command, a show or the model's own.
+        /// </summary>
+        private bool ChangesAGameObject(CodeMember? member) =>
+            member is { Kind: CodeMemberKind.Method, HasThis: true } && member.Namespace.StartsWith("MegaCrit.Sts2.Core", StringComparison.Ordinal)
+            && (member.ValueType == typeof(void).Name || member.ValueType.StartsWith("Task", StringComparison.Ordinal))
+            && !member.Name.StartsWith("get_", StringComparison.Ordinal) && !member.Name.StartsWith("set_", StringComparison.Ordinal) && !member.Name.StartsWith('<') && member.Name != ".ctor"
+            && member.DeclaringType != _type.Name && !member.Namespace.StartsWith("MegaCrit.Sts2.Core.Commands", StringComparison.Ordinal)
+            && member.Name is not ("Flash" or "InvokeDisplayAmountChanged" or "AssertMutable" or "SetResult" or "Start" or "AwaitUnsafeOnCompleted" or "SetStateMachine" or "SetException");
 
         /// <summary>A turn-start body: past a simulation's horizon when each of its steps waits on its owner, a player, taking part; else a gap.</summary>
         private string? PastTheHorizon(MethodInfo hook)
@@ -217,7 +233,8 @@ public static class HookReader
                     var translated = Command(command);
                     return translated == null ? Array.Empty<HookStep>() : new[] { translated with { When = Condition(step.Condition) } };
                 case StoreStep store:
-                    throw new Gap($"gap: stores its own state ({store.Field}): model fields aren't read yet");
+                    // A store to its own state (a field or property of its class): simulator state its programs read (HookField).
+                    return new[] { new StoreFieldStep(store.Field, Value(store.Value)) { When = Condition(step.Condition) } };
                 case LoopStep:
                     throw new Gap("gap: a loop");
                 case ChoiceStep:
@@ -283,6 +300,13 @@ public static class HookReader
                     var applierAt = IndexOf(types, from: amountAt + 1, "Creature");
                     if (applierAt < 0 || !IsOwner(values[applierAt])) throw new Gap($"gap: {power} applied by someone else");
                     var amount = Value(values[amountAt]);
+                    // A temporary Strength or Dexterity power (Helical Dart's) lands as the Strength or Dexterity its BeforeApplied applies, by its sign
+                    // (TemporaryStrengthPower, TemporaryDexterityPower: IsPositive), as the card programs land it (SimAdapter.PowersFrom).
+                    if (TemporaryOf(power) is { } underlying)
+                    {
+                        var negative = LandsAsDebuff(power, amount);
+                        return new ApplyPowerStep(underlying, Targets(values[targetAt]), negative ? new HookMath(HookOperation.Multiply, amount, new HookConstant(-1m)) : amount) { Debuff = negative };
+                    }
                     return new ApplyPowerStep(power, Targets(values[targetAt]), amount) { Debuff = LandsAsDebuff(power, amount) };
                 }
                 case "PowerCmd.Remove" or "PowerCmd.Decrement" or "PowerCmd.TickDownDuration":
@@ -292,6 +316,25 @@ public static class HookReader
                     throw new Gap($"gap: {member} isn't translated");
             }
         }
+
+        private readonly HashSet<string> _inlining = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// One of its own properties: state when it can be set (a counter it stores: HookField), else what its getter works out (TuningFork's
+        /// SkillsThreshold, its Cards value), read from the getter's code.
+        /// </summary>
+        private HookValue OwnProperty(string name)
+        {
+            var property = _type.GetProperty(name, Declared);
+            if (property == null || property.SetMethod != null) return new HookField(name);
+            if (property.GetMethod is not { } getter || !_inlining.Add(name)) throw new Gap($"gap: the property {name}");
+            try { return Value(ProgramReader.ReadReturnedValue(_type, getter, _read) ?? throw new Gap($"gap: the property {name}")); }
+            finally { _inlining.Remove(name); }
+        }
+
+        /// <summary>A field or property its own class declares (not a base class's: their state is the game's, not the model's).</summary>
+        private bool IsOwnMember(string name) =>
+            _type.GetProperty(name, Declared) != null || _type.GetField(name, Declared) != null;
 
         private static int IndexOf(IReadOnlyList<string> types, params string[] names) => IndexOf(types, from: 0, names);
 
@@ -305,11 +348,24 @@ public static class HookReader
         /// <summary>Who a command acts on: the owner, every hittable enemy, a roll over them, or the creature a power landed on.</summary>
         private static HookTarget Targets(ProgramValue value)
         {
+            if (value is StoredValue stored) return Targets(stored.Value);
             if (IsOwner(value)) return HookTarget.Owner;
             if (value is QueryValue { Name: "HittableEnemies" }) return HookTarget.AllEnemies;
             if (value is QueryValue { Name: "NextItem", Arguments: [QueryValue { Name: "HittableEnemies" }] }) return HookTarget.RandomEnemy;
             if (value is QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } }) return HookTarget.PowerOwner;
             throw new Gap($"gap: acts on {value}");
+        }
+
+        /// <summary>The power a temporary Strength or Dexterity power applies as it lands (its base class's BeforeApplied), or null for any other.</summary>
+        private string? TemporaryOf(string power)
+        {
+            for (var type = _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + power)?.BaseType; type != null; type = type.BaseType)
+                switch (type.Name)
+                {
+                    case nameof(MegaCrit.Sts2.Core.Models.Powers.TemporaryStrengthPower): return PowerId.Strength.Name;
+                    case nameof(MegaCrit.Sts2.Core.Models.Powers.TemporaryDexterityPower): return PowerId.Dexterity.Name;
+                }
+            return null;
         }
 
         /// <summary>
@@ -346,6 +402,8 @@ public static class HookReader
                 foreach (var literal in term)
                 {
                     var test = Test(literal.Test);
+                    // Asked once a hook run, at its place (a constant needs no asking).
+                    if (test is not HookConstant) test = new HookTest(literal.At, test);
                     var holds = literal.Holds ? test : Not(test);
                     all = all == null ? holds : new HookMath(HookOperation.And, all, holds);
                 }
@@ -393,6 +451,12 @@ public static class HookReader
                 // A null check of the creator of a made card: the simulator's made cards always have one (a player).
                 case NamedValue { Name: "creator" }:
                     return new HookConstant(1m);
+                // A roll over the hittable enemies found one: the simulator's random damage hits none when there's none to hit (ProcDamageRandom).
+                case StoredValue { Value: QueryValue { Name: "NextItem", Arguments: [QueryValue { Name: "HittableEnemies" }] } }:
+                    return new HookConstant(1m);
+                case QueryValue { Name: "Contains", Arguments: [QueryValue { Name: "Tags", Of: { } tagsOf }, ConstantValue tag] } when IsPlayCard(tagsOf):
+                    return EnumName(_type.Assembly, "CardTag", tag.Value) is { } tagName && Enum.TryParse<SimCardTag>(tagName, out _)
+                        ? new HookFactValue(HookFact.CardTag) { Of = tagName } : throw new Gap($"gap: tests the card's tag {tag.Value}");
                 // A card drawn in a simulation is never the turn's hand draw.
                 case NamedValue { Name: "fromHandDraw" }:
                     return new HookConstant(0m);
@@ -418,6 +482,9 @@ public static class HookReader
                     return new HookFactValue(HookFact.CardIs) { Of = cardClass };
                 case QueryValue { Type: "Decimal", Name: var operatorName, Arguments: [var left, var right] } when OperatorOf(operatorName) is { } operation:
                     return new HookMath(operation, Value(left), Value(right));
+                // One of its own true-or-false properties (MiniRegent's UsedThisTurn): its state, 1 when set.
+                case QueryValue { Of: NamedValue { Name: "this" }, IsProperty: true, Name: var property, Type: var declaring } when declaring == _type.Name && IsOwnMember(property):
+                    return new HookMath(HookOperation.NotEqual, OwnProperty(property), new HookConstant(0m));
                 case ArithmeticValue:
                     // An int tested as true or false (not (count rem Cards): its remainder is 0).
                     return new HookMath(HookOperation.NotEqual, Value(test), new HookConstant(0m));
@@ -509,6 +576,11 @@ public static class HookReader
                 }
                 case QueryValue { Name: "Amount", Of: NamedValue { Name: "this" }, Type: "PowerModel" }:
                     return new HookFactValue(HookFact.Amount);
+                // One of its own properties (Kunai's AttacksPlayedThisTurn): simulator state, seeded from the game.
+                case QueryValue { Of: NamedValue { Name: "this" }, IsProperty: true, Name: var property, Type: var declaring } when declaring == _type.Name && IsOwnMember(property):
+                    return OwnProperty(property);
+                case QueryValue { Name: "EnergyValue", Of: { } resources } when (resources is StoredValue stored ? stored.Value : resources) is QueryValue { Name: "Resources", Of: NamedValue { Name: "cardPlay" } or ParameterValue { Name: "cardPlay" } }:
+                    return new HookFactValue(HookFact.CardEnergy);
                 case QueryValue { Name: "GetResolved", Of: QueryValue { Name: "EnergyCost", Of: { } costOf } } when IsPlayCard(costOf):
                     return new HookFactValue(HookFact.CardEnergy);
                 case ArithmeticValue arithmetic:
@@ -646,8 +718,10 @@ public static class HookReader
 
         private static bool IsSourceCard(ProgramValue value) => value is ParameterValue { Name: "cardSource" } or NamedValue { Name: "cardSource" };
 
+        /// <summary>The player a card event happened to, as its hook names it: a made card's creator, the player who shuffled or spent stars.</summary>
         private static bool IsCreator(ProgramValue value) =>
-            value is NamedValue { Name: "creator" } or QueryValue { Type: "Player", Name: "Creature", Of: NamedValue { Name: "creator" } };
+            value is NamedValue { Name: "creator" or "shuffler" or "spender" } or ParameterValue { Name: "creator" or "shuffler" or "spender" }
+            || value is QueryValue { Type: "Player", Name: "Creature", Of: { } player } && IsCreator(player);
 
         private static bool IsDealer(ProgramValue value) => value is ParameterValue { Name: "dealer" } or NamedValue { Name: "dealer" };
 
@@ -655,7 +729,7 @@ public static class HookReader
 
         /// <summary>participants.Contains(base.Owner): the owner takes part in the side's turn ending or starting.</summary>
         private static bool IsTakingPart(ProgramValue value) =>
-            value is QueryValue { Name: "Contains", Arguments: [NamedValue { Name: "participants" }, var who] } && IsOwner(who);
+            value is QueryValue { Name: "Contains", Arguments: [NamedValue { Name: "participants" } or ParameterValue { Name: "participants" }, var who] } && IsOwner(who);
 
         /// <summary>CurrentSide == Side of the owner's (or the card owner's) creature: the side whose turn it is is a player's.</summary>
         private static bool IsSideOfPlayers(ProgramValue left, ProgramValue right)

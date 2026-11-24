@@ -68,9 +68,10 @@ public class SimModelEffectTests
     public void RainbowRingGivesStrengthAndDexterityOnTheThirdKind()
     {
         // An Attack and a Skill played already: the Power completes the three, once a turn.
+        // Its own counts of this turn's kinds, as the game keeps them (RainbowRing.AttacksPlayedThisTurn, SkillsPlayedThisTurn: decision #195).
         var state = Relic(State(), RelicId.RainbowRing, ("StrengthPower", 1), ("DexterityPower", 1));
         state.You.Relics = state.You.Relics.With(RelicId.RainbowRing, amount: 0, data: 0);
-        state.You.Turn = state.You.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardType.Attack), delta: 1).Add(SimKeys.Plays(PlayStage.Finished, SimCardType.Skill), delta: 1);
+        state.You.Fields = state.You.Fields.With("RainbowRing.AttacksPlayedThisTurn", amount: 1).With("RainbowRing.SkillsPlayedThisTurn", amount: 1);
         var after = After(state, Play(Card("Inflame", SimCardType.Power), target: Who.None, plays: 1));
         Assert.Equal(1, after.You.Powers[PowerId.Strength]);
         Assert.Equal(1, after.You.Powers[PowerId.Dexterity]);

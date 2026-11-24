@@ -34,7 +34,7 @@ public class ReadModelParityTests
     /// The relics whose hand-written model's amount the adapter read from one of their values (SimReaders.RelicAmountVars), by that value's key:
     /// the board gives the amount as the adapter did, so the two read the same number.
     /// </summary>
-    private static readonly Dictionary<string, string> RelicAmountVars = new(StringComparer.Ordinal) { [RelicId.CharonsAshes.Name] = "Damage" };
+    private static readonly Dictionary<string, string> RelicAmountVars = new(StringComparer.Ordinal) { [RelicId.CharonsAshes.Name] = "Damage", [RelicId.ForgottenSoul.Name] = "Damage" };
 
     public static TheoryData<string> Models() => new(HandWritten.Keys.OrderBy(name => name, StringComparer.Ordinal));
 
@@ -156,6 +156,20 @@ public class ReadModelParityTests
                     yield return ($"{block}", (model, state) => Number(hook == nameof(SimModel.ModifyBlockAdditive) ? model.ModifyBlockAdditive(state, owner, block) : model.ModifyBlockMultiplicative(state, owner, block)));
                 break;
             case nameof(SimModel.BeforeCardPlayed) or nameof(SimModel.AfterCardPlayed):
+                // A run of plays in turn, each through both hooks (a counter's count, a once-a-turn flag), each step's outcome compared.
+                var run = Plays(others).Where(play => play.Owner == owner && play.PlayIndex == 0 && play.Card.Energy == 1).ToList();
+                if (run.Count > 0)
+                    yield return ("a run of plays in turn", (model, state) => Sequence(state, Enumerable.Range(0, 24).Select(index => run[index * 7 % run.Count]), (branch, play) =>
+                    {
+                        // As the engine runs a play: BeforeCardPlayed, the play started counted, the play finished counted, AfterCardPlayed.
+                        branch.CurrentPlay = play;
+                        return model.BeforeCardPlayed(branch, owner, play).Select(before =>
+                        {
+                            var player = before.MutablePlayer(play.Owner);
+                            player.Turn = SimKeys.CountPlay(SimKeys.CountPlay(player.Turn, PlayStage.Started, play.Card.Type, play.Card.Tags), PlayStage.Finished, play.Card.Type, play.Card.Tags);
+                            return before;
+                        }).SelectMany(after => model.AfterCardPlayed(after, owner, play)).ToList();
+                    }));
                 foreach (var play in Plays(others))
                 {
                     yield return ($"{hook} of {Describe(play)}", (model, state) =>
@@ -172,6 +186,9 @@ public class ReadModelParityTests
                 }
                 break;
             case nameof(SimModel.AfterCardEvent):
+                // Twelve of each event in turn (a counter's count, a once-a-turn flag), each step's outcome compared.
+                foreach (var cardEvent in Enum.GetValues<CardEvent>().Where(_ => Who.IsPlayer(owner)))
+                    yield return ($"twelve {cardEvent} for {owner} in turn", (model, state) => Sequence(state, Enumerable.Repeat(0, 12), (branch, _) => model.AfterCardEvent(branch, owner, cardEvent, owner)));
                 foreach (var cardEvent in Enum.GetValues<CardEvent>())
                     foreach (var player in others.Where(Who.IsPlayer))
                         foreach (var card in new[] { null, new SimCard("Skilled", SimCardType.Skill), new SimCard("Attacker", SimCardType.Attack) })
@@ -241,13 +258,44 @@ public class ReadModelParityTests
 
     private static string Number(decimal value) => value.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-    /// <summary>A hook's branches as text: each one's state key, weight, what it logged and whether it's unknown, in key order.</summary>
+    /// <summary>A copy without what models keep of their own: every relic entry's counter and flag, every read model's fields.</summary>
+    private static SimState Stripped(SimState state)
+    {
+        var copy = state.Clone();
+        foreach (var id in copy.PlayerIds)
+        {
+            var player = copy.MutablePlayer(id);
+            foreach (var relic in player.Relics.Items) player.Relics = player.Relics.With(relic.Name, amount: 0, data: 0);
+            player.Fields = NamedCounts.Empty;
+        }
+        foreach (var enemy in copy.Enemies) enemy.Fields = NamedCounts.Empty;
+        return copy;
+    }
+
+    /// <summary>Calls in turn, each on every branch the one before left; each step's branches as text.</summary>
+    private static string Sequence<TStep>(SimState state, IEnumerable<TStep> steps, Func<SimState, TStep, IEnumerable<SimState>> call)
+    {
+        IEnumerable<SimState> states = new[] { state };
+        var text = new StringBuilder();
+        foreach (var step in steps)
+        {
+            states = states.SelectMany(branch => call(branch, step)).ToList();
+            text.Append(Branches(states)).Append(" // ");
+        }
+        return text.ToString();
+    }
+
+    /// <summary>
+    /// A hook's branches as text: each one's state key, weight, what it logged and whether it's unknown, in key order. What each kind of model
+    /// keeps of its own is left out of the key (a relic's counter and flag on its entry, a read model's fields), as two ways of keeping the same
+    /// thing: the sequences compare what they do with it.
+    /// </summary>
     private static string Branches(IEnumerable<SimState> states)
     {
         var lines = states.ToList().Select(branch =>
         {
             var text = new StringBuilder();
-            text.Append($"key {branch.Key():X16} weight {branch.Weight:0.####}");
+            text.Append($"key {Stripped(branch).Key():X16} weight {branch.Weight:0.####}");
             text.Append(" fired [" + string.Join(",", branch.Fired.Items.Select(entry => $"{entry.Name}:{entry.Amount}/{entry.Data}")) + "]");
             text.Append(" any [" + string.Join(",", branch.FiredAny.Items.Select(entry => $"{entry.Name}:{entry.Amount}/{entry.Data}")) + "]");
             if (branch.Unmodelled != null) text.Append(" unknown: " + branch.Unmodelled);

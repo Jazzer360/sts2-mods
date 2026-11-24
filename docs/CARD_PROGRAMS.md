@@ -501,6 +501,9 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 | a test of the hook's parameters (`cardPlay.Card.Owner == base.Owner.Player`, `card.Type == Attack`, `applier == base.Owner`, `props.IsPoweredAttack()`, `participants.Contains(base.Owner)`...) | a `HookFact`, translated once for every model |
 | `base.Amount`, `base.DynamicVars.Block` (its key from DynamicVarSet's getter), constants, arithmetic | `HookFactValue(Amount)`, `HookVar` (its canonical value from the class's CanonicalVars), `HookConstant`, `HookMath` |
 | a Modify hook's returns (`ReadReturnedWays`) | `HookWays`: the value of the first way whose test holds |
+| a store to its own field or property (`AttacksPlayedThisTurn++`), a read of it | `StoreFieldStep`, `HookField`: per-branch state (`SimPlayer.Fields`, `SimEnemy.Fields`) seeded from the game (`SimReaders.Fields`); a store nothing reads is left out |
+| each test at its branch | `HookTest`: asked once a hook run, where a step first needs it |
+| a temporary Strength or Dexterity power applied | the Strength or Dexterity its base class's BeforeApplied applies, by its sign |
 
 What isn't read is a named gap (a store to the model's own state, its internal data, a hook no read model runs yet, a query with no fact), and a
 hook the simulator never runs says why (outside fights: `OutOfCombatHooks.txt`; a relic's turn-start body that waits on its owner's next turn).

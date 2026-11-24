@@ -238,6 +238,12 @@ public sealed class SimEnemy
     [JsonIgnore]
     public bool Alive => Hp > 0;
 
+    /// <summary>
+    /// What its powers read from their code keep of their own (decision #195: a field or property each stores and reads, "Model.Field" → its
+    /// value), seeded from the game and followed by their programs. Never changed in place (shared between clones).
+    /// </summary>
+    public NamedCounts Fields = NamedCounts.Empty;
+
     /// <summary>Copies the numbers; the attack list never changes during a run, so it's shared.</summary>
     public SimEnemy Clone() => (SimEnemy)MemberwiseClone();
 
@@ -248,6 +254,7 @@ public sealed class SimEnemy
         add(PoisonStacks); add(Stunned ? 1 : 0); add(IntendsToAttack ? 1 : 0); add(ReactedWithBlock ? 1 : 0); add(BlockBroken ? 1 : 0); add(GambitTriggered ? 1 : 0);
         add(SlipperyTriggered ? 1 : 0); add(Exploded ? 1 : 0); add(MoveBlock);
         Powers.Hash(add); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
+        Fields.Hash(add);
         add(Hits.Count); foreach (var hit in Hits) add(hit);
         add(HitsAfterAllyDies?.Count ?? -1); if (HitsAfterAllyDies != null) foreach (var hit in HitsAfterAllyDies) add(hit);
     }
@@ -300,6 +307,12 @@ public sealed class SimPlayer
     /// Key), seeded from the game's log and counted forward. An entry whose Data is 1 had an event whose card wasn't read: its count isn't known.
     /// </summary>
     public NamedCounts Fight = NamedCounts.Empty;
+    /// <summary>
+    /// What their powers and relics read from their code keep of their own (decision #195: a field or property each stores and reads, as
+    /// Kunai's AttacksPlayedThisTurn, "Model.Field" → its value), seeded from the game and followed by their programs. Never changed in place
+    /// (shared between clones).
+    /// </summary>
+    public NamedCounts Fields = NamedCounts.Empty;
 
     // Powers that react or act at end of turn.
     [JsonIgnore] public int Juggernaut { get => Powers[PowerId.Juggernaut]; set => Set(PowerId.Juggernaut, value); }
@@ -551,7 +564,7 @@ public sealed class SimPlayer
         add(AutoHand?.Count ?? -1);
         // By what each card is, in any order: branches that picked identical copies hold the same hand, and merge.
         if (AutoHand != null) foreach (var key in AutoHand.Select(handCard => handCard.Key).OrderBy(key => key.Digest)) add(key.GetHashCode());
-        Powers.Hash(add); Relics.Hash(add); Turn.Hash(add); Fight.Hash(add);
+        Powers.Hash(add); Relics.Hash(add); Turn.Hash(add); Fight.Hash(add); Fields.Hash(add);
         add(Orbs.Count);
         foreach (var orb in Orbs) orb.Hash(add);
     }

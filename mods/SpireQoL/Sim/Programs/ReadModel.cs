@@ -25,8 +25,14 @@ internal readonly struct HookArgs
     public DamageCtx? Damage { get; init; }
     public BlockCtx? Block { get; init; }
 
-    /// <summary>The same hook on another branch.</summary>
-    public HookArgs On(SimState branch) => this with { State = branch };
+    /// <summary>
+    /// The answers of the code's tests this hook run has asked (HookTest, by its slot: 0 not yet, 1 held, 2 didn't), for a program that stores to
+    /// its own state; null: every test is asked where it's needed.
+    /// </summary>
+    public int[]? Asked { get; init; }
+
+    /// <summary>The same hook on another branch (its answers so far its own).</summary>
+    public HookArgs On(SimState branch) => this with { State = branch, Asked = (int[]?)Asked?.Clone() };
 }
 
 /// <summary>
@@ -47,13 +53,19 @@ public sealed class ReadModel : SimModel
     public override TabKind? Tab => Spec.Tab;
 
     private readonly CompiledStep[]?[] _steps = new CompiledStep[]?[Enum.GetValues<HookName>().Length];
+    /// <summary>The hooks whose program stores to the model's own state: their tests are asked once a run (HookTest).</summary>
+    private readonly bool[] _asksOnce = new bool[Enum.GetValues<HookName>().Length];
+    /// <summary>Each test place's slot in HookArgs.Asked.</summary>
+    private readonly Dictionary<string, int> _testSlots = new(StringComparer.Ordinal);
     private readonly Evaluate?[] _returns = new Evaluate?[Enum.GetValues<HookName>().Length];
 
     public ReadModel(ModelSpec spec) : base(spec.Name, spec.Hooks.Select(program => SimHookOf(program.Hook)).Distinct())
     {
         Spec = spec;
+        foreach (var test in spec.Values().OfType<HookTest>()) _testSlots.TryAdd(test.At, _testSlots.Count);
         foreach (var program in spec.Hooks)
         {
+            _asksOnce[(int)program.Hook] = program.Steps.Any(step => step is StoreFieldStep);
             if (program.Returns != null) _returns[(int)program.Hook] = Compile(program.Returns);
             var firing = new List<HookStep>();
             var compiled = new List<CompiledStep>();
@@ -145,7 +157,7 @@ public sealed class ReadModel : SimModel
     private IEnumerable<SimState> Run(HookName hook, HookArgs args)
     {
         if (_steps[(int)hook] is not { } steps) return One(args.State);
-        args = args with { Hook = hook };
+        args = args with { Hook = hook, Asked = _asksOnce[(int)hook] ? new int[_testSlots.Count] : null };
         IEnumerable<SimState>? states = null;
         foreach (var step in steps)
         {
@@ -228,6 +240,16 @@ public sealed class ReadModel : SimModel
                     return One(state);
                 };
             }
+            case StoreFieldStep store:
+            {
+                var value = Compile(store.Value);
+                var key = FieldKey(store.Field);
+                return args =>
+                {
+                    SimEngine.SetField(args.State, args.Owner, key, (int)value(in args));
+                    return One(args.State);
+                };
+            }
             case RemovePowerStep:
                 return args =>
                 {
@@ -244,6 +266,9 @@ public sealed class ReadModel : SimModel
                 throw new InvalidOperationException($"{Name}: no command for {step.GetType().Name}");
         }
     }
+
+    /// <summary>One of its own fields' key among its owner's (SimPlayer.Fields, SimEnemy.Fields): "Model.Field".</summary>
+    public string FieldKey(string field) => Name + "." + field;
 
     /// <summary>Card events it causes (draws, energy), each through every listener; a draw or energy tab counts what they gave (decision #132).</summary>
     private IEnumerable<SimState> Cause(HookArgs args, CardEvent cardEvent, int count, bool fires)
@@ -288,6 +313,22 @@ public sealed class ReadModel : SimModel
             }
             case HookFactValue fact:
                 return CompileFact(fact);
+            case HookTest test:
+            {
+                var inner = Compile(test.Test);
+                var slot = _testSlots[test.At];
+                return (in HookArgs args) =>
+                {
+                    if (args.Asked is not { } asked) return inner(in args);
+                    if (asked[slot] == 0) asked[slot] = inner(in args) != 0m ? 1 : 2;
+                    return asked[slot] == 1 ? 1m : 0m;
+                };
+            }
+            case HookField field:
+            {
+                var key = FieldKey(field.Field);
+                return (in HookArgs args) => SimEngine.FieldsOf(args.State, args.Owner)[key];
+            }
             default:
                 throw new InvalidOperationException($"{Name}: no value {value.GetType().Name}");
         }
@@ -323,6 +364,11 @@ public sealed class ReadModel : SimModel
             case HookFact.CardType: return (in HookArgs args) => (int)CardTypeOf(in args);
             case HookFact.CardEthereal: return (in HookArgs args) => (args.Hook == HookName.AfterCardDrawn ? args.State.DrawnCard?.Ethereal : args.Play?.Card.Ethereal) == true ? 1m : 0m;
             case HookFact.CardEnergy: return (in HookArgs args) => args.Play?.Card.Energy ?? 0;
+            case HookFact.CardTag:
+            {
+                var tag = Enum.Parse<SimCardTag>(named!);
+                return (in HookArgs args) => args.Play?.Card.Is(tag) == true ? 1m : 0m;
+            }
             case HookFact.EventIsOwners: return (in HookArgs args) => args.Player == args.Owner ? 1m : 0m;
             case HookFact.CardIs:
                 return (in HookArgs args) => named == CardId.Sadness.Name && args.Event == CardEvent.GeneratedSadness

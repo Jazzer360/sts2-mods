@@ -42,6 +42,8 @@ public enum HookFact
     CardType,
     /// <summary>The card played is Ethereal (its Keywords contain Ethereal).</summary>
     CardEthereal,
+    /// <summary>The card played has the tag named in Of (its Tags contain Shiv).</summary>
+    CardTag,
     /// <summary>The card played's cost as it's played (EnergyCost.GetResolved()).</summary>
     CardEnergy,
     /// <summary>A card event's card is its owner's (card.Owner == base.Owner; a made card's creator is base.Owner).</summary>
@@ -104,8 +106,20 @@ public sealed record HookVar(string Key) : HookValue
     public decimal Canonical { get; init; }
 }
 
+/// <summary>
+/// One of the model's own fields or properties (Kunai's AttacksPlayedThisTurn): simulator state (SimPlayer.Fields, SimEnemy.Fields), seeded from
+/// the game and changed by its programs' stores.
+/// </summary>
+public sealed record HookField(string Field) : HookValue;
+
 /// <summary>Two values the code combines or compares.</summary>
 public sealed record HookMath(HookOperation Operation, HookValue Left, HookValue Right) : HookValue;
+
+/// <summary>
+/// One test the code makes at one place (<paramref name="At"/>: its method and offset), 1 when it holds: asked once a hook run, where a step first
+/// needs it, as the game asks it once at its branch (MiniRegent's !UsedThisTurn, asked before the store that sets it, holds for the Strength after it).
+/// </summary>
+public sealed record HookTest(string At, HookValue Test) : HookValue;
 
 /// <summary>Not: 1 when the value is 0.</summary>
 public sealed record HookNot(HookValue Inner) : HookValue;
@@ -158,6 +172,9 @@ public sealed record ApplyPowerStep(string Power, HookTarget Target, HookValue A
     public bool Debuff { get; init; }
 }
 
+/// <summary>A store to one of the model's own fields or properties a program reads (this.AttacksPlayedThisTurn = ... + 1).</summary>
+public sealed record StoreFieldStep(string Field, HookValue Value) : HookStep;
+
 /// <summary>PowerCmd.Remove(this): the power itself goes from its owner.</summary>
 public sealed record RemovePowerStep : HookStep;
 
@@ -191,6 +208,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             null => Array.Empty<HookValue>(),
             HookMath math => new[] { value }.Concat(Inside(math.Left)).Concat(Inside(math.Right)),
             HookNot not => new[] { value }.Concat(Inside(not.Inner)),
+            HookTest test => new[] { value }.Concat(Inside(test.Test)),
             HookWays ways => new[] { value }.Concat(ways.Ways.SelectMany(way => Inside(way.When).Concat(Inside(way.Value)))),
             _ => new[] { value },
         };
@@ -201,10 +219,16 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             DrawStep draw => Inside(draw.Count),
             GainEnergyStep energy => Inside(energy.Amount),
             ApplyPowerStep apply => Inside(apply.Amount),
+            StoreFieldStep store => Inside(store.Value),
             _ => Array.Empty<HookValue>(),
         });
         return Hooks.SelectMany(program => Inside(program.Returns).Concat(program.Steps.SelectMany(OfStep)));
     }
+
+    /// <summary>Its own fields and properties its programs read or store (the adapter seeds them from the game: SimReaders.Fields).</summary>
+    public IEnumerable<string> Fields() =>
+        Values().OfType<HookField>().Select(field => field.Field).Concat(Hooks.SelectMany(program => program.Steps).OfType<StoreFieldStep>().Select(store => store.Field))
+            .Distinct(StringComparer.Ordinal);
 
     /// <summary>The program of a hook, or null when it doesn't override it.</summary>
     public HookProgram? Of(HookName hook)

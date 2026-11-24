@@ -119,6 +119,7 @@ public static partial class SimAdapter
             // Every power, with the numbers its model keeps (Curl Up, Sneaky, Skittish, Thorns, Burrowed, Asleep, Slumber, Flutter,
             // Plow, Shriek, The Gambit, Slippery, Hard to Kill, Intangible, Hardened Shell, Barricade, Strength, Weak...).
             enemy.Powers = SimReaders.Powers(creature, IdOf);
+            enemy.Fields = SimReaders.Fields(creature.Powers);
             foreach (var power in creature.Powers) SimReaders.AddVars(state, id, power);
             // Explosive: its death damages every living player (unpowered, blockable), through the game's damage math.
             if (creature.IsAlive && (ExplosiveOf?.Invoke(creature) ?? 0) is > 0 and var explosive) enemy.Explosive = ExplosiveOn(creature, me.Creature, explosive, me, combat);
@@ -638,6 +639,7 @@ public static partial class SimAdapter
         player.Powers = SimReaders.Powers(creature, idOf);
         player.Counters = SimReaders.Counters(creature);
         player.Relics = SimReaders.Relics(me);
+        player.Fields = SimReaders.Fields(creature.Powers.Cast<AbstractModel>().Concat(me.Relics.Where(relic => !relic.IsMelted)));
         player.Cards = SimReaders.Cards(me);
         player.Turn = SimReaders.Turn(me, combat);
         player.Reflect = creature.Powers.Any(power => power is ReflectPower);

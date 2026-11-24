@@ -108,24 +108,3 @@ public abstract class RelicProc : ProcModel
     protected bool Armed(SimState state, int owner) => ((RelicUse)Data(state, owner)).HasFlag(RelicUse.Armed);
     protected void Disarm(SimState state, int owner) => Set(state, owner, Amount(state, owner), (int)((RelicUse)Data(state, owner) & ~RelicUse.Armed));
 }
-
-/// <summary>
-/// A counter relic (Kunai, Shuriken, Ornamental Fan...): every card of its kind its owner plays counts (AfterCardPlayed); the one
-/// that brings the count to its Cards value fires it, and the count starts over. Amount: the count (the tray's number).
-/// </summary>
-public abstract class CounterRelic : RelicProc
-{
-    protected abstract bool Counts(SimCard card);
-    protected abstract IEnumerable<SimState> OnComplete(SimState state, int owner);
-
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (!Mine(play, owner) || !Counts(play.Card)) return One(state);
-        var cardsNeeded = Var(state, owner, "Cards", fallback: 0);
-        if (cardsNeeded <= 0) return One(state);
-        var count = Amount(state, owner) % cardsNeeded + 1;
-        Set(state, owner, count % cardsNeeded, Data(state, owner));
-        if (count < cardsNeeded) return One(state);
-        return OnComplete(state, owner);
-    }
-}

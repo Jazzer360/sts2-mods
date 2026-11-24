@@ -223,6 +223,16 @@ public static partial class SimEngine
 
     public static int PowerOn(SimState state, int id, PowerId power) => PowersOf(state, id)[power];
 
+    /// <summary>What a creature's models read from their code keep of their own (SimPlayer.Fields, SimEnemy.Fields), by id.</summary>
+    public static NamedCounts FieldsOf(SimState state, int id) => Who.IsEnemy(id) ? state.Enemy(id)?.Fields ?? NamedCounts.Empty : state.Player(id)?.Fields ?? NamedCounts.Empty;
+
+    /// <summary>Sets one of them (a teammate shared between branches is copied first).</summary>
+    public static void SetField(SimState state, int id, string key, int value)
+    {
+        if (Who.IsEnemy(id)) { if (state.Enemy(id) is { } enemy) enemy.Fields = enemy.Fields.With(key, value); }
+        else if (state.Player(id) != null) state.MutablePlayer(id).Fields = state.Player(id)!.Fields.With(key, value);
+    }
+
     /// <summary>A power's amount down by one, gone at 0 (PowerCmd.Decrement).</summary>
     public static void DecrementPower(SimState state, int id, PowerId power)
     {

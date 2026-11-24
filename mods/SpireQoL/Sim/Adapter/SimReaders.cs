@@ -474,6 +474,26 @@ public static class SimReaders
         return new CapturedTerms { EnchantAdd = enchantAdd, EnchantMul = enchantMul, Add = add, Mul = mul };
     }
 
+    /// <summary>
+    /// What the models read from their code keep of their own (SimPlayer.Fields, SimEnemy.Fields, decision #195): each field or property a read
+    /// model's programs read or store, read from the game's object (a count or a flag a player could keep: Kunai's attacks this turn).
+    /// </summary>
+    public static NamedCounts Fields(IEnumerable<AbstractModel> models)
+    {
+        var fields = NamedCounts.Empty;
+        foreach (var model in models)
+            if (SimModels.Get(ModelName(model)) is ReadModel read)
+                foreach (var field in read.Spec.Fields())
+                    fields = fields.With(read.FieldKey(field), Sts2State.Private<object?>(model, field, fallback: null) switch
+                    {
+                        int number => number,
+                        bool flag => flag ? 1 : 0,
+                        decimal number => (int)number,
+                        _ => 0,
+                    });
+        return fields;
+    }
+
     /// <summary>The name a game model has in the simulator (temporary Thorns is Thorns).</summary>
     public static string ModelName(AbstractModel model) => model is PowerModel ? SimAdapter.SimPowerName(model.GetType()) : model.GetType().Name;
 
