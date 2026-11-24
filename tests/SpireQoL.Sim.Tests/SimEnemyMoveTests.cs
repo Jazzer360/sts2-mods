@@ -131,4 +131,33 @@ public class SimEnemyMoveTests
         Assert.Equal(3, branch.Enemies[0].Powers[PowerId.Strength]);
         Assert.False(branch.Enemies[1].Powers.Has(PowerId.Strength));
     }
+
+    [Fact]
+    public void AnEnemysVigorIsSpentByItsFirstAttack()
+    {
+        // AttackCommand.Execute: Hook.BeforeAttack, its hits, Hook.AfterAttack. VigorPower.BeforeAttack keeps the attack (a monster's has no
+        // ModelSource), ModifyDamageAdditive adds its amount to that attack's hits, AfterAttack takes it back (PowerCmd.ModifyAmount: 0, gone).
+        // A move of two attacks: 3 + 5, then 3.
+        var enemy = Attacker(id: 0, hp: 50, hits: new[] { 3m, 3m });
+        enemy.Move = new SimAction[] { new MoveAttackAction(FirstHit: 0, Hits: 1), new MoveAttackAction(FirstHit: 1, Hits: 1) };
+        enemy.Powers = enemy.Powers.With(PowerId.Vigor, amount: 5);
+        var branch = Assert.Single(SimEngine.Run(new SimState { Enemies = { enemy } }).Branches);
+        Assert.Equal(8 + 3, branch.Taken);
+        Assert.False(branch.Enemies[0].Powers.Has(PowerId.Vigor));
+    }
+
+    [Fact]
+    public void AnEnemyDeadBeforeItsAttackMakesNoAttack()
+    {
+        // AttackCommand.Execute returns before Hook.BeforeAttack when its attacker is dead: your Thorns killing it on its first attack's hit
+        // leaves its Vigor for no attack (none is made), and the second attack makes no hits.
+        var enemy = Attacker(id: 0, hp: 2, hits: new[] { 3m, 3m });
+        enemy.Move = new SimAction[] { new MoveAttackAction(FirstHit: 0, Hits: 1), new MoveAttackAction(FirstHit: 1, Hits: 1) };
+        enemy.Powers = enemy.Powers.With(PowerId.Vigor, amount: 5);
+        var state = new SimState { Enemies = { enemy, new SimEnemy { Id = 1, Name = "E1", Hp = 50 } } };
+        state.You.Thorns = 2;
+        var branch = Assert.Single(SimEngine.Run(state).Branches);
+        Assert.Equal(8, branch.Taken);
+        Assert.Equal(1, branch.CancelledHits);
+    }
 }

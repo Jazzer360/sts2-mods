@@ -18,7 +18,7 @@ Damage to a creature: the damage math, block, the HP-loss pipeline, a death held
   simulator: SimEngine.Damage, SimEngine.ModifiedDamage, SimEngine.CalcDamage, SimEngine.PlainDamage, SimEngine.AnyListensToDamage, SimEngine.HpLossPipeline, SimEngine.HpLoss, SimEngine.PlayerDamaged, SimEngine.LandBlockable, SimEngine.LandOnPlayer, SimEngine.LandUnblockable, SimEngine.LoseHp, SimEngine.Lose, SimEngine.PlayHp, SimEngine.BiggestHit, SimEngine.HitOnce, SimEngine.HitAll, SimEngine.HitRandom, SimEngine.RandomTarget, SimEngine.ProcHitOn, SimEngine.ProcDamageAll, SimEngine.ProcDamageRandom, SimEngine.ProcDamageOn, SimEngine.ProcDamagePlayer, SimEngine.DamagePlayer, SimEngine.RunDamage, SimEngine.IntentDamage, SimEngine.WithoutEnchantment, SimEngine.DamageAllEnemies
 An attack: its hits, their targets (a random one a branch each), the attack's hooks
   game: AttackCommand.Execute, DamageCmd.Attack, Hook.BeforeAttack, Hook.AfterAttack, Hook.ModifyAttackHitCount
-  simulator: SimEngine.RunAttack, SimEngine.HitCount
+  simulator: SimEngine.RunAttack, SimEngine.HitCount, SimEngine.EnemyAttackHook
 Block: the block math, its hooks, a power's or relic's block, block lost
   game: CreatureCmd.GainBlock, Hook.ModifyBlock, Hook.AfterModifyingBlockAmount, Hook.BeforeBlockGained, Hook.AfterBlockGained, CreatureCmd.LoseBlock, Creature.GainBlockInternal
   simulator: SimEngine.BlockOnce, SimEngine.BlockBaseNow, SimEngine.CalcBlock, SimEngine.GainBlock, SimEngine.ShareBlock, SimEngine.ProcBlock, SimEngine.ProcBlockFor, SimEngine.EnemyBlock, SimEngine.RunBlock, SimEngine.StripBlock

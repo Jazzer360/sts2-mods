@@ -38,7 +38,7 @@ public static class HandModelled
                 "Hook.AfterModifyingHpLostAfterOsty", "Hook.ModifyPreBlockDamageTarget", "Hook.ModifyUnblockedDamageTarget", "Hook.AfterBlockBroken", "Hook.AfterDamageGiven",
                 "Hook.AfterDamageReceived", "Hook.ShouldDie", "Hook.AfterPreventingDeath", "Creature.DamageBlockInternal", "Creature.LoseHpInternal" }),
         new("An attack: its hits, their targets (a random one a branch each), the attack's hooks",
-            new[] { "SimEngine.RunAttack", "SimEngine.HitCount" },
+            new[] { "SimEngine.RunAttack", "SimEngine.HitCount", "SimEngine.EnemyAttackHook" },
             new[] { "AttackCommand.Execute", "DamageCmd.Attack", "Hook.BeforeAttack", "Hook.AfterAttack", "Hook.ModifyAttackHitCount" }),
         new("Block: the block math, its hooks, a power's or relic's block, block lost",
             new[] { "SimEngine.BlockOnce", "SimEngine.BlockBaseNow", "SimEngine.CalcBlock", "SimEngine.GainBlock", "SimEngine.ShareBlock", "SimEngine.ProcBlock", "SimEngine.ProcBlockFor", "SimEngine.EnemyBlock", "SimEngine.RunBlock", "SimEngine.StripBlock" },

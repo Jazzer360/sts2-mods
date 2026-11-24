@@ -1174,6 +1174,23 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// An enemy's attack's hook in the enemy turn (Hook.BeforeAttack, Hook.AfterAttack: AttackCommand.Execute), every listener in the game's
+    /// order, on the one state the enemy turn runs on: a listener that would branch there is an error, never a guess.
+    /// </summary>
+    private static void EnemyAttackHook(SimState state, string hook, AttackInfo attack)
+    {
+        if (!Listens(state, hook)) return;
+        foreach (var (model, owner) in Listeners(state).ToArray())
+        {
+            if (!model.Overrides(hook)) continue;
+            if (Who.IsEnemy(owner) && state.Enemy(owner) is not { Alive: true }) continue; // its powers went at its death
+            var after = hook == nameof(SimModel.BeforeAttack) ? model.BeforeAttack(state, owner, attack) : model.AfterAttack(state, owner, attack);
+            foreach (var branch in after)
+                if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{model.Name}: {hook} branched in the enemy turn");
+        }
+    }
+
+    /// <summary>
     /// A power an enemy's move applies (PowerCmd.Apply: CanReceivePowers, then Artifact), on each creature it names that's alive now. Its
     /// AfterPowerApplied listeners in the simulator all react to their own owner's applications, never an enemy's.
     /// </summary>
@@ -1318,8 +1335,18 @@ public static partial class SimEngine
                 TakesHit(Who.Teammate(teammateIndex), amount);
             }
             var players = state.PlayerIds;
+            // Its attack (AttackCommand.Execute): none at all once it's dead; else Hook.BeforeAttack, its hits until it dies, Hook.AfterAttack
+            // (an enemy's Vigor keeps the attack and is spent by it). A monster's attack has no card (no ModelSource) and its props are a Move.
             void Attack(int firstHit, int hits)
             {
+                AttackInfo? attack = null;
+                if (!dead)
+                {
+                    state.AttackSerial++;
+                    state.CurrentAttack = state.AttackSerial;
+                    attack = new AttackInfo(state.AttackSerial, enemy.Id, SimProps.Move, Card: null);
+                    EnemyAttackHook(state, nameof(SimModel.BeforeAttack), attack);
+                }
                 for (var hit = firstHit; hit < Math.Min(firstHit + hits, HitCount(enemy)); hit++)
                 {
                     // The hit on you: the intent through the damage pipeline as it lands, or the final number.
@@ -1335,6 +1362,9 @@ public static partial class SimEngine
                         else TeammateTakesHit(Who.TeammateIndex(player), hit, perHit);
                     }
                 }
+                if (attack == null) return;
+                EnemyAttackHook(state, nameof(SimModel.AfterAttack), attack);
+                state.CurrentAttack = 0;
             }
             if (enemy.Move == null) Attack(firstHit: 0, HitCount(enemy));
             else
