@@ -17,7 +17,6 @@ public static class CardEffects
     public static bool BlocksAnother(Type cardType) => BlocksAnother(CardPrograms.Of(cardType));
     public static bool BlocksEachPlayer(Type cardType) => BlocksEachPlayer(CardPrograms.Of(cardType));
     public static bool ChannelsForTarget(Type cardType) => ChannelsForTarget(CardPrograms.Of(cardType));
-    public static bool HitsAllOnKill(Type cardType) => HitsAllOnKill(CardPrograms.Of(cardType));
 
     /// <summary>Kills your Osty (CreatureCmd.Kill on Owner.Osty: Sacrifice, Bone Shards).</summary>
     public static bool KillsOsty(CardProgram program) => program.Commands.Any(command => Is(command, "CreatureCmd", "Kill") && Argument(command, 0) == "Owner.Osty");
@@ -45,13 +44,6 @@ public static class CardEffects
     /// <summary>Channels an orb for its target's player (Ignition: into a teammate's orbs).</summary>
     public static bool ChannelsForTarget(CardProgram program) =>
         program.Commands.Any(command => Is(command, "OrbCmd", "Channel") && command.Arguments.Contains(Target + ".Player"));
-
-    /// <summary>A second attack, at every enemy, when the first one killed (Timber).</summary>
-    public static bool HitsAllOnKill(CardProgram program)
-    {
-        var attacks = program.Commands.Where(command => Is(command, "DamageCmd", "Attack")).ToList();
-        return attacks.Count >= 2 && attacks.Skip(1).Any(attack => attack.Condition != null && attack.Builder.Contains("TargetingAllOpponents"));
-    }
 
     public static bool DrawsForTarget(Type cardType) => DrawsForTarget(CardPrograms.Of(cardType));
     public static bool DrawsForEachTeammate(Type cardType) => DrawsForEachTeammate(CardPrograms.Of(cardType));
@@ -327,19 +319,6 @@ public static class CardEffects
     /// <summary>It exhausts other cards in its play, read from its program (True Grit, Fiend Fire, Second Wind, Cleanse...).</summary>
     public static bool ExhaustsOthers(CardProgram program) => ExhaustsOfOthers(program).Count > 0;
 
-    public static bool DrawsOnACondition(Type cardType) => DrawsOnACondition(CardPrograms.Of(cardType));
-    public static bool DrawsDependOnTarget(Type cardType) => DrawsForYou(cardType).Any(draw => ProgramEvaluator.AsksTarget(draw.Condition));
-
-    /// <summary>
-    /// Its draws for you wait on a condition (Impatience: no Attack in your hand; FTL: fewer plays this turn than PlayMax; Mad Science:
-    /// its rider), not on every way through its play (Wheel of Fortune draws one way or the other).
-    /// </summary>
-    public static bool DrawsOnACondition(CardProgram program) =>
-        DrawsForYou(program).Aggregate(ProgramCondition.Never, (either, draw) => either.Or(draw.Condition)) is { IsNever: false, IsAlways: false };
-
-    /// <summary>Whether it draws depends on its target (Ki Hop: an Impaled target; Wrest: one your arrow Impales).</summary>
-    public static bool DrawsDependOnTarget(CardProgram program) => DrawsForYou(program).Any(draw => ProgramEvaluator.AsksTarget(draw.Condition));
-
     // ---- cards moved between piles (CardPileCmd.Add)
 
     /// <summary>What a CardPileCmd.Add in a card's play does with the cards it moves.</summary>
@@ -407,7 +386,6 @@ public static class CardEffects
 
     public static bool AutoPlaysFromDrawPile(Type cardType) => AutoPlaysFromDrawPile(CardPrograms.Of(cardType));
     public static bool SummonsEachPlayer(Type cardType) => SummonsEachPlayer(CardPrograms.Of(cardType));
-    public static bool GainsStarsOnKill(Type cardType) => GainsStarsOnKill(CardPrograms.Of(cardType));
     public static bool DislodgesArrows(Type cardType) => DislodgesArrows(CardPrograms.Of(cardType));
     public static bool KeepsStretchForReplays(Type cardType) => KeepsStretchForReplays(CardPrograms.Of(cardType));
 
@@ -479,18 +457,6 @@ public static class CardEffects
     /// <summary>Summons each player's Osty, a loop over the players (Legion of Bone: OstyCmd.Summon for each, not only you).</summary>
     public static bool SummonsEachPlayer(CardProgram program) =>
         program.All().OfType<LoopStep>().Any(loop => loop.Body.OfType<CommandStep>().Any(command => Is(command, "OstyCmd", "Summon") && Argument(command, 1) is { } player && player != "Owner"));
-
-    /// <summary>Gains stars only when its attack kills (Knockout Blow: PlayerCmd.GainStars behind a test of the attack's results).</summary>
-    public static bool GainsStarsOnKill(CardProgram program)
-    {
-        var attacked = false;
-        foreach (var command in program.Commands)
-        {
-            if (Is(command, "DamageCmd", "Attack")) attacked = true;
-            else if (attacked && Is(command, "PlayerCmd", "GainStars") && command.Condition != null) return true;
-        }
-        return false;
-    }
 
     /// <summary>Knocks your arrows out of its target (ArrowCmd.DislodgeArrow on the target: Recall, Uproot, Wrest).</summary>
     public static bool DislodgesArrows(CardProgram program) => program.Commands.Any(command => Is(command, "ArrowCmd", "DislodgeArrow") && Argument(command, 0) == Target);

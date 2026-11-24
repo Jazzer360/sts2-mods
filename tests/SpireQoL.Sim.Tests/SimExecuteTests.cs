@@ -48,13 +48,30 @@ public class SimExecuteTests
         Assert.False(SimEngine.Run(state, Judgement(target: 1, threshold: 20)).DeadInAll(enemyId: 1));
     }
 
+    /// <summary>
+    /// Timber: a hit of 20 on its target, then, when it killed (decision #190: its attack's results), a second attack of 30 on every enemy.
+    /// </summary>
+    private static SimPlay Timber(int target, int enemies)
+    {
+        Dictionary<int, decimal> Each(decimal damage) => Enumerable.Range(1, enemies).ToDictionary(id => id, _ => damage);
+        return new SimPlay
+        {
+            Name = "Timber", TargetId = target, IsAttack = true,
+            Body =
+            {
+                new AttackAction(Hits: 1, SimPlay.Target.Single, new DamageSpec(Base: 0m, SimProps.Move) { BaseOn = Each(damage: 20m), Fixed = true }),
+                new WhenAction(new AttackKilledCondition(), new SimAction[]
+                    { new AttackAction(Hits: 1, SimPlay.Target.All, new DamageSpec(Base: 0m, SimProps.Move) { BaseOn = Each(damage: 30m), Fixed = true }) }),
+            },
+        };
+    }
+
     [Fact]
     public void TimbersKillHitsEveryEnemy()
     {
         // Timber: its hit kills the target, then a second attack hits every enemy (30 each).
         var state = new SimState { Enemies = { E(id: 1, hp: 8, hits: 5), E(id: 2, hp: 36, hits: 5), E(id: 3, hp: 13, hits: 5) } };
-        var timber = new SimPlay { Name = "Timber", HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 1,
-            HitDamage = { [1] = 20, [2] = 20, [3] = 20 }, OnKillHitAll = { [1] = 30, [2] = 30, [3] = 30 } };
+        var timber = Timber(target: 1, enemies: 3);
         SimEngine.ApplyPlayTo(state, timber, out var branches, out _);
         Assert.All(branches, branch =>
         {
@@ -68,8 +85,7 @@ public class SimExecuteTests
     public void TimberWithoutAKillHitsOnlyItsTarget()
     {
         var state = new SimState { Enemies = { E(id: 1, hp: 50, hits: 5), E(id: 2, hp: 36, hits: 5) } };
-        var timber = new SimPlay { Name = "Timber", HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 1,
-            HitDamage = { [1] = 20, [2] = 20 }, OnKillHitAll = { [1] = 30, [2] = 30 } };
+        var timber = Timber(target: 1, enemies: 2);
         SimEngine.ApplyPlayTo(state, timber, out var branches, out _);
         Assert.All(branches, branch => { Assert.Equal(30, branch.Enemy(id: 1)!.Hp); Assert.Equal(36, branch.Enemy(id: 2)!.Hp); });
     }

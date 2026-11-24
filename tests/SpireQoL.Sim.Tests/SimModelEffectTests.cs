@@ -106,7 +106,7 @@ public class SimModelEffectTests
     [Fact]
     public void KnockoutBlowsStarsWaitOnItsKill()
     {
-        // KnockoutBlow.OnPlay gains stars only when its attack kills the target (AttackAction.KillRewards); Black Hole then hits every
+        // KnockoutBlow.OnPlay gains stars only when its attack kills the target (decision #190: a WhenAction); Black Hole then hits every
         // enemy. It used to count the stars on every play.
         SimState WithBlackHole(int targetHp)
         {
@@ -114,7 +114,7 @@ public class SimModelEffectTests
             state.You.Powers = state.You.Powers.With(PowerId.BlackHole, amount: 3);
             return state;
         }
-        var knockout = Play(Card("KnockoutBlow"), target: 0, plays: 1, Attack(baseDamage: 10) with { KillRewards = new[] { new KillReward(CardEvent.StarsGained, Count: 1) } });
+        var knockout = Play(Card("KnockoutBlow"), target: 0, plays: 1, Attack(baseDamage: 10), new WhenAction(new AttackKilledCondition(), new SimAction[] { new CardEventAction(CardEvent.StarsGained, Count: 1) }));
         Assert.Equal(47, After(WithBlackHole(targetHp: 5), knockout).Enemies[1].Hp);
         Assert.Equal(50, After(WithBlackHole(targetHp: 30), knockout).Enemies[1].Hp);
     }

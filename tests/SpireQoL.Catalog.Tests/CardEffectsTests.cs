@@ -34,7 +34,6 @@ public class CardEffectsTests
         Finds(CardEffects.BlocksAnother, "Lift", "Constellation", "DemonicShield");
         Finds(CardEffects.BlocksEachPlayer, "Rally");
         Finds(CardEffects.ChannelsForTarget, "Ignition");
-        Finds(CardEffects.HitsAllOnKill, "Timber");
         // Your own block is yours: Iron Wave blocks you, not another.
         Assert.False(CardEffects.BlocksAnother(programs["IronWave"]));
     }
@@ -66,7 +65,6 @@ public class CardEffectsTests
         Exactly(nameof(CardEffects.BlocksAnother), CardEffects.BlocksAnother, "Lift", "Constellation", "DemonicShield");
         Exactly(nameof(CardEffects.BlocksEachPlayer), CardEffects.BlocksEachPlayer, "Rally");
         Exactly(nameof(CardEffects.ChannelsForTarget), CardEffects.ChannelsForTarget, "Ignition");
-        Exactly(nameof(CardEffects.HitsAllOnKill), CardEffects.HitsAllOnKill, "Timber");
         Exactly(nameof(CardEffects.DrawsForTarget), CardEffects.DrawsForTarget, Tables.AllyDrawCards);
         Exactly(nameof(CardEffects.DrawsForEachTeammate), CardEffects.DrawsForEachTeammate, Tables.TeammatesDrawCards);
         Exactly(nameof(CardEffects.ShufflesDiscardPileIn), CardEffects.ShufflesDiscardPileIn, Tables.ShuffleCards);
@@ -80,14 +78,9 @@ public class CardEffectsTests
         Exactly(nameof(CardEffects.AttacksOnceRepeatingSomethingElse), CardEffects.AttacksOnceRepeatingSomethingElse, Tables.SingleHitRepeatCards);
         Exactly(nameof(CardEffects.AutoPlaysFromDrawPile), CardEffects.AutoPlaysFromDrawPile, Tables.PlaysFromDrawPile);
         Exactly(nameof(CardEffects.SummonsEachPlayer), CardEffects.SummonsEachPlayer, Tables.AllPlayersSummonCards);
-        Exactly(nameof(CardEffects.GainsStarsOnKill), CardEffects.GainsStarsOnKill, Tables.KillStarCards);
         Exactly(nameof(CardEffects.DislodgesArrows), CardEffects.DislodgesArrows, Tables.DislodgeCards);
         Exactly(nameof(CardEffects.KeepsStretchForReplays), CardEffects.KeepsStretchForReplays, Tables.KeepsStretchCards);
         Exactly(nameof(CardEffects.TakesWholeHand), CardEffects.TakesWholeHand, Tables.WholeHandCards);
-        // Draws on a condition, evaluated against the board (ProgramEvaluator): the table and Mad Science's own case in CardsDrawn (its
-        // rider), both deleted with it.
-        Exactly(nameof(CardEffects.DrawsOnACondition), CardEffects.DrawsOnACondition, Tables.ConditionalDrawCards.Append("MadScience").ToArray());
-        Exactly(nameof(CardEffects.DrawsDependOnTarget), CardEffects.DrawsDependOnTarget, Tables.TargetDrawCards);
         // Other cards exhausted (PlayFacts.ExhaustOthers' cases), and how each takes them (ExhaustPickOf, ExhaustTakesNoActingCard).
         Exactly(nameof(CardEffects.ExhaustsOthers), CardEffects.ExhaustsOthers, Tables.ExhaustOthersCards);
         foreach (var (card, ways) in Tables.ExhaustWays)

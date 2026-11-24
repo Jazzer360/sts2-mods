@@ -54,8 +54,6 @@ public sealed record AttackAction(int Hits, SimPlay.Target Mode, DamageSpec Dama
     public int TargetId { get; init; } = Who.None;
     /// <summary>Osty makes the attack (his hits: Thorns hits him; your Envenom and The Boot don't apply).</summary>
     public bool ByOsty { get; init; }
-    /// <summary>Timber: when a hit kills the target, a second attack hits every enemy with this damage (OnKillDamage).</summary>
-    public DamageSpec? OnKill { get; init; }
     /// <summary>Rain Shot: after a hit on the target, every other hittable enemy takes that hit's damage (overkill included).</summary>
     public bool Splash { get; init; }
     /// <summary>
@@ -70,15 +68,7 @@ public sealed record AttackAction(int Hits, SimPlay.Target Mode, DamageSpec Dama
     /// TotalDamage + OverkillDamage: blocked, unblocked and overkill), none when it didn't happen (a shot with no arrow).
     /// </summary>
     public bool StretchFromDamage { get; init; }
-    /// <summary>
-    /// What the play's player gets once the attack is over, when one of its hits killed the target (DamageCmd's results:
-    /// WasTargetKilled): Sunder's energy (decision #117), Knockout Blow's stars.
-    /// </summary>
-    public IReadOnlyList<KillReward> KillRewards { get; init; } = Array.Empty<KillReward>();
 }
-
-/// <summary>A card event an attack sets off when it kills its target (AttackAction.KillRewards): energy gained, stars gained.</summary>
-public sealed record KillReward(CardEvent Event, int Count);
 
 /// <summary>
 /// Double Energy (PlayerCmd.GainEnergy(Energy)): its player gains as much energy as they have when it resolves, the cost already
@@ -294,11 +284,6 @@ public sealed record CardEventAction(CardEvent Event, int Count) : SimAction
     /// full hand none (decision #189). False: the play's HandDelta counts them (the test shorthand).
     /// </summary>
     public bool JoinsHand { get; init; }
-    /// <summary>
-    /// Its count on each play of a replay (the last for any after it), when a test of the play itself decides it (FTL's plays this turn,
-    /// Fetch's first play): Count is the first play's. Null: Count on every play.
-    /// </summary>
-    public IReadOnlyList<int>? ByPlay { get; init; }
     /// <summary>The filtered takes of the play each card it makes would be taken by (decision #189: SimDrawCard.TakenBy); null: not known.</summary>
     public IReadOnlyList<string>? TakenBy { get; init; }
 }

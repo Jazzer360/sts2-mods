@@ -50,11 +50,11 @@ public class CardEnergyTests
     {
         // Your last 3 energy on Sunder: the kill gives 3 back (no Pael's Tears warning); no kill, none back (the warning stands).
         var sunder = new SimCard("Sunder", SimCardType.Attack) { Energy = 3 };
-        var kills = One(WithTears(State(hp: 10)), Spending(sunder, cost: 3, Attack(baseDamage: 24) with { KillRewards = new[] { new KillReward(CardEvent.EnergyGained, Count: 3) } }));
+        var kills = One(WithTears(State(hp: 10)), Spending(sunder, cost: 3, Attack(baseDamage: 24), new WhenAction(new AttackKilledCondition(), new SimAction[] { new CardEventAction(CardEvent.EnergyGained, Count: 3) })));
         Assert.False(kills.Enemy(id: 0)!.Alive);
         Assert.Equal(3, kills.You.Energy);
         Assert.False(kills.Fired.Has("PaelsTears"));
-        var survives = One(WithTears(State(hp: 50)), Spending(sunder, cost: 3, Attack(baseDamage: 24) with { KillRewards = new[] { new KillReward(CardEvent.EnergyGained, Count: 3) } }));
+        var survives = One(WithTears(State(hp: 50)), Spending(sunder, cost: 3, Attack(baseDamage: 24), new WhenAction(new AttackKilledCondition(), new SimAction[] { new CardEventAction(CardEvent.EnergyGained, Count: 3) })));
         Assert.Equal(0, survives.You.Energy);
         Assert.True(survives.Fired.Has("PaelsTears"));
     }

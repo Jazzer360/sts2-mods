@@ -328,11 +328,7 @@ public static partial class SimEngine
                     {
                         var target = at.TargetId >= 0 ? at.TargetId : branch.CurrentPlay?.Target ?? Who.None;
                         if (!Hits(branch, hit) || branch.Enemy(target) is not { Alive: true }) return new[] { branch };
-                        var states = HitOnce(branch, Info(branch).Dealer, target, at);
-                        // Timber: the kill sets off a second attack on every enemy.
-                        if (at.OnKill is { } onKill) states = Then(states, copy => copy.Enemy(target) is { Alive: false }
-                            ? HitEveryEnemy(copy, Info(copy).Dealer, onKill) : new[] { copy });
-                        return states;
+                        return HitOnce(branch, Info(branch).Dealer, target, at);
                     });
                     break;
                 case SimPlay.Target.All:
@@ -351,10 +347,6 @@ public static partial class SimEngine
                 var owner = branch.CurrentPlay?.Owner ?? Who.You;
                 if (branch.AttackDealt > 0) ApplyPower(branch, owner, owner, PowerId.Stretch, branch.AttackDealt, debuff: false);
             });
-        // Once the attack is over, when it killed its target: what it gives (Sunder's energy, Knockout Blow's stars).
-        foreach (var reward in at.KillRewards)
-            branches.Each(branch => (at.TargetId >= 0 ? at.TargetId : branch.CurrentPlay?.Target ?? Who.None) is var target && branch.Enemy(target) is { Alive: false }
-                ? ProcCardEvent(branch, reward.Event, reward.Count, branch.CurrentPlay?.Owner ?? Who.You, indirect: false) : new[] { branch });
         branches.Do(branch => branch.CurrentAttack = 0);
 
         // One hit on every hittable enemy; with RepeatPerKill (Echoing Slash), one more round per enemy it killed.
@@ -544,7 +536,7 @@ public static partial class SimEngine
     {
         if (cardEventAction.FirstPlayOnly && branches.States.Count > 0 && branches.States[0].CurrentPlay is { PlayIndex: > 0 }) return;
         var made = cardEventAction.Event is CardEvent.Generated or CardEvent.GeneratedStatus or CardEvent.GeneratedSadness;
-        if (cardEventAction.CountFrom != SimCount.Given || cardEventAction.JoinsHand || cardEventAction.ByPlay != null || made && branches.States.Any(branch => branch.TakeMatching.Count > 0))
+        if (cardEventAction.CountFrom != SimCount.Given || cardEventAction.JoinsHand || made && branches.States.Any(branch => branch.TakeMatching.Count > 0))
         {
             branches.Each(branch => CardEvents(branch, cardEventAction));
             return;
@@ -577,8 +569,7 @@ public static partial class SimEngine
     private static IEnumerable<SimState> CardEvents(SimState state, CardEventAction cardEventAction)
     {
         var player = cardEventAction.Player ?? state.CurrentPlay?.Owner ?? Who.You;
-        var given = cardEventAction.ByPlay is { Count: > 0 } byPlay ? byPlay[Math.Min(state.CurrentPlay?.PlayIndex ?? 0, byPlay.Count - 1)] : cardEventAction.Count;
-        var count = CountOf(state, cardEventAction.CountFrom, given);
+        var count = CountOf(state, cardEventAction.CountFrom, cardEventAction.Count);
         IEnumerable<SimState> states = new[] { state };
         for (var i = 0; i < count; i++) states = Then(states, branch => OneCardEvent(branch, cardEventAction, player));
         return states;
@@ -645,20 +636,4 @@ public static partial class SimEngine
 {
     /// <summary>Blockable damage to a player (Who.You, Who.Teammate(k)): Thorns hitting back at whoever attacked.</summary>
     internal static void LandOnPlayer(SimState state, string name, int amount, int player) => LandBlockable(state, name, amount, player);
-}
-
-public static partial class SimEngine
-{
-    /// <summary>One hit on every hittable enemy with this damage (Timber's second attack), each through the pipeline.</summary>
-    private static IEnumerable<SimState> HitEveryEnemy(SimState state, int dealer, DamageSpec spec)
-    {
-        var at = new AttackAction(Hits: 1, SimPlay.Target.All, spec);
-        IEnumerable<SimState> states = new[] { state };
-        foreach (var id in state.Targetable.Select(enemy => enemy.Id).ToList())
-        {
-            var target = id;
-            states = Then(states, branch => branch.Enemy(target) is { Alive: true } ? HitOnce(branch, dealer, target, at) : new[] { branch });
-        }
-        return states;
-    }
 }

@@ -222,7 +222,7 @@ hooks.
     replaced `XHitCards`; `AttacksOnceRepeatingSomethingElse` (an attack with no hit count, and a loop over `Repeat` with no
     attack in it: Ice Lance, Heirloom Hammer) replaced `SingleHitRepeatCards`.
   - The rest (2026-11-23): `AutoPlaysFromDrawPile` (`PlaysFromDrawPile`), `SummonsEachPlayer` (an Osty summon for each player a
-    loop goes over: `AllPlayersSummonCards`), `GainsStarsOnKill` (a star gain behind a test after its attack: `KillStarCards`),
+    loop goes over: `AllPlayersSummonCards`), a star gain behind a test after its attack (`KillStarCards`; since decision #190 a gain guarded by its kill),
     `DislodgesArrows` (`ArrowCmd.DislodgeArrow` on the target: Fool's `DislodgeCards`), `KeepsStretchForReplays` (Stretch to you
     after your block: `KeepsStretchCards`).
   - The whole hand (2026-11-23): a foreach now says what it goes over (`loop over each of Hand.Cards.ToList`), a pile is named by
@@ -232,8 +232,8 @@ hooks.
   - Draws on a condition (2026-11-23, with conditions as values): `PlayFacts.CardsDrawn` reads every draw for you in the program
     (`CardEffects.DrawsForYou`: `CardPileCmd.Draw` to its owner, `CardCmd.DiscardAndDraw`), each with the condition it runs on and
     the loops around it, evaluated against the board by `ProgramEvaluator`, its count from its own argument (a card value, Scrawl's
-    room in your hand, Calculated Gamble's hand, a calculated value). `DrawsOnACondition` and `DrawsDependOnTarget` (the condition
-    asks `cardPlay.Target`) replaced `ConditionalDrawCards` and `TargetDrawCards`, and with them `CardsDrawn`'s cases for FTL,
+    room in your hand, Calculated Gamble's hand, a calculated value). Two rules on the draws (on a condition; the condition
+    asks `cardPlay.Target`; since decision #190 each draw is guarded by its own condition) replaced `ConditionalDrawCards` and `TargetDrawCards`, and with them `CardsDrawn`'s cases for FTL,
     Impatience, Fetch, Restlessness, Ki Hop, Wrest, Scrawl, Calculated Gamble, a calculated count and Mad Science's Wisdom rider.
     The card scan flags a draw on a condition the evaluator can't read, in place of a gold-glowing card missing from the table.
   - Other cards exhausted (2026-11-23): `CardEffects.ExhaustsOfOthers` reads each `CardCmd.Exhaust` of other cards as a pick

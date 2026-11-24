@@ -57,7 +57,9 @@ public class CardCodeTests
         // Gather Light gains stars on every play; Knockout Blow only when its attack kills (the attack's, not the play's).
         Assert.Equal(1, PlayFacts.StarGainsOf(ModelDb.Card<GatherLight>()));
         Assert.Equal(0, PlayFacts.StarGainsOf(ModelDb.Card<KnockoutBlow>()));
-        Assert.True(SpireQoL.Procs.Programs.CardEffects.GainsStarsOnKill(typeof(KnockoutBlow)));
+        // Its gain is guarded by its attack's kill (decision #190: ConditionTranslationTests).
+        Assert.Contains(SpireQoL.Procs.Programs.CardEffects.Find(SpireQoL.Procs.Programs.CardPrograms.Of(typeof(KnockoutBlow)), command => command.Command.Name == "GainStars"),
+            gain => SpireQoL.Sim.PlayConditions.CodeReading(typeof(KnockoutBlow), gain.Condition).Condition is SpireQoL.Sim.AttackKilledCondition);
     }
 
     [Fact]

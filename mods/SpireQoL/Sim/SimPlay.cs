@@ -58,8 +58,6 @@ public sealed class SimPlay
     public Dictionary<int, int> HitDamage = new();
     /// <summary>Hits per target (Single/All), or random hits in total (Random).</summary>
     public int Hits;
-    /// <summary>Timber: when its hit kills the target, a second attack hits every enemy for this much each.</summary>
-    public Dictionary<int, int> OnKillHitAll = new();
     /// <summary>Rain Shot: after its hit on the target, every other hittable enemy takes that hit's damage.</summary>
     public bool SplashFromTarget;
     /// <summary>Osty makes the attack.</summary>
@@ -179,7 +177,6 @@ public sealed class SimScript
             {
                 TargetId = play.HitTarget == SimPlay.Target.Single ? play.TargetId : Who.None,
                 ByOsty = play.ByOsty,
-                OnKill = play.OnKillHitAll.Count > 0 ? new DamageSpec(Base: 0m, SimProps.Move) { BaseOn = Decimals(play.OnKillHitAll), Fixed = true } : null,
                 Splash = play.SplashFromTarget,
             });
         }

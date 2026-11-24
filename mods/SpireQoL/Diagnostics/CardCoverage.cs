@@ -112,12 +112,6 @@ internal static class CardCoverage
     internal static bool TeammateTargetUnmodelled(CardModel card) =>
         card.TargetType == TargetType.AnyAlly && !TeammateTargetModelled.ContainsKey(card.GetType().Name);
 
-    /// <summary>
-    /// Cards whose kill only gives a reward that changes nothing in the turn's outcome: Feed (max HP), Hand of Greed (gold),
-    /// Knockout Blow (stars), Sunder (energy), The Hunt (a power for the fight's rewards).
-    /// </summary>
-    private static readonly HashSet<string> KillRewardCards = new() { nameof(Feed), nameof(HandOfGreed), nameof(KnockoutBlow), nameof(Sunder), nameof(TheHunt) };
-
     /// <summary>Cards reviewed as not needing what the scan finds, and why.</summary>
     private static readonly Dictionary<string, string> Reviewed = new()
     {
@@ -176,11 +170,14 @@ internal static class CardCoverage
         // A card that sets off poison during the play (Outbreak).
         if (Calls(nameof(PoisonPower), "Trigger") && !Procs.Programs.CardEffects.TriggersPoison(card.GetType()))
             issues.Add("sets off poison now (the simulator only ticks it at the start of the enemies' turn)");
-        // A card that reacts to its own kills: more damage (Timber's hit on every enemy, Echoing Slash's repeats) is simulated;
-        // a reward for the kill (energy, stars, gold, max HP, a power) changes nothing the turn's outcome shows.
-        if (Calls("DamageResult", "get_WasTargetKilled") && !Procs.Programs.CardEffects.HitsAllOnKill(card.GetType())
-            && !SimAdapter.RepeatPerKillCards.Contains(name) && !KillRewardCards.Contains(name))
-            issues.Add("reacts to its own kills (not simulated)");
+        // A card that reacts to its own kills: a step on the kill is guarded by it (decision #190: Timber's attack on every enemy,
+        // Sunder's energy), checked with every condition below; one that counts its kills (Echoing Slash's repeats) is RepeatPerKill.
+        if (Calls("DamageResult", "get_WasTargetKilled") && !SimAdapter.RepeatPerKillCards.Contains(name)
+            && !Procs.Programs.CardEffects.Find(Procs.Programs.CardPrograms.Of(card.GetType()), _ => true).Any(found => found.Condition.Literals.Any(literal => literal.Test.Parts().Any(part => part is Procs.Programs.QueryValue { Name: "WasTargetKilled" }))))
+            issues.Add("reacts to its own kills outside a step's condition (not simulated)");
+        // Every step on a condition the simulator acts on (decision #190): its condition translated, decided before the play, or a gap of
+        // a reviewed kind (ConditionGapKinds).
+        issues.AddRange(ConditionGaps(card.GetType()));
         // A draw on a condition (Impatience: no Attack in hand) is counted when its condition holds on the board (PlayFacts.CardsDrawn,
         // evaluated from its program): one the evaluator can't read (a test of something the play itself gives) isn't checked.
         if (Procs.Programs.CardEffects.DrawsForYou(card.GetType()).Any(draw => !Procs.Programs.ProgramEvaluator.CanEvaluate(draw.Condition)))
@@ -214,7 +211,7 @@ internal static class CardCoverage
         if (card.Type != CardType.Attack && Calls("CreatureCmd", "Damage") && card.DynamicVars.ContainsKey("Damage") && !Procs.Programs.CardEffects.DamagesTargetWithoutAttacking(card.GetType()))
             issues.Add("damages an enemy without attacking (not in the simulator: kills, lethal, Slippery)");
         // A second damage value (Timber's hit on every enemy after a kill): the simulator models the ones it knows.
-        if (card.DynamicVars.Any(entry => entry.Key != "Damage" && entry.Value is DamageVar) && !Procs.Programs.CardEffects.HitsAllOnKill(card.GetType()))
+        if (card.DynamicVars.Any(entry => entry.Key != "Damage" && entry.Value is DamageVar && !LaterAttackDamages(card.GetType(), entry.Key)))
             issues.Add("has a second damage value (not in the simulator: kills, lethal)");
         // A card that sets an enemy's HP (Judgement kills at or below a threshold), read from its program: its target's.
         if (Calls("CreatureCmd", "SetCurrentHp") && !Procs.Programs.CardEffects.SetsTargetsHp(card.GetType()))
@@ -299,9 +296,69 @@ internal static class CardCoverage
             issues.Add("shoots an arrow without the Shoot tag (its damage is counted even with no arrow to shoot)");
         if (Calls("ArrowCmd", "DislodgeArrow") && !Procs.Programs.CardEffects.DislodgesArrows(card.GetType()))
             issues.Add("knocks arrows loose (not counted: Twine, Yah)");
-        if (Calls("PlayerCmd", "GainStars") && PlayFacts.StarGainsOf(card) == 0 && !Procs.Programs.CardEffects.GainsStarsOnKill(card.GetType()))
+        if (Calls("PlayerCmd", "GainStars") && PlayFacts.StarGainsOf(card) == 0
+            && !Procs.Programs.CardEffects.Find(program, command => command.Command is { DeclaringType: "PlayerCmd", Name: "GainStars" })
+                .Any(gain => PlayConditions.CodeReading(card.GetType(), gain.Condition).Way == Procs.Programs.ConditionWay.Simulated))
             issues.Add("gains stars (not counted for Black Hole)");
         return issues;
+    }
+
+    /// <summary>
+    /// A later attack of the card's at every enemy deals this damage value, on a condition the simulator asks (decision #190: Timber's
+    /// OnKillDamage, SimAdapter.LaterAttacks).
+    /// </summary>
+    private static bool LaterAttackDamages(Type cardType, string key) =>
+        Procs.Programs.CardEffects.Attacks(cardType).Skip(1).Any(attack => attack.Command.Builder.Contains("TargetingAllOpponents") && attack.Command.Values.Count > 0
+            && attack.Command.Values[0].Parts().OfType<Procs.Programs.CardValue>().Any(value => value.Key == key)
+            && PlayConditions.CodeReading(cardType, attack.Condition).Way == Procs.Programs.ConditionWay.Simulated);
+
+    /// <summary>
+    /// The kinds of test the simulator doesn't ask yet (decision #190), each reviewed: a step on one is decided on the board before the
+    /// play, or its own action asks it. A test of a kind not here, on a step the simulator acts on, is flagged by the card scan.
+    /// </summary>
+    internal static readonly Dictionary<string, string> ConditionGapKinds = new()
+    {
+        ["a roll"] = "a card or a target a roll takes (NextItem, TakeRandom, a card made at random): the action rolls it, a branch per outcome, or makes a card the simulator doesn't name; never read before the roll",
+        ["a command's result"] = "what an earlier command of the play gave (a drawn card, a shot's arrow, a made card, damage results): the action that follows it asks it where the simulator has one (Escape Plan's draw, a shot's NeedsArrow, Rain Shot's splash); else decided on the board (TRACKER 20)",
+        ["the fight"] = "the fight going on, the card being in it, its room a fight, a test hook (IsOverOrEnding, CombatState, CurrentRoom, a mock): holds in every simulated play",
+        ["a taken card"] = "a test of each card a loop or a pick takes (The Hermit's Curse): the take's own filter (TakeFromHandAction), followed through the play",
+        ["the target"] = "a test of the target the simulator doesn't ask yet (alive, its powers, its intent): decided on the board (TRACKER 20); Judgement's HP and Expose's Artifact are asked by their actions",
+        ["a count of the board"] = "a count the simulator doesn't keep or doesn't ask yet (your orbs, the enemies, your exhaust, draw or discard pile, your hand's room): decided on the board (TRACKER 20); a take into your hand reads your hand's room as it runs",
+        ["this turn's history"] = "what happened this turn besides plays (a card exhausted, a melody played): decided on the board (TRACKER 20)",
+        ["your powers"] = "a power of yours or a teammate's tested by the code (Cho Ki's Stretch, Sovereign Blade's Parry, Imitation Learning, Frantic Escape): decided on the board (TRACKER 20)",
+        ["the reader"] = "a value the reader can't follow yet (a helper's local, an array's length): decided on the board as before (docs/CARD_PROGRAMS.md A5)",
+    };
+
+    /// <summary>The kind of an unread test (ConditionGapKinds), by what it reads; null for a kind not reviewed.</summary>
+    internal static string? ConditionGapKind(Procs.Programs.ProgramValue test)
+    {
+        var parts = test.Parts().ToList();
+        bool Names(params string[] names) => parts.Any(part => part is Procs.Programs.QueryValue query && names.Contains(query.Name) || part is Procs.Programs.NamedValue named && names.Contains(named.Name));
+        if (Names("NextItem", "TakeRandom", "StableShuffle", "GetDistinctForCombat")) return "a roll";
+        if (Names("IsOverOrEnding", "CombatState", "CurrentRoom", "_owner", "_mockGeneratedCard", "_mockSelectedCard", "DeckVersion", "_deckVersion")) return "the fight";
+        if (parts.Any(part => part is Procs.Programs.ResultValue)) return "a command's result";
+        if (Names("each")) return "a taken card";
+        if (parts.Any(part => part is Procs.Programs.QueryValue { Name: "Target", Of: Procs.Programs.NamedValue { Name: "cardPlay" } })) return "the target";
+        if (Names("Orbs", "HittableEnemies", "GetCards", "Take") || parts.Any(part => part is Procs.Programs.QueryValue { Name: "GetPile" })) return "a count of the board";
+        if (Names("History", "PlayedChoThisTurn", "PlayedWahThisTurn", "HasWahOrChoMelody", "PlayerHasAnyArrows")) return "this turn's history";
+        if (Names("Powers", "GetPowerAmount", "GetSandpitEnemy", "GetOwnerParryAmount")) return "your powers";
+        if (parts.Any(part => part is Procs.Programs.UnknownValue) || Names("count", "creatures")) return "the reader";
+        return null;
+    }
+
+    /// <summary>
+    /// The card's steps on a condition that the simulator acts on (a command it has an action for: PlayOrder.KeysOf) whose test it doesn't
+    /// ask and whose kind isn't reviewed (ConditionGapKinds).
+    /// </summary>
+    internal static IEnumerable<string> ConditionGaps(Type cardType)
+    {
+        foreach (var found in Procs.Programs.CardEffects.Find(Procs.Programs.CardPrograms.Of(cardType), _ => true))
+        {
+            if (found.Condition.IsAlways || PlayOrder.KeysOf(found.Command).All(key => key == found.Command.Command.FullName)) continue;
+            var reading = PlayConditions.CodeReading(cardType, found.Condition);
+            if (reading.Way != Procs.Programs.ConditionWay.NotRead || reading.Unread is { } unread && ConditionGapKind(unread) != null) continue;
+            yield return $"runs {found.Command.Command} on a test the simulator doesn't ask (decision #190): {reading.Reason}";
+        }
     }
 
     private static readonly BindingFlags All = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;

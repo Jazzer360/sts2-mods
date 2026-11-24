@@ -793,36 +793,35 @@ public sealed class PlayFacts
     /// game calculates) and its loops' rounds. A draw whose condition asks the target (Ki Hop, Wrest) counts what the worst target it
     /// could be aimed at would draw. <paramref name="handCount"/> isn't read: the hand is the board's.
     /// </summary>
-    public static int CardsDrawn(CardModel card, int handCount)
-    {
-        if (!Programs.CardEffects.DrawsDependOnTarget(card.GetType())) return DrawsOnPlay(card, target: null, playsBefore: 0);
-        var targets = Targets(card);
-        if (targets == null) return DrawsOnPlay(card, target: null, playsBefore: 0); // no fight to aim at (the game's template card)
-        return targets.Count > 0 ? targets.Min(target => DrawsOnPlay(card, target, playsBefore: 0)) : 0;
-    }
+    public static int CardsDrawn(CardModel card, int handCount) => DrawsOnPlay(card, target: null, playsBefore: 0);
 
     /// <summary>
     /// Draws of one play of <paramref name="card"/> aimed at <paramref name="target"/>, after <paramref name="playsBefore"/> of its replay's
-    /// plays: each draw its condition lets through, its count times its loops' rounds. A count that can't be read is its Cards value, or
-    /// one card when it has none (Dagger Throw, Escape Plan).
+    /// plays: each draw its condition lets through, its count times its loops' rounds (DrawCount). A draw whose condition asks the target
+    /// with none given (Ki Hop, Wrest) counts what it would draw at the worst target it could be aimed at; with no fight to aim at (the
+    /// game's template card), its condition counts as holding.
     /// </summary>
     private static int DrawsOnPlay(CardModel card, Creature? target, int playsBefore)
     {
         var program = Programs.CardPrograms.Of(card.GetType());
-        var draws = Programs.CardEffects.DrawsForYou(program);
-        if (draws.Count == 0) return 0;
-        var board = new Programs.ProgramBoard(card, target, playsBefore);
         var total = 0;
-        foreach (var draw in draws)
+        foreach (var draw in Programs.CardEffects.DrawsForYou(program))
         {
-            if (Programs.ProgramEvaluator.Holds(draw.Condition, board, program) == false) continue;
-            var count = Programs.ProgramEvaluator.Number(draw.Count, board, program) is { } read ? (int)read
-                : card.DynamicVars.ContainsKey("Cards") ? Sts2State.Var(card, "Cards") : 1;
-            foreach (var loop in draw.Loops)
-                count *= card.DynamicVars.ContainsKey(loop.Over) ? Sts2State.Var(card, loop.Over) : 1;
-            total += Math.Max(0, count);
+            if (target == null && Programs.ProgramEvaluator.AsksTarget(draw.Condition) && Targets(card) is { } targets)
+            {
+                total += targets.Count > 0 ? targets.Min(enemy => DrawOnPlay(card, draw, enemy, playsBefore)) : 0;
+                continue;
+            }
+            total += DrawOnPlay(card, draw, target, playsBefore);
         }
         return total;
+    }
+
+    /// <summary>One draw of a play, on the board as that play starts: none when its condition fails there, else its count.</summary>
+    private static int DrawOnPlay(CardModel card, Programs.CardEffects.DrawForYou draw, Creature? target, int playsBefore)
+    {
+        var program = Programs.CardPrograms.Of(card.GetType());
+        return Programs.ProgramEvaluator.Holds(draw.Condition, new Programs.ProgramBoard(card, target, playsBefore), program) == false ? 0 : DrawCount(card, draw);
     }
 
     /// <summary>The enemies the card could be aimed at; null when it isn't in a fight (the game's template card).</summary>
@@ -833,16 +832,14 @@ public sealed class PlayFacts
     }
 
     /// <summary>
-    /// Draws of all <paramref name="plays"/> plays aimed at <paramref name="target"/>, for a card whose draws depend on its target
-    /// (CardEffects.DrawsDependOnTarget), from the board before the first play; null for other cards. Each play's condition is
-    /// evaluated after the plays before it: Ki Hop draws on each play that starts with the target Impaled, its own hit loosening the
-    /// last arrow (SimEngine.PlaysStartingImpaled); Wrest pulls every arrow of yours out on its first play, so only that one draws. The
-    /// audit takes it with the play's actual target as the play starts; the prediction counts what the worst target would draw
-    /// (CardsDrawnTotal).
+    /// Draws of all <paramref name="plays"/> plays aimed at <paramref name="target"/>, when one of the card's draws asks its target; null
+    /// for other cards. Each play's condition is evaluated after the plays before it: Ki Hop draws on each play that starts with the target
+    /// Impaled, its own hit loosening the last arrow (SimEngine.PlaysStartingImpaled); Wrest pulls every arrow of yours out on its first
+    /// play, so only that one draws. The audit takes it with the play's actual target as the play starts.
     /// </summary>
     public static int? TargetDraws(CardModel card, Creature target, int plays)
     {
-        if (!Programs.CardEffects.DrawsDependOnTarget(card.GetType())) return null;
+        if (!Programs.CardEffects.DrawsForYou(card.GetType()).Any(draw => Programs.ProgramEvaluator.AsksTarget(draw.Condition))) return null;
         var total = 0;
         for (var playIndex = 0; playIndex < Math.Max(1, plays); playIndex++) total += DrawsOnPlay(card, target, playIndex);
         return total;
@@ -850,21 +847,14 @@ public sealed class PlayFacts
 
     /// <summary>
     /// How many cards all <paramref name="plays"/> plays of this card draw right now, each play's conditions after the plays before it
-    /// (FTL draws while fewer than PlayMax plays have finished this turn, a replay's earlier plays included; Fetch only on its first).
-    /// A card whose draws depend on its target counts what the worst target it could be aimed at would draw.
+    /// (FTL draws while fewer than PlayMax plays have finished this turn, a replay's earlier plays included; Fetch only on its first),
+    /// a draw that asks the target at the worst target it could be aimed at.
     /// </summary>
     public static int CardsDrawnTotal(CardModel card, int handCount, int plays)
     {
-        plays = Math.Max(1, plays);
-        if (!Programs.CardEffects.DrawsDependOnTarget(card.GetType()))
-        {
-            var total = 0;
-            for (var playIndex = 0; playIndex < plays; playIndex++) total += DrawsOnPlay(card, target: null, playIndex);
-            return total;
-        }
-        var targets = Targets(card);
-        if (targets == null) return Enumerable.Range(0, plays).Sum(playIndex => DrawsOnPlay(card, target: null, playIndex));
-        return targets.Count > 0 ? targets.Min(target => TargetDraws(card, target, plays) ?? 0) : 0;
+        var total = 0;
+        for (var playIndex = 0; playIndex < Math.Max(1, plays); playIndex++) total += DrawsOnPlay(card, target: null, playIndex);
+        return total;
     }
 
     /// <summary>
@@ -1371,7 +1361,7 @@ public sealed class PlayFacts
 
     /// <summary>
     /// The star gains of one play of the card: each PlayerCmd.GainStars in its play, on every way through it, to its owner, read from
-    /// its own code (CardEnergy.CallsOf). A gain that waits on its attack's kill is the attack's instead (CardEffects.GainsStarsOnKill: AttackAction.KillRewards).
+    /// its own code (CardEnergy.CallsOf). A gain on a condition is guarded by it in the simulation instead (decision #190: Knockout Blow's kill).
     /// </summary>
     internal static int StarGainsOf(CardModel card) =>
         SpireQoL.Sim.CardEnergy.CallsOf(card.GetType(), "GainStars").Count(call => call is { Method: "OnPlay", Certain: true, ToOwner: true });

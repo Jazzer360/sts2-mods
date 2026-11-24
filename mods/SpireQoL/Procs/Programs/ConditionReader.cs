@@ -28,6 +28,9 @@ public sealed record ConditionReading(ConditionWay Way)
     /// <summary>Decided or NotRead: why.</summary>
     public string Reason { get; init; } = "";
 
+    /// <summary>NotRead: the test the simulator doesn't ask yet (the card scan reviews it by its kind: CardCoverage.ConditionGapKinds).</summary>
+    public ProgramValue? Unread { get; init; }
+
     /// <summary>Tests the code stores in a local before the play's first command (Ki Hop's wasImpaled): asked at the play's start (AskAction).</summary>
     public IReadOnlyList<SimCondition> AskFirst { get; init; } = Array.Empty<SimCondition>();
 }
@@ -149,7 +152,7 @@ public static class ConditionReader
     private static ConditionReading Test(ProgramValue test, Context context, string? at, int depth)
     {
         ConditionReading Simulated(SimCondition condition) => new(ConditionWay.Simulated) { Condition = condition with { At = at } };
-        ConditionReading NotRead(string why) => new(ConditionWay.NotRead) { Reason = why };
+        ConditionReading NotRead(string why) => new(ConditionWay.NotRead) { Reason = why, Unread = test };
 
         // The attack's kill: Any over the results of AttackCommand.Execute of WasTargetKilled (Sunder, Knockout Blow, Timber).
         if (test is QueryValue { Name: "Any" } any && any.Parts().Any(part => part is QueryValue { Name: "WasTargetKilled" })
@@ -343,6 +346,8 @@ public static class ConditionReader
         NamedValue { Name: "this" or "Decimal.One" or "Decimal.Zero" or "Decimal.MinusOne" } => true,
         QueryValue { IsProperty: true, Of: NamedValue { Name: "this" }, Name: var property } => property == "IsUpgraded" || IsStoredOnCard(context, property),
         QueryValue { Name: "op_UnaryNegation" or "op_Addition" or "op_Subtraction" or "op_Multiply", Of: null } => true,
+        // The card's X: what playing it now spends, fixed for the play (Repeat Shot at X 0).
+        QueryValue { Name: "ResolveEnergyXValue" or "ResolveStarXValue", Of: NamedValue { Name: "this" } } => true,
         _ => false,
     });
 
