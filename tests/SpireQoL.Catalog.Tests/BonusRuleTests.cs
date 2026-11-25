@@ -23,14 +23,8 @@ public class BonusRuleTests
     /// <summary>The classes whose code pays out on a condition a play changes, or reacts to its owner losing HP, but that have no settings row: no tab.</summary>
     private static readonly Dictionary<string, string> WithoutARow = new(StringComparer.Ordinal)
     {
-        ["CloakClasp"] = "its block as your turn ends, by the cards left in your hand: a play would set it up or give it up (decided where it's paid)",
-        ["FakeOrichalcum"] = "its block as your turn ends with none: a play that gains block would give it up",
-        ["HailstormPower"] = "its damage as your turn ends while you have a Frost orb: a play that channels or evokes one would set it up or give it up",
-        ["ObsidianVice"] = "its damage as your turn ends, by the cards in your hand: a play would set it up or give it up",
-        ["Orichalcum"] = "its block as your turn ends with none: a play that gains block would give it up",
         ["RegenPower"] = "its heal as your turn ends, while its owner lives: a play would give it up only by your death",
         ["RitualPower"] = "its Strength as its owner's turn ends, an enemy's (not one it got on its own turn): the rule shows yours only",
-        ["ScreamingFlagon"] = "its damage as your turn ends with an empty hand: a play that empties your hand would set it up",
         ["TheBombPower"] = "its damage as your turn ends once its countdown is over: decided by its count as your turn ends",
         ["TunePower"] = "a card made free next turn, on its own count of the turn's plays: a play would set it up",
     };

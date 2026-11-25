@@ -40,6 +40,32 @@ public class TabRowsTests
     }
 
     [Fact]
+    public void TheBonusRowsShowWhatTheOwnerDecided()
+    {
+        // Decisions #250, #251: each row's directions and default.
+        var expected = new Dictionary<string, (TabShows Shows, bool On)>(StringComparer.Ordinal)
+        {
+            ["ParryingShield"] = (TabShows.SetsUp, true),
+            ["Orichalcum"] = (TabShows.GivesUp, true),
+            ["FakeOrichalcum"] = (TabShows.GivesUp, true),
+            ["CloakClasp"] = (TabShows.GivesUp | TabShows.Reduces, false),
+            ["ObsidianVice"] = (TabShows.GivesUp | TabShows.Reduces, false),
+            ["ScreamingFlagon"] = (TabShows.SetsUp, true),
+            ["HailstormPower"] = (TabShows.Default, true),
+        };
+        foreach (var (type, (shows, on)) in expected)
+        {
+            var row = Assert.Single(SettingsCatalog.Sources, source => source.Type == type && source.TagPrefix == "proc:");
+            Assert.NotNull(row.Tag);
+            Assert.Equal(shows, row.Shows);
+            Assert.Equal(on, row.TagDefault);
+            Assert.Equal(!on, SettingsCatalog.TabsOffByDefault.Contains("proc:" + type));
+            // What crosses it is the row's text's: a row showing only a warning is a crossed row.
+            Assert.Equal((shows & TabShows.SetsUp) == 0, row.Tag!.StartsWith(SettingsCatalog.CrossedPrefix, StringComparison.Ordinal));
+        }
+    }
+
+    [Fact]
     public void ARowShowsSomething()
     {
         // A row whose tab shows none of its bonus's directions would be a switch for nothing.

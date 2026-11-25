@@ -20,9 +20,9 @@ public class OutcomeTabTests
     {
         var expected = new[]
         {
-            "AsleepPower", "BurrowedPower", "CompostPower", "CrabRagePower", "DemonTongue", "EmotionChip", "ExplosivePower", "FlutterPower",
-            "GremlinHorn", "HandDrill", "ImbalancedPower", "InfestedPower", "ParryingShield", "PlowPower", "RavenousPower", "RedSkull",
-            "RupturePower", "SelfFormingClay", "ShriekPower", "SlipperyPower", "SlumberPower", "SteamEruptionPower", "StockPower",
+            "AsleepPower", "BurrowedPower", "CloakClasp", "CompostPower", "CrabRagePower", "DemonTongue", "EmotionChip", "ExplosivePower", "FakeOrichalcum", "FlutterPower",
+            "GremlinHorn", "HailstormPower", "HandDrill", "ImbalancedPower", "InfestedPower", "ObsidianVice", "Orichalcum", "ParryingShield", "PlowPower", "RavenousPower", "RedSkull",
+            "RupturePower", "ScreamingFlagon", "SelfFormingClay", "ShriekPower", "SlipperyPower", "SlumberPower", "SteamEruptionPower", "StockPower",
             "SurprisePower", "TheGambitPower",
         };
         Assert.Equal(expected, SimModels.Names.Where(name => Model(name).JudgedOnOutcome).Order());

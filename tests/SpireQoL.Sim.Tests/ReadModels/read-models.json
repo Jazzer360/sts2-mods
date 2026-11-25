@@ -3953,7 +3953,40 @@
         ]
       }
     ],
-    "HelpsOwner": false
+    "HelpsOwner": false,
+    "Payouts": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Condition": {
+          "$kind": "HookMath",
+          "Operation": "And",
+          "Left": {
+            "$kind": "HookTest",
+            "At": "\u003CBeforeSideTurnEnd\u003Ed__6.MoveNext:002A",
+            "Test": {
+              "$kind": "HookFactValue",
+              "Fact": "TakesPart"
+            }
+          },
+          "Right": {
+            "$kind": "HookTest",
+            "At": "\u003CBeforeSideTurnEnd\u003Ed__6.MoveNext:0049",
+            "Test": {
+              "$kind": "HookMath",
+              "Operation": "NotEqual",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "OwnerHandCount"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "Name": "ColossusPower",
@@ -7055,7 +7088,28 @@
         ]
       }
     ],
-    "HelpsOwner": false
+    "HelpsOwner": false,
+    "Payouts": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Condition": {
+          "$kind": "HookTest",
+          "At": "\u003CBeforeSideTurnEnd\u003Ed__13.MoveNext:0017",
+          "Test": {
+            "$kind": "HookMath",
+            "Operation": "NotEqual",
+            "Left": {
+              "$kind": "HookField",
+              "Field": "ShouldTrigger"
+            },
+            "Right": {
+              "$kind": "HookConstant",
+              "Value": 0
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "Name": "FeelNoPainPower",
@@ -9099,7 +9153,45 @@
         ]
       }
     ],
-    "HelpsOwner": false
+    "HelpsOwner": false,
+    "Payouts": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Condition": {
+          "$kind": "HookMath",
+          "Operation": "And",
+          "Left": {
+            "$kind": "HookTest",
+            "At": "\u003CBeforeSideTurnEnd\u003Ed__10.MoveNext:0025",
+            "Test": {
+              "$kind": "HookFactValue",
+              "Fact": "TakesPart"
+            }
+          },
+          "Right": {
+            "$kind": "HookNot",
+            "Inner": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeSideTurnEnd\u003Ed__10.MoveNext:0081",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "Less",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OwnerOrbCount",
+                  "Of": "Frost"
+                },
+                "Right": {
+                  "$kind": "HookVar",
+                  "Key": "FrostOrbs",
+                  "Canonical": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "Name": "HangPower",
@@ -17054,7 +17146,40 @@
         ]
       }
     ],
-    "HelpsOwner": false
+    "HelpsOwner": false,
+    "Payouts": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Condition": {
+          "$kind": "HookMath",
+          "Operation": "And",
+          "Left": {
+            "$kind": "HookTest",
+            "At": "\u003CBeforeSideTurnEnd\u003Ed__4.MoveNext:002A",
+            "Test": {
+              "$kind": "HookFactValue",
+              "Fact": "TakesPart"
+            }
+          },
+          "Right": {
+            "$kind": "HookTest",
+            "At": "\u003CBeforeSideTurnEnd\u003Ed__4.MoveNext:0049",
+            "Test": {
+              "$kind": "HookMath",
+              "Operation": "NotEqual",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "OwnerHandCount"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "Name": "OneTwoPunchPower",
@@ -17696,7 +17821,28 @@
         ]
       }
     ],
-    "HelpsOwner": false
+    "HelpsOwner": false,
+    "Payouts": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Condition": {
+          "$kind": "HookTest",
+          "At": "\u003CBeforeSideTurnEnd\u003Ed__11.MoveNext:0017",
+          "Test": {
+            "$kind": "HookMath",
+            "Operation": "NotEqual",
+            "Left": {
+              "$kind": "HookField",
+              "Field": "ShouldTrigger"
+            },
+            "Right": {
+              "$kind": "HookConstant",
+              "Value": 0
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "Name": "OrnamentalFan",
@@ -21700,7 +21846,40 @@
         ]
       }
     ],
-    "HelpsOwner": false
+    "HelpsOwner": false,
+    "Payouts": [
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Condition": {
+          "$kind": "HookMath",
+          "Operation": "And",
+          "Left": {
+            "$kind": "HookTest",
+            "At": "\u003CBeforeSideTurnEnd\u003Ed__4.MoveNext:002A",
+            "Test": {
+              "$kind": "HookFactValue",
+              "Fact": "TakesPart"
+            }
+          },
+          "Right": {
+            "$kind": "HookTest",
+            "At": "\u003CBeforeSideTurnEnd\u003Ed__4.MoveNext:0042",
+            "Test": {
+              "$kind": "HookMath",
+              "Operation": "Equal",
+              "Left": {
+                "$kind": "HookFactValue",
+                "Fact": "OwnerHandCount"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          }
+        }
+      }
+    ]
   },
   {
     "Name": "SelfFormingClay",

@@ -80,7 +80,7 @@ public sealed partial class SettingsMenu
             + "(In fights, Proc Tags: Amounts on proc tags). Here Ornamental Fan gives 4 block.",
             Tab("proc:OrnamentalFan", Relic<OrnamentalFan>(), number: 4));
         GuideCardCell(flow, Card<KinglyPunch>(), "Crossed: a warning",
-            "Playing this might be bad for you: it helps an enemy, hurts you, or gives up a relic's bonus. Often still the right play; "
+            "Playing this might be bad for you: it helps an enemy, hurts you, or gives up a relic's bonus (or makes it smaller). Often still the right play; "
             + "the slash makes sure you know. Here the enemy's Thorns hits you for 3.",
             Tab("proc:ThornsPower", Power<ThornsPower>(), crossed: true, number: 3));
         GuideCardCell(flow, Card<BallLightning>(), "A chance on a warning",

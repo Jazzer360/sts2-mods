@@ -4,15 +4,16 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// Decision #153: the tabs of powers that act on every card you play, whatever the card, and never run out start off; every other
-/// tab starts on, and one you've switched keeps your choice.
+/// Decision #153: the tabs of powers that act on every card you play, whatever the card, and never run out start off, and so do the
+/// relics' crossed tabs nearly every card gets (Cloak Clasp, Obsidian Vice: decision #251); every other tab starts on, and one you've
+/// switched keeps your choice.
 /// </summary>
 public class TabDefaultTests
 {
     private static readonly string[] EveryCard =
     {
         "AfterimagePower", "GravityPower", "SerpentFormPower", "MonologuePower", "TheSealedThronePower", "TenderPower",
-        "StranglePower", "OblivionPower", "SlowPower",
+        "StranglePower", "OblivionPower", "SlowPower", "CloakClasp", "ObsidianVice",
     };
 
     [Fact]

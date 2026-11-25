@@ -26,6 +26,20 @@ public class ReadModelParityTests
     };
 
     /// <summary>
+    /// Classes given a settings row since their conversion (decision #250, the owner's call): their tab is new, judged on the turn's outcome where the
+    /// hand-written model had none (BonusTabRowTests holds it to their code); what they do is compared as before.
+    /// </summary>
+    private static readonly Dictionary<string, string> NewTabs = new(StringComparer.Ordinal)
+    {
+        ["Orichalcum"] = "its block as your turn ends with none: a crossed tab on a play that gives you block",
+        ["FakeOrichalcum"] = "as Orichalcum's",
+        ["CloakClasp"] = "its block per card in hand as your turn ends: a crossed tab on a play that leaves fewer (off by default)",
+        ["ObsidianVice"] = "its damage per card in hand as your turn ends: a crossed tab on a play that leaves fewer (off by default)",
+        ["ScreamingFlagon"] = "its damage as your turn ends with an empty hand: a plain tab on a play that empties it",
+        ["HailstormPower"] = "its damage as your turn ends with a Frost orb: plain on a play that channels your first, crossed on one that evokes your last",
+    };
+
+    /// <summary>
     /// Differences reviewed: "Model.Hook" â†’ the game's line the read model follows and the hand-written one didn't, and why it changes no
     /// prediction (or which, a fix).
     /// </summary>
@@ -184,7 +198,7 @@ public class ReadModelParityTests
         Assert.Equal(hand.Tab, read.Tab);
         Assert.Equal(hand.Seen, read.Seen);
         Assert.Equal(hand.Instanced, read.Instanced);
-        Assert.Equal(hand.JudgedOnOutcome, read.JudgedOnOutcome);
+        if (!NewTabs.ContainsKey(name)) Assert.Equal(hand.JudgedOnOutcome, read.JudgedOnOutcome);
         // A tab judged on the outcome: the same rule for each owner (none, or a warning or a bonus, set off by the play or later).
         foreach (var owner in OwnersOf(read))
         {
@@ -192,7 +206,7 @@ public class ReadModelParityTests
             if (!ReviewedCrossing.ContainsKey(name))
                 Assert.True(hand.HarmfulFor(owner) == read.HarmfulFor(owner), $"{name}: crossed {read.HarmfulFor(owner)} for owner {owner}, the hand-written model {hand.HarmfulFor(owner)}");
             static string RuleOf(OutcomeRule? rule) => rule == null ? "none" : $"harmful {rule.Harmful}, in play {rule.InPlay}, by branch {rule.InBranch != null}, in some {rule.InSome != null}";
-            Assert.Equal(RuleOf(hand.OutcomeTab(Board(read, owner), new SimOutcome(), owner)), RuleOf(read.OutcomeTab(Board(read, owner), new SimOutcome(), owner)));
+            if (!NewTabs.ContainsKey(name)) Assert.Equal(RuleOf(hand.OutcomeTab(Board(read, owner), new SimOutcome(), owner)), RuleOf(read.OutcomeTab(Board(read, owner), new SimOutcome(), owner)));
         }
         var differences = new List<string>();
         var compared = 0;
@@ -739,6 +753,9 @@ public class ReadModelParityTests
     private static SimState Stripped(SimState state)
     {
         var copy = state.Clone();
+        // What a payout decided where it's paid kept for its tab (SimState.Payouts, decision #239): the tab's bookkeeping, not an effect; a class
+        // given a row since its conversion keeps it where its hand-written model kept nothing (NewTabs).
+        copy.Payouts = NamedCounts.Empty;
         foreach (var id in copy.PlayerIds)
         {
             var player = copy.MutablePlayer(id);
