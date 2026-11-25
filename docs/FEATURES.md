@@ -603,6 +603,8 @@ Setting: **Reward Tags** (`reward-tags`, on by default). Tags on the cards you'r
 
 **Check:** after you take a card, what the tags showed is compared with what happened: the cards that joined your deck (two with Bing Bong), Lucky Fysh's gold, and whether Book of Five Rings healed exactly when its tag showed. Skipping or sacrificing isn't checked. Lucky Fysh's amount comes from the game's own gold query (`Hook.ModifyGoldGained`, no side effects).
 
+**How it watches** (decisions #177, #255): the offered cards are searched for only when what could change them does (the screen on top, the shop opening, a press or release, the window's size, and a few times in the second after); in between, every card found is kept, shown or not, and each frame tags those on screen (a grid of cards hides and shows its holders as it scrolls). Whether a card is one of yours, and its tags, are worked out when the card on it, the settings or your run change. Dev mode searches anyway once a second and logs it if the kept cards were stale, as a set of cards: hovering one brings it to the front, which only changes their order.
+
 ### Event Reminders
 
 Setting: **Event Reminders** (`event-reminders`, on by default), with **Inspect event cards** (`EventInspect`) under it and **Chance under event icons** (`EventOdds`) under Show chances. **Patches:** `EventOption.Chosen` (observe-only prefix and postfix: the check).

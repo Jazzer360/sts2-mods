@@ -39,6 +39,8 @@ public class FrameCodeScanTests
         methods.Add(Method(typeof(CardOverlayRenderer), nameof(CardOverlayRenderer.Render)));
         methods.Add(Method(typeof(CardPredictions), nameof(CardPredictions.Update)));
         methods.Add(Method(typeof(MovableWidget), nameof(MovableWidget.UpdateLayout)));
+        methods.Add(Method(typeof(SpireQoL.Features.RunReminders), nameof(SpireQoL.Features.RunReminders.OfferedCardTabs)));
+        methods.Add(Method(typeof(SpireQoL.Features.RunReminders), "OfferedCards"));
         methods.AddRange(SharedFrameCode());
         return methods;
     }
@@ -143,6 +145,30 @@ public class FrameCodeScanTests
                     break;
                 }
         Assert.True(found.Count == 0, "A value boxed while widgets are placed, every frame (compare it as its own type): " + string.Join(", ", found));
+    }
+
+    /// <summary>A game getter that makes garbage on every call: a closure, an iterator or a lambda in its own code, or LINQ (CardModel.Pile).</summary>
+    private static bool MakesGarbage(MethodInfo getter) =>
+        (Code(getter) ?? new()).Any(instruction =>
+            instruction.opcode == OpCodes.Newobj && instruction.operand is ConstructorInfo { DeclaringType: { } made } && (made.Name.Contains("DisplayClass", StringComparison.Ordinal) || made.Name.StartsWith('<') || typeof(Delegate).IsAssignableFrom(made))
+            || instruction.operand is MethodInfo { DeclaringType: { } linq } && linq == typeof(Enumerable));
+
+    [Fact]
+    public void WhatRunsOnEveryFrameAsksNoGameGetterThatMakesGarbage()
+    {
+        // What runs on every frame whatever changed: the code every feature shares, the widgets' placement, and the offered cards' frame (a dev
+        // review: CardModel.Pile, asked of each card on a card reward every frame, looks through your piles with a closure: 0.5 KB a frame).
+        var methods = SharedFrameCode();
+        methods.Add(Method(typeof(MovableWidget), nameof(MovableWidget.UpdateLayout)));
+        methods.Add(Method(typeof(SpireQoL.Features.RunReminders), nameof(SpireQoL.Features.RunReminders.OfferedCardTabs)));
+        methods.Add(Method(typeof(SpireQoL.Features.RunReminders), "OfferedCards"));
+        var found = new List<string>();
+        foreach (var method in methods)
+            foreach (var instruction in Code(method) ?? new())
+                if (instruction.operand is MethodInfo { IsSpecialName: true, DeclaringType.Namespace: { } space } getter && getter.Name.StartsWith("get_", StringComparison.Ordinal)
+                    && space.StartsWith("MegaCrit", StringComparison.Ordinal) && MakesGarbage(getter))
+                    found.Add($"{NameOf(method)} ({getter.DeclaringType!.Name}.{getter.Name[4..]})");
+        Assert.True(found.Count == 0, "A game getter that makes garbage, asked on every frame (ask it when what it reads changes, in a method of its own): " + string.Join(", ", found.Distinct()));
     }
 
     [Fact]

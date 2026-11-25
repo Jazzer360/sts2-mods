@@ -65,6 +65,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Fixed
 - The session summary no longer counts a fight's winning turn as unchecked: the preview's check, skipped because the play ended the fight, now counts as the expected skip the other checks' are.
+- Reward Tags: no garbage on every frame while cards are on offer (whether each was one of yours was looked up through all your piles every frame), and the cards of a grid (an event's choice) that come back into view as it scrolls get their tags at once instead of at the next click. Dev mode no longer takes a hovered card brought to the front for a missed change.
 - No garbage on every frame of a fight from the widgets beside the HP bar (Relic Counters): the fight it logged the bar's place for was compared as an object.
 - Much less garbage in fights: the check for a change on the board asked every power on every creature, on every frame, whether its code keeps who applied it, and worked that out from the power's code each time (about 9 KB a frame in a fight, two thirds of what the mod allocated on the game's thread, and the collections that came with it). That and a power's, relic's or enchantment's own fields are now worked out once.
 - Violent Chord and Song Path count your first Wah or Cho this turn by the play itself, as the game does: a Wah or Cho that Lost Lute plays off your draw pile inside it no longer stops the card you played from counting as the first (it showed no damage or block from them).
