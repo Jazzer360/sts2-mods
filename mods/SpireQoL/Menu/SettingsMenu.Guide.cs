@@ -428,7 +428,7 @@ public sealed partial class SettingsMenu
         example.AddChild(UiKit.Label("50%", size: 18, Colors.White));
         example.AddChild(UiKit.Label("  12/40", size: 20, Colors.White));
         GuideRow(example, "Death Skull",
-            "Beside an enemy's HP: it dies before acting if you end your turn now (Poison, your end-of-turn damage, orbs). "
+            "Beside an enemy's HP: it dies before acting if you end your turn now (Poison, your end-of-turn damage, orbs), even if its own death brings it straight back (the Waterfall Giant). "
             + "With a chance when a roll decides it (In fights: Chances, Death chances). With a range and ? when the fight was too big to work out (from the kills already certain up).");
     }
 

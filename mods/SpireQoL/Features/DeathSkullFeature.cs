@@ -59,7 +59,7 @@ public sealed class DeathSkullFeature : IFeature, IFrameFeature
         foreach (var (enemy, id) in model.Ids)
         {
             if (!enemy.IsAlive || !enemy.IsEnemy) continue;
-            var chance = model.Outcome.DeadChanceRange(id);
+            var chance = model.Outcome.DeathSkullChance(id);
             if (chance.Certain)
             {
                 show[enemy] = null;

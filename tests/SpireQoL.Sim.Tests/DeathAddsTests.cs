@@ -139,6 +139,34 @@ public class DeathAddsTests
     }
 
     [Fact]
+    public void AGiantYourEndOfTurnKillsDiesBeforeActingForTheDeathSkull()
+    {
+        // Decision #295: your end of turn kills it (Lightning's passive), Steam Eruption brings it straight back. The Death Skull says it dies
+        // before acting (DeathSkullChance); the lethal tag's "dead when it would act" (DeadChanceRange) and the enemy turn are unchanged.
+        var state = Fight(Giant(hp: 3));
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        state.You.OrbCapacity = 1;
+        var outcome = SimEngine.Run(state);
+        var giant = Assert.Single(outcome.Branches).Enemy(id: 0)!;
+        Assert.True(giant.Revived);
+        Assert.False(giant.DiedBeforeActing);
+        Assert.True(outcome.DeathSkullChance(enemyId: 0).Certain);
+        Assert.False(outcome.DeadChanceRange(enemyId: 0).Possible);
+        Assert.Equal(0, outcome.TakenMax);
+    }
+
+    [Fact]
+    public void AGiantYourEndOfTurnLeavesAliveHasNoDeathSkull()
+    {
+        var state = Fight(Giant(hp: 10));
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        state.You.OrbCapacity = 1;
+        var outcome = SimEngine.Run(state);
+        Assert.False(outcome.DeathSkullChance(enemyId: 0).Possible);
+        Assert.False(Assert.Single(outcome.Branches).Enemy(id: 0)!.RevivedBeforeActing);
+    }
+
+    [Fact]
     public void ARevivedGiantIsATargetForTheHitsAfterIt()
     {
         // The first random hit can kill the Giant; the second lands on it or the other enemy, half the time each, where a dead Giant left the other the

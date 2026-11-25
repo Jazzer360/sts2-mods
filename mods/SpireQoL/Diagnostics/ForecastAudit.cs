@@ -478,7 +478,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         // The chances (decision #95): each one between 0 and 100% with what happened, totalled per fight and over the session.
         foreach (var (_, id) in forecast.Ids)
             if (forecast.State.Enemy(id) is { Hp: > 0 } simEnemy && actuals.TryGetValue(id, out var act))
-                Odds($"{simEnemy.Name} dies before acting", shownChances.DeadChanceRange(id), act.Died);
+                Odds($"{simEnemy.Name} dies before acting", shownChances.DeathSkullChance(id), act.DiedBeforeItsMove);
         Odds("you die", shownChances.YouDieChance(), youDied);
         // The most likely outcome Incoming Damage showed (decision #155): what you lost (or your death), as it said.
         if (forecast.Outcomes.Count > 1 && forecast.MostLikely is { } likely)
@@ -531,10 +531,10 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     /// so every range below covers every outcome.
     /// </summary>
     private static List<(string Issue, string? Monster)> EnemyIssues(TurnEndModel forecast, List<CombatHistoryEntry> window, List<CombatHistoryEntry> endOfTurn, Player me, out string summary,
-        out Dictionary<int, (int Hp, int Through, bool Died)> actuals)
+        out Dictionary<int, (int Hp, int Through, bool Died, bool DiedBeforeItsMove)> actuals)
     {
         var result = new List<(string, string?)>();
-        actuals = new Dictionary<int, (int Hp, int Through, bool Died)>();
+        actuals = new Dictionary<int, (int Hp, int Through, bool Died, bool DiedBeforeItsMove)>();
         var parts = new List<string>();
         summary = "";
         var outcome = forecast.Outcome;
@@ -569,7 +569,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             parts.Add($"{name} HP {start.Hp}→{hpAtTurnEnd} (pred {Range(outcome.HpAtTurnEndMin(id), outcome.HpAtTurnEndMax(id))}), through {through} (pred {Range(outcome.UnblockedAtTurnEndMin(id), outcome.UnblockedAtTurnEndMax(id))}), " +
                       $"died before acting {(diedBeforeActing ? "yes" : "no")} (pred {(outcome.DeadInAll(id) ? "always" : outcome.DeadInAny(id) ? "sometimes" : "never")})");
 
-            actuals[id] = (hpAtTurnEnd, through, diedBeforeActing);
+            // The Death Skull's meaning (decision #295): killed before its move, whether its own death's code brought it back or not.
+            actuals[id] = (hpAtTurnEnd, through, diedBeforeActing, killAt >= 0 && (moveAt < 0 || killAt < moveAt) && !hitAfterKill);
             if (outcome.DeadInAll(id) && !diedBeforeActing)
                 result.Add(($"enemy death: {name} predicted dead before acting, but it lived to act (or outlived you)", monster));
             if (!outcome.DeadInAny(id) && diedBeforeActing)

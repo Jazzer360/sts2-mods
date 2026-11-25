@@ -124,6 +124,11 @@ public sealed class SimEnemy
     /// </summary>
     public bool Revived;
     /// <summary>
+    /// It died before the enemies' moves began (your turn, your end of turn, the enemies' turn start) and its own death's code brought it straight
+    /// back (the Waterfall Giant): it died before acting all the same, as the Death Skull says (decision #295), though it's alive when it would act.
+    /// </summary>
+    public bool RevivedBeforeActing;
+    /// <summary>
     /// Each hit's amount on teammate k (their own Vulnerable, Intangible, Tank...: the game's damage math per
     /// target); missing: the same as yours.
     /// </summary>
@@ -248,7 +253,7 @@ public sealed class SimEnemy
     {
         key.Add(Id); key.Add(Hp); key.Add(Block); key.Add(UnblockedInstances); key.Add(Poison); key.Add(DiedBeforeActing ? 1 : 0);
         key.Add(Stunned ? 1 : 0); key.Add(IntendsToAttack ? 1 : 0); key.Add(BlockBroken ? 1 : 0); key.Add(KilledByItsPower ? 1 : 0);
-        key.Add(MoveBlock); key.Add(Revived ? 1 : 0);
+        key.Add(MoveBlock); key.Add(Revived ? 1 : 0); key.Add(RevivedBeforeActing ? 1 : 0);
         Powers.Hash(ref key); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         Fields.Hash(ref key);
         key.Add(Hits.Count); foreach (var hit in Hits) key.Add(hit);

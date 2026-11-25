@@ -78,6 +78,13 @@ public sealed class SimOutcome
     /// before it acts), so the range's floor is the deaths already settled.</remarks>
     public SimChance DeadChanceRange(int enemyId) => Chance(branch => branch.Enemy(enemyId) is { DiedBeforeActing: true } || (Truncated && !branch.EnemyTurnNow && branch.Enemy(enemyId) is { Alive: false, StartedAlive: true }), lasting: true);
 
+    /// <summary>
+    /// The Death Skull's chance (decision #295): the enemy dies before it would act, dead then (DeadChanceRange) or brought straight back by its own
+    /// death's code (the Waterfall Giant: SimEnemy.RevivedBeforeActing). The lethal tag keeps DeadChanceRange's meaning: dead when it would act.
+    /// </summary>
+    public SimChance DeathSkullChance(int enemyId) => Chance(branch => branch.Enemy(enemyId) is { } enemy && (enemy.DiedBeforeActing || enemy.RevivedBeforeActing)
+        || (Truncated && !branch.EnemyTurnNow && branch.Enemy(enemyId) is { Alive: false, StartedAlive: true }), lasting: true);
+
     /// <summary>The chance the enemy turn kills you (nothing left to save you).</summary>
     public SimChance YouDieChance() => Chance(branch => branch.Died);
 
@@ -1580,6 +1587,10 @@ public static partial class SimEngine
             enemy.DiedBeforeActing = true;
             if (HitCount(enemy) > 0) state.SkippedPoisoned++;
         }
+        // One its own death brought straight back so far (Steam Eruption's revive: every death until now came before any enemy moved) died
+        // before acting all the same: the Death Skull's meaning (decision #295).
+        foreach (var enemy in state.Enemies)
+            if (enemy.Revived) enemy.RevivedBeforeActing = true;
         // Each enemy's block this turn (CombatManager.StartTurn clears it unless a listener's ShouldClearBlock says no: Creature.ClearBlock, Barricade's
         // and Burrowed's read from their code; its moves' block adds to it): what the damage hitting it back during the turn meets. What your turn left
         // them (the outcome reads it) comes back once the turn is over; its count of hits through block goes on through the turn, as the wake rules
