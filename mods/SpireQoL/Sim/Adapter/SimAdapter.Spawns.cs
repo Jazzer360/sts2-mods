@@ -19,7 +19,38 @@ public static partial class SimAdapter
         ["a loop"] = "creatures added in a loop the reader can't count (a foreach, a bound it can't work out on the board)",
         ["set up"] = "a property set on a monster before it joins that the adapter can't set on a copy of it (no such property, a value it can't work out)",
         ["unread"] = "a condition or a monster the evaluator can't read on the board",
+        ["changeable"] = "a test or a value on the way to it that a play can change before the death, other than its source's own amount (decision #315)",
+        ["asked as it dies"] = "a test of its source's amount that doesn't hold on the board: asked as the death runs, and should a play make it hold, the creature it adds isn't read (decision #315)",
     };
+
+    /// <summary>
+    /// What a test or a value in a power's AfterDeath reads that a play or a turn can change before the death (decision #311's rule outside a card's
+    /// steps, decision #315): whether it reads its own Amount (Stock's base.Amount: the spawn keeps the amount it was read with, SimSpawn.ReadAtAmount,
+    /// and the death asks it as it runs), and the first other such input, named. A hook's parameters (the dying creature, wasRemovalPrevented) are
+    /// what the read model's step asks as it runs; its own Owner and the fight are fixed; any other state of its own is what its hooks and the
+    /// commands on it change (never fixed as a card's own values are: ConditionReader.ChangeableInput's card rule doesn't hold for a power).
+    /// </summary>
+    internal static (bool ReadsOwnAmount, string? Other) SpawnInputs(ProgramValue value, Type powerType, ModelProgram program)
+    {
+        static bool OwnAmount(ProgramValue part) => part is QueryValue { Name: nameof(PowerModel.Amount), IsProperty: true, Of: NamedValue { Name: "this" } };
+        var readsOwnAmount = value.Parts().Any(OwnAmount);
+        var withoutAmount = value.Map(part => OwnAmount(part) ? new ConstantValue(0) : null);
+        foreach (var part in withoutAmount.Parts())
+            if (part is QueryValue { Of: NamedValue { Name: "this" } } own && !ConditionReader.FixedQueries.Contains(own.Name)) return (readsOwnAmount, $"its {own.Name}");
+        return (readsOwnAmount, ConditionReader.ChangeableInput(withoutAmount, new ConditionReader.Context(powerType, RuntimeCode.Read, Board: null, program)));
+    }
+
+    private static (bool ReadsOwnAmount, string? Other) SpawnInputs(ProgramCondition condition, Type powerType, ModelProgram program)
+    {
+        var readsOwnAmount = false;
+        foreach (var literal in condition.Literals)
+        {
+            var (amount, other) = SpawnInputs(literal.Test, powerType, program);
+            readsOwnAmount |= amount;
+            if (other != null) return (readsOwnAmount, other);
+        }
+        return (readsOwnAmount, null);
+    }
 
     /// <summary>
     /// The creatures <paramref name="creature"/>'s death adds (SimEnemy.Spawns), in the order its powers' AfterDeath code adds them, each with the power
@@ -47,18 +78,41 @@ public static partial class SimAdapter
                 if (!program.All().Any(step => step is CommandStep { Command.FullName: "CreatureCmd.Add" })) continue;
                 var parameters = new Dictionary<string, object?> { ["target"] = creature, ["creature"] = creature, ["wasRemovalPrevented"] = false };
                 var board = ProgramBoard.Of(power);
+                var powerType = power.GetType();
+                // Its code reads its own amount on the way to a creature (decision #315): each it adds keeps the amount it was read with.
+                var readsOwnAmount = false;
+                var first = spawns?.Count ?? 0;
+                var changeableSetUp = new HashSet<string>(StringComparer.Ordinal);
                 static bool Adds(ProgramStep step) => step is CommandStep { Command.FullName: "CreatureCmd.Add" } || step is LoopStep loop && loop.Body.Any(Adds);
                 void Walk(IReadOnlyList<ProgramStep> steps, Dictionary<string, List<(string Property, object? Value)>> setUp)
                 {
                     foreach (var step in steps)
                     {
+                        // A test a play can change is never decided on the board (decision #315): its own amount is asked as the death runs; anything
+                        // else makes the creature it adds unread (the death unknown).
+                        var (testsOwnAmount, changeable) = step.Condition == null ? (false, null) : SpawnInputs(step.Condition, powerType, program);
+                        if (changeable != null)
+                        {
+                            if (Adds(step)) Unread("changeable");
+                            continue;
+                        }
+                        readsOwnAmount |= testsOwnAmount && Adds(step);
                         var holds = step.Condition == null ? true : ProgramEvaluator.Holds(step.Condition, board, program, parameters);
                         if (holds == null && Adds(step)) Unread("unread");
+                        // Its amount's test not holding on the board: the read step asks it again as the death runs (the same amount, the same
+                        // answer); should a play make it hold, the creature isn't read.
+                        if (holds == false && testsOwnAmount && Adds(step)) Unread("asked as it dies");
                         if (holds != true) continue;
                         switch (step)
                         {
                             case LoopStep loop:
                                 // A counter loop (for i < n): each round makes and adds its own creature.
+                                if (loop.While != null && SpawnInputs(loop.While, powerType, program) is var (boundReadsAmount, boundChangeable)
+                                    && (boundChangeable != null || boundReadsAmount))
+                                {
+                                    if (Adds(loop)) Unread("changeable");
+                                    continue;
+                                }
                                 if (CounterRounds(loop, board, program, parameters) is not { } rounds)
                                 {
                                     if (Adds(loop)) Unread("a loop");
@@ -71,6 +125,11 @@ public static partial class SimAdapter
                             {
                                 var monsterClass = made.Field[ProgramReader.MadeMonsterPrefix.Length..made.Field.LastIndexOf('.')];
                                 var property = made.Field[(made.Field.LastIndexOf('.') + 1)..];
+                                // A value a play can change (decision #315): its own amount (Stock's StockAmount = Amount - 1) kept as read with; any
+                                // other input leaves the monster unread.
+                                var (setUpReadsAmount, setUpChangeable) = SpawnInputs(made.Value, powerType, program);
+                                readsOwnAmount |= setUpReadsAmount;
+                                if (setUpChangeable != null) changeableSetUp.Add(monsterClass);
                                 setUp[monsterClass] = (setUp.TryGetValue(monsterClass, out var earlier) ? earlier : new List<(string, object?)>())
                                     .Append((property, ProgramEvaluator.Value(made.Value, board, program, parameters))).ToList();
                                 break;
@@ -82,6 +141,11 @@ public static partial class SimAdapter
                                 if (name == null || MonsterType(name) is not { } type)
                                 {
                                     Unread("unread");
+                                    continue;
+                                }
+                                if (madeClass != null && changeableSetUp.Contains(madeClass))
+                                {
+                                    Unread("changeable");
                                     continue;
                                 }
                                 var monster = madeClass != null ? SetUp(type, setUp.TryGetValue(madeClass, out var properties) ? properties : new List<(string, object?)>(), combat) : CanonicalMonster(type);
@@ -100,6 +164,8 @@ public static partial class SimAdapter
                     }
                 }
                 Walk(program.Steps, new Dictionary<string, List<(string, object?)>>(StringComparer.Ordinal));
+                if (readsOwnAmount && spawns != null)
+                    for (var index = first; index < spawns.Count; index++) spawns[index] = spawns[index] with { ReadAtAmount = power.Amount };
             }
             catch
             {

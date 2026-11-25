@@ -82,6 +82,37 @@ public class DeathAddsTests
         Assert.Equal("Axebot", next.Monster);
     }
 
+    private static SimEnemy AxebotReadAt(int stock) => new()
+    {
+        Id = 0, Name = "Axebot", Hp = 4, Powers = PowerSet.Empty.With(PowerId.Stock, amount: stock),
+        Spawns = new List<SimSpawn>
+        {
+            new("Axebot", new[] { 90 }) { Source = PowerId.Stock, Monster = "Axebot", UniqueFromEarlier = true, Powers = PowerSet.Empty.With(PowerId.Stock, amount: stock - 1), ReadAtAmount = stock },
+        },
+    };
+
+    [Fact]
+    public void StocksNextAxebotReadWithItsStockOnTheBoardJoinsWhileTheDeathHasThatStock()
+    {
+        // StockPower.AfterDeath reads its own Amount on the way (Amount > 0) and into the next Axebot (StockAmount = Amount - 1): the adapter reads it
+        // with the board's amount, and the death asks it as it runs (decision #315). Killed with the same Stock, it's the creature read.
+        var branch = Assert.Single(SimEngine.Run(Fight(AxebotReadAt(stock: 2)), Strike(target: 0, damage: 6)).Branches);
+        Assert.Null(branch.Unmodelled);
+        Assert.Equal(1, branch.Enemy(id: 1)!.Powers[PowerId.Stock]);
+    }
+
+    [Fact]
+    public void StocksNextAxebotIsUnknownWhenThePlayChangedItsStockBeforeTheDeath()
+    {
+        // The play takes one Stock off before its kill: the next Axebot would start with none and 10 more HP, not the one read on the board, so the death
+        // is unknown, never the board's creature (decision #315).
+        var play = Strike(target: 0, damage: 6);
+        play.Body.Insert(0, new ApplyPowerAction(PowerId.Stock, Amount: -1));
+        var outcome = SimEngine.Run(Fight(AxebotReadAt(stock: 2)), play);
+        Assert.True(outcome.AnyUnmodelled);
+        Assert.Contains(outcome.Branches, branch => branch.Unmodelled?.Contains("read with its StockPower at 2, now 1", StringComparison.Ordinal) == true);
+    }
+
     [Fact]
     public void ACreatureADeathAddsThatWasntReadMakesItUnknown()
     {

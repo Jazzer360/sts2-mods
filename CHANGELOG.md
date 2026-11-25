@@ -230,6 +230,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Cruelty and Fan of Knives played: their power lands in the predictions (it was left out, having nothing of its own to predict), so what reads it there counts it: Vulnerable's extra damage from Cruelty, a Shiv hitting every enemy with Fan of Knives.
 - Doom's kill as the enemies' turn ends runs each doomed enemy's own death effects as it dies, before Book Repair Knife's heal, as the game does: Explosive's damage comes first, so the heal isn't lost to your max HP.
 - A card's step on a test of something the play itself can change is no longer decided before the play and left out or kept on that: Sovereign Blade's block follows your Parry as it plays, and where a test isn't followed yet the card shows `?` and a range instead: a replay's later play of Memento Mori, Dredge, Optimism, Storm of Steel, The Moon and Imitation Learning, whose first play reads things as they stand.
+- An Axebot's death brings in the next Axebot as its Stock stands when it dies: a play that changed its Stock first shows `?` instead of the Axebot its Stock on the board would bring.
 
 #### Removed
 - Biiig Hug's tag and its settings row: the Soot it adds on a shuffle never makes a shuffle worth avoiding. The Soot is still worked out (a later draw can find it, and your relics and powers that react to a card you make hear it).

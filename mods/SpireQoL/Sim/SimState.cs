@@ -398,6 +398,15 @@ public sealed record SimSpawn(string Name, IReadOnlyList<int> Hp)
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Unread { get; init; }
+
+    /// <summary>
+    /// The amount of its source power on the dying creature it was read with, where its code reads that amount on the way to adding it or setting
+    /// it up (StockPower's base.Amount: the next Axebot's StockAmount, its HP and Stock): a play or a turn can change it before the death, so the
+    /// death asks it as it runs (SimEngine.Spawn), and another amount then makes the death unknown, never the board's creature (decision #315).
+    /// Null: its code reads nothing a play can change.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? ReadAtAmount { get; init; }
 }
 
 /// <summary>

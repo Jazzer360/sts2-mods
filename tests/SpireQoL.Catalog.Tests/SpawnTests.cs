@@ -124,6 +124,33 @@ public class SpawnTests
         Assert.False(final.Powers.Has(PowerId.Stock));
     }
 
+    [Fact]
+    public void StocksNextAxebotIsReadWithTheAmountItsDeathAsksAsItRuns()
+    {
+        // StockPower.AfterDeath tests its own Amount (> 0) and sets the next Axebot up from it (StockAmount = Amount - 1): a play can change it before the
+        // death, so it's never decided on the board alone (decision #315). Each spawn keeps the amount it was read with (the death asks it as it runs);
+        // a test of it that doesn't hold on the board is asked as it dies too: listed unread, never a death that adds nothing.
+        var fight = new GameFight();
+        var axebot = fight.Combat.CreateCreature(ModelDb.Monster<Axebot>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(axebot);
+        ModelDb.Power<StockPower>().ToMutable().ApplyInternal(axebot, amount: 2m);
+        Assert.Equal(2, Assert.Single(SimAdapter.SpawnsOf(axebot, fight.Combat)!).ReadAtAmount);
+        var empty = fight.Combat.CreateCreature(ModelDb.Monster<Axebot>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(empty);
+        // A Stock of none on the board (as a play could leave it: the game removes it at 0, so set here past its apply).
+        var none = ModelDb.Power<StockPower>().ToMutable();
+        none.ApplyInternal(empty, amount: 1m);
+        none.SetAmount(0, silent: true);
+        var unread = Assert.Single(SimAdapter.SpawnsOf(empty, fight.Combat)!);
+        Assert.Equal(PowerId.Stock, unread.Source);
+        Assert.Equal(SimAdapter.SpawnGaps["asked as it dies"], unread.Unread);
+        // Infested's and Surprise's read only what the death is given: nothing to ask again.
+        var parasite = fight.Combat.CreateCreature(ModelDb.Monster<PhrogParasite>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(parasite);
+        ModelDb.Power<InfestedPower>().ToMutable().ApplyInternal(parasite, amount: 1m);
+        Assert.All(SimAdapter.SpawnsOf(parasite, fight.Combat)!, spawn => Assert.Null(spawn.ReadAtAmount));
+    }
+
     /// <summary>
     /// A creature a death adds joins doing nothing this turn (SimEngine.Spawn adds it with no hits): its first move, as its class's move rules make it
     /// for the monster set up as the death's code sets it up, has no attack intent (the Wrigglers' and gremlins' SPAWNED_MOVE, the next Axebot's Boot

@@ -145,6 +145,12 @@ public static partial class SimEngine
             state.Unmodelled ??= $"a creature {state.Enemy(pending.Dead)!.Name}'s death adds isn't read ({spawn.Unread ?? "no HP"})";
             return new[] { state };
         }
+        // Read with its source's amount on the board (Stock's next Axebot): asked as the death runs (decision #315), another amount isn't the creature read.
+        if (spawn.ReadAtAmount is { } readAt && state.Enemy(pending.Dead)!.Powers[pending.Source] != readAt)
+        {
+            state.Unmodelled ??= $"a creature {state.Enemy(pending.Dead)!.Name}'s death adds was read with its {pending.Source.Name} at {readAt}, now {state.Enemy(pending.Dead)!.Powers[pending.Source]}";
+            return new[] { state };
+        }
         var raw = spawn.RawHp ?? spawn.Hp;
         var taken = spawn.UniqueFromEarlier ? state.Enemies.Where(enemy => enemy.AddedBy == pending.Dead).Select(enemy => enemy.Hp).ToHashSet() : null;
         var free = Enumerable.Range(0, spawn.Hp.Count).Where(index => taken?.Contains(raw[index]) != true).ToList();

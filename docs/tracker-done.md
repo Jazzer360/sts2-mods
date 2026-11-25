@@ -258,6 +258,7 @@ written when checked off: the record of how each was done. What's open stays in 
 - [x] Personal Hive's crossed tab counts its Dazed: its amount per powered attack hit (decision #161), held to the cards created by the play check.
 - [x] Red Skull's Strength mid-play (2026-11-22, a dev review report: Hemokinesis at 42/80 hit for 28, predicted 24): `RedSkull.AfterDamageReceived` gives it as HP lost reaches the threshold, once (`StrengthApplied`).
 - [x] No Draw stopping a card's draws gets its tab (2026-11-22, the owner's request, decision #171); the checks expect No Draw to flash on those plays, and a fight that ends mid-play makes fewer of Personal Hive's Dazed than its tab counted.
+- [x] A death's adds decided on the board (decision #315): each test and set-up value on the way to a CreatureCmd.Add is told apart by what it reads (`SimAdapter.SpawnInputs`); the source's own amount is kept with each creature read (`SimSpawn.ReadAtAmount`) and asked as the death runs (another amount: unknown); a test of it not holding on the board is a creature not read; any other input a play can change leaves it unread.
 
 ## 19. Game v0.113.1 (beta, 2026-11-14)
 - [x] 0.36.2: Adroit's block gets Stretch on any card (simulator, Pael's Legion and Vambrace tabs), Adroit cards get the Stretch tab and spend it in the play check, and a replayed Adroit card's later plays gain without the Stretch, Pael's Legion or Vambrace the first play spent. Reverses 0.35.3.
