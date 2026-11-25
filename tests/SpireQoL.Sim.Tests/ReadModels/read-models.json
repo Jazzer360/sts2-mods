@@ -23213,6 +23213,572 @@
     }
   },
   {
+    "Name": "PlowPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageReceived",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0038",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:004B",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Greater",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HitUnblocked"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0063",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CreatureHp",
+                    "Creature": {
+                      "Who": "Target",
+                      "PetOwner": false
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "Powers": [
+              "CoordinatePower",
+              "CrushUnderPower",
+              "DarkShacklesPower",
+              "DyingStarPower",
+              "EnfeeblingTouchPower",
+              "FeedingFrenzyPower",
+              "FlexPotionPower",
+              "ManglePower",
+              "MockTemporaryStrengthLossPower",
+              "MonarchsGazeStrengthDownPower",
+              "PiercingWailPower",
+              "ReptileTrinketPower",
+              "SetupStrikePower",
+              "ShacklingPotionPower"
+            ],
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0038",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:004B",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Greater",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HitUnblocked"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0063",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CreatureHp",
+                    "Creature": {
+                      "Who": "Target",
+                      "PetOwner": false
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "Powers": [
+              "StrengthPower"
+            ],
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0038",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:004B",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Greater",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HitUnblocked"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0063",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CreatureHp",
+                    "Creature": {
+                      "Who": "Target",
+                      "PetOwner": false
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "RitualPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookWays",
+              "Ways": [
+                {
+                  "When": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "CeremonialBeast.get_RitualAmount:0005",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "Dread"
+                      }
+                    }
+                  },
+                  "Value": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                },
+                {
+                  "When": {
+                    "$kind": "HookTest",
+                    "At": "CeremonialBeast.get_RitualAmount:0005",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "Dread"
+                    }
+                  },
+                  "Value": {
+                    "$kind": "HookConstant",
+                    "Value": 2
+                  }
+                }
+              ]
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0038",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "TargetIsOwner"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:004B",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Greater",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "HitUnblocked"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0063",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureHp",
+                        "Creature": {
+                          "Who": "Target",
+                          "PetOwner": false
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "Amount"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:01B1",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CreatureMonsterIs",
+                    "Of": "CeremonialBeast",
+                    "Creature": {
+                      "Who": "Owner",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CSetStunned\u003Ed__57.MoveNext:00A6",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookWays",
+                      "Ways": [
+                        {
+                          "When": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "CeremonialBeast.get_RitualAmount:0005",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "Dread"
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookTest",
+                            "At": "CeremonialBeast.get_RitualAmount:0005",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "Dread"
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookConstant",
+                            "Value": 2
+                          }
+                        }
+                      ]
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StunStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0038",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "TargetIsOwner"
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:004B",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Greater",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "HitUnblocked"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0063",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureHp",
+                      "Creature": {
+                        "Who": "Target",
+                        "PetOwner": false
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookFactValue",
+                      "Fact": "Amount"
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:01B1",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreatureMonsterIs",
+                  "Of": "CeremonialBeast",
+                  "Creature": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StunStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0038",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "TargetIsOwner"
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:004B",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Greater",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "HitUnblocked"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0063",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureHp",
+                      "Creature": {
+                        "Who": "Target",
+                        "PetOwner": false
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookFactValue",
+                      "Fact": "Amount"
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:01B1",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CreatureMonsterIs",
+                    "Of": "CeremonialBeast",
+                    "Creature": {
+                      "Who": "Owner",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0038",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:004B",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Greater",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HitUnblocked"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__8.MoveNext:0063",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CreatureHp",
+                    "Creature": {
+                      "Who": "Target",
+                      "PetOwner": false
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "Stuns"
+  },
+  {
     "Name": "PoisonPower",
     "Kind": "Power",
     "Hooks": [

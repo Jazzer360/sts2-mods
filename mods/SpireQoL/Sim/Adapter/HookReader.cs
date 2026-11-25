@@ -1635,6 +1635,11 @@ public static class HookReader
                     return new[] { Data(data) with { When = Condition(step.Condition) } };
                 case LoopStep loop:
                 {
+                    // A loop removing every power its owner has of a class (foreach over base.Owner.GetPowerInstances<TemporaryStrengthPower>().ToList():
+                    // PowerCmd.Remove(item): Plow's): each power class of the game's that is one off its owner (decision #275).
+                    if (loop.Items is { } instances && OwnersPowersOf(instances) is { } powerClass && loop.Body is [CommandStep { Command.FullName: "PowerCmd.Remove" } removeEach]
+                        && removeEach.Values is [var removed] && StepValues.IsEach(Unstored(removed)))
+                        return new HookStep[] { new RemovePowerStep { Powers = Removable(new[] { powerClass }), When = Condition(step.Condition) } };
                     // A loop over the fight's players or its hittable enemies (foreach): its body once for each, the item Each inside it.
                     if (loop.Items is { } items && ItemsOf(items) is { } over)
                     {
@@ -1981,6 +1986,10 @@ public static class HookReader
                         Debuff = LandsAsDebuff(_type.Name, offset), DebuffWhenNegative = offset is not HookConstant && AllowsNegative(_type.Name), By = by, GoesAtZero = !AllowsNegative(_type.Name),
                     };
                 }
+                // Another power of its owner's removed by its class (PowerCmd.Remove<StrengthPower>(base.Owner): Plow's): that power off its owner, when
+                // nothing of its own runs as it goes (no AfterRemoved of its class's).
+                case "PowerCmd.Remove" when member.GenericArguments is [var removedClass] && values.Count == 1 && IsOwner(Unstored(values[0])):
+                    return new RemovePowerStep { Powers = Removable(new[] { removedClass }) };
                 case "PowerCmd.Remove" or "PowerCmd.Decrement" or "PowerCmd.TickDownDuration":
                     if (values[0] is not NamedValue { Name: "this" }) throw new Gap(ReaderCapability.CommandOnAnotherPower, $"gap: {member.FullName} of another power");
                     return member.Name == "Remove" ? new RemovePowerStep() : new DecrementPowerStep();
@@ -2237,6 +2246,9 @@ public static class HookReader
         {
             switch (test)
             {
+                // The run on the Dread ascension, tested (Ceremonial Beast's RitualAmount: IsDread() ? 2 : 0): decision #275.
+                case QueryValue { Type: "AscensionHelper", Name: "IsDread", Arguments.Count: 0 }:
+                    return new HookFactValue(HookFact.Dread);
                 // A pick from the owner's hand tested as there, in the condition of the step it guards (FreeInHandStep: the step acts on what the
                 // hand holds).
                 case QueryValue { Name: "NextItem", Arguments: [var picked] } when _handPickHolds && FromOwnersHand(picked):
@@ -2766,6 +2778,14 @@ public static class HookReader
         {
             switch (value)
             {
+                // The run on the Dread ascension (AscensionHelper.IsDread(): Ceremonial Beast's RitualAmount), which a player knows (decision #275).
+                case QueryValue { Type: "AscensionHelper", Name: "IsDread", Arguments.Count: 0 }:
+                    return new HookFactValue(HookFact.Dread);
+                // A property of its owner's monster's class with no setter (Ceremonial Beast's RitualAmount, read in a method of that class its power
+                // calls on it: decision #275): what its getter's code returns, its this that monster.
+                case QueryValue { IsProperty: true, Type: var monsterClass, Name: var monsterProperty, Of: QueryValue { Name: "Monster", Of: { } monsterOf } monster } when IsOwner(Unstored(monsterOf))
+                    && OwnersMonsterGetter(monsterClass, monsterProperty) is (Type monsterType, MethodBase getter):
+                    return Ways((WaysValue)ProgramReader.ReadReturnedWays(monsterType, getter, _read).Map(part => part is NamedValue { Name: "this" } ? monster : null));
                 // An orb's value read in its own programs (this.PassiveVal): the value as the game shows it, which its getter's code works out.
                 case QueryValue { Of: NamedValue { Name: "this" }, IsProperty: true, Name: var shown } when _kind == ModelKind.Orb && _shownValues && OrbValueProperties().Contains(shown):
                     return new HookOrbProperty(shown);
@@ -3303,6 +3323,50 @@ public static class HookReader
         // ---- what values are
 
         /// <summary>
+        /// The power class a value lists its owner's powers of (base.Owner.GetPowerInstances&lt;T&gt;(), made a list or not), or null.
+        /// </summary>
+        private static string? OwnersPowersOf(ProgramValue value) => Unstored(value) switch
+        {
+            QueryValue { Name: "ToList", Arguments: [var listed] } => OwnersPowersOf(listed),
+            QueryValue { Name: "GetPowerInstances", GenericArguments: [var power], Of: { } of } when IsOwner(Unstored(of)) => power,
+            _ => null,
+        };
+
+        /// <summary>
+        /// A property of a monster class of the game's with a getter and no setter (Ceremonial Beast's RitualAmount): its class and getter, whose code
+        /// works out its value; null for any other (a property with a setter is that monster's own state, MonsterStateStep's).
+        /// </summary>
+        private (Type Monster, MethodBase Getter)? OwnersMonsterGetter(string monsterClass, string property)
+        {
+            if (_type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Monsters." + monsterClass) is not { } monster || !IsMonsterClass(monsterClass)) return null;
+            var declared = monster.GetProperty(property, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+            return declared is { SetMethod: null, GetMethod: { } getter } ? (monster, getter) : null;
+        }
+
+        /// <summary>
+        /// The power classes of the game's a removal by class takes off (a class, or every class of an abstract one: TemporaryStrengthPower's Dark
+        /// Shackles, Flex Potion...), by name; a gap where one runs code of its own as it goes (PowerCmd.Remove calls its AfterRemoved).
+        /// </summary>
+        private IReadOnlyList<string> Removable(IEnumerable<string> classes)
+        {
+            var powers = new List<string>();
+            foreach (var name in classes)
+            {
+                var type = _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + name) ?? throw new Gap(ReaderCapability.CommandOnAnotherPower, $"gap: no power class {name}");
+                var each = type.IsAbstract ? _type.Assembly.GetTypes().Where(candidate => !candidate.IsAbstract && type.IsAssignableFrom(candidate)).ToList() : new List<Type> { type };
+                foreach (var power in each)
+                {
+                    // Its class or a base class below PowerModel declares an AfterRemoved (an override of PowerModel's, which does nothing).
+                    for (var declaring = power; declaring != null && declaring.Name != nameof(MegaCrit.Sts2.Core.Models.PowerModel); declaring = declaring.BaseType)
+                        if (declaring.GetMethod("AfterRemoved", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly) != null)
+                            throw new Gap(ReaderCapability.CommandOnAnotherPower, $"gap: removes {power.Name}, whose AfterRemoved runs as it goes");
+                    powers.Add(power.Name);
+                }
+            }
+            return powers.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
+        }
+
+        /// <summary>
         /// The model's owner: base.Owner (a power's creature, a relic's, a potion's or an orb's player), an enchantment's or affliction's card's
         /// owner (base.Card.Owner), its player or creature.
         /// </summary>
@@ -3310,6 +3374,8 @@ public static class HookReader
         {
             QueryValue { Name: "Owner", Of: NamedValue { Name: "this" }, Type: "PowerModel" or "RelicModel" or "AbstractModel" or "PotionModel" or "OrbModel" } => true,
             QueryValue { Name: "Owner", Of: QueryValue { Name: "Card", Of: NamedValue { Name: "this" }, Type: "EnchantmentModel" or "AfflictionModel" } } => true,
+            // Its owner's monster's creature (base.Creature in a method of that monster's class its power calls on it: decision #275).
+            QueryValue { Name: "Creature", Of: QueryValue { Name: "Monster", Of: { } monsterOf } } => IsOwner(monsterOf),
             QueryValue { Name: "Player" or "Creature", Of: { } of } => IsOwner(of),
             _ => false,
         };

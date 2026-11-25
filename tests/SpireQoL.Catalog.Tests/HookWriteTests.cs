@@ -161,10 +161,15 @@ public class HookWriteTests
                 if (baseType.Name == member.DeclaringType && baseType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models", StringComparison.Ordinal) == true) owner = baseType;
         if (owner == null && !member.HasThis && member.Namespace.StartsWith("MegaCrit.Sts2.Core.Models", StringComparison.Ordinal))
             owner = type.Assembly.GetType(member.Namespace + "." + member.DeclaringType);
+        // A method of a monster class a power calls (on its owner's monster: Plow's CeremonialBeast.SetStunned, decision #275), read where it's called.
+        if (owner == null && OfAMonster(member)) owner = type.Assembly.GetType(member.Namespace + "." + member.DeclaringType);
         if (owner == null) return null;
         var found = owner.GetMethods(All).FirstOrDefault(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount);
         return found == null || found.IsAbstract ? null : ProgramReader.BodyOf(found);
     }
+
+    /// <summary>An instance method a monster class of the game's declares (its writes are followed, as the reader reads it where a power calls it on its owner's monster).</summary>
+    private static bool OfAMonster(CodeMember member) => member is { HasThis: true, Namespace: "MegaCrit.Sts2.Core.Models.Monsters" };
 
     /// <summary>The write an instruction makes, or null (a read, a compiler's local, something that only shows).</summary>
     private static Write? Of(Type type, List<Type> own, CodeOp instruction)
@@ -190,6 +195,7 @@ public class HookWriteTests
         if (member.ValueType != typeof(void).Name && !member.ValueType.StartsWith("Task", StringComparison.Ordinal)) return null;
         if (own.Any(candidate => candidate.Name == member.DeclaringType)) return null;
         if (!member.HasThis && member.Namespace.StartsWith("MegaCrit.Sts2.Core.Models", StringComparison.Ordinal)) return null;
+        if (OfAMonster(member)) return null;
         for (var baseType = type.BaseType; baseType != null; baseType = baseType.BaseType)
             if (baseType.Name == member.DeclaringType && member.HasThis && !ProgramReader.IsModelAction(member) && !ProgramReader.IsPowerAction(member)) return null;
         return new Write("changes", member.FullName);

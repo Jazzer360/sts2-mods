@@ -822,6 +822,11 @@ public sealed class SimState
     /// never reaches the players' next turn.
     /// </summary>
     public int TurnNumber;
+    /// <summary>
+    /// The run is on the Dread ascension (AscensionHelper.IsDread, read from the game: beta only, decision #163), which a monster's code asks (Ceremonial
+    /// Beast's RitualAmount, as Plow stuns it: decision #275). A player knows it. Constant in a simulation.
+    /// </summary>
+    public bool Dread;
 
     /// <summary>
     /// The history ledger's questions (decision #191): every query of the game's log of the fight that the cards, relics and powers on this

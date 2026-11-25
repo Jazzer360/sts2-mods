@@ -736,6 +736,22 @@ public static class ProgramReader
                     callback = null;
                     continue;
                 }
+                // A method of its owner's monster's own class, called on that monster (((CeremonialBeast)base.Owner.Monster).SetStunned(): Plow's): its
+                // steps run here as that monster's, its this the owner's monster, so a store to its own state is that monster's state
+                // ("Monster.CeremonialBeast.IsInSecondPhase") and its base.Creature the owner (decision #275). Each step is at the call, where the power's
+                // code runs it.
+                if (IsPowerOrRelic && OwnersMonsterMethod(member) is { } monsterMethod && IsOwnersMonster(flow.ReceiverValue(i, member.ParameterCount)))
+                {
+                    if (depth >= MaxDepth) into.Add(new UnknownStep(instruction.Offset, $"{member.Name}: calls nested too deep") { Condition = condition });
+                    else
+                    {
+                        var passed = PassedTo(monsterMethod.Called, flow.ArgumentValues(i, member));
+                        var inner = new Reader(monsterMethod.Owner, _read).Steps(monsterMethod.Body, depth + 1)
+                            .Select(step => AsOwnersMonsters(Bound(step, value => value is NamedValue { Name: "this" } ? OwnersMonster : passed(value)), monsterMethod.Owner.Name) with { Offset = instruction.Offset });
+                        into.AddRange(condition == null ? inner : inner.Select(step => step with { Condition = And(condition, step.Condition) }));
+                    }
+                    continue;
+                }
                 // The card's own methods and the local functions its OnPlay declares: their steps run here.
                 if (OwnMethod(member) is { } own)
                 {
@@ -802,6 +818,7 @@ public static class ProgramReader
                 LoopStep loop => loop with { While = loop.While?.Map(replace), Items = loop.Items?.Map(replace), Body = loop.Body.Select(inner => Bound(inner, replace)).ToList() },
                 ChoiceStep choice => choice with { Values = choice.Values.Select(value => value.Map(replace)).ToList() },
                 CreateStep create => create with { Values = create.Values.Select(value => value.Map(replace)).ToList() },
+                StoreStep store => store with { Value = store.Value.Map(replace) },
                 CommandStep command => command with
                 {
                     Values = command.Values.Select(value => value.Map(replace)).ToList(), Inner = command.Inner.Select(inner => Bound(inner, replace)).ToList(),
@@ -876,8 +893,50 @@ public static class ProgramReader
                 if (type.GetMethods(All).FirstOrDefault(method => method.Name == member.Name) is not { } found) continue;
                 return BodyOf(found);
             }
-            return null;
+            // A method of its owner's monster's class made into a delegate (Plow's ceremonialBeast.StunnedMove, the stunned move it gives CreatureCmd.Stun):
+            // its code, read as a lambda's is.
+            return IsPowerOrRelic && OwnersMonsterMethod(member) is { } monsterMethod ? monsterMethod.Body : null;
         }
+
+        /// <summary>
+        /// An instance method a monster class of the game's declares, that returns nothing or a task and isn't a question, a property or a show
+        /// (CeremonialBeast.SetStunned, its StunnedMove): its class and code, for a power whose code calls it on its owner's monster; else null.
+        /// </summary>
+        private (Type Owner, MethodBase Called, MethodBase Body)? OwnersMonsterMethod(CodeMember member)
+        {
+            if (member is not { Kind: CodeMemberKind.Method, HasThis: true, Namespace: "MegaCrit.Sts2.Core.Models.Monsters" } || member.Name.StartsWith('<')
+                || member.Name.StartsWith("get_", StringComparison.Ordinal) || member.Name.StartsWith("set_", StringComparison.Ordinal) || Asks(member.Name) || ShowsOnly(member.Name)
+                || member.ValueType != typeof(void).Name && member.ValueType != nameof(Task)) return null;
+            if (_card.Assembly.GetType(member.Namespace + "." + member.DeclaringType) is not { } monster || !IsMonsterClass(monster)) return null;
+            if (monster.GetMethods(All).FirstOrDefault(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount) is not { } found) return null;
+            return (monster, found, BodyOf(found));
+
+            // By name: the game's types may be read apart from the ones the mod runs with.
+            static bool IsMonsterClass(Type type)
+            {
+                for (var baseType = type.BaseType; baseType != null; baseType = baseType.BaseType)
+                    if (baseType.Name == nameof(MegaCrit.Sts2.Core.Models.MonsterModel)) return true;
+                return false;
+            }
+        }
+
+        /// <summary>Its owner's monster (base.Owner.Monster): what a method of that monster's class names as this, read for its owner's power.</summary>
+        private static readonly ProgramValue OwnersMonster = new QueryValue(nameof(MegaCrit.Sts2.Core.Entities.Creatures.Creature), "Monster",
+            new QueryValue(nameof(MegaCrit.Sts2.Core.Models.PowerModel), "Owner", new NamedValue("this"), Array.Empty<ProgramValue>(), nameof(MegaCrit.Sts2.Core.Entities.Creatures.Creature)) { IsProperty = true },
+            Array.Empty<ProgramValue>(), nameof(MegaCrit.Sts2.Core.Models.MonsterModel)) { IsProperty = true };
+
+        /// <summary>
+        /// A step of a method of the owner's monster's class, as its owner's power runs it: a store to the monster's own state is that monster's state
+        /// ("Monster." + its class + "." + the member: OwnersMonsterPrefix), as a property the power sets on it is.
+        /// </summary>
+        private static ProgramStep AsOwnersMonsters(ProgramStep step, string monsterClass) => step switch
+        {
+            StoreStep store when !store.Field.StartsWith(OwnDataPrefix, StringComparison.Ordinal) && !store.Field.StartsWith(OwnVarPrefix, StringComparison.Ordinal)
+                && !store.Field.StartsWith(GivenPrefix, StringComparison.Ordinal) && !store.Field.StartsWith(OwnersMonsterPrefix, StringComparison.Ordinal)
+                => store with { Field = OwnersMonsterPrefix + monsterClass + "." + store.Field },
+            LoopStep loop => loop with { Body = loop.Body.Select(inner => AsOwnersMonsters(inner, monsterClass)).ToList() },
+            _ => step,
+        };
 
         /// <summary>The model read is a power or a relic (its own values are state its hooks keep; a card's are its play's numbers, read apart).</summary>
         private bool IsPowerOrRelic

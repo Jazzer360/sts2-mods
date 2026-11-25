@@ -101,7 +101,7 @@ public static partial class SimAdapter
     {
         var idMap = new Dictionary<Creature, int>();
         ids = idMap;
-        var state = new SimState { MainRules = BranchRules.MainRulesNow(), TurnNumber = me.PlayerCombatState?.TurnNumber ?? 0, EncounterScaling = EncounterScaling(combat) };
+        var state = new SimState { MainRules = BranchRules.MainRulesNow(), TurnNumber = me.PlayerCombatState?.TurnNumber ?? 0, Dread = MoveBranches.DreadRun, EncounterScaling = EncounterScaling(combat) };
         var mates = Teammates(me, combat);
         // Any creature's simulator id (Who): an enemy's, you, teammate k, or one of a player's pets the simulator keeps.
         int? PlayerIdOf(Creature creature) => creature == me.Creature ? Who.You

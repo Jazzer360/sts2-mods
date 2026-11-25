@@ -82,22 +82,7 @@ public sealed class SlumberPower : SimModel
     }
 }
 
-/// <summary>
-/// PlowPower.AfterDamageReceived: HP through that leaves its owner at or below its amount: it flashes, loses its Strength,
-/// is stunned, and the power goes.
-/// </summary>
-public sealed class PlowPower : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => OutcomeRules.Stuns(now, owner);
-
-    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
-    {
-        if (hit.Target != owner || hit.Unblocked <= 0 || state.Enemy(owner) is not { Alive: true } enemy || enemy.Hp > enemy.Powers[ThisPower]) return;
-        state.LogFired(Name, amount: 0, owner);
-        enemy.Powers = enemy.Powers.Without(PowerId.Strength).Without(ThisPower);
-        SimEngine.Stun(enemy);
-    }
-}
+// Plow is read from its code (ReadModel, decision #275).
 
 // Shriek is read from its code (ReadModel, decision #251).
 

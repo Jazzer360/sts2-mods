@@ -1540,6 +1540,18 @@ public sealed class ReadModel : SimModel
                 };
             }
             // PowerCmd.Remove(this), PowerCmd.Decrement(this): the power, or the copy running the hook.
+            case RemovePowerStep { Powers: { } removed }:
+            {
+                var powers = removed.Select(PowerId.Of).ToArray();
+                return args =>
+                {
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                    var left = SimEngine.PowersOf(args.State, args.Owner);
+                    foreach (var power in powers) left = left.Without(power);
+                    SimEngine.SetPowers(args.State, args.Owner, left);
+                    return One(args.State);
+                };
+            }
             case RemovePowerStep:
                 return args =>
                 {
@@ -1966,6 +1978,7 @@ public sealed class ReadModel : SimModel
             case HookFact.PlayIsLast: return (in HookArgs args) => args.Play is { } last && last.PlayIndex == last.PlayCount - 1 ? 1m : 0m;
             // The card play the hook names (a play hook's, a block's or damage's: HookArgs.Play, none for a gain from no play), by its identity (decision #269).
             case HookFact.PlaySerial: return (in HookArgs args) => args.Play?.Serial ?? 0;
+            case HookFact.Dread: return (in HookArgs args) => args.State.Dread ? 1m : 0m;
             case HookFact.HitCardPlaySerial:
                 return (in HookArgs args) => args.Hit?.Card is { } card && args.State.CurrentPlay is { } play && ReferenceEquals(play.Card, card) ? play.Serial : 0;
             case HookFact.BlockModified: return (in HookArgs args) => args.BlockModified;

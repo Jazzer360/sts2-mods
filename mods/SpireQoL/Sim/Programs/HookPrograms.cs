@@ -366,6 +366,8 @@ public enum HookFact
     /// outside its play (decision #274).
     /// </summary>
     HitCardPlaySerial,
+    /// <summary>The run is on the Dread ascension (AscensionHelper.IsDread: SimState.Dread, beta only; a player knows it), as a monster's code asks it (Ceremonial Beast's RitualAmount).</summary>
+    Dread,
     /// <summary>
     /// The card played gains block (CardModel.GainsBlock: SimCard.GainsBlock); with Of "Source", the card a damage or block comes from (cardSource).
     /// </summary>
@@ -759,8 +761,15 @@ public sealed record SummonStep(HookTarget Summoner, HookValue Amount) : HookSte
     public bool PetOwner { get; init; }
 }
 
-/// <summary>PowerCmd.Remove(this): the power itself goes from its owner.</summary>
-public sealed record RemovePowerStep : HookStep;
+/// <summary>
+/// PowerCmd.Remove(this): the power itself goes from its owner. With <see cref="Powers"/>, those powers of its owner go instead (PowerCmd.Remove<T>(base.Owner),
+/// or every power of a class a loop over base.Owner.GetPowerInstances<T>() removes: Plow's Strength and Temporary Strength, decision #275).
+/// </summary>
+public sealed record RemovePowerStep : HookStep
+{
+    /// <summary>The powers of its owner it removes, by class; null: the power itself.</summary>
+    public IReadOnlyList<string>? Powers { get; init; }
+}
 
 /// <summary>PowerCmd.Decrement(this), PowerCmd.TickDownDuration(this): the power itself goes down by one, gone at 0.</summary>
 public sealed record DecrementPowerStep : HookStep;

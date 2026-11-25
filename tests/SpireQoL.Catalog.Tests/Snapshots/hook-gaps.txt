@@ -1,17 +1,16 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by the capability the reader names.
-# 48 hand-written models.
+# 47 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
-a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 6 classes, 3 alone: ImpaledPower, InsatiableDominionPower*, PlatingPower, ShadowmeldPower*, SkittishPower*, SmoggyPower
+a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 8 classes, 3 alone: AsleepPower, ImpaledPower, InsatiableDominionPower*, PlatingPower, ShadowmeldPower*, SkittishPower*, SmoggyPower, SurroundedPower
+the play's result location (ModifyCardPlayResultLocation): 4 classes, 3 alone: CorruptionPower, FeralPower*, NostalgiaPower*, ReboundPower*
 the simulator's own model (no game class by its name): 3 classes, 3 alone: ImpaledPowerOther*, Regret*, Void*
-a monster's own state set (its flag, its next move): 6 classes, 2 alone: AsleepPower, InfestedPower, PlowPower*, SlumberPower*, SteamEruptionPower, StockPower
-the play's result location (ModifyCardPlayResultLocation): 4 classes, 2 alone: CorruptionPower, FeralPower, NostalgiaPower*, ReboundPower*
 another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 3 classes, 2 alone: CoveredPower*, HardenedShellPower*, SurprisePower
+its own data: a card or a play kept, a field used directly: 3 classes, 2 alone: ImitationLearningPower*, SurroundedPower, WitheringPresencePower*
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
 hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount): 2 classes, 2 alone: BurrowedPower*, HandDrill*
 hooks: the power amount given: 2 classes, 2 alone: SneckoSkull*, UnsettlingLamp*
-its own data: a card or a play kept, a field used directly: 2 classes, 2 alone: ImitationLearningPower*, WitheringPresencePower*
 orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first): 2 classes, 2 alone: ConsumingShadowPower*, TrashToTreasurePower*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*
 card costs and keywords (cards' own hooks, Part B3): 3 classes, 1 alone: ChemicalX*, CorruptionPower, PhantomBladesPower
@@ -27,22 +26,23 @@ the fight's log (the history ledger, decision #191): 1 classes, 1 alone: Unmovab
 the owner's energy: 1 classes, 1 alone: PaelsTears*
 a death the game holds back (ShouldStopCombatFromEnding, ShouldDie and the like): 4 classes, 0 alone: InfestedPower, SteamEruptionPower, StockPower, SurprisePower
 a loop over items (creatures, cards): 3 classes, 0 alone: ImpaledPower, PaelsEye, SmoggyPower
-a model's own method (its body read where it's called): 2 classes, 0 alone: FeralPower, SurroundedPower
-a command on another power (PowerCmd.Remove of another): 1 classes, 0 alone: AsleepPower
+a monster's own state set (its flag, its next move): 3 classes, 0 alone: InfestedPower, SteamEruptionPower, StockPower
+a command on another power (PowerCmd.Remove of another): 2 classes, 0 alone: AsleepPower, SlumberPower
 a turn's start (an extra turn): 1 classes, 0 alone: PaelsEye
 multiplayer scaling (GetScaledAmountForMultiplayer, the players' count): 1 classes, 0 alone: PlatingPower
+outcomes: a stun or a kill (outcome tabs): 1 classes, 0 alone: SlumberPower
 queries: a creature's side or presence: 1 classes, 0 alone: PlatingPower
 
 ## Classes, each hook body's gap in reading order
 
-AsleepPower: [a command on another power (PowerCmd.Remove of another)] AfterDamageReceived: gap: PowerCmd.Remove of another power | [a monster's own state set (its flag, its next move)] AfterSideTurnEnd: gap: changes a game object outside a command (LagavulinMatriarch.WakeUpMove) | [a command on another power (PowerCmd.Remove of another)] BeforeSideTurnEndVeryEarly: gap: PowerCmd.Remove of another power
+AsleepPower: [a command on another power (PowerCmd.Remove of another)] AfterDamageReceived: gap: PowerCmd.Remove of another power | [a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)] AfterSideTurnEnd: gap: tests this.Owner.Monster._isAwake() | [a command on another power (PowerCmd.Remove of another)] BeforeSideTurnEndVeryEarly: gap: PowerCmd.Remove of another power
 BurrowedPower: [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount)] AfterBlockBroken: gap: the simulator runs no read model's AfterBlockBroken | [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount)] ShouldClearBlock: gap: the simulator runs no read model's ShouldClearBlock
 ChemicalX: [card costs and keywords (cards' own hooks, Part B3)] ModifyXValue: gap: the simulator runs no read model's ModifyXValue
 CompostPower: [a command on another creature (the players, a card's owner, a roll's list)] AfterDeath: gap: energy for someone else
 ConsumingShadowPower: [orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first)] AfterSideTurnEnd: gap: OrbCmd.EvokeLast isn't translated
 CorruptionPower: [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation | [card costs and keywords (cards' own hooks, Part B3)] TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
 CoveredPower: [another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount)] AfterApplied: gap: changes a game object outside a command (InterceptPower.AddCoveredCreature)
-FeralPower: [a model's own method (its body read where it's called)] AfterApplied: gap: the value value | [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [a model's own method (its body read where it's called)] AfterSideTurnStart: gap: the value value | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
+FeralPower: [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
 HandDrill: [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount)] AfterBlockBroken: gap: the simulator runs no read model's AfterBlockBroken
 HardenedShellPower: [another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount)] AfterDamageReceived: gap: sets Creature.HpDisplay where the reader reads no store
 ImitationLearningPower: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: changes a collection (List`1.FindIndex) where the reader reads no step | [its own data: a card or a play kept, a field used directly] BeforeCardPlayed: gap: uses its own field (_playerTarget) directly: what a call on it changes isn't read
@@ -59,7 +59,6 @@ PaelsTears: [the owner's energy] BeforeSideTurnEnd: gap: the value this.Owner.Pl
 ParryPower: [the simulator's own model (its game class has no hooks: another class's code reads it)] no hooks
 PhantomBladesPower: [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyDamageAdditive: gap: tests Contains(cardSource.Tags, 5) | [card costs and keywords (cards' own hooks, Part B3)] TryModifyKeywordsInCombat: gap: the simulator runs no read model's TryModifyKeywordsInCombat
 PlatingPower: [multiplayer scaling (GetScaledAmountForMultiplayer, the players' count)] AfterApplied: gap: the value this.Owner.CombatState.RunState.Players.Count | [a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)] AfterSideTurnStart: gap: the value combatState.RoundNumber | [queries: a creature's side or presence] BeforeSideTurnStart: gap: the value side
-PlowPower: [a monster's own state set (its flag, its next move)] AfterDamageReceived: gap: changes a game object outside a command (CeremonialBeast.SetStunned)
 Pocketwatch: [hooks: the hand draw] AfterModifyingHandDraw: gap: the simulator runs no read model's AfterModifyingHandDraw | [hooks: the hand draw] ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 ReboundPower: [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
 RedSkull: [hooks: AfterCurrentHpChanged] AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged
@@ -67,14 +66,14 @@ Regret: [the simulator's own model (no game class by its name)] no game class
 SeekingEdgePower: [the simulator's own model (its game class has no hooks: another class's code reads it)] no hooks
 ShadowmeldPower: [a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)] ModifyBlockMultiplicative: gap: the value ?Pow
 SkittishPower: [a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)] AfterAttack: gap: tests FirstOrDefault(SelectMany(command.Results, r => r), r => r.Receiver == this.Owner)
-SlumberPower: [a monster's own state set (its flag, its next move)] AfterDamageReceived: gap: a stunned move the reader doesn't read (?WakeUpMove) | [a monster's own state set (its flag, its next move)] AfterSideTurnEnd: gap: changes a game object outside a command (SlumberingBeetle.WakeUpMove)
+SlumberPower: [outcomes: a stun or a kill (outcome tabs)] AfterDamageReceived: gap: a stunned move that calls commands | [a command on another power (PowerCmd.Remove of another)] AfterSideTurnEnd: gap: PowerCmd.Remove of another power
 SmoggyPower: [a loop over items (creatures, cards)] AfterCardPlayed: gap: a loop | [a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)] AfterSideTurnEnd: gap: tests this.Owner.Player.PlayerCombatState | [hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...)] ShouldPlay: gap: the simulator runs no read model's ShouldPlay
 SneckoSkull: [hooks: the power amount given] AfterModifyingPowerAmountGiven: gap: the simulator runs no read model's AfterModifyingPowerAmountGiven | [hooks: the power amount given] ModifyPowerAmountGivenAdditive: gap: the simulator runs no read model's ModifyPowerAmountGivenAdditive
 SteamEruptionPower: [a monster's own state set (its flag, its next move)] AfterDeath: gap: changes a game object outside a command (WaterfallGiant.TriggerAboutToBlowState) | [a death the game holds back (ShouldStopCombatFromEnding, ShouldDie and the like)] ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding
 StockPower: [a monster's own state set (its flag, its next move)] AfterDeath: gap: sets Axebot.ShouldPlaySpawnAnimation where the reader reads no store | [a death the game holds back (ShouldStopCombatFromEnding, ShouldDie and the like)] ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding
 StratagemPower: [a pick] AfterShuffle: gap: a pick
 SurprisePower: [another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount)] AfterDeath: gap: sets PowerModel.Target where the reader reads no store | [a death the game holds back (ShouldStopCombatFromEnding, ShouldDie and the like)] ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding
-SurroundedPower: [a model's own method (its body read where it's called)] AfterDeath: gap: the value direction | [a model's own method (its body read where it's called)] BeforeCardPlayed: gap: the value direction | [hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...)] BeforePotionUsed: gap: the simulator runs no read model's BeforePotionUsed
+SurroundedPower: [a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)] AfterDeath: gap: tests All(this.Owner.CombatState.HittableEnemies, e => e.HasPower<BackAttackLeftPower>()) | [its own data: a card or a play kept, a field used directly] BeforeCardPlayed: gap: tests cardPlay.Target | [hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...)] BeforePotionUsed: gap: the simulator runs no read model's BeforePotionUsed
 SwordSagePower: [hooks: AfterCardEnteredCombat] AfterCardEnteredCombat: gap: the simulator runs no read model's AfterCardEnteredCombat
 TagTeamPower: [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyCardPlayCount: gap: the value card.Owner.Creature
 TrashToTreasurePower: [orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first)] AfterCardGeneratedForCombat: gap: an orb made first

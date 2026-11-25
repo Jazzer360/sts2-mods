@@ -27,6 +27,9 @@ internal static class MoveBranches
 
     private static readonly Func<bool>? IsDread = BetaOnly.Gate<Func<bool>>(IsDreadRun);
 
+    /// <summary>The run is on the Dread ascension (false on main, which has none).</summary>
+    internal static bool DreadRun => IsDread?.Invoke() == true;
+
     /// <summary>Rules by the move's perform method: "Monster.Method". Each reads only what a player sees (decision #72).</summary>
     internal static readonly Dictionary<string, Rule> Rules = new()
     {
