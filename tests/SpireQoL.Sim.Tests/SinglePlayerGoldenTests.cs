@@ -115,13 +115,12 @@ public class SinglePlayerGoldenTests
         var outcome = SimEngine.Run(statePlay.State, statePlay.Play);
         var text = new StringBuilder();
         text.Append($"T{outcome.Truncated} K[{string.Join(",", outcome.KilledByPlayInAll.OrderBy(x => x))}|{string.Join(",", outcome.KilledByPlayInAny.OrderBy(x => x))}] ");
-        var reacted = outcome.Branches.SelectMany(branch => branch.Enemies.Where(enemy => enemy.ReactedWithBlock).Select(enemy => enemy.Id)).Distinct().Order();
-        text.Append($"B{outcome.PlayBlockGainsMax} {outcome.PlayKillsInAll} {outcome.PlayBreaksBlockInAll} R[{string.Join(",", reacted)}] ");
+        text.Append($"B{outcome.PlayBlockGainsMax} {outcome.PlayKillsInAll} {outcome.PlayBreaksBlockInAll} ");
         var branches = outcome.Branches.Select(branch =>
         {
             var enemies = string.Join(";", branch.Enemies.OrderBy(enemy => enemy.Id).Select(enemy =>
                 $"{enemy.Id}:{enemy.Hp},{enemy.Block},{enemy.Alive},{enemy.DiedBeforeActing},{enemy.Stunned},{enemy.Poison},{branch.Flashed.Has(SimKeys.Logged(PowerId.Imbalanced.Name, enemy.Id))}"));
-            return $"{branch.Taken},{branch.OstyTaken},{branch.DamageThrough},{branch.BlockAtEnemyTurn},{branch.CancelledHits},{branch.You.Block},{branch.BlockDemand},{branch.Weight.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)}|{enemies}";
+            return $"{branch.Taken},{branch.OstyTaken},{branch.DamageThrough},{branch.BlockAtEnemyTurn},{branch.CancelledHits},{branch.You.Block},{branch.Weight.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)}|{enemies}";
         }).OrderBy(line => line, StringComparer.Ordinal);
         text.Append(string.Join("#", branches));
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())))[..16];

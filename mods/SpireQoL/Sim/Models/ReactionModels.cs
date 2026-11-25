@@ -83,7 +83,6 @@ public sealed class SkittishPower : SimModel
         if ((data & UsedThisTurn) != 0 || (data & FirstHitGotThrough) == 0 || !attack.Props.HasFlag(SimProps.Move) || attack.Card == null) return One(state);
         enemy.Block += enemy.Powers[ThisPower];
         enemy.Powers = enemy.Powers.With(ThisPower, enemy.Powers[ThisPower], data: UsedThisTurn);
-        enemy.ReactedWithBlock = true;
         state.LogFired(Name, amount: 0, owner);
         return One(state);
     }

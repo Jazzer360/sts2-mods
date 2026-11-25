@@ -91,9 +91,9 @@ public class SimKillTests
         state.Enemies[0].CurlUp = 5;
         var random = new SimPlay { Name = "Sword Boomerang", IsAttack = true, HitTarget = SimPlay.Target.Random, HitDamage = { [1] = 3, [2] = 3 }, Hits = 1 };
         SimEngine.ApplyPlayTo(state, random, out var randomBranches, out _);
-        Assert.Contains(randomBranches, branch => branch.Enemy(id: 1)!.ReactedWithBlock);
+        Assert.Contains(randomBranches, branch => branch.Enemy(id: 1)!.Block == 5);
         var other = new SimPlay { Name = "Strike", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 2, HitDamage = { [2] = 6 }, Hits = 1 };
         SimEngine.ApplyPlayTo(state, other, out var otherBranches, out _);
-        Assert.DoesNotContain(otherBranches, branch => branch.Enemy(id: 1)!.ReactedWithBlock);
+        Assert.DoesNotContain(otherBranches, branch => branch.Enemy(id: 1)!.Block > 0);
     }
 }

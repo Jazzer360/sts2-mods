@@ -646,7 +646,6 @@ public sealed class SneakyPower : SimModel
     {
         if (play.Card.Type != SimCardType.Attack || play.Owner == owner || state.Enemy(owner) is not { } enemy) return One(state);
         enemy.Block += enemy.Powers[ThisPower];
-        enemy.ReactedWithBlock = true;
         state.LogFired(Name, amount: 0, owner);
         return One(state);
     }
@@ -2349,7 +2348,6 @@ public sealed class CurlUpPower : SimModel
         if (state.Enemy(owner) is not { } enemy || enemy.Powers.DataOf(ThisPower) != BoundToPlay) return One(state);
         enemy.Block += enemy.Powers[ThisPower];
         enemy.Powers = enemy.Powers.Without(ThisPower);
-        enemy.ReactedWithBlock = true;
         state.LogFired(Name, amount: 0, owner);
         return One(state);
     }

@@ -53,7 +53,6 @@ public class SimKeyCoverageTests
         ["SimEnemy.HpAtTurnEnd"] = "a copy of Hp taken once your end of turn is over (Hp is in the key)",
         ["SimEnemy.UnblockedAtTurnEnd"] = "a copy of UnblockedInstances taken once your end of turn is over (that is in the key)",
         ["SimEnemy.DeathHandled"] = "follows Hp: a dead enemy's death is handled in the same step",
-        ["SimEnemy.ReactedWithBlock"] = "follows its block and its reacting power's state, which are in the key (decision #197 let it leave the key)",
         ["SimEnemy.StunnedThisTurn"] = "follows Stunned, which is in the key",
     };
 

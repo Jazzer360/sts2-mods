@@ -862,11 +862,7 @@ public static partial class SimEngine
         else
         {
             simPlayer.Incoming += past;
-            if (yours)
-            {
-                state.BlockDemand += past;
-                if (label != null && state.Log) state.Blockable.Add((label, past));
-            }
+            if (yours && label != null && state.Log) state.Blockable.Add((label, past));
         }
         simPlayer.Block -= Math.Min(simPlayer.Block, blocked);
         // The results applied (beta's ApplyDamageResults): the BeforeOsty phase's changes told, Osty's HP, the first AfterOsty phase's, the player's HP,

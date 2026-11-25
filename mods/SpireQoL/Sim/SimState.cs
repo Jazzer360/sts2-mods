@@ -149,12 +149,6 @@ public sealed class SimEnemy
     [JsonIgnore] public int Sneaky { get => Powers[PowerId.Sneaky]; set => Set(PowerId.Sneaky, value); }
     /// <summary>Skittish: block it gains after a card's attack gets damage through its block (once per turn; 0 once used).</summary>
     [JsonIgnore] public int Skittish { get => Powers[PowerId.Skittish]; set => Set(PowerId.Skittish, value); }
-    /// <summary>
-    /// It gained block because of the play (Curl Up, Skittish, a read model's block for its enemy owner: SimEngine.EnemyBlock), for the tests and the
-    /// single-player golden's fingerprint. Not in the branch key: it follows the enemy's block and its reacting power's state, which are.
-    /// </summary>
-    public bool ReactedWithBlock;
-
     // Being hit (decompile v0.111.0):
     /// <summary>
     /// Thorns: damage to you (blockable) before each hit of your card's attack on it
@@ -766,9 +760,6 @@ public sealed class SimState
     public List<(string Name, int Amount)> Unblockable = new();
     public List<(string Name, int Amount)> EndOfTurnDamage = new();
 
-    /// <summary>Running "blockable damage landed so far" for Imbalanced's full-block threshold.</summary>
-    public int BlockDemand;
-
     public SimEnemy? Enemy(int id) => Enemies.FirstOrDefault(enemy => enemy.Id == id);
 
     [JsonIgnore]
@@ -1142,7 +1133,7 @@ public sealed class SimState
         var key = new BranchKey();
 
         if (Payouts.Count > 0) Payouts.Hash(ref key);
-        key.Add(BlockDemand); key.Add(SkippedPoisoned); key.Add(SkippedEndOfTurn); key.Add(CancelledHits);
+        key.Add(SkippedPoisoned); key.Add(SkippedEndOfTurn); key.Add(CancelledHits);
         if (DrawRecord != null)
         {
             key.Add(DrawRecord.Count);
