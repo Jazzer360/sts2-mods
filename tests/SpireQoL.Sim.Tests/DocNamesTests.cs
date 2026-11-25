@@ -8,7 +8,7 @@ namespace SpireQoL.Sim.Tests;
 /// (decision #150). Every backticked Type.Member in the docs whose type is declared in this repo must still name a member of it: an
 /// identifier in the code (comments left out) of a file that declares that type. The game's own names (CardCmd.Exhaust, and a model
 /// named as the game class it models: FeralPower) aren't this repo's to check. History stays as written: only the docs that describe
-/// the code as it is (FEATURES, SIMULATOR, DEVELOPMENT, CLAUDE.md, README), active decisions (not their Why and Replaced lines) and
+/// the code as it is (FEATURES, SIMULATOR, DEVELOPMENT, CLAUDE.md, README), active decisions (docs/decisions/, not their Why and Replaced lines) and
 /// open tracker items are checked.
 /// </summary>
 public class DocNamesTests
@@ -47,13 +47,16 @@ public class DocNamesTests
     private static IEnumerable<(int Line, string Text)> Current(string doc, string[] lines)
     {
         var name = Path.GetFileName(doc);
+        // The decisions index (its titles are the decisions' headings, checked in their own files) and the tracker's done items are history.
+        if (name is "DECISIONS.md" or "tracker-done.md") yield break;
+        var decisions = Path.GetFileName(Path.GetDirectoryName(doc)) == "decisions";
         var active = true;
         for (var i = 0; i < lines.Length; i++)
         {
             var line = lines[i];
-            if (name == "DECISIONS.md" && line.StartsWith("### ", StringComparison.Ordinal)) active = line.Contains("— active", StringComparison.Ordinal);
+            if (decisions && line.StartsWith("### ", StringComparison.Ordinal)) active = line.Contains("— active", StringComparison.Ordinal);
             // A decision's Why and Replaced lines tell what came before it.
-            if (name == "DECISIONS.md" && (!active || line.StartsWith("*Replaced:*", StringComparison.Ordinal) || line.StartsWith("*Why:*", StringComparison.Ordinal))) continue;
+            if (decisions && (!active || line.StartsWith("*Replaced:*", StringComparison.Ordinal) || line.StartsWith("*Why:*", StringComparison.Ordinal))) continue;
             // Only open tracker items: a done or partly done one ([x], [~]) is a log of how it went.
             if (name == "TRACKER.md" && !line.TrimStart().StartsWith("- [ ]", StringComparison.Ordinal)) continue;
             yield return (i + 1, line);
@@ -66,6 +69,7 @@ public class DocNamesTests
         var types = Types();
         var game = GameClasses();
         var docs = Directory.EnumerateFiles(Path.Combine(RepoFiles.Root(), "docs"), "*.md")
+            .Concat(Directory.EnumerateFiles(Path.Combine(RepoFiles.Root(), "docs", "decisions"), "*.md"))
             .Append(Path.Combine(RepoFiles.Root(), "CLAUDE.md")).Append(Path.Combine(RepoFiles.Root(), "README.md"));
         var stale = new List<string>();
         foreach (var doc in docs)
