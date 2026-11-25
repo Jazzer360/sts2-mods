@@ -2263,3 +2263,73 @@ public sealed class ImbalancedPower : SimModel
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
         Who.IsEnemy(owner) && !now.FirstHitBlockedInAll(owner) ? new(Harmful: false, outcome => outcome.FirstHitBlockedInAll(owner), InPlay: false) : null;
 }
+
+// ---- round twenty-two: a card kept as its card play's identity (Sim/Models/StatModels.cs, BlockModels.cs), deleted 2026-11-25
+
+/// <summary>
+/// Pen Nib (relic): Amount is AttacksPlayed (0-9). Data 1 while a card the game is playing right now is bound to be doubled
+/// (AttackToDouble, read mid-play: no card simulated here is that card, so none is doubled), 2 while a play simulated here is.
+/// BeforeCardPlayed counts your Attack plays (each play of a replay); the one that brings it to 0 binds itself (and flashes);
+/// its powered hits from that play deal double (ModifyDamageMultiplicative); AfterCardPlayed of that play unbinds.
+/// </summary>
+public sealed class PenNib : SimModel
+{
+    /// <summary>Its Data: the card the game is playing right now is the doubled one (AttackToDouble), or a play simulated here is.</summary>
+    public const int GameCardBound = 1, SimulatedPlayBound = 2;
+    public override TabKind? Tab => TabKind.Trigger;
+    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage)
+    {
+        if (!damage.Props.IsPoweredAttack() || damage.Card == null) return 1m;
+        if (!(damage.Dealer == owner || (owner == Who.You && damage.Dealer == Who.YourOsty))) return 1m;
+        var relics = SimEngine.RelicsOf(state, owner);
+        if (relics.DataOf(ThisRelic) == SimulatedPlayBound) return damage.Play != null ? 2m : 1m;
+        if (relics.DataOf(ThisRelic) == GameCardBound) return 1m; // the game's card mid-play is the doubled one
+        return damage.Play == null && relics[ThisRelic] == 9 ? 2m : 1m; // not being played (a preview): the next attack is the 10th
+    }
+    public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (play.Card.Type != SimCardType.Attack || play.Owner != owner) return One(state);
+        var relics = SimEngine.RelicsOf(state, owner);
+        var count = (relics[ThisRelic] + 1) % 10;
+        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, count, count == 0 ? SimulatedPlayBound : relics.DataOf(ThisRelic)));
+        if (count == 0) state.LogFired(Name, amount: 0, owner);
+        return One(state);
+    }
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        var relics = SimEngine.RelicsOf(state, owner);
+        if (relics.DataOf(ThisRelic) == SimulatedPlayBound && play.Owner == owner) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], data: 0));
+        return One(state);
+    }
+}
+
+/// <summary>
+/// Vambrace (relic): Data bit 1 = a card is bound (its block was doubled), bit 2 = block gained this combat. Until then, a card's
+/// block from its owner is doubled; the first time that lands it flashes and binds the card (AfterModifyingBlockAmount);
+/// AfterCardPlayed of that card marks block gained this combat (so a replay's later plays aren't doubled).
+/// </summary>
+public sealed class Vambrace : SimModel
+{
+    /// <summary>Its Data: a card is bound (its block was doubled: the game's TriggeringCard), block gained this combat.</summary>
+    public const int Bound = 1, GainedThisCombat = 2;
+    public override TabKind? Tab => TabKind.Trigger;
+    public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block)
+    {
+        if (!block.Props.IsCardOrMonsterMove() || block.Card == null || block.Play?.Owner != owner) return 1m;
+        return (SimEngine.RelicsOf(state, owner).DataOf(ThisRelic) & GainedThisCombat) != 0 ? 1m : 2m;
+    }
+    public override void AfterModifyingBlockAmount(SimState state, int owner, int amount, SimCardPlay? play)
+    {
+        var relics = SimEngine.RelicsOf(state, owner);
+        if (amount <= 0 || play == null) return;
+        if ((relics.DataOf(ThisRelic) & Bound) == 0) state.LogFired(Name, amount: 0, owner);
+        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], relics.DataOf(ThisRelic) | Bound));
+    }
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        var relics = SimEngine.RelicsOf(state, owner);
+        var data = relics.DataOf(ThisRelic);
+        if (play.Owner == owner && (data & Bound) != 0 && (data & GainedThisCombat) == 0) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], data: GainedThisCombat));
+        return One(state);
+    }
+}

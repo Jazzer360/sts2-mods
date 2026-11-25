@@ -63,13 +63,15 @@ public class StatModelTests
     public void PenNibDoublesOnlyThePlayThatReachesTen()
     {
         // A report from 0.46.2: Ki Whip with Pen Nib ready (9), played twice into a 56-HP Magi Knight: 14, then 7.
+        // Read from its code (decision #272): its AttacksPlayed is its own state, the adapter's reading of the game's.
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 56) } };
-        state.You.Relics = RelicSet.Empty.With(RelicId.PenNib, amount: 9);
+        state.You.Relics = RelicSet.Empty.With(RelicId.PenNib, amount: 0);
+        SimEngine.SetField(state, Who.You, "PenNib.AttacksPlayed", 9);
         var after = After(state, Play(Card("KiWhip"), target: 0, plays: 2, Attack(baseDamage: 7))).Single();
         Assert.Equal(35, after.Enemy(id: 0)!.Hp);
-        Assert.Equal(1, after.You.Relics[RelicId.PenNib]);
+        Assert.Equal(1, after.You.Fields["PenNib.AttacksPlayed"]);
         // At 8, the replay's second play is the doubled one.
-        state.You.Relics = RelicSet.Empty.With(RelicId.PenNib, amount: 8);
+        SimEngine.SetField(state, Who.You, "PenNib.AttacksPlayed", 8);
         Assert.Equal(35, After(state, Play(Card("KiWhip"), target: 0, plays: 2, Attack(baseDamage: 7))).Single().Enemy(id: 0)!.Hp);
         Assert.Equal(1, After(state, Play(Card("KiWhip"), target: 0, plays: 2, Attack(baseDamage: 7))).Single().Fired["PenNib"]);
     }
@@ -80,10 +82,12 @@ public class StatModelTests
         // Reports from 1.11.4 (Regent): Jackpot was the 10th attack and mid-play when the hand was simulated; the game
         // doubles only Jackpot (AttackToDouble), so Sovereign Blade dealt 60, not 120. Its next attack counts 1.
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 200) } };
-        state.You.Relics = RelicSet.Empty.With(RelicId.PenNib, amount: 0, data: 1);
+        // Its AttackToDouble kept as the state was read: there, and no simulated card play's (SimReaders.KeptOutside: decision #272).
+        state.You.Relics = RelicSet.Empty.With(RelicId.PenNib, amount: 0);
+        SimEngine.SetField(state, Who.You, "PenNib.AttackToDouble", int.MaxValue);
         var after = After(state, Play(Card("SovereignBlade"), target: 0, plays: 1, Attack(baseDamage: 60))).Single();
         Assert.Equal(140, after.Enemy(id: 0)!.Hp);
-        Assert.Equal(1, after.You.Relics[RelicId.PenNib]);
+        Assert.Equal(1, after.You.Fields["PenNib.AttacksPlayed"]);
         Assert.False(after.Fired.Has("PenNib"));
     }
 

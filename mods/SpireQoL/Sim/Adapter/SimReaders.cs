@@ -173,13 +173,6 @@ public static class SimReaders
             int amount = amountIsVar ? Sts2State.Var(relic, amountVar.Var, amountVar.Fallback) : 0, data = 0;
             switch (name)
             {
-                case nameof(PenNib):
-                    amount = Sts2State.Private(relic, "AttacksPlayed", fallback: 0);
-                    data = Sts2State.Private<object?>(relic, "AttackToDouble", fallback: null) != null ? Models.PenNib.GameCardBound : 0;
-                    break;
-                case nameof(Vambrace):
-                    data = (Sts2State.Private<object?>(relic, "TriggeringCard", fallback: null) != null ? Models.Vambrace.Bound : 0) | (Sts2State.Private(relic, "BlockGainedThisCombat", fallback: false) ? Models.Vambrace.GainedThisCombat : 0);
-                    break;
                 case nameof(Pocketwatch): amount = Sts2State.Private(relic, "_cardsPlayedThisTurn", fallback: 0); data = Sts2State.Var(relic, "CardThreshold", fallback: 3); break;
                 // The HP at or below which it gives Strength (its threshold of your max HP).
                 case nameof(RedSkull):
@@ -460,7 +453,10 @@ public static class SimReaders
                     bool flag => flag ? 1 : 0,
                     decimal number => (int)number,
                     // What an attack it keeps names (decision #228): its card by its identity (the HandId the simulator's cards carry), its attacker by id.
-                    CardModel card => SimAdapter.HandId(card),
+                    CardModel card when field.EndsWith(".ModelSource", StringComparison.Ordinal) => SimAdapter.HandId(card),
+                    // A card it keeps (Pen Nib's AttackToDouble, Vambrace's TriggeringCard: decision #272), the identity of the card play it was kept from:
+                    // one kept as the state was read is there, and no simulated card play's.
+                    CardModel => KeptOutside,
                     Creature creature => idOf?.Invoke(creature) ?? Who.None,
                     // A card play's player it keeps (Stretch's cardPlay.Player), by its creature's id.
                     MegaCrit.Sts2.Core.Entities.Players.Player keptPlayer => idOf?.Invoke(keptPlayer.Creature) ?? Who.None,

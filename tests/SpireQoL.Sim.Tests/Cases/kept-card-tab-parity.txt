@@ -1,0 +1,300 @@
+0 proc:PenNib plain amount 0 0-0; proc:Vambrace plain amount 0 0-0; | checked PenNib 1/1; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 14/5/28 block 0
+1 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 15 block 0
+2 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 39/1/39 block 0
+3 | checked PenNib 0/0; | seen PenNib Flash plain; | hp -6 block 5
+4 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; | seen PenNib Flash plain; | hp 5/18/5 block 0
+5 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 34 block 0
+6 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 7/16/20 block 0
+7 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 12/11 block 0
+8 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 30/28/11 block 0
+9 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 2/6 block 0
+10 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 11/25/37 block 0
+11 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 25/3 block 0
+12 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 36/30/10 block 0
+13 | checked | seen | hp 9/23 block 0
+14 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 20/17/20 block 0
+15 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 32/35 block 0
+16 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 4 block 0
+17 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 16/31 block 0
+18 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 27 block 0
+19 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 27/34 block 0
+20 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp -3 block 5
+21 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 4/5 block 0
+22 | checked | seen | hp 29 block 2
+23 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; | seen PenNib Flash plain; | hp -3/15/24 block 2
+24 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 18 block 0
+25 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 29/16/8 block 0
+26 | checked | seen | hp 1 block 0
+27 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 1/0/-3 block 0
+28 | checked | seen | hp 24 block 3
+29 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 36/23/22 block 0
+30 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 8/26 block 0
+31 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 20/4/1 block 0
+32 | checked | seen | hp 30/5 block 0
+33 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 4/5/33 block 0
+34 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 15/18 block 0
+35 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 26/36/1 block 0
+36 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 38/29 block 0
+37 | checked | seen | hp 2 block 2
+38 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 16/5 block 0
+39 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 33 block 0
+40 | checked | seen | hp -4/-2 block 0
+41 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 17 block 0
+42 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 29/38 block 0
+43 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 1 block 0
+44 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 12/30 block 0
+45 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 24 block 5
+46 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 34/19/18 block 0
+47 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; | seen PenNib Flash plain; | hp -4 block 0
+48 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 19/31/27 block 0
+49 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; | seen PenNib Flash plain; | hp 31 block 3
+50 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 3/27/22 block 0
+51 | checked | seen | hp 7 block 0
+52 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; | seen PenNib Flash plain; | hp 26/24/8 block 0
+53 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 37/2 block 0
+54 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 10/19/22 block 0
+55 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 7/37 block 0
+56 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 33/8/22 block 0
+57 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 5/33 block 0
+58 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 17/12/22 block 0
+59 | checked | seen | hp 27/23 block 0
+60 | checked | seen | hp 1 block 5
+61 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 0/14 block 7
+62 | checked | seen | hp 23 block 0
+63 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 35/22 block 0
+64 | checked PenNib 0/0; | seen PenNib Flash plain; | hp -1 block 7
+65 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 17/18 block 0
+66 | checked | seen | hp 30 block 0
+67 proc:PenNib plain amount 0 0-0; proc:Vambrace plain amount 0 0-0; | checked PenNib 1/1; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 3/14/-6 block 0
+68 | checked | seen | hp 14 block 0
+69 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 26/22/14 block 0
+70 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 37 block 0
+71 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 9/7/21 block 0
+72 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 21 block 5
+73 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 16/-5/15 block 0
+74 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp -3/21 block 0
+75 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 12/34/4 block 0
+76 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 28/27 block 0
+77 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 3/-2/-11 block 0
+78 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 12/13 block 3
+79 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 23/6/21 block 0
+80 proc:PenNib plain amount 0 0-0; proc:Vambrace plain amount 0 0-0; | checked PenNib 1/1; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 26/9 block 3
+81 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 6/27/30 block 0
+82 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 18/37 block 0
+83 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 30 block 3
+84 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 2/2 block 3
+85 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 12 block 0
+86 | checked | seen | hp 24/9 block 0
+87 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 37 block 0
+88 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 9/33 block 0
+89 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 20 block 0
+90 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 32/29/25 block 0
+91 | checked | seen | hp -5 block 5
+92 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 7/26/5 block 0
+93 | checked | seen | hp 21 block 2
+94 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 39/22/25 block 0
+95 | checked PenNib 0/0; | seen PenNib Flash plain; | hp -3 block 8
+96 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 23/7/13 block 0
+97 | checked | seen | hp 34/36 block 4
+98 | checked | seen | hp 6/5/25 block 2
+99 proc:PenNib plain amount 0 0-0; proc:Vambrace plain amount 0 0-0; | checked PenNib 1/1; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 9/31 block 1
+100 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 29/10/25 block 0
+101 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 2/28 block 0
+102 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 1/16/15 block 0
+103 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 25/24 block 0
+104 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 36 block 0
+105 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 9/1 block 0
+106 | checked | seen | hp 20 block 0
+107 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 31/17 block 0
+108 | checked | seen | hp 4 block 0
+109 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 15/21 block 0
+110 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 27 block 6
+111 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 38/9 block 11
+112 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 11 block 0
+113 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 22/5/29 block 0
+114 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 34 block 3
+115 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 6/30/38 block 0
+116 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 17 block 2
+117 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 29/37/7 block 0
+118 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp -1 block 0
+119 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 13/11/19 block 0
+120 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 24/11 block 0
+121 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 36/29/28 block 2
+122 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 8/35 block 0
+123 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 19/25/7 block 0
+124 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 31/4 block 0
+125 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 3/20/1 block 0
+126 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 15/15 block 0
+127 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 22 block 0
+128 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 20/35 block 0
+129 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 1 block 0
+130 | checked | seen | hp 22/26 block 0
+131 | checked | seen | hp 29 block 0
+132 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 5/25 block 0
+133 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 7 block 0
+134 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 28/14/27 block 0
+135 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 1 block 0
+136 | checked | seen | hp 10/5/-3 block 0
+137 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 12 block 0
+138 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 35/16/28 block 0
+139 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 8 block 0
+140 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 19/13/28 block 0
+141 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 24/24 block 0
+142 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 3/2/13 block 0
+143 | checked | seen | hp 14/26 block 0
+144 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 26/5/22 block 0
+145 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; | seen PenNib Flash plain; | hp 21/21 block 0
+146 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 3/1/28 block 0
+147 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 19/17 block 0
+148 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 33/37/28 block 0
+149 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 5/19 block 0
+150 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp -12 block 10
+151 | checked | seen | hp 28/11 block 0
+152 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 39 block 5
+153 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 12/8 block 0
+154 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 23 block 0
+155 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 35/25 block 2
+156 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp -1 block 4
+157 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 3/23/1 block 0
+158 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 30 block 4
+159 | checked | seen | hp 2/9/17 block 0
+160 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 8 block 0
+161 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 25/31/10 block 0
+162 | checked | seen | hp 37 block 0
+163 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 9/28/10 block 0
+164 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 21/6 block 0
+165 proc:PenNib plain amount 0 0-0; proc:Vambrace plain amount 0 0-0; | checked PenNib 1/1; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 18/18/30 block 0
+166 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 5/2 block 0
+167 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 16/20/16 block 0
+168 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 27/38 block 0
+169 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 39/38/26 block 0
+170 | checked | seen | hp 11/34 block 0
+171 | checked | seen | hp 14 block 0
+172 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 34/23 block 0
+173 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 7 block 3
+174 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; | seen PenNib Flash plain; | hp -14/-5 block 6
+175 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 30 block 0
+176 | checked | seen | hp 2/23 block 0
+177 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 1 block 0
+178 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 25/19/30 block 0
+179 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; | seen PenNib Flash plain; | hp 34 block 0
+180 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 8/15/30 block 0
+181 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 4 block 0
+182 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 32/13/11 block 0
+183 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 4 block 1
+184 | checked | seen | hp 4/0/8 block 0
+185 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 27 block 3
+186 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 38/4/31 block 0
+187 | checked | seen | hp 11/19 block 0
+188 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 22/39/31 block 0
+189 | checked | seen | hp 34/17 block 0
+190 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 6/35/10 block 0
+191 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 18/14 block 0
+192 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 29/3/28 block 0
+193 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp -4/10 block 0
+194 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 3 block 0
+195 | checked | seen | hp 11/13 block 0
+196 | checked | seen | hp 36 block 0
+197 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 8/2 block 0
+198 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 18 block 0
+199 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 31/7 block 0
+200 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 4 block 6
+201 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 12/31/9 block 0
+202 | checked | seen | hp 27 block 0
+203 | checked | seen | hp 38/30/12 block 0
+204 | checked | seen | hp 10 block 0
+205 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 6/-1/-4 block 0
+206 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 32 block 0
+207 | checked | seen | hp 6/22/14 block 0
+208 | checked | seen | hp 7/-8 block 7
+209 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 29/36/24 block 0
+210 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 1/36 block 2
+211 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 1/3/1 block 0
+212 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 24/21 block 0
+213 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 35/9/13 block 0
+214 | checked | seen | hp -4/26 block 0
+215 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 19/6/14 block 0
+216 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 31/25 block 0
+217 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 3 block 0
+218 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 15/23 block 0
+219 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 14 block 0
+220 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 37/17 block 0
+221 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 10 block 0
+222 | checked | seen | hp 21/9 block 0
+223 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 23 block 0
+224 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 5/10/18 block 0
+225 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 12 block 0
+226 | checked | seen | hp 28/6/33 block 0
+227 | checked | seen | hp -3 block 0
+228 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 12/21/39 block 0
+229 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 18 block 0
+230 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 17/21/-1 block 0
+231 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 7/16 block 0
+232 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 19/1/18 block 0
+233 | checked | seen | hp 30/12 block 0
+234 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 3/30/34 block 0
+235 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 14/18 block 5
+236 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 26/26/34 block 0
+237 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 37/5 block 0
+238 | checked | seen | hp 9 block 0
+239 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 21/1 block 0
+240 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 16 block 3
+241 | checked | seen | hp 5/36 block 0
+242 | checked | seen | hp 16 block 3
+243 | checked | seen | hp 28/28 block 0
+244 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 31 block 0
+245 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 12/15/3 block 0
+246 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 23 block 0
+247 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 34/25/12 block 0
+248 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 7 block 13
+249 | checked | seen | hp 18/21/16 block 0
+250 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 16 block 5
+251 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp -5/17/16 block 0
+252 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 14 block 0
+253 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 23/11/16 block 0
+254 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 33/31 block 0
+255 | checked | seen | hp 9/3/10 block 0
+256 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; | seen PenNib Flash plain; | hp 6/13 block 0
+257 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 32/6/16 block 0
+258 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 3/29 block 0
+259 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp -4/-8/-4 block 0
+260 | checked | seen | hp 27/20 block 0
+261 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 39 block 0
+262 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 11/9 block 0
+263 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 17 block 0
+264 proc:PenNib plain amount 0 0-0; proc:Vambrace plain amount 0 0-0; | checked PenNib 1/1; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 10/0 block 5
+265 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 6 block 0
+266 | checked | seen | hp 18/-2 block 0
+267 | checked | seen | hp 20 block 0
+268 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 2/16/29 block 0
+269 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp -1 block 4
+270 | checked | seen | hp 25/1/6 block 0
+271 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 36 block 0
+272 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 9/38/16 block 0
+273 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 20 block 0
+274 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 31/32/37 block 0
+275 | checked | seen | hp 0/17 block 0
+276 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 15/28/37 block 0
+277 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 27/7 block 0
+278 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 38/6/3 block 0
+279 | checked | seen | hp 11/3 block 0
+280 | checked | seen | hp 22/21/37 block 0
+281 | checked | seen | hp 16/20 block 0
+282 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 6 block 2
+283 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 17/35 block 0
+284 | checked PenNib 0/0; | seen PenNib Flash plain; | hp 29 block 0
+285 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 1/-3 block 0
+286 proc:PenNib plain amount 0 0-0; | checked PenNib 1/1; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp -5 block 0
+287 | checked | seen | hp 16/27 block 0
+288 proc:Vambrace plain amount 0 0-0; | checked PenNib 0/0; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 36 block 10
+289 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 6/21 block 0
+290 | checked Vambrace 0/0; | seen Vambrace Flash plain; | hp 20 block 0
+291 | checked PenNib 0/0; Vambrace 0/0; | seen PenNib Flash plain; Vambrace Flash plain; | hp 31/19/4 block 0
+292 | checked | seen | hp 3 block 0
+293 | checked | seen | hp 15/16/39 block 0
+294 proc:PenNib plain amount 0 0-0; proc:Vambrace plain amount 0 0-0; | checked PenNib 1/1; Vambrace 1/1; | seen PenNib Flash plain; Vambrace Flash plain; | hp 20 block 6
+295 proc:Vambrace plain amount 0 0-0; | checked Vambrace 1/1; | seen Vambrace Flash plain; | hp 38/3/27 block 0
+296 | checked | seen | hp 10 block 0
+297 | checked | seen | hp 22/8/19 block 0
+298 | checked | seen | hp 33/27 block 0
+299 | checked | seen | hp 6/4/19 block 0

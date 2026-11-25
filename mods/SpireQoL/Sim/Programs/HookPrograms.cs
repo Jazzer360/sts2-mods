@@ -208,15 +208,6 @@ public enum HookFact
     TakeBound,
     /// <summary>The amount this hook run took from what the model bound to the play (Remove's out value; 0 when none was).</summary>
     BoundTaken,
-    /// <summary>
-    /// The model has a card play bound, left there, whichever (a card its code keeps in a field of its own: MusicBox's CardBeingPlayed != null).
-    /// </summary>
-    BoundHeld,
-    /// <summary>
-    /// The card the model keeps is the card played (MusicBox's cardPlay.Card == CardBeingPlayed): something is bound to this card play, not to one
-    /// it's played inside (decision #267).
-    /// </summary>
-    BoundToPlay,
     /// <summary>The card play's count as the listeners before it left it (ModifyCardPlayCount's playCount).</summary>
     PlayCountSoFar,
     /// <summary>The HP a hit took past block (AfterDamageGiven's and AfterDamageReceived's result.UnblockedDamage).</summary>
@@ -957,6 +948,57 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     /// every simulation it's in is unknown (SimState.Unmodelled, decision #92). Null: read.
     /// </summary>
     public string? Unread { get; init; }
+
+    /// <summary>
+    /// The fields its damage terms (ModifyDamageAdditive, Multiplicative, MultiplicativeLate, Cap) read on a way a damage from the card being played can
+    /// take (decision #272): a way that holds only for a card outside the play pile (Pen Nib's `cardSource.Pile.Type != PileType.Play` and `AttacksPlayed == 9`,
+    /// a card in your hand's preview) is left out, each way's test read as alternatives of conditions that all hold, and so is a way that leaves the
+    /// damage as it is (its 1, or 0 added: what it tests only says the term changes nothing; the ways' order isn't followed). Aplay hook's store to one of
+    /// these changes what its own damage gets (decision #229: Slow's count; Pen Nib's 10th Attack kept).
+    /// </summary>
+    public static HashSet<string> TermFieldsOfAPlay(IEnumerable<HookProgram> programs)
+    {
+        var fields = new HashSet<string>(StringComparer.Ordinal);
+        static bool OutsideThePlay(HookValue atom) => atom is HookNot { Inner: HookFactValue { Fact: HookFact.SourceInPlay } or HookTest { Test: HookFactValue { Fact: HookFact.SourceInPlay } } };
+        // A test as its alternatives, each the conditions that all hold in it (a bounded disjunctive form; a test's own wrapper and a negated atom as they are).
+        static List<List<HookValue>> Alternatives(HookValue value, int depth)
+        {
+            if (depth > 12) return new() { new() { value } };
+            switch (value)
+            {
+                case HookTest test: return Alternatives(test.Test, depth + 1);
+                case HookNot { Inner: HookTest inner }: return Alternatives(new HookNot(inner.Test), depth + 1);
+                case HookMath { Operation: HookOperation.Or } either: return Alternatives(either.Left, depth + 1).Concat(Alternatives(either.Right, depth + 1)).ToList();
+                case HookMath { Operation: HookOperation.And } both:
+                    var left = Alternatives(both.Left, depth + 1);
+                    var right = Alternatives(both.Right, depth + 1);
+                    if (left.Count * right.Count > 64) return new() { left.SelectMany(part => part).Concat(right.SelectMany(part => part)).ToList() };
+                    return left.SelectMany(one => right.Select(other => one.Concat(other).ToList())).ToList();
+                default: return new() { new() { value } };
+            }
+        }
+        void Read(HookValue value) => fields.UnionWith(new ModelSpec("", ModelKind.Power, new[] { new HookProgram(HookName.ModifyDamageAdditive, Array.Empty<HookStep>()) { Returns = value } })
+            .Values().OfType<HookField>().Select(field => field.Field));
+        foreach (var program in programs)
+        {
+            if (program.Returns is not { } returns || program.Hook is not (HookName.ModifyDamageAdditive or HookName.ModifyDamageMultiplicative or HookName.ModifyDamageMultiplicativeLate or HookName.ModifyDamageCap)) continue;
+            if (returns is not HookWays ways)
+            {
+                Read(returns);
+                continue;
+            }
+            // A way that leaves the damage as it is (its term's 1, or 0 added) changes no play's damage: what it tests isn't what a play's damage gets.
+            var neutral = program.Hook == HookName.ModifyDamageAdditive ? 0m : 1m;
+            foreach (var way in ways.Ways)
+            {
+                if (program.Hook != HookName.ModifyDamageCap && way.Value is HookConstant { Value: var constant } && constant == neutral) continue;
+                Read(way.Value);
+                foreach (var alternative in Alternatives(way.When, depth: 0))
+                    if (!alternative.Any(OutsideThePlay)) foreach (var atom in alternative) Read(atom);
+            }
+        }
+        return fields;
+    }
 
     /// <summary>Every value its programs work out (each condition, amount and return, with the values inside them).</summary>
     public IEnumerable<HookValue> Values()

@@ -25,10 +25,6 @@ public static class SimKeys
     /// <summary>What a model (its owned key) binds to one card play (SimCardPlay.Serial): "Name@id#serial" (decision #267).</summary>
     public static string Bound(string owned, int cardPlay) => BoundNames.GetOrAdd((owned, cardPlay), ownedPlay => ownedPlay.Owned + "#" + ownedPlay.CardPlay);
 
-    /// <summary>A bound entry's key is the model's (<paramref name="owned"/>), for any card play.</summary>
-    public static bool IsBoundOf(string key, string owned) =>
-        key.Length > owned.Length && key[owned.Length] == '#' && key.StartsWith(owned, StringComparison.Ordinal);
-
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<(string Owned, int CardPlay), string> BoundNames = new();
 
     /// <summary>The play log's entry for a firing set off by a card event (the Indirect procs setting): "~" before its name.</summary>

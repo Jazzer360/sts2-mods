@@ -97,7 +97,7 @@ internal static partial class CoverageLedger
         ["PaelsLegion"] = "covered: read from its code (ReadModel, decision #269): ModifyBlockMultiplicative doubles its owner's card block off cooldown for no card play kept or the one kept; AfterModifyingBlockAmount keeps the first card play whose block it changed; AfterCardPlayed of that card play lets it go and starts the cooldown (its Turns); AfterSideTurnStart counts it down past the turns predicted (proc tab: its term changing a block, tracker)",
         ["PaelsTears"] = "covered: BeforeSideTurnEnd notes leftover energy (crossed tab on cards that leave no energy once the play has resolved, energy it gets back counted)",
         ["ParryingShield"] = "covered: read from its code (ReadModel, decision #239): AfterSideTurnEnd damages a random hittable enemy when its owner's block is at least its Block; whether that holds as your turn ends, with the play against without it, is its tab, plain where the play makes it pay (its row shows that direction only: decision #244)",
-        ["PenNib"] = "covered: Before/AfterCardPlayed doubles every 10th attack (proc tab, tracker; damage through the game's math; a replay doubles only the play that reaches 10, in the simulator)",
+        ["PenNib"] = "covered: read from its code (ReadModel, decision #272): BeforeCardPlayed counts its owner's Attacks (AttacksPlayed, its setter's % 10) and keeps the 10th's card play (AttackToDouble, by its identity); ModifyDamageMultiplicative doubles that card play's powered hits by its owner or their Osty (or a card outside the play pile at 9: a preview); AfterCardPlayed of that card play lets it go (proc tab, tracker)",
         ["Permafrost"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed block on the first Power (proc block)",
         ["PhilosophersStone"] = "ignore: AfterCreatureAddedToCombat gives enemies Strength as they enter (intents read live)",
         ["Pocketwatch"] = "covered: AfterCardPlayed counts cards this turn (tracker); the play that takes it past CardThreshold gives up ModifyHandDraw's extra cards next turn (crossed tab, model Pocketwatch)",
@@ -121,7 +121,7 @@ internal static partial class CoverageLedger
         ["TuningFork"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed block every N skills (proc block, tracker)",
         ["UnceasingTop"] = "covered: AfterHandEmptied draws (proc tab)",
         ["UnsettlingLamp"] = "covered: proc tab on the card that arms it (temporary debuffs too); ModifyPowerAmountGivenMultiplicative doubles that card's first play's debuffs: the adapter doubles its Strength loss and poison (random poison, Bouncing Flask, isn't doubled)",
-        ["Vambrace"] = "covered: AfterCardPlayed doubles the first block card (proc tab)",
+        ["Vambrace"] = "covered: read from its code (ReadModel, decision #272): ModifyBlockMultiplicative doubles its owner's card block until BlockGainedThisCombat, for the card play it keeps or any while it keeps none; AfterModifyingBlockAmount keeps the block's card play (TriggeringCard, by its identity); AfterCardPlayed of that card play spends it (proc tab)",
         ["VelvetChoker"] = "covered: ShouldPlay limits cards per turn (tracker; playability read live)",
         ["WhisperingEarring"] = "ignore: AfterAutoPrePlayPhaseEnteredLate plays your turn-1 hand (before your plays)",
         // v0.113.0

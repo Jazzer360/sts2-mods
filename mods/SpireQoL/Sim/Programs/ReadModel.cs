@@ -214,8 +214,7 @@ public sealed class ReadModel : SimModel
         _copyPrefix = spec.Name + "@";
         _upgradesCardInPlay = spec.Steps().Any(step => step is UpgradeCardStep);
         CountdownAt = CountdownOf(spec);
-        _termFields = spec.Hooks.Where(program => program.Returns != null && program.Hook is HookName.ModifyDamageAdditive or HookName.ModifyDamageMultiplicative or HookName.ModifyDamageMultiplicativeLate or HookName.ModifyDamageCap)
-            .SelectMany(program => new ModelSpec(spec.Name, spec.Kind, new[] { program }).Values()).OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
+        _termFields = ModelSpec.TermFieldsOfAPlay(spec.Hooks);
         foreach (var test in spec.Values().OfType<HookTest>()) _testSlots.TryAdd(test.At, _testSlots.Count);
         foreach (var let in spec.Steps().OfType<LetStep>()) _localSlots.TryAdd(let.Name, _localSlots.Count);
         foreach (var payout in spec.Payouts ?? Array.Empty<Payout>())
@@ -452,7 +451,8 @@ public sealed class ReadModel : SimModel
             // A play that changes the state its damage term reads (Slow's SlowAmount++ on every card) acts on that play too (decision #229).
             var acts = step is DrawStep or GainEnergyStep or GainStarsStep or SummonStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep
                 || hook == HookName.AfterAttack && step is DecrementPowerStep or RemovePowerStep
-                || hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed && step is StoreFieldStep { Field: var termField } && _termFields.Contains(termField);
+                // Not a store of 0, which lets go of what it kept (Pen Nib's AttackToDouble = null as its 10th Attack ends: decision #272).
+                || hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed && step is StoreFieldStep { Field: var termField, Value: not HookConstant { Value: 0m } } && _termFields.Contains(termField);
             // An enchantment's effects are its card's (no tab of its own, nothing in the play log: its card's play shows them).
             var fires = firstRound && acts && Spec.Kind != ModelKind.Enchantment && !firing.Any(earlier => Equals(earlier.When, step.When));
             if (acts) firing.Add(step);
@@ -1775,14 +1775,6 @@ public sealed class ReadModel : SimModel
     /// <summary>Its own key among what's bound, whatever card play: "Model@owner" (or the copy's).</summary>
     private string BoundOwnerKey(in HookArgs args) => args.Copy > 0 ? SimKeys.Owned(CopyKey(args.Copy), args.Owner) : SimKeys.Owned(Name, args.Owner);
 
-    /// <summary>It has something bound to any card play (CardBeingPlayed != null: Music Box's, kept from an outer card play too).</summary>
-    private bool HoldsAny(in HookArgs args)
-    {
-        var prefix = BoundOwnerKey(in args);
-        foreach (var entry in args.State.Bound.Items) if (SimKeys.IsBoundOf(entry.Name, prefix)) return true;
-        return false;
-    }
-
     /// <summary>Card events it causes (draws, energy), each through every listener; a draw or energy tab counts what they gave (decision #132).</summary>
     private IEnumerable<SimState> Cause(HookArgs args, CardEvent cardEvent, int count, bool fires)
     {
@@ -2131,8 +2123,6 @@ public sealed class ReadModel : SimModel
                 ? args.State.Enemy(args.Owner) is { Alive: true } : args.State.TakesPart(args.Owner)) ? 1m : 0m;
             case HookFact.TakeBound: return (in HookArgs args) => Take(in args) ? 1m : 0m;
             case HookFact.BoundTaken: return (in HookArgs args) => args.Taken?[0] ?? 0;
-            case HookFact.BoundHeld: return (in HookArgs args) => HoldsAny(in args) ? 1m : 0m;
-            case HookFact.BoundToPlay: return (in HookArgs args) => args.State.Bound.Has(BoundKey(in args)) ? 1m : 0m;
             case HookFact.HitUnblocked: return (in HookArgs args) => args.Hit?.Unblocked ?? 0;
             case HookFact.HitBlocked: return (in HookArgs args) => args.Hit?.Blocked ?? 0;
             // The damage's card is the card in play, bound (what its BeforeCardPlayed added for the play, still there).

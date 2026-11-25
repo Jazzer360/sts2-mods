@@ -12446,7 +12446,12 @@
         "Hook": "AfterCardPlayed",
         "Steps": [
           {
-            "$kind": "UnbindStep",
+            "$kind": "StoreFieldStep",
+            "Field": "Data.cardToClone",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
             "When": {
               "$kind": "HookNot",
               "Inner": {
@@ -12455,8 +12460,32 @@
                 "Test": {
                   "$kind": "HookNot",
                   "Inner": {
-                    "$kind": "HookFactValue",
-                    "Fact": "BoundToPlay"
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardToClone"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardToClone"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlaySerial"
+                      }
+                    }
                   }
                 }
               }
@@ -12472,8 +12501,32 @@
                 "Test": {
                   "$kind": "HookNot",
                   "Inner": {
-                    "$kind": "HookFactValue",
-                    "Fact": "BoundToPlay"
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardToClone"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardToClone"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlaySerial"
+                      }
+                    }
                   }
                 }
               }
@@ -12500,8 +12553,32 @@
                 "Test": {
                   "$kind": "HookNot",
                   "Inner": {
-                    "$kind": "HookFactValue",
-                    "Fact": "BoundToPlay"
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardToClone"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardToClone"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlaySerial"
+                      }
+                    }
                   }
                 }
               }
@@ -12578,10 +12655,11 @@
             }
           },
           {
-            "$kind": "BindStep",
+            "$kind": "StoreFieldStep",
+            "Field": "Data.cardToClone",
             "Value": {
-              "$kind": "HookConstant",
-              "Value": 1
+              "$kind": "HookFactValue",
+              "Fact": "PlaySerial"
             },
             "When": {
               "$kind": "HookMath",
@@ -18203,8 +18281,32 @@
               "$kind": "HookTest",
               "At": "\u003CAfterCardPlayed\u003Ed__13.MoveNext:0022",
               "Test": {
-                "$kind": "HookFactValue",
-                "Fact": "BoundToPlay"
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "CardBeingPlayed"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "CardBeingPlayed"
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlaySerial"
+                  }
+                }
               }
             }
           },
@@ -18216,8 +18318,32 @@
               "$kind": "HookTest",
               "At": "\u003CAfterCardPlayed\u003Ed__13.MoveNext:0022",
               "Test": {
-                "$kind": "HookFactValue",
-                "Fact": "BoundToPlay"
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "CardBeingPlayed"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "CardBeingPlayed"
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlaySerial"
+                  }
+                }
               }
             }
           },
@@ -18232,19 +18358,72 @@
               "$kind": "HookTest",
               "At": "\u003CAfterCardPlayed\u003Ed__13.MoveNext:0022",
               "Test": {
-                "$kind": "HookFactValue",
-                "Fact": "BoundToPlay"
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "CardBeingPlayed"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "CardBeingPlayed"
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlaySerial"
+                  }
+                }
               }
             }
           },
           {
-            "$kind": "UnbindStep",
+            "$kind": "StoreFieldStep",
+            "Field": "CardBeingPlayed",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
             "When": {
               "$kind": "HookTest",
               "At": "\u003CAfterCardPlayed\u003Ed__13.MoveNext:0022",
               "Test": {
-                "$kind": "HookFactValue",
-                "Fact": "BoundToPlay"
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "CardBeingPlayed"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "CardBeingPlayed"
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlaySerial"
+                  }
+                }
               }
             }
           }
@@ -18254,10 +18433,11 @@
         "Hook": "BeforeCardPlayed",
         "Steps": [
           {
-            "$kind": "BindStep",
+            "$kind": "StoreFieldStep",
+            "Field": "CardBeingPlayed",
             "Value": {
-              "$kind": "HookConstant",
-              "Value": 1
+              "$kind": "HookFactValue",
+              "Fact": "PlaySerial"
             },
             "When": {
               "$kind": "HookMath",
@@ -18274,8 +18454,16 @@
                       "$kind": "HookTest",
                       "At": "MusicBox.BeforeCardPlayed:0006",
                       "Test": {
-                        "$kind": "HookFactValue",
-                        "Fact": "BoundHeld"
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "CardBeingPlayed"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
                       }
                     }
                   },
@@ -20914,6 +21102,1292 @@
         }
       }
     ]
+  },
+  {
+    "Name": "PenNib",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AttackToDouble",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "PenNib.AfterCardPlayed:0006",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "AttackToDouble"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "PenNib.AfterCardPlayed:001A",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "AttackToDouble"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "AttackToDouble"
+                    },
+                    "Right": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PlaySerial"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AttacksPlayed",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Remainder",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Add",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "AttacksPlayed"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                }
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 10
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "PenNib.BeforeCardPlayed:000C",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "PenNib.BeforeCardPlayed:0025",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "PenNib.BeforeCardPlayed:000C",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "PenNib.BeforeCardPlayed:0025",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "PenNib.NotifyAttackPlayed:0016",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "AttacksPlayed"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AttackToDouble",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "PlaySerial"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "PenNib.BeforeCardPlayed:000C",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "PenNib.BeforeCardPlayed:0025",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "PenNib.BeforeCardPlayed:0039",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "AttacksPlayed"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "PenNib.ModifyDamageMultiplicative:0006",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "PenNib.ModifyDamageMultiplicative:0010",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "FromCard"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "PenNib.ModifyDamageMultiplicative:0025",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "DealerIsOwner"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "PenNib.ModifyDamageMultiplicative:0034",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "DealerIsOwnersPet"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "PenNib.ModifyDamageMultiplicative:0025",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "DealerIsOwner"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "PenNib.ModifyDamageMultiplicative:0042",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "AttackToDouble"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:005D",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Or",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "PenNib.ModifyDamageMultiplicative:0042",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "AttackToDouble"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "PenNib.ModifyDamageMultiplicative:005B:value",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookFactValue",
+                                "Fact": "SourceInPlay"
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "PenNib.ModifyDamageMultiplicative:0034",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "DealerIsOwnersPet"
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "PenNib.ModifyDamageMultiplicative:0042",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "AttackToDouble"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 0
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "PenNib.ModifyDamageMultiplicative:005B:value",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookFactValue",
+                                "Fact": "SourceInPlay"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:0067",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "AttacksPlayed"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 9
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "PenNib.ModifyDamageMultiplicative:0034",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "DealerIsOwnersPet"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "PenNib.ModifyDamageMultiplicative:0042",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "AttackToDouble"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:005D",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Or",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "PenNib.ModifyDamageMultiplicative:0025",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "DealerIsOwner"
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "PenNib.ModifyDamageMultiplicative:0042",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "AttackToDouble"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 0
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "PenNib.ModifyDamageMultiplicative:005B:value",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookFactValue",
+                                "Fact": "SourceInPlay"
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "PenNib.ModifyDamageMultiplicative:0042",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "AttackToDouble"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "PenNib.ModifyDamageMultiplicative:005B:value",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookFactValue",
+                                "Fact": "SourceInPlay"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:0067",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "AttacksPlayed"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 9
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 2
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "PenNib.ModifyDamageMultiplicative:0025",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "DealerIsOwner"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "PenNib.ModifyDamageMultiplicative:0042",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookField",
+                                "Field": "AttackToDouble"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "PenNib.ModifyDamageMultiplicative:005D",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Or",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "PenNib.ModifyDamageMultiplicative:0042",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "NotEqual",
+                                    "Left": {
+                                      "$kind": "HookField",
+                                      "Field": "AttackToDouble"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 0
+                                    }
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "PenNib.ModifyDamageMultiplicative:005B:value",
+                                "Test": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "SourceInPlay"
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "PenNib.ModifyDamageMultiplicative:0034",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "DealerIsOwnersPet"
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "PenNib.ModifyDamageMultiplicative:0042",
+                                    "Test": {
+                                      "$kind": "HookMath",
+                                      "Operation": "NotEqual",
+                                      "Left": {
+                                        "$kind": "HookField",
+                                        "Field": "AttackToDouble"
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 0
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "PenNib.ModifyDamageMultiplicative:005B:value",
+                                "Test": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "SourceInPlay"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "PenNib.ModifyDamageMultiplicative:0034",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "DealerIsOwnersPet"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "PenNib.ModifyDamageMultiplicative:0042",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookField",
+                                "Field": "AttackToDouble"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "PenNib.ModifyDamageMultiplicative:005D",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Or",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "PenNib.ModifyDamageMultiplicative:0025",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "DealerIsOwner"
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "PenNib.ModifyDamageMultiplicative:0042",
+                                    "Test": {
+                                      "$kind": "HookMath",
+                                      "Operation": "NotEqual",
+                                      "Left": {
+                                        "$kind": "HookField",
+                                        "Field": "AttackToDouble"
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 0
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "PenNib.ModifyDamageMultiplicative:005B:value",
+                                "Test": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "SourceInPlay"
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "PenNib.ModifyDamageMultiplicative:0042",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "NotEqual",
+                                    "Left": {
+                                      "$kind": "HookField",
+                                      "Field": "AttackToDouble"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 0
+                                    }
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "PenNib.ModifyDamageMultiplicative:005B:value",
+                                "Test": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "SourceInPlay"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "PenNib.ModifyDamageMultiplicative:0025",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "DealerIsOwner"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "PenNib.ModifyDamageMultiplicative:0042",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "AttackToDouble"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:0067",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "AttacksPlayed"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 9
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:0034",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwnersPet"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "PenNib.ModifyDamageMultiplicative:0042",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "AttackToDouble"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "PenNib.ModifyDamageMultiplicative:0067",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AttacksPlayed"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 9
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:0025",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwner"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:0042",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "AttackToDouble"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:007E",
+                      "Test": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "AttackToDouble"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "AttackToDouble"
+                            },
+                            "Right": {
+                              "$kind": "HookFactValue",
+                              "Fact": "PlaySerial"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:0034",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwnersPet"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:0042",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "AttackToDouble"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:007E",
+                      "Test": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "AttackToDouble"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "AttackToDouble"
+                            },
+                            "Right": {
+                              "$kind": "HookFactValue",
+                              "Fact": "PlaySerial"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 2
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:0025",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwner"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:0042",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "AttackToDouble"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "PenNib.ModifyDamageMultiplicative:007E",
+                    "Test": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "AttackToDouble"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "AttackToDouble"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PlaySerial"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:0034",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "DealerIsOwnersPet"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "PenNib.ModifyDamageMultiplicative:0042",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "AttackToDouble"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "PenNib.ModifyDamageMultiplicative:007E",
+                    "Test": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "AttackToDouble"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "AttackToDouble"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PlaySerial"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false
   },
   {
     "Name": "PerfectFit",
@@ -31831,6 +33305,624 @@
       }
     ],
     "HelpsOwner": false
+  },
+  {
+    "Name": "Vambrace",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "BlockGainedThisCombat",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "Vambrace.AfterCardPlayed:0011",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "Vambrace.AfterCardPlayed:0025",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "TriggeringCard"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "TriggeringCard"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlaySerial"
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "Vambrace.AfterCardPlayed:0033",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "BlockGainedThisCombat"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterModifyingBlockAmount",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "Vambrace.AfterModifyingBlockAmount:000B",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "BlockModified"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "Vambrace.AfterModifyingBlockAmount:0014",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "FromCard"
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "TriggeringCard",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "PlaySerial"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "Vambrace.AfterModifyingBlockAmount:000B",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "BlockModified"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "Vambrace.AfterModifyingBlockAmount:0014",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "FromCard"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyBlockMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "Vambrace.ModifyBlockMultiplicative:0006",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardOrMonsterMove"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "Vambrace.ModifyBlockMultiplicative:0010",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "FromCard"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "Vambrace.ModifyBlockMultiplicative:001E",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "TriggeringCard"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "Vambrace.ModifyBlockMultiplicative:0028",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "TriggeringCard"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "TriggeringCard"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PlaySerial"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "Vambrace.ModifyBlockMultiplicative:001E",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "TriggeringCard"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "Vambrace.ModifyBlockMultiplicative:003D",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardIsOwners"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "Vambrace.ModifyBlockMultiplicative:0028",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "TriggeringCard"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "TriggeringCard"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PlaySerial"
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "Vambrace.ModifyBlockMultiplicative:003D",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardIsOwners"
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "Vambrace.ModifyBlockMultiplicative:001E",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "TriggeringCard"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "Vambrace.ModifyBlockMultiplicative:003D",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardIsOwners"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "Vambrace.ModifyBlockMultiplicative:004B",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "BlockGainedThisCombat"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "Vambrace.ModifyBlockMultiplicative:0028",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "TriggeringCard"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "TriggeringCard"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PlaySerial"
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "Vambrace.ModifyBlockMultiplicative:003D",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardIsOwners"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "Vambrace.ModifyBlockMultiplicative:004B",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "BlockGainedThisCombat"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "Vambrace.ModifyBlockMultiplicative:001E",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "TriggeringCard"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "Vambrace.ModifyBlockMultiplicative:003D",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardIsOwners"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "Vambrace.ModifyBlockMultiplicative:004B",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "BlockGainedThisCombat"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "Vambrace.ModifyBlockMultiplicative:0028",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "TriggeringCard"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "TriggeringCard"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PlaySerial"
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "Vambrace.ModifyBlockMultiplicative:003D",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardIsOwners"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "Vambrace.ModifyBlockMultiplicative:004B",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "BlockGainedThisCombat"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 2
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false,
+    "TermActs": true
   },
   {
     "Name": "ViciousPower",

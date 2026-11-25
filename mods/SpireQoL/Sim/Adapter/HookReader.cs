@@ -658,8 +658,7 @@ public static class HookReader
     /// <summary>A play hook stores to state a damage term of its own reads (Slow's SlowAmount, which its ModifyDamageMultiplicative reads).</summary>
     private static bool ChangesItsTermOnAPlay(IReadOnlyList<HookProgram> programs)
     {
-        var termFields = programs.Where(program => program.Returns != null && program.Hook is HookName.ModifyDamageAdditive or HookName.ModifyDamageMultiplicative or HookName.ModifyDamageMultiplicativeLate or HookName.ModifyDamageCap)
-            .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Values()).OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
+        var termFields = ModelSpec.TermFieldsOfAPlay(programs);
         return programs.Where(program => program.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed)
             .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps()).Any(step => step is StoreFieldStep store && termFields.Contains(store.Field));
     }
@@ -1167,11 +1166,31 @@ public static class HookReader
         /// <summary>A copy of the card played (cardPlay.Card.CreateClone(), kept in a local or not).</summary>
         private bool IsCopyOfPlayCard(ProgramValue value) => Unstored(value) is QueryValue { Name: "CreateClone", Of: { } cloned } && IsPlayCard(cloned);
 
-        /// <summary>A card its code keeps in a field of its own (MusicBox's CardBeingPlayed): what's bound to the play in progress (HookFact.BoundHeld).</summary>
-        private bool IsKeptCard(ProgramValue value) => Unstored(value) is QueryValue { Of: NamedValue { Name: "this" }, Name: var member } && KeepsACard(member)
-            || Unstored(value) is NamedValue { Name: var named } && KeepsACard(named)
-            // A card field of its own data (Juggling's GetInternalData<Data>().cardToClone).
-            || Unstored(value) is QueryValue { Name: var dataField, Of: { } dataOf, Arguments.Count: 0 } && ProgramReader.IsOwnData(dataOf) && KeepsACard(ProgramReader.OwnDataPrefix + dataField);
+        /// <summary>
+        /// A card its code keeps in a field of its own (MusicBox's CardBeingPlayed, Pen Nib's AttackToDouble, Vambrace's TriggeringCard) or of its data
+        /// (Juggling's GetInternalData&lt;Data&gt;().cardToClone): the field's name, whose state is the identity of the card play the card was kept from
+        /// (decision #272: SimCardPlay.Serial, 0 for none), as a card play kept is (decision #269); else null.
+        /// </summary>
+        private string? KeptCard(ProgramValue value) => Unstored(value) switch
+        {
+            QueryValue { Of: NamedValue { Name: "this" }, Name: var member } when KeepsACard(member) => member,
+            NamedValue { Name: var named } when KeepsACard(named) => named,
+            QueryValue { Name: var dataField, Of: { } dataOf, Arguments.Count: 0 } when ProgramReader.IsOwnData(dataOf) && KeepsACard(ProgramReader.OwnDataPrefix + dataField) => ProgramReader.OwnDataPrefix + dataField,
+            _ => null,
+        };
+
+        /// <summary>
+        /// The card a card kept is held against or kept from, in a hook given its card play: the card played (a play hook's cardPlay.Card) or the card a
+        /// damage or block comes from (a Modify hook's or AfterModifyingBlockAmount's cardSource, its cardPlay's card): that card play's identity
+        /// (HookFact.PlaySerial). A damage's or block's card outside a card play has none (0).
+        /// </summary>
+        private bool IsCardOfThePlay(ProgramValue value) => IsPlayCard(Unstored(value)) && GivenAPlay.Contains(_hook!) || IsSourceCard(Unstored(value)) && GivenACardSource.Contains(_hook!);
+
+        /// <summary>The hooks given a damage's or block's card and its card play (cardSource, cardPlay).</summary>
+        private static readonly HashSet<string> GivenACardSource = new(StringComparer.Ordinal)
+        {
+            "ModifyBlockAdditive", "ModifyBlockMultiplicative", "AfterModifyingBlockAmount", "ModifyDamageAdditive", "ModifyDamageMultiplicative", "ModifyDamageMultiplicativeLate",
+        };
 
         /// <summary>
         /// A card play its code keeps (Stretch's data's cardPlay, Pael's Legion's AffectedCardPlay): the field's name ("Data.cardPlay", "AffectedCardPlay"),
@@ -1259,6 +1278,28 @@ public static class HookReader
             if (getter == null) return null;
             try { return _read(getter).FirstOrDefault(instruction => instruction.IsCall && instruction.Member is { Name: "GetPet", GenericArguments.Count: 1 })?.Member!.GenericArguments[0]; }
             catch (InvalidOperationException) { return null; }
+        }
+
+        /// <summary>
+        /// What a property of its own keeps when its code sets it to <paramref name="given"/> (decision #272): its setter's store to its backing field, read
+        /// from the setter's code, `value` the value given (Pen Nib's AttacksPlayed: `_attacksPlayed = value % 10`); the value given for a plain setter
+        /// or a member that isn't such a property. A setter that keeps it on a condition, or stores more than one of its own fields from it, is a gap.
+        /// </summary>
+        private ProgramValue SetterStores(string property, ProgramValue given)
+        {
+            if (_type.GetProperty(property, Declared) is not { SetMethod: { } setter }) return given;
+            ModelProgram program;
+            try { program = ProgramReader.Read(_type, _read, setter.Name); }
+            catch (InvalidOperationException) { return given; }
+            static bool IsGiven(ProgramValue part) => part is ParameterValue { Name: "value" } or NamedValue { Name: "value" };
+            var kept = program.All().OfType<StoreStep>().Where(store => store.Value.Parts().Any(IsGiven)).ToList();
+            if (kept.Count == 0) return given;
+            // Kept only when it changes (if (_skillsPlayed != value) _skillsPlayed = value: Tuning Fork's, Centennial Puzzle's): the value given either way.
+            static bool OnlyWhenItChanges(ProgramCondition? condition) => condition?.Terms.All(term => term.All(literal =>
+                literal.Test is CompareValue { Op: Comparison.Equal or Comparison.NotEqual } compare && (IsGiven(compare.Left) || IsGiven(compare.Right)))) == true;
+            if (kept.Count == 1 && IsGiven(kept[0].Value) && OnlyWhenItChanges(kept[0].Condition)) return given;
+            if (kept.Count > 1 || kept[0].Condition != null) throw new Gap(ReaderCapability.OwnData, $"gap: {property}'s setter keeps what it's given on a condition or in several fields");
+            return IsGiven(kept[0].Value) ? given : kept[0].Value.Map(part => IsGiven(part) ? given : null);
         }
 
         /// <summary>A monster class of this branch, by name (MegaCrit.Sts2.Core.Models.Monsters: BowlbugRock), not abstract.</summary>
@@ -1540,9 +1581,11 @@ public static class HookReader
                         return new HookStep[] { new StoreFieldStep(playStore.Field, new HookConstant(0m)) { When = keptWhen }, new StoreFieldStep(playStore.Field + ".Player", new HookConstant(Who.None)) { When = keptWhen } };
                     throw new Gap(ReaderCapability.OwnData, $"gap: keeps {playStore.Value} in {playStore.Field}");
                 }
+                // A card its code keeps (Music Box's CardBeingPlayed = cardPlay.Card, Vambrace's TriggeringCard = cardSource): the identity of the card play it
+                // comes from (decision #272); null lets it go. Any other card kept is a gap.
                 case StoreStep cardStore when KeepsACard(cardStore.Field):
-                    if (IsPlayCard(cardStore.Value)) return new HookStep[] { new BindStep(new HookConstant(1m)) { When = Condition(step.Condition) } };
-                    if (cardStore.Value is NullValue) return new HookStep[] { new UnbindStep { When = Condition(step.Condition) } };
+                    if (IsCardOfThePlay(cardStore.Value)) return new HookStep[] { new StoreFieldStep(cardStore.Field, new HookFactValue(HookFact.PlaySerial)) { When = Condition(step.Condition) } };
+                    if (cardStore.Value is NullValue) return new HookStep[] { new StoreFieldStep(cardStore.Field, new HookConstant(0m)) { When = Condition(step.Condition) } };
                     throw new Gap(ReaderCapability.OwnData, $"gap: keeps {cardStore.Value} in {cardStore.Field}");
                 // An attack its data keeps (Vigor's commandToModify = command): the attack's id, its card and its attacker, each its state (KeptAttack);
                 // null lets it go. Any other attack kept is a gap.
@@ -1575,7 +1618,7 @@ public static class HookReader
                     var field = store.Field.StartsWith(ProgramReader.OwnVarPrefix, StringComparison.Ordinal) ? VarFieldPrefix + OwnVarKey(store.Field[ProgramReader.OwnVarPrefix.Length..]) : store.Field;
                     // One of its own fields or properties that holds a node (Echo Form's Vfx: how it looks) is what's shown, never read by a hook.
                     if (OwnMemberType(store.Field) is { } memberType && (memberType.Namespace ?? "").Contains(".Nodes", StringComparison.Ordinal)) return Array.Empty<HookStep>();
-                    return new[] { new StoreFieldStep(field, Value(store.Value)) { When = Condition(step.Condition) } };
+                    return new[] { new StoreFieldStep(field, Value(SetterStores(store.Field, store.Value))) { When = Condition(step.Condition) } };
                 case DataStep data:
                     return new[] { Data(data) with { When = Condition(step.Condition) } };
                 case LoopStep loop:
@@ -2186,9 +2229,9 @@ public static class HookReader
                 // hand holds).
                 case QueryValue { Name: "NextItem", Arguments: [var picked] } when _handPickHolds && FromOwnersHand(picked):
                     return new HookConstant(1m);
-                // Its kept card tested as there (MusicBox's CardBeingPlayed): a play bound to it.
-                case var kept when IsKeptCard(kept):
-                    return new HookFactValue(HookFact.BoundHeld);
+                // Its kept card tested as there (MusicBox's CardBeingPlayed): one is kept, whichever card play's.
+                case var kept when KeptCard(kept) is { } keptField:
+                    return new HookMath(HookOperation.NotEqual, new HookField(keptField), new HookConstant(0m));
                 // A card play its code keeps, tested as there (Stretch's data's cardPlay != null): one is kept, whichever.
                 case var keptPlay when KeptPlay(keptPlay) is { } playField:
                     return new HookMath(HookOperation.NotEqual, new HookField(playField), new HookConstant(0m));
@@ -2553,13 +2596,16 @@ public static class HookReader
                 var (keptPlayer, otherPlayer) = KeptPlayPlayer(compare.Left) is { } leftPlayer ? (leftPlayer, compare.Right) : KeptPlayPlayer(compare.Right) is { } rightPlayer ? (rightPlayer, compare.Left) : (null, compare.Left);
                 if (keptPlayer != null && CardOwnerOf(Unstored(otherPlayer)) is { } ownedCard && IsSourceCard(Unstored(ownedCard)))
                     return new HookMath(OperationOf(compare.Op), new HookField(keptPlayer), CreatureFact(HookFact.CreatureId, new HookCreature(HookWho.SourceCardOwner)));
-                // Its kept card is there (CardBeingPlayed != null: any card play's), or is the card played (cardPlay.Card == CardBeingPlayed: this card
-                // play's, not one it's played inside: decision #267).
-                if (IsKeptCard(compare.Left) && (compare.Right is NullValue || IsPlayCard(compare.Right)) || IsKeptCard(compare.Right) && (compare.Left is NullValue || IsPlayCard(compare.Left)))
+                // Its kept card against none (CardBeingPlayed != null: any card play's), or against the card played or a damage's or block's card
+                // (cardPlay.Card == CardBeingPlayed, cardSource == AttackToDouble): one is kept and it's that card play's (decision #272; a card played
+                // inside it is another card play: decision #267).
+                var (keptCard, otherCard) = KeptCard(compare.Left) is { } keptOnTheLeft ? (keptOnTheLeft, compare.Right) : KeptCard(compare.Right) is { } keptOnTheRight ? (keptOnTheRight, compare.Left) : (null, compare.Left);
+                if (keptCard != null && (otherCard is NullValue || IsCardOfThePlay(otherCard)))
                 {
-                    var isNull = compare.Left is NullValue || compare.Right is NullValue;
-                    var held = new HookFactValue(isNull ? HookFact.BoundHeld : HookFact.BoundToPlay);
-                    return (compare.Op == Comparison.Equal) != isNull ? held : Not(held);
+                    HookValue same = otherCard is NullValue ? Not(new HookMath(HookOperation.NotEqual, new HookField(keptCard), new HookConstant(0m)))
+                        : new HookMath(HookOperation.And, new HookMath(HookOperation.NotEqual, new HookField(keptCard), new HookConstant(0m)),
+                            new HookMath(HookOperation.Equal, new HookField(keptCard), new HookFactValue(HookFact.PlaySerial)));
+                    return compare.Op == Comparison.Equal ? same : Not(same);
                 }
                 // The orb a hook is given is its owner's (orb.Owner == base.Owner, base.Owner.Player).
                 var orbOwner = IsOrbOwner(compare.Left) && IsOwner(compare.Right) || IsOrbOwner(compare.Right) && IsOwner(compare.Left);

@@ -5,36 +5,7 @@ namespace SpireQoL.Sim.Models;
 // Stretch and Pael's Legion are read from their code (ReadModel, decision #269): the card play each keeps (its identity and player), Stretch's bonus
 // given as its block term works it out, Pael's Legion's play kept as its term changes the block (AfterModifyingBlockAmount).
 
-/// <summary>
-/// Vambrace (relic): Data bit 1 = a card is bound (its block was doubled), bit 2 = block gained this combat. Until then, a card's
-/// block from its owner is doubled; the first time that lands it flashes and binds the card (AfterModifyingBlockAmount);
-/// AfterCardPlayed of that card marks block gained this combat (so a replay's later plays aren't doubled).
-/// </summary>
-public sealed class Vambrace : SimModel
-{
-    /// <summary>Its Data: a card is bound (its block was doubled: the game's TriggeringCard), block gained this combat.</summary>
-    public const int Bound = 1, GainedThisCombat = 2;
-    public override TabKind? Tab => TabKind.Trigger;
-    public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block)
-    {
-        if (!block.Props.IsCardOrMonsterMove() || block.Card == null || block.Play?.Owner != owner) return 1m;
-        return (SimEngine.RelicsOf(state, owner).DataOf(ThisRelic) & GainedThisCombat) != 0 ? 1m : 2m;
-    }
-    public override void AfterModifyingBlockAmount(SimState state, int owner, int amount, SimCardPlay? play)
-    {
-        var relics = SimEngine.RelicsOf(state, owner);
-        if (amount <= 0 || play == null) return;
-        if ((relics.DataOf(ThisRelic) & Bound) == 0) state.LogFired(Name, amount: 0, owner);
-        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], relics.DataOf(ThisRelic) | Bound));
-    }
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        var relics = SimEngine.RelicsOf(state, owner);
-        var data = relics.DataOf(ThisRelic);
-        if (play.Owner == owner && (data & Bound) != 0 && (data & GainedThisCombat) == 0) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], data: GainedThisCombat));
-        return One(state);
-    }
-}
+// Vambrace is read from its code (ReadModel, decision #272): the card whose block it doubled kept as its card play's identity.
 
 /// <summary>
 /// UnmovablePower.ModifyBlockMultiplicative: doubles its owner's block from cards (Move) while their card plays this turn that gained block, other
