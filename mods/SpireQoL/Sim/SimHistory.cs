@@ -127,7 +127,7 @@ public readonly record struct HistoryEvent(HistoryKind Kind, int Whose)
         {
             HistoryWhose.Anyone => true,
             HistoryWhose.Owner => Whose == player,
-            _ => player == Who.You && Whose == Who.YourOsty,
+            _ => Whose == Who.OstyOf(player),
         };
         if (!whose) return false;
         if (query.CardType != SimCardType.None && CardType != query.CardType) return false;

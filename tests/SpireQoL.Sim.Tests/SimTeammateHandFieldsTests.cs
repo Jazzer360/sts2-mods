@@ -49,7 +49,7 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.Taken), nameof(SimPlayer.Through), nameof(SimPlayer.OstyTaken), nameof(SimPlayer.Incoming),
         nameof(SimPlayer.UnblockableTaken), nameof(SimPlayer.WuppyTaken), nameof(SimPlayer.Died), nameof(SimPlayer.LizardTailUsed), nameof(SimPlayer.FairiesUsed), // results
         nameof(SimPlayer.BlockGained), nameof(SimPlayer.BeaconOfHope), nameof(SimPlayer.BeaconGiving),
-        nameof(SimPlayer.Powers), nameof(SimPlayer.Relics), // their powers and relics are on screen
+        nameof(SimPlayer.Powers), nameof(SimPlayer.Relics), nameof(SimPlayer.OstyPowers), nameof(SimPlayer.WuppyPowers), // their powers and relics, and their pets', are on screen
         nameof(SimPlayer.Turn), // the cards they played this turn: you watch them play
         nameof(SimPlayer.Fight), // the fight's log (decision #191): what happened, on screen
         nameof(SimPlayer.ExhaustPile), // their exhaust pile's count: you can look at it

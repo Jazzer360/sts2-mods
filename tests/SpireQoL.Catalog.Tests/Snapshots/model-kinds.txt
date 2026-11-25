@@ -3,9 +3,9 @@
 
 ## Powers and relics
 
-beta powers: 303 classes, 272 with hooks; read from code 128, hand-written 43, neither 103 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 303 classes, 272 with hooks; read from code 130, hand-written 43, neither 101 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 60, hand-written 12, neither 238 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 108, hand-written 38, neither 91 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 109, hand-written 38, neither 90 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 52, hand-written 12, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 7, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 1
@@ -182,7 +182,6 @@ name gate: StrengthPower in Sim/Adapter/MoveBranches.cs: read from code: a gate 
 name gate: StretchPower in Procs/Fool.cs, Sim/Adapter/SimAdapter.Steps.cs: hand-written: goes with its model
 name gate: SwipePower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule
 name gate: ThornsPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
-name gate: WuppysLoyaltyPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a gate to replace by a rule
 
 ## Capabilities across every kind, by the classes each blocks on beta (alone: the classes it's the last one for; hand-written powers and relics and every other kind's class with a body to read)
 

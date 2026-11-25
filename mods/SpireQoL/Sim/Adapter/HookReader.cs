@@ -944,6 +944,12 @@ public static class HookReader
                 if (StartsATurn(hook.Name) && PastTheHorizon(hook) is { } horizon)
                     return horizon.Length == 0 ? (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers") : (null, new GapOf(ReaderCapability.ValueNotFollowed, horizon), null);
                 if (!Enum.TryParse<HookName>(hook.Name, out var name)) return (null, new GapOf(ReaderCapabilities.OfHook(hook.Name), $"gap: the simulator runs no read model's {hook.Name}"), null);
+                // A creature-valued Modify hook (a damage's redirect: Wuppy's Loyalty, Die For You): the creature of the first way that holds.
+                if (name is HookName.ModifyPreBlockDamageTarget or HookName.ModifyUnblockedDamageTarget)
+                    return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(CreatureWays(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
+                // A Should hook the engine asks (a true-or-false: 1 or 0).
+                if (name is HookName.ShouldAllowHitting or HookName.ShouldCreatureBeRemovedFromCombatAfterDeath or HookName.ShouldPowerBeRemovedAfterOwnerDeath && hook.ReturnType.Name == "Boolean")
+                    return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(TestWays(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
                 if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name is HookName.ModifyCardPlayCount or HookName.ModifyOrbPassiveTriggerCounts)
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(Ways(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
                 var body = BodySteps(hook);
@@ -2290,7 +2296,13 @@ public static class HookReader
             if (value is NamedValue { Name: "each" }) return new HookCreature(HookWho.Each);
             if (IsDead(value)) return new HookCreature(HookWho.Dead);
             if (IsDealer(value) && DamageHooks.Contains(_hook)) return new HookCreature(HookWho.Dealer);
+            // ModifyPreBlockDamageTarget(originalTarget, target, ...): the damage's target, and the redirect so far.
+            if (_hook == nameof(HookName.ModifyPreBlockDamageTarget) && value is ParameterValue { Name: "originalTarget" } or NamedValue { Name: "originalTarget" }) return new HookCreature(HookWho.Target);
+            if (_hook == nameof(HookName.ModifyPreBlockDamageTarget) && value is ParameterValue { Name: "target" } or NamedValue { Name: "target" }) return new HookCreature(HookWho.RedirectSoFar);
             if (value is ParameterValue { Name: "target" } or NamedValue { Name: "target" } && DamageHooks.Contains(_hook)) return new HookCreature(HookWho.Target);
+            // The creature a Should hook asks about.
+            if (value is ParameterValue { Name: "creature" } or NamedValue { Name: "creature" } && _hook is nameof(HookName.ShouldAllowHitting) or nameof(HookName.ShouldCreatureBeRemovedFromCombatAfterDeath))
+                return new HookCreature(HookWho.Asked);
             if (IsApplier(value)) return new HookCreature(HookWho.Applier);
             if (value is QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } } && _hook == "AfterPowerAmountChanged") return new HookCreature(HookWho.PowerOwner);
             // A creature's monster cast to its class, then that monster's creature (dealer?.Monster is Osty osty, then osty.Creature: Sic 'Em's): the
@@ -2325,7 +2337,7 @@ public static class HookReader
         private static readonly HashSet<string> DamageHooks = new(StringComparer.Ordinal)
         {
             "ModifyDamageAdditive", "ModifyDamageMultiplicative", "ModifyDamageMultiplicativeLate", "ModifyBlockAdditive", "ModifyBlockMultiplicative", "AfterDamageGiven", "AfterDamageReceived",
-            "BeforeDamageReceived",
+            "BeforeDamageReceived", "ModifyPreBlockDamageTarget", "ModifyUnblockedDamageTarget",
         };
 
         /// <summary>
@@ -2920,6 +2932,27 @@ public static class HookReader
         {
             if (ways.Ways.Count == 0) throw new Gap(ReaderCapability.ValueNotFollowed, "gap: no return read");
             return new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), Value(way.Value))).ToList());
+        }
+
+        /// <summary>A true-or-false hook's returns (a Should hook's): each way's test and what it returns as a test (1 or 0), the first that holds.</summary>
+        private HookValue TestWays(WaysValue ways)
+        {
+            if (ways.Ways.Count == 0) throw new Gap(ReaderCapability.ValueNotFollowed, "gap: no return read");
+            return new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m),
+                Unstored(way.Value) is ConstantValue ? Value(way.Value) : Test(way.Value))).ToList());
+        }
+
+        /// <summary>
+        /// A creature-valued hook's returns (a redirect's: ModifyPreBlockDamageTarget, ModifyUnblockedDamageTarget): each way's test and the creature it
+        /// names (its id: HookFact.CreatureId; a null: no one, Who.None). A creature the reader can't name is a gap.
+        /// </summary>
+        private HookValue CreatureWays(WaysValue ways)
+        {
+            if (ways.Ways.Count == 0) throw new Gap(ReaderCapability.ValueNotFollowed, "gap: no return read");
+            HookValue CreatureValue(ProgramValue value) => CreatureOf(Unstored(value)) is { } creature ? CreatureFact(HookFact.CreatureId, creature)
+                : Unstored(value) is NullValue ? new HookConstant(Who.None)
+                : throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: returns a creature the reader can't name ({value})");
+            return new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), CreatureValue(way.Value))).ToList());
         }
 
         /// <summary>

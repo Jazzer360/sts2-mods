@@ -496,6 +496,12 @@ public sealed class ReadModel : SimModel
         HookName.BeforeDamageReceived => nameof(BeforeDamageReceived),
         HookName.AfterArrowShot => nameof(AfterArrowShot),
         HookName.AfterArrowImpaled => nameof(AfterArrowImpaled),
+        HookName.ModifyPreBlockDamageTarget => nameof(ModifyPreBlockDamageTarget),
+        HookName.ModifyUnblockedDamageTarget => nameof(ModifyUnblockedDamageTarget),
+        HookName.ShouldAllowHitting => nameof(ShouldAllowHitting),
+        HookName.ShouldCreatureBeRemovedFromCombatAfterDeath => nameof(ShouldCreatureBeRemovedFromCombatAfterDeath),
+        // Its power's own question as its owner dies (Creature.RemoveAllPowersAfterDeath): asked of it, never of every listener.
+        HookName.ShouldPowerBeRemovedAfterOwnerDeath => nameof(StaysOnDeadOwner),
         // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook; an enchantment's OnPlay
         // where its card plays (RunEnchantment).
         HookName.Passive or HookName.Evoke or HookName.OnPlay => "",
@@ -796,6 +802,31 @@ public sealed class ReadModel : SimModel
             if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingDamageAmount branched inside a damage");
     }
     public override decimal ModifyBlockAdditive(SimState state, int owner, BlockCtx block) => Returned(HookName.ModifyBlockAdditive, state, owner, block, otherwise: 0m);
+
+    /// <summary>Hook.ModifyPreBlockDamageTarget: its code's returned creature (Wuppy's Loyalty: its own Wuppy for a powered attack on its player while it lives).</summary>
+    public override int ModifyPreBlockDamageTarget(SimState state, int owner, DamageCtx damage, int targetSoFar, decimal amount) =>
+        _returns[(int)HookName.ModifyPreBlockDamageTarget] is { } returns
+            ? (int)returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ModifyPreBlockDamageTarget, Damage = damage, Play = damage.Play, Target = targetSoFar, HpLost = amount })
+            : targetSoFar;
+
+    /// <summary>Hook.ModifyUnblockedDamageTarget: its code's returned creature (Die For You: its own Osty for a powered attack on his player while he lives).</summary>
+    public override int ModifyUnblockedDamageTarget(SimState state, int owner, DamageCtx damage, decimal amount) =>
+        _returns[(int)HookName.ModifyUnblockedDamageTarget] is { } returns
+            ? (int)returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ModifyUnblockedDamageTarget, Damage = damage, Play = damage.Play, Target = damage.Target, HpLost = amount })
+            : damage.Target;
+
+    /// <summary>Hook.ShouldAllowHitting of <paramref name="creature"/>: its code's answer (Die For You's and Wuppy's Loyalty's: whether it lives).</summary>
+    public override bool ShouldAllowHitting(SimState state, int owner, int creature) =>
+        _returns[(int)HookName.ShouldAllowHitting] is not { } returns || returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ShouldAllowHitting, Target = creature }) != 0m;
+
+    /// <summary>Hook.ShouldCreatureBeRemovedFromCombatAfterDeath of <paramref name="creature"/>: its code's answer (Die For You keeps its own Osty).</summary>
+    public override bool ShouldCreatureBeRemovedFromCombatAfterDeath(SimState state, int owner, int creature) =>
+        _returns[(int)HookName.ShouldCreatureBeRemovedFromCombatAfterDeath] is not { } returns
+        || returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ShouldCreatureBeRemovedFromCombatAfterDeath, Target = creature }) != 0m;
+
+    /// <summary>Its ShouldPowerBeRemovedAfterOwnerDeath says no: it stays on its dead owner (Die For You, Wuppy's Loyalty).</summary>
+    public override bool StaysOnDeadOwner(SimState state, int owner) =>
+        _returns[(int)HookName.ShouldPowerBeRemovedAfterOwnerDeath] is { } returns && returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ShouldPowerBeRemovedAfterOwnerDeath }) == 0m;
     public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block) => Returned(HookName.ModifyBlockMultiplicative, state, owner, block, otherwise: 1m);
 
     public override decimal ModifyHpLostBeforeOsty(SimState state, int owner, DamageCtx damage, decimal amount) => HpLost(HookName.ModifyHpLostBeforeOsty, state, owner, damage, amount);
@@ -1291,7 +1322,13 @@ public sealed class ReadModel : SimModel
                     HookTarget.Dealer => args =>
                     {
                         if ((args.Damage?.Dealer ?? args.Hit?.Dealer) is not { } dealer) return One(args.State);
-                        if (dealer == Who.YourOsty) return SimEngine.ProcDamageOsty(args.State, args.Owner, Name, Who.You, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer);
+                        if (Who.IsPet(dealer))
+                        {
+                            if (Who.PetKindOf(dealer) == PetKind.Osty)
+                                return SimEngine.ProcDamageOsty(args.State, args.Owner, Name, Who.PetOwnerOf(dealer), amount(in args), (SimProps)(int)props(in args), noDealer: noDealer);
+                            args.State.Unmodelled ??= $"{Name}'s damage to a pet that deals none in the simulator";
+                            return One(args.State);
+                        }
                         if (Who.IsPlayer(dealer))
                             return args.State.Player(dealer) is { Hp: > 0, Died: false }
                                 ? SimEngine.ProcDamagePlayer(args.State, args.Owner, Name, dealer, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer, label: OwnerLabel(in args))
@@ -1330,8 +1367,8 @@ public sealed class ReadModel : SimModel
                     {
                         HookTarget.Owner => args.Owner,
                         HookTarget.PlayOwner => args.Play?.Owner ?? Who.None,
-                        // The hit's dealer's player: your Osty's is you (the one pet the simulator keeps); no one else's dealer has one.
-                        HookTarget.Dealer when summon.PetOwner => (args.Damage?.Dealer ?? args.Hit?.Dealer) == Who.YourOsty ? Who.You : Who.None,
+                        // The hit's dealer's player: a pet's (Osty's); no one else's dealer has one.
+                        HookTarget.Dealer when summon.PetOwner => Who.PetOwnerOf(args.Damage?.Dealer ?? args.Hit?.Dealer ?? Who.None),
                         _ => Who.None,
                     };
                     if (!Who.IsPlayer(summoner) || args.State.Player(summoner) == null) return One(args.State);
@@ -1609,13 +1646,15 @@ public sealed class ReadModel : SimModel
 
     /// <summary>
     /// Its owner's side (CombatState.GetTeammatesOf(base.Owner): Allies or Enemies, itself included): for a player's model every player in their
-    /// order and your Osty while he lives (the one pet the simulator keeps), for an enemy's the living enemies.
+    /// order, then each one's pets while they live (Osty, Wuppy: the allies after the players), for an enemy's the living enemies.
     /// </summary>
     private static List<int> Teammates(SimState state, int owner)
     {
         if (Who.IsEnemy(owner)) return state.Enemies.Where(enemy => enemy.Alive).Select(enemy => enemy.Id).ToList();
         var side = state.PlayerIds.ToList();
-        if (state.You.OstyHp > 0) side.Add(Who.YourOsty);
+        foreach (var player in state.PlayerIds)
+            foreach (var kind in new[] { PetKind.Osty, PetKind.Wuppy })
+                if (state.Player(player)!.PetHp(kind) > 0) side.Add(Who.PetOf(player, kind));
         return side;
     }
 
@@ -1899,7 +1938,7 @@ public sealed class ReadModel : SimModel
             case HookFact.CreatureIsPet:
             {
                 var creature = CreatureNamed(fact);
-                return (in HookArgs args) => CreatureOf(in args, creature) == Who.YourOsty ? 1m : 0m;
+                return (in HookArgs args) => CreatureOf(in args, creature) is var id && Who.IsPet(id) && Who.PetKindOf(id) == PetKind.Osty ? 1m : 0m;
             }
             case HookFact.CreatureId:
             {
@@ -1918,7 +1957,7 @@ public sealed class ReadModel : SimModel
                 };
             case HookFact.OpponentsPowerAmount:
             {
-                // GetOpponentsOf(owner) where alive: the living players (a pet keeps no powers in the simulator) for an enemy, the living enemies for a player.
+                // GetOpponentsOf(owner) where alive: the living players and their living pets for an enemy, the living enemies for a player.
                 var power = new PowerId(named!);
                 return (in HookArgs args) =>
                 {
@@ -1927,7 +1966,12 @@ public sealed class ReadModel : SimModel
                     if (Who.IsEnemy(args.Owner))
                     {
                         foreach (var id in state.PlayerIds)
-                            if (state.Player(id) is { Hp: > 0, Died: false } player) total += player.Powers[power];
+                        {
+                            var player = state.Player(id)!;
+                            if (player is { Hp: > 0, Died: false }) total += player.Powers[power];
+                            if (player.OstyHp > 0) total += player.OstyPowers[power];
+                            if (player.WuppyHp > 0) total += player.WuppyPowers[power];
+                        }
                     }
                     else
                         foreach (var enemy in state.Enemies)
@@ -1947,7 +1991,7 @@ public sealed class ReadModel : SimModel
             case HookFact.StarsSpent: return (in HookArgs args) => args.Event == CardEvent.StarsSpent ? args.Play?.Card.Stars ?? 0 : 0;
             case HookFact.PowerOnEnemy: return (in HookArgs args) => Who.IsEnemy(args.Target) ? 1m : 0m;
             case HookFact.DealerIsOwner: return (in HookArgs args) => (args.Damage?.Dealer ?? args.Hit?.Dealer) == args.Owner ? 1m : 0m;
-            case HookFact.DealerIsOwnersPet: return (in HookArgs args) => args.Owner == Who.You && (args.Damage?.Dealer ?? args.Hit?.Dealer) == Who.YourOsty ? 1m : 0m;
+            case HookFact.DealerIsOwnersPet: return (in HookArgs args) => Who.IsPlayer(args.Owner) && Who.PetOwnerOf(args.Damage?.Dealer ?? args.Hit?.Dealer ?? Who.None) == args.Owner ? 1m : 0m;
             case HookFact.TargetIsOwner: return (in HookArgs args) => (args.Damage?.Target ?? args.Block?.Target ?? args.Hit?.Target) == args.Owner ? 1m : 0m;
             case HookFact.PoweredAttack: return (in HookArgs args) => (args.Damage?.Props ?? args.Hit?.Props ?? args.Attack?.Props)?.IsPoweredAttack() == true ? 1m : 0m;
             case HookFact.PoweredBlock: return (in HookArgs args) => args.Block?.Props.IsPoweredBlock() == true ? 1m : 0m;
@@ -1980,8 +2024,8 @@ public sealed class ReadModel : SimModel
                 var creature = CreatureNamed(fact);
                 return (in HookArgs args) => CreatureOf(in args, creature) switch
                 {
-                    Who.YourOsty => args.State.You.OstyHp > 0 ? 1m : 0m,
-                    var id when Who.IsPlayer(id) => args.State.Player(id) is { Hp: > 0, Died: false } ? 1m : 0m,
+                    var pet when Who.IsPet(pet) => SimEngine.PetHp(args.State, pet) > 0 ? 1m : 0m,
+                    var player when Who.IsPlayer(player) => args.State.Player(player) is { Hp: > 0, Died: false } ? 1m : 0m,
                     var id => args.State.Enemy(id) is { Alive: true } ? 1m : 0m,
                 };
             }
@@ -1991,7 +2035,7 @@ public sealed class ReadModel : SimModel
                 return (in HookArgs args) =>
                 {
                     var id = CreatureOf(in args, creature);
-                    if (id == Who.YourOsty) return Math.Max(0, args.State.You.OstyHp);
+                    if (Who.IsPet(id)) return Math.Max(0, SimEngine.PetHp(args.State, id));
                     if (!Who.IsPlayer(id)) return args.State.Enemy(id) is { Alive: true } enemy ? enemy.Hp : 0m;
                     if (args.State.Player(id) is not { } player || player.Died) return 0m;
                     if (player.Hp == int.MaxValue) args.State.Unmodelled ??= $"{Name} asks a player's HP, which isn't known";
@@ -2018,7 +2062,8 @@ public sealed class ReadModel : SimModel
             case HookFact.ApplierIsPlayer: return (in HookArgs args) => Who.IsPlayer(ApplierOf(in args)) ? 1m : 0m;
             case HookFact.PlayIsAppliers: return (in HookArgs args) => args.Play is { } play && ApplierOf(in args) is var applier && applier != Who.None && play.Owner == applier ? 1m : 0m;
             case HookFact.TurnNumber: return (in HookArgs args) => args.State.TurnNumber + (args.NextTurn ? 1 : 0);
-            case HookFact.OwnerDead: return (in HookArgs args) => (args.State.Player(args.Owner) is { } player ? player.Died || player.Hp <= 0 : args.State.Enemy(args.Owner) is not { Alive: true }) ? 1m : 0m;
+            case HookFact.OwnerDead: return (in HookArgs args) => (Who.IsPet(args.Owner) ? SimEngine.PetHp(args.State, args.Owner) <= 0
+                : args.State.Player(args.Owner) is { } player ? player.Died || player.Hp <= 0 : args.State.Enemy(args.Owner) is not { Alive: true }) ? 1m : 0m;
             case HookFact.CreatureThere:
             {
                 var creature = CreatureNamed(fact);
@@ -2033,7 +2078,7 @@ public sealed class ReadModel : SimModel
             {
                 // An enemy, or a pet (Osty is a monster that fights for its player: Creature.IsMonster).
                 var creature = CreatureNamed(fact);
-                return (in HookArgs args) => CreatureOf(in args, creature) is var id && (Who.IsEnemy(id) || id == Who.YourOsty) ? 1m : 0m;
+                return (in HookArgs args) => CreatureOf(in args, creature) is var id && (Who.IsEnemy(id) || Who.IsPet(id)) ? 1m : 0m;
             }
             case HookFact.CreatureHasPower:
             {
@@ -2078,7 +2123,7 @@ public sealed class ReadModel : SimModel
     /// <summary>
     /// The creature a hook's code names, as the simulator has it (Who.None: none, a null in the game's code): the owner, the damage's dealer
     /// and target (a Modify hook's, a block's, a hit's), the creature that died or a power landed on, the applier it keeps; a pet's player for
-    /// its PetOwner (your Osty's: you), none for anyone else's.
+    /// its PetOwner (a pet's: its player), none for anyone else's.
     /// </summary>
     private int CreatureOf(in HookArgs args, HookCreature creature)
     {
@@ -2087,14 +2132,14 @@ public sealed class ReadModel : SimModel
             HookWho.Owner => args.Owner,
             HookWho.Dealer => args.Damage is { } damage ? damage.Dealer ?? Who.None : args.Hit?.Dealer ?? Who.None,
             HookWho.Target => args.Damage?.Target ?? args.Block?.Target ?? args.Hit?.Target ?? Who.None,
-            HookWho.Dead or HookWho.PowerOwner => args.Target,
+            HookWho.Dead or HookWho.PowerOwner or HookWho.RedirectSoFar or HookWho.Asked => args.Target,
             HookWho.Applier => ApplierOf(in args),
             HookWho.Each => args.Each,
             HookWho.Attacker => args.Attack?.Dealer ?? Who.None,
             HookWho.AttackCardOwner => args.Attack?.Card != null ? args.Play?.Owner ?? Who.None : Who.None,
             _ => Who.None,
         };
-        return creature.PetOwner ? id == Who.YourOsty ? Who.You : Who.None : id;
+        return creature.PetOwner ? Who.PetOwnerOf(id) : id;
     }
 
     /// <summary>Who applied this power: its Data (DataCreature), as a read power that asks keeps it (ModelSpec.UsesApplier); Who.None when no one.</summary>

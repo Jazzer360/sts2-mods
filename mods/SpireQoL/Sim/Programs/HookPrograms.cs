@@ -89,6 +89,19 @@ public enum HookName
     AfterArrowShot,
     /// <summary>Hook.AfterArrowImpaled: a player's arrow impaled a creature (ArrowCmd.ImpaleTarget), after the shot's attack: its shooter the hook's player.</summary>
     AfterArrowImpaled,
+    /// <summary>
+    /// Hook.ModifyPreBlockDamageTarget: the creature a damage hits instead, before its target's block, as each listener in turn leaves it (from none:
+    /// Wuppy's Loyalty takes a powered attack on its player); a creature-valued return (HookFact.CreatureId).
+    /// </summary>
+    ModifyPreBlockDamageTarget,
+    /// <summary>Hook.ModifyUnblockedDamageTarget: the creature that takes what got past the block, as each listener in turn leaves it (Die For You's Osty).</summary>
+    ModifyUnblockedDamageTarget,
+    /// <summary>Hook.ShouldAllowHitting: whether a creature can be hit and receive powers (Creature.IsHittable, CanReceivePowers): 1 it can.</summary>
+    ShouldAllowHitting,
+    /// <summary>Hook.ShouldCreatureBeRemovedFromCombatAfterDeath: whether a creature leaves the fight as it dies (CreatureCmd.Kill): 1 it does.</summary>
+    ShouldCreatureBeRemovedFromCombatAfterDeath,
+    /// <summary>PowerModel.ShouldPowerBeRemovedAfterOwnerDeath: whether the power comes off its owner as it dies (Creature.RemoveAllPowersAfterDeath).</summary>
+    ShouldPowerBeRemovedAfterOwnerDeath,
 }
 
 /// <summary>When an orb's passive goes off: the OrbModel trigger hook its class overrides with a call of TriggerPassive (OrbQueue calls them).</summary>
@@ -367,6 +380,10 @@ public enum HookWho
     Attacker,
     /// <summary>The player whose card the attack is (command.ModelSource as a card, its Owner): the play's.</summary>
     AttackCardOwner,
+    /// <summary>The creature a redirect is so far (ModifyPreBlockDamageTarget's target: the listeners before it left it; none at first).</summary>
+    RedirectSoFar,
+    /// <summary>The creature a Should hook asks about (ShouldAllowHitting's and ShouldCreatureBeRemovedFromCombatAfterDeath's creature).</summary>
+    Asked,
 }
 
 /// <summary>A creature a hook's code names (HookWho), or the player who owns it when it's a pet (creature.PetOwner.Creature: Osty's player).</summary>

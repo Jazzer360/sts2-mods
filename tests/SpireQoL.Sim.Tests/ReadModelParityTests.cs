@@ -281,6 +281,8 @@ public class ReadModelParityTests
         nameof(SimModel.ModifyOrbValue), nameof(SimModel.ModifyOrbPassiveTriggerCounts), nameof(SimModel.AfterModifyingOrbPassiveTriggerCount), nameof(SimModel.AfterOrbEvoked),
         nameof(SimModel.BeforeAttack), nameof(SimModel.AfterAttack), nameof(SimModel.ModifyDamageCap), nameof(SimModel.AfterModifyingDamageAmount),
         nameof(SimModel.BeforeDamageReceived), nameof(SimModel.AfterArrowShot), nameof(SimModel.AfterArrowImpaled),
+        nameof(SimModel.ModifyPreBlockDamageTarget), nameof(SimModel.ModifyUnblockedDamageTarget), nameof(SimModel.ShouldAllowHitting),
+        nameof(SimModel.ShouldCreatureBeRemovedFromCombatAfterDeath), nameof(SimModel.StaysOnDeadOwner),
     };
 
     [Fact]
@@ -422,7 +424,7 @@ public class ReadModelParityTests
                     foreach (var amount in new[] { 0, 4 })
                         yield return ($"{damage}, {amount} about to land", (model, state) =>
                         {
-                            state.You.OstyHp = 10;
+                            state.You.WithOsty(hp: 10);
                             model.BeforeDamageReceived(state, owner, damage, amount);
                             return Branches(new[] { state }) + $" // Osty {state.You.OstyHp}";
                         });
@@ -532,6 +534,31 @@ public class ReadModelParityTests
                         return Branches(new[] { state });
                     });
                 break;
+            case nameof(SimModel.ModifyPreBlockDamageTarget) or nameof(SimModel.ModifyUnblockedDamageTarget):
+                // Who a damage of every dealer, target, kind and card goes to (from none so far, or from your Osty), with the owner alive and dead.
+                foreach (var damage in Damages(owner))
+                    foreach (var ownerHp in new[] { 0, 5 })
+                        yield return ($"{damage}, its owner's HP {ownerHp}", (model, state) =>
+                        {
+                            if (Who.IsPet(owner)) state.You.WithOsty(hp: ownerHp).WithWuppy(hp: ownerHp);
+                            return Number(hook == nameof(SimModel.ModifyPreBlockDamageTarget)
+                                ? model.ModifyPreBlockDamageTarget(state, owner, damage, Who.None, amount: 4)
+                                : model.ModifyUnblockedDamageTarget(state, owner, damage, amount: 4));
+                        });
+                break;
+            case nameof(SimModel.ShouldAllowHitting) or nameof(SimModel.ShouldCreatureBeRemovedFromCombatAfterDeath):
+                // Asked of every creature, alive and dead (a dead enemy 1, a dead Osty).
+                foreach (var creature in new[] { owner, Who.You, Who.Teammate(0), Who.YourOsty, 0, 1 }.Distinct())
+                    yield return ($"asked of {creature}", (model, state) =>
+                    {
+                        state.Enemy(1)!.Hp = 0;
+                        state.You.WithOsty(hp: 0);
+                        return hook == nameof(SimModel.ShouldAllowHitting) ? model.ShouldAllowHitting(state, owner, creature).ToString() : model.ShouldCreatureBeRemovedFromCombatAfterDeath(state, owner, creature).ToString();
+                    });
+                break;
+            case nameof(SimModel.StaysOnDeadOwner):
+                yield return ("as its owner dies", (model, state) => model.StaysOnDeadOwner(state, owner).ToString());
+                break;
             case nameof(SimModel.AfterDeath):
                 // A creature dies (the applier, another enemy, the owner), then the players' turn ends: what the death changed shows there.
                 foreach (var dead in new[] { 0, 1, owner }.Distinct().Where(Who.IsEnemy))
@@ -612,7 +639,7 @@ public class ReadModelParityTests
                             foreach (var ostyHp in attacker == Who.YourOsty ? new[] { 5, 0 } : new[] { 5 })
                                 yield return ($"two attacks by {attacker}, {props}, card {type?.ToString() ?? "none"}{(ostyHp == 0 ? ", Osty at 0 HP" : "")}", (model, state) =>
                                 {
-                                    state.You.OstyHp = ostyHp;
+                                    state.You.WithOsty(hp: ostyHp);
                                     var player = attacker == Who.YourOsty ? Who.You : attacker;
                                     var text = new StringBuilder();
                                     IEnumerable<SimState> states = new[] { state };

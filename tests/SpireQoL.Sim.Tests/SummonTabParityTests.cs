@@ -64,7 +64,7 @@ public class SummonTabParityTests
         state.You.Hp = 50;
         state.You.MaxHp = 70;
         state.You.Energy = 3;
-        state.You.OstyHp = random.Next(0, 10);
+        state.You.WithOsty(hp: random.Next(0, 10));
         state.You.OstyMaxHp = Math.Max(state.You.OstyHp, 1);
         if (random.Next(2) == 0) state.You.Powers = state.You.Powers.With(PowerId.DevourLife, amount: random.Next(1, 4));
         var soul = random.Next(3) == 0;

@@ -147,9 +147,9 @@ public static partial class SimEngine
     /// </summary>
     public static IEnumerable<SimState> ProcDamageOsty(SimState state, int owner, string name, int player, decimal baseDamage, SimProps props, bool noDealer = false)
     {
-        if (player != Who.You || state.Player(player) is not { OstyHp: > 0 }) return new[] { state };
+        if (state.Player(player) is not { OstyHp: > 0 }) return new[] { state };
         var dealer = noDealer ? (int?)null : owner;
-        var damage = new DamageCtx(dealer, Who.YourOsty, props, Card: null, Play: null);
+        var damage = new DamageCtx(dealer, Who.OstyOf(player), props, Card: null, Play: null);
         var modifiers = Listeners(state).Count == 0 ? null : new List<(SimModel Model, int Owner)>();
         var amount = CalcDamage(state, baseDamage, damage, captured: null, modifiers);
         state.LogFired(name, amount, owner);

@@ -173,7 +173,7 @@ internal static partial class CoverageLedger
         ["DebilitatePower"] = "covered: read from its code (ReadModel, decision #195): AfterSideTurnEnd ticks down as a player owner's turn ends; its Vulnerable and Weak multipliers are read by those models",
         ["DemisePower"] = "covered: read from its code (ReadModel, decision #195): AfterSideTurnEnd deals its amount to its owner, unblockable, no dealer",
         ["DevourLifePower"] = "covered: read from its code (ReadModel, round nineteen): AfterCardPlayed summons its amount for the Soul's player (OstyCmd.Summon: SummonStep, SimEngine.Summon) when its owner plays a Soul (summon tab)",
-        ["DieForYouPower"] = "covered: Osty takes your attacks (simulator OstyHp)",
+        ["DieForYouPower"] = "covered: read from its code (ReadModel, decision #265): ModifyUnblockedDamageTarget gives its Osty (a pet with his own powers) the powered attacks on his player that get past their block while he lives; ShouldAllowHitting lets no dead creature receive powers; ShouldCreatureBeRemovedFromCombatAfterDeath and ShouldPowerBeRemovedAfterOwnerDeath keep a dead Osty in the fight with it",
         ["DisintegrationPower"] = "covered: read from its code (ReadModel, decision #195): AfterSideTurnEndLate deals its amount to its owner, blockable, dealt by its owner",
         ["DoomPower"] = "ignore: Doom kills at the end of the enemies' own turn, after they attack (BeforeSideTurnEnd, enemy side)",
         ["DoubleDamagePower"] = "covered: read from its code (ReadModel, decision #195): ModifyDamageMultiplicative, AfterSideTurnEnd's Decrement",
@@ -334,7 +334,7 @@ internal static partial class CoverageLedger
         ["TemporaryThornsPower"] = "covered: BeforeApplied/AfterPowerAmountChanged apply Thorns (read as Thorns: simulator); AfterSideTurnEnd removes it after the other side's turn",
         ["TunePower"] = "covered: read from its code (ReadModel, decision #195; v0.114.0): AfterCardPlayed, when the card its owner plays is their first Ki this turn (MelodyCmd.IsFirstPlayThisTurn), upgrades its amount of random upgradable cards in their hand (UpgradeRandomInHandStep: followed while no upgradable card in that hand acts as the turn ends, else unknown) (proc tab)",
         ["ViolentChordPower"] = "covered: read from its code (ReadModel, decision #253): AfterCardPlayed damages every hittable enemy its amount (unpowered) when the card its owner plays is their first Wah this turn (MelodyCmd.IsFirstPlayThisTurn: the play itself, HookFact.PlayIsFirst) (proc damage)",
-        ["WuppysLoyaltyPower"] = "covered: ModifyPreBlockDamageTarget sends powered attacks on its pet owner to Wuppy while it lives, whole, before block (simulator: SimPlayer.WuppyHp, yours and each teammate's; their Thorns still hits back first)",
+        ["WuppysLoyaltyPower"] = "covered: read from its code (ReadModel, decision #265): ModifyPreBlockDamageTarget sends powered attacks on its pet owner to its Wuppy (a pet with its own powers, SimPlayer.WuppyHp) while it lives, whole, before block, its own result told and logged; ShouldAllowHitting, ShouldCreatureBeRemovedFromCombatAfterDeath and ShouldPowerBeRemovedAfterOwnerDeath as Die For You's",
         ["YahPower"] = "covered: read from its code (ReadModel, decision #236): AfterArrowDislodged gives its amount of energy when the arrow knocked loose is its owner's, once a turn (its own data's triggeredThisTurn, reset by BeforeSideTurnStart as its owner's turn starts)",
 
         // ======== cards

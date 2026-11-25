@@ -106,7 +106,7 @@ public class EnemyTurnHitBackTests
         {
             var state = new SimState { Enemies = { Enemy(id: 0, hp: 10, hits: [12]) }, MainRules = rules };
             state.You.Hp = 50;
-            state.You.OstyHp = 5;
+            state.You.WithOsty(hp: 5);
             state.You.FlameBarrier = 3;
             state.You.Powers = state.You.Powers.With(PowerId.NecroMastery, amount: 2);
             return state;
@@ -122,7 +122,7 @@ public class EnemyTurnHitBackTests
         // of your result (0 taken), so Flame Barrier hits back its 4.
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 30, hits: [6]) } };
         state.You.Hp = 50;
-        state.You.WuppyHp = 20;
+        state.You.WithWuppy(hp: 20);
         state.You.FlameBarrier = 4;
         Assert.Equal(26, HpAfter(state));
     }
@@ -134,7 +134,7 @@ public class EnemyTurnHitBackTests
         // Intangible (IntangiblePower.ModifyDamageCap: target == base.Owner) doesn't cap what he takes. Thorns 4 on his Poke: he loses 4, not 1.
         var state = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 30 } } };
         state.Enemies[0].Thorns = 4;
-        state.You.OstyHp = 10;
+        state.You.WithOsty(hp: 10);
         state.You.Powers = state.You.Powers.With(PowerId.Intangible, amount: 1);
         var poke = new SimPlay { Name = "Poke", HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 1, HitDamage = { [1] = 6 }, ByOsty = true };
         SimEngine.ApplyPlayTo(state, poke, out var branches, out _);

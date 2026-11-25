@@ -58,7 +58,8 @@ Non-goals:
   discard, exhaust, play), each followed by its affliction and enchantment. "Powers fire before relics" is this order. The
   simulator's list (`SimEngine.Listeners`) is the same: each player in player order (their powers in the order applied,
   their relics, then their cards: `SimPlayer.Cards`, the card classes in their piles with a `CardListener` model, one per
-  class since each copy's hook answers only its own card's events), then each living enemy's powers. Its kinds are `ListenerKind`.
+  class since each copy's hook answers only its own card's events), then each player's pets' powers (Osty's, Wuppy's: decision #265, a pet
+  is a creature of its own, `Who.PetOf`), then each living enemy's powers. Its kinds are `ListenerKind`.
   A dead enemy's powers aren't listeners (the game removes them at its death: `CreatureCmd.Kill`, `Creature.RemoveAllPowersAfterDeath`),
   for every model: no model asks whether its owner lives. The hit that killed it and its own `AfterDeath` are told to them still
   (`SimEngine.ListenersWith`), as the game runs both before the removal; a hook that started before an enemy died skips its powers

@@ -6601,6 +6601,418 @@
     "HelpsOwner": false
   },
   {
+    "Name": "DieForYouPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ModifyUnblockedDamageTarget",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "DieForYouPower.ModifyUnblockedDamageTarget:0018",
+                  "Test": {
+                    "$kind": "HookWays",
+                    "Ways": [
+                      {
+                        "When": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "DieForYouPower.ModifyUnblockedDamageTarget:000D",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureThere",
+                              "Creature": {
+                                "Who": "Owner",
+                                "PetOwner": true
+                              }
+                            }
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureThere",
+                            "Creature": {
+                              "Who": "Target",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "When": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        },
+                        "Value": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SameCreature",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": true
+                          },
+                          "Other": {
+                            "Who": "Target",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CreatureId",
+                "Creature": {
+                  "Who": "Target",
+                  "PetOwner": false
+                }
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "DieForYouPower.ModifyUnblockedDamageTarget:0018",
+                  "Test": {
+                    "$kind": "HookWays",
+                    "Ways": [
+                      {
+                        "When": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "DieForYouPower.ModifyUnblockedDamageTarget:000D",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureThere",
+                              "Creature": {
+                                "Who": "Owner",
+                                "PetOwner": true
+                              }
+                            }
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureThere",
+                            "Creature": {
+                              "Who": "Target",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "When": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        },
+                        "Value": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SameCreature",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": true
+                          },
+                          "Other": {
+                            "Who": "Target",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "DieForYouPower.ModifyUnblockedDamageTarget:0027",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerDead"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CreatureId",
+                "Creature": {
+                  "Who": "Target",
+                  "PetOwner": false
+                }
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "DieForYouPower.ModifyUnblockedDamageTarget:0018",
+                    "Test": {
+                      "$kind": "HookWays",
+                      "Ways": [
+                        {
+                          "When": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "DieForYouPower.ModifyUnblockedDamageTarget:000D",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreatureThere",
+                                "Creature": {
+                                  "Who": "Owner",
+                                  "PetOwner": true
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureThere",
+                              "Creature": {
+                                "Who": "Target",
+                                "PetOwner": false
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Value": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SameCreature",
+                            "Creature": {
+                              "Who": "Owner",
+                              "PetOwner": true
+                            },
+                            "Other": {
+                              "Who": "Target",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "DieForYouPower.ModifyUnblockedDamageTarget:0027",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "OwnerDead"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "DieForYouPower.ModifyUnblockedDamageTarget:0031",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PoweredAttack"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CreatureId",
+                "Creature": {
+                  "Who": "Target",
+                  "PetOwner": false
+                }
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "DieForYouPower.ModifyUnblockedDamageTarget:0018",
+                    "Test": {
+                      "$kind": "HookWays",
+                      "Ways": [
+                        {
+                          "When": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "DieForYouPower.ModifyUnblockedDamageTarget:000D",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreatureThere",
+                                "Creature": {
+                                  "Who": "Owner",
+                                  "PetOwner": true
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureThere",
+                              "Creature": {
+                                "Who": "Target",
+                                "PetOwner": false
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Value": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SameCreature",
+                            "Creature": {
+                              "Who": "Owner",
+                              "PetOwner": true
+                            },
+                            "Other": {
+                              "Who": "Target",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "DieForYouPower.ModifyUnblockedDamageTarget:0027",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "OwnerDead"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "DieForYouPower.ModifyUnblockedDamageTarget:0031",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CreatureId",
+                "Creature": {
+                  "Who": "Owner",
+                  "PetOwner": false
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Hook": "ShouldAllowHitting",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookFactValue",
+          "Fact": "CreatureAlive",
+          "Creature": {
+            "Who": "Asked",
+            "PetOwner": false
+          }
+        }
+      },
+      {
+        "Hook": "ShouldCreatureBeRemovedFromCombatAfterDeath",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "DieForYouPower.ShouldCreatureBeRemovedFromCombatAfterDeath:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "SameCreature",
+                    "Creature": {
+                      "Who": "Asked",
+                      "PetOwner": false
+                    },
+                    "Other": {
+                      "Who": "Owner",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Hook": "ShouldPowerBeRemovedAfterOwnerDeath",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookConstant",
+          "Value": 0
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "DisintegrationPower",
     "Kind": "Power",
     "Hooks": [
@@ -34236,6 +34648,418 @@
             }
           }
         ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "WuppysLoyaltyPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ModifyPreBlockDamageTarget",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "WuppysLoyaltyPower.ModifyPreBlockDamageTarget:0018",
+                  "Test": {
+                    "$kind": "HookWays",
+                    "Ways": [
+                      {
+                        "When": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "WuppysLoyaltyPower.ModifyPreBlockDamageTarget:000D",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureThere",
+                              "Creature": {
+                                "Who": "Owner",
+                                "PetOwner": true
+                              }
+                            }
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureThere",
+                            "Creature": {
+                              "Who": "Target",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "When": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        },
+                        "Value": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SameCreature",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": true
+                          },
+                          "Other": {
+                            "Who": "Target",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CreatureId",
+                "Creature": {
+                  "Who": "RedirectSoFar",
+                  "PetOwner": false
+                }
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "WuppysLoyaltyPower.ModifyPreBlockDamageTarget:0018",
+                  "Test": {
+                    "$kind": "HookWays",
+                    "Ways": [
+                      {
+                        "When": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "WuppysLoyaltyPower.ModifyPreBlockDamageTarget:000D",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureThere",
+                              "Creature": {
+                                "Who": "Owner",
+                                "PetOwner": true
+                              }
+                            }
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureThere",
+                            "Creature": {
+                              "Who": "Target",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "When": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        },
+                        "Value": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SameCreature",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": true
+                          },
+                          "Other": {
+                            "Who": "Target",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "WuppysLoyaltyPower.ModifyPreBlockDamageTarget:0027",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerDead"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CreatureId",
+                "Creature": {
+                  "Who": "RedirectSoFar",
+                  "PetOwner": false
+                }
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "WuppysLoyaltyPower.ModifyPreBlockDamageTarget:0018",
+                    "Test": {
+                      "$kind": "HookWays",
+                      "Ways": [
+                        {
+                          "When": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "WuppysLoyaltyPower.ModifyPreBlockDamageTarget:000D",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreatureThere",
+                                "Creature": {
+                                  "Who": "Owner",
+                                  "PetOwner": true
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureThere",
+                              "Creature": {
+                                "Who": "Target",
+                                "PetOwner": false
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Value": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SameCreature",
+                            "Creature": {
+                              "Who": "Owner",
+                              "PetOwner": true
+                            },
+                            "Other": {
+                              "Who": "Target",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "WuppysLoyaltyPower.ModifyPreBlockDamageTarget:0027",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "OwnerDead"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "WuppysLoyaltyPower.ModifyPreBlockDamageTarget:0032",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PoweredAttack"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CreatureId",
+                "Creature": {
+                  "Who": "RedirectSoFar",
+                  "PetOwner": false
+                }
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "WuppysLoyaltyPower.ModifyPreBlockDamageTarget:0018",
+                    "Test": {
+                      "$kind": "HookWays",
+                      "Ways": [
+                        {
+                          "When": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "WuppysLoyaltyPower.ModifyPreBlockDamageTarget:000D",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreatureThere",
+                                "Creature": {
+                                  "Who": "Owner",
+                                  "PetOwner": true
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureThere",
+                              "Creature": {
+                                "Who": "Target",
+                                "PetOwner": false
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Value": {
+                            "$kind": "HookFactValue",
+                            "Fact": "SameCreature",
+                            "Creature": {
+                              "Who": "Owner",
+                              "PetOwner": true
+                            },
+                            "Other": {
+                              "Who": "Target",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "WuppysLoyaltyPower.ModifyPreBlockDamageTarget:0027",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "OwnerDead"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "WuppysLoyaltyPower.ModifyPreBlockDamageTarget:0032",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CreatureId",
+                "Creature": {
+                  "Who": "Owner",
+                  "PetOwner": false
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Hook": "ShouldAllowHitting",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookFactValue",
+          "Fact": "CreatureAlive",
+          "Creature": {
+            "Who": "Asked",
+            "PetOwner": false
+          }
+        }
+      },
+      {
+        "Hook": "ShouldCreatureBeRemovedFromCombatAfterDeath",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "WuppysLoyaltyPower.ShouldCreatureBeRemovedFromCombatAfterDeath:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "SameCreature",
+                    "Creature": {
+                      "Who": "Asked",
+                      "PetOwner": false
+                    },
+                    "Other": {
+                      "Who": "Owner",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Hook": "ShouldPowerBeRemovedAfterOwnerDeath",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookConstant",
+          "Value": 0
+        }
       }
     ],
     "HelpsOwner": false

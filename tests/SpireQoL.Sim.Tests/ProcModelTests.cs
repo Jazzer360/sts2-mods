@@ -462,7 +462,7 @@ public class ProcModelTests
         // v0.114.0: ImpaledPower.AfterDamageReceived counts a powered hit whose source card's owner is its applier, whoever deals it (dealer != null &&
         // source.Owner.Creature == Applier): Osty's three hits from your card knock an arrow out (before v0.114.0 only its applier's own hits did).
         var state = State(hp: 100);
-        state.You.OstyHp = 10;
+        state.You.WithOsty(hp: 10);
         state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Impaled, amount: 2, data: 3);
         var after = One(state, Play(Card("Squeeze"), target: 0, plays: 1, Attack(baseDamage: 1, hits: 3) with { ByOsty = true }));
         Assert.Equal((1, 3), (after.Enemy(id: 0)!.Powers[PowerId.Impaled], after.Enemy(id: 0)!.Powers.DataOf(PowerId.Impaled)));

@@ -11,7 +11,7 @@ public class ReadModelAttackTests
 {
     private static SimState Board()
     {
-        var state = new SimState { You = new SimPlayer { Hp = 50, MaxHp = 70, OstyHp = 10 } };
+        var state = new SimState { You = new SimPlayer { Hp = 50, MaxHp = 70 }.WithOsty(hp: 10) };
         state.Enemies.Add(new SimEnemy { Id = 0, Name = "E0", Hp = 30 });
         return state;
     }

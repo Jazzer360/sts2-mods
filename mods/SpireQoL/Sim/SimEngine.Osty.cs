@@ -12,6 +12,7 @@ public static partial class SimEngine
         var lost = OstyDrops(state, player, amount);
         if (lost <= 0) return 0;
         foreach (var (model, o) in Listeners(state)) model.AfterOstyHpLost(state, o, player, lost);
+        OstyDeath(state, player);
         AllyDeaths(state);
         return lost;
     }
@@ -27,35 +28,35 @@ public static partial class SimEngine
         return lost;
     }
 
-    /// <summary>Osty's id as a damage's target or a hit's receiver: your Osty's (Who.YourOsty); a teammate's Osty has none the simulator keeps.</summary>
-    private static int OstyId(int player) => player == Who.You ? Who.YourOsty : Who.None;
+    /// <summary>A player's Osty's id as a damage's target or a hit's receiver (Who.OstyOf: your Osty is Who.YourOsty).</summary>
+    private static int OstyId(int player) => Who.OstyOf(player);
 
     /// <summary>
     /// What CreatureCmd.Damage tells of Osty's result once a damage's results are applied (its results loop): the fight's log has it first
     /// (CombatHistory.DamageReceived, with the player's: <see cref="RecordOstyHit"/>), then Hook.AfterCurrentHpChanged with his loss (Necro Mastery),
-    /// Hook.AfterDamageGiven and, unless it killed him, Hook.AfterDamageReceived, each told of his result; then a death it caused. Your Osty's: a
-    /// teammate's Osty has no id the hooks could be told (his loss is told to Necro Mastery as before).
+    /// Hook.AfterDamageGiven and, unless it killed him, Hook.AfterDamageReceived, each told of his result; then a death it caused. Any player's.
     /// </summary>
     private static void TellOstyHit(SimState state, int player, int? dealer, SimProps props, SimCard? card, int lost, bool killed)
     {
         if (lost > 0) foreach (var (model, o) in Listeners(state)) model.AfterOstyHpLost(state, o, player, lost);
-        if (player == Who.You && Listeners(state).Count > 0)
+        if (Listeners(state).Count > 0)
         {
-            var hit = new DamageEvent(dealer, Who.YourOsty, props, card, lost, Blocked: 0, Unblocked: lost, Killed: killed);
+            var hit = new DamageEvent(dealer, Who.OstyOf(player), props, card, lost, Blocked: 0, Unblocked: lost, Killed: killed);
             foreach (var (model, o) in Listeners(state)) model.AfterDamageGiven(state, o, hit);
             if (!killed) foreach (var (model, o) in Listeners(state)) model.AfterDamageReceived(state, o, hit);
         }
+        OstyDeath(state, player);
         AllyDeaths(state);
     }
 
-    /// <summary>Your Osty's DamageReceivedEntry (CombatHistory.DamageReceived of his result: its receiver Osty, the HP he lost).</summary>
-    private static void RecordOstyHit(SimState state, int player, SimProps props, int lost)
+    /// <summary>His death once a damage killed him (CreatureCmd.Kill after the results loop): SimEngine.PetDied, when his HP is 0 and he has powers.</summary>
+    private static void OstyDeath(SimState state, int player)
     {
-        if (state.History.Count == 0 || player != Who.You) return;
-        var details = lost > 0 ? HistoryDetail.Unblocked : HistoryDetail.None;
-        if (props.IsPoweredAttack()) details |= HistoryDetail.PoweredAttack;
-        Record(state, new HistoryEvent(HistoryKind.DamageReceived, Who.YourOsty) { Details = details });
+        if (state.Player(player) is { OstyHp: <= 0 } owner && (owner.OstyPowers.Count > 0 || owner.OstyShields)) PetDied(state, Who.OstyOf(player));
     }
+
+    /// <summary>A player's Osty's DamageReceivedEntry (CombatHistory.DamageReceived of his result: its receiver Osty, the HP he lost).</summary>
+    private static void RecordOstyHit(SimState state, int player, SimProps props, int lost) => RecordDamageReceived(state, Who.OstyOf(player), props, lost);
 
     /// <summary>
     /// OstyCmd.Summon of <paramref name="amount"/> for <paramref name="player"/>, as the game runs it: the amount through Hook.ModifySummonAmount (every
@@ -75,6 +76,7 @@ public static partial class SimEngine
         var summoned = (int)amount;
         var summoner = state.MutablePlayer(player);
         var revived = false;
+        var added = false;
         if (summoner.OstyHp > 0)
         {
             // GainMaxHp: SetMaxHp(MaxHp + amount), then Heal by the change.
@@ -83,7 +85,8 @@ public static partial class SimEngine
         }
         else
         {
-            revived = summoner.OstyShields; // a dead Osty stays in the fight with his Die For You (ShouldPowerBeRemovedAfterOwnerDeath: false)
+            revived = summoner.OstyShields; // a dead Osty stays in the fight with his powers that stay (Die For You)
+            added = !revived;
             summoner.OstyShields = true;
             summoner.OstyMaxHp = summoned;
             summoner.OstyHp = summoned;
@@ -91,6 +94,8 @@ public static partial class SimEngine
         if (log != null && firing) state.LogFired(log, summoned, logOwner ?? player);
         else if (log != null) state.LogAmount(log, summoned, logOwner ?? player);
         IEnumerable<SimState> states = new[] { state };
+        // A new Osty (PlayerCmd.AddPet) gets Die For You (PowerCmd.Apply<DieForYouPower>(osty, 1, null, null)), its listeners told.
+        if (added) states = ApplyAndTell(state, applier: Who.None, Who.OstyOf(player), PowerId.DieForYou, amount: 1, debuff: false);
         if (revived) states = Then(states.ToList(), branch => Hook(branch, nameof(SimModel.AfterOstyRevived), (model, owner, copy) => model.AfterOstyRevived(copy, owner, player)));
         return Then(states.ToList(), branch =>
         {

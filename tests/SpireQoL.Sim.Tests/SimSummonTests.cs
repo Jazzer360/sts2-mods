@@ -21,7 +21,7 @@ public class SimSummonTests
         var state = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "ShrinkerBeetle", Hp = 28, Hits = { 8 } } } };
         state.You.Hp = 52;
         state.You.MaxHp = 66;
-        state.You.OstyHp = 2;
+        state.You.WithOsty(hp: 2);
         state.You.OstyMaxHp = 2;
         var outcome = SimEngine.Run(state, Summoning(amount: 5));
         Assert.Equal(1, outcome.TakenMax);
@@ -36,9 +36,8 @@ public class SimSummonTests
     {
         // OstyCmd.Summon with Osty dead: SetMaxHp(amount), Heal(amount): he comes back at the amount, whatever his max HP was.
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 50) } };
-        state.You.OstyHp = 0;
+        state.You.WithOsty(hp: 0);
         state.You.OstyMaxHp = 12;
-        state.You.OstyShields = true;
         var after = Assert.Single(After(state, Summoning(amount: 5)));
         Assert.Equal(5, after.You.OstyHp);
         Assert.Equal(5, after.You.OstyMaxHp);
@@ -51,11 +50,11 @@ public class SimSummonTests
         // No Osty yet (PlayerCmd.AddPet, then PowerCmd.Apply<DieForYouPower>): he takes your powered hits from then on.
         var state = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = 50, Hits = { 4 } } } };
         state.You.OstyShields = false;
-        state.You.OstyHp = 0;
         Assert.Equal(4, SimEngine.Run(state).TakenMax);
         var outcome = SimEngine.Run(state, Summoning(amount: 6));
         Assert.Equal(0, outcome.TakenMax);
         Assert.Equal(4, outcome.OstyTakenMax);
+        Assert.True(outcome.Worst.You.OstyPowers.Has(PowerId.DieForYou));
     }
 
     [Fact]
@@ -64,7 +63,7 @@ public class SimSummonTests
         // CombatHistory.Summoned: a question counting the turn's summons of its owner counts the play's.
         var query = new HistoryQuery(HistoryKind.Summoned, HistoryScope.ThisTurn, HistoryWhose.Owner);
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 50) }, History = new[] { query } };
-        state.You.OstyHp = 3;
+        state.You.WithOsty(hp: 3);
         var after = Assert.Single(After(state, Summoning(amount: 2)));
         Assert.Equal(1, SimEngine.HistoryCount(after, Who.You, query));
     }
@@ -74,7 +73,7 @@ public class SimSummonTests
     {
         // Spur.OnPlay: OstyCmd.Summon, then CreatureCmd.Heal(base.Owner.Osty, Heal): up to his max HP (Creature.SetCurrentHpInternal).
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 50) } };
-        state.You.OstyHp = 3;
+        state.You.WithOsty(hp: 3);
         state.You.OstyMaxHp = 10;
         var spur = Summoning(amount: 2, new HealAction(Amount: 4) { Osty = true }); // 3/10 → 5/12 → 9/12
         Assert.Equal(9, Assert.Single(After(state, spur)).You.OstyHp);
@@ -98,7 +97,7 @@ public class SimSummonTests
         // DevourLifePower.AfterCardPlayed, read from its code: cardPlay.Card is Soul && cardPlay.Card.Owner.Creature == base.Owner →
         // OstyCmd.Summon(cardPlay.Card.Owner, base.Amount): Osty gains it, and its summon tab counts it.
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 50) } };
-        state.You.OstyHp = 2;
+        state.You.WithOsty(hp: 2);
         state.You.OstyMaxHp = 2;
         state.You.Powers = state.You.Powers.With(PowerId.DevourLife, amount: 3);
         var soul = Play(Card(CardId.Soul.Name, SimCardType.Skill), target: Who.None, plays: 1);
@@ -114,8 +113,8 @@ public class SimSummonTests
     {
         // Legion of Bone: OstyCmd.Summon for each living player of your side, each their own Osty.
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 50) } };
-        state.You.OstyHp = 1;
-        state.Teammates.Add(new SimPlayer { OstyHp = 2 });
+        state.You.WithOsty(hp: 1);
+        state.Teammates.Add(new SimPlayer().WithOsty(hp: 2));
         var legion = Play(Card("LegionOfBone", SimCardType.Skill), target: Who.None, plays: 1, new SummonAction(Amount: 4), new SummonAction(Amount: 4) { Player = Who.Teammate(0) });
         var after = Assert.Single(After(state, legion));
         Assert.Equal(5, after.You.OstyHp);

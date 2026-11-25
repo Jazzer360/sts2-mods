@@ -164,13 +164,16 @@ public sealed record AttackInfo(int Id, int Dealer, SimProps Props, SimCard? Car
 /// <summary>A damage event (DamageResult) for the hooks around it.</summary>
 public sealed record DamageEvent(int? Dealer, int Target, SimProps Props, SimCard? Card, int Total, int Blocked, int Unblocked, bool Killed);
 
-/// <summary>What a creature id names (Who.KindOf); None: no creature (Who.None).</summary>
-public enum CreatureKind { You, Teammate, YourOsty, Enemy, None }
+/// <summary>What a creature id names (Who.KindOf); None: no creature (Who.None). Pet: a pet the simulator keeps other than your Osty (Who.PetOf).</summary>
+public enum CreatureKind { You, Teammate, YourOsty, Enemy, None, Pet }
+
+/// <summary>The pets the simulator keeps for each player (PlayerCmd.AddPet's creatures): Osty (OstyCmd.Summon) and Wuppy (the Wuppy relic's).</summary>
+public enum PetKind { Osty, Wuppy }
 
 /// <summary>
 /// Creature ids: one number for any creature, the only one the simulator uses (hooks need an owner, a target, a dealer). Enemies
-/// are their SimEnemy.Id (0 and up), you are -1, teammate k (SimState.Teammates[k]) is -2 - k, your Osty as a dealer -100.
-/// Look a player up by id with SimState.Player.
+/// are their SimEnemy.Id (0 and up), you are -1, teammate k (SimState.Teammates[k]) is -2 - k, a player's pets each their own (PetOf):
+/// your Osty -100, your Wuppy -200, teammate k's -101 - k and -201 - k. Look a player up by id with SimState.Player.
 /// </summary>
 public static class Who
 {
@@ -180,13 +183,36 @@ public static class Who
     /// aimed at you, and this is no creature's id, so "aimed at no one" can't be read as you.
     /// </summary>
     public const int None = int.MinValue;
-    /// <summary>Your Osty, as a dealer (his own powers aren't simulated: his damage is captured).</summary>
+    /// <summary>Your Osty: his powers are his own (SimPlayer.OstyPowers), listening at his place among the creatures.</summary>
     public const int YourOsty = -100;
+    /// <summary>The first id of a player's pets of a kind (you: PetBase + kind's offset; teammate k: one less for each).</summary>
+    private const int OstyBase = -100, WuppyBase = -200, PetsPerKind = 100;
     public static int Teammate(int teammateIndex) => -2 - teammateIndex;
     public static CreatureKind KindOf(int id) => id >= 0 ? CreatureKind.Enemy : id == You ? CreatureKind.You : id == YourOsty ? CreatureKind.YourOsty
-        : id == None ? CreatureKind.None : CreatureKind.Teammate;
+        : id == None ? CreatureKind.None : IsPet(id) ? CreatureKind.Pet : CreatureKind.Teammate;
     public static bool IsEnemy(int id) => id >= 0;
     public static bool IsPlayer(int id) => KindOf(id) is CreatureKind.You or CreatureKind.Teammate;
+
+    /// <summary>A player's pet of a kind: its id (your Osty is YourOsty).</summary>
+    public static int PetOf(int player, PetKind kind) => (kind == PetKind.Osty ? OstyBase : WuppyBase) - (player == You ? 0 : 1 + TeammateIndex(player));
+
+    /// <summary>A player's Osty's id (PetOf with Osty).</summary>
+    public static int OstyOf(int player) => PetOf(player, PetKind.Osty);
+
+    /// <summary>The id names one of the pets the simulator keeps.</summary>
+    public static bool IsPet(int id) => id is <= OstyBase and > OstyBase - PetsPerKind or <= WuppyBase and > WuppyBase - PetsPerKind;
+
+    /// <summary>Which kind of pet the id names (an id that names none: Osty, never asked).</summary>
+    public static PetKind PetKindOf(int id) => id <= WuppyBase ? PetKind.Wuppy : PetKind.Osty;
+
+    /// <summary>The pet's player (its PetOwner): you or a teammate; Who.None for an id that names no pet.</summary>
+    public static int PetOwnerOf(int id)
+    {
+        if (!IsPet(id)) return None;
+        var index = (PetKindOf(id) == PetKind.Wuppy ? WuppyBase : OstyBase) - id;
+        return index == 0 ? You : Teammate(index - 1);
+    }
+
     /// <summary>The teammate index of a player id (SimState.Teammates[k]); -1 for anything else.</summary>
     public static int TeammateIndex(int id) => KindOf(id) == CreatureKind.Teammate ? -2 - id : -1;
 
@@ -357,6 +383,28 @@ public abstract class SimModel
     /// <summary>A creature's block went from above 0 to 0 (AfterBlockBroken: Burrowed).</summary>
     /// <param name="breaker">Who dealt the damage that broke it (null: no one).</param>
     public virtual void AfterBlockBroken(SimState state, int owner, int target, int? breaker) { }
+    /// <summary>
+    /// Hook.ModifyPreBlockDamageTarget: who a damage to <paramref name="damage"/>'s Target hits instead, before its block (Wuppy's Loyalty), as this
+    /// listener leaves <paramref name="targetSoFar"/> (Who.None: no one yet, the hook's null). Pure.
+    /// </summary>
+    public virtual int ModifyPreBlockDamageTarget(SimState state, int owner, DamageCtx damage, int targetSoFar, decimal amount) => targetSoFar;
+    /// <summary>
+    /// Hook.ModifyUnblockedDamageTarget: who takes what a damage got past its target's block (Die For You), as this listener leaves the target so far
+    /// (<paramref name="damage"/>'s Target). Pure.
+    /// </summary>
+    public virtual int ModifyUnblockedDamageTarget(SimState state, int owner, DamageCtx damage, decimal amount) => damage.Target;
+    /// <summary>
+    /// PowerModel.ShouldPowerBeRemovedAfterOwnerDeath, the other way round: the power stays on <paramref name="owner"/> when it dies (a pet's Die For You
+    /// and Wuppy's Loyalty), so a pet that dies keeps it listening (SimEngine.PetDied). Pure.
+    /// </summary>
+    public virtual bool StaysOnDeadOwner(SimState state, int owner) => false;
+    /// <summary>
+    /// Hook.ShouldCreatureBeRemovedFromCombatAfterDeath: whether <paramref name="creature"/>, dying, leaves the fight (false keeps it: a pet's own Die
+    /// For You keeps Osty, dead, for a summon to revive). A dead enemy kept so isn't followed (SimEngine.AllyDeaths: unknown). Pure.
+    /// </summary>
+    public virtual bool ShouldCreatureBeRemovedFromCombatAfterDeath(SimState state, int owner, int creature) => true;
+    /// <summary>Hook.ShouldAllowHitting: whether <paramref name="creature"/> can be hit and receive powers (Creature.IsHittable, CanReceivePowers). Pure.</summary>
+    public virtual bool ShouldAllowHitting(SimState state, int owner, int creature) => true;
     /// <summary>The HP-loss pipeline (Hook.ModifyHpLost*): BeforeOsty, BeforeOstyLate, AfterOsty, AfterOstyLate.</summary>
     public virtual decimal ModifyHpLostBeforeOsty(SimState state, int owner, DamageCtx damage, decimal amount) => amount;
     public virtual decimal ModifyHpLostBeforeOstyLate(SimState state, int owner, DamageCtx damage, decimal amount) => amount;

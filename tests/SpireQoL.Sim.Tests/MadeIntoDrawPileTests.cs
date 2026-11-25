@@ -65,7 +65,7 @@ public class MadeIntoDrawPileTests
         // then CreateCard<Dazed>(dealer.Player): your Osty's powered hit makes them for you.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 50) } };
         state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.PersonalHive, amount: 1);
-        state.You.OstyHp = 10;
+        state.You.WithOsty(hp: 10);
         state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), 3) } };
         state.You.MadeCards = new Dictionary<string, SimDrawCard> { [CardId.Dazed.Name] = new SimDrawCard("dazed") };
         var poke = new SimPlay { Name = "Poke", HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 1, HitDamage = { [1] = 4 }, ByOsty = true };

@@ -781,15 +781,15 @@ public static partial class SimEngine
         state.PlayHpLost += lost;
     }
 
-    /// <summary>What a damage did as it landed on a player (CreatureCmd.Damage's results for them): its amount past Wuppy, their block's, Osty's and their HP's.</summary>
+    /// <summary>What a damage did as it landed on a player (CreatureCmd.Damage's results for them): its amount past the pre-block redirect (Wuppy), their block's, Osty's and their HP's.</summary>
     internal readonly record struct PlayerHit(int Amount, int Blocked, int ToOsty, int Lost);
 
     /// <summary>
     /// CreatureCmd.Damage landing on a player once its amount is worked out, for every damage to a player (decision #219), in the game's order:
     /// what it does worked out first (v0.114.0: CreatureCmd.GetDamageResults), then Hook.BeforeDamageReceived (Thorns hits the dealer back, read from its
-    /// code; the damage still lands as worked out), then the results applied: Wuppy first for a powered attack while it
-    /// lives (WuppysLoyaltyPower.ModifyPreBlockDamageTarget: only what it doesn't take goes on), their block unless it's Unblockable
-    /// (Creature.DamageBlockInternal), Osty for what a powered attack gets past it while he lives (DieForYouPower.ModifyUnblockedDamageTarget), the
+    /// code; the damage still lands as worked out), then the results applied: the creature Hook.ModifyPreBlockDamageTarget names first (Wuppy's
+    /// Loyalty, read from its code: a powered attack while Wuppy lives; only what it doesn't take goes on), their block unless it's Unblockable
+    /// (Creature.DamageBlockInternal), the one Hook.ModifyUnblockedDamageTarget names for what got past it (Die For You's Osty, read from its code), the
     /// HP-loss pipeline, their HP, then the hit's reactions (Flame Barrier and Reflect hit back, read from their code). The same for every player
     /// (decision #93). <paramref name="label"/> names it in Incoming Damage's breakdown, and yours feeds your play's HP-loss tabs; null for an enemy's
     /// attack in the enemy turn, which names its hits by its enemy.
@@ -798,7 +798,6 @@ public static partial class SimEngine
     {
         var listeners = Listeners(state);
         var yours = player == Who.You;
-        var powered = props.IsPoweredAttack();
         var unblockable = props.HasFlag(SimProps.Unblockable);
         // What the hit does, worked out first (beta, v0.114.0: CreatureCmd.GetDamageResults, a dry run): Wuppy's share, the block's, Osty's, the HP
         // the pipeline leaves; then Hook.BeforeDamageReceived (Thorns hits the dealer back), then the results applied as worked out
@@ -806,19 +805,32 @@ public static partial class SimEngine
         var receivedFirst = ReceivedFirst(state);
         if (receivedFirst) TellReceived(state, listeners, player, amount, props, dealer, card);
         var before = state.Player(player)!;
-        var toWuppy = powered && before.WuppyHp > 0 && amount > 0 ? Math.Min(before.WuppyHp, amount) : 0;
-        var past = amount - toWuppy;
+        // Hook.ModifyPreBlockDamageTarget: a creature that takes the damage whole before the player's block (Wuppy's Loyalty, read from its code), its
+        // HP as Creature.LoseHpInternal takes it; only what it can't take (its overkill) goes on.
+        var preBlock = RedirectTarget(state, listeners, preBlock: true, player, amount, props, dealer, card);
+        var toPreBlock = 0;
+        var preBlockKilled = false;
+        var past = amount;
+        if (preBlock != Who.None)
+        {
+            var petHp = PetHp(state, preBlock);
+            toPreBlock = Math.Min(petHp, amount);
+            preBlockKilled = petHp > 0 && amount >= petHp;
+            past = preBlockKilled ? amount - petHp : 0;
+        }
         var blocked = unblockable ? 0 : Math.Min(before.Block, past);
         var through = past - blocked;
-        var redirect = powered && before.OstyShields && before.OstyHp > 0;
-        var hpLoss = HpLossOnPlayer(state, Listeners(state), player, through, redirect, before.OstyHp, dealer, props, card, tellNow: receivedFirst);
+        // Hook.ModifyUnblockedDamageTarget: who takes what got past the block (Die For You's Osty, read from its code).
+        var receiver = RedirectTarget(state, listeners, preBlock: false, player, through, props, dealer, card);
+        var redirect = receiver != player;
+        var hpLoss = HpLossOnPlayer(state, Listeners(state), player, through, redirect, redirect ? PetHp(state, receiver) : 0, dealer, props, card, tellNow: receivedFirst);
         var lost = hpLoss.Lost;
         if (!receivedFirst) TellReceived(state, listeners, player, amount, props, dealer, card);
         var simPlayer = state.MutablePlayer(player);
-        if (toWuppy > 0)
+        if (toPreBlock > 0)
         {
-            simPlayer.WuppyHp = Math.Max(0, simPlayer.WuppyHp - toWuppy);
-            simPlayer.WuppyTaken += toWuppy; // not their Incoming Damage: it never reaches them
+            simPlayer.WuppyHp = Math.Max(0, simPlayer.WuppyHp - toPreBlock);
+            simPlayer.WuppyTaken += toPreBlock; // not their Incoming Damage: it never reaches them
         }
         if (unblockable)
         {
@@ -846,16 +858,56 @@ public static partial class SimEngine
         TellHpLoss(state, new HpLossNotes(null, hpLoss.OverkillAfterOsty));
         if (unblockable) state.MutablePlayer(player).UnblockableTaken += lost;
         if (yours && label != null) PlayHp(state, through - toOsty, lost);
-        // Each result in the fight's log, then each told to the hooks (the results loop): beta's results are the player's, then Osty's
-        // (DamageResults.AllResults: the original, then the unblocked redirect); main's Osty's, then the player's.
+        // Each result in the fight's log, then each told to the hooks (the results loop): beta's results are the player's, the pre-block redirect's
+        // (Wuppy's), then Osty's (DamageResults.AllResults: the original, the pre-block redirect, the unblocked redirect); main's Osty's, then the
+        // player's (main has no pre-block redirect).
         var ostyFirst = receivedFirst && redirect;
         if (ostyFirst) RecordOstyHit(state, player, props, toOsty);
         RecordDamageReceived(state, player, props, lost);
+        if (preBlock != Who.None) RecordDamageReceived(state, preBlock, props, toPreBlock);
         if (redirect && !ostyFirst) RecordOstyHit(state, player, props, toOsty);
         if (ostyFirst) TellOstyHit(state, player, dealer, props, card, toOsty, hpLoss.OstyKilled);
         PlayerDamaged(state, player, dealer, props, blocked, lost, card);
+        if (preBlock != Who.None) PetDamaged(state, preBlock, dealer, props, card, toPreBlock, preBlockKilled);
         if (redirect && !ostyFirst) TellOstyHit(state, player, dealer, props, card, toOsty, hpLoss.OstyKilled);
         return new PlayerHit(past, blocked, toOsty, lost);
+    }
+
+    /// <summary>
+    /// Hook.ModifyPreBlockDamageTarget (<paramref name="preBlock"/>: every listener in turn on the target so far, from none) or
+    /// Hook.ModifyUnblockedDamageTarget (from the player) for a damage to <paramref name="player"/>: the creature that takes it. Who.None for no
+    /// pre-block one; the player for no unblocked one. A creature the simulator keeps no HP for (a game update's) makes the simulation unknown.
+    /// </summary>
+    private static int RedirectTarget(SimState state, List<(SimModel Model, int Owner)> listeners, bool preBlock, int player, int amount, SimProps props, int? dealer, SimCard? card)
+    {
+        var hook = preBlock ? nameof(SimModel.ModifyPreBlockDamageTarget) : nameof(SimModel.ModifyUnblockedDamageTarget);
+        var target = preBlock ? Who.None : player;
+        var damage = new DamageCtx(dealer, player, props, card, card == null ? null : state.CurrentPlay);
+        foreach (var (model, owner) in listeners)
+        {
+            if (!model.Overrides(hook)) continue;
+            target = preBlock ? model.ModifyPreBlockDamageTarget(state, owner, damage, target, amount) : model.ModifyUnblockedDamageTarget(state, owner, damage with { Target = target }, amount);
+        }
+        if (target == Who.None || target == player) return target;
+        // The pets the simulator keeps take what's redirected (Wuppy before the block, Osty after it), each their player's.
+        if (Who.IsPet(target) && Who.PetOwnerOf(target) == player && Who.PetKindOf(target) == (preBlock ? PetKind.Wuppy : PetKind.Osty)) return target;
+        state.Unmodelled ??= $"a damage redirected to a creature the simulator doesn't follow there ({hook})";
+        return preBlock ? Who.None : player;
+    }
+
+    /// <summary>
+    /// A pet's own result of a damage redirected to it before its player's block (Wuppy's), told once the results are applied, as CreatureCmd.Damage's
+    /// results loop tells each: AfterDamageGiven, then AfterDamageReceived unless it killed it. (Hook.AfterCurrentHpChanged with its loss: the Wuppy
+    /// relic keeps its counter from it, which nothing a simulation reads.)
+    /// </summary>
+    private static void PetDamaged(SimState state, int pet, int? dealer, SimProps props, SimCard? card, int lost, bool killed)
+    {
+        if (Listeners(state).Count == 0) return;
+        var hit = new DamageEvent(dealer, pet, props, card, lost, Blocked: 0, Unblocked: lost, Killed: killed);
+        foreach (var (model, owner) in Listeners(state)) model.AfterDamageGiven(state, owner, hit);
+        if (!killed) foreach (var (model, owner) in Listeners(state)) model.AfterDamageReceived(state, owner, hit);
+        // Then its death (CreatureCmd.Kill after the results loop).
+        else PetDied(state, pet);
     }
 
     /// <summary>Blockable damage to a player from no one (a card's damage to you: SimPlay.DamageToYou), Unpowered.</summary>
@@ -1347,6 +1399,12 @@ public static partial class SimEngine
                 dead.DeathHandled = true;
                 handled = true;
                 if (!PowersOf(state, dead.Id).Has(PowerId.Minion)) mainDied = true;
+                // Hook.ShouldCreatureBeRemovedFromCombatAfterDeath: a dead enemy a listener keeps in the fight (read from its code) isn't followed, nor one
+                // of its powers that stays on it (its ShouldPowerBeRemovedAfterOwnerDeath false: the simulator's dead enemy has no listening powers).
+                foreach (var (model, o) in ListenersWith(state, dead.Id))
+                    if (model.Overrides(nameof(SimModel.ShouldCreatureBeRemovedFromCombatAfterDeath)) && !model.ShouldCreatureBeRemovedFromCombatAfterDeath(state, o, dead.Id)
+                        || o == dead.Id && model.StaysOnDeadOwner(state, o))
+                        state.Unmodelled ??= $"{model.Name} keeps a dead enemy in the fight or stays on it: what it does there isn't followed";
                 // Its own powers hear its death (CreatureCmd.Kill runs AfterDeath before RemoveAllPowersAfterDeath); no other dead one's do.
                 foreach (var (model, o) in ListenersWith(state, dead.Id)) model.AfterDeath(state, o, dead.Id);
             }

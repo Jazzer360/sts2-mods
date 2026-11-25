@@ -690,9 +690,9 @@ public static partial class SimEngine
     {
         landed = 0;
         if (amount == 0) return false;
-        // A power on Osty (a hook told of his result acting on its hit target: Monarch's Gaze's Strength down as an enemy's hit lands on him): his
-        // powers aren't kept (TRACKER). Today's only such power acts on his attacks, which come after the enemy turn every simulation ends with.
-        if (target == Who.YourOsty) return false;
+        // Creature.CanReceivePowers: every listener's ShouldAllowHitting of the target (Die For You and Wuppy's Loyalty, read from their code: a
+        // dead creature receives none, as a pet killed by the hit Monarch's Gaze is told of).
+        if (!CanReceivePowers(state, target)) return false;
         foreach (var (model, o) in Listeners(state)) amount = model.ModifyPowerAmountGiven(state, o, power, amount, applier, target, debuff);
         if (amount == 0) return false;
         var powers = PowersOf(state, target);
@@ -743,6 +743,14 @@ public static partial class SimEngine
         }
         // Each copy of an instanced power is applied on its own (a second Intercept on a covered teammate: a Covered of its own).
         if (!had || powerModel is { Instanced: true }) powerModel?.AfterApplied(state, target, applier, amount);
+        return true;
+    }
+
+    /// <summary>Creature.CanReceivePowers: no listener's Hook.ShouldAllowHitting says no for the creature.</summary>
+    internal static bool CanReceivePowers(SimState state, int creature)
+    {
+        foreach (var (model, owner) in Listeners(state))
+            if (model.Overrides(nameof(SimModel.ShouldAllowHitting)) && !model.ShouldAllowHitting(state, owner, creature)) return false;
         return true;
     }
 

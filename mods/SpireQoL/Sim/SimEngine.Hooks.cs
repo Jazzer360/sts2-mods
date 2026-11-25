@@ -78,16 +78,20 @@ public static partial class SimEngine
         return listeners.Select((listener, index) => (kinds[index], listener.Model.Name, listener.Owner)).ToList();
     }
 
-    /// <summary>Sets kept per player: their powers, relics and cards.</summary>
-    private const int SetsPerPlayer = 3;
+    /// <summary>Sets kept per player: their powers, relics and cards, and their pets' powers (Osty's, Wuppy's).</summary>
+    private const int SetsPerPlayer = 5;
 
     /// <summary>Every set listeners come from, in listener order.</summary>
     private static object[] CurrentSets(SimState state)
     {
         var sets = new object[SetsPerPlayer * (1 + state.Teammates.Count) + state.Enemies.Count];
         var next = 0;
-        sets[next++] = state.You.Powers; sets[next++] = state.You.Relics; sets[next++] = state.You.Cards;
-        foreach (var player in state.Teammates) { sets[next++] = player.Powers; sets[next++] = player.Relics; sets[next++] = player.Cards; }
+        static void Of(object[] sets, ref int next, SimPlayer player)
+        {
+            sets[next++] = player.Powers; sets[next++] = player.Relics; sets[next++] = player.Cards; sets[next++] = player.OstyPowers; sets[next++] = player.WuppyPowers;
+        }
+        Of(sets, ref next, state.You);
+        foreach (var player in state.Teammates) Of(sets, ref next, player);
         foreach (var enemy in state.Enemies) sets[next++] = enemy.Powers;
         return sets;
     }
@@ -97,7 +101,8 @@ public static partial class SimEngine
         if (sets.Length != SetsPerPlayer * (1 + state.Teammates.Count) + state.Enemies.Count) return false;
         var next = 0;
         static bool Same(object[] sets, ref int next, SimPlayer player) =>
-            ReferenceEquals(sets[next++], player.Powers) && ReferenceEquals(sets[next++], player.Relics) && ReferenceEquals(sets[next++], player.Cards);
+            ReferenceEquals(sets[next++], player.Powers) && ReferenceEquals(sets[next++], player.Relics) && ReferenceEquals(sets[next++], player.Cards)
+            && ReferenceEquals(sets[next++], player.OstyPowers) && ReferenceEquals(sets[next++], player.WuppyPowers);
         if (!Same(sets, ref next, state.You)) return false;
         foreach (var player in state.Teammates) if (!Same(sets, ref next, player)) return false;
         foreach (var enemy in state.Enemies) if (!ReferenceEquals(sets[next++], enemy.Powers)) return false;
@@ -127,6 +132,13 @@ public static partial class SimEngine
             // Their potions and orbs come here: none has a model (no potion's or orb's hook changes with its place in the order).
             Add(player.Cards.Items.Select(entry => entry.Name.Name), id, ListenerKind.Card);
         }
+        // The players' pets come after every player (CombatState's allies: PlayerCmd.AddPet adds them as they join), each player's in turn, their
+        // powers as any creature's. A dead pet's are the ones that stay on it (PetDied takes the others off, as Creature.RemoveAllPowersAfterDeath).
+        foreach (var id in state.PlayerIds)
+        {
+            var player = state.Player(id)!;
+            foreach (var kind in PetKinds) Add(player.PetPowers(kind).Items.Select(entry => entry.Name.Name), Who.PetOf(id, kind), ListenerKind.Power);
+        }
         foreach (var enemy in state.Enemies)
             if (Listening(enemy, alsoDead)) Add(enemy.Powers.Items.Select(entry => entry.Name.Name), enemy.Id, ListenerKind.Power);
         return list;
@@ -142,7 +154,7 @@ public static partial class SimEngine
             foreach (var entry in named.Items) if (SimModels.Has(entry.Name.Name)) return true;
             return false;
         }
-        static bool AnyOf(SimPlayer player) => Any(player.Powers) || Any(player.Relics) || Any(player.Cards);
+        static bool AnyOf(SimPlayer player) => Any(player.Powers) || Any(player.Relics) || Any(player.Cards) || Any(player.OstyPowers) || Any(player.WuppyPowers);
         if (AnyOf(state.You)) return true;
         foreach (var player in state.Teammates) if (AnyOf(player)) return true;
         foreach (var enemy in state.Enemies) if (Any(enemy.Powers)) return true;
@@ -229,16 +241,49 @@ public static partial class SimEngine
 
     // ------------------------------------------------------------------ creature access
 
-    /// <summary>A creature's powers by id (enemy id, You, Teammate(k)).</summary>
+    /// <summary>A creature's powers by id (enemy id, You, Teammate(k), a player's pet).</summary>
     public static PowerSet PowersOf(SimState state, int id) => Who.IsEnemy(id)
         ? state.Enemy(id)?.Powers ?? PowerSet.Empty
+        : Who.IsPet(id) ? state.Player(Who.PetOwnerOf(id))?.PetPowers(Who.PetKindOf(id)) ?? PowerSet.Empty
         : state.Player(id)?.Powers ?? PowerSet.Empty;
 
     /// <summary>Sets a creature's powers (a teammate shared between branches is copied first).</summary>
     public static void SetPowers(SimState state, int id, PowerSet powers)
     {
         if (Who.IsEnemy(id)) { if (state.Enemy(id) is { } enemy) enemy.Powers = powers; }
+        else if (Who.IsPet(id))
+        {
+            if (state.Player(Who.PetOwnerOf(id)) == null) return;
+            var owner = state.MutablePlayer(Who.PetOwnerOf(id));
+            if (Who.PetKindOf(id) == PetKind.Osty) owner.OstyPowers = powers;
+            else owner.WuppyPowers = powers;
+        }
         else if (state.Player(id) != null) state.MutablePlayer(id).Powers = powers;
+    }
+
+    /// <summary>The pets the simulator keeps, in the order a player's join the fight (Osty, then Wuppy: no hook today answers both).</summary>
+    private static readonly PetKind[] PetKinds = { PetKind.Osty, PetKind.Wuppy };
+
+    /// <summary>A pet's HP by its id (0: none, or dead).</summary>
+    internal static int PetHp(SimState state, int pet) => Who.IsPet(pet) ? state.Player(Who.PetOwnerOf(pet))?.PetHp(Who.PetKindOf(pet)) ?? 0 : 0;
+
+    /// <summary>
+    /// A pet died (its HP to 0), as CreatureCmd.Kill takes it: it stays in the fight when a listener keeps it (Hook.ShouldCreatureBeRemovedFromCombatAfterDeath:
+    /// Die For You keeps its Osty, Wuppy's Loyalty its Wuppy, read from their code), with the powers that stay on their dead owner
+    /// (Creature.RemoveAllPowersAfterDeath keeps one whose ShouldPowerBeRemovedAfterOwnerDeath is false); one no listener keeps leaves with them all
+    /// (an Osty gone: a summon adds a new one).
+    /// </summary>
+    internal static void PetDied(SimState state, int pet)
+    {
+        var powers = PowersOf(state, pet);
+        var kept = false;
+        foreach (var (model, owner) in Listeners(state))
+            if (model.Overrides(nameof(SimModel.ShouldCreatureBeRemovedFromCombatAfterDeath)) && !model.ShouldCreatureBeRemovedFromCombatAfterDeath(state, owner, pet)) kept = true;
+        var staying = powers;
+        foreach (var entry in powers.Items)
+            if (!kept || SimModels.Get(entry.Name.Name)?.StaysOnDeadOwner(state, pet) != true) staying = staying.Without(entry.Name);
+        if (!ReferenceEquals(staying, powers)) SetPowers(state, pet, staying);
+        if (!kept && Who.PetKindOf(pet) == PetKind.Osty && state.Player(Who.PetOwnerOf(pet)) is { OstyShields: true }) state.MutablePlayer(Who.PetOwnerOf(pet)).OstyShields = false;
     }
 
     /// <summary>A player's relic counters by id.</summary>

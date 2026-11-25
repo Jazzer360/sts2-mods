@@ -123,8 +123,8 @@ public class SimTeammateParityTests
             switch (name)
             {
                 case "block": player.Block = 12; break;
-                case "Wuppy": player.WuppyHp = 8; break;
-                case "Osty": player.OstyHp = 10; player.OstyShields = true; break;
+                case "Wuppy": player.WithWuppy(hp: 8); break;
+                case "Osty": player.WithOsty(hp: 10); break;
                 case "Tungsten Rod": player.TungstenRod = 1; break;
                 case "Regret": player.HandCount = 3; player.TurnEndCards.Add(new TurnEndCard("Regret", "Regret", Amount: 0)); player.Cards = player.Cards.With(CardId.Regret, amount: 1); break;
                 case "Fairy in a Bottle": player.Hp = 15; player.Fairies = 1; player.FairyHeal = 20; break;

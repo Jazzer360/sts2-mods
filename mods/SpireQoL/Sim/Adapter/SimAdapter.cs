@@ -103,9 +103,11 @@ public static partial class SimAdapter
         ids = idMap;
         var state = new SimState { MainRules = BranchRules.MainRulesNow(), TurnNumber = me.PlayerCombatState?.TurnNumber ?? 0, EncounterScaling = EncounterScaling(combat) };
         var mates = Teammates(me, combat);
-        // Any creature's simulator id (Who): an enemy's, you, or teammate k.
-        int? IdOf(Creature creature) => idMap.TryGetValue(creature, out var enemyId) ? enemyId : creature == me.Creature ? Who.You
+        // Any creature's simulator id (Who): an enemy's, you, teammate k, or one of a player's pets the simulator keeps.
+        int? PlayerIdOf(Creature creature) => creature == me.Creature ? Who.You
             : mates.FindIndex(player => player.Creature == creature) is var teammateIndex and >= 0 ? Who.Teammate(teammateIndex) : null;
+        int? IdOf(Creature creature) => idMap.TryGetValue(creature, out var enemyId) ? enemyId : PlayerIdOf(creature)
+            ?? (creature.PetOwner is { } petOwner && PetKindOf(petOwner, creature) is { } kind && PlayerIdOf(petOwner.Creature) is { } ownerId ? Who.PetOf(ownerId, kind) : null);
         var targets = combat.Players.Select(player => player.Creature).ToList();
 
         var nextEnemyId = 0;
@@ -686,12 +688,25 @@ public static partial class SimAdapter
         player.SlotOnFirstChannel = SafeInt(() => me.Character.BaseOrbSlotCount) == 0;
         foreach (var orb in pcs.OrbQueue.Orbs) player.Orbs.Add(ToSim(orb));
 
+        // Their pets, each a creature with its own powers (Die For You, Wuppy's Loyalty: read from their code), listening at its place.
         var osty = me.Osty;
         player.OstyHp = osty != null && osty.IsAlive ? osty.CurrentHp : 0;
         if (osty != null) player.OstyMaxHp = osty.MaxHp;
-        player.OstyShields = osty != null && osty.HasPower<DieForYouPower>();
-        player.WuppyHp = SafeInt(() => me.Creature.Pets.Where(pet => pet.IsAlive && pet.Powers.Any(power => power.GetType().Name == nameof(WuppysLoyaltyPower))).Sum(pet => pet.CurrentHp));
+        player.OstyShields = osty != null;
+        if (osty != null) player.OstyPowers = SimReaders.Powers(osty, idOf);
+        if (me.Creature.Pets.FirstOrDefault(pet => PetKindOf(me, pet) == PetKind.Wuppy) is { } wuppy)
+        {
+            player.WuppyHp = wuppy.IsAlive ? wuppy.CurrentHp : 0;
+            player.WuppyPowers = SimReaders.Powers(wuppy, idOf);
+        }
     }
+
+    /// <summary>
+    /// Which of the pets the simulator keeps a player's pet is (null: none of them): their Osty (Player.Osty), or the Wuppy relic's (its monster,
+    /// MegaCrit.Sts2.Core.Models.Monsters.Wuppy, v0.113.0).
+    /// </summary>
+    internal static PetKind? PetKindOf(Player owner, Creature pet) =>
+        pet == owner.Osty ? PetKind.Osty : pet.Monster?.GetType().Name == nameof(MegaCrit.Sts2.Core.Models.Monsters.Wuppy) ? PetKind.Wuppy : null;
 
     /// <summary>
     /// An enemy's attack hits on a player, through the game's damage math with that player as the target

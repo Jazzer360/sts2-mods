@@ -288,7 +288,7 @@ public class SimTeammateTests
         // WuppysLoyaltyPower.ModifyPreBlockDamageTarget on a teammate's pet, as on yours: 7 into their Wuppy at 5 HP, the 2 left
         // over goes on to their 1 block and them. Their Thorns still hits back (BeforeDamageReceived: they're still the target).
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 7) } };
-        var mate = new SimPlayer { Hp = 30, Block = 1, WuppyHp = 5 };
+        var mate = new SimPlayer { Hp = 30, Block = 1 }.WithWuppy(hp: 5);
         mate.Thorns = 3;
         state.Teammates.Add(mate);
         var outcome = SimEngine.Run(state);
@@ -302,7 +302,7 @@ public class SimTeammateTests
     public void ATeammatesWuppyThatTakesTheWholeHitLeavesThemUntouched()
     {
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 50, hits: 4) } };
-        state.Teammates.Add(new SimPlayer { Hp = 30, Block = 3, WuppyHp = 10 });
+        state.Teammates.Add(new SimPlayer { Hp = 30, Block = 3 }.WithWuppy(hp: 10));
         var outcome = SimEngine.Run(state);
         Assert.Equal(0, outcome.TeammateTakenMax(teammateIndex: 0));
         Assert.Equal(3, outcome.Worst.Teammates[0].Block);

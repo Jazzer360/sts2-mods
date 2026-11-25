@@ -43,7 +43,7 @@ public class CardActionTests
     public void NecroMasteryHitsEveryEnemyWhenOstyLosesHp()
     {
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 50, block: 5), Enemy(id: 1, hp: 50) } };
-        state.You.OstyHp = 7;
+        state.You.WithOsty(hp: 7);
         state.You.Powers = state.You.Powers.With(PowerId.NecroMastery, amount: 2);
         var after = Assert.Single(After(state, Play(Card("Sacrifice", SimCardType.Skill), target: Who.None, plays: 1, new KillOstyAction())));
         Assert.Equal(0, after.You.OstyHp);
@@ -57,7 +57,7 @@ public class CardActionTests
     {
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 50) } };
         state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Thorns, amount: 3);
-        state.You.OstyHp = 10;
+        state.You.WithOsty(hp: 10);
         state.You.Powers = state.You.Powers.With(PowerId.NecroMastery, amount: 1);
         var poke = Play(Card("Poke"), target: 0, plays: 1, new AttackAction(Hits: 1, SimPlay.Target.Single, new DamageSpec(Base: 6, SimProps.Move) { Fixed = true }) { ByOsty = true });
         var after = Assert.Single(After(state, poke));

@@ -56,6 +56,7 @@ public static partial class ReadModels
         RelicId.DemonTongue.Name,
         PowerId.DevourLife.Name,
         PowerId.Dexterity.Name,
+        PowerId.DieForYou.Name,
         PowerId.Disintegration.Name,
         PowerId.DislikeYou.Name,
         PowerId.DoubleDamage.Name,
@@ -217,6 +218,7 @@ public static partial class ReadModels
         PowerId.Weak.Name,
         RelicId.WhittlingKnife.Name,
         PowerId.WraithForm.Name,
+        PowerId.WuppysLoyalty.Name,
         PowerId.Yah.Name,
     };
 }

@@ -21,7 +21,7 @@ public class SimOstyAttackTests
     {
         var state = new SimState { Enemies = { E(id: 1, hp: 30) } };
         state.Enemies[0].Thorns = 3;
-        state.You.OstyHp = 10;
+        state.You.WithOsty(hp: 10);
         SimEngine.ApplyPlayTo(state, Poke(target: 1, damage: 6, byOsty: true), out var branches, out _);
         Assert.All(branches, branch =>
         {
@@ -41,7 +41,7 @@ public class SimOstyAttackTests
         // (target.PetOwner?.Creature ?? target), the blockRedirect result. Thorns 3 on Osty's hit with your 2 block: your block goes, Osty loses 1.
         var state = new SimState { Enemies = { E(id: 1, hp: 30) } };
         state.Enemies[0].Thorns = 3;
-        state.You.OstyHp = 10;
+        state.You.WithOsty(hp: 10);
         state.You.Block = 2;
         SimEngine.ApplyPlayTo(state, Poke(target: 1, damage: 6, byOsty: true), out var branches, out _);
         Assert.All(branches, branch =>
@@ -60,7 +60,7 @@ public class SimOstyAttackTests
         var ostys = new HistoryQuery(HistoryKind.DamageReceived, HistoryScope.ThisTurn, HistoryWhose.OwnersOsty);
         var yours = new HistoryQuery(HistoryKind.DamageReceived, HistoryScope.ThisTurn, HistoryWhose.Owner) { Details = HistoryDetail.Unblocked };
         var state = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 30, Hits = { 4 } } }, History = new[] { ostys, yours } };
-        state.You.OstyHp = 10;
+        state.You.WithOsty(hp: 10);
         var branch = SimEngine.Run(state).Worst;
         Assert.Equal(4, branch.OstyTaken);
         Assert.Equal(1, branch.You.Turn[ostys.Key]);
@@ -68,15 +68,55 @@ public class SimOstyAttackTests
     }
 
     [Fact]
-    public void APowerOnOstyLandsNowhere()
+    public void APowerOnOstyLandsOnHim()
     {
-        // A hook told of Osty's result may act on its hit target (MonarchsGazePower.AfterDamageGiven: PowerCmd.Apply on him): his powers aren't
-        // kept, so nothing lands, on you or on an enemy (Who.YourOsty is no one's power set).
+        // A hook told of Osty's result may act on its hit target (MonarchsGazePower.AfterDamageGiven: PowerCmd.Apply on him): it lands in his own
+        // powers, never yours.
         var state = new SimState { Enemies = { E(id: 1, hp: 30) } };
-        state.You.OstyHp = 5;
-        Assert.False(SimEngine.ApplyPower(state, applier: 1, target: Who.YourOsty, PowerId.Weak, amount: 1, debuff: true));
+        state.You.WithOsty(hp: 5);
+        Assert.True(SimEngine.ApplyPower(state, applier: 1, target: Who.YourOsty, PowerId.Weak, amount: 1, debuff: true));
+        Assert.Equal(1, state.You.OstyPowers[PowerId.Weak]);
         Assert.False(state.You.Powers.Has(PowerId.Weak));
         Assert.Null(state.Unmodelled);
+    }
+
+    [Fact]
+    public void ADeadOstyReceivesNoPower()
+    {
+        // Creature.CanReceivePowers: Die For You's ShouldAllowHitting (read from its code) says no for a dead creature, his own Osty included.
+        var state = new SimState { Enemies = { E(id: 1, hp: 30) } };
+        state.You.WithOsty(hp: 0);
+        Assert.False(SimEngine.ApplyPower(state, applier: 1, target: Who.YourOsty, PowerId.Weak, amount: 1, debuff: true));
+        Assert.False(state.You.OstyPowers.Has(PowerId.Weak));
+    }
+
+    [Fact]
+    public void OstysOwnStrengthIsInHisHits()
+    {
+        // His powers are listeners at his place: StrengthPower.ModifyDamageAdditive adds his own Strength to the hits he deals (dealer == base.Owner),
+        // where the adapter's captured terms leave out a modelled class.
+        var state = new SimState { Enemies = { E(id: 1, hp: 30) } };
+        state.You.WithOsty(hp: 5);
+        state.You.OstyPowers = state.You.OstyPowers.With(PowerId.Strength, 3);
+        var poke = new SimPlay { Name = "Poke", TargetId = 1, HandCard = 0, HandDelta = 0 };
+        poke.Body.Add(new AttackAction(Hits: 1, SimPlay.Target.Single, new DamageSpec(Base: 6m, SimProps.Move)) { ByOsty = true });
+        SimEngine.ApplyPlayTo(state, poke, out var branches, out _);
+        Assert.All(branches, branch => Assert.Equal(21, branch.Enemy(id: 1)!.Hp));
+    }
+
+    [Fact]
+    public void OstysPowersComeOffAtHisDeathButDieForYou()
+    {
+        // Creature.RemoveAllPowersAfterDeath keeps what stays on him (DieForYouPower.ShouldPowerBeRemovedAfterOwnerDeath: false), and Die For You keeps
+        // him in the fight (ShouldCreatureBeRemovedFromCombatAfterDeath: false for its owner): a later summon revives him.
+        var state = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = 50, Hits = { 9 } } } };
+        state.You.WithOsty(hp: 4);
+        state.You.OstyPowers = state.You.OstyPowers.With(PowerId.Strength, 2);
+        var branch = Assert.Single(SimEngine.Run(state).Branches);
+        Assert.Equal(0, branch.You.OstyHp);
+        Assert.True(branch.You.OstyShields);
+        Assert.True(branch.You.OstyPowers.Has(PowerId.DieForYou));
+        Assert.False(branch.You.OstyPowers.Has(PowerId.Strength));
     }
 
     [Fact]
@@ -102,7 +142,7 @@ public class SimOstyAttackTests
         // Bone Shards kills Osty at 4 HP with Necro Mastery 2: 8 unblockable damage to every enemy.
         var state = new SimState { Enemies = { E(id: 1, hp: 30), E(id: 2, hp: 5) } };
         state.Enemies[0].Block = 20;
-        state.You.OstyHp = 4;
+        state.You.WithOsty(hp: 4);
         state.You.Powers = state.You.Powers.With(PowerId.NecroMastery, amount: 2);
         var play = new SimPlay { Name = "BoneShards", KillsOsty = true };
         SimEngine.ApplyPlayTo(state, play, out var branches, out _);
@@ -122,7 +162,7 @@ public class SimOstyAttackTests
         // OstyCmd.Summon(dealer.PetOwner, base.Amount), so Osty has the 4 HP more by the enemy turn.
         var state = new SimState { Enemies = { E(id: 1, hp: 30), E(id: 2, hp: 30) } };
         state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.SicEm, amount: 4, data: DataCreature.Of(Who.You));
-        state.You.OstyHp = 5;
+        state.You.WithOsty(hp: 5);
         SimEngine.ApplyPlayTo(state, Poke(target: 1, damage: 6, byOsty: true), out var summoned, out _);
         Assert.All(summoned, branch => Assert.Equal(9, branch.You.OstyHp));
         var byOsty = SimEngine.Run(state, Poke(target: 1, damage: 6, byOsty: true));
@@ -139,8 +179,7 @@ public class SimOstyAttackTests
         // block is its turn's, not your end of turn's: the outcome audit counts your end of turn's (UnblockedAtTurnEnd), the wake
         // rules every hit (UnblockedInstances).
         var state = new SimState { Enemies = { E(id: 1, hp: 100, hits: 9) } };
-        state.You.OstyHp = 20;
-        state.You.OstyShields = true;
+        state.You.WithOsty(hp: 20);
         state.You.Powers = state.You.Powers.With(PowerId.NecroMastery, amount: 1);
         var outcome = SimEngine.Run(state);
         Assert.Equal(0, outcome.UnblockedAtTurnEndMax(enemyId: 1));

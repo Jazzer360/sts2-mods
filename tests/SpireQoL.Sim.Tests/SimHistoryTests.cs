@@ -159,7 +159,7 @@ public class SimHistoryTests
         var ostysAttacks = new HistoryQuery(HistoryKind.CreatureAttacked, HistoryScope.ThisTurn, HistoryWhose.OwnersOsty);
         var yourAttacks = new HistoryQuery(HistoryKind.CreatureAttacked, HistoryScope.ThisTurn, HistoryWhose.Owner);
         var state = Board(queries: new[] { ostysAttacks, yourAttacks });
-        state.You.OstyHp = 10;
+        state.You.WithOsty(hp: 10);
         var ostyHits = Card("Poke", Hit(damage: 3) with { ByOsty = true }, Hit(damage: 2));
         SimEngine.RunScriptTo(state, SimScript.Of(ostyHits), out var after, out _);
         var branch = Assert.Single(after);
@@ -174,7 +174,7 @@ public class SimHistoryTests
         // CreatureAttackedEntry, e.Actor == Owner.Osty). Replayed, its second play counts the first's attack: two hits.
         var ostysAttacks = new HistoryQuery(HistoryKind.CreatureAttacked, HistoryScope.ThisTurn, HistoryWhose.OwnersOsty);
         var state = Board(queries: new[] { ostysAttacks });
-        state.You.OstyHp = 10;
+        state.You.WithOsty(hp: 10);
         var rattle = Card("Rattle", Hit(damage: 3, hits: 1) with { ByOsty = true, HitsLogged = new LoggedAmount(ostysAttacks, Per: 1, AtStart: 0) });
         rattle.Plays = 2;
         rattle.Card = new SimCardPlay(new SimCard("Rattle", SimCardType.Attack), Who.You, Target: 0, PlayIndex: 0, PlayCount: 2, AutoPlay: false);

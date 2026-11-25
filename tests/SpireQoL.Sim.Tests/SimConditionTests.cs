@@ -102,7 +102,7 @@ public class SimConditionTests
             new GainBlockAction(Times: 1, Base: 12m, SimProps.Move) { Fixed = true },
         }));
         var state = Board();
-        state.You.OstyHp = 10;
+        state.You.WithOsty(hp: 10);
         var branch = Assert.Single(SimEngine.Run(state, sacrifice).Branches);
         Assert.Equal(0, branch.You.OstyHp);
         Assert.Equal(12, branch.You.Block);

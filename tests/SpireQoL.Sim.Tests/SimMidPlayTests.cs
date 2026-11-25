@@ -122,7 +122,7 @@ public class SimMidPlayTests
         // (Creature.LoseHpInternal's OverkillDamage), which goes on to your 2 block; the third hit (5) is all yours.
         var state = new SimState { Enemies = { E(id: 1, hp: 50, block: 0, hits: [7, 5, 5]) } };
         state.You.Block = 2;
-        state.You.WuppyHp = 10;
+        state.You.WithWuppy(hp: 10);
         var outcome = SimEngine.Run(state);
         Assert.Equal(5, outcome.TakenMax);
         Assert.Equal(0, outcome.Worst.You.WuppyHp);
@@ -135,7 +135,7 @@ public class SimMidPlayTests
         // Knowledge Demon's 19 into Wuppy at 8 HP with 6 block: 8 to Wuppy, 11 on, 6 blocked, 5 lost (a 1.0.0 report forecast 0).
         var state = new SimState { Enemies = { E(id: 1, hp: 116, block: 0, hits: 19) } };
         state.You.Block = 6;
-        state.You.WuppyHp = 8;
+        state.You.WithWuppy(hp: 8);
         var outcome = SimEngine.Run(state);
         Assert.Equal(5, outcome.TakenMax);
         Assert.Equal(8, outcome.Worst.WuppyTaken);
@@ -147,7 +147,7 @@ public class SimMidPlayTests
         // ThornsPower.BeforeDamageReceived: you're still the hit's target (Wuppy takes it later, before block).
         var state = new SimState { Enemies = { E(id: 1, hp: 50, block: 0, hits: 7) } };
         state.You.Thorns = 3;
-        state.You.WuppyHp = 20;
+        state.You.WithWuppy(hp: 20);
         var outcome = SimEngine.Run(state);
         Assert.Equal(0, outcome.TakenMax);
         Assert.Equal(47, outcome.Worst.Enemy(id: 1)!.Hp);

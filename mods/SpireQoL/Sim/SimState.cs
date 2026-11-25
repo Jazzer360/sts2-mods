@@ -439,15 +439,29 @@ public sealed class SimPlayer
     /// <summary>Osty's max HP (int.MaxValue: not tracked): a heal of him stops there (CreatureCmd.Heal), a summon raises it or sets it (OstyCmd.Summon).</summary>
     public int OstyMaxHp = int.MaxValue;
     /// <summary>
-    /// The player has an Osty, alive or dead, with Die For You (DieForYouPower: he takes the hits aimed at his owner while he lives, and keeps
-    /// the power at his death). False: none yet, so a summon adds him (OstyCmd.Summon: PlayerCmd.AddPet, Die For You).
+    /// The player has an Osty, alive or dead (a dead Osty stays in the fight with his powers that stay: Die For You's
+    /// ShouldPowerBeRemovedAfterOwnerDeath is false). False: none (none yet, or one that left the fight), so a summon adds him (OstyCmd.Summon:
+    /// PlayerCmd.AddPet, Die For You).
     /// </summary>
-    public bool OstyShields = true;
+    public bool OstyShields;
     /// <summary>
-    /// Your pet Wuppy's HP (Wuppy relic, v0.113.0): while it lives, every powered attack aimed at you hits it instead,
-    /// whole, before your block (WuppysLoyaltyPower.ModifyPreBlockDamageTarget). 0: none.
+    /// Their Osty's powers, in the order applied (Die For You: he takes the powered attacks aimed at his player while he lives, read from its code,
+    /// DieForYouPower.ModifyUnblockedDamageTarget): listeners at his place among the creatures (SimEngine.Listeners), his id Who.PetOf.
+    /// </summary>
+    public PowerSet OstyPowers = PowerSet.Empty;
+    /// <summary>
+    /// Their pet Wuppy's HP (Wuppy relic, v0.113.0): while it lives, its Wuppy's Loyalty takes every powered attack aimed at them, whole, before
+    /// their block (WuppysLoyaltyPower.ModifyPreBlockDamageTarget, read from its code). 0: none, or dead.
     /// </summary>
     public int WuppyHp;
+    /// <summary>Their Wuppy's powers, in the order applied (Wuppy's Loyalty): listeners at its place among the creatures, its id Who.PetOf.</summary>
+    public PowerSet WuppyPowers = PowerSet.Empty;
+
+    /// <summary>A pet's powers (its kind's set).</summary>
+    public PowerSet PetPowers(PetKind kind) => kind == PetKind.Osty ? OstyPowers : WuppyPowers;
+
+    /// <summary>A pet's HP (0: none, or dead).</summary>
+    public int PetHp(PetKind kind) => kind == PetKind.Osty ? OstyHp : WuppyHp;
 
     /// <summary>
     /// HP (int.MaxValue: not tracked). Reaching 0 uses up what prevents death (Fairy in a Bottle, then Lizard Tail), each
@@ -539,7 +553,7 @@ public sealed class SimPlayer
         key.Add(AutoHand?.Count ?? -1);
         // By what each card is, in any order: branches that picked identical copies hold the same hand, and merge.
         if (AutoHand != null) foreach (var cardKey in AutoHand.Select(handCard => handCard.Key).OrderBy(cardKey => cardKey.Digest)) key.Add(cardKey.GetHashCode());
-        Powers.Hash(ref key); Relics.Hash(ref key); Turn.Hash(ref key); Fight.Hash(ref key); Fields.Hash(ref key);
+        Powers.Hash(ref key); Relics.Hash(ref key); Turn.Hash(ref key); Fight.Hash(ref key); Fields.Hash(ref key); OstyPowers.Hash(ref key); WuppyPowers.Hash(ref key);
         key.Add(Orbs.Count);
         foreach (var orb in Orbs) orb.Hash(ref key);
     }
