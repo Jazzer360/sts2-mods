@@ -1,4 +1,4 @@
-power AdaptablePower: AfterDeath: gap: changes a game object outside a command (TestSubject.TriggerDeadState) | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ShouldAllowHitting: read | ShouldCreatureBeRemovedFromCombatAfterDeath: read | ShouldPowerBeRemovedAfterOwnerDeath: read | ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding
+power AdaptablePower: AfterDeath: gap: changes a game object outside a command (TestSubject.TriggerDeadState) | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ShouldAllowHitting: read | ShouldCreatureBeRemovedFromCombatAfterDeath: read | ShouldPowerBeRemovedAfterOwnerDeath: read | ShouldStopCombatFromEnding: read
 power AfterimagePower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power AimPower: AfterAttack: read | BeforeAttack: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyDamageAdditive: read
 power AllIsWellPower: AfterCardGeneratedForCombat: read
@@ -70,7 +70,7 @@ power GravityPower: AfterCardPlayed: read | AfterSideTurnEnd: read | BeforeCardP
 power GuardedPower: AfterApplied: read | AfterDeath: read | ModifyDamageMultiplicative: read
 power HailstormPower: BeforeSideTurnEnd: read
 power HardToKillPower: AfterModifyingHpLostBeforeOsty: read | ModifyHpLostBeforeOstyLate: read
-power HardenedShellPower: AfterDamageReceived: gap: sets Creature.HpDisplay where the reader reads no store | AfterModifyingHpLostBeforeOsty: read | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyHpLostBeforeOstyLate: read
+power HardenedShellPower: AfterDamageReceived: read | AfterModifyingHpLostBeforeOsty: read | BeforeSideTurnStart: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyHpLostBeforeOstyLate: read
 power HatchPower: AfterSideTurnEnd: read
 power HauntPower: AfterCardPlayed: read
 power HeistPower: BeforeDeath: gap: the simulator runs no read model's BeforeDeath
@@ -82,7 +82,7 @@ power ImbalancedPower: AfterDamageGiven: read
 power ImitationLearningPower: AfterCardPlayed: gap: changes a collection (List`1.FindIndex) where the reader reads no step | BeforeCardPlayed: gap: uses its own field (_playerTarget) directly: what a call on it changes isn't read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power ImpaledPower: AfterApplied: read | AfterDamageReceived: gap: tests source | AfterDeath: gap: a loop | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power InfernoPower: AfterDamageReceived: read | AfterPlayerTurnStart: not run: it runs as the players' next turn starts, past the turns a simulation covers
-power InfestedPower: AfterDeath: gap: sets Wriggler.StartStunned where the reader reads no store | ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding
+power InfestedPower: AfterDeath: read | ShouldStopCombatFromEnding: read
 power InsatiableDominionPower: AfterApplied: gap: the value ?stloc.0 | AfterSideTurnEndLate: read | AfterSideTurnStart: gap: the value ?stloc.0
 power IntangiblePower: AfterModifyingDamageAmount: read | AfterModifyingHpLostAfterOsty: read | AfterSideTurnEnd: not run: its commands wait on the enemies' side's turn ending, which no simulation reaches | ModifyDamageCap: read | ModifyHpLostAfterOsty: read
 power InterceptPower: AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | AfterSideTurnEnd: not run: its commands wait on the enemies' side's turn ending, which no simulation reaches | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyDamageMultiplicative: read
@@ -156,15 +156,15 @@ power SoulboundPower: AfterCardGeneratedForCombat: gap: the value creator.Creatu
 power SpeedsterPower: AfterCardDrawn: read
 power SpiritOfAshPower: BeforeCardPlayed: read
 power StampedePower: AfterAutoPostPlayPhaseEntered: gap: the simulator runs no read model's AfterAutoPostPlayPhaseEntered
-power SteamEruptionPower: AfterDeath: gap: changes a game object outside a command (WaterfallGiant.TriggerAboutToBlowState) | ShouldCreatureBeRemovedFromCombatAfterDeath: read | ShouldPowerBeRemovedAfterOwnerDeath: read | ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding
-power StockPower: AfterDeath: gap: sets Axebot.ShouldPlaySpawnAnimation where the reader reads no store | ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding
+power SteamEruptionPower: AfterDeath: read | ShouldCreatureBeRemovedFromCombatAfterDeath: read | ShouldPowerBeRemovedAfterOwnerDeath: read | ShouldStopCombatFromEnding: read
+power StockPower: AfterDeath: read | ShouldStopCombatFromEnding: read
 power StormPower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power StranglePower: AfterCardPlayed: read | AfterSideTurnEnd: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power StratagemPower: AfterShuffle: gap: a pick
 power StretchPower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyBlockAdditive: read
 power SubroutinePower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power SuckPower: AfterAttack: gap: the value command.TargetSide
-power SurprisePower: AfterDeath: gap: sets PowerModel.Target where the reader reads no store | ShouldStopCombatFromEnding: gap: the simulator runs no read model's ShouldStopCombatFromEnding
+power SurprisePower: AfterDeath: gap: sets PowerModel.Target where the reader reads no store | ShouldStopCombatFromEnding: read
 power SurroundedPower: AfterDeath: gap: tests All(this.Owner.CombatState.HittableEnemies, e => e.HasPower<BackAttackLeftPower>()) | BeforeCardPlayed: gap: tests cardPlay.Target | BeforePotionUsed: gap: the simulator runs no read model's BeforePotionUsed | ModifyDamageMultiplicative: read
 power SwipePower: BeforeDeath: gap: the simulator runs no read model's BeforeDeath
 power SwordSagePower: AfterCardEnteredCombat: gap: the simulator runs no read model's AfterCardEnteredCombat | AfterPowerAmountChanged: read | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)

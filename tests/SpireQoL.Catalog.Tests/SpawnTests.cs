@@ -65,10 +65,88 @@ public class SpawnTests
             {
                 var inLoop = step is LoopStep;
                 foreach (var add in (step is LoopStep loop ? loop.Body : new[] { step }).OfType<CommandStep>().Where(command => command.Command.FullName == "CreatureCmd.Add"))
-                    found.Add($"{power.Name}: " + (inLoop ? "in a loop" : SimAdapter.SpawnedMonster(add) ?? "set up before it joins"));
+                {
+                    var madeClass = add.Values.Count > 0 ? ProgramReader.MadeMonster(add.Values[0]) : null;
+                    found.Add($"{power.Name}: " + (SimAdapter.SpawnedMonster(add) ?? (madeClass != null ? madeClass + " set up before it joins" : "unread")) + (inLoop ? " in a counter loop" : ""));
+                }
             }
         }
-        Assert.Equal(new[] { "InfestedPower: in a loop", "StockPower: set up before it joins", "SurprisePower: FatGremlin", "SurprisePower: SneakyGremlin" }, found);
+        Assert.Equal(new[] { "InfestedPower: Wriggler set up before it joins in a counter loop", "StockPower: Axebot set up before it joins", "SurprisePower: FatGremlin", "SurprisePower: SneakyGremlin" }, found);
+    }
+
+    [Fact]
+    public void InfestedAddsFourWrigglersEachWithAnHpNoneBeforeItTook()
+    {
+        // InfestedPower.AfterDeath: four times, (Wriggler)ModelDb.Monster<Wriggler>().ToMutable(), StartStunned = true, CreatureCmd.Add: each made as it's
+        // added (CombatState.CreateCreature: SetUniqueMonsterHpValue over the enemies then), so each has an HP none of the earlier ones took.
+        var fight = new GameFight();
+        var parasite = fight.Combat.CreateCreature(ModelDb.Monster<PhrogParasite>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(parasite);
+        ModelDb.Power<InfestedPower>().ToMutable().ApplyInternal(parasite, amount: 1m);
+        var spawns = SimAdapter.SpawnsOf(parasite, fight.Combat);
+        Assert.NotNull(spawns);
+        var wriggler = ModelDb.Monster<Wriggler>();
+        var range = Enumerable.Range(wriggler.MinInitialHp, wriggler.MaxInitialHp - wriggler.MinInitialHp + 1).Where(hp => hp != parasite.MaxHp).ToList();
+        Assert.Equal(4, spawns.Count);
+        Assert.All(spawns, spawn =>
+        {
+            Assert.Equal(PowerId.Infested, spawn.Source);
+            Assert.Equal(nameof(Wriggler), spawn.Monster);
+            Assert.Equal(range, spawn.Hp);
+            Assert.True(spawn.UniqueFromEarlier);
+            Assert.Equal(0, spawn.Powers.Count);
+        });
+    }
+
+    [Fact]
+    public void StocksNextAxebotHasOneStockLessAndTheHpThatGives()
+    {
+        // StockPower.AfterDeath while Amount > 0: (Axebot)ModelDb.Monster<Axebot>().ToMutable(), StockAmount = Amount - 1, CreatureCmd.Add. Axebot's
+        // MinInitialHp is its base + RespawnCount (2 - StockAmount) × 10; its AfterAddedToRoom applies Stock of its StockAmount while above 0.
+        var fight = new GameFight();
+        var axebot = fight.Combat.CreateCreature(ModelDb.Monster<Axebot>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(axebot);
+        ModelDb.Power<StockPower>().ToMutable().ApplyInternal(axebot, amount: 2m);
+        var spawns = SimAdapter.SpawnsOf(axebot, fight.Combat);
+        var next = (Axebot)ModelDb.Monster<Axebot>().ToMutable();
+        next.StockAmount = 1;
+        Assert.NotNull(spawns);
+        var spawn = Assert.Single(spawns);
+        Assert.Equal(PowerId.Stock, spawn.Source);
+        Assert.Equal(new[] { next.MinInitialHp }, spawn.Hp);
+        Assert.Equal(1, spawn.Powers[PowerId.Stock]);
+        // The last Axebot's (Stock 1): its next has none, and an HP 10 higher again.
+        var last = fight.Combat.CreateCreature(ModelDb.Monster<Axebot>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(last);
+        ModelDb.Power<StockPower>().ToMutable().ApplyInternal(last, amount: 1m);
+        var final = Assert.Single(SimAdapter.SpawnsOf(last, fight.Combat)!);
+        Assert.Equal(next.MinInitialHp + 10, final.Hp.Single());
+        Assert.False(final.Powers.Has(PowerId.Stock));
+    }
+
+    /// <summary>
+    /// A creature a death adds joins doing nothing this turn (SimEngine.Spawn adds it with no hits): its first move, as its class's move rules make it
+    /// for the monster set up as the death's code sets it up, has no attack intent (the Wrigglers' and gremlins' SPAWNED_MOVE, the next Axebot's Boot
+    /// Up: block and Strength, after every other enemy's move, as it joins last).
+    /// </summary>
+    [Fact]
+    public void ACreatureADeathAddsAttacksNoOneThisTurn()
+    {
+        GameModels.EnsureLoaded();
+        static MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterState FirstOf(MonsterModel monster)
+        {
+            var machine = monster.GetType().GetMethod("GenerateMoveStateMachine", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(monster, null)!;
+            return (MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MonsterState)machine.GetType().GetField("_initialState", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.GetValue(machine)!;
+        }
+        var wriggler = (Wriggler)ModelDb.Monster<Wriggler>().ToMutable();
+        wriggler.StartStunned = true;
+        var axebot = (Axebot)ModelDb.Monster<Axebot>().ToMutable();
+        axebot.StockAmount = 1;
+        foreach (var monster in new MonsterModel[] { wriggler, axebot, ModelDb.Monster<SneakyGremlin>().ToMutable(), ModelDb.Monster<FatGremlin>().ToMutable() })
+        {
+            var first = Assert.IsType<MegaCrit.Sts2.Core.MonsterMoves.MonsterMoveStateMachine.MoveState>(FirstOf(monster));
+            Assert.DoesNotContain(first.Intents, intent => intent is MegaCrit.Sts2.Core.MonsterMoves.Intents.AttackIntent);
+        }
     }
 
     [Fact]
@@ -88,11 +166,8 @@ public class SpawnTests
     private static readonly Dictionary<string, string> StartingPowerGaps = new()
     {
         ["Aeonglass: PowerCmd.Apply"] = "Withering Presence made first, on each of its opponents, not itself; it starts the fight, never added by a death",
-        ["Axebot: PowerCmd.Apply<StockPower>"] = "its stock when StockAmount > 0, a number Stock sets on the next Axebot before it joins (that spawn is a gap: set up before it joins)",
-        ["Crusher: PowerCmd.Apply<PlatingPower>"] = "Plating on a condition (PlatingAmount > 0); it starts the fight, never added by a death",
         ["GremlinMerc: PowerCmd.Apply"] = "Thievery made first, one for each player; it starts the fight, never added by a death",
         ["Rocket: PowerCmd.Apply<SurroundedPower>"] = "Surrounded on its opponents, not itself; it starts the fight, never added by a death",
-        ["Rocket: PowerCmd.Apply<PlatingPower>"] = "Plating on a condition (PlatingAmount > 0); it starts the fight, never added by a death",
         ["ToughEgg: PowerCmd.Apply<HatchPower>"] = "Hatch on a condition (not hatched yet), its amount by whose turn it is; eggs join from Ovicopter's move (a summon the enemy turn doesn't follow yet)",
     };
 }

@@ -11500,6 +11500,47 @@
     "HelpsOwner": false
   },
   {
+    "Name": "InfestedPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDeath",
+        "Steps": [
+          {
+            "$kind": "RepeatStep",
+            "Times": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "Steps": [
+              {
+                "$kind": "SpawnStep"
+              }
+            ],
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterDeath\u003Ed__4.MoveNext:002D",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "DeadIsOwner"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ShouldStopCombatFromEnding",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookConstant",
+          "Value": 1
+        }
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "KillsIt"
+  },
+  {
     "Name": "InfusedCore",
     "Kind": "Relic",
     "Hooks": [
@@ -28993,6 +29034,174 @@
     ],
     "Tab": "Block",
     "HelpsOwner": false
+  },
+  {
+    "Name": "SteamEruptionPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDeath",
+        "Steps": [
+          {
+            "$kind": "MonsterStateStep",
+            "Field": "Monster.WaterfallGiant.IsAboutToBlow",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterDeath\u003Ed__4.MoveNext:002A",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "DeadIsOwner"
+              }
+            }
+          },
+          {
+            "$kind": "SetHpStep",
+            "Amount": {
+              "$kind": "HookConstant",
+              "Value": 999999999
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterDeath\u003Ed__4.MoveNext:002A",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "DeadIsOwner"
+              }
+            }
+          },
+          {
+            "$kind": "SetMoveStep",
+            "Move": "AboutToBlowState",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterDeath\u003Ed__4.MoveNext:002A",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "DeadIsOwner"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ShouldCreatureBeRemovedFromCombatAfterDeath",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "SteamEruptionPower.ShouldCreatureBeRemovedFromCombatAfterDeath:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "SameCreature",
+                    "Creature": {
+                      "Who": "Asked",
+                      "PetOwner": false
+                    },
+                    "Other": {
+                      "Who": "Owner",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Hook": "ShouldPowerBeRemovedAfterOwnerDeath",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookConstant",
+          "Value": 0
+        }
+      },
+      {
+        "Hook": "ShouldStopCombatFromEnding",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookConstant",
+          "Value": 1
+        }
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "KillsIt"
+  },
+  {
+    "Name": "StockPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDeath",
+        "Steps": [
+          {
+            "$kind": "SpawnStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDeath\u003Ed__4.MoveNext:002D",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "DeadIsOwner"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDeath\u003Ed__4.MoveNext:003B",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Greater",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ShouldStopCombatFromEnding",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookConstant",
+          "Value": 1
+        }
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "KillsIt"
   },
   {
     "Name": "StoneCalendar",

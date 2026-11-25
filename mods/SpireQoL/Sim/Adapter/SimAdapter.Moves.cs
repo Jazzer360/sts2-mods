@@ -63,11 +63,13 @@ public static partial class SimAdapter
     /// </summary>
     /// <param name="hitsPerAttack">The hits of each of its intent's attacks, in order (AttackIntent.Repeats).</param>
     /// <param name="idOf">A creature's simulator id (an enemy's, Who.You, Who.Teammate(k)), or null for one the state doesn't hold.</param>
-    internal static IReadOnlyList<SimAction>? MoveOf(MonsterModel monster, IReadOnlyList<int> hitsPerAttack, Func<Creature, int?> idOf, ICombatState combat, List<string>? gaps = null)
+    /// <param name="given">The move to read in place of its NextMove (one its powers' code sets it to: SetMovesOf).</param>
+    internal static IReadOnlyList<SimAction>? MoveOf(MonsterModel monster, IReadOnlyList<int> hitsPerAttack, Func<Creature, int?> idOf, ICombatState combat, List<string>? gaps = null,
+        MoveState? given = null)
     {
         try
         {
-            var move = monster.NextMove;
+            var move = given ?? monster.NextMove;
             if (move == null || move.Intents.Any(intent => intent is HiddenIntent or UnknownIntent)) return null;
             if (Sts2State.Private<Delegate?>(move, "_onPerform", fallback: null)?.Method is not { DeclaringType: { } owner } perform) return null;
             var program = ModelPrograms.Of(owner, perform.Name);
@@ -92,6 +94,48 @@ public static partial class SimAdapter
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// The moves a power's code can set <paramref name="creature"/>'s monster to (its read program's SetMoveSteps: Steam Eruption's AboutToBlowState),
+    /// each read from the monster's own property holding that MoveState as its NextMove would be (SimEnemy.SetMoves): its intent's hits on you and its
+    /// steps (MoveOf). A move behind a hidden intent, or a property that holds none, isn't read (a SetMoveStep finding none is unknown). Null: none.
+    /// </summary>
+    internal static Dictionary<string, SimMove?>? SetMovesOf(Creature creature, Func<Creature, int?> idOf, ICombatState combat, IReadOnlyList<Creature> targets)
+    {
+        if (creature.Monster is not { } monster) return null;
+        Dictionary<string, SimMove?>? moves = null;
+        foreach (var power in creature.Powers)
+        {
+            if (SimModels.Get(SimPowerName(power.GetType())) is not ReadModel read) continue;
+            foreach (var setMove in read.Spec.Steps().OfType<SetMoveStep>())
+            {
+                moves ??= new Dictionary<string, SimMove?>(StringComparer.Ordinal);
+                if (moves.ContainsKey(setMove.Move)) continue;
+                moves[setMove.Move] = null; // not read unless read below: setting it is unknown
+                try
+                {
+                    var property = monster.GetType().GetProperty(setMove.Move, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                    if (property?.GetValue(monster) is not MoveState move || move.Intents.Any(intent => intent is HiddenIntent or UnknownIntent)) continue;
+                    var hits = new List<int>();
+                    var hitsPerAttack = new List<int>();
+                    foreach (var attack in move.Intents.OfType<AttackIntent>())
+                    {
+                        var perHit = attack.GetSingleDamage(targets, creature);
+                        hitsPerAttack.Add(Math.Max(1, attack.Repeats));
+                        for (var i = 0; i < Math.Max(1, attack.Repeats); i++) hits.Add(perHit);
+                    }
+                    // A move with an attack must place its attacks against its intent (MoveOf): read whole, or not read at all.
+                    var actions = MoveOf(monster, hitsPerAttack, idOf, combat, given: move);
+                    if (actions != null || hits.Count == 0) moves[setMove.Move] = new SimMove(hits, actions);
+                }
+                catch
+                {
+                    // not read: setting it is unknown
+                }
+            }
+        }
+        return moves;
     }
 
     /// <summary>
@@ -222,6 +266,7 @@ public static partial class SimAdapter
         decimal number => number,
         int number => number,
         long number => number,
+        bool flag => flag ? 1m : 0m,
         _ => null,
     };
 

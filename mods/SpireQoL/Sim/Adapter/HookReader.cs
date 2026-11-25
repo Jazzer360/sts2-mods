@@ -85,7 +85,13 @@ public static class HookReader
     /// Vital Spark sets its cards' Tainted amount; only the affliction's tooltip and the multiplayer checksum read it). A catalog scan holds every
     /// one to that on both branches (ShownOnlyValueTests): a game update whose code reads one fails it.
     /// </summary>
-    internal static readonly IReadOnlySet<string> ShownOnly = new HashSet<string>(StringComparer.Ordinal) { "AfflictionModel.set_Amount" };
+    internal static readonly IReadOnlySet<string> ShownOnly = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "AfflictionModel.set_Amount",
+        // How a creature's HP bar shows it (Steam Eruption's infinite HP as its Waterfall Giant is about to blow). Hellraiser's cap on endless auto-plays
+        // reads it too (9 a turn once every enemy you could hit shows infinite HP), as the adapter reads the board, a cap no simulation reaches.
+        "Creature.set_HpDisplay",
+    };
 
     /// <summary>
     /// The hooks that run only as the players' turn starts (CombatManager.SetupPlayerTurn, for the players starting a turn): after a simulation's
@@ -437,6 +443,7 @@ public static class HookReader
             GainStarsStep stars => stars with { Amount = Map(stars.Amount)! },
             HealStep heal => heal with { Amount = Map(heal.Amount)! },
             SummonStep summon => summon with { Amount = Map(summon.Amount)! },
+            SetHpStep setHp => setHp with { Amount = Map(setHp.Amount)! },
             ApplyPowerStep apply => apply with { Amount = Map(apply.Amount)! },
             StoreFieldStep store => store with { Value = Map(store.Value)! },
             BindStep bind => bind with { Value = Map(bind.Value)! },
@@ -979,7 +986,8 @@ public static class HookReader
                 if (name is HookName.ModifyPreBlockDamageTarget or HookName.ModifyUnblockedDamageTarget)
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(CreatureWays(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
                 // A Should hook the engine asks (a true-or-false: 1 or 0).
-                if (name is HookName.ShouldAllowHitting or HookName.ShouldCreatureBeRemovedFromCombatAfterDeath or HookName.ShouldPowerBeRemovedAfterOwnerDeath && hook.ReturnType.Name == "Boolean")
+                if (name is HookName.ShouldAllowHitting or HookName.ShouldCreatureBeRemovedFromCombatAfterDeath or HookName.ShouldPowerBeRemovedAfterOwnerDeath or HookName.ShouldStopCombatFromEnding
+                    && hook.ReturnType.Name == "Boolean")
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(TestWays(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
                 if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name is HookName.ModifyCardPlayCount or HookName.ModifyOrbPassiveTriggerCounts)
                 {
@@ -1068,6 +1076,10 @@ public static class HookReader
                 var instruction = ops[index];
                 if (instruction.OpCode == System.Reflection.Emit.OpCodes.Stfld && instruction.Member is { } stored && nested.Contains(stored.DeclaringType) && !stepsAt.Contains(instruction.Offset))
                     return new GapOf(ReaderCapability.OwnData, $"gap: changes its own data ({stored.Name}) where the reader reads no store");
+                // A field set to its default through its address (ldflda, then initobj: a decimal's = default).
+                if (instruction.OpCode == System.Reflection.Emit.OpCodes.Ldflda && index + 1 < ops.Count && ops[index + 1].OpCode == System.Reflection.Emit.OpCodes.Initobj
+                    && instruction.Member is { } cleared && !cleared.DeclaringType.StartsWith('<') && !cleared.Name.StartsWith('<') && !stepsAt.Contains(instruction.Offset))
+                    return new GapOf(nested.Contains(cleared.DeclaringType) ? ReaderCapability.OwnData : SetOn(cleared.DeclaringType, call: false), $"gap: clears {cleared.DeclaringType}.{cleared.Name} where the reader reads no store");
                 if (instruction.IsCall && instruction.Member is { Kind: CodeMemberKind.Method, HasThis: true } call && usesData && call.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)
                     && !CollectionQueries.Contains(call.Name) && !stepsAt.Contains(instruction.Offset)
                     // Going over a list (a foreach's enumerator: Calamity's made cards) changes nothing.
@@ -1509,16 +1521,22 @@ public static class HookReader
             && !ShowsOnly(member, depth: 0);
 
         /// <summary>
-        /// A method of the model's own base class whose code only shows something (OrbModel.ActivatePassive: an event the orb's node hears;
-        /// PlayEvokeSfx: a sound): it stores nothing, and every call in it asks (a getter), shows (a show-only command, a node, a sound) or invokes
-        /// a delegate, or is such a method itself.
+        /// A method of the model's own base class, or of a creature (Creature.SetNodeVisible: Infested's Wrigglers hidden until its death's animation
+        /// ends), whose code only shows something (OrbModel.ActivatePassive: an event the orb's node hears; PlayEvokeSfx: a sound): it stores nothing,
+        /// and every call in it asks (a getter), shows (a show-only command, a node, a sound) or invokes a delegate, or is such a method itself.
         /// </summary>
         private bool ShowsOnly(CodeMember member, int depth)
         {
-            if (depth > 2 || !Derives(_type, member.DeclaringType)) return false;
+            if (depth > 2) return false;
             MethodInfo? method = null;
-            for (var type = _type.BaseType; type != null && method == null; type = type.BaseType)
-                if (type.Name == member.DeclaringType) method = type.GetMethods(Declared).FirstOrDefault(candidate => candidate.Name == member.Name && !candidate.IsAbstract);
+            if (Derives(_type, member.DeclaringType))
+            {
+                for (var type = _type.BaseType; type != null && method == null; type = type.BaseType)
+                    if (type.Name == member.DeclaringType) method = type.GetMethods(Declared).FirstOrDefault(candidate => candidate.Name == member.Name && !candidate.IsAbstract);
+            }
+            else if (member.Namespace == "MegaCrit.Sts2.Core.Entities.Creatures" && member.DeclaringType == nameof(MegaCrit.Sts2.Core.Entities.Creatures.Creature))
+                method = _type.Assembly.GetType(member.Namespace + "." + member.DeclaringType)?.GetMethods(Declared)
+                    .FirstOrDefault(candidate => candidate.Name == member.Name && candidate.GetParameters().Length == member.ParameterCount && !candidate.IsAbstract);
             if (method == null) return false;
             List<CodeOp> ops;
             try { ops = _read(ProgramReader.BodyOf(method)); }
@@ -1529,7 +1547,7 @@ public static class HookReader
                 if (!instruction.IsCall || instruction.Member is not { } called) continue;
                 if (called.Name.StartsWith("get_", StringComparison.Ordinal) || called.Name == nameof(Action.Invoke) || called.Namespace.StartsWith("System", StringComparison.Ordinal)
                     || called.Namespace.Contains(".Nodes", StringComparison.Ordinal) || called.Namespace.Contains(".Audio", StringComparison.Ordinal)
-                    || called.DeclaringType is "SfxCmd" or "VfxCmd") continue;
+                    || called.Namespace.StartsWith("Godot", StringComparison.Ordinal) || called.DeclaringType is "SfxCmd" or "VfxCmd") continue;
                 if (called.DeclaringType != member.DeclaringType || !ShowsOnly(called, depth + 1)) return false;
             }
             return true;
@@ -1624,6 +1642,22 @@ public static class HookReader
                 case StoreStep monsterStore when monsterStore.Field.StartsWith(ProgramReader.OwnersMonsterPrefix, StringComparison.Ordinal):
                     if (StoredWithAStun(monsterStore)) return Array.Empty<HookStep>();
                     return new HookStep[] { new MonsterStateStep(monsterStore.Field, Value(monsterStore.Value)) { When = Condition(step.Condition) } };
+                // A property set on a monster its death adds, before it joins (Infested's wriggler.StartStunned, Stock's axebot.StockAmount): how that
+                // monster starts, which the adapter reads with the creature (SimAdapter.SpawnsOf: its HP, its starting powers), so no step here. One set
+                // on a monster no CreatureCmd.Add of this hook adds is a gap.
+                case StoreStep madeStore when madeStore.Field.StartsWith(ProgramReader.MadeMonsterPrefix, StringComparison.Ordinal):
+                    if (_hook != "AfterDeath" || !AddsMadeMonster(madeStore.Field)) throw new Gap(ReaderCapability.MonsterStateSet, $"gap: sets {madeStore.Field[ProgramReader.MadeMonsterPrefix.Length..]} on a monster it doesn't add as it dies");
+                    return Array.Empty<HookStep>();
+                // A property its owner's monster's method sets on its own creature (Steam Eruption's base.Creature.HpDisplay): one that only shows (ShownOnly)
+                // is no step; any other is a gap.
+                case StoreStep creatureStore when creatureStore.Field.StartsWith(ProgramReader.OwnCreaturePrefix, StringComparison.Ordinal):
+                    if (!ShownOnly.Contains(nameof(MegaCrit.Sts2.Core.Entities.Creatures.Creature) + ".set_" + creatureStore.Field[ProgramReader.OwnCreaturePrefix.Length..]))
+                        throw new Gap(ReaderCapability.OtherModelValueSet, $"gap: sets its owner's {creatureStore.Field[ProgramReader.OwnCreaturePrefix.Length..]}");
+                    return Array.Empty<HookStep>();
+                // A change to a collection the code makes itself (Infested's wrigglers.Add(creature)): nothing of the fight's, and anything that reads it
+                // (a loop over it) is a gap of its own.
+                case DataStep local when local.Data.StartsWith(ProgramReader.LocalPrefix, StringComparison.Ordinal):
+                    return Array.Empty<HookStep>();
                 case StoreStep store:
                     // A store to its own state (a field or property of its class, a plain field of its data): simulator state its programs read (HookField).
                     // One of its own values set (DynamicVars["CardsLeft"].BaseValue = ...): its state too, under the value's key.
@@ -1784,6 +1818,17 @@ public static class HookReader
         /// </summary>
         private bool StoredWithAStun(StoreStep store) => _body != null && _body.All().OfType<CommandStep>().Any(command => command.Command.FullName == "CreatureCmd.Stun"
             && command.Values.Count > 0 && IsOwner(command.Values[0]) && string.Equals(command.Condition?.ToString(), store.Condition?.ToString(), StringComparison.Ordinal));
+
+        /// <summary>
+        /// A CreatureCmd.Add in the same body adds the monster a store sets up ("Made.Wriggler.StartStunned": a CreatureCmd.Add(monster, ...) of a
+        /// (Wriggler)ModelDb.Monster&lt;Wriggler&gt;().ToMutable()).
+        /// </summary>
+        private bool AddsMadeMonster(string field)
+        {
+            var monster = field[ProgramReader.MadeMonsterPrefix.Length..field.LastIndexOf('.')];
+            return _body != null && _body.All().OfType<CommandStep>().Any(command => command.Command.FullName == "CreatureCmd.Add" && command.Values.Count > 0
+                && ProgramReader.MadeMonster(command.Values[0]) == monster);
+        }
 
         /// <summary>
         /// A counter loop's bound: what its test compares the counter with (i &lt; n, (decimal)i &lt; n through Decimal's operator), and whether it
@@ -2011,6 +2056,25 @@ public static class HookReader
                     if (keywords is not [var keyword]) throw new Gap(ReaderCapability.CardChanged, $"gap: the keywords {values[1]}");
                     return new ApplyKeywordStep(keyword);
                 }
+                // A creature its owner's death adds to the fight (CreatureCmd.Add<T>, or of a monster its code makes and sets up first: Infested's Wrigglers,
+                // Stock's next Axebot): the creature the adapter reads from this same code with every HP it can start with (SimAdapter.SpawnsOf), added
+                // once the hit is over (SpawnStep). Added in any other hook, or as another creature dies, it's a gap.
+                case "CreatureCmd.Add":
+                    if (_hook != "AfterDeath") throw new Gap(ReaderCapability.CommandOnAnotherCreature, "gap: a creature added other than as a creature dies");
+                    return new SpawnStep();
+                // Its owner's max and current HP set (CreatureCmd.SetMaxAndCurrentHp(base.Creature, amount), in its monster's method: Steam Eruption's
+                // TriggerAboutToBlowState): on a dead enemy, a revive.
+                case "CreatureCmd.SetMaxAndCurrentHp":
+                    if (values.Count < 2 || !IsOwner(Unstored(values[0]))) throw new Gap(Other(values.Count > 0 ? values[0] : NullValue.Instance), $"gap: sets the HP of {(values.Count > 0 ? values[0] : "nothing")}");
+                    return new SetHpStep(Value(values[1]));
+                // Its owner's monster's next move set to one of that monster's own (SetMoveImmediate(AboutToBlowState, forceTransition: true): Steam
+                // Eruption's), forced: the move the adapter reads from that monster (SimEnemy.SetMoves). Not forced, the monster's current move decides
+                // whether it changes (MoveState.CanTransitionAway): a gap.
+                case "MonsterModel.SetMoveImmediate":
+                    if (values.Count < 2 || Unstored(values[0]) is not QueryValue { IsProperty: true, Name: var moveProperty, Of: QueryValue { Name: "Monster", Of: { } monsterOf } } || !IsOwner(Unstored(monsterOf)))
+                        throw new Gap(ReaderCapability.MonsterStateSet, $"gap: a move set from {(values.Count > 0 ? values[0] : "nothing")}");
+                    if (values[1] is not ConstantValue { Value: not 0 }) throw new Gap(ReaderCapability.MonsterStateSet, "gap: a move set unless the current one holds it");
+                    return new SetMoveStep(moveProperty);
                 default:
                     throw new Gap(ReaderCapabilities.OfCommand(member.FullName), $"gap: {member} isn't translated");
             }

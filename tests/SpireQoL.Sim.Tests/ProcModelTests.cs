@@ -155,7 +155,7 @@ public class ProcModelTests
         // turn. A 6 kills the Gremlin Merc; the random 3 after it lands on either gremlin, half the time each.
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 5) } };
         state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Surprise, amount: 1);
-        state.Enemies[0].Spawns = new List<SimSpawn> { new("Sneaky Gremlin", new[] { 10, 11 }), new("Fat Gremlin", new[] { 13 }) };
+        state.Enemies[0].Spawns = new List<SimSpawn> { new("Sneaky Gremlin", new[] { 10, 11 }) { Source = PowerId.Surprise }, new("Fat Gremlin", new[] { 13 }) { Source = PowerId.Surprise } };
         var outcome = SimEngine.Run(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 6), Attack(baseDamage: 3, mode: SimPlay.Target.Random)));
         Assert.All(outcome.Branches, branch => Assert.Equal(3, branch.Enemies.Count));
         Assert.All(outcome.Branches, branch => Assert.Equal(new[] { 1, 2 }, branch.Enemies.Skip(1).Select(enemy => enemy.Id)));
@@ -172,7 +172,7 @@ public class ProcModelTests
         // and it has them as it joins.
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 5) } };
         state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Surprise, amount: 1);
-        state.Enemies[0].Spawns = new List<SimSpawn> { new("Plated", new[] { 20 }) { Powers = PowerSet.Empty.With(PowerId.Plating, amount: 3) } };
+        state.Enemies[0].Spawns = new List<SimSpawn> { new("Plated", new[] { 20 }) { Powers = PowerSet.Empty.With(PowerId.Plating, amount: 3), Source = PowerId.Surprise } };
         var branch = Assert.Single(SimEngine.Run(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 6))).Branches);
         Assert.Equal(3, branch.Enemy(id: 1)!.Powers[PowerId.Plating]);
     }

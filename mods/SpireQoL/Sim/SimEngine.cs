@@ -264,7 +264,7 @@ public static partial class SimEngine
     private static SimOutcome PlayResults(List<SimState> states, SimState start, List<int> aliveAtStart, bool complete)
     {
         // Kills during the play itself (its hits, orbs, procs, Juggernaut), for kill-reactive tabs.
-        var killedPerBranch = states.Select(branch => aliveAtStart.Where(id => branch.Enemy(id) is not { Alive: true }).ToHashSet()).ToList();
+        var killedPerBranch = states.Select(branch => aliveAtStart.Where(id => branch.Enemy(id) is not { Died: false }).ToHashSet()).ToList();
         // Enemies that gained block from Curl Up, Sneaky or Skittish because of the play, in some branch.
         // Some enemy's block broken by the play, in every branch (Hand Drill).
         var breaksBlock = complete && states.All(branch => branch.Enemies.Any(enemy => enemy.BlockBroken && start.Enemy(enemy.Id) is { BlockBroken: false }));
@@ -619,6 +619,21 @@ public static partial class SimEngine
     {
         enemy.Stunned = true;
         enemy.StunnedThisTurn = true;
+    }
+
+    /// <summary>
+    /// Its next move set (MonsterModel.SetMoveImmediate, forced: NextMove is that move, in place of a stunned one too, so a stun earlier in the turn
+    /// no longer stands): its hits and its steps are that move's (Waterfall Giant's AboutToBlow: none), what its intent showed gone.
+    /// </summary>
+    internal static void SetMove(SimEnemy enemy, SimMove move)
+    {
+        enemy.Stunned = false;
+        enemy.StunnedThisTurn = false;
+        enemy.Hits = move.Hits.ToList();
+        enemy.TeammateHits = new List<List<int>>();
+        enemy.Intent = null;
+        enemy.Move = move.Actions;
+        enemy.IntendsToAttack = move.Hits.Count > 0;
     }
 
     /// <summary>
@@ -1389,6 +1404,37 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// An enemy its own death's code brought back (SetHpStep on its dead owner), as CreatureCmd.Kill goes on after AfterDeath: its powers come off but
+    /// the ones whose ShouldPowerBeRemovedAfterOwnerDeath is false (Creature.RemoveAllPowersAfterDeath, whatever its HP), and it's in the fight again.
+    /// </summary>
+    private static void Revive(SimState state, SimEnemy enemy)
+    {
+        enemy.Revived = true;
+        var powers = enemy.Powers;
+        foreach (var entry in powers.Items)
+            if (SimModels.Get(entry.Name.Name)?.StaysOnDeadOwner(state, enemy.Id) != true) powers = powers.Without(entry.Name);
+        enemy.Powers = powers;
+    }
+
+    /// <summary>
+    /// CombatManager.IsEnding (IsCombatEnding): no primary enemy alive (one without a power whose OwnerIsSecondaryEnemy is true: Minion's) and no
+    /// listener's Hook.ShouldStopCombatFromEnding (Infested's, Stock's, Steam Eruption's: their deaths bring creatures in). An enemy that died during
+    /// its own move keeps its powers until the move is over (CreatureCmd.Kill removes them only when it isn't performing one), so they're asked too
+    /// (<paramref name="performer"/>).
+    /// </summary>
+    internal static bool FightEnding(SimState state, int? performer = null)
+    {
+        foreach (var enemy in state.Enemies)
+            if (enemy.Alive && !PowersOf(state, enemy.Id).Has(PowerId.Minion)) return false;
+        foreach (var (model, owner) in Listeners(state))
+            if (model.Overrides(nameof(SimModel.ShouldStopCombatFromEnding)) && model.ShouldStopCombatFromEnding(state, owner)) return false;
+        if (performer is { } id && state.Enemy(id) is { Alive: false })
+            foreach (var (model, owner) in ListenersWith(state, id))
+                if (owner == id && model.Overrides(nameof(SimModel.ShouldStopCombatFromEnding)) && model.ShouldStopCombatFromEnding(state, owner)) return false;
+        return true;
+    }
+
+    /// <summary>
     /// Enemies react to an ally's death as it happens (AfterDeath): Ravenous is stunned (and gains
     /// Strength for later turns), Crab Rage gains Strength (its hits) and block, once.
     /// </summary>
@@ -1408,14 +1454,20 @@ public static partial class SimEngine
                 dead.DeathHandled = true;
                 handled = true;
                 if (!PowersOf(state, dead.Id).Has(PowerId.Minion)) mainDied = true;
-                // Hook.ShouldCreatureBeRemovedFromCombatAfterDeath: a dead enemy a listener keeps in the fight (read from its code) isn't followed, nor one
-                // of its powers that stays on it (its ShouldPowerBeRemovedAfterOwnerDeath false: the simulator's dead enemy has no listening powers).
+                // Hook.ShouldCreatureBeRemovedFromCombatAfterDeath, asked as it dies (CreatureCmd.Kill, before AfterDeath): a listener may keep it in the fight.
+                string? keeper = null;
                 foreach (var (model, o) in ListenersWith(state, dead.Id))
                     if (model.Overrides(nameof(SimModel.ShouldCreatureBeRemovedFromCombatAfterDeath)) && !model.ShouldCreatureBeRemovedFromCombatAfterDeath(state, o, dead.Id)
                         || o == dead.Id && model.StaysOnDeadOwner(state, o))
-                        state.Unmodelled ??= $"{model.Name} keeps a dead enemy in the fight or stays on it: what it does there isn't followed";
+                        keeper ??= model.Name;
                 // Its own powers hear its death (CreatureCmd.Kill runs AfterDeath before RemoveAllPowersAfterDeath); no other dead one's do.
                 foreach (var (model, o) in ListenersWith(state, dead.Id)) model.AfterDeath(state, o, dead.Id);
+                // Brought back by its own death's code (Steam Eruption's TriggerAboutToBlowState: SetHpStep), it's in the fight again with the powers
+                // that stay on their dead owner (CreatureCmd.Kill's RemoveAllPowersAfterDeath runs after AfterDeath, whatever its HP: their
+                // ShouldPowerBeRemovedAfterOwnerDeath false), which listen as any living enemy's do. A dead enemy kept in the fight (read from its code)
+                // isn't followed, nor a power that stays on it: the simulator's dead enemy has no listening powers.
+                if (dead.Alive) Revive(state, dead);
+                else if (keeper != null) state.Unmodelled ??= $"{keeper} keeps a dead enemy in the fight or stays on it: what it does there isn't followed";
             }
             var left = state.Enemies.Where(enemy => enemy.Alive).ToList();
             if (mainDied && left.Count > 0 && left.All(enemy => PowersOf(state, enemy.Id).Has(PowerId.Minion)))
@@ -1577,7 +1629,9 @@ public static partial class SimEngine
                 {
                     foreach (var action in actions)
                     {
-                        if (!state.Enemies.Any(simEnemy => simEnemy.Alive)) return; // the fight is ending (PowerCmd.Apply: CombatManager.IsEnding)
+                        // The fight is ending (PowerCmd.Apply and the rest stop on CombatManager.IsEnding): no primary enemy alive and nothing
+                        // holding the end back (Stock on the Axebot your Thorns killed during its attack: its next Axebot comes in).
+                        if (FightEnding(state, enemy.Id)) return;
                         switch (action)
                         {
                             case MoveAttackAction moveAttackAction: Attack(moveAttackAction.FirstHit, moveAttackAction.Hits); break;

@@ -26,7 +26,7 @@ public class PowerCmdRuleTests
         // Its AfterAddedToRoom's PowerCmd.Apply<SlipperyPower>(creature, 2): SlipperyPower.GetScaledAmountForMultiplayer is amount × players, 4.
         var state = TwoPlayers(Enemy(id: 0, hp: 5));
         state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Surprise, amount: 1);
-        state.Enemies[0].Spawns = new List<SimSpawn> { new("Slick", new[] { 20 }) { Powers = PowerSet.Empty.With(PowerId.Slippery, amount: 2) } };
+        state.Enemies[0].Spawns = new List<SimSpawn> { new("Slick", new[] { 20 }) { Powers = PowerSet.Empty.With(PowerId.Slippery, amount: 2), Source = PowerId.Surprise } };
         var strike = new SimPlay { Name = "Strike", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 0, Hits = 1, HitDamage = { [0] = 6 } };
         var branch = Assert.Single(SimEngine.Run(state, strike).Branches);
         Assert.Equal(4, branch.Enemy(id: 1)!.Powers[PowerId.Slippery]);

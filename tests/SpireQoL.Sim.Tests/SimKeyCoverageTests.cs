@@ -12,6 +12,7 @@ namespace SpireQoL.Sim.Tests;
 public class SimKeyCoverageTests
 {
     private const string Constant = "never differs between branches of one run (read from the game, or set once)";
+    private const string SetByAMove = "read from the game once; a move its powers' code sets (SetMoveStep: SimEngine.SetMove) changes it with Hits and Hp (its revive), which are in the key";
     private const string Merged = "a per-play result merged on purpose: the guarantee keeps the smallest, the possibility the largest (MergeResults)";
     private const string Scratch = "the engine's scratch inside one step: set and cleared before branches are compared";
     private const string Bookkeeping = "how the search is run, not what happened";
@@ -26,13 +27,14 @@ public class SimKeyCoverageTests
         ["SimState.CardPlaysStarted"] = "a card play's identity within the run (SimCardPlay.Serial): what a model binds is keyed by it, and every bound entry is scratch",
         // Read from the game once and never changed.
         ["SimState.Vars"] = Constant, ["SimState.Fractions"] = Constant, ["SimState.TurnNumber"] = Constant, ["SimState.Dread"] = Constant, ["SimState.MainRules"] = Constant, ["SimState.History"] = Constant, ["SimState.Titles"] = Constant, ["SimState.TeammatesBeforeMe"] = Constant,
-        ["SimEnemy.Name"] = Constant, ["SimEnemy.Monster"] = Constant, ["SimEnemy.Hittable"] = Constant, ["SimEnemy.Intent"] = Constant,
-        ["SimEnemy.TeammateHits"] = Constant, ["SimEnemy.StartedAlive"] = Constant,
+        ["SimEnemy.Name"] = Constant, ["SimEnemy.Monster"] = Constant, ["SimEnemy.Hittable"] = Constant, ["SimEnemy.SetMoves"] = Constant,
+        ["SimEnemy.StartedAlive"] = Constant, ["SimEnemy.AddedBy"] = "set as a creature a death adds joins, beside its Id (in the key), and never changed",
+        ["SimEnemy.Intent"] = SetByAMove, ["SimEnemy.TeammateHits"] = SetByAMove, ["SimEnemy.Move"] = SetByAMove,
         ["SimEnemy.PoisonTriggers"] = Constant,
         ["SimPlayer.SlotOnFirstChannel"] = Constant,
         ["SimPlayer.OstyShields"] = Constant, ["SimPlayer.FairyHeal"] = Constant, ["SimPlayer.BeaconOfHope"] = Constant,
         ["SimPlayer.Stampede"] = Constant, ["SimPlayer.Simpleton"] = Constant, ["SimPlayer.ExhaustAutoPlays"] = Constant,
-        ["SimPlayer.MadeCards"] = Constant, ["SimEnemy.Spawns"] = Constant, ["SimEnemy.Move"] = Constant, ["SimPlayer.Cards"] = Constant,
+        ["SimPlayer.MadeCards"] = Constant, ["SimEnemy.Spawns"] = Constant, ["SimPlayer.Cards"] = Constant,
         // Per-play results, merged.
         ["SimState.PlayHpReached"] = Merged, ["SimState.PlayHpLosses"] = Merged, ["SimState.PlayHpLost"] = Merged,
         ["SimState.PlayBiggestHit"] = Merged, ["SimState.Fired"] = Merged, ["SimState.FiredAny"] = Merged, ["SimState.Flashed"] = Merged, ["SimState.FlashedAny"] = Merged,

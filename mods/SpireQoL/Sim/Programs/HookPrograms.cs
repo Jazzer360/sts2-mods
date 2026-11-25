@@ -107,6 +107,11 @@ public enum HookName
     ShouldCreatureBeRemovedFromCombatAfterDeath,
     /// <summary>PowerModel.ShouldPowerBeRemovedAfterOwnerDeath: whether the power comes off its owner as it dies (Creature.RemoveAllPowersAfterDeath).</summary>
     ShouldPowerBeRemovedAfterOwnerDeath,
+    /// <summary>
+    /// Hook.ShouldStopCombatFromEnding: whether the fight goes on with no primary enemy alive (CombatManager.IsEnding: Infested's, Stock's and Steam
+    /// Eruption's, whose deaths bring creatures in): 1 it stops it ending.
+    /// </summary>
+    ShouldStopCombatFromEnding,
 }
 
 /// <summary>When an orb's passive goes off: the OrbModel trigger hook its class overrides with a call of TriggerPassive (OrbQueue calls them).</summary>
@@ -690,6 +695,27 @@ public sealed record MonsterStateStep(string Field, HookValue Value) : HookStep;
 public sealed record KillStep(bool Forced = false) : HookStep;
 
 /// <summary>
+/// CreatureCmd.Add of a creature as its owner (an enemy) dies (Infested's four Wrigglers, Stock's next Axebot, each set up before it joins): the next
+/// of the creatures its class's death adds, as the adapter read them from this same code with every HP each can start with (SimEnemy.Spawns, by
+/// its class), joining once the hit is over (SimEngine.Spawn: a branch per HP). Run on another creature's death, or with nothing read to add, the
+/// simulation is unknown.
+/// </summary>
+public sealed record SpawnStep : HookStep;
+
+/// <summary>
+/// CreatureCmd.SetMaxAndCurrentHp of its owner (in its monster's method its power calls as it dies: Steam Eruption's TriggerAboutToBlowState): its
+/// HP set to <paramref name="Amount"/>; on its dead owner, a revive (CreatureCmd.SetCurrentHp: alive again, still in the fight when a listener keeps it).
+/// </summary>
+public sealed record SetHpStep(HookValue Amount) : HookStep;
+
+/// <summary>
+/// MonsterModel.SetMoveImmediate(move, forceTransition: true) on its owner's monster: its next move is <paramref name="Move"/> (the monster's own
+/// property holding that MoveState: Waterfall Giant's AboutToBlowState), as the adapter read it from that monster (SimEnemy.SetMoves), in place of
+/// the one its intent showed. With no move read under that name, the simulation is unknown.
+/// </summary>
+public sealed record SetMoveStep(string Move) : HookStep;
+
+/// <summary>
 /// More on what the model bound to the play in progress (its own data's playedCards[cardSource] += Value, under the damage's card, the bound one:
 /// Rupture's Strength from a card's own HP cost, given as the card is played): taken back with it (HookFact.TakeBound, BoundTaken).
 /// </summary>
@@ -1037,6 +1063,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             GainStarsStep stars => Inside(stars.Amount),
             HealStep heal => Inside(heal.Amount),
             SummonStep summon => Inside(summon.Amount),
+            SetHpStep setHp => Inside(setHp.Amount),
             ApplyPowerStep apply => Inside(apply.Amount),
             StoreFieldStep store => Inside(store.Value),
             MonsterStateStep monsterState => Inside(monsterState.Value),

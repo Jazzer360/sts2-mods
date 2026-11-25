@@ -421,6 +421,11 @@ public abstract class SimModel
     /// For You keeps Osty, dead, for a summon to revive). A dead enemy kept so isn't followed (SimEngine.AllyDeaths: unknown). Pure.
     /// </summary>
     public virtual bool ShouldCreatureBeRemovedFromCombatAfterDeath(SimState state, int owner, int creature) => true;
+    /// <summary>
+    /// Hook.ShouldStopCombatFromEnding: the fight goes on with no primary enemy alive (CombatManager.IsEnding: a death that brings creatures in), as
+    /// SimEngine.FightEnding asks it. Pure.
+    /// </summary>
+    public virtual bool ShouldStopCombatFromEnding(SimState state, int owner) => false;
     /// <summary>Hook.ShouldAllowHitting: whether <paramref name="creature"/> can be hit and receive powers (Creature.IsHittable, CanReceivePowers). Pure.</summary>
     public virtual bool ShouldAllowHitting(SimState state, int owner, int creature) => true;
     /// <summary>The HP-loss pipeline (Hook.ModifyHpLost*): BeforeOsty, BeforeOstyLate, AfterOsty, AfterOstyLate.</summary>

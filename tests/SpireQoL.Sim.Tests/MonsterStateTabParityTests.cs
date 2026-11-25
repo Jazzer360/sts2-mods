@@ -32,6 +32,12 @@ public class MonsterStateTabParityTests
     {
         // ImbalancedPower.AfterDamageGiven: `dealer == base.Owner && result.WasFullyBlocked`, for every player's result.
         [169] = "Imbalanced: the play kills the Asleep enemy whose attack would have spent your teammate's 11 block, so the block takes the Imbalanced enemy's 9 whole: stunned in every outcome (a teammate's full block sets it off, where the hand-written model judged only your first hit)",
+        // SteamEruptionPower.AfterDeath: TriggerAboutToBlowState's CreatureCmd.SetMaxAndCurrentHp(base.Creature, 999999999m): the enemy it kills is in the
+        // fight again (ShouldCreatureBeRemovedFromCombatAfterDeath false for it), so the random attack's later hits can land on it (decision #276).
+        [14] = "Steam Eruption: a random hit that kills enemy 2 brings it back at 999999999 HP, a target for the 3-hit attack's later hits: fewer reach the Asleep enemy (81% to 79%)",
+        [35] = "Steam Eruption: a random hit that kills enemy 0 brings it back, a target for the later hits: fewer kill the Infested enemy or reach the Slumber one (32% to 26%)",
+        [163] = "Steam Eruption: a random hit that kills enemy 2 brings it back, a target for the later hits: fewer reach the Asleep and Curl Up enemy (72% to 70%)",
+        [209] = "Steam Eruption: a random hit that kills enemy 0 brings it back, a target for the 4-hit attack's later hits: fewer reach the Curl Up enemy (73% to 69%)",
     };
 
     /// <summary>
@@ -92,6 +98,9 @@ public class MonsterStateTabParityTests
             // A second power now and then: two of the group on one enemy.
             if (random.Next(5) == 0 && Group[random.Next(Group.Length)] is var second && second != power && second != PowerId.Stock && second != PowerId.Imbalanced)
                 enemy.Powers = enemy.Powers.With(second, second == PowerId.Plow ? random.Next(1, 30) : second == PowerId.CurlUp ? random.Next(3, 9) : 1);
+            // The move Steam Eruption's death sets, as the adapter reads it from the Waterfall Giant (SimEnemy.SetMoves: About to Blow, no attack and
+            // nothing a simulation follows), so a revived enemy makes it (decision #276).
+            if (enemy.Powers.Has(PowerId.SteamEruption)) enemy.SetMoves = new Dictionary<string, SimMove?> { ["AboutToBlowState"] = new SimMove(Array.Empty<int>(), Array.Empty<SimAction>()) };
             state.Enemies.Add(enemy);
         }
         state.You.Hp = 50;

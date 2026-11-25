@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 149 game methods; 3 adapter rules; 47 hand-written models.
+# 20 engine rules naming 156 game methods; 3 adapter rules; 44 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -46,9 +46,9 @@ Osty: the HP he loses for his player, his result in the fight's log and told to 
 Poison: Outbreak's trigger of every enemy's poison, and the game's preview of the next tick (the tick itself is PoisonPower's code: decision #201)
   game: PoisonPower.Trigger, PoisonPower.CalculateTotalDamageNextTurn
   simulator: SimEngine.RunModelCommand, SimEngine.PoisonTick
-Deaths: the hooks told as each happens (an end-of-turn step's, and what they raise, before the next), a dead enemy's powers gone, the creatures a death adds, a kill, a stun
-  game: CreatureCmd.Kill, CreatureCmd.KillWithoutCheckingWinCondition, Hook.AfterDeath, Creature.RemoveAllPowersAfterDeath, Hook.ShouldPowerBeRemovedOnDeath, CreatureCmd.Add, CreatureCmd.Stun
-  simulator: SimEngine.AllyDeaths, SimEngine.DeathCheck, SimEngine.Spawn, SimEngine.SpawnPowers, SimEngine.Stun, SimEngine.RunExecute, SimEngine.KillPlayer
+Deaths: the hooks told as each happens (an end-of-turn step's, and what they raise, before the next), a dead enemy's powers gone, the creatures a death adds (each made as the game makes it: its HP none an earlier one of the same death joined with), a dead enemy its death's code brings back, a kill, a stun, a move set; the fight ending with no primary enemy alive unless a listener holds it back
+  game: CreatureCmd.Kill, CreatureCmd.KillWithoutCheckingWinCondition, Hook.AfterDeath, Creature.RemoveAllPowersAfterDeath, Hook.ShouldPowerBeRemovedOnDeath, CreatureCmd.Add, CreatureCmd.Stun, CombatState.CreateCreature, Creature.SetUniqueMonsterHpValue, CreatureCmd.SetMaxAndCurrentHp, CreatureCmd.SetCurrentHp, MonsterModel.SetMoveImmediate, CombatManager.IsCombatEnding, Hook.ShouldStopCombatFromEnding
+  simulator: SimEngine.AllyDeaths, SimEngine.DeathCheck, SimEngine.Spawn, SimEngine.SpawnPowers, SimEngine.Stun, SimEngine.SetMove, SimEngine.Revive, SimEngine.FightEnding, SimEngine.RunExecute, SimEngine.KillPlayer
 The players' turn's end: its hooks in their places, Ethereal cards, the cards that act in hand, the hand flushed
   game: CombatManager.EndPlayerTurnPhaseOneInternal, CombatManager.EndPlayerTurnPhaseTwoInternal, CombatManager.DoTurnEnd, CombatManager.FlushPlayerHand, Hook.BeforeSideTurnEnd, Hook.AfterSideTurnEnd, Hook.ShouldEtherealTrigger, Hook.ShouldFlush, Hook.BeforeFlush
   simulator: SimEngine.EndOfTurn, SimEngine.Exhausting, SimEngine.CardsActInHand
@@ -105,8 +105,6 @@ ImpaledPower: ImpaledPower.AfterApplied (beta only), ImpaledPower.AfterDamageRec
   model: AfterDamageReceived, AfterDeath
 ImpaledPowerOther: no game class by its name (the simulator's own)
   model: AfterDeath
-InfestedPower: InfestedPower.AfterDeath, InfestedPower.ShouldStopCombatFromEnding
-  model: nothing it overrides
 InsatiableDominionPower: InsatiableDominionPower.AfterApplied (beta only), InsatiableDominionPower.AfterSideTurnEndLate (beta only), InsatiableDominionPower.AfterSideTurnStart (beta only)
   model: AfterSideTurnEndLate
 LostLutePower: LostLutePower.AfterCardPlayed (beta only)
@@ -147,14 +145,10 @@ SmoggyPower: SmoggyPower.AfterCardEnteredCombat, SmoggyPower.AfterCardPlayed, Sm
   model: AfterCardPlayed
 SneckoSkull: SneckoSkull.AfterModifyingPowerAmountGiven, SneckoSkull.ModifyPowerAmountGivenAdditive
   model: ModifyPowerAmountGiven
-SteamEruptionPower: SteamEruptionPower.AfterDeath, SteamEruptionPower.ShouldCreatureBeRemovedFromCombatAfterDeath, SteamEruptionPower.ShouldPowerBeRemovedAfterOwnerDeath, SteamEruptionPower.ShouldStopCombatFromEnding
-  model: nothing it overrides
-StockPower: StockPower.AfterDeath, StockPower.ShouldStopCombatFromEnding
-  model: OutcomeTab
 StratagemPower: StratagemPower.AfterShuffle
   model: AfterCardEvent
 SurprisePower: SurprisePower.AfterDeath, SurprisePower.ShouldStopCombatFromEnding
-  model: AfterDeath
+  model: AfterDeath, ShouldStopCombatFromEnding
 SurroundedPower: SurroundedPower.AfterDeath, SurroundedPower.BeforeCardPlayed, SurroundedPower.BeforePotionUsed, SurroundedPower.ModifyDamageMultiplicative
   model: AfterDeath, BeforeCardPlayed, ModifyDamageMultiplicative
 SwordSagePower: SwordSagePower.AfterCardEnteredCombat, SwordSagePower.AfterPowerAmountChanged, SwordSagePower.AfterRemoved

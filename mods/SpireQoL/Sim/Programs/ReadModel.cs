@@ -508,6 +508,7 @@ public sealed class ReadModel : SimModel
         HookName.ModifyUnblockedDamageTarget => nameof(ModifyUnblockedDamageTarget),
         HookName.ShouldAllowHitting => nameof(ShouldAllowHitting),
         HookName.ShouldCreatureBeRemovedFromCombatAfterDeath => nameof(ShouldCreatureBeRemovedFromCombatAfterDeath),
+        HookName.ShouldStopCombatFromEnding => nameof(ShouldStopCombatFromEnding),
         // Its power's own question as its owner dies (Creature.RemoveAllPowersAfterDeath): asked of it, never of every listener.
         HookName.ShouldPowerBeRemovedAfterOwnerDeath => nameof(StaysOnDeadOwner),
         // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook; an enchantment's OnPlay
@@ -833,6 +834,10 @@ public sealed class ReadModel : SimModel
     public override bool ShouldCreatureBeRemovedFromCombatAfterDeath(SimState state, int owner, int creature) =>
         _returns[(int)HookName.ShouldCreatureBeRemovedFromCombatAfterDeath] is not { } returns
         || returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ShouldCreatureBeRemovedFromCombatAfterDeath, Target = creature }) != 0m;
+
+    /// <summary>Hook.ShouldStopCombatFromEnding: its code's answer (Infested's, Stock's, Steam Eruption's: true).</summary>
+    public override bool ShouldStopCombatFromEnding(SimState state, int owner) =>
+        _returns[(int)HookName.ShouldStopCombatFromEnding] is { } returns && returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ShouldStopCombatFromEnding }) != 0m;
 
     /// <summary>Its ShouldPowerBeRemovedAfterOwnerDeath says no: it stays on its dead owner (Die For You, Wuppy's Loyalty).</summary>
     public override bool StaysOnDeadOwner(SimState state, int owner) =>
@@ -1309,7 +1314,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or SummonStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep
+            case FlashStep or GainStarsStep or HealStep or SummonStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep or SpawnStep or SetHpStep or SetMoveStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1688,6 +1693,67 @@ public sealed class ReadModel : SimModel
                         return One(args.State);
                     }
                     return SimEngine.MadeIntoDrawPile(args.State, new PendingMade(player, make.Card, creator, card));
+                };
+            }
+            case SpawnStep:
+            {
+                var source = PowerId.Of(Name);
+                return args =>
+                {
+                    // CreatureCmd.Add as its owner dies: the next of the creatures its class's death adds (SimEnemy.Spawns, read from this code by the
+                    // adapter), joining once the hit is over (SimEngine.Spawn: a branch per HP it can start with).
+                    if (args.Target != args.Owner || args.State.Enemy(args.Owner) is not { } enemy)
+                    {
+                        args.State.Unmodelled ??= $"{Name} adds a creature other than as its owner, an enemy, dies";
+                        return One(args.State);
+                    }
+                    // None read (a state written without them): none added.
+                    if (enemy.Spawns == null) return One(args.State);
+                    var ordinal = 0;
+                    foreach (var queued in args.State.PendingSpawns)
+                        if (queued.Dead == args.Owner && queued.Source == source) ordinal++;
+                    if (enemy.Spawns.Where(spawn => spawn.Source == source).ElementAtOrDefault(ordinal) is not { Unread: null })
+                    {
+                        args.State.Unmodelled ??= $"{Name}: a creature {enemy.Name}'s death adds isn't read";
+                        return One(args.State);
+                    }
+                    args.State.PendingSpawns = args.State.PendingSpawns.Add(new PendingSpawn(args.Owner, source, ordinal));
+                    return One(args.State);
+                };
+            }
+            case SetHpStep setHp:
+            {
+                var amount = Compile(setHp.Amount);
+                return args =>
+                {
+                    // CreatureCmd.SetMaxAndCurrentHp of its owner: its HP set; a dead one is alive again (its death told: a revive, SimEngine.Revive as
+                    // CreatureCmd.Kill goes on). A player's is a gap the game's code doesn't reach.
+                    if (args.State.Enemy(args.Owner) is not { } enemy)
+                    {
+                        args.State.Unmodelled ??= $"{Name} sets the HP of a creature that isn't an enemy";
+                        return One(args.State);
+                    }
+                    var hp = (int)Math.Clamp(amount(in args), 0m, int.MaxValue);
+                    if (!enemy.Alive && hp > 0) enemy.Revived = true;
+                    enemy.Hp = hp;
+                    return One(args.State);
+                };
+            }
+            case SetMoveStep setMove:
+            {
+                var move = setMove.Move;
+                return args =>
+                {
+                    // SetMoveImmediate(move, forceTransition: true) on its owner's monster: its next move is that one, as the adapter read it.
+                    // None read (a state written without them): its move stays the one its intent shows.
+                    if (args.State.Enemy(args.Owner) is not { SetMoves: { } moves } enemy) return One(args.State);
+                    if (!moves.TryGetValue(move, out var set) || set == null)
+                    {
+                        args.State.Unmodelled ??= $"{Name} sets {enemy.Name}'s move to its {move}, which isn't read";
+                        return One(args.State);
+                    }
+                    SimEngine.SetMove(enemy, set);
+                    return One(args.State);
                 };
             }
             case KillStep kill:

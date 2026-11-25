@@ -131,22 +131,35 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// The creatures an enemy's death adds (SimEnemy.Spawns: Surprise's gremlins), one after another, each with the next id (the
-    /// adapter numbers enemies in the game's order, so a creature added last is next), a branch per HP it can start with, each its
-    /// share. They join doing nothing this turn (no hits), hittable at once: later hits in the same play and random targets count them.
+    /// A creature an enemy's death adds (SimEnemy.Spawns, the next of its source's: Infested's Wrigglers, Stock's next Axebot, Surprise's gremlins),
+    /// with the next id (the adapter numbers enemies in the game's order, so a creature added last is next), a branch per HP it can start with, each
+    /// its share (Creature.SetUniqueMonsterHpValue: one made as it's added has none the creatures its death added before it joined with, unless
+    /// none is left: SimSpawn.UniqueFromEarlier). It joins doing nothing this turn (its first move attacks no one: SpawnTests), hittable at once:
+    /// later hits in the same play and random targets count it.
     /// </summary>
-    internal static IEnumerable<SimState> Spawn(SimState state, int dead)
+    internal static IEnumerable<SimState> Spawn(SimState state, PendingSpawn pending)
     {
-        IEnumerable<SimState> states = new[] { state };
-        foreach (var spawn in state.Enemy(dead)?.Spawns ?? new List<SimSpawn>())
-            states = Then(states.ToList(), branch => spawn.Hp.Select((hp, index) =>
+        if (state.Enemy(pending.Dead)?.Spawns?.Where(spawn => spawn.Source == pending.Source).ElementAtOrDefault(pending.Ordinal) is not { } spawn) return new[] { state };
+        if (spawn.Unread != null || spawn.Hp.Count == 0)
+        {
+            state.Unmodelled ??= $"a creature {state.Enemy(pending.Dead)!.Name}'s death adds isn't read ({spawn.Unread ?? "no HP"})";
+            return new[] { state };
+        }
+        var raw = spawn.RawHp ?? spawn.Hp;
+        var taken = spawn.UniqueFromEarlier ? state.Enemies.Where(enemy => enemy.AddedBy == pending.Dead).Select(enemy => enemy.Hp).ToHashSet() : null;
+        var free = Enumerable.Range(0, spawn.Hp.Count).Where(index => taken?.Contains(raw[index]) != true).ToList();
+        if (free.Count == 0) free = Enumerable.Range(0, spawn.Hp.Count).ToList();
+        return free.Select((index, place) =>
+        {
+            var copy = place == free.Count - 1 ? state : state.Clone();
+            copy.Weight = state.Weight / free.Count;
+            copy.Enemies.Add(new SimEnemy
             {
-                var copy = index == spawn.Hp.Count - 1 ? branch : branch.Clone();
-                copy.Weight = branch.Weight / spawn.Hp.Count;
-                copy.Enemies.Add(new SimEnemy { Id = copy.Enemies.Max(enemy => enemy.Id) + 1, Name = spawn.Name, Hp = hp, Powers = SpawnPowers(copy, spawn.Powers) });
-                return copy;
-            }).ToList());
-        return states;
+                Id = copy.Enemies.Max(enemy => enemy.Id) + 1, Name = spawn.Name, Monster = spawn.Monster ?? "", Hp = spawn.Hp[index], Powers = SpawnPowers(copy, spawn.Powers),
+                AddedBy = pending.Dead,
+            });
+            return copy;
+        }).ToList();
     }
 
     /// <summary>
@@ -171,10 +184,10 @@ public static partial class SimEngine
         var powers = state.PendingPowers;
         state.Pending = ImmutableArray<PendingEvent>.Empty;
         state.PendingIntoDraw = ImmutableArray<PendingMade>.Empty;
-        state.PendingSpawns = ImmutableArray<int>.Empty;
+        state.PendingSpawns = ImmutableArray<PendingSpawn>.Empty;
         state.PendingPowers = ImmutableArray<PendingPower>.Empty;
         IEnumerable<SimState> states = new[] { state };
-        foreach (var dead in spawns) states = Then(states.ToList(), branch => Spawn(branch, dead));
+        foreach (var spawn in spawns) states = Then(states.ToList(), branch => Spawn(branch, spawn));
         // The powers that landed: each one's listeners told in the order they landed (Hook.AfterPowerAmountChanged).
         foreach (var (power, amount, applier, target, debuff) in powers) states = Then(states.ToList(), branch => Tell(branch, power, amount, applier, target, debuff));
         foreach (var made in intoDraw) states = Then(states.ToList(), branch => MadeIntoDrawPile(branch, made));

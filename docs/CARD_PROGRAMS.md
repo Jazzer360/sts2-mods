@@ -474,9 +474,12 @@ commands are named gaps (`MoveCommandsNotTranslated`); a power or block step on 
 
 ### C3. Spawns and starting powers
 
-`SimAdapter.SpawnsOf` reads each power's AfterDeath for the creatures it adds (`CreatureCmd.Add<T>`, or a creature made by
-`CreateCreature(ModelDb.Monster<T>())`), on its condition evaluated as the creature dies now, each with every HP its class can start with
-and the powers its AfterAddedToRoom gives it (`StartingPowers`). It replaced `SurpriseSpawns` (`SpawnTests`).
+`SimAdapter.SpawnsOf` reads each power's AfterDeath for the creatures it adds (`CreatureCmd.Add<T>`, a creature made by
+`CreateCreature(ModelDb.Monster<T>())`, or a monster the code makes and sets up first: `(Wriggler)ModelDb.Monster<Wriggler>().ToMutable()` and its
+properties set, each set through its own setter on a copy of the monster), each round of a counter loop its own, on its condition evaluated as the
+creature dies now, each with every HP its class can start with (none an earlier one of the same death took, when it's made as it's added) and the
+powers its AfterAddedToRoom gives it (`StartingPowers`, each on its condition read on the set-up monster). It replaced `SurpriseSpawns`
+(`SpawnTests`). A read power's `CreatureCmd.Add` is a `SpawnStep`, adding them as it dies (decision #276).
 
 ### C4. Conditional branches
 
@@ -517,6 +520,9 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 | a list of its own data counted (`data.coveredCreatures.Count`); `base.Owner.Powers.Contains(this)` | its state, `HookField("Data.coveredCreatures.Count")`, which another class's call of its own method changes (Covered's: decision #270); 1 |
 | a card kept from a hit's card in a hook given no card play (Curl Up's `playedCard = cardSource` in AfterDamageReceived), tested against it | the identity of the card play the hit's card comes from (`HookFact.HitCardPlaySerial`: the card play under way when its card is the hit's, else 0); `HookFact.FromCard` is the hit's card there (decision #274) |
 | a method of its owner's monster's class called on it (`ceremonialBeast.SetStunned()`), one made into a delegate (`ceremonialBeast.StunnedMove`); a property of that class with no setter (`RitualAmount`); `AscensionHelper.IsDread()` | its code read at the call, its this the owner's monster (a store to its state is that monster's, `MonsterStateStep`); the delegate read as a lambda; the getter's code; `HookFact.Dread` (`SimState.Dread`) (decision #275) |
+| `CreatureCmd.Add` in an AfterDeath (of `T`, of a creature made of `ModelDb.Monster<T>()`, of a monster made and set up first: `wriggler.StartStunned = true`, "Made.Wriggler.StartStunned"); a list the code makes itself changed ("Local.wrigglers") | `SpawnStep`: the next of the creatures its class's death adds, read by the adapter (`SimEnemy.Spawns`, its `Source`), each HP a branch (`SimEngine.Spawn`); no step (decision #276) |
+| `((WaterfallGiant)creature.Monster).TriggerAboutToBlowState()` under `creature == base.Owner`; `CreatureCmd.SetMaxAndCurrentHp(base.Creature, n)`; `SetMoveImmediate(AboutToBlowState, forceTransition: true)`; `base.Creature.HpDisplay = ...` | the method read at the call as its owner's monster's; `SetHpStep` (on its dead owner a revive: `SimEngine.Revive`); `SetMoveStep` (the move the adapter read: `SimEnemy.SetMoves`, `SimEngine.SetMove`); shown only (decision #276) |
+| `ShouldStopCombatFromEnding()`; a field cleared through its address (`ldflda`, `initobj`: `data.damageReceivedThisTurn = default`) | a true-or-false return, asked where the fight may end (`SimEngine.FightEnding`); a store of 0 (decision #276) |
 | `PowerCmd.Remove<T>(base.Owner)`, a loop removing each of `base.Owner.GetPowerInstances<T>().ToList()` | `RemovePowerStep` with the classes taken off (T, or every class of the game's that is a T), a gap where one declares AfterRemoved (decision #275) |
 | a property set on its owner's monster (`bowlbugRock.IsOffBalance = true`, the monster tested as its class and kept); `result.WasFullyBlocked`; `base.Owner.Monster is BowlbugRock` | its monster's own state, `MonsterStateStep("Monster.BowlbugRock.IsOffBalance")` in the enemy's fields, where its move's stun of itself reads it (`WhenAction(MonsterState, MoveStunAction)`); `HookFact.HitFullyBlocked`; `HookFact.CreatureMonsterIs` (decision #271) |
 | a counter loop (`for (i = 0; i < n; i++)`) | `RepeatStep`: its body n times, n worked out as it starts, a firing on the first round only |

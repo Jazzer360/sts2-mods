@@ -7,7 +7,7 @@ namespace SpireQoL.Sim.Models;
 internal static class OutcomeRules
 {
     /// <summary>The play kills this enemy in some branch: a warning, as its death sets something off.</summary>
-    public static OutcomeRule KillsIt(int enemy) => new(Harmful: true, outcome => outcome.KilledByPlayInAny.Contains(enemy), branch => branch.Enemy(enemy) is not { Alive: true });
+    public static OutcomeRule KillsIt(int enemy) => new(Harmful: true, outcome => outcome.KilledByPlayInAny.Contains(enemy), branch => branch.Enemy(enemy) is not { Died: false });
 
     /// <summary>The play kills another enemy in some branch: a warning, as that makes this one stronger.</summary>
     public static OutcomeRule KillsAnother(int enemy) => new(Harmful: true, outcome => outcome.KilledByPlayInAny.Any(killed => killed != enemy));
@@ -29,11 +29,7 @@ public abstract class DeathSetsOff : SimModel
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => Who.IsEnemy(owner) ? OutcomeRules.KillsIt(owner) : null;
 }
 
-/// <summary>InfestedPower: its death releases what infests it.</summary>
-public sealed class InfestedPower : DeathSetsOff { }
-
-/// <summary>SteamEruptionPower: its death erupts.</summary>
-public sealed class SteamEruptionPower : DeathSetsOff { }
+// Infested, Stock and Steam Eruption are read from their code (ReadModel, decision #276).
 
 /// <summary>
 /// SurprisePower: its death springs the surprise (AfterDeath: CreatureCmd.Add of a Sneaky Gremlin and a Fat Gremlin, whose HP is a
@@ -43,15 +39,14 @@ public sealed class SurprisePower : DeathSetsOff
 {
     public override void AfterDeath(SimState state, int owner, int dead)
     {
-        if (dead == owner && state.Enemy(owner) is { Spawns.Count: > 0 }) state.PendingSpawns = state.PendingSpawns.Add(owner);
+        if (dead != owner || state.Enemy(owner)?.Spawns is not { } spawns) return;
+        var ordinal = 0;
+        foreach (var spawn in spawns)
+            if (spawn.Source == ThisPower) state.PendingSpawns = state.PendingSpawns.Add(new PendingSpawn(owner, ThisPower, ordinal++));
     }
-}
 
-/// <summary>StockPower: while stock is left, a new Axebot takes its place when it dies (and attacks this enemy turn).</summary>
-public sealed class StockPower : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        Who.IsEnemy(owner) && SimEngine.PowerOn(start, owner, ThisPower) > 0 ? OutcomeRules.KillsIt(owner) : null;
+    /// <summary>SurprisePower.ShouldStopCombatFromEnding: true (its gremlins come in).</summary>
+    public override bool ShouldStopCombatFromEnding(SimState state, int owner) => true;
 }
 
 // Imbalanced is read from its code (ReadModel, decision #271).

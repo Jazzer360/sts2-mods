@@ -120,7 +120,11 @@ public class HookWriteTests
             // A property set on an object the hook is given (an arrow or a card it's given: "Given.arrow.Status").
             || step.Field.StartsWith(ProgramReader.GivenPrefix, StringComparison.Ordinal) && step.Field.EndsWith("." + write.Name, StringComparison.Ordinal)
             // A property set on its owner's monster (((CorpseSlug)base.Owner.Monster).IsRavenous: "Monster.CorpseSlug.IsRavenous"), read beside a stun.
-            || step.Field.StartsWith(ProgramReader.OwnersMonsterPrefix, StringComparison.Ordinal) && step.Field.EndsWith("." + write.Name, StringComparison.Ordinal)),
+            || step.Field.StartsWith(ProgramReader.OwnersMonsterPrefix, StringComparison.Ordinal) && step.Field.EndsWith("." + write.Name, StringComparison.Ordinal)
+            // A property set on a monster the hook makes before it joins (Infested's wriggler.StartStunned: "Made.Wriggler.StartStunned").
+            || step.Field.StartsWith(ProgramReader.MadeMonsterPrefix, StringComparison.Ordinal) && step.Field.EndsWith("." + write.Name, StringComparison.Ordinal)
+            // A property its owner's monster's method sets on its own creature (Steam Eruption's base.Creature.HpDisplay: "Creature.HpDisplay").
+            || step.Field == ProgramReader.OwnCreaturePrefix + write.Name),
         "data" => steps.OfType<DataStep>().Any(step => step.Operation == write.Name),
         _ => steps.OfType<CommandStep>().Any(step => step.Command.FullName == write.Name) || steps.OfType<ChoiceStep>().Any(step => step.Command.FullName == write.Name)
             || steps.OfType<CardActionStep>().Any(step => step.Action.FullName == write.Name),
@@ -142,9 +146,14 @@ public class HookWriteTests
             List<CodeOp> ops;
             try { ops = read(method); }
             catch { continue; }
-            foreach (var instruction in ops)
+            for (var index = 0; index < ops.Count; index++)
             {
+                var instruction = ops[index];
                 if (Of(type, own, instruction) is { } write) yield return write;
+                // A field set to its default through its address (ldflda, then initobj: Hardened Shell's damageReceivedThisTurn = default).
+                if (instruction.OpCode == OpCodes.Ldflda && index + 1 < ops.Count && ops[index + 1].OpCode == OpCodes.Initobj && instruction.Member is { } cleared
+                    && !cleared.DeclaringType.StartsWith('<') && !cleared.Name.StartsWith('<'))
+                    yield return new Write("store", cleared.Name);
                 if (depth >= 3 || !instruction.IsCall || instruction.Member is not { Kind: CodeMemberKind.Method } member || member.Name.StartsWith("get_", StringComparison.Ordinal)
                     || member.Name.StartsWith("set_", StringComparison.Ordinal) || ProgramReader.IsCommand(member)) continue;
                 if (Called(type, own, member) is { } called && seen.Add(called)) queue.Enqueue((called, depth + 1));
@@ -163,6 +172,8 @@ public class HookWriteTests
             owner = type.Assembly.GetType(member.Namespace + "." + member.DeclaringType);
         // A method of a monster class a power calls (on its owner's monster: Plow's CeremonialBeast.SetStunned, decision #275), read where it's called.
         if (owner == null && OfAMonster(member)) owner = type.Assembly.GetType(member.Namespace + "." + member.DeclaringType);
+        // A creature's own method (Creature.SetNodeVisible), followed: its writes count.
+        if (owner == null && OfACreature(member)) owner = type.Assembly.GetType(member.Namespace + "." + member.DeclaringType);
         if (owner == null) return null;
         var found = owner.GetMethods(All).FirstOrDefault(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount);
         return found == null || found.IsAbstract ? null : ProgramReader.BodyOf(found);
@@ -170,6 +181,9 @@ public class HookWriteTests
 
     /// <summary>An instance method a monster class of the game's declares (its writes are followed, as the reader reads it where a power calls it on its owner's monster).</summary>
     private static bool OfAMonster(CodeMember member) => member is { HasThis: true, Namespace: "MegaCrit.Sts2.Core.Models.Monsters" };
+
+    /// <summary>An instance method of a creature (its writes are followed: Creature.SetNodeVisible only sets its node's Visible, which shows).</summary>
+    private static bool OfACreature(CodeMember member) => member is { HasThis: true, Namespace: "MegaCrit.Sts2.Core.Entities.Creatures", DeclaringType: nameof(MegaCrit.Sts2.Core.Entities.Creatures.Creature) };
 
     /// <summary>The write an instruction makes, or null (a read, a compiler's local, something that only shows).</summary>
     private static Write? Of(Type type, List<Type> own, CodeOp instruction)
@@ -195,7 +209,7 @@ public class HookWriteTests
         if (member.ValueType != typeof(void).Name && !member.ValueType.StartsWith("Task", StringComparison.Ordinal)) return null;
         if (own.Any(candidate => candidate.Name == member.DeclaringType)) return null;
         if (!member.HasThis && member.Namespace.StartsWith("MegaCrit.Sts2.Core.Models", StringComparison.Ordinal)) return null;
-        if (OfAMonster(member)) return null;
+        if (OfAMonster(member) || OfACreature(member)) return null;
         for (var baseType = type.BaseType; baseType != null; baseType = baseType.BaseType)
             if (baseType.Name == member.DeclaringType && member.HasThis && !ProgramReader.IsModelAction(member) && !ProgramReader.IsPowerAction(member)) return null;
         return new Write("changes", member.FullName);

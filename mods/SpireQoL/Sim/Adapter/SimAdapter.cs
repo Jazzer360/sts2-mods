@@ -175,6 +175,8 @@ public static partial class SimAdapter
             enemy.Move = MoveOf(monster, hitsPerAttack, IdOf, combat);
             // The monster's own state its move asks (Bowlbug Rock's IsOffBalance: decision #271), as the game has it now.
             if (enemy.Move != null) enemy.Fields = MoveConditions.StateFields(monster, enemy.Move, enemy.Fields);
+            // The moves its powers' code can set it to (Steam Eruption's AboutToBlowState as the Waterfall Giant dies: decision #276).
+            enemy.SetMoves = SetMovesOf(monster.Creature, IdOf, combat, targets);
         }
 
         // The history ledger (decision #191): the questions this board's models ask of the fight's log, each player's counts seeded here, once.

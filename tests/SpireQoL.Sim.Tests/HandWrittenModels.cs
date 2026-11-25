@@ -2373,3 +2373,18 @@ public sealed class PlowPower : SimModel
         SimEngine.Stun(enemy);
     }
 }
+
+// ---- round twenty-four: creatures a death adds and a revive (Sim/Models/OutcomeModels.cs), deleted 2026-11-25
+
+/// <summary>InfestedPower: its death releases what infests it.</summary>
+public sealed class InfestedPower : DeathSetsOff { }
+
+/// <summary>SteamEruptionPower: its death erupts.</summary>
+public sealed class SteamEruptionPower : DeathSetsOff { }
+
+/// <summary>StockPower: while stock is left, a new Axebot takes its place when it dies (and attacks this enemy turn).</summary>
+public sealed class StockPower : SimModel
+{
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
+        Who.IsEnemy(owner) && SimEngine.PowerOn(start, owner, ThisPower) > 0 ? OutcomeRules.KillsIt(owner) : null;
+}

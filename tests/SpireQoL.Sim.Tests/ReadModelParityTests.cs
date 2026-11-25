@@ -101,6 +101,12 @@ public class ReadModelParityTests
         ["StretchPower.AfterModifyingBlockAmount"] = "GainsBlock(card): card.GainsBlock || card.Enchantment?.GainsBlock: the read model binds a play whose enchantment gains block (Adroit), as the hand-written model did while SimCard.GainsBlock held both; its frozen copy reads the card's own block only since the two were split (SimCard.EnchantmentGainsBlock). No prediction changes",
         ["PaelsLegion.AfterModifyingBlockAmount"] = "its term changing a block is what it does (ModelSpec.TermActs, decision #269): the read model logs its firing as the engine tells it the term changed a block, where the hand-written model logged it at AfterCardPlayed of the play it kept: the same play's log, so the same tab (OwnDataTabParityTests); the engine tells it only of a block its term changed (CreatureCmd.GainBlock), never of one at 0",
         ["Vambrace.AfterModifyingBlockAmount"] = "its term changing a block is what it does (ModelSpec.TermActs, decision #269, as Pael's Legion's): the read model logs its firing as the engine tells it the term changed a block, and its code's modifiedAmount <= 0 return keeps only its TriggeringCard unset there; the engine tells it only of a block its term changed (CreatureCmd.GainBlock), never of one at 0, so the board's call at 0 is one the engine never makes: no prediction changes",
+        ["InfestedPower.ShouldStopCombatFromEnding"] = "return true: the fight goes on while its owner's death brings its Wrigglers in, where the hand-written model answered nothing. The engine asks it where the fight may end (SimEngine.FightEnding: an enemy's move stops once no primary enemy is alive and no listener holds the end back), of an enemy that died during its own move too: a fix (decision #276)",
+        ["StockPower.ShouldStopCombatFromEnding"] = "return true, as Infested's: your Thorns killing the last Axebot during its attack leaves the rest of its move going on (its Weak and Frail land), as the next Axebot comes in (a fix, decision #276)",
+        ["SteamEruptionPower.ShouldStopCombatFromEnding"] = "return true, as Infested's",
+        ["SteamEruptionPower.AfterDeath"] = "!wasRemovalPrevented && creature == base.Owner: ((WaterfallGiant)creature.Monster).TriggerAboutToBlowState(), read where it's called: IsAboutToBlow = true (its own state, on a dead creature: nothing), CreatureCmd.SetMaxAndCurrentHp(base.Creature, 999999999m) (a revive: SimEngine.Revive takes off its powers but this one, as CreatureCmd.Kill's RemoveAllPowersAfterDeath does after AfterDeath), its HpDisplay (shown), SetMoveImmediate(AboutToBlowState, forceTransition: true) (its move the one the adapter read: the scenario's enemy has none read, so it keeps its own). The hand-written model only had its tab: the Giant now stays in the fight, a target for later hits, with no attack this turn (a fix, decision #276); its tabs are held to the recording (MonsterStateTabParityTests)",
+        ["SteamEruptionPower.ShouldCreatureBeRemovedFromCombatAfterDeath"] = "creature != base.Owner ? true : false: it keeps its Giant in the fight as it dies (CreatureCmd.Kill asks it before AfterDeath), which its revive uses; the hand-written model left it out. A dead enemy kept and not brought back stays unknown (SimEngine.AllyDeaths)",
+        ["SteamEruptionPower.StaysOnDeadOwner"] = "ShouldPowerBeRemovedAfterOwnerDeath false: it stays on its Giant through its death (Creature.RemoveAllPowersAfterDeath), so the revived Giant still has it (its About to Blow takes it off and keeps its amount for its explosion, a turn past every simulation)",
         ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
     };
 
@@ -291,7 +297,7 @@ public class ReadModelParityTests
         nameof(SimModel.BeforeAttack), nameof(SimModel.AfterAttack), nameof(SimModel.ModifyDamageCap), nameof(SimModel.AfterModifyingDamageAmount),
         nameof(SimModel.BeforeDamageReceived), nameof(SimModel.AfterArrowShot), nameof(SimModel.AfterArrowImpaled),
         nameof(SimModel.ModifyPreBlockDamageTarget), nameof(SimModel.ModifyUnblockedDamageTarget), nameof(SimModel.ShouldAllowHitting),
-        nameof(SimModel.ShouldCreatureBeRemovedFromCombatAfterDeath), nameof(SimModel.StaysOnDeadOwner),
+        nameof(SimModel.ShouldCreatureBeRemovedFromCombatAfterDeath), nameof(SimModel.StaysOnDeadOwner), nameof(SimModel.ShouldStopCombatFromEnding),
     };
 
     [Fact]
@@ -604,6 +610,9 @@ public class ReadModelParityTests
                 break;
             case nameof(SimModel.StaysOnDeadOwner):
                 yield return ("as its owner dies", (model, state) => model.StaysOnDeadOwner(state, owner).ToString());
+                break;
+            case nameof(SimModel.ShouldStopCombatFromEnding):
+                yield return ("as the fight would end", (model, state) => model.ShouldStopCombatFromEnding(state, owner).ToString());
                 break;
             case nameof(SimModel.AfterDeath):
                 // A creature dies (the applier, another enemy, the owner), then the players' turn ends: what the death changed shows there.

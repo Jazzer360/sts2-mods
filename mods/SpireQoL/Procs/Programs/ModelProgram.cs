@@ -422,6 +422,46 @@ public static class ProgramReader
     };
 
     /// <summary>
+    /// The monster of a creature the hook is given, where every way the code reaches the call tests that creature is its owner (Steam Eruption's
+    /// ((WaterfallGiant)creature.Monster).TriggerAboutToBlowState() under creature == base.Owner): its owner's monster there.
+    /// </summary>
+    private static bool IsGivenOwnersMonster(ProgramValue value, ProgramCondition reached)
+    {
+        var given = (value is StoredValue kept ? kept.Value : value) switch
+        {
+            QueryValue { Name: "Monster", Of: ParameterValue parameter } => parameter.Name,
+            QueryValue { Name: "Monster", Of: NamedValue { Name: var named } } when named != "this" => named,
+            _ => null,
+        };
+        if (given == null || reached.IsNever || reached.IsAlways) return false;
+        static bool IsGiven(ProgramValue side, string name) => side is ParameterValue { Name: var parameter } && parameter == name || side is NamedValue { Name: var named } && named == name;
+        static bool IsTheOwner(ProgramValue side) => side is QueryValue { Name: "Owner", Of: NamedValue { Name: "this" } };
+        bool SaysOwner(ConditionLiteral literal) => literal.Test is CompareValue { Op: Comparison.Equal or Comparison.NotEqual } compare
+            && (compare.Op == Comparison.Equal) == literal.Holds
+            && (IsGiven(compare.Left, given) && IsTheOwner(compare.Right) || IsTheOwner(compare.Left) && IsGiven(compare.Right, given));
+        return reached.Terms.All(term => term.Any(SaysOwner));
+    }
+
+    /// <summary>The prefix of a property set on a monster the hook makes before it joins ("Made.Wriggler.StartStunned"), set up for its CreatureCmd.Add.</summary>
+    public const string MadeMonsterPrefix = "Made.";
+
+    /// <summary>The prefix of a property its owner's monster's method sets on its own creature ("Creature.HpDisplay").</summary>
+    public const string OwnCreaturePrefix = "Creature.";
+
+    /// <summary>The prefix of a collection the code makes itself, in a local ("Local.wrigglers"), changed by a DataStep.</summary>
+    public const string LocalPrefix = "Local.";
+
+    /// <summary>
+    /// The class of a monster the code makes to add to the fight ((Wriggler)ModelDb.Monster&lt;Wriggler&gt;().ToMutable(), in a local or not), or null.
+    /// </summary>
+    public static string? MadeMonster(ProgramValue? value) => value switch
+    {
+        StoredValue kept => MadeMonster(kept.Value),
+        QueryValue { Name: "ToMutable", Of: QueryValue { Name: "Monster", Type: "ModelDb", GenericArguments: [var monster] } } => monster,
+        _ => null,
+    };
+
+    /// <summary>
     /// One of the model's own values a value names (base.DynamicVars.Damage, base.DynamicVars["CardsLeft"], kept in a local or not): the
     /// property, or the key as the code writes it ("\"CardsLeft\""); null for anything else.
     /// </summary>
@@ -467,6 +507,12 @@ public static class ProgramReader
             _read = read;
             _helperDepth = helperDepth;
         }
+
+        /// <summary>
+        /// A method of a monster's class read where its owner's power calls it on that monster (decision #275): a property it sets on its own creature
+        /// (base.Creature.HpDisplay) is a store, "Creature.HpDisplay", the power's owner's.
+        /// </summary>
+        public bool ForOwnersPower { get; init; }
 
         public List<ProgramStep> Steps(MethodBase method, int depth)
         {
@@ -638,6 +684,14 @@ public static class ProgramReader
                     into.Add(new StoreStep(instruction.Offset, OwnDataPrefix + dataField.Name, flow.ValueBefore(i)) { Condition = condition });
                     continue;
                 }
+                // A plain field of the model's own data set to its default through its address (GetInternalData<Data>().damageReceivedThisTurn = default:
+                // ldflda, then initobj: Hardened Shell's count as each side's turn starts): a store of 0, as "Data.damageReceivedThisTurn".
+                if (instruction.OpCode == OpCodes.Ldflda && i + 1 < end && ops[i + 1].OpCode == OpCodes.Initobj && instruction.Member is { Kind: CodeMemberKind.Field } clearedField
+                    && IsOwnDataType(clearedField.DeclaringType) && IsOwnData(flow.ReceiverValue(i, arguments: 0)))
+                {
+                    into.Add(new StoreStep(instruction.Offset, OwnDataPrefix + clearedField.Name, new ConstantValue(0)) { Condition = condition });
+                    continue;
+                }
                 if (!instruction.IsCall || instruction.Member is not { } member) continue;
                 // A change to one of the model's own data's collections whose result isn't used (an Add, a Remove for its out value).
                 if (member is { Kind: CodeMemberKind.Method, HasThis: true } && member.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)
@@ -675,6 +729,32 @@ public static class ProgramReader
                     && IsOwnersMonster(flow.ReceiverValue(i, arguments: 1)))
                 {
                     into.Add(new StoreStep(instruction.Offset, OwnersMonsterPrefix + member.DeclaringType + "." + member.Name[4..], flow.ArgumentValues(i, member)[0]) { Condition = condition });
+                    continue;
+                }
+                // A property set on a monster the hook makes before it joins the fight ((Wriggler)ModelDb.Monster<Wriggler>().ToMutable(), then
+                // wriggler.StartStunned = true: Infested's): a store, "Made.Wriggler.StartStunned", which the hook reader reads with the CreatureCmd.Add that
+                // adds that monster or names as a gap.
+                if (member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1 } && member.Name.StartsWith("set_", StringComparison.Ordinal) && IsPowerOrRelic
+                    && MadeMonster(flow.ReceiverValue(i, arguments: 1)) is { } madeMonster)
+                {
+                    into.Add(new StoreStep(instruction.Offset, MadeMonsterPrefix + madeMonster + "." + member.Name[4..], flow.ArgumentValues(i, member)[0]) { Condition = condition });
+                    continue;
+                }
+                // A property a monster's method sets on its own creature, read where its owner's power calls it (Steam Eruption's TriggerAboutToBlowState:
+                // base.Creature.HpDisplay = ...): a store, "Creature.HpDisplay", which the hook reader translates or names as a gap.
+                if (ForOwnersPower && member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1 } && member.Name.StartsWith("set_", StringComparison.Ordinal)
+                    && flow.ReceiverValue(i, arguments: 1) is QueryValue { Name: "Creature", Of: NamedValue { Name: "this" } })
+                {
+                    into.Add(new StoreStep(instruction.Offset, OwnCreaturePrefix + member.Name[4..], flow.ArgumentValues(i, member)[0]) { Condition = condition });
+                    continue;
+                }
+                // A change to a collection the code makes itself (List<Creature> wrigglers = new(): Infested's, its Wrigglers kept to show them once its death's
+                // animation ends), whose result isn't used: a step on it, "Local.wrigglers", which the hook reader translates or names as a gap.
+                if (IsPowerOrRelic && member is { Kind: CodeMemberKind.Method, HasThis: true } && member.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)
+                    && (!member.ReturnsValue || i + 1 < ops.Count && ops[i + 1].OpCode == OpCodes.Pop)
+                    && flow.ReceiverValue(i, member.ParameterCount) is StoredValue { Name: { Length: > 0 } madeList, Value: QueryValue { Name: ".ctor" } made } && made.Type.StartsWith("List", StringComparison.Ordinal))
+                {
+                    into.Add(new DataStep(instruction.Offset, LocalPrefix + madeList, member.Name, flow.ArgumentValues(i, member)) { Condition = condition });
                     continue;
                 }
                 // One of the model's own values set (base.DynamicVars["CardsLeft"].BaseValue = 5m, base.DynamicVars.Damage.BaseValue--): a store to
@@ -740,13 +820,14 @@ public static class ProgramReader
                 // steps run here as that monster's, its this the owner's monster, so a store to its own state is that monster's state
                 // ("Monster.CeremonialBeast.IsInSecondPhase") and its base.Creature the owner (decision #275). Each step is at the call, where the power's
                 // code runs it.
-                if (IsPowerOrRelic && OwnersMonsterMethod(member) is { } monsterMethod && IsOwnersMonster(flow.ReceiverValue(i, member.ParameterCount)))
+                if (IsPowerOrRelic && OwnersMonsterMethod(member) is { } monsterMethod
+                    && (IsOwnersMonster(flow.ReceiverValue(i, member.ParameterCount)) || IsGivenOwnersMonster(flow.ReceiverValue(i, member.ParameterCount), reached)))
                 {
                     if (depth >= MaxDepth) into.Add(new UnknownStep(instruction.Offset, $"{member.Name}: calls nested too deep") { Condition = condition });
                     else
                     {
                         var passed = PassedTo(monsterMethod.Called, flow.ArgumentValues(i, member));
-                        var inner = new Reader(monsterMethod.Owner, _read).Steps(monsterMethod.Body, depth + 1)
+                        var inner = new Reader(monsterMethod.Owner, _read) { ForOwnersPower = true }.Steps(monsterMethod.Body, depth + 1)
                             .Select(step => AsOwnersMonsters(Bound(step, value => value is NamedValue { Name: "this" } ? OwnersMonster : passed(value)), monsterMethod.Owner.Name) with { Offset = instruction.Offset });
                         into.AddRange(condition == null ? inner : inner.Select(step => step with { Condition = And(condition, step.Condition) }));
                     }
@@ -932,7 +1013,7 @@ public static class ProgramReader
         private static ProgramStep AsOwnersMonsters(ProgramStep step, string monsterClass) => step switch
         {
             StoreStep store when !store.Field.StartsWith(OwnDataPrefix, StringComparison.Ordinal) && !store.Field.StartsWith(OwnVarPrefix, StringComparison.Ordinal)
-                && !store.Field.StartsWith(GivenPrefix, StringComparison.Ordinal) && !store.Field.StartsWith(OwnersMonsterPrefix, StringComparison.Ordinal)
+                && !store.Field.StartsWith(GivenPrefix, StringComparison.Ordinal) && !store.Field.StartsWith(OwnersMonsterPrefix, StringComparison.Ordinal) && !store.Field.StartsWith(OwnCreaturePrefix, StringComparison.Ordinal)
                 => store with { Field = OwnersMonsterPrefix + monsterClass + "." + store.Field },
             LoopStep loop => loop with { Body = loop.Body.Select(inner => AsOwnersMonsters(inner, monsterClass)).ToList() },
             _ => step,

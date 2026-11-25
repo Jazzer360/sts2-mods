@@ -23,6 +23,9 @@ public class ShownOnlyValueTests
         ["MockSelfDamageAffliction.OnPlay"] = "a mock (IsMock: the game's own tests), never on a card in a run",
         ["AfflictionModel.get_Amount"] = "the getter itself",
         ["AfflictionModel.set_Amount"] = "the setter itself",
+        ["NHealthBar.RefreshForeground"] = "the HP bar drawn: shown",
+        ["NHealthBar.RefreshText"] = "the HP bar's number: shown",
+        ["HellraiserPower.<AfterCardDrawnEarly>b__7_0"] = "its cap on endless auto-plays (9 a turn once every enemy you could hit shows infinite HP): the adapter reads it from the board for each Strike it may play (SimAdapter's hellraised), and no simulation plays 9 Strikes from Hellraiser after an enemy's HP turns infinite in it (Steam Eruption's revive)",
     };
 
     public static TheoryData<string> Branches() => new() { "beta", "main" };

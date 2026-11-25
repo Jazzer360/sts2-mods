@@ -120,10 +120,25 @@ public sealed class SimEnemy
     /// <summary>Block its side's moves gave it this enemy turn (MoveBlockAction), on top of what it kept from before (Barricade).</summary>
     public int MoveBlock;
     /// <summary>
-    /// The creatures its death adds to the fight (Surprise: the Gremlin Merc's Sneaky and Fat Gremlin), in the order the game adds them:
-    /// SimEngine.Spawn. Null: none.
+    /// The creatures its death adds to the fight (Surprise: the Gremlin Merc's Sneaky and Fat Gremlin; Infested's Wrigglers; Stock's next Axebot), in
+    /// the order the game adds them, each by the power that adds it: SimEngine.Spawn. Null: none read (a state written without them: a test's, an older
+    /// report's), so a death adds none; the adapter lists every creature a power's code adds, or why it couldn't (SimSpawn.Unread).
     /// </summary>
     public List<SimSpawn>? Spawns;
+    /// <summary>
+    /// The moves its powers' code can set it to (SetMoveStep: Steam Eruption's AboutToBlowState), by the monster's property holding each, read by the
+    /// adapter from its monster (null for one it couldn't read: setting it is unknown). Null: none read (a state written without them), so its move
+    /// stays the one its intent shows. Fixed during a run.
+    /// </summary>
+    public Dictionary<string, SimMove?>? SetMoves;
+    /// <summary>The enemy whose death added it to the fight during the simulation (SimEngine.Spawn); null for one there from the start.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? AddedBy;
+    /// <summary>
+    /// It died during the simulation and its code brought it back (Steam Eruption's TriggerAboutToBlowState: SetHpStep on its dead owner): the play
+    /// killed it (its death was told), and it's in the fight again.
+    /// </summary>
+    public bool Revived;
     /// <summary>
     /// Each hit's amount on teammate k (their own Vulnerable, Intangible, Tank...: the game's damage math per
     /// target); missing: the same as yours.
@@ -237,6 +252,10 @@ public sealed class SimEnemy
     [JsonIgnore]
     public bool Alive => Hp > 0;
 
+    /// <summary>It's dead, or it died and its code brought it back (Revived): what a play's kills count (SimOutcome.KilledByPlayInAny).</summary>
+    [JsonIgnore]
+    public bool Died => !Alive || Revived;
+
     /// <summary>
     /// What its powers read from their code keep of their own (decision #195: a field or property each stores and reads, "Model.Field" → its
     /// value), seeded from the game and followed by their programs. Never changed in place (shared between clones).
@@ -251,7 +270,7 @@ public sealed class SimEnemy
     {
         key.Add(Id); key.Add(Hp); key.Add(Block); key.Add(UnblockedInstances); key.Add(Poison); key.Add(DiedBeforeActing ? 1 : 0);
         key.Add(Stunned ? 1 : 0); key.Add(IntendsToAttack ? 1 : 0); key.Add(BlockBroken ? 1 : 0); key.Add(KilledByItsPower ? 1 : 0);
-        key.Add(MoveBlock);
+        key.Add(MoveBlock); key.Add(Revived ? 1 : 0);
         Powers.Hash(ref key); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         Fields.Hash(ref key);
         key.Add(Hits.Count); foreach (var hit in Hits) key.Add(hit);
@@ -281,7 +300,43 @@ public sealed record SimSpawn(string Name, IReadOnlyList<int> Hp)
 {
     /// <summary>The powers it starts with (its AfterAddedToRoom's, read from its code: decision #195).</summary>
     public PowerSet Powers { get; init; } = PowerSet.Empty;
+
+    /// <summary>The power whose AfterDeath adds it (Infested, Stock, Surprise): its SpawnStep, or the hand-written model, adds it.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PowerId? Source { get; init; }
+
+    /// <summary>Its monster's class (SimEnemy.Monster), as a power's code tests it; null for one not read.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Monster { get; init; }
+
+    /// <summary>
+    /// Each value of <see cref="Hp"/> before the multiplayer scaling, in the same order (what Creature.SetUniqueMonsterHpValue compares with the HP
+    /// of the enemies in the fight); null: the same as Hp (one player).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<int>? RawHp { get; init; }
+
+    /// <summary>
+    /// It's made as it's added (CreatureCmd.Add&lt;T&gt;, CreatureCmd.Add(monster, ...): CombatState.CreateCreature there), so its HP is none that the
+    /// creatures the same death added before it joined with (Infested's Wrigglers: 5, then 4, then 3, then 2 values left). False: made before any of
+    /// them joined (Surprise's Fat Gremlin, made first).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool UniqueFromEarlier { get; init; }
+
+    /// <summary>
+    /// Why the adapter couldn't read it (a creature its source's code adds that it can't set up or count: SimAdapter.SpawnGaps), when it couldn't: its
+    /// death makes the simulation unknown, never a death that adds nothing. Null: read.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Unread { get; init; }
 }
+
+/// <summary>
+/// A move a power's code sets an enemy to (MonsterModel.SetMoveImmediate: Waterfall Giant's AboutToBlowState), as the adapter reads it from that
+/// monster: its attack's hits on you (its intent's), and its steps as its code runs them (SimEnemy.Move's; null: its hits alone).
+/// </summary>
+public sealed record SimMove(IReadOnlyList<int> Hits, IReadOnlyList<SimAction>? Actions);
 
 public sealed class SimPlayer
 {
@@ -860,8 +915,8 @@ public sealed class SimState
     internal ImmutableArray<PendingEvent> Pending = ImmutableArray<PendingEvent>.Empty;
     /// <summary>Cards made into a player's draw pile inside a hit (Personal Hive's Dazed), put in once it's over (DrainPending).</summary>
     internal ImmutableArray<PendingMade> PendingIntoDraw = ImmutableArray<PendingMade>.Empty;
-    /// <summary>Enemies whose death adds creatures (SimEnemy.Spawns), added once the hit is over (DrainPending).</summary>
-    internal ImmutableArray<int> PendingSpawns = ImmutableArray<int>.Empty;
+    /// <summary>The creatures enemies' deaths add (SimEnemy.Spawns, each by its class and place: SpawnStep), added once the hit is over (DrainPending).</summary>
+    internal ImmutableArray<PendingSpawn> PendingSpawns = ImmutableArray<PendingSpawn>.Empty;
     /// <summary>Powers landed inside a hit or a death, their listeners told once it's over (SimEngine.ApplyInHit, DrainPending).</summary>
     internal ImmutableArray<PendingPower> PendingPowers = ImmutableArray<PendingPower>.Empty;
     /// <summary>Something raised inside a hit or a death waits to run (DrainPending).</summary>

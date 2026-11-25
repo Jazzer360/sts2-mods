@@ -63,8 +63,9 @@ Non-goals:
   A dead enemy's powers aren't listeners (the game removes them at its death: `CreatureCmd.Kill`, `Creature.RemoveAllPowersAfterDeath`),
   for every model: no model asks whether its owner lives. The hit that killed it and its own `AfterDeath` are told to them still
   (`SimEngine.ListenersWith`), as the game runs both before the removal; a hook that started before an enemy died skips its powers
-  from then on. A power that stays past its owner's death (`ShouldPowerBeRemovedAfterOwnerDeath`) answers no hook in the simulator
-  (`DeathListenerTests`, catalog).
+  from then on. A power that stays past its owner's death (`ShouldPowerBeRemovedAfterOwnerDeath`) answers no hook in the simulator while its
+  owner is dead (`DeathListenerTests`, catalog); an enemy its own death's code brings back (Steam Eruption's Waterfall Giant) keeps only those
+  powers, listening again (decision #276). A death that adds creatures adds them once its hit is over (`SimEngine.Spawn`), each HP a branch.
   `ListenerOrderTests` (catalog tests) compares it with the game's list for a fight built from the game's own objects.
   - Cards with a model: Void (its `AfterCardDrawn` loses energy after your powers' and relics' draw reactions: Automation,
     Iteration, Pagestorm) and Regret (its `BeforeSideTurnEnd` counts the hand before the Ethereal cards exhaust).

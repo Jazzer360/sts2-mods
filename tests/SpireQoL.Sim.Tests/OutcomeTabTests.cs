@@ -88,10 +88,10 @@ public class OutcomeTabTests
         Assert.True(rule.Harmful);
         Assert.True(rule.SetOff(new SimOutcome { KilledByPlayInAny = { 1 } }));
         Assert.False(rule.SetOff(new SimOutcome { KilledByPlayInAny = { 0 } }));
-        // Stock: only while stock is left.
+        // Stock (read from its code, decision #276): its death adds the next Axebot while its Amount > 0, and a Stock on the board has stock left (a
+        // counter power goes at 0, and Axebot applies none at 0): a warning wherever it's on an enemy.
         var stocked = new SimState { Enemies = { new SimEnemy { Id = 1, Hp = 5, Powers = PowerSet.Empty.With(PowerId.Stock, amount: 2) } } };
-        Assert.NotNull(Model("StockPower").OutcomeTab(stocked, Ended(), owner: 1));
-        Assert.Null(Model("StockPower").OutcomeTab(new SimState { Enemies = { new SimEnemy { Id = 1, Hp = 5 } } }, Ended(), owner: 1));
+        Assert.True(Model("StockPower").OutcomeTab(stocked, Ended(), owner: 1)!.SetOff(new SimOutcome { KilledByPlayInAny = { 1 } }));
     }
 
     [Fact]

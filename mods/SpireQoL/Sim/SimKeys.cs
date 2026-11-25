@@ -126,6 +126,12 @@ public sealed record PendingPower(PowerId Power, int Amount, int Applier, int Ta
 /// </summary>
 public sealed record PendingMade(int Player, string Card, int Creator, SimCard? Made);
 
+/// <summary>
+/// A creature an enemy's death adds, waiting for the hit to be over (SimEngine.Spawn): the enemy that died, the class whose AfterDeath adds it, and
+/// which of that class's creatures it is (SimEnemy.Spawns, in the order its code adds them).
+/// </summary>
+public sealed record PendingSpawn(int Dead, PowerId Source, int Ordinal);
+
 /// <summary>How many of each card event the current play has caused for its player (Unceasing Top: nothing drawn or created). Immutable.</summary>
 public sealed class CardEventCounts
 {

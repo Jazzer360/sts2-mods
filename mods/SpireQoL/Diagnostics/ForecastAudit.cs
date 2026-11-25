@@ -548,12 +548,15 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
 
             // What happened: HP lost and instances through its block during your end of turn; whether it
             // died before its move; its first hit on you.
-            // Up to the hit that kills it: an enemy that comes back (Waterfall Giant with Steam Eruption, at
-            // 999999999 HP) takes later hits that aren't part of the simulated fight.
+            // Up to the hit that kills it, unless its own death's code brought it back, as the simulator follows (the Waterfall Giant with Steam
+            // Eruption: alive at 999999999 HP, its max: decision #276), when its HP is that less the hits after. One that comes back later, in its
+            // own move (Test Subject's Respawn: not simulated), counts as dead before acting, as the simulator has it.
             var eot = endOfTurn.OfType<DamageReceivedEntry>().Where(damage => damage.Result.Receiver == creature).ToList();
             var killHit = eot.FindIndex(damage => damage.Result.WasTargetKilled);
-            if (killHit >= 0) eot = eot.Take(killHit + 1).ToList();
-            var hpAtTurnEnd = Math.Max(0, start.Hp - eot.Sum(damage => damage.Result.UnblockedDamage));
+            var revived = killHit >= 0 && creature.IsAlive && outcome.InSome(branch => branch.Enemy(id) is { Revived: true });
+            var hpAtTurnEnd = revived ? Math.Max(0, creature.MaxHp - eot.Skip(killHit + 1).Sum(damage => damage.Result.UnblockedDamage)) : 0;
+            if (killHit >= 0 && !revived) eot = eot.Take(killHit + 1).ToList();
+            if (!revived) hpAtTurnEnd = Math.Max(0, start.Hp - eot.Sum(damage => damage.Result.UnblockedDamage));
             var through = eot.Count(damage => damage.Result.UnblockedDamage > 0);
             var killAt = window.FindIndex(entry => entry is DamageReceivedEntry damage && damage.Result.Receiver == creature && damage.Result.WasTargetKilled);
             var moveAt = window.FindIndex(entry => entry is MonsterPerformedMoveEntry monsterPerformedMoveEntry && ReferenceEquals(monsterPerformedMoveEntry.Monster, creature.Monster));
@@ -561,7 +564,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             // the move is logged once it ends): its hit still lands, so it acted.
             var hitAfterKill = killAt >= 0 && window.Skip(killAt + 1).Take(moveAt > killAt ? moveAt - killAt - 1 : int.MaxValue)
                 .Any(entry => entry is DamageReceivedEntry damage && damage.Dealer == creature);
-            var diedBeforeActing = killAt >= 0 && (moveAt < 0 || killAt < moveAt) && !hitAfterKill;
+            var diedBeforeActing = killAt >= 0 && (moveAt < 0 || killAt < moveAt) && !hitAfterKill && !revived;
             string Range(int low, int high) => low == high ? $"{low}" : $"{low}-{high}";
             parts.Add($"{name} HP {start.Hp}→{hpAtTurnEnd} (pred {Range(outcome.HpAtTurnEndMin(id), outcome.HpAtTurnEndMax(id))}), through {through} (pred {Range(outcome.UnblockedAtTurnEndMin(id), outcome.UnblockedAtTurnEndMax(id))}), " +
                       $"died before acting {(diedBeforeActing ? "yes" : "no")} (pred {(outcome.DeadInAll(id) ? "always" : outcome.DeadInAny(id) ? "sometimes" : "never")})");
