@@ -1543,10 +1543,16 @@ public static class ProgramReader
             }
             if (name.StartsWith("ldloc", StringComparison.Ordinal))
             {
+                // A nullable with no value made in place and read at once (ldloca x; initobj Nullable<T>; ldloc x: a ?. chain's null way): null.
+                if (!name.StartsWith("ldloca", StringComparison.Ordinal) && at >= 2 && Ops[at - 1].OpCode == OpCodes.Initobj && Ops[at - 1].Member is { Name: "Nullable`1" }
+                    && Ops[at - 2].OpCode.Name!.StartsWith("ldloca", StringComparison.Ordinal) && Ops[at - 2].Slot == instruction.Slot && !_jumpsTo.ContainsKey(at - 1) && !_jumpsTo.ContainsKey(at))
+                    return (NullValue.Instance, at - 2);
                 if (instruction.Slot is { } slot && StoredOnce(slot) is { } store && ReadBack(store, depth + 1) is { Start: >= 0 } stored)
                     // A name (the card itself, kept in a local by the state machine) is the same wherever it's read; anything else is as it
-                    // was where it was stored.
-                    return (stored.Value is NamedValue or ConstantValue or ParameterValue ? stored.Value : new StoredValue("", stored.Value, Ops[store].Offset), at);
+                    // was where it was stored. One stored just before it's read (stloc x; ldloca x: a nullable's GetValueOrDefault) is a temporary
+                    // whose code starts where the stored value's does, so what's under it on the stack is read from there.
+                    return (stored.Value is NamedValue or ConstantValue or ParameterValue ? stored.Value : new StoredValue("", stored.Value, Ops[store].Offset),
+                        store == at - 1 ? stored.Start : at);
                 if (instruction.Slot is { } flagSlot && FlagOf(flagSlot) is { } flag) return (new ConditionValue(flag), at);
                 if (instruction.Slot is { } lastSlot && LastStored(lastSlot, at, depth) is { } last) return (last, at);
                 if (instruction.Slot is { } builtSlot && BuiltOnce(builtSlot, depth) is { } built) return (built, at);

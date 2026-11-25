@@ -2452,3 +2452,12 @@ public sealed class ShadowmeldPower : SimModel
     public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block) =>
         block.Target == owner ? (decimal)Math.Pow(2.0, SimEngine.PowerOn(state, owner, ThisPower)) : 1m;
 }
+
+// ---- round twenty-six: a value the reader can't follow, a nullable's GetValueOrDefault (Sim/Models/EndOfTurnModels.cs), deleted 2026-11-25
+
+/// <summary>InsatiableDominionPower.AfterSideTurnEndLate: its Damage (2 + its owner's turn number, unpowered, no dealer) to its owner.</summary>
+public sealed class InsatiableDominionPower : TurnEndDebuff
+{
+    public override IEnumerable<SimState> AfterSideTurnEndLate(SimState state, int owner) =>
+        state.TakesPart(owner) ? Hurt(state, owner, SimEngine.Var(state, owner, Name, "Damage", fallback: 0), Unpowered, selfDealt: false) : One(state);
+}

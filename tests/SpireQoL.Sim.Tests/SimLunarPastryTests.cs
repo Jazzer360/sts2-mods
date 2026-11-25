@@ -68,6 +68,7 @@ public class SimLunarPastryTests
         state.WithRelic(Who.You, RelicId.ParryingShield, "Damage", value: 6);
         state.You.Powers = state.You.Powers.With(PowerId.InsatiableDominion, amount: 1);
         state.Vars["-1:InsatiableDominionPower:Damage"] = 7;
+        state.You.Fields = state.You.Fields.With(PowerId.InsatiableDominion.Name + ".Var.Damage", 7); // its own value, its code storing it (decision #283)
         var outcome = SimEngine.Run(state);
         Assert.True(outcome.DeadInAll(enemyId: 1));
         Assert.Equal(2, outcome.TakenMax);

@@ -128,6 +128,20 @@ public class EndOfTurnModelTests
     }
 
     [Fact]
+    public void InsatiableDominionSetsItsDamageFromTheTurnNumberAsItLands()
+    {
+        // InsatiableDominionPower.AfterApplied: RefreshDamage, Damage = DisplayAmount = 2 + (Owner.Player?.PlayerCombatState?.TurnNumber).GetValueOrDefault()
+        // (on turn 3, 5); AfterSideTurnEndLate deals it to its owner (unpowered, no dealer) as their turn ends.
+        var state = new SimState { TurnNumber = 3, Enemies = { Attacker(id: 0, hp: 50, hit: 0) } };
+        state.You.HandCount = 0;
+        var play = new SimPlay { Name = "Applies", Card = new SimCardPlay(new SimCard("Applies", SimCardType.Skill), Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: false) };
+        play.Body.Add(new ApplyPowerAction(PowerId.InsatiableDominion, Amount: 1) { To = ApplyPowerAction.Where.You });
+        var outcome = SimEngine.Run(state, play);
+        Assert.Equal(5, outcome.TakenMax);
+        Assert.Equal(5, Assert.Single(outcome.Branches).You.Fields[PowerId.InsatiableDominion.Name + ".Var.Damage"]);
+    }
+
+    [Fact]
     public void ConstrictAndMagicBombGoWithTheirApplier()
     {
         // ConstrictPower.AfterDeath and MagicBombPower.AfterSideTurnEnd: once the enemy that applied them is dead (here Screaming

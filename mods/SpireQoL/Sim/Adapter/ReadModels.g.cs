@@ -108,6 +108,7 @@ public static partial class ReadModels
         PowerId.Infested.Name,
         RelicId.InfusedCore.Name,
         nameof(MegaCrit.Sts2.Core.Models.Enchantments.Inky),
+        PowerId.InsatiableDominion.Name,
         PowerId.Intangible.Name,
         PowerId.Intercept.Name,
         RelicId.IntimidatingHelmet.Name,

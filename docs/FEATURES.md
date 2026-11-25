@@ -296,7 +296,7 @@ Beside the last number (the heart line when there is one): a skull when this mig
 - **Unblockable HP loss** (Regret, Bad Luck, Beckon: anything the simulator lands as unblockable on you) is its own line under the result (the heart), not part of the incoming or the result: block does nothing to it. It's what you lose to it after the HP-loss effects (Tungsten Rod...), the worst outcome's.
 
 **Sources:**
-- **Blockable:** enemy attack intents (`AttackIntent.GetSingleDamage` × hits, the same numbers the game shows); Burn, Decay, Infection, Toxic, Wither in hand; the Constrict, Magic Bomb, Disintegration and Insatiable Dominion debuffs (Constrict and Magic Bomb only while the enemy that applied them lives: each goes as it dies, both read from their code). Each goes through the game's damage math on you, so Intangible makes it 1.
+- **Blockable:** enemy attack intents (`AttackIntent.GetSingleDamage` × hits, the same numbers the game shows); Burn, Decay, Infection, Toxic, Wither in hand; the Constrict, Magic Bomb, Disintegration and Insatiable Dominion debuffs (Constrict and Magic Bomb only while the enemy that applied them lives: each goes as it dies, both read from their code; Insatiable Dominion its damage of 2 plus the turn number, read from its code: decision #283). Each goes through the game's damage math on you, so Intangible makes it 1.
 - **Unblockable:** Regret (HP loss = cards in hand), Bad Luck, Beckon; Demise on an enemy (Powdered Demise).
 - **End-of-turn block** (the "block" line = current block + these):
   - Plating

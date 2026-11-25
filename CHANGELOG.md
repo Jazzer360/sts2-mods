@@ -34,6 +34,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Hardened Shell is worked out from its own code (at most its amount of HP lost each side's turn, less what it already took this turn, as it counts it). What's shown is unchanged.
 - Magic Bomb is worked out from its own code (its damage as your turn ends while the enemy that applied it lives; it goes as that enemy dies). What's shown is unchanged.
 - Shadowmeld is worked out from its own code (your block multiplied by 2 to the power of its amount, until your turn ends). What's shown is unchanged.
+- Insatiable Dominion is worked out from its own code (its damage to you as your turn ends, 2 plus the turn number). What's shown is unchanged.
 - An enemy's Infested, Stock and Steam Eruption are worked out from their own code (the creatures each death brings in, the Waterfall Giant's return). Their tabs are unchanged but for the fix below.
 - An enemy's Shriek, Flutter and Ravenous are worked out from their own code (the stun each gives its owner, Flutter's halved damage, Ravenous' Strength). Their tabs are unchanged.
 - Burning Sticks is worked out from its own code (the copy of the first Skill you exhaust each combat). Its tab is unchanged.

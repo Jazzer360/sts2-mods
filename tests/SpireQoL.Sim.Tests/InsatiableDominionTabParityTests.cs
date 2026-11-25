@@ -78,9 +78,12 @@ public class InsatiableDominionTabParityTests
         foreach (var player in state.PlayerIds.Where((_, at) => on == 2 || at == on).ToList())
         {
             var mutable = state.MutablePlayer(player);
-            // Its Damage as the game sets it (2 plus the turn number: InsatiableDominionPower.RefreshDamage), seeded as the adapter reads it.
+            // Its Damage as the game sets it (2 plus the turn number: InsatiableDominionPower.RefreshDamage), seeded as the adapter reads it: the
+            // power's value (SimState.Vars: the hand-written model's) and, its code storing it, the read model's own value (Var.Damage).
             mutable.Powers = mutable.Powers.With(PowerId.InsatiableDominion, amount: 1);
-            state.Vars[$"{player}:{PowerId.InsatiableDominion.Name}:Damage"] = 2 + random.Next(1, 8);
+            var damage = 2 + random.Next(1, 8);
+            state.Vars[$"{player}:{PowerId.InsatiableDominion.Name}:Damage"] = damage;
+            mutable.Fields = mutable.Fields.With(PowerId.InsatiableDominion.Name + ".Var.Damage", damage);
             if (random.Next(3) == 0) mutable.Powers = mutable.Powers.With(PowerId.Plating, random.Next(1, 6));
             if (random.Next(4) == 0) mutable.Powers = mutable.Powers.With(PowerId.Buffer, amount: 1);
         }

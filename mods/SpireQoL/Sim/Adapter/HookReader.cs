@@ -2545,6 +2545,10 @@ public static class HookReader
             if (test is StoredValue stored) return CreatureTest(stored.Value);
             if (CreatureOf(test) is { } there)
                 return test is QueryValue { Name: "Player" } ? CreatureFact(HookFact.CreatureIsPlayer, there) : CreatureFact(HookFact.CreatureThere, there);
+            // A player's combat state is there (x.Player?.PlayerCombatState: Insatiable Dominion's turn number): every player has one in a fight
+            // (Player.PlayerCombatState, made as the fight starts), so it's the creature being a player.
+            if (test is QueryValue { Name: "PlayerCombatState", Of: QueryValue { Name: "Player" } player } && CreatureOf(player) is { } fighter)
+                return CreatureFact(HookFact.CreatureIsPlayer, fighter);
             if (test is not QueryValue { Of: { } of } query || CreatureOf(of) is not { } creature) return null;
             switch (query.Name)
             {
@@ -2778,7 +2782,7 @@ public static class HookReader
                 return compare.Op == Comparison.Equal ? debuff : Not(debuff);
             }
             // The side whose turn is ending or starting: the simulator ends the players' side's turn and starts the enemies'.
-            if (compare.Left is NamedValue { Name: "side" } && compare.Right is ConstantValue side)
+            if (compare.Left is NamedValue { Name: "side" } or ParameterValue { Name: "side" } && compare.Right is ConstantValue side)
             {
                 var isSide = StartsATurn(_hook) ? EnumName(_type.Assembly, "CombatSide", side.Value) == "Enemy" : EnumName(_type.Assembly, "CombatSide", side.Value) == "Player";
                 return new HookConstant((compare.Op == Comparison.Equal) == isSide ? 1m : 0m);
@@ -3049,6 +3053,8 @@ public static class HookReader
             // A power's amount on a creature the code names (X.GetPower<T>().Amount: a called power's base.Amount, Cruelty's).
             if (value is QueryValue { Name: "Amount", Of: { } amountOf } && Getter(amountOf) is { Relic: false } amountGetter)
                 return CreatureFact(HookFact.CreaturePowerAmount, amountGetter.Holder) with { Of = amountGetter.Model };
+            // A nullable's value or its default ((x?.y?.Z).GetValueOrDefault(): Insatiable Dominion's turn number): each way's value, 0 where it's null.
+            if (value is QueryValue { Name: "GetValueOrDefault", Arguments.Count: 0, Of: { } nullable }) return Value(OrDefault(Unstored(nullable)));
             // A value of several ways (a local set on each branch: Vulnerable's num after Paper Phrog, then Cruelty): the first way that holds.
             if (value is WaysValue ways)
                 return new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), Value(way.Value))).ToList());
@@ -3247,6 +3253,18 @@ public static class HookReader
             }
             return varType.EndsWith("Var", StringComparison.Ordinal) ? varType[..^3] : varType;
         }
+
+        /// <summary>
+        /// A nullable value as its GetValueOrDefault gives it: a null is 0, a value made a nullable (new Nullable&lt;T&gt;(x)) is x, each way of
+        /// several so; anything else is a gap.
+        /// </summary>
+        private static ProgramValue OrDefault(ProgramValue nullable) => nullable switch
+        {
+            NullValue => new ConstantValue(0),
+            QueryValue { Type: "Nullable`1", Name: ".ctor", Arguments: [var made] } => made,
+            WaysValue ways => new WaysValue(ways.Ways.Select(way => (way.When, OrDefault(Unstored(way.Value)))).ToList()),
+            _ => throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: the nullable {nullable}"),
+        };
 
         /// <summary>A Modify hook's returns: each way's test and value, the first that holds.</summary>
         private HookValue Ways(WaysValue ways)

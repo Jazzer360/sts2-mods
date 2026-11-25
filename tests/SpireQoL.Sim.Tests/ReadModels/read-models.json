@@ -11975,6 +11975,166 @@
     "HelpsOwner": false
   },
   {
+    "Name": "InsatiableDominionPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterApplied",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Var.Damage",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookConstant",
+                "Value": 2
+              },
+              "Right": {
+                "$kind": "HookWays",
+                "Ways": [
+                  {
+                    "When": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "InsatiableDominionPower.get_DisplayAmount:000D",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureIsPlayer",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    },
+                    "Value": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  },
+                  {
+                    "When": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "InsatiableDominionPower.get_DisplayAmount:000D",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureIsPlayer",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "InsatiableDominionPower.get_DisplayAmount:0021",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureIsPlayer",
+                            "Creature": {
+                              "Who": "Owner",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Value": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  },
+                  {
+                    "When": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "InsatiableDominionPower.get_DisplayAmount:000D",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureIsPlayer",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "InsatiableDominionPower.get_DisplayAmount:0021",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureIsPlayer",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    },
+                    "Value": {
+                      "$kind": "HookFactValue",
+                      "Fact": "TurnNumber"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEndLate",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEndLate\u003Ed__12.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "DamageStep",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookField",
+              "Field": "Var.Damage",
+              "Canonical": 2
+            },
+            "Props": {
+              "$kind": "HookVar",
+              "Key": "Damage.Props",
+              "Canonical": 4
+            },
+            "NoDealer": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEndLate\u003Ed__12.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "IntangiblePower",
     "Kind": "Power",
     "Hooks": [

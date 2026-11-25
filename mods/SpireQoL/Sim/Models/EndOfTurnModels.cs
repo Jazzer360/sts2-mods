@@ -44,11 +44,4 @@ public abstract class TurnEndDebuff : EndOfTurnModel
         amount <= 0 ? One(state) : SimEngine.ProcDamagePlayer(state, owner, Name, owner, amount, props, noDealer: !selfDealt, label: SimEngine.Title(state, owner, Name));
 }
 
-// Magic Bomb is read from its code (ReadModel, decision #279).
-
-/// <summary>InsatiableDominionPower.AfterSideTurnEndLate: its Damage (2 + its owner's turn number, unpowered, no dealer) to its owner.</summary>
-public sealed class InsatiableDominionPower : TurnEndDebuff
-{
-    public override IEnumerable<SimState> AfterSideTurnEndLate(SimState state, int owner) =>
-        state.TakesPart(owner) ? Hurt(state, owner, SimEngine.Var(state, owner, Name, "Damage", fallback: 0), Unpowered, selfDealt: false) : One(state);
-}
+// Magic Bomb is read from its code (ReadModel, decision #279); Insatiable Dominion too (decision #283).
