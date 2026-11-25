@@ -105,7 +105,7 @@ power NemesisPower: AfterSideTurnEnd: gap: PowerCmd.Remove of another power
 power NoBlockPower: AfterSideTurnEnd: not run: its commands wait on the enemies' side's turn ending, which no simulation reaches | ModifyBlockMultiplicative: read
 power NoDrawPower: AfterSideTurnEnd: read | ShouldDraw: gap: the simulator runs no read model's ShouldDraw
 power NoEnergyGainPower: AfterModifyingEnergyGain: gap: the simulator runs no read model's AfterModifyingEnergyGain | AfterSideTurnEnd: read | ModifyEnergyGain: gap: the simulator runs no read model's ModifyEnergyGain
-power NostalgiaPower: AfterModifyingCardPlayResultLocation: read | ModifyCardPlayResultLocation: gap: the fight's log (more than one way: ((e.HappenedThisTurn(this.CombatState) and (e.CardPlay.Card.Type sub 1) <= 1) or (e.HappenedThisTurn(this.CombatState) and not e.HappenedThisTurn(this.CombatState)))): Count(Instance.History.CardPlaysStarted, e => ((e.HappenedThisTurn(this.CombatState) and (e.CardPlay.Card.Type sub 1) <= 1) or (e.HappenedThisTurn(this.CombatState) and not e.HappenedThisTurn(this.CombatState))) and e.CardPlay.Player == this.Owner.Player)
+power NostalgiaPower: AfterModifyingCardPlayResultLocation: read | ModifyCardPlayResultLocation: read
 power OblivionPower: AfterCardPlayed: read | AfterSideTurnEnd: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power OneTwoPunchPower: AfterModifyingCardPlayCount: read | AfterSideTurnEnd: read | ModifyCardPlayCount: read
 power OrbitPower: AfterEnergySpent: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them

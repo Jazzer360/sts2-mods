@@ -20243,6 +20243,675 @@
     "HelpsOwner": false
   },
   {
+    "Name": "NostalgiaPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterModifyingCardPlayResultLocation",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "NostalgiaPower.AfterModifyingCardPlayResultLocation:0011",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyCardPlayResultLocation",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "NostalgiaPower.ModifyCardPlayResultLocation:0011",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "ResultLocationSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "NostalgiaPower.ModifyCardPlayResultLocation:002A",
+                  "Test": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "NostalgiaPower.ModifyCardPlayResultLocation:0021",
+                      "Test": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookMath",
+                          "Operation": "Or",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "ResultLocationSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "NostalgiaPower.ModifyCardPlayResultLocation:002A",
+                  "Test": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "NostalgiaPower.ModifyCardPlayResultLocation:0021",
+                      "Test": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookMath",
+                          "Operation": "Or",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "NostalgiaPower.ModifyCardPlayResultLocation:0037",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookWays",
+                        "Ways": [
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 3
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 3
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 4
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 4
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        ]
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 3
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "ResultLocationSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "NostalgiaPower.ModifyCardPlayResultLocation:002A",
+                    "Test": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "NostalgiaPower.ModifyCardPlayResultLocation:0021",
+                        "Test": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookMath",
+                            "Operation": "Or",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "NostalgiaPower.ModifyCardPlayResultLocation:0037",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookWays",
+                        "Ways": [
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 3
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 3
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 4
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 4
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        ]
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 3
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "NostalgiaPower.ModifyCardPlayResultLocation:0064",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Less",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "Add",
+                        "Left": {
+                          "$kind": "HookHistory",
+                          "Query": {
+                            "Kind": "CardPlayStarted",
+                            "Scope": "ThisTurn",
+                            "Whose": "Owner",
+                            "Details": "None",
+                            "CardType": "Attack"
+                          },
+                          "Any": false
+                        },
+                        "Right": {
+                          "$kind": "HookHistory",
+                          "Query": {
+                            "Kind": "CardPlayStarted",
+                            "Scope": "ThisTurn",
+                            "Whose": "Owner",
+                            "Details": "None",
+                            "CardType": "Skill"
+                          },
+                          "Any": false
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "Amount"
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "ResultLocationSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "NostalgiaPower.ModifyCardPlayResultLocation:002A",
+                    "Test": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "NostalgiaPower.ModifyCardPlayResultLocation:0021",
+                        "Test": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookMath",
+                            "Operation": "Or",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "NostalgiaPower.ModifyCardPlayResultLocation:0037",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookWays",
+                        "Ways": [
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 3
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 3
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 4
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "ResultLocationSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 4
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        ]
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 3
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "NostalgiaPower.ModifyCardPlayResultLocation:0064",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "Add",
+                      "Left": {
+                        "$kind": "HookHistory",
+                        "Query": {
+                          "Kind": "CardPlayStarted",
+                          "Scope": "ThisTurn",
+                          "Whose": "Owner",
+                          "Details": "None",
+                          "CardType": "Attack"
+                        },
+                        "Any": false
+                      },
+                      "Right": {
+                        "$kind": "HookHistory",
+                        "Query": {
+                          "Kind": "CardPlayStarted",
+                          "Scope": "ThisTurn",
+                          "Whose": "Owner",
+                          "Details": "None",
+                          "CardType": "Skill"
+                        },
+                        "Any": false
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookFactValue",
+                      "Fact": "Amount"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 2
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false,
+    "TermActs": true
+  },
+  {
     "Name": "NoxiousFumesPower",
     "Kind": "Power",
     "Hooks": [

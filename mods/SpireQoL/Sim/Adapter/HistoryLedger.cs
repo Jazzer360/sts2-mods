@@ -24,8 +24,8 @@ internal static class HistoryLedger
         try
         {
             return ProgramReader.HistoryQueries(owner, RuntimeCode.Read)
-                .Select(found => HistoryQueryReader.Read((QueryValue)found.Query).Query)
-                .OfType<HistoryQuery>().Where(query => !query.IsTurnPlayCount).Distinct().ToList();
+                .SelectMany(found => HistoryQueryReader.Read((QueryValue)found.Query).Counted)
+                .Where(query => !query.IsTurnPlayCount).Distinct().ToList();
         }
         catch
         {

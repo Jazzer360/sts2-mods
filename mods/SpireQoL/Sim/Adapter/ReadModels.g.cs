@@ -145,6 +145,7 @@ public static partial class ReadModels
         RelicId.MysticLighter.Name,
         PowerId.Neurosurge.Name,
         PowerId.NoBlock.Name,
+        PowerId.Nostalgia.Name,
         PowerId.NoxiousFumes.Name,
         RelicId.Nunchaku.Name,
         PowerId.Oblivion.Name,

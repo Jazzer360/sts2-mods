@@ -42,7 +42,7 @@ public class HistoryQuestionTests
             foreach (var (method, query) in questions)
             {
                 var reading = HistoryQueryReader.Read((QueryValue)query, code.EnumName);
-                if (reading.Query != null) translated++;
+                if (reading.Query != null || reading.Sum != null) translated++;
                 else if (reading.Gap is { } gap && HistoryQueryReader.GapKinds.ContainsKey(gap)) gapsUsed.Add(gap);
                 else unknown.Add($"{type.Name} {method}: {reading.Gap} ({reading.Why})");
             }
@@ -104,7 +104,7 @@ public class HistoryQuestionTests
         foreach (var name in SimModels.Names)
         {
             if (SimModels.Get(name) is not { History.Count: > 0 } model || !models.TryGetValue(name, out var type)) continue;
-            var asked = ProgramReader.HistoryQueries(type, code.Read).Select(found => HistoryQueryReader.Read((QueryValue)found.Query, code.EnumName).Query).ToList();
+            var asked = ProgramReader.HistoryQueries(type, code.Read).SelectMany(found => HistoryQueryReader.Read((QueryValue)found.Query, code.EnumName).Counted).ToList();
             foreach (var query in model.History) Assert.True(asked.Contains(query), $"{name} asks {query}; its code asks {string.Join(", ", asked)}");
             checkedModels++;
         }

@@ -121,23 +121,7 @@ public sealed class CorruptionPower : SimModel
 
 // Rebound is read from its code (ReadModel: ModifyCardPlayResultLocation and AfterModifyingCardPlayResultLocation, decision #286).
 
-/// <summary>
-/// NostalgiaPower.ModifyCardPlayResultLocation, decided once before a card play's plays: its owner's Attack or Skill bound for their
-/// discard pile (not exhausting, not sent elsewhere) goes on top of their draw pile while fewer than its amount of their Attack and Skill
-/// plays started this turn; AfterModifyingCardPlayResultLocation flashes. Where the card lands isn't followed further (its tag).
-/// </summary>
-public sealed class NostalgiaPower : ProcModel
-{
-    public override SimResultLocation ModifyCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location)
-    {
-        if (!Mine(play, owner) || play.Card.Type is not (SimCardType.Attack or SimCardType.Skill) || play.Card.ExhaustsSelf || location != SimResultLocation.Default) return location;
-        var turn = SimEngine.TurnOf(state, owner);
-        var started = turn[SimKeys.Plays(PlayStage.Started, SimCardType.Attack)] + turn[SimKeys.Plays(PlayStage.Started, SimCardType.Skill)];
-        return started < Amount(state, owner) ? SimResultLocation.DrawTop : location;
-    }
-
-    public override void AfterModifyingCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location) => Fire(state, owner);
-}
+// Nostalgia is read from its code (ReadModel, decision #290): the fight's log asked for its owner's Attacks and Skills started this turn, a count each.
 
 /// <summary>ImitationLearningPower (a teammate's, Data = the player it copies + 100): a Power card that player plays is copied and played for its owner.</summary>
 public sealed class ImitationLearningPower : ProcModel

@@ -898,9 +898,13 @@ public sealed class ReadModel : SimModel
             ? (SimResultLocation)(int)returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ModifyCardPlayResultLocation, Play = play, Location = location })
             : location;
 
-    /// <summary>Hook.AfterModifyingCardPlayResultLocation, told to the listeners that changed it, before the plays: deterministic, on the state given.</summary>
+    /// <summary>
+    /// Hook.AfterModifyingCardPlayResultLocation, told to the listeners that changed it, before the plays: deterministic, on the state given. Its
+    /// return changing where the card goes is what a model whose commands give it no tab does (ModelSpec.TermActs, decision #290: Nostalgia).
+    /// </summary>
     public override void AfterModifyingCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location)
     {
+        if (Spec.TermActs) state.LogFired(Name, amount: 0, owner);
         foreach (var branch in Run(HookName.AfterModifyingCardPlayResultLocation, new HookArgs { State = state, Owner = owner, Play = play, Location = location }))
             if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingCardPlayResultLocation branched");
     }

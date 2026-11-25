@@ -6,8 +6,17 @@ namespace SpireQoL.Procs.Programs;
 /// <param name="Code">The question as the code asks it (its last Enumerable call: Count, Any...).</param>
 public sealed record HistoryReading(QueryValue Code)
 {
-    /// <summary>The query the history ledger counts (decision #191); null for a gap.</summary>
+    /// <summary>The query the history ledger counts (decision #191); null for a gap, or for a question that's a sum of several (<see cref="Sum"/>).</summary>
     public HistoryQuery? Query { get; init; }
+
+    /// <summary>
+    /// The queries whose counts sum to its answer, where its code tests a card's type among several (the compiler's (uint)(type - 1) &lt;= 1u:
+    /// an Attack or a Skill, a query each: Nostalgia's); null for any other.
+    /// </summary>
+    public IReadOnlyList<HistoryQuery>? Sum { get; init; }
+
+    /// <summary>Every query the ledger counts for it: its one, or each part of its sum.</summary>
+    public IEnumerable<HistoryQuery> Counted => Query != null ? new[] { Query } : Sum ?? (IEnumerable<HistoryQuery>)Array.Empty<HistoryQuery>();
 
     /// <summary>It asks whether there's any (Any): its count is above 0. Otherwise it's the count (Count).</summary>
     public bool AsksAny { get; init; }
@@ -39,7 +48,6 @@ public static class HistoryQueryReader
         ["the target's"] = "the damage the card's target took (e.Receiver == target: Gang Up, Beat Into Shape): a calculated value on the target, worked out by the adapter for each target before the play",
         ["an affliction"] = "cards afflicted (CardAfflictedEntry: Chains of Binding): the simulator doesn't afflict cards; the power's hook is reviewed in the CoverageLedger",
         ["not a count"] = "a value that isn't a count of entries (Sum of an amount, LastOrDefault: Helix Drill's energy spent, Radiate's stars, History Course's card): read before the play",
-        ["more than one way"] = "a test with more than one way through it (Nostalgia's Attack or Skill): its model reads its own counters (SimKeys.Plays by type)",
     };
 
     /// <summary>The kinds of entry, by their class name.</summary>
@@ -64,13 +72,22 @@ public static class HistoryQueryReader
         if (code.Arguments.Count > 1 && lambda == null) return Gap("unknown", "a predicate that isn't a lambda");
         var query = new HistoryQuery(kind, HistoryScope.ThisFight, HistoryWhose.Anyone);
         if (kind == HistoryKind.CardAfflicted) return Gap("an affliction", code.ToString());
+        List<SimCardType>? types = null;
         if (lambda != null)
         {
-            if (lambda.Body.Terms.Count != 1) return Gap("more than one way", lambda.ToString());
+            if (lambda.Body.Terms.Count != 1) return Gap("more than one way", lambda.ToString()); // no question asks this today (GapKinds: the scan fails a new one)
             // Every test read; a reviewed kind of gap is named before an unknown test (Emotion Chip: the last turn, whatever else it tests).
             string? unknown = null;
-            foreach (var literal in lambda.Body.Terms[0])
+            foreach (var literal in Flattened(lambda.Body.Terms[0]))
             {
+                // The card's type among several (the compiler's range test): a query of each, summed.
+                if (TypeRange(literal, lambda.Parameter, enumName) is var (range, rangeGap))
+                {
+                    if (rangeGap != null) unknown ??= rangeGap;
+                    else if (types != null || query.CardType != SimCardType.None) unknown ??= "a card's type tested twice: " + literal;
+                    else types = range;
+                    continue;
+                }
                 var (next, gap, why) = Test(query, literal, lambda.Parameter, enumName);
                 if (gap == "unknown") unknown ??= why;
                 else if (gap != null) return Gap(gap, why);
@@ -78,7 +95,57 @@ public static class HistoryQueryReader
             }
             if (unknown != null) return Gap("unknown", unknown);
         }
+        if (types != null)
+        {
+            if (query.CardType != SimCardType.None) return Gap("unknown", "a card's type tested twice");
+            return types.Count == 1 ? new HistoryReading(code) { Query = query with { CardType = types[0] }, AsksAny = code.Name == "Any" }
+                : new HistoryReading(code) { Sum = types.Select(type => query with { CardType = type }).ToList(), AsksAny = code.Name == "Any" };
+        }
         return new HistoryReading(code) { Query = query, AsksAny = code.Name == "Any" };
+    }
+
+    /// <summary>
+    /// A term's tests with each true-or-false the code worked out on several ways (a flag set on an if: Nostalgia's `flag2 = flag; if (flag2) flag2 =
+    /// (uint)(type - 1) &lt;= 1u`) that holds on one way only, once the ways that can't hold are left out (a test and its own negation, by its branch or as it reads: `flag and
+    /// not flag`), read as that way's tests. Any other stays as it is (a gap of more than one way).
+    /// </summary>
+    private static IEnumerable<ConditionLiteral> Flattened(IReadOnlyList<ConditionLiteral> term)
+    {
+        foreach (var literal in term)
+        {
+            if (literal is { Holds: true, Test: ConditionValue flag }
+                && flag.Condition.Terms.Where(way => !way.Any(test => way.Any(other => other.Holds != test.Holds && (other.At == test.At || other.Test.ToString() == test.Test.ToString())))).ToList() is [var only])
+            {
+                // Each test as the flag kept it (a local it was stored in: `bool flag = e.HappenedThisTurn(...)`), read as the test itself.
+                foreach (var inner in Flattened(only)) yield return inner with { Test = Unstored(inner.Test) };
+            }
+            else yield return literal;
+        }
+    }
+
+    /// <summary>A value with the locals it was kept in left out (a flag stored, then stored again as it's tested).</summary>
+    private static ProgramValue Unstored(ProgramValue value) => value is StoredValue stored ? Unstored(stored.Value) : value;
+
+    /// <summary>
+    /// The compiler's range test of the entry's card's type ((uint)(e.CardPlay.Card.Type - 1) &lt;= 1u: an Attack or a Skill): the types it holds for,
+    /// each a game value from the one subtracted to it plus the bound, by name on the code's branch; a gap where one isn't a type the simulator
+    /// knows. Null for any other test.
+    /// </summary>
+    private static (List<SimCardType> Types, string? Gap)? TypeRange(ConditionLiteral literal, string entry, Func<string, long, string?> enumName)
+    {
+        if (literal.Test is not CompareValue { Unsigned: true, Op: var comparison, Left: ArithmeticValue { Op: "sub", Left: var typeValue, Right: ConstantValue low }, Right: ConstantValue span }
+            || Unstored(typeValue) is not QueryValue typeOf
+            || PathOf(typeOf, entry) is not (["CardPlay", "Card", "Type"] or ["Card", "Type"]))
+            return null;
+        // Held, <= is the range; not held, > is (the other way round, the types outside it: a gap).
+        if ((comparison == Comparison.LessOrEqual) != literal.Holds || comparison is not (Comparison.LessOrEqual or Comparison.Greater) || span.Value is < 0 or > 7) return (new List<SimCardType>(), "a card's type outside a range: " + literal);
+        var types = new List<SimCardType>();
+        for (var value = low.Value; value <= low.Value + span.Value; value++)
+        {
+            if (enumName("CardType", value) is not { } name || !Enum.TryParse<SimCardType>(name, out var type)) return (types, "a card type " + value);
+            types.Add(type);
+        }
+        return (types, null);
     }
 
     /// <summary>The entries the source names: CardPlaysStarted, CardPlaysFinished, or Entries.OfType&lt;XEntry&gt;.</summary>
@@ -97,7 +164,8 @@ public static class HistoryQueryReader
         (HistoryQuery, string?, string) Unknown() => (query, "unknown", literal.ToString());
         (HistoryQuery, string?, string) With(HistoryQuery changed) => (changed, null, "");
         var test = literal.Test;
-        // A true-or-false the code worked out on several ways (Nostalgia: an Attack or a Skill): more than one way.
+        // A true-or-false the code worked out on several ways that holds on more than one (Flattened reads one that holds on one way: Nostalgia's):
+        // more than one way, a kind no question asks today (GapKinds: the scan fails a new one, to review).
         if (test is ConditionValue) return (query, "more than one way", literal.ToString());
         // A true-or-false compared with 0 (e.CardPlay.IsAutoPlay == 0): the test, the other way.
         if (test is CompareValue { Op: Comparison.Equal or Comparison.NotEqual, Right: ConstantValue { Value: 0 }, Left: QueryValue { ValueType: "Boolean" } flag })

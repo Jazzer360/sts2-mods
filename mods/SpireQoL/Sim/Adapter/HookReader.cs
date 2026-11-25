@@ -226,7 +226,10 @@ public static class HookReader
         && programs.All(program => program.Hook != HookName.AfterModifyingDamageAmount)
         // A Modify block hook's term (Pael's Legion's doubled block): the game tells it changed a block (Hook.AfterModifyingBlockAmount), whatever its code
         // does there (decision #269).
-        || programs.Any(program => program.Returns != null && program.Hook is HookName.ModifyBlockAdditive or HookName.ModifyBlockMultiplicative);
+        || programs.Any(program => program.Returns != null && program.Hook is HookName.ModifyBlockAdditive or HookName.ModifyBlockMultiplicative)
+        // Where a played card goes (Nostalgia's, on top of the draw pile): the game tells it changed the location (Hook.AfterModifyingCardPlayResultLocation),
+        // whatever its code does there (decision #290).
+        || programs.Any(program => program.Returns != null && program.Hook is HookName.ModifyCardPlayResultLocation);
 
     /// <summary>
     /// A model of a kind the engine runs no read program for (an enchantment, an affliction, a potion, an orb: decision #195's last kinds): each of
@@ -3193,6 +3196,10 @@ public static class HookReader
         private HookValue History(QueryValue code)
         {
             var reading = HistoryQueryReader.Read(code, (enumType, number) => EnumName(_type.Assembly, enumType, number));
+            // A sum of a count per card type (an Attack or a Skill: Nostalgia's): the counts added, or any of them there.
+            if (reading.Sum is { Count: > 0 } parts)
+                return parts.Select(part => (HookValue)new HookHistory(part) { Any = reading.AsksAny })
+                    .Aggregate((sum, part) => new HookMath(reading.AsksAny ? HookOperation.Or : HookOperation.Add, sum, part));
             if (reading.Query is not { } query) throw new Gap(ReaderCapability.FightLog, $"gap: the fight's log ({reading.Gap}: {reading.Why}): {code}");
             return new HookHistory(query) { Any = reading.AsksAny };
         }
