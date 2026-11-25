@@ -28,6 +28,11 @@ public enum SimTest
     /// as it stood then.
     /// </summary>
     Known,
+    /// <summary>
+    /// The play's target's death sets off Fatal: every power on it answers PowerModel.ShouldOwnerDeathTriggerFatal true (The Hunt's reward),
+    /// its powers' answer as the adapter read it (SimEnemy.DeathSetsOffFatal); unknown where one's couldn't be read.
+    /// </summary>
+    TargetDeathSetsOffFatal,
 }
 
 /// <summary>How a counted condition compares its count with its number.</summary>
@@ -103,6 +108,12 @@ public sealed record OstyMissingCondition() : SimCondition(SimTest.OstyMissing);
 
 /// <summary>The play's target intends to attack (MonsterModel.IntendsToAttack: Go for the Eyes), not stunned since.</summary>
 public sealed record TargetIntendsToAttackCondition() : SimCondition(SimTest.TargetIntendsToAttack);
+
+/// <summary>
+/// The play's target's death sets off Fatal (cardPlay.Target.Powers.All(p => p.ShouldOwnerDeathTriggerFatal()): The Hunt's): SimEnemy.DeathSetsOffFatal;
+/// unknown where its powers' code doesn't say (Reattach's), false for a target that isn't an enemy.
+/// </summary>
+public sealed record TargetDeathSetsOffFatalCondition() : SimCondition(SimTest.TargetDeathSetsOffFatal);
 
 /// <summary>The play's last shot had an arrow to shoot at a living target (ArrowCmd.ShootArrowAtTarget's result: Hobbling Shot's debuffs).</summary>
 public sealed record ShotHadArrowCondition() : SimCondition(SimTest.ShotHadArrow);

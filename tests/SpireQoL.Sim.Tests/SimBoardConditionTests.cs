@@ -83,4 +83,35 @@ public class SimBoardConditionTests
         SimEngine.RunScriptTo(buffing, SimScript.Of(eyes), out var notAttacking, out _);
         Assert.Equal(0, Assert.Single(notAttacking).Enemies[0].Powers[PowerId.Weak]);
     }
+
+    [Fact]
+    public void TheHuntsRewardFollowsWhetherItsKillSetsOffFatal()
+    {
+        // TheHunt.OnPlay: shouldTriggerFatal = cardPlay.Target.Powers.All(p => p.ShouldOwnerDeathTriggerFatal()), stored before its attack, then the
+        // reward (TheHuntPower) when that holds and the attack killed. The target's answer is its powers' (SimEnemy.DeathSetsOffFatal: a Minion's
+        // death sets off none), asked before the attack; a power whose answer its code doesn't say (Reattach's) leaves it unknown.
+        var fatal = new TargetDeathSetsOffFatalCondition { At = "TheHunt:1" };
+        var reward = new WhenAction(new AllCondition(new SimCondition[] { fatal, new AttackKilledCondition() }),
+            new SimAction[] { new ApplyPowerAction(PowerId.TheHunt, Amount: 1) { To = ApplyPowerAction.Where.You } });
+        SimState Hunted(int hp, bool? setsOffFatal)
+        {
+            var state = Board(enemyHp: hp);
+            state.Enemies[0].DeathSetsOffFatal = setsOffFatal;
+            state.Enemies.Add(new SimEnemy { Id = 1, Name = "E1", Hp = 40 }); // the fight goes on past the kill
+            return state;
+        }
+        SimState After(SimState state)
+        {
+            SimEngine.RunScriptTo(state, SimScript.Of(Card("TheHunt", plays: 1, new AskAction(fatal), Hit(damage: 10), reward)), out var after, out _);
+            return Assert.Single(after);
+        }
+        var killed = After(Hunted(hp: 8, setsOffFatal: true));
+        Assert.Equal(1, killed.You.Powers[PowerId.TheHunt]);
+        Assert.Null(killed.Unmodelled);
+        Assert.Equal(0, After(Hunted(hp: 20, setsOffFatal: true)).You.Powers[PowerId.TheHunt]);
+        var minion = After(Hunted(hp: 8, setsOffFatal: false));
+        Assert.Equal(0, minion.You.Powers[PowerId.TheHunt]);
+        Assert.Null(minion.Unmodelled);
+        Assert.Contains("sets off Fatal", After(Hunted(hp: 8, setsOffFatal: null)).Unmodelled);
+    }
 }

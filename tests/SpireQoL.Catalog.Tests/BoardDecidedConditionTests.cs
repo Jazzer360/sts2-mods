@@ -90,9 +90,9 @@ public class BoardDecidedConditionTests
         Assert.DoesNotContain(decisions, entry => entry.Card is nameof(MementoMori) or nameof(Dredge) or nameof(Optimism) or nameof(StormOfSteel) or nameof(TheMoon)
                                                   && entry.Step.Command.FullName is "DamageCmd.Attack" or "CardPileCmd.Add" or "CardPileCmd.Draw" or "CardPileCmd.AddGeneratedCardsToCombat"
                                                   && entry.Decision.Way != SimAdapter.StepDecision.Fixed);
-        // The Hunt's room (a combat room for every play) is fixed for the play; its reward's test of the target's Fatal and its kill isn't.
+        // The Hunt's room (a combat room for every play) is fixed for the play; its reward's test of the target's Fatal and its kill is asked as it runs.
         Assert.Equal(SimAdapter.StepDecision.Fixed, Of(nameof(TheHunt), "DamageCmd.Attack").Way);
-        Assert.Equal(SimAdapter.StepDecision.Unknown, Of(nameof(TheHunt), "PowerCmd.Apply").Way);
+        Assert.DoesNotContain(decisions, entry => entry.Card == nameof(TheHunt) && entry.Step.Command.FullName == "PowerCmd.Apply"); // asked as it runs: its target's Fatal and its kill
         // A pick is a card (decision #188); Mad Science's rider is stored on the card: fixed.
         Assert.Equal(SimAdapter.StepDecision.Fixed, Of(nameof(Acrobatics), "CardCmd.Discard").Way);
         Assert.Equal(SimAdapter.StepDecision.Fixed, Of(nameof(MadScience), "DamageCmd.Attack").Way);

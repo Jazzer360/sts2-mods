@@ -1414,12 +1414,12 @@ Fear [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=193/0 enemy1=30/0 []
 Fear [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=183/0 []
 Fear [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=193/0 []
 Fear [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=193/0 []
-Feed [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=190/0 [Exhausted1] ?CreatureCmd.GainMaxHp: max HP gained: not followed
-Feed [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=188/0 [Exhausted1] ?CreatureCmd.GainMaxHp: max HP gained: not followed
-Feed [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=190/0 enemy1=30/0 [Exhausted1] ?CreatureCmd.GainMaxHp: max HP gained: not followed
-Feed [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=180/0 [Exhausted1] ?CreatureCmd.GainMaxHp: max HP gained: not followed
-Feed [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=190/0 [Exhausted1] ?CreatureCmd.GainMaxHp: max HP gained: not followed
-Feed [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=190/0 [Exhausted1] ?CreatureCmd.GainMaxHp: max HP gained: not followed
+Feed [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=190/0 [Exhausted1]
+Feed [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=188/0 [Exhausted1]
+Feed [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=190/0 enemy1=30/0 [Exhausted1]
+Feed [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=180/0 [Exhausted1]
+Feed [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=190/0 [Exhausted1]
+Feed [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=190/0 [Exhausted1]
 FeedingFrenzy [Standard] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 []
 FeedingFrenzy [Upgraded] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 []
 FeedingFrenzy [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=200/0 enemy1=30/0 []

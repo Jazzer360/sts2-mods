@@ -185,6 +185,9 @@ public static class ConditionReader
         // The fight going on: a play the simulator runs is in a fight (the card's CombatState) that isn't over (CombatManager.IsOverOrEnding).
         if (test is QueryValue { Name: "IsOverOrEnding" }) return new ConditionReading(ConditionWay.Decided) { Holds = false, Reason = "the fight goes on" };
         if (test is QueryValue { Name: "CombatState", Of: NamedValue { Name: "this" } }) return new ConditionReading(ConditionWay.Decided) { Holds = true, Reason = "the card is in the fight" };
+        // The run's room a combat room (CombatState.RunState.CurrentRoom is CombatRoom: The Hunt's): a play the simulator runs is in a fight's room.
+        if (test is QueryValue { Name: "is", Type: "CombatRoom" or "MegaCrit.Sts2.Core.Rooms.CombatRoom", Of: { } room } && Unstored(room) is QueryValue { Name: "CurrentRoom" })
+            return new ConditionReading(ConditionWay.Decided) { Holds = true, Reason = "a play is in a combat room" };
         // A shot's result: it had an arrow to shoot at a living target (ArrowCmd.ShootArrowAtTarget, TryShootArrow: Hobbling Shot's debuffs).
         if (test is ResultValue { Command: "ArrowCmd.ShootArrowAtTarget" or "ArrowCmd.TryShootArrow" })
             return Simulated(new ShotHadArrowCondition());
@@ -301,6 +304,11 @@ public static class ConditionReader
             return Simulated(new CountCondition(SimCounted.OwnerPower, SimCompare.Greater, Than: 0) { Power = PowerId.Of(ownPower) });
         if (test is QueryValue { Name: "IntendsToAttack", Of: QueryValue { Name: "Monster", Of: { } monster } } && IsTarget(monster))
             return Simulated(new TargetIntendsToAttackCondition());
+        // Every power on the target answers that its death sets off Fatal (cardPlay.Target.Powers.All(p => p.ShouldOwnerDeathTriggerFatal()): The
+        // Hunt's reward): the target's own answer, read from its powers' code (SimEnemy.DeathSetsOffFatal), asked as the step runs.
+        if (test is QueryValue { Type: "Enumerable", Name: "All", Arguments: [QueryValue { Name: "Powers", Of: { } powersOf }, LambdaValue { Body.Terms: [[{ Holds: true, Test: QueryValue { Name: "ShouldOwnerDeathTriggerFatal", Of: ParameterValue asked } }]] } fatal] }
+            && IsTarget(powersOf) && asked.Name == fatal.Parameter)
+            return Simulated(new TargetDeathSetsOffFatalCondition());
         // The target alive or dead (Creature.IsAlive, IsDead: its HP above 0 or not).
         if (test is QueryValue { Name: "IsAlive" or "IsDead", IsProperty: true, Of: { } living } && IsTarget(living))
             return Simulated(new CountCondition(SimCounted.TargetHp, test is QueryValue { Name: "IsAlive" } ? SimCompare.Greater : SimCompare.LessOrEqual, Than: 0));

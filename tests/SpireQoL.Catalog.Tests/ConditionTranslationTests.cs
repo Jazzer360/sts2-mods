@@ -46,6 +46,8 @@ public class ConditionTranslationTests
         ("GoForTheEyes", "PowerCmd.Apply", 0, "TargetIntendsToAttackCondition", false),
         ("MoltenFist", "PowerCmd.Apply", 0, "not TargetPowerLessOrEqual", false),
         ("PactsEnd", "DamageCmd.Attack", 0, "ExhaustPileGreaterOrEqual", false),
+        // The Hunt's reward: its target's death sets off Fatal (every power on it says so, stored before its attack: asked first) and its attack killed.
+        ("TheHunt", "PowerCmd.Apply", 0, "all(TargetDeathSetsOffFatalCondition, AttackKilled)", true),
     };
 
     /// <summary>Cards whose step main runs on every play (main's Forgotten Ritual gains its energy with no test).</summary>

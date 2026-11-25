@@ -79,6 +79,12 @@ public static partial class SimEngine
                 return state.PlayTests.Has(ShotKey) && state.PlayTests[ShotKey] == 1;
             case TargetIntendsToAttackCondition:
                 return state.Enemy(target) is { Alive: true, IntendsToAttack: true, Stunned: false };
+            case TargetDeathSetsOffFatalCondition:
+                // Every power on it answers ShouldOwnerDeathTriggerFatal true, as the adapter read its powers' code; one that can't say makes it unknown.
+                if (state.Enemy(target) is not { } fated) return false;
+                if (fated.DeathSetsOffFatal is { } fatal) return fatal;
+                state.Unmodelled ??= $"whether {fated.Name}'s death sets off Fatal, which its powers' code doesn't say as the fight stands";
+                return null;
             case KnownCondition known:
                 return known.Holds;
             case CountCondition counted:
