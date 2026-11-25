@@ -185,8 +185,9 @@ checked against their game hooks by Part B. Reading their hooks as programs too 
 it isn't part of this plan.
 
 A command with no action yet is a named gap (`SimAdapter.CommandsNotTranslated`, with why: a card upgraded mid-play, a
-power's amount changed in place...), and `StepTranslationTests` holds every command every card calls, on both branches, to one or the other. A gap adds no
-`NotModelledAction`: a new `?` on screen is the owner's call, so they're listed, not shown (TRACKER).
+power's amount changed in place...), and `StepTranslationTests` holds every command every card calls, on both branches, to one or the other
+or to the reviewed `CommandsOutsideTheFight` (nothing the simulator predicts). A gap is a `NotModelledAction` where it runs (decision #292:
+`?` and a range, counted by the audits), each an open TRACKER item.
 
 **Built first (2026-11-23): the order.** `PlayOrder` gave each action the command it stood for and put the adapter's actions in the
 program's order, the values from the card-level builders. Replaced in round four by the actions built from the steps themselves (above).

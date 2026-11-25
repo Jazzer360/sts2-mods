@@ -67,26 +67,38 @@ public static partial class SimAdapter
         [nameof(PoisonPower) + ".Trigger"] = "ModelCommandAction: the power's own command on each enemy's instance of it, as its code runs it (ModelSpec.Commands)",
     };
 
-    /// <summary>The game commands a card's step can call that have no simulator action yet, each with why (TRACKER).</summary>
+    /// <summary>
+    /// The game commands a card's step can call that the simulator can't follow yet, each with what isn't followed: where one runs, the play's
+    /// outcome is unknown (a NotModelledAction with its reason, decision #292: `?` and a range, counted by the audits), never left out. Each is
+    /// an open docs/TRACKER.md item naming it (StepTranslationTests).
+    /// </summary>
     internal static readonly IReadOnlyDictionary<string, string> CommandsNotTranslated = new Dictionary<string, string>
     {
-        ["CardCmd.Upgrade"] = "a card upgraded mid-play: its numbers aren't followed by the simulator (gap)",
-        ["MonsterModel.OnDieToDoom"] = "a monster's own reaction to dying of Doom (End of Days' kills): its looks only (Torch Head Amalgam's torches)",
-        ["CardCmd.AutoPlay"] = "a card in hand or a pile played by the card (Beat Down, Knife Trap): not simulated (gap)",
-        ["CardCmd.ApplyKeyword"] = "a keyword given to a card: not simulated (gap)",
-        ["CardCmd.ApplySingleTurnSly"] = "Sly given to a card this turn: not simulated (gap)",
-        ["CardCmd.ApplySingleTurnRetain"] = "Retain given to a card this turn (main): the turn's end reads your hand from the game (gap)",
-        ["CardCmd.Enchant"] = "an enchantment given to a card: not simulated (gap)",
-        ["CardPileCmd.RemoveFromDeck"] = "a card taken out of your deck: outside the fight",
-        ["OrbCmd.Passive"] = "an orb's passive set off by a card: not simulated (gap)",
-        ["PowerCmd.ModifyAmount"] = "a power's amount changed in place: not simulated (gap)",
-        ["CreatureCmd.Stun"] = "an enemy stunned by a card: not simulated (gap)",
-        ["CreatureCmd.GainMaxHp"] = "max HP gained: not simulated (gap)",
-        ["CreatureCmd.LoseMaxHp"] = "max HP lost: not simulated (gap)",
-        ["ArrowCmd.GainArrowSlot"] = "an arrow slot gained: the simulator reads your arrows from the board (gap)",
-        ["PotionCmd.TryToProcure"] = "a potion: outside the simulated fight",
-        ["PlayerCmd.EndTurn"] = "the turn ended by the card: the turn's end is the forecast's",
-        ["PlayerCmd.GainGold"] = "gold: outside the fight",
+        ["CardCmd.Upgrade"] = "a card upgraded mid-play: its numbers after it aren't followed",
+        ["CardCmd.AutoPlay"] = "a card in hand or a pile played by the card: that play isn't followed",
+        ["CardCmd.ApplyKeyword"] = "a keyword given to a card: not followed",
+        ["CardCmd.ApplySingleTurnSly"] = "Sly given to a card this turn: not followed",
+        ["CardCmd.ApplySingleTurnRetain"] = "Retain given to a card this turn: not followed",
+        ["CardCmd.Enchant"] = "an enchantment given to a card: not followed",
+        ["OrbCmd.Passive"] = "an orb's passive set off by a card: not followed",
+        ["PowerCmd.ModifyAmount"] = "a power's amount changed in place: not followed",
+        ["CreatureCmd.Stun"] = "an enemy stunned by a card: not followed",
+        ["CreatureCmd.GainMaxHp"] = "max HP gained: not followed",
+        ["CreatureCmd.LoseMaxHp"] = "max HP lost: not followed",
+        ["ArrowCmd.GainArrowSlot"] = "an arrow slot gained: not followed",
+        ["PotionCmd.TryToProcure"] = "a potion procured: what reacts to it (AfterPotionProcured) isn't followed",
+        ["PlayerCmd.GainGold"] = "gold gained: what reacts to it (AfterGoldGained) isn't followed",
+    };
+
+    /// <summary>
+    /// The game commands a card's step can call that change nothing the simulator predicts, each with why (reviewed from the code they run, decision
+    /// #292): no action, and no unknown.
+    /// </summary>
+    internal static readonly IReadOnlyDictionary<string, string> CommandsOutsideTheFight = new Dictionary<string, string>
+    {
+        ["MonsterModel.OnDieToDoom"] = "a monster's own reaction to dying of Doom (End of Days' kills): every override is its looks only (Torch Head Amalgam's torches)",
+        ["CardPileCmd.RemoveFromDeck"] = "a card taken out of your deck (its DeckVersion): the deck outside the fight, not its piles",
+        ["PlayerCmd.EndTurn"] = "the turn ended by the card: what follows is the turn's end, which the forecast simulates from the state after the play",
     };
 
     /// <summary>One play being translated: the card, its board, its program and what the steps have decided so far.</summary>
@@ -224,7 +236,7 @@ public static partial class SimAdapter
                 return (EnergyFrom(found, play), null);
             case ("PlayerCmd", "GainStars") when Argument(command, 1) == "Owner":
                 return (new List<SimAction> { new CardEventAction(CardEvent.StarsGained, Count: 1) }, null);
-            case ("OrbCmd", _):
+            case ("OrbCmd", "Channel" or "EvokeNext" or "AddSlots" or "RemoveSlots"):
                 return OrbsFrom(found, play);
             case ("CardCmd", "Exhaust" or "Discard" or "Transform" or "TransformTo"):
                 return TakesFrom(found, play);
@@ -243,7 +255,35 @@ public static partial class SimAdapter
             case ("ForgeCmd", "Forge"):
                 return (MadeFrom(found, play), null);
         }
-        return none;
+        // A command the simulator can't follow yet: the play's outcome is unknown where it runs (decision #292), never left out. One whose only
+        // effect on the fight is the hook it runs (gold, a potion) has nothing to follow when no listener's class overrides that hook.
+        if (!CommandsNotTranslated.TryGetValue(command.Command.FullName, out var notFollowed)) return none;
+        if (HookOnlyCommands.TryGetValue(command.Command.FullName, out var hook) && !AnyListenerOverrides(play, hook)) return none;
+        return (new List<SimAction> { new NotModelledAction($"{command.Command.FullName}: {notFollowed}") }, null);
+    }
+
+    /// <summary>
+    /// The commands not followed whose only effect on the fight is the hook they run (PlayerCmd.GainGold runs Hook.AfterGoldGained;
+    /// PotionCmd.TryToProcure, Hook.AfterPotionProcured): the hook's name on AbstractModel.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, string> HookOnlyCommands = new Dictionary<string, string>
+    {
+        ["PlayerCmd.GainGold"] = nameof(AbstractModel.AfterGoldGained),
+        ["PotionCmd.TryToProcure"] = nameof(AbstractModel.AfterPotionProcured),
+    };
+
+    /// <summary>A hook listener of the run (RunState.IterateHookListeners, the hooks' own loop) whose class overrides <paramref name="hook"/>.</summary>
+    private static bool AnyListenerOverrides(StepPlay play, string hook)
+    {
+        try
+        {
+            return play.Me.RunState.IterateHookListeners(play.Combat).Any(model =>
+                model.GetType().GetMethod(hook, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public) is { } method && method.DeclaringType != typeof(AbstractModel));
+        }
+        catch
+        {
+            return true;
+        }
     }
 
     // ---------------------------------------------------------------- the play's context

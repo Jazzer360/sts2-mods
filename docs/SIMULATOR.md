@@ -170,7 +170,7 @@ hands to commands) from the running game into a program, and `SimAdapter.Steps` 
 action for that command (`CommandsTranslated`: an attack from `DamageCmd.Attack` with its hits and targeting from its builder, a block
 from `CreatureCmd.GainBlock` to the creature its argument names, a power from `PowerCmd.Apply<T>` with its amount argument, a draw, a
 take, a channel...), its values from the step's arguments (block before attack for Iron Wave, exhausts before attack for Fiend
-Fire, block after each exhaust for Second Wind's loop). A command with no action yet is a named gap (`CommandsNotTranslated`), and
+Fire, block after each exhaust for Second Wind's loop). A command with no action yet is a named gap (`CommandsNotTranslated`: the play's outcome unknown where it runs, decision #292), and
 `StepTranslationTests` holds every command every card calls on both branches to one or the other. Whether a step's action exists is
 never decided on the board before the play: its condition is.
 
