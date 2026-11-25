@@ -108,6 +108,13 @@ public enum HookName
     /// <summary>PowerModel.ShouldPowerBeRemovedAfterOwnerDeath: whether the power comes off its owner as it dies (Creature.RemoveAllPowersAfterDeath).</summary>
     ShouldPowerBeRemovedAfterOwnerDeath,
     /// <summary>
+    /// Hook.AfterBlockBroken: a creature's block went to 0 under a damage or a block loss (CreatureCmd.Damage's results, CreatureCmd.LoseBlock): its
+    /// target, and who broke it (the damage's dealer, the loss's card's player).
+    /// </summary>
+    AfterBlockBroken,
+    /// <summary>Hook.ShouldClearBlock: whether a creature's block is cleared as its side's turn starts (CombatManager.StartTurn): 1 it is.</summary>
+    ShouldClearBlock,
+    /// <summary>
     /// Hook.ShouldStopCombatFromEnding: whether the fight goes on with no primary enemy alive (CombatManager.IsEnding: Infested's, Stock's and Steam
     /// Eruption's, whose deaths bring creatures in): 1 it stops it ending.
     /// </summary>
@@ -426,6 +433,8 @@ public enum HookWho
     PlayOwner,
     /// <summary>The player whose card a damage or block comes from (cardSource.Owner: its card play's player).</summary>
     SourceCardOwner,
+    /// <summary>Who broke a creature's block (AfterBlockBroken's breaker: the damage's dealer, a block loss's card's player), or no one.</summary>
+    Breaker,
 }
 
 /// <summary>A creature a hook's code names (HookWho), or the player who owns it when it's a pet (creature.PetOwner.Creature: Osty's player).</summary>
@@ -846,6 +855,12 @@ public enum HookOutcome
     /// ends, never held to the play (OutcomeRule.InPlay false).
     /// </summary>
     StunsOnItsOwnHit,
+    /// <summary>
+    /// Its AfterBlockBroken acts on a block its owner (or its owner's pet) breaks (every step waiting on the breaker being its owner, or its pet's
+    /// player its owner), on a creature other than its owner: on you, a bonus on a play that breaks some enemy's block in every outcome (Hand
+    /// Drill's Vulnerable on it, which the rest of the play's hits meet). Only your play's breaks are yours: a teammate's is no tab.
+    /// </summary>
+    BreaksBlock,
 }
 
 /// <summary>

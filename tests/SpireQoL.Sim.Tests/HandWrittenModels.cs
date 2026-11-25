@@ -2461,3 +2461,41 @@ public sealed class InsatiableDominionPower : TurnEndDebuff
     public override IEnumerable<SimState> AfterSideTurnEndLate(SimState state, int owner) =>
         state.TakesPart(owner) ? Hurt(state, owner, SimEngine.Var(state, owner, Name, "Damage", fallback: 0), Unpowered, selfDealt: false) : One(state);
 }
+
+// ---- round twenty-seven: the block hooks, AfterBlockBroken and ShouldClearBlock (Sim/Models/OutcomeModels.cs, ReactionModels.cs), deleted 2026-11-25
+
+/// <summary>
+/// HandDrill.AfterBlockBroken: Vulnerable (its VulnerablePower value) on an enemy whose block its owner (or their Osty) breaks, so
+/// the rest of the attack hits harder. A bonus when every branch of an aim breaks one.
+/// </summary>
+public sealed class HandDrill : SimModel
+{
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
+        owner == Who.You ? new(Harmful: false, outcome => outcome.PlayBreaksBlockInAll) : null;
+    public override void AfterBlockBroken(SimState state, int owner, int target, int? breaker)
+    {
+        if (!Who.IsEnemy(target) || !(breaker == owner || (owner == Who.You && breaker == Who.YourOsty))) return;
+        SimEngine.ApplyInHit(state, owner, target, PowerId.Vulnerable, SimEngine.Var(state, owner, Name, "VulnerablePower", fallback: 2), debuff: true);
+        state.LogFired(Name, amount: 0, owner);
+    }
+}
+
+/// <summary>BurrowedPower.AfterBlockBroken: breaking its owner's block stuns it, and the power goes (with its block-keeping).</summary>
+public sealed class BurrowedPower : SimModel
+{
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => FrozenStunRules.Stuns(now, owner);
+
+    public override void AfterBlockBroken(SimState state, int owner, int target, int? breaker)
+    {
+        if (target != owner || state.Enemy(owner) is not { } enemy) return;
+        SimEngine.Stun(enemy);
+        enemy.Powers = enemy.Powers.Without(ThisPower);
+        state.LogFired(Name, amount: 0, owner);
+    }
+
+    /// <summary>
+    /// BurrowedPower.ShouldClearBlock, as the engine kept it before the conversion (SimEnemy.Barricade was Barricade or Burrowed): its owner's
+    /// block is kept as its turn starts.
+    /// </summary>
+    public override bool ShouldClearBlock(SimState state, int owner, int creature) => creature != owner;
+}

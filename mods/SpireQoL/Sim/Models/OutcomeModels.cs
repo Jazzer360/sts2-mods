@@ -51,21 +51,7 @@ public sealed class SurprisePower : DeathSetsOff
 
 // Imbalanced is read from its code (ReadModel, decision #271).
 
-/// <summary>
-/// HandDrill.AfterBlockBroken: Vulnerable (its VulnerablePower value) on an enemy whose block its owner (or their Osty) breaks, so
-/// the rest of the attack hits harder. A bonus when every branch of an aim breaks one.
-/// </summary>
-public sealed class HandDrill : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        owner == Who.You ? new(Harmful: false, outcome => outcome.PlayBreaksBlockInAll) : null;
-    public override void AfterBlockBroken(SimState state, int owner, int target, int? breaker)
-    {
-        if (!Who.IsEnemy(target) || !(breaker == owner || (owner == Who.You && breaker == Who.YourOsty))) return;
-        SimEngine.ApplyInHit(state, owner, target, PowerId.Vulnerable, SimEngine.Var(state, owner, Name, "VulnerablePower", fallback: 2), debuff: true);
-        state.LogFired(Name, amount: 0, owner);
-    }
-}
+// Hand Drill is read from its code (ReadModel: AfterBlockBroken, decision #285).
 
 // Compost is read from its code (ReadModel, decision #277).
 

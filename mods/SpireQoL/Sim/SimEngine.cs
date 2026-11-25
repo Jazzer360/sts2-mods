@@ -1391,6 +1391,18 @@ public static partial class SimEngine
 
     // ------------------------------------------------------------------ enemy turn
 
+    /// <summary>
+    /// Hook.ShouldClearBlock of <paramref name="creature"/> (Creature.ClearBlock as its side's turn starts): cleared unless a listener says no
+    /// (Barricade, Burrowed, read from their code). A preventer's AfterPreventingBlockClear (Blur's, Sturdy Clamp's: a player's) isn't told: no
+    /// enemy's listener answers it.
+    /// </summary>
+    internal static bool ClearsBlock(SimState state, int creature)
+    {
+        foreach (var (model, owner) in Listeners(state))
+            if (!model.ShouldClearBlock(state, owner, creature)) return false;
+        return true;
+    }
+
     private static void StripBlock(SimState state, StripBlockAction stripBlockAction)
     {
         if (state.Enemy(state.CurrentPlay?.Target ?? Who.None) is not { Alive: true } enemy) return;
@@ -1545,15 +1557,16 @@ public static partial class SimEngine
             enemy.DiedBeforeActing = true;
             if (HitCount(enemy) > 0) state.SkippedPoisoned++;
         }
-        // Each enemy's block this turn (CombatManager.StartTurn clears it unless it has Barricade; its moves' block adds to it): what the damage
-        // hitting it back during the turn meets. What your turn left them (the outcome reads it) comes back once the turn is over; its count of
-        // hits through block goes on through the turn, as the wake rules want (SimEnemy.UnblockedInstances).
+        // Each enemy's block this turn (CombatManager.StartTurn clears it unless a listener's ShouldClearBlock says no: Creature.ClearBlock, Barricade's
+        // and Burrowed's read from their code; its moves' block adds to it): what the damage hitting it back during the turn meets. What your turn left
+        // them (the outcome reads it) comes back once the turn is over; its count of hits through block goes on through the turn, as the wake rules
+        // want (SimEnemy.UnblockedInstances).
         var turnEnd = new (int Block, bool BlockBroken)[state.Enemies.Count];
         for (var i = 0; i < state.Enemies.Count; i++)
         {
             var enemy = state.Enemies[i];
             turnEnd[i] = (enemy.Block, enemy.BlockBroken);
-            enemy.Block = (enemy.Barricade ? enemy.Block : 0) + enemy.MoveBlock;
+            enemy.Block = (ClearsBlock(state, enemy.Id) ? 0 : enemy.Block) + enemy.MoveBlock;
         }
         foreach (var enemy in state.Enemies)
         {

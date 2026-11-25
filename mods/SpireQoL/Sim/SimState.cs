@@ -80,8 +80,8 @@ public sealed class SimEnemy
     public bool Hittable = true;
     /// <summary>Damage of its poison tick at the start of its turn.</summary>
     public int Poison;
-    /// <summary>Keeps its block between turns (BarricadePower, or BurrowedPower.ShouldClearBlock).</summary>
-    [JsonIgnore] public bool Barricade { get => Powers.Has(PowerId.Barricade) || Powers.Has(PowerId.Burrowed); set => Set(PowerId.Barricade, value ? 1 : 0); }
+    /// <summary>Barricade, its power: whether its block is kept between turns is its ShouldClearBlock's, read from its code (SimEngine.ClearsBlock).</summary>
+    [JsonIgnore] public bool Barricade { get => Powers.Has(PowerId.Barricade); set => Set(PowerId.Barricade, value ? 1 : 0); }
     public bool Stunned;
     /// <summary>
     /// Its next move is an attack (MonsterModel.IntendsToAttack: an Attack or Death Blow intent), read from the game; a stun replaces the move

@@ -15,19 +15,7 @@ public sealed class SneckoSkull : SimModel
 
 // Hardened Shell is read from its code (ReadModel, decision #278).
 
-/// <summary>BurrowedPower.AfterBlockBroken: breaking its owner's block stuns it, and the power goes (with its block-keeping).</summary>
-public sealed class BurrowedPower : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => OutcomeRules.Stuns(now, owner);
-
-    public override void AfterBlockBroken(SimState state, int owner, int target, int? breaker)
-    {
-        if (target != owner || state.Enemy(owner) is not { } enemy) return;
-        SimEngine.Stun(enemy);
-        enemy.Powers = enemy.Powers.Without(ThisPower);
-        state.LogFired(Name, amount: 0, owner);
-    }
-}
+// Burrowed is read from its code (ReadModel: AfterBlockBroken and ShouldClearBlock, decision #285).
 
 /// <summary>AsleepPower.AfterDamageReceived: HP through its owner's block (any source) wakes it: Plating goes, it's stunned, the power goes.</summary>
 public sealed class AsleepPower : SimModel

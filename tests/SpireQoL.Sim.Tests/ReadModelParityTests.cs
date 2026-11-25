@@ -305,6 +305,7 @@ public class ReadModelParityTests
         nameof(SimModel.BeforeDamageReceived), nameof(SimModel.AfterArrowShot), nameof(SimModel.AfterArrowImpaled),
         nameof(SimModel.ModifyPreBlockDamageTarget), nameof(SimModel.ModifyUnblockedDamageTarget), nameof(SimModel.ShouldAllowHitting),
         nameof(SimModel.ShouldCreatureBeRemovedFromCombatAfterDeath), nameof(SimModel.StaysOnDeadOwner), nameof(SimModel.ShouldStopCombatFromEnding),
+        nameof(SimModel.AfterBlockBroken), nameof(SimModel.ShouldClearBlock),
     };
 
     [Fact]
@@ -398,8 +399,22 @@ public class ReadModelParityTests
             : RelicCounterFields.TryGetValue(model.Name, out var relicCounter) ? relicCounter.Data : RelicAmountVars.ContainsKey(model.Name) ? 0 : (int)RelicUse.Armed;
         if (RelicCounterFields.TryGetValue(model.Name, out var counterField)) SimEngine.SetField(state, owner, model.FieldKey(counterField.Field), counterField.Data);
         if (model.Spec.Kind == ModelKind.Relic) SimEngine.SetRelics(state, owner, SimEngine.RelicsOf(state, owner).With(new RelicId(model.Name), amount, data));
+        // A power whose every step waits on its owner's monster being a class (Burrowed's Tunneler: the one monster the game gives it, whose class its code
+        // casts to): its owner is that monster, as in the game.
+        if (Who.IsEnemy(owner) && state.Enemy(owner) is { } ownerEnemy && model.Spec.Steps().ToList() is { Count: > 0 } steps
+            && steps.Select(step => MonsterClassNeeded(step.When)).Distinct().ToList() is [{ } monsterClass])
+            ownerEnemy.Monster = monsterClass;
         return state;
     }
+
+    /// <summary>The monster class a step's condition needs a creature's monster to be (CreatureMonsterIs, one of its ands), or null.</summary>
+    private static string? MonsterClassNeeded(HookValue? when) => when switch
+    {
+        HookFactValue { Fact: HookFact.CreatureMonsterIs, Of: { } monsterClass } => monsterClass,
+        HookTest test => MonsterClassNeeded(test.Test),
+        HookMath { Operation: HookOperation.And } both => MonsterClassNeeded(both.Left) ?? MonsterClassNeeded(both.Right),
+        _ => null,
+    };
 
     private static IEnumerable<HookVar> VarsOf(ModelSpec spec) => spec.Values().OfType<HookVar>().DistinctBy(variable => variable.Key);
 
@@ -620,6 +635,21 @@ public class ReadModelParityTests
                 break;
             case nameof(SimModel.ShouldStopCombatFromEnding):
                 yield return ("as the fight would end", (model, state) => model.ShouldStopCombatFromEnding(state, owner).ToString());
+                break;
+            case nameof(SimModel.ShouldClearBlock):
+                // Asked of every creature as its side's turn starts.
+                foreach (var creature in new[] { owner, Who.You, Who.Teammate(0), 0, 1 }.Distinct())
+                    yield return ($"asked of {creature}", (model, state) => model.ShouldClearBlock(state, owner, creature).ToString());
+                break;
+            case nameof(SimModel.AfterBlockBroken):
+                // A block broken on every creature, by every breaker (a damage's dealer, a block loss's player; your Osty; no one), inside the hit.
+                foreach (var target in new[] { owner, 0, 1, Who.You, Who.Teammate(0) }.Distinct())
+                    foreach (var breaker in new int?[] { owner, Who.You, Who.YourOsty, Who.Teammate(0), 0, null }.Distinct())
+                        yield return ($"{target}'s block broken by {breaker?.ToString() ?? "no one"}", (model, state) =>
+                        {
+                            model.AfterBlockBroken(state, owner, target, breaker);
+                            return Branches(new[] { state });
+                        });
                 break;
             case nameof(SimModel.AfterDeath):
                 // A creature dies (the applier, another enemy, the owner), then the players' turn ends: what the death changed shows there.

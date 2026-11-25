@@ -88,7 +88,7 @@ public static class HandModelled
             new[] { "CombatManager.EndPlayerTurnPhaseOneInternal", "CombatManager.EndPlayerTurnPhaseTwoInternal", "CombatManager.DoTurnEnd", "CombatManager.FlushPlayerHand", "Hook.BeforeSideTurnEnd",
                 "Hook.AfterSideTurnEnd", "Hook.ShouldEtherealTrigger", "Hook.ShouldFlush", "Hook.BeforeFlush" }),
         new("The enemies' turn: its start's hooks, block cleared, each move in turn order, the intents read after a play",
-            new[] { "SimEngine.EnemyTurnStart", "SimEngine.StartTheEnemiesTurn", "SimEngine.EnemyTurn", "SimEngine.IntentsAfter" },
+            new[] { "SimEngine.EnemyTurnStart", "SimEngine.StartTheEnemiesTurn", "SimEngine.EnemyTurn", "SimEngine.ClearsBlock", "SimEngine.IntentsAfter" },
             new[] { "CombatManager.StartTurn", "CombatManager.ExecuteEnemyTurn", "MonsterModel.PerformMove", "Hook.BeforeSideTurnStart", "Hook.AfterSideTurnStart", "Hook.ShouldClearBlock", "Creature.ClearBlock" }),
         new("A heal: up to max HP",
             new[] { "SimEngine.Heal" },

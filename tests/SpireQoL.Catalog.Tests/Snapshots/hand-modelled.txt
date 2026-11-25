@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 156 game methods; 3 adapter rules; 39 hand-written models.
+# 20 engine rules naming 156 game methods; 3 adapter rules; 37 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -54,7 +54,7 @@ The players' turn's end: its hooks in their places, Ethereal cards, the cards th
   simulator: SimEngine.EndOfTurn, SimEngine.Exhausting, SimEngine.CardsActInHand
 The enemies' turn: its start's hooks, block cleared, each move in turn order, the intents read after a play
   game: CombatManager.StartTurn, CombatManager.ExecuteEnemyTurn, MonsterModel.PerformMove, Hook.BeforeSideTurnStart, Hook.AfterSideTurnStart, Hook.ShouldClearBlock, Creature.ClearBlock
-  simulator: SimEngine.EnemyTurnStart, SimEngine.StartTheEnemiesTurn, SimEngine.EnemyTurn, SimEngine.IntentsAfter
+  simulator: SimEngine.EnemyTurnStart, SimEngine.StartTheEnemiesTurn, SimEngine.EnemyTurn, SimEngine.ClearsBlock, SimEngine.IntentsAfter
 A heal: up to max HP
   game: CreatureCmd.Heal, Creature.HealInternal
   simulator: SimEngine.Heal
@@ -81,8 +81,6 @@ Fairy in a Bottle and Lizard Tail: a death held back, healed from 0
 
 AsleepPower: AsleepPower.AfterDamageReceived, AsleepPower.AfterSideTurnEnd, AsleepPower.BeforeSideTurnEndVeryEarly
   model: AfterDamageReceived, OutcomeTab
-BurrowedPower: BurrowedPower.AfterBlockBroken, BurrowedPower.AfterRemoved, BurrowedPower.ShouldClearBlock
-  model: AfterBlockBroken, OutcomeTab
 ChemicalX: ChemicalX.BeforeCardPlayed, ChemicalX.ModifyXValue
   model: BeforeCardPlayed
 ConsumingShadowPower: ConsumingShadowPower.AfterSideTurnEnd
@@ -93,8 +91,6 @@ CoveredPower: CoveredPower.AfterApplied, CoveredPower.AfterDeath, CoveredPower.A
   model: AfterApplied, ModifyDamageMultiplicative
 FeralPower: FeralPower.AfterApplied, FeralPower.AfterModifyingCardPlayResultLocation, FeralPower.AfterSideTurnStart, FeralPower.InitInternalData, FeralPower.ModifyCardPlayResultLocation
   model: AfterApplied, AfterModifyingCardPlayResultLocation, ModifyCardPlayResultLocation
-HandDrill: HandDrill.AfterBlockBroken
-  model: AfterBlockBroken, OutcomeTab
 ImitationLearningPower: ImitationLearningPower.AfterCardPlayed, ImitationLearningPower.BeforeCardPlayed, ImitationLearningPower.InitInternalData
   model: AfterCardPlayed
 ImpaledPower: ImpaledPower.AfterApplied (beta only), ImpaledPower.AfterDamageReceived (beta only), ImpaledPower.AfterDeath (beta only), ImpaledPower.InitInternalData (beta only)

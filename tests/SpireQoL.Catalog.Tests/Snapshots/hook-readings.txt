@@ -6,15 +6,15 @@ power AmnesiaPower: AfterPlayerTurnStart: not run: it runs as the players' next 
 power ArsenalPower: AfterCardGeneratedForCombat: read
 power AsleepPower: AfterDamageReceived: gap: PowerCmd.Remove of another power | AfterSideTurnEnd: gap: tests this.Owner.Monster._isAwake() | BeforeSideTurnEndVeryEarly: gap: PowerCmd.Remove of another power
 power AutomationPower: AfterCardDrawn: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
-power BarricadePower: AfterApplied: read | ShouldClearBlock: gap: the simulator runs no read model's ShouldClearBlock
+power BarricadePower: AfterApplied: read | ShouldClearBlock: read
 power BattlewornDummyTimeLimitPower: AfterSideTurnEnd: gap: sets BattlewornDummyEventEncounter.RanOutOfTime where the reader reads no store
 power BeaconOfHopePower: AfterBlockGained: gap: the simulator runs no read model's AfterBlockGained
 power BlackHolePower: AfterCardPlayed: read | AfterStarsGained: read
 power BlockNextTurnPower: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
-power BlurPower: AfterPreventingBlockClear: gap: the simulator runs no read model's AfterPreventingBlockClear | AfterSideTurnStart: read | ShouldClearBlock: gap: the simulator runs no read model's ShouldClearBlock
+power BlurPower: AfterPreventingBlockClear: gap: the simulator runs no read model's AfterPreventingBlockClear | AfterSideTurnStart: read | ShouldClearBlock: read
 power BorrowedTimePower: AfterSideTurnEnd: read | TryModifyEnergyCostInCombat: gap: the simulator runs no read model's TryModifyEnergyCostInCombat
 power BufferPower: AfterModifyingHpLostAfterOsty: read | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply never calls it: the power's ShouldScaleInMultiplayer is false | ModifyHpLostAfterOstyLate: read
-power BurrowedPower: AfterBlockBroken: gap: the simulator runs no read model's AfterBlockBroken | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | ShouldClearBlock: gap: the simulator runs no read model's ShouldClearBlock
+power BurrowedPower: AfterBlockBroken: read | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | ShouldClearBlock: read
 power BurstPower: AfterModifyingCardPlayCount: read | AfterSideTurnEnd: read | ModifyCardPlayCount: read
 power CacophonyPower: AfterCardDrawn: read
 power CalamityPower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
@@ -222,7 +222,7 @@ relic GamePiece: AfterCardPlayed: read
 relic GhostSeed: AfterCardEnteredCombat: gap: the simulator runs no read model's AfterCardEnteredCombat | AfterRoomEntered: not run: entering a room: outside the fight's turns
 relic GoldPlatedCables: AfterModifyingOrbPassiveTriggerCount: read | ModifyOrbPassiveTriggerCounts: read
 relic GremlinHorn: AfterDeath: read
-relic HandDrill: AfterBlockBroken: gap: the simulator runs no read model's AfterBlockBroken
+relic HandDrill: AfterBlockBroken: read
 relic HelicalDart: AfterCardPlayed: read
 relic HistoryCourse: AfterAutoPrePlayPhaseEntered: gap: the simulator runs no read model's AfterAutoPrePlayPhaseEntered
 relic HornCleat: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
@@ -269,7 +269,7 @@ relic SneckoSkull: AfterModifyingPowerAmountGiven: gap: the simulator runs no re
 relic SparklingRouge: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
 relic StoneCalendar: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns | AfterSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers | BeforeSideTurnEnd: read
 relic Storyteller: AfterRoomEntered: not run: entering a room: outside the fight's turns | BeforeSideTurnEnd: read
-relic SturdyClamp: AfterPreventingBlockClear: gap: the simulator runs no read model's AfterPreventingBlockClear | ShouldClearBlock: gap: the simulator runs no read model's ShouldClearBlock
+relic SturdyClamp: AfterPreventingBlockClear: gap: the simulator runs no read model's AfterPreventingBlockClear | ShouldClearBlock: read
 relic TheAbacus: AfterShuffle: read
 relic TheBoot: AfterModifyingHpLostAfterOsty: read | ModifyHpLostAfterOstyLate: read
 relic Thumbscrew: ModifyAttackHitCount: gap: the simulator runs no read model's ModifyAttackHitCount

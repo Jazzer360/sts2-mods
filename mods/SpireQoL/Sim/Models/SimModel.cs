@@ -426,6 +426,11 @@ public abstract class SimModel
     /// SimEngine.FightEnding asks it. Pure.
     /// </summary>
     public virtual bool ShouldStopCombatFromEnding(SimState state, int owner) => false;
+    /// <summary>
+    /// Hook.ShouldClearBlock: whether <paramref name="creature"/>'s block is cleared as its side's turn starts (CombatManager.StartTurn; Barricade,
+    /// Burrowed: no), as SimEngine.EnemyTurn asks it of each enemy. Pure.
+    /// </summary>
+    public virtual bool ShouldClearBlock(SimState state, int owner, int creature) => true;
     /// <summary>Hook.ShouldAllowHitting: whether <paramref name="creature"/> can be hit and receive powers (Creature.IsHittable, CanReceivePowers). Pure.</summary>
     public virtual bool ShouldAllowHitting(SimState state, int owner, int creature) => true;
     /// <summary>The HP-loss pipeline (Hook.ModifyHpLost*): BeforeOsty, BeforeOstyLate, AfterOsty, AfterOstyLate.</summary>

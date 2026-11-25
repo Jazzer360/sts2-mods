@@ -482,8 +482,25 @@ public static class HookReader
         // A kill of its owner (an enemy's) in a hook a play sets off: the play that kills it so.
         if (programs.Where(program => program.Hook != HookName.AfterDeath).Any(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps().Any(step => step is KillStep)))
             return HookOutcome.KillsItself;
+        // A block its owner (or its pet) breaks, on another creature: every AfterBlockBroken step waits on the breaker (Hand Drill's Vulnerable).
+        static bool NamesBreaker(HookFactValue fact) => fact.Creature?.Who == HookWho.Breaker || fact.Other?.Who == HookWho.Breaker;
+        if (programs.Where(program => program.Hook == HookName.AfterBlockBroken).SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps()).ToList() is { Count: > 0 } broken
+            && broken.All(step => EveryWayNeeds(step.When, NamesBreaker)))
+            return HookOutcome.BreaksBlock;
         return ReactsToHpLoss(programs) ? HookOutcome.ReactsToHpLoss : null;
     }
+
+    /// <summary>The condition holds only through a fact that <paramref name="matches"/> holding: one of its ands, on each of its ors' ways.</summary>
+    private static bool EveryWayNeeds(HookValue? when, Func<HookFactValue, bool> matches) => when switch
+    {
+        HookFactValue fact => matches(fact),
+        HookTest test => EveryWayNeeds(test.Test, matches),
+        HookMath { Operation: HookOperation.And } both => EveryWayNeeds(both.Left, matches) || EveryWayNeeds(both.Right, matches),
+        HookMath { Operation: HookOperation.Or } either => EveryWayNeeds(either.Left, matches) && EveryWayNeeds(either.Right, matches),
+        // A value of several ways tested (breaker?.PetOwner == base.Owner: null where there's no breaker): each way that can hold needs it.
+        HookWays ways => ways.Ways.All(way => way.Value is HookConstant { Value: 0m } || EveryWayNeeds(way.When, matches) || EveryWayNeeds(way.Value, matches)),
+        _ => false,
+    };
 
     /// <summary>The relic's Status (RelicModel.Status: Normal 0, Active 1), as a store of its code names it.</summary>
     private const string StatusField = "Status";
@@ -987,6 +1004,7 @@ public static class HookReader
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(CreatureWays(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
                 // A Should hook the engine asks (a true-or-false: 1 or 0).
                 if (name is HookName.ShouldAllowHitting or HookName.ShouldCreatureBeRemovedFromCombatAfterDeath or HookName.ShouldPowerBeRemovedAfterOwnerDeath or HookName.ShouldStopCombatFromEnding
+                        or HookName.ShouldClearBlock
                     && hook.ReturnType.Name == "Boolean")
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(TestWays(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
                 if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name is HookName.ModifyCardPlayCount or HookName.ModifyOrbPassiveTriggerCounts)
@@ -2183,8 +2201,8 @@ public static class HookReader
             // The living creatures an evoke acted on (AfterOrbEvoked's targets.Where(c => c.IsAlive)).
             if (_hook == "AfterOrbEvoked" && Unstored(value) is QueryValue { Name: "ToList", Arguments: [QueryValue { Type: "Enumerable", Name: "Where", Arguments: [ParameterValue { Name: "targets" } or NamedValue { Name: "targets" }, LambdaValue alive] }] }
                 && LambdaReads(alive, "IsAlive")) return HookTarget.EvokeTargets;
-            // The creature a hit landed on (AfterDamageGiven's, AfterDamageReceived's target).
-            if (value is ParameterValue { Name: "target" } or NamedValue { Name: "target" } && _hook is "AfterDamageGiven" or "AfterDamageReceived" or "BeforeDamageReceived") return HookTarget.HitTarget;
+            // The creature a hit landed on (AfterDamageGiven's, AfterDamageReceived's target), or whose block broke (AfterBlockBroken's: Hand Drill's Vulnerable).
+            if (value is ParameterValue { Name: "target" } or NamedValue { Name: "target" } && _hook is "AfterDamageGiven" or "AfterDamageReceived" or "BeforeDamageReceived" or "AfterBlockBroken") return HookTarget.HitTarget;
             // The damage's dealer (BeforeDamageReceived's, a hit's: Thorns, Flame Barrier and Reflect hit it back).
             if (IsDealer(value) && _hook is "AfterDamageGiven" or "AfterDamageReceived" or "BeforeDamageReceived") return HookTarget.Dealer;
             // The card play's target (an enchantment's OnPlay: Inky's Weak on cardPlay.Target).
@@ -2343,12 +2361,13 @@ public static class HookReader
                 // keeps for a player when it's the class Player.Osty gets (read from its code); any other class is a gap.
                 case QueryValue { Name: "is", Of: { } monsterOf, Type: var monsterClass } when Unstored(monsterOf) is WaysValue or QueryValue { Name: "Monster" }:
                 {
-                    // Any other monster class of its owner's (base.Owner.Monster is BowlbugRock: Imbalanced's): the enemy's monster (SimEnemy.Monster).
+                    // Any other monster class of a creature the code names (base.Owner.Monster is BowlbugRock: Imbalanced's; AfterBlockBroken's target.Monster
+                    // is Tunneler: Burrowed's): the enemy's monster (SimEnemy.Monster).
                     HookValue MonsterIs(ProgramValue monster) => monster is NullValue ? new HookConstant(0m)
                         : Unstored(monster) is QueryValue { Name: "Monster", Of: { } creatureOf } && CreatureOf(creatureOf) is { } creature && monsterClass == OstyClass()
                             ? CreatureFact(HookFact.CreatureIsPet, creature)
-                            : Unstored(monster) is QueryValue { Name: "Monster", Of: { } ownerOf } && IsOwner(ownerOf) && IsMonsterClass(monsterClass)
-                                ? CreatureFact(HookFact.CreatureMonsterIs, new HookCreature(HookWho.Owner)) with { Of = monsterClass }
+                            : Unstored(monster) is QueryValue { Name: "Monster", Of: { } namedOf } && CreatureOf(namedOf) is { PetOwner: false } named && IsMonsterClass(monsterClass)
+                                ? CreatureFact(HookFact.CreatureMonsterIs, named) with { Of = monsterClass }
                                 : throw new Gap(ReaderCapability.Osty, $"gap: tests {monster} is {monsterClass}");
                     return Unstored(monsterOf) is WaysValue monsterWays
                         ? new HookWays(monsterWays.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), MonsterIs(way.Value))).ToList())
@@ -2591,8 +2610,12 @@ public static class HookReader
             if (_hook == nameof(HookName.ModifyPreBlockDamageTarget) && value is ParameterValue { Name: "originalTarget" } or NamedValue { Name: "originalTarget" }) return new HookCreature(HookWho.Target);
             if (_hook == nameof(HookName.ModifyPreBlockDamageTarget) && value is ParameterValue { Name: "target" } or NamedValue { Name: "target" }) return new HookCreature(HookWho.RedirectSoFar);
             if (value is ParameterValue { Name: "target" } or NamedValue { Name: "target" } && DamageHooks.Contains(_hook)) return new HookCreature(HookWho.Target);
+            // AfterBlockBroken(target, breaker): the creature whose block broke, and who broke it.
+            if (_hook == nameof(HookName.AfterBlockBroken) && value is ParameterValue { Name: "target" } or NamedValue { Name: "target" }) return new HookCreature(HookWho.Target);
+            if (_hook == nameof(HookName.AfterBlockBroken) && value is ParameterValue { Name: "breaker" } or NamedValue { Name: "breaker" }) return new HookCreature(HookWho.Breaker);
             // The creature a Should hook asks about.
-            if (value is ParameterValue { Name: "creature" } or NamedValue { Name: "creature" } && _hook is nameof(HookName.ShouldAllowHitting) or nameof(HookName.ShouldCreatureBeRemovedFromCombatAfterDeath))
+            if (value is ParameterValue { Name: "creature" } or NamedValue { Name: "creature" }
+                && _hook is nameof(HookName.ShouldAllowHitting) or nameof(HookName.ShouldCreatureBeRemovedFromCombatAfterDeath) or nameof(HookName.ShouldClearBlock))
                 return new HookCreature(HookWho.Asked);
             if (IsApplier(value)) return new HookCreature(HookWho.Applier);
             if (value is QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } } && _hook == "AfterPowerAmountChanged") return new HookCreature(HookWho.PowerOwner);
@@ -3435,8 +3458,9 @@ public static class HookReader
                 var each = type.IsAbstract ? _type.Assembly.GetTypes().Where(candidate => !candidate.IsAbstract && type.IsAssignableFrom(candidate)).ToList() : new List<Type> { type };
                 foreach (var power in each)
                 {
-                    // Its class or a base class below PowerModel declares an AfterRemoved (an override of PowerModel's, which does nothing).
-                    for (var declaring = power; declaring != null && declaring.Name != nameof(MegaCrit.Sts2.Core.Models.PowerModel); declaring = declaring.BaseType)
+                    // Its class or a base class below PowerModel declares an AfterRemoved (an override of PowerModel's, which does nothing). Its own class
+                    // (Burrowed's PowerCmd.Remove<BurrowedPower>(base.Owner)): its AfterRemoved is one of the hooks read with it, as PowerCmd.Remove(this)'s is.
+                    for (var declaring = power; declaring != null && declaring != _type && declaring.Name != nameof(MegaCrit.Sts2.Core.Models.PowerModel); declaring = declaring.BaseType)
                         if (declaring.GetMethod("AfterRemoved", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly) != null)
                             throw new Gap(ReaderCapability.CommandOnAnotherPower, $"gap: removes {power.Name}, whose AfterRemoved runs as it goes");
                     powers.Add(power.Name);

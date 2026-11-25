@@ -1846,6 +1846,57 @@
     "Copies": "EachApplication"
   },
   {
+    "Name": "BarricadePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ShouldClearBlock",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "BarricadePower.ShouldClearBlock:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "SameCreature",
+                    "Creature": {
+                      "Who": "Owner",
+                      "PetOwner": false
+                    },
+                    "Other": {
+                      "Who": "Asked",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "BeatingRemnant",
     "Kind": "Relic",
     "Hooks": [
@@ -2957,6 +3008,134 @@
     ],
     "Tab": "Trigger",
     "HelpsOwner": false
+  },
+  {
+    "Name": "BurrowedPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterBlockBroken",
+        "Steps": [
+          {
+            "$kind": "StunStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterBlockBroken\u003Ed__5.MoveNext:002C",
+                  "Test": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookFactValue",
+                      "Fact": "TargetIsOwner"
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterBlockBroken\u003Ed__5.MoveNext:004C",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreatureMonsterIs",
+                  "Of": "Tunneler",
+                  "Creature": {
+                    "Who": "Target",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "Powers": [
+              "BurrowedPower"
+            ],
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterBlockBroken\u003Ed__5.MoveNext:002C",
+                  "Test": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookFactValue",
+                      "Fact": "TargetIsOwner"
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterBlockBroken\u003Ed__5.MoveNext:004C",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreatureMonsterIs",
+                  "Of": "Tunneler",
+                  "Creature": {
+                    "Who": "Target",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ShouldClearBlock",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "BurrowedPower.ShouldClearBlock:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "SameCreature",
+                    "Creature": {
+                      "Who": "Owner",
+                      "PetOwner": false
+                    },
+                    "Other": {
+                      "Who": "Asked",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "Stuns"
   },
   {
     "Name": "BurstPower",
@@ -10918,6 +11097,354 @@
         }
       }
     ]
+  },
+  {
+    "Name": "HandDrill",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterBlockBroken",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "Or",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:0025",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "SameCreature",
+                    "Creature": {
+                      "Who": "Breaker",
+                      "PetOwner": false
+                    },
+                    "Other": {
+                      "Who": "Owner",
+                      "PetOwner": false
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:0051",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureIsPlayer",
+                      "Creature": {
+                        "Who": "Target",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:003F",
+                  "Test": {
+                    "$kind": "HookWays",
+                    "Ways": [
+                      {
+                        "When": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:0025",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "SameCreature",
+                                "Creature": {
+                                  "Who": "Breaker",
+                                  "PetOwner": false
+                                },
+                                "Other": {
+                                  "Who": "Owner",
+                                  "PetOwner": false
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:002E",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreatureThere",
+                                "Creature": {
+                                  "Who": "Breaker",
+                                  "PetOwner": false
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      },
+                      {
+                        "When": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:0025",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "SameCreature",
+                                "Creature": {
+                                  "Who": "Breaker",
+                                  "PetOwner": false
+                                },
+                                "Other": {
+                                  "Who": "Owner",
+                                  "PetOwner": false
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:002E",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureThere",
+                              "Creature": {
+                                "Who": "Breaker",
+                                "PetOwner": false
+                              }
+                            }
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SameCreature",
+                          "Creature": {
+                            "Who": "Breaker",
+                            "PetOwner": true
+                          },
+                          "Other": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:0051",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureIsPlayer",
+                      "Creature": {
+                        "Who": "Target",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "VulnerablePower",
+            "Target": "HitTarget",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "VulnerablePower",
+              "Canonical": 2
+            },
+            "GoesAtZero": false,
+            "Debuff": true,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "Or",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:0025",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "SameCreature",
+                    "Creature": {
+                      "Who": "Breaker",
+                      "PetOwner": false
+                    },
+                    "Other": {
+                      "Who": "Owner",
+                      "PetOwner": false
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:0051",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureIsPlayer",
+                      "Creature": {
+                        "Who": "Target",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:003F",
+                  "Test": {
+                    "$kind": "HookWays",
+                    "Ways": [
+                      {
+                        "When": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:0025",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "SameCreature",
+                                "Creature": {
+                                  "Who": "Breaker",
+                                  "PetOwner": false
+                                },
+                                "Other": {
+                                  "Who": "Owner",
+                                  "PetOwner": false
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:002E",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreatureThere",
+                                "Creature": {
+                                  "Who": "Breaker",
+                                  "PetOwner": false
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      },
+                      {
+                        "When": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:0025",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "SameCreature",
+                                "Creature": {
+                                  "Who": "Breaker",
+                                  "PetOwner": false
+                                },
+                                "Other": {
+                                  "Who": "Owner",
+                                  "PetOwner": false
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:002E",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureThere",
+                              "Creature": {
+                                "Who": "Breaker",
+                                "PetOwner": false
+                              }
+                            }
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookFactValue",
+                          "Fact": "SameCreature",
+                          "Creature": {
+                            "Who": "Breaker",
+                            "PetOwner": true
+                          },
+                          "Other": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterBlockBroken\u003Ed__6.MoveNext:0051",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureIsPlayer",
+                      "Creature": {
+                        "Who": "Target",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "BreaksBlock"
   },
   {
     "Name": "HangPower",

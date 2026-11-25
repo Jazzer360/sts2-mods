@@ -72,7 +72,13 @@ public class BlockBreakTabParityTests
             var enemy = new SimEnemy { Id = i, Name = $"E{i}", Hp = random.Next(5, 40), Block = random.Next(4) != 0 ? random.Next(1, 14) : 0,
                 Hits = Enumerable.Range(0, random.Next(0, 3)).Select(_ => random.Next(1, 12)).ToList() };
             enemy.IntendsToAttack = enemy.Hits.Count > 0;
-            if (random.Next(3) == 0) enemy.Powers = enemy.Powers.With(PowerId.Burrowed, 1);
+            // Burrowed on its one monster, a Tunneler (Tunneler.BurrowMove applies it; BurrowedPower.AfterBlockBroken acts on a Tunneler only). The
+            // hand-written model the recording was made with didn't ask.
+            if (random.Next(3) == 0)
+            {
+                enemy.Powers = enemy.Powers.With(PowerId.Burrowed, 1);
+                enemy.Monster = "Tunneler";
+            }
             if (random.Next(5) == 0) enemy.Powers = enemy.Powers.With(PowerId.Vulnerable, random.Next(1, 3));
             if (random.Next(6) == 0) enemy.Powers = enemy.Powers.With(PowerId.Artifact, 1);
             state.Enemies.Add(enemy);

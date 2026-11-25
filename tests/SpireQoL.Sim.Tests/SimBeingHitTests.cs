@@ -20,6 +20,7 @@ public class SimBeingHitTests
         // BurrowedPower.AfterBlockBroken: stunned, power and block removed. Its block stays between turns.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 40, block: 10, hits: 15) } };
         state.Enemies[0].Burrowed = true;
+        state.Enemies[0].Monster = "Tunneler"; // its one monster: BurrowedPower.AfterBlockBroken acts on a Tunneler only
         state.Enemies[0].Barricade = true;
         Assert.Equal(15, SimEngine.Run(state).TakenMax);
         Assert.Equal(15, SimEngine.Run(state, Strike(target: 1, damage: 6)).TakenMax); // block not broken

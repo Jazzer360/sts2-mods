@@ -58,6 +58,8 @@ internal readonly struct HookArgs
     public int TriggerCount { get; init; }
     /// <summary>The item of the loop the step is in (HookWho.Each): a player's or an enemy's id.</summary>
     public int Each { get; init; }
+    /// <summary>Who broke the block an AfterBlockBroken is told of (Who.None: no one).</summary>
+    public int Breaker { get; init; }
     /// <summary>The locals this run kept (LetStep, by its slot); null: it keeps none.</summary>
     public decimal[]? Locals { get; init; }
     /// <summary>Asked of the players' next turn (a payout there: decision #239): the turn number is the next one.</summary>
@@ -517,6 +519,8 @@ public sealed class ReadModel : SimModel
         HookName.ShouldAllowHitting => nameof(ShouldAllowHitting),
         HookName.ShouldCreatureBeRemovedFromCombatAfterDeath => nameof(ShouldCreatureBeRemovedFromCombatAfterDeath),
         HookName.ShouldStopCombatFromEnding => nameof(ShouldStopCombatFromEnding),
+        HookName.AfterBlockBroken => nameof(AfterBlockBroken),
+        HookName.ShouldClearBlock => nameof(ShouldClearBlock),
         // Its power's own question as its owner dies (Creature.RemoveAllPowersAfterDeath): asked of it, never of every listener.
         HookName.ShouldPowerBeRemovedAfterOwnerDeath => nameof(StaysOnDeadOwner),
         // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook; an enchantment's OnPlay
@@ -652,6 +656,16 @@ public sealed class ReadModel : SimModel
     public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit) => InDamage(HookName.AfterDamageGiven, state, owner, hit);
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit) => InDamage(HookName.AfterDamageReceived, state, owner, hit);
 
+    /// <summary>
+    /// A creature's block broke (Hook.AfterBlockBroken: inside the damage after its HP loss, SimEngine.Damage, or a block loss, SimEngine.StripBlock):
+    /// deterministic, on the state given.
+    /// </summary>
+    public override void AfterBlockBroken(SimState state, int owner, int target, int? breaker)
+    {
+        foreach (var branch in Run(HookName.AfterBlockBroken, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Target = target, Breaker = breaker ?? Who.None }))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterBlockBroken branched inside a hit");
+    }
+
     /// <summary>A player tried a shot (Hook.AfterArrowShot, SimEngine.RunShoot): its shooter the hook's player, the shot's arrow SimState.ArrowAwayAt.</summary>
     public override IEnumerable<SimState> AfterArrowShot(SimState state, int owner, int shooter) =>
         Run(HookName.AfterArrowShot, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Player = shooter });
@@ -701,6 +715,8 @@ public sealed class ReadModel : SimModel
         // Its own hit's: stunned when the turn's over, set off after the play (in its turn), so the play check isn't held to it.
         HookOutcome.StunsOnItsOwnHit => Models.OutcomeRules.Stuns(now, owner) is { } stuns ? stuns with { InPlay = false } : null,
         HookOutcome.KillsItself => Who.IsEnemy(owner) && !now.KilledByItsPowerInAll(owner) ? new(Harmful: false, outcome => outcome.KilledByItsPowerInAll(owner)) : null,
+        // A block its owner breaks: your play's breaks are yours (every step waits on the breaker), a bonus when every outcome breaks some enemy's.
+        HookOutcome.BreaksBlock => owner == Who.You ? new(Harmful: false, outcome => outcome.PlayBreaksBlockInAll) : null,
         _ => _paidWhere.Count > 0 ? PaidWhere(now, owner) : null,
     };
 
@@ -847,6 +863,10 @@ public sealed class ReadModel : SimModel
     /// <summary>Hook.ShouldStopCombatFromEnding: its code's answer (Infested's, Stock's, Steam Eruption's: true).</summary>
     public override bool ShouldStopCombatFromEnding(SimState state, int owner) =>
         _returns[(int)HookName.ShouldStopCombatFromEnding] is { } returns && returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ShouldStopCombatFromEnding }) != 0m;
+
+    /// <summary>Hook.ShouldClearBlock of <paramref name="creature"/>: its code's answer (Barricade and Burrowed keep their owner's).</summary>
+    public override bool ShouldClearBlock(SimState state, int owner, int creature) =>
+        _returns[(int)HookName.ShouldClearBlock] is not { } returns || returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ShouldClearBlock, Target = creature }) != 0m;
 
     /// <summary>Its ShouldPowerBeRemovedAfterOwnerDeath says no: it stays on its dead owner (Die For You, Wuppy's Loyalty).</summary>
     public override bool StaysOnDeadOwner(SimState state, int owner) =>
@@ -2204,7 +2224,8 @@ public sealed class ReadModel : SimModel
             case HookFact.PowerOnEnemy: return (in HookArgs args) => Who.IsEnemy(args.Target) ? 1m : 0m;
             case HookFact.DealerIsOwner: return (in HookArgs args) => (args.Damage?.Dealer ?? args.Hit?.Dealer) == args.Owner ? 1m : 0m;
             case HookFact.DealerIsOwnersPet: return (in HookArgs args) => Who.IsPlayer(args.Owner) && Who.PetOwnerOf(args.Damage?.Dealer ?? args.Hit?.Dealer ?? Who.None) == args.Owner ? 1m : 0m;
-            case HookFact.TargetIsOwner: return (in HookArgs args) => (args.Damage?.Target ?? args.Block?.Target ?? args.Hit?.Target) == args.Owner ? 1m : 0m;
+            case HookFact.TargetIsOwner: return (in HookArgs args) =>
+                (args.Damage?.Target ?? args.Block?.Target ?? args.Hit?.Target ?? (args.Hook == HookName.AfterBlockBroken ? args.Target : null)) == args.Owner ? 1m : 0m;
             case HookFact.PoweredAttack: return (in HookArgs args) => (args.Damage?.Props ?? args.Hit?.Props ?? args.Attack?.Props)?.IsPoweredAttack() == true ? 1m : 0m;
             case HookFact.PoweredBlock: return (in HookArgs args) => args.Block?.Props.IsPoweredBlock() == true ? 1m : 0m;
             case HookFact.CardOrMonsterMove: return (in HookArgs args) => (args.Damage?.Props ?? args.Block?.Props ?? args.Hit?.Props)?.IsCardOrMonsterMove() == true ? 1m : 0m;
@@ -2343,7 +2364,9 @@ public sealed class ReadModel : SimModel
         {
             HookWho.Owner => args.Owner,
             HookWho.Dealer => args.Damage is { } damage ? damage.Dealer ?? Who.None : args.Hit?.Dealer ?? Who.None,
-            HookWho.Target => args.Damage?.Target ?? args.Block?.Target ?? args.Hit?.Target ?? Who.None,
+            // A damage's or block's target; AfterBlockBroken's (no damage of its own: its creature the hook's Target).
+            HookWho.Target => args.Damage?.Target ?? args.Block?.Target ?? args.Hit?.Target ?? (args.Hook == HookName.AfterBlockBroken ? args.Target : Who.None),
+            HookWho.Breaker => args.Breaker,
             HookWho.Dead or HookWho.PowerOwner or HookWho.RedirectSoFar or HookWho.Asked => args.Target,
             HookWho.Applier => ApplierOf(in args),
             HookWho.Each => args.Each,

@@ -437,11 +437,18 @@ public static class ProgramReader
 
     /// <summary>
     /// The monster of a creature the hook is given, where every way the code reaches the call tests that creature is its owner (Steam Eruption's
-    /// ((WaterfallGiant)creature.Monster).TriggerAboutToBlowState() under creature == base.Owner): its owner's monster there.
+    /// ((WaterfallGiant)creature.Monster).TriggerAboutToBlowState() under creature == base.Owner; Burrowed's target.Monster kept and tested as a
+    /// Tunneler, then tunneler.GetStunned() under target == base.Owner): its owner's monster there.
     /// </summary>
     private static bool IsGivenOwnersMonster(ProgramValue value, ProgramCondition reached)
     {
-        var given = (value is StoredValue kept ? kept.Value : value) switch
+        static ProgramValue Monster(ProgramValue candidate) => candidate switch
+        {
+            StoredValue kept => Monster(kept.Value),
+            QueryValue { Name: "is", Of: { } tested } => Monster(tested),
+            _ => candidate,
+        };
+        var given = Monster(value) switch
         {
             QueryValue { Name: "Monster", Of: ParameterValue parameter } => parameter.Name,
             QueryValue { Name: "Monster", Of: NamedValue { Name: var named } } when named != "this" => named,
@@ -1005,13 +1012,14 @@ public static class ProgramReader
         }
 
         /// <summary>
-        /// An instance method a monster class of the game's declares, that returns nothing or a task and isn't a question, a property or a show
-        /// (CeremonialBeast.SetStunned, its StunnedMove): its class and code, for a power whose code calls it on its owner's monster; else null.
+        /// An instance method a monster class of the game's declares, that returns nothing or a task (so no question, whatever its name: Tunneler's
+        /// GetStunned) and isn't a property or a show (CeremonialBeast.SetStunned, its StunnedMove): its class and code, for a power whose code calls it
+        /// on its owner's monster; else null.
         /// </summary>
         private (Type Owner, MethodBase Called, MethodBase Body)? OwnersMonsterMethod(CodeMember member)
         {
             if (member is not { Kind: CodeMemberKind.Method, HasThis: true, Namespace: "MegaCrit.Sts2.Core.Models.Monsters" } || member.Name.StartsWith('<')
-                || member.Name.StartsWith("get_", StringComparison.Ordinal) || member.Name.StartsWith("set_", StringComparison.Ordinal) || Asks(member.Name) || ShowsOnly(member.Name)
+                || member.Name.StartsWith("get_", StringComparison.Ordinal) || member.Name.StartsWith("set_", StringComparison.Ordinal) || ShowsOnly(member.Name)
                 || member.ValueType != typeof(void).Name && member.ValueType != nameof(Task)) return null;
             if (_card.Assembly.GetType(member.Namespace + "." + member.DeclaringType) is not { } monster || !IsMonsterClass(monster)) return null;
             if (monster.GetMethods(All).FirstOrDefault(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount) is not { } found) return null;

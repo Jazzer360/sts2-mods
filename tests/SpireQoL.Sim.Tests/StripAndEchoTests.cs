@@ -25,7 +25,9 @@ public class StripAndEchoTests
     {
         // LoseBlock runs AfterBlockBroken when the block was above 0: Burrowed stuns its owner.
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 30, block: 10) } };
+        // Burrowed on its one monster, a Tunneler (BurrowedPower.AfterBlockBroken acts on a Tunneler only).
         state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Burrowed, amount: 1);
+        state.Enemies[0].Monster = "Tunneler";
         state.Enemies[0].Hits = new List<int> { 12 };
         var after = After(state, Play(Card("Expose", SimCardType.Skill), target: 0, plays: 1, new StripBlockAction(RemoveArtifact: true))).Single();
         Assert.True(after.Enemy(id: 0)!.Stunned);
