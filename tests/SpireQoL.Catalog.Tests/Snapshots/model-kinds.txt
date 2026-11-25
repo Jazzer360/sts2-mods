@@ -142,27 +142,20 @@ SimReaders.RelicAmountVars: SneckoSkull: hand-written; reads its own value Poiso
 name gate: AccelerantPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a gate to replace by a rule
 name gate: AimPower in Procs/Fool.cs: read from code: a gate its reading could replace
 name gate: ArtifactPower in Sim/Adapter/SimAdapter.Steps.cs: not modelled from code: a gate to replace by a rule
-name gate: AutomationPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
-name gate: CacophonyPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
 name gate: ChainsOfBindingPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a gate to replace by a rule
 name gate: ConfusedPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a gate to replace by a rule
-name gate: CorrosiveWavePower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
 name gate: DampenPower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule
-name gate: FeelNoPainPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
-name gate: FlameBarrierPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
 name gate: FreeAttackPower in Procs/FreeCards.cs: not modelled from code: a gate to replace by a rule
 name gate: FreePowerPower in Procs/FreeCards.cs: not modelled from code: a gate to replace by a rule
 name gate: FreeSkillPower in Procs/FreeCards.cs: not modelled from code: a gate to replace by a rule
 name gate: HellraiserPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a gate to replace by a rule
 name gate: HexPower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule
 name gate: ImpaledPower in Procs/Fool.cs: hand-written: goes with its model
-name gate: IterationPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
 name gate: JuggernautPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a gate to replace by a rule
 name gate: LostLutePower in Sim/Adapter/SimAdapter.cs: hand-written: goes with its model
 name gate: MinionPower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule
 name gate: NemesisPower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule
 name gate: PaelsEye in Sim/Adapter/SimAdapter.cs: hand-written: goes with its model
-name gate: PagestormPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
 name gate: PainfulStabsPower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule
 name gate: PersonalHivePower in Sim/Adapter/MoveBranches.cs: read from code: a gate its reading could replace
 name gate: PlatingPower in Sim/Adapter/SimAdapter.cs: hand-written: goes with its model
@@ -170,7 +163,6 @@ name gate: PlowPower in Sim/Adapter/BranchRules.cs: read from code: a gate its r
 name gate: PoisonPower in Sim/Adapter/SimAdapter.Steps.cs: read from code: a gate its reading could replace
 name gate: QuietusPower in Procs/Fool.cs: read from code: a gate its reading could replace
 name gate: SandpitPower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule
-name gate: SpeedsterPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
 name gate: StrengthPower in Sim/Adapter/MoveBranches.cs: read from code: a gate its reading could replace
 name gate: StretchPower in Procs/Fool.cs, Sim/Adapter/SimAdapter.Steps.cs: read from code: a gate its reading could replace
 name gate: SwipePower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule

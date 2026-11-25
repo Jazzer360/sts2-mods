@@ -23,13 +23,20 @@ public class DrawScanTests
             .Select(type => type.Name).OrderBy(name => name).ToList();
     }
 
+    /// <summary>A class read from its code (decision #195): its reading says what it asks of the drawn card (SimAdapter.DrawnCardNotKept).</summary>
+    private static ReadModel? Read(string name) => SimModels.Get(name) as ReadModel;
+
     [Fact]
     public void EveryDrawReactionIsReviewed()
     {
         var reactors = DrawReactors();
         Assert.NotEmpty(reactors);
-        var missing = reactors.Where(reactor => !SimAdapter.DrawReactions.ContainsKey(reactor)).ToList();
-        Assert.True(missing.Count == 0, "React to a drawn card, not reviewed for the draw profile (SimAdapter.DrawReactions): " + string.Join(", ", missing));
+        var missing = reactors.Where(reactor => !SimAdapter.DrawReactions.ContainsKey(reactor) && Read(reactor) == null).ToList();
+        Assert.True(missing.Count == 0, "React to a drawn card, neither read from their code nor reviewed for the draw profile (SimAdapter.DrawReactions): " + string.Join(", ", missing));
+        // One read from its code asks only what the profile keeps of the drawn card (any card, a Status, Ethereal).
+        var notKept = reactors.Where(reactor => Read(reactor) is { } read && SimAdapter.DrawnCardNotKept(read.Spec) != null)
+            .Select(reactor => $"{reactor}: {SimAdapter.DrawnCardNotKept(Read(reactor)!.Spec)}").ToList();
+        Assert.True(notKept.Count == 0, "Read from their code, asking what the draw profile doesn't keep of the drawn card: " + string.Join("; ", notKept));
     }
 
     [Fact]
@@ -38,6 +45,24 @@ public class DrawScanTests
         var reactors = DrawReactors().ToHashSet();
         var stale = SimAdapter.DrawReactions.Keys.Where(key => !reactors.Contains(key)).ToList();
         Assert.True(stale.Count == 0, "Reviewed in SimAdapter.DrawReactions but no longer reacting to draws: " + string.Join(", ", stale));
+        // A review by name for a class read from its code is its reading's to give (decision #281).
+        var read = SimAdapter.DrawReactions.Keys.Where(key => Read(key) != null).ToList();
+        Assert.True(read.Count == 0, "Reviewed in SimAdapter.DrawReactions but read from their code: " + string.Join(", ", read));
+    }
+
+    /// <summary>
+    /// The reading's answer: Iteration's type tested against Status and Pagestorm's Ethereal are kept, Automation's count of any card asks nothing;
+    /// a type tested against Attack isn't kept (the profile keeps only whether a drawn card is a Status).
+    /// </summary>
+    [Fact]
+    public void WhatADrawHookAsksIsReadFromItsCode()
+    {
+        GameModels.EnsureLoaded();
+        foreach (var name in new[] { nameof(MegaCrit.Sts2.Core.Models.Powers.IterationPower), nameof(MegaCrit.Sts2.Core.Models.Powers.PagestormPower), nameof(MegaCrit.Sts2.Core.Models.Powers.AutomationPower) })
+            Assert.Null(SimAdapter.DrawnCardNotKept(Read(name)!.Spec));
+        var attack = new HookTest("probe", new HookMath(HookOperation.Equal, new HookFactValue(HookFact.CardType), new HookConstant((int)SimCardType.Attack)));
+        var drawsOnAttack = new ModelSpec("Probe", ModelKind.Power, new[] { new HookProgram(HookName.AfterCardDrawn, new HookStep[] { new FlashStep { When = attack } }) });
+        Assert.NotNull(SimAdapter.DrawnCardNotKept(drawsOnAttack));
     }
 
     /// <summary>

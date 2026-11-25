@@ -21,19 +21,21 @@ namespace SpireQoL.Sim;
 public static partial class SimAdapter
 {
 
-    /// <summary>Your powers the simulator tracks (Plating, Juggernaut, Feel No Pain, Thorns, Flame Barrier).</summary>
+    /// <summary>
+    /// Your powers the simulator tracks that aren't read from their code (Plating, Juggernaut, Accelerant). One read from its code (Feel No Pain,
+    /// Thorns, Flame Barrier) is simulated as any read model is, its amount the card's step's (decision #281).
+    /// </summary>
     internal static readonly HashSet<string> SelfPowers = new()
     {
-        nameof(PlatingPower), nameof(JuggernautPower), nameof(FeelNoPainPower), nameof(ThornsPower), nameof(FlameBarrierPower),
+        nameof(PlatingPower), nameof(JuggernautPower),
         nameof(AccelerantPower),
     };
 
     /// <summary>
-    /// A tracked power the card's code applies without a PowerVar for it: its plain value ("Power":
-    /// Feel No Pain; "DamageBack": Flame Barrier; "Accelerant"), 0 when it has neither (the card scan reports it), or
-    /// null (none, or it has a PowerVar, read with the others).
+    /// A tracked power the card's code applies without a PowerVar for it: its plain value ("Accelerant"), 0 when it has none (the card scan
+    /// reports it), or null (none, or it has a PowerVar, read with the others).
     /// </summary>
-    private static readonly string[] PlainPowerVars = { "Power", "DamageBack", "Accelerant" }; // DynamicVars keys
+    private static readonly string[] PlainPowerVars = { "Accelerant" }; // DynamicVars keys
 
     /// <summary>
     /// How many times an enemy's poison ticks: 1 plus the Accelerant of every living opponent of it, so every player's
@@ -315,6 +317,37 @@ public static partial class SimAdapter
         models.Any(model => SimModels.Get(SimReaders.ModelName(model)) is ReadModel read && read.Spec.Of(HookName.AfterCardDrawn) is { } drawn
             && new ModelSpec(read.Name, read.Spec.Kind, new[] { drawn }).Values().Any(value => value is HookFactValue { Fact: HookFact.CardEthereal }));
 
+    /// <summary>The facts of a card a read hook can ask of the card it's given (a drawn card, in a draw hook).</summary>
+    private static readonly HashSet<HookFact> CardFacts = new()
+    {
+        HookFact.CardType, HookFact.CardEthereal, HookFact.CardUpgradable, HookFact.CardAffliction, HookFact.CardTag, HookFact.CardEnergy, HookFact.CardIs,
+        HookFact.CardGainsBlock, HookFact.CardEnchanted, HookFact.EnchantmentGainsBlock,
+    };
+
+    /// <summary>
+    /// What a model read from its code asks of a drawn card in its draw hooks (AfterCardDrawn, AfterCardDrawnEarly) that the draw profile doesn't keep
+    /// (decision #90), or null when the profile keeps all it asks: nothing (any card: a count), its being a Status (its type tested against Status, or a
+    /// question to the fight's log counting the Statuses drawn: AsksDrawnStatus), or its Ethereal (AsksDrawnEthereal). What a class's reading gives in
+    /// place of a review by its name (DrawReactions, decision #281).
+    /// </summary>
+    internal static string? DrawnCardNotKept(ModelSpec spec)
+    {
+        var hooks = spec.Hooks.Where(program => program.Hook is HookName.AfterCardDrawn).ToList();
+        if (hooks.Count == 0) return null;
+        var values = new ModelSpec(spec.Name, spec.Kind, hooks).Values().ToList();
+        // Its type compared with Status (Iteration's card.Type == CardType.Status) is the profile's Status; any other use of its type isn't kept.
+        static bool IsType(HookValue value) => value is HookFactValue { Fact: HookFact.CardType };
+        static bool IsStatus(HookValue value) => value is HookConstant constant && constant.Value == (int)SimCardType.Status;
+        var statusTests = values.OfType<HookMath>().Count(math => math.Operation is HookOperation.Equal or HookOperation.NotEqual
+            && (IsType(math.Left) && IsStatus(math.Right) || IsStatus(math.Left) && IsType(math.Right)));
+        var typesAsked = values.Count(IsType);
+        if (typesAsked > statusTests) return "its type, other than whether it's a Status";
+        var unkept = values.OfType<HookFactValue>().Where(fact => CardFacts.Contains(fact.Fact) && fact.Fact is not (HookFact.CardType or HookFact.CardEthereal)).Select(fact => fact.Fact.ToString()).Distinct().ToList();
+        if (unkept.Count > 0) return string.Join(", ", unkept);
+        var questions = values.OfType<HookHistory>().Where(history => history.Query.Kind == HistoryKind.CardDrawn && history.Query.CardType is not (SimCardType.None or SimCardType.Status)).ToList();
+        return questions.Count > 0 ? "a question to the fight's log about the cards drawn of a type other than Status" : null;
+    }
+
     /// <summary>
     /// Your draw and discard piles by profile (decision #90): what about each card matters if you draw it on this board, never
     /// their order (hidden; only the cards known to be on top would be: none yet). What matters: acting in hand at end of
@@ -517,18 +550,13 @@ public static partial class SimAdapter
     }
 
     /// <summary>
-    /// Every game class that reacts to a card being drawn (AfterCardDrawn, AfterCardDrawnEarly), reviewed for the draw profile
-    /// (decision #90): what about the drawn card it reads, and how the simulator covers it. DrawScanTests (catalog tests) fails a
-    /// class that isn't here, so a new draw reaction can't merge cards the profile should keep apart.
+    /// Every game class that reacts to a card being drawn (AfterCardDrawn, AfterCardDrawnEarly) and isn't read from its code, reviewed for the
+    /// draw profile (decision #90): what about the drawn card it reads, and how the simulator covers it. One read from its code is covered by what
+    /// its reading asks of the drawn card (DrawnCardNotKept, decision #281). DrawScanTests (catalog tests) fails a class that's neither, so a new
+    /// draw reaction can't merge cards the profile should keep apart.
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, string> DrawReactions = new Dictionary<string, string>
     {
-        [nameof(AutomationPower)] = "any card: a count (CardEvent.Drawn)",
-        [nameof(CacophonyPower)] = "any card: a count (CardEvent.Drawn)",
-        [nameof(SpeedsterPower)] = "any card: a count (CardEvent.Drawn)",
-        [nameof(CorrosiveWavePower)] = "any card: a count (CardEvent.Drawn)",
-        [nameof(IterationPower)] = "a Status (the profile's Status, as its question to the fight's log asks it: AsksDrawnStatus): draws more",
-        [nameof(PagestormPower)] = "Ethereal (the profile's Ethereal, when a read hook tests it: AsksDrawnEthereal): draws more",
         [nameof(HellraiserPower)] = "a Strike (the profile's Strike, with Hellraiser): its auto-play isn't simulated; later auto-plays aren't predicted",
         [nameof(ChainsOfBindingPower)] = "afflicts drawn cards Bound (playability, read live; nothing at end of turn)",
         [nameof(ConfusedPower)] = "a random cost (costs matter to Simpleton only: read live in hand; a drawn card keeps the cost it had)",
