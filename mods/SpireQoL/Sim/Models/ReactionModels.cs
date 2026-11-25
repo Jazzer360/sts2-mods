@@ -99,7 +99,7 @@ public sealed class PlowPower : SimModel
     }
 }
 
-// Shriek is read from its code (ReadModel, decision #245).
+// Shriek is read from its code (ReadModel, decision #251).
 
 /// <summary>TheGambitPower.AfterDamageReceived: a powered attack that gets HP through kills its owner.</summary>
 public sealed class TheGambitPower : SimModel

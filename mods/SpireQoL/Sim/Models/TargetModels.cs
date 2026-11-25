@@ -2,7 +2,7 @@ namespace SpireQoL.Sim.Models;
 
 // Damage sources keyed on the target or on positions that change during your turn (decompile v0.113.1).
 
-// Flutter is read from its code (ReadModel, decision #245).
+// Flutter is read from its code (ReadModel, decision #251).
 
 // Hard to Kill and Intangible are read from their code (ReadModel, decision #229).
 

@@ -90,7 +90,7 @@ public sealed class BiiigHug : RelicProc
 
 // ---- used up by a play
 
-// Burning Sticks is read from its code (ReadModel, decision #246).
+// Burning Sticks is read from its code (ReadModel, decision #252).
 
 /// <summary>
 /// UnsettlingLamp: while armed, the first card of yours that applies a debuff to an enemy without Artifact (BeforePowerAmountChanged)

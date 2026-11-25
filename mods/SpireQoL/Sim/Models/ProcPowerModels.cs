@@ -55,7 +55,7 @@ public sealed class JugglingPower : ProcModel
         Mine(play, owner) && TakeBound(state, owner) is { } bound ? MakeInHand(Fire(state, owner), play.Card, bound, owner) : One(state);
 }
 
-// Black Hole is read from its code (ReadModel, decision #244).
+// Black Hole is read from its code (ReadModel, decision #250).
 
 /// <summary>DevourLifePower.AfterCardPlayed: each Soul its owner plays summons its amount (Osty).</summary>
 public sealed class DevourLifePower : ProcModel
@@ -254,7 +254,7 @@ internal static class Melodies
     }
 }
 
-// Violent Chord and Song Path are read from their code (ReadModel, decision #247).
+// Violent Chord and Song Path are read from their code (ReadModel, decision #253).
 
 
 /// <summary>
