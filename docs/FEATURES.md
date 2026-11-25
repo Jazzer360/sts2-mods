@@ -515,7 +515,7 @@ Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). M
 
 ## Potion Tags
 
-**What you see**, in fights: the on-card tag's design hanging under each potion in the top bar, point down like a banner, with the icon of a relic that drinking that potion sets off. One tag per relic, side by side under the potion.
+**What you see**, in fights: the on-card tag's design hanging under each potion in the top bar, point down like a banner, with the icon of a relic that drinking that potion sets off. One tag per relic, side by side under the potion. A tag for a relic whose code answers a potion's use (Reptile Trinket, Belt Buckle) comes from the potion's simulated use (decision #318): the use alone, searched in the background once per potion and board (a board change, never every frame), its tag where the relic acts in it; White Beast Statue's is a rule on the board (its reward comes after the fight).
 
 | Relic | Potions | Why |
 | --- | --- | --- |
@@ -525,9 +525,9 @@ Draw cards are every `CardPileCmd.Draw` caller in the decompile (TRACKER §6). M
 
 **Settings:** the `potion-tabs` switch, the "All potion tags" group (`potion:*`) and one key per relic (`potion:<Relic>`, Tags by source, Relics, On cards column).
 
-**Check:** after you drink a potion, Reptile Trinket's Strength and Belt Buckle's Dexterity against the tags it had on its last frame on the belt (kept after it leaves the belt, which it does before the game logs it as drunk); reported (`potion`) when they differ. Each potion writes an `[audit] [potion]` line to the log. **Its outcome (decision #313):** as a potion of yours starts (its `UsePotionAction`, `ActionExecutor.BeforeActionExecuted`), its use is built from the board then through the same code as its preview (`SimAdapter.Potion`), and when the action finishes (`GameAction.AfterFinished`) the state it left (each enemy's HP, block, poison, Flutter, stun and intent; your block, hand, energy, Plating, Thorns, Osty and orbs; each living teammate's block, HP, energy and orbs) is compared with the simulator's outcomes of that use: only a state no outcome gives is reported (`potion`, with the start state to replay). Not checked, with the reason counted: a potion that acts on its own, a use whose search stopped at a cap or met something not modelled (its `?`), a use that ended your turn.
+**Check:** after you drink a potion, which of your relics that answer a potion's use flashed (the game showing it acted: `RelicModel.Flashed`) against the tags it had on its last frame on the belt (kept after it leaves the belt, which it does before the game logs it as drunk); reported (`potion`) when they differ. Each potion writes an `[audit] [potion]` line to the log. **Its outcome (decision #313):** as a potion of yours starts (its `UsePotionAction`, `ActionExecutor.BeforeActionExecuted`), its use is built from the board then through the same code as its preview (`SimAdapter.Potion`), and when the action finishes (`GameAction.AfterFinished`) the state it left (each enemy's HP, block, poison, Flutter, stun and intent; your block, hand, energy, Plating, Thorns, Osty and orbs; each living teammate's block, HP, energy and orbs) is compared with the simulator's outcomes of that use: only a state no outcome gives is reported (`potion`, with the start state to replay). Not checked, with the reason counted: a potion that acts on its own, a use whose search stopped at a cap or met something not modelled (its `?`), a use that ended your turn.
 
-**Game UI touched:** each tag is a copy of a hand card's enchantment tab, added as the first child of the potion's `NPotionHolder` (so the potion draws over its tucked end); the game's nodes aren't changed. No Harmony patches.
+**Game UI touched:** each tag is a copy of a hand card's enchantment tab, added as the first child of the potion's `NPotionHolder` (so the potion draws over its tucked end); the game's nodes aren't changed. The check listens to your relics' own `Flashed` event while in a fight. No Harmony patches.
 
 ---
 

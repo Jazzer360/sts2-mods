@@ -59,6 +59,15 @@ internal static class CatalogCheck
         foreach (var name in replayers.Except(doubleRows).Order()) problems.Add($"source of extra plays without a double-play row: {name}");
         foreach (var name in doubleRows.Except(replayers).Order()) problems.Add($"double-play row for a class that doesn't add plays: {name}");
 
+        // Potion tags (decision #318): every relic whose code listens to a potion's use (its tag from the use's log) and every board rule of the
+        // feature's has a potion row, and every potion row is one of those.
+        var potionRules = Sim.SimModels.Names.Where(name => Sim.SimModels.Get(name) is { } model && Sim.PotionTabs.ListensToPotions(model)
+                                                            && gameTypes.TryGetValue(name, out var type) && typeof(RelicModel).IsAssignableFrom(type))
+            .Concat(SpireQoL.Features.PotionTabsFeature.BoardRules).ToHashSet();
+        var potionRows = sources.Where(sourceEntry => sourceEntry.TagPrefix == "potion:").Select(sourceEntry => sourceEntry.Type).ToHashSet();
+        foreach (var name in potionRules.Except(potionRows).Order()) problems.Add($"potion tag without a settings row: {name}");
+        foreach (var name in potionRows.Except(potionRules).Order()) problems.Add($"settings row (potion tag) without a rule: {name}");
+
         // Run reminders: every rule has a settings row, every row a rule.
         var reminderRules = ChoiceReminders.Rules.Select(reminderRule => reminderRule.Relic).ToHashSet();
         var reminderRows = sources.Where(sourceEntry => sourceEntry.OutsideFights).Select(sourceEntry => sourceEntry.Type).ToHashSet();

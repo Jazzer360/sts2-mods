@@ -222,9 +222,10 @@ public static partial class SimEngine
     /// One search (decision #107): every step advances all branches together, and branches that reach the same state merge
     /// (adding their shares of the rolls), so the work grows with the distinct states, not the orders of random targets. Bounded by
     /// the memory cap (SimWork.Hold): past it the search stops where it is, and the outcome is Truncated. <paramref name="work"/>
-    /// carries the cancellation and the background gate (SimJob).
+    /// carries the cancellation and the background gate (SimJob). <paramref name="playOnly"/>: the play and its own results alone, no end of
+    /// turn or enemy turn after it (a potion's use for its tags: decision #318); its branches are the states right after the play.
     /// </summary>
-    internal static SimOutcome Run(SimState start, SimScript? play, SimWork? work)
+    internal static SimOutcome Run(SimState start, SimScript? play, SimWork? work, bool playOnly = false)
     {
         work ??= new SimWork();
         var first = start.Clone();
@@ -240,15 +241,18 @@ public static partial class SimEngine
                 if (play != null) RunScript(branches, play);
                 // The play is over in every branch: its own results are exact from here, even if the end of turn hits the cap.
                 outcome = PlayResults(branches.States, start, aliveAtStart, complete: true);
-                // A play that won the fight has no end of turn after it, nor an enemy turn (decision #301).
-                Fighting(branches, () => AutoPostPlay(branches));
-                EndOfTurn(branches);
-                Fighting(branches, () => EnemyTurnStart(branches));
-                // The enemy turn of a branch whose fight is over moves no one (each move asks FightEnding first): it only marks the dead.
-                branches.Do(EnemyTurn);
-                // Then the enemies' side's turn ends, while the fight goes on (CombatManager.ExecuteEnemyTurn: EndEnemyTurn after the last move).
-                Fighting(branches, () => EnemyTurnEnd(branches));
-                foreach (var branch in branches.States) TurnEndBlockBack(branch); // not a step of the search: no work counted
+                if (!playOnly)
+                {
+                    // A play that won the fight has no end of turn after it, nor an enemy turn (decision #301).
+                    Fighting(branches, () => AutoPostPlay(branches));
+                    EndOfTurn(branches);
+                    Fighting(branches, () => EnemyTurnStart(branches));
+                    // The enemy turn of a branch whose fight is over moves no one (each move asks FightEnding first): it only marks the dead.
+                    branches.Do(EnemyTurn);
+                    // Then the enemies' side's turn ends, while the fight goes on (CombatManager.ExecuteEnemyTurn: EndEnemyTurn after the last move).
+                    Fighting(branches, () => EnemyTurnEnd(branches));
+                    foreach (var branch in branches.States) TurnEndBlockBack(branch); // not a step of the search: no work counted
+                }
             }
             catch (SimCapped)
             {

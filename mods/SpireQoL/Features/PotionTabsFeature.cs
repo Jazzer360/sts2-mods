@@ -3,7 +3,8 @@ using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Combat.History.Entries;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Powers;
+using SpireQoL.Combat;
+using SpireQoL.Sim;
 using MegaCrit.Sts2.Core.Models.Relics;
 using MegaCrit.Sts2.Core.Nodes;
 using MegaCrit.Sts2.Core.Nodes.Potions;
@@ -17,12 +18,13 @@ namespace SpireQoL.Features;
 /// <summary>
 /// Potion Tags (docs/FEATURES.md "Potion Tags"): in fights, the on-card tag's design hanging under each potion in the top
 /// bar, point down like a banner, with the icon of a relic that drinking that potion sets off. Keys "potion:&lt;Relic&gt;".
-///  - Reptile Trinket: every potion (3 Strength this turn: ReptileTrinket.AfterPotionUsed).
-///  - Belt Buckle: your last potion, while its Dexterity isn't up (holding none gives it: AfterPotionUsed/Discarded).
+///  - A relic of yours whose code listens to a potion's use (Hook.BeforePotionUsed, AfterPotionUsed: Reptile Trinket, Belt Buckle), where the
+///    potion's simulated use shows it acting (decision #318: Sim/PotionTabs, from the use's log as a card's proc tabs are): the use alone searched
+///    on a worker (SimSearch.PlayOnly, decision #107) once per potion, aim and board, never per frame.
 ///  - White Beast Statue: every potion while your slots are full (a potion reward comes after every fight:
-///    ShouldForcePotionReward; with no room it's lost).
-/// The tabs are copies of a hand card's enchantment tab (the same art as the card tabs). Check: after you drink a potion,
-/// Reptile Trinket's Strength and Belt Buckle's Dexterity against the tabs it had.
+///    ShouldForcePotionReward; with no room it's lost): outside the fight, so not the use's.
+/// The tabs are copies of a hand card's enchantment tab (the same art as the card tabs). Check: after you drink a potion, which of those
+/// relics flashed (the game showing it acted) against the tabs it had.
 /// </summary>
 public sealed class PotionTabsFeature : IFeature, IFrameFeature
 {
@@ -42,12 +44,33 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     private readonly Dictionary<PotionModel, List<string>> _last = new(ReferenceEqualityComparer.Instance);
     private int _historySeen = -1;
     private Pending? _pending;
-    // Last frame's Reptile Trinket Strength and Belt Buckle state: the baseline for a potion drunk since (its relic may
-    // already have reacted by the frame the entry shows up).
-    private int _prevStrength;
-    private bool _prevBuckle;
 
-    private sealed record Pending(PotionModel Potion, List<string> Tabs, int Strength, bool DexterityApplied, int Frames);
+    /// <summary>A potion's tags as a pending check holds them: the tabs it had, each potion-listening relic's flashes as of last frame.</summary>
+    private sealed record Pending(PotionModel Potion, List<string> Tabs, Dictionary<RelicModel, int> Flashes, int Frames);
+
+    /// <summary>
+    /// A relic's flashes this fight (RelicModel.Flashed), and as of last frame: the baseline for a potion drunk since (its relic may already have
+    /// flashed by the frame the game's log shows the potion used). A class, so a frame updates it in place.
+    /// </summary>
+    private sealed class FlashCount
+    {
+        public int Now;
+        public int LastFrame;
+    }
+
+    /// <summary>Your relics that listen to a potion's use (PotionTabs.ListensToPotions), each with its flashes, subscribed while in a fight.</summary>
+    private readonly Dictionary<RelicModel, FlashCount> _flashes = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>A potion's use searched for its tags: the board's key and the aim it was built for, and its search.</summary>
+    private sealed record Use(long StateKey, int Aim, SimJob Job);
+
+    private readonly Dictionary<PotionModel, Use> _uses = new(ReferenceEqualityComparer.Instance);
+
+    /// <summary>
+    /// The tags the feature decides on the board, not from a potion's use (outside the fight: White Beast Statue's potion reward with your slots
+    /// full): the catalog check holds the potion rows to these and to the relics listening to a potion's use (decision #318).
+    /// </summary>
+    internal static readonly IReadOnlySet<string> BoardRules = new HashSet<string>(StringComparer.Ordinal) { nameof(WhiteBeastStatue) };
 
     public PotionTabsFeature(QolContext ctx) => _ctx = ctx;
 
@@ -93,6 +116,8 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
             var slots = me.PotionSlots;
             for (var i = 0; i < slots.Count; i++) drawnFor.Add(slots[i] == null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(slots[i]));
         }
+        // A use's search finishing draws its tags (each is started on a board change, never per frame).
+        foreach (var use in _uses.Values) drawnFor.Add(use.Job.Finished);
         if (drawnFor.ToHashCode() == _drawnFor) return;
         _drawnFor = drawnFor.ToHashCode();
         Draw(me, host);
@@ -106,27 +131,42 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
             ? Holders?.Invoke(container) ?? MainHoldersField?.GetValue(container) as IReadOnlyList<NPotionHolder>
             : null;
         var seen = new HashSet<ulong>();
-        if (me != null && holders != null && Sts2State.InCombat && !host.HideAll)
+        var onBelt = new HashSet<PotionModel>(ReferenceEqualityComparer.Instance);
+        if (me != null && holders != null && Sts2State.InCombat && Sts2State.Combat is { } combat && !host.HideAll)
         {
-            var potions = me.Potions.ToList();
             var full = !me.HasOpenPotionSlots;
-            var buckleReady = me.Relics.OfType<BeltBuckle>().FirstOrDefault() is { } buckle && !Sts2State.Private(buckle, "_dexterityApplied", fallback: true);
+            // Your relics whose code listens to a potion's use: what its simulated use's log can show acting (decision #318).
+            var listening = new List<string>();
+            foreach (var relic in me.Relics)
+                if (SimModels.Loaded && SimModels.Get(SimReaders.ModelName(relic)) is { } model && PotionTabs.ListensToPotions(model))
+                {
+                    listening.Add(SimReaders.ModelName(relic));
+                    if (!_flashes.ContainsKey(relic))
+                    {
+                        _flashes[relic] = new FlashCount();
+                        relic.Flashed += OnRelicFlashed;
+                    }
+                }
+            var start = listening.Count > 0 ? TurnEndModel.Begin() : null;
             foreach (var holder in holders)
             {
                 if (!GodotObject.IsInstanceValid(holder) || holder.Potion is not { } node || !GodotObject.IsInstanceValid(node)) continue;
                 PotionModel? potion;
                 try { potion = node.Model; } catch { continue; }
+                onBelt.Add(potion);
+                var setOff = start != null ? SetOffBy(potion, me, combat, start, listening) : null;
                 var specs = new List<(string Key, RelicModel Relic, bool Crossed)>();
                 foreach (var relic in me.Relics)
                 {
-                    var on = relic switch
+                    if (relic is WhiteBeastStatue)
                     {
-                        ReptileTrinket => true,
-                        BeltBuckle => buckleReady && potions.Count == 1,
-                        WhiteBeastStatue => full,
-                        _ => false,
-                    };
-                    if (on) specs.Add(("potion:" + relic.GetType().Name, relic, false));
+                        if (full) specs.Add(("potion:" + relic.GetType().Name, relic, false));
+                        continue;
+                    }
+                    if (setOff == null) continue;
+                    var name = SimReaders.ModelName(relic);
+                    foreach (var (model, crossed) in setOff)
+                        if (model == name) specs.Add(("potion:" + relic.GetType().Name, relic, crossed));
                 }
                 _last[potion] = specs.Select(spec => spec.Key).ToList();
                 var shown = specs.Where(spec => _ctx.Settings.TabEnabled(spec.Key) && (spec.Crossed ? _ctx.Settings.CrossedTabs : _ctx.Settings.PlainTabs)).ToList();
@@ -140,6 +180,40 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
             if (seen.Contains(id)) continue;
             foreach (var control in tabs) if (GodotObject.IsInstanceValid(control)) control.Visible = false;
         }
+        // A potion no longer on your belt: its search isn't wanted.
+        foreach (var potion in _uses.Keys.Where(potion => !onBelt.Contains(potion)).ToList())
+        {
+            _uses[potion].Job.Cancel();
+            _uses.Remove(potion);
+        }
+    }
+
+    /// <summary>
+    /// The relics of <paramref name="listening"/> the potion's use sets off (decision #318), from its use alone searched on a worker (SimJob): started
+    /// once for the potion, its aim and the board (a board change, never a frame), waited for out of the frame's shared budget on the first frame
+    /// only; null until it's done.
+    /// </summary>
+    private List<(string Model, bool Crossed)>? SetOffBy(PotionModel potion, MegaCrit.Sts2.Core.Entities.Players.Player me, ICombatState combat,
+        TurnEndModel.ForecastStart start, List<string> listening)
+    {
+        // Its aim as the game would take it unaimed: an enemy you can hit for one aimed at an enemy (what sets these relics off doesn't depend on
+        // which), else you when you're a valid target, else none.
+        var target = potion.TargetType is MegaCrit.Sts2.Core.Entities.Cards.TargetType.AnyEnemy ? (combat.HittableEnemies.Count > 0 ? combat.HittableEnemies[0] : null)
+            : potion.IsValidTarget(me.Creature) ? me.Creature : null;
+        var aim = SimAdapter.AimOf(target, me, combat, start.Ids);
+        if (!_uses.TryGetValue(potion, out var use) || use.StateKey != start.StateKey || use.Aim != aim)
+        {
+            use?.Job.Cancel();
+            var play = SimAdapter.Potion(potion, me, combat, start.Ids, aim);
+            _uses[potion] = use = new Use(start.StateKey, aim, SimJob.Start(SimSearch.PlayOnly(start.State, play), $"{potion.GetType().Name} (potion tags)"));
+        }
+        if (!use.Job.Waited) SimWait.Ready(use.Job);
+        return use.Job.Latest is { } outcome ? PotionTabs.SetOff(outcome, listening) : null;
+    }
+
+    private void OnRelicFlashed(RelicModel relic, IEnumerable<MegaCrit.Sts2.Core.Entities.Creatures.Creature> _)
+    {
+        if (_flashes.TryGetValue(relic, out var count)) count.Now++;
     }
 
     /// <summary>A copy of a hand card's enchantment tab (the card tabs' art), once.</summary>
@@ -253,8 +327,8 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
     // ------------------------------------------------------------------ check
 
     /// <summary>
-    /// A potion you drank (a new PotionUsedEntry of yours): a second later, Reptile Trinket's Strength and Belt Buckle's
-    /// Dexterity against the tabs it had on its last frame.
+    /// A potion you drank (a new PotionUsedEntry of yours): a second later, which of your potion-listening relics flashed since the frame
+    /// before (the game showing it acted) against the tabs it had on its last frame.
     /// </summary>
     private void Check(MegaCrit.Sts2.Core.Entities.Players.Player? me)
     {
@@ -264,7 +338,7 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
             else
             {
                 _pending = null;
-                if (me != null) Compare(me, pending);
+                Compare(pending);
             }
         }
         var entries = CombatManager.Instance?.History?.Entries;
@@ -272,6 +346,11 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         {
             _historySeen = -1;
             _last.Clear();
+            if (_flashes.Count > 0)
+            {
+                foreach (var relic in _flashes.Keys) relic.Flashed -= OnRelicFlashed;
+                _flashes.Clear();
+            }
             return;
         }
         // The game's own list when it is one (it is): copying the whole fight's history every frame was garbage that grew all fight.
@@ -281,44 +360,24 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         {
             if (list[i] is not PotionUsedEntry used || used.Actor != me.Creature) continue;
             var tabs = _last.Remove(used.Potion, out var previous) ? previous : new List<string>();
-            _pending = new Pending(used.Potion, tabs, _prevStrength, _prevBuckle, Frames: 0);
+            var flashes = new Dictionary<RelicModel, int>(ReferenceEqualityComparer.Instance);
+            foreach (var (relic, count) in _flashes) flashes[relic] = count.LastFrame;
+            _pending = new Pending(used.Potion, tabs, flashes, Frames: 0);
         }
         _historySeen = list.Count;
-        _prevStrength = Strength(me);
-        _prevBuckle = BuckleApplied(me);
+        foreach (var count in _flashes.Values) count.LastFrame = count.Now;
     }
 
-    private static int Strength(MegaCrit.Sts2.Core.Entities.Players.Player me)
-    {
-        var powers = me.Creature.Powers;
-        var strength = 0;
-        for (var i = 0; i < powers.Count; i++)
-            if (powers[i] is ReptileTrinketPower reptileTrinketPower) strength += reptileTrinketPower.Amount;
-        return strength;
-    }
-
-    private static bool BuckleApplied(MegaCrit.Sts2.Core.Entities.Players.Player me)
-    {
-        var relics = me.Relics;
-        for (var i = 0; i < relics.Count; i++)
-            if (relics[i] is BeltBuckle beltBuckle) return Sts2State.Private(beltBuckle, "_dexterityApplied", fallback: false);
-        return false;
-    }
-
-    private static void Compare(MegaCrit.Sts2.Core.Entities.Players.Player me, Pending pending)
+    private void Compare(Pending pending)
     {
         var problems = new List<(string Key, string Text)>();
-        if (me.Relics.Any(relic => relic is ReptileTrinket))
+        foreach (var (relic, before) in pending.Flashes)
         {
-            var gained = Strength(me) > pending.Strength;
-            var predicted = pending.Tabs.Contains("potion:" + nameof(ReptileTrinket));
-            if (gained != predicted) problems.Add((nameof(ReptileTrinket), $"Reptile Trinket: {(gained ? "fired" : "didn't fire")}, tab {(predicted ? "shown" : "not shown")}"));
-        }
-        if (me.Relics.Any(relic => relic is BeltBuckle))
-        {
-            var gained = !pending.DexterityApplied && BuckleApplied(me);
-            var predicted = pending.Tabs.Contains("potion:" + nameof(BeltBuckle));
-            if (gained != predicted) problems.Add((nameof(BeltBuckle), $"Belt Buckle: {(gained ? "gave Dexterity" : "didn't")}, tab {(predicted ? "shown" : "not shown")}"));
+            if (!_flashes.TryGetValue(relic, out var count)) continue;
+            var name = relic.GetType().Name;
+            var flashed = count.Now > before;
+            var predicted = pending.Tabs.Contains("potion:" + name);
+            if (flashed != predicted) problems.Add((name, $"{name}: {(flashed ? "flashed" : "didn't flash")}, tab {(predicted ? "shown" : "not shown")}"));
         }
         var what = $"potion {pending.Potion.GetType().Name}: tabs [{string.Join(", ", pending.Tabs)}]";
         ModEntry.Log.Detail($"[audit] [potion] {what}{(problems.Count == 0 ? ", matched" : "; " + string.Join("; ", problems.Select(problem => problem.Text)))}");
