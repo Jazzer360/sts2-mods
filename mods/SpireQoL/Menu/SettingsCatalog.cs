@@ -243,7 +243,7 @@ public static class SettingsCatalog
         new(nameof(Girya), SourceGroup.Relic, Tag: null, Map: "Beside Rest (Lift)"),
         new(nameof(Shovel), SourceGroup.Relic, Tag: null, Map: "Beside Rest (Dig)"),
         new(nameof(MeatCleaver), SourceGroup.Relic, Tag: null, Map: "Beside Rest (Cook)"),
-        new(nameof(PaelsGrowth), SourceGroup.Relic, Tag: null, Map: "Beside Rest (Clone)"),
+        new(nameof(PaelsGrowth), SourceGroup.Relic, Tag: null, Map: "Beside Rest while a card in your deck has Clone (its option)"),
         new(nameof(PumpkinCandle), SourceGroup.Relic, Tag: null, Map: "Beside Rest (Kindle)"),
         new(nameof(Wuppy), SourceGroup.Relic, Tag: null, Map: "Beside Rest (Restore)"),
         new(nameof(Byrdpip), SourceGroup.Relic, Tag: null, Map: "Beside Rest (Evolve)"),

@@ -167,10 +167,57 @@ public sealed partial class RunReminders
             if (ChoiceReminders.For(name) is not { } rule || (rule.Map & room) == 0 || !seen.Add(name)) continue;
             if (!_ctx.Settings.TabEnabled(ChoiceReminders.Key(ReminderPlace.Map, name))) continue;
             if (!PathApplies(model)) continue;
+            if ((room & PathRoom.RestSite) != 0 && model is RelicModel && !OffersRestSiteOption(model.GetType(), me.Deck.Cards)) continue;
             marks.Add(new PathMark(model, (rule.MapCrossed & room) != 0, PathNote(model, me)));
         }
         return marks;
     }
+
+    /// <summary>
+    /// Whether the relic still adds its rest-site option (decision #296): its own class does (an override of TryModifyRestSiteOptions), or none of
+    /// the enchantments its code gives a card does; else only while a card in your deck holds one that does (v0.114.0 moved Pael's Growth's Clone
+    /// option onto the Clone enchantment: Clone.TryModifyRestSiteOptions, offered while your deck has a card it enchants).
+    /// </summary>
+    internal static bool OffersRestSiteOption(Type relic, IEnumerable<CardModel> deck)
+    {
+        if (Overrides(relic, nameof(AbstractModel.TryModifyRestSiteOptions))) return true;
+        var enchantments = RestSiteEnchantmentsOf(relic);
+        return enchantments.Count == 0 || deck.Any(card => card.Enchantment is { } enchantment && enchantments.Contains(enchantment.GetType()));
+    }
+
+    /// <summary>
+    /// The enchantments the relic's code gives a card (CardCmd.Enchant&lt;T&gt; in any of its methods, the compiler's async bodies included) whose
+    /// class adds a rest-site option (overrides TryModifyRestSiteOptions). Read once per class.
+    /// </summary>
+    internal static IReadOnlySet<Type> RestSiteEnchantmentsOf(Type relic) => RestSiteEnchantments.GetOrAdd(relic, type =>
+    {
+        var found = new HashSet<Type>();
+        const System.Reflection.BindingFlags every = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static
+            | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly;
+        foreach (var owner in type.GetNestedTypes(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public).Append(type))
+            foreach (var method in owner.GetMethods(every))
+            {
+                try
+                {
+                    foreach (var instruction in Diagnostics.GameCode.Instructions(method))
+                        if (instruction.operand is System.Reflection.MethodInfo { IsGenericMethod: true, Name: "Enchant" } called
+                            && called.DeclaringType == typeof(MegaCrit.Sts2.Core.Commands.CardCmd)
+                            && called.GetGenericArguments()[0] is { } enchantment && Overrides(enchantment, nameof(AbstractModel.TryModifyRestSiteOptions)))
+                            found.Add(enchantment);
+                }
+                catch
+                {
+                    // a method with no body to read (abstract, extern): nothing it gives
+                }
+            }
+        return found;
+    });
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlySet<Type>> RestSiteEnchantments = new();
+
+    /// <summary>The class (or a base class of it other than AbstractModel) declares the virtual method.</summary>
+    private static bool Overrides(Type type, string method) =>
+        type.GetMethod(method, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public) is { } found && found.DeclaringType != typeof(AbstractModel);
 
     private static readonly IReadOnlySet<RoomType> UnknownCanBe =
         new HashSet<RoomType> { RoomType.Monster, RoomType.Elite, RoomType.Event, RoomType.Shop, RoomType.Treasure };
