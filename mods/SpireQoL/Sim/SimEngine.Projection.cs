@@ -34,6 +34,13 @@ public sealed class Projection
 {
     public List<Dictionary<int, Dictionary<string, ProjectedHits>>> Turns { get; } = new();
 
+    /// <summary>What it cost (SimWork's counts at its end, as SimOutcome's), and the cap that stopped it if one did (the projection is unknown past it).</summary>
+    public int Steps { get; internal set; }
+    public int Stepped { get; internal set; }
+    public int Copies { get; internal set; }
+    public int PeakHeld { get; internal set; }
+    public string? CapHit { get; internal set; }
+
     /// <summary>A move's hits in a projected turn, or null: not projected (past where it was known).</summary>
     public ProjectedHits? Of(int turn, int enemyId, string move) =>
         turn < Turns.Count && Turns[turn].TryGetValue(enemyId, out var moves) && moves.TryGetValue(move, out var hits) ? hits : null;
@@ -41,9 +48,6 @@ public sealed class Projection
 
 public static partial class SimEngine
 {
-    /// <summary>The copies a projection may make (SimWork.CopyCap): a hovered forecast's work stays small; past it the later turns are unknown.</summary>
-    public const long ProjectionCopies = 20_000;
-
     /// <summary>
     /// The Intent Forecast's later turns, projected from the board (decision #304): this turn's end with no more plays and the enemy turn (as Run),
     /// the enemies' turn end; then for each forecast turn your next turn (its start: your block cleared, your hand left out, since what you'd draw
@@ -54,11 +58,13 @@ public static partial class SimEngine
     /// </summary>
     /// <param name="turns">Each forecast turn's moves, by enemy (IntentForecast's turns after the intent on screen); a living enemy with none that
     /// turn makes the branch unknown from its move on.</param>
-    public static Projection Project(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns, long copyCap = ProjectionCopies)
+    public static Projection Project(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns) => Project(start, turns, new SimWork());
+
+    /// <summary>The projection with <paramref name="work"/>: SimJob's on a worker (its cancellation and background gate, decision #107).</summary>
+    internal static Projection Project(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns, SimWork work)
     {
         var projection = new Projection();
         if (turns.Count == 0) return projection;
-        var work = new SimWork { CopyCap = copyCap };
         var first = start.Clone();
         first.Work = work;
         first.Log = false; // no breakdown: only the hits are read
@@ -104,9 +110,12 @@ public static partial class SimEngine
                 foreach (var moves in row.Values)
                     foreach (var move in moves.Keys.ToList())
                         if (moves[move].Lands == null && moves[move].Unknown == null) moves[move] = moves[move] with { Unknown = "the projection stopped at its cap" };
+            projection.CapHit = work.CapHit ?? "the work cap";
         }
         finally
         {
+            work.EndStep();
+            (projection.Steps, projection.Stepped, projection.Copies, projection.PeakHeld) = (work.Steps, work.Stepped, work.Copies, work.PeakHeld);
             work.Release();
         }
         return projection;

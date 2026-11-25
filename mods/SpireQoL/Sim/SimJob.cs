@@ -63,12 +63,15 @@ public sealed class SimJob
     /// <summary>Log lines from worker threads, written out on the main thread (FlushLog).</summary>
     private static readonly ConcurrentQueue<(string Line, Exception? Error)> Pending = new();
 
-    private readonly SimSearch _ex;
+    private readonly SimSearch? _ex;
+    /// <summary>A projection's start and turns (decision #304: the Intent Forecast's later turns) in place of a search.</summary>
+    private readonly (SimState Start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> Turns)? _projection;
     private readonly CancellationTokenSource _cts = new();
     private readonly TaskCompletionSource<bool> _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly string _label;
     private readonly long _firstBudget;
     private volatile SimOutcome? _latest;
+    private volatile Projection? _projected;
     private long _context;
 
     /// <summary>
@@ -77,17 +80,31 @@ public sealed class SimJob
     /// </summary>
     internal static long Context;
 
-    private SimJob(SimSearch ex, string label, long firstBudget)
+    private SimJob(SimSearch? ex, (SimState, IReadOnlyList<IReadOnlyList<ProjectedChoice>>)? projection, string label, long firstBudget)
     {
         _ex = ex;
+        _projection = projection;
         _label = label;
         _firstBudget = firstBudget;
     }
 
+    /// <summary>The state it searches from (a cap report carries it).</summary>
+    private SimState StartState => _ex?.Start ?? _projection!.Value.Start;
+
     /// <summary>Starts searching on a worker thread (waiting for a background turn after FirstBudget copies unless told otherwise: tests).</summary>
-    public static SimJob Start(SimSearch ex, string label, long firstBudget = FirstBudget)
+    public static SimJob Start(SimSearch ex, string label, long firstBudget = FirstBudget) => Begin(new SimJob(ex, projection: null, label, firstBudget));
+
+    /// <summary>
+    /// Starts projecting the Intent Forecast's later turns from <paramref name="start"/> on a worker thread (decision #304: SimEngine.Project), as a
+    /// search does: the frame waits for it as for any job (SimWait), it waits for a background turn past FirstBudget copies, and its result is
+    /// <see cref="Projected"/> once it's over.
+    /// </summary>
+    public static SimJob StartProjection(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns, string label, long firstBudget = FirstBudget) =>
+        Begin(new SimJob(ex: null, (start, turns), label, firstBudget));
+
+    private static SimJob Begin(SimJob job)
     {
-        var job = new SimJob(ex, label, firstBudget) { _context = Interlocked.Read(ref Context) };
+        job._context = Interlocked.Read(ref Context);
         if (Running.IsEmpty)
         {
             Interlocked.Exchange(ref _started, 0);
@@ -103,8 +120,10 @@ public sealed class SimJob
     public Task Ready => _ready.Task;
     /// <summary>The outcome (null before Ready).</summary>
     public SimOutcome? Latest => _latest;
-    /// <summary>The search is over: every outcome is in Latest, or the cap stopped it (Latest is Truncated).</summary>
-    public bool Finished => _latest != null;
+    /// <summary>A projection's result (null before Ready, and for a search).</summary>
+    public Projection? Projected => _projected;
+    /// <summary>The search is over: every outcome is in Latest, or the cap stopped it (Latest is Truncated); a projection's is in Projected.</summary>
+    public bool Finished => _latest != null || _projected != null;
     /// <summary>Kept searching after the board changed (the forecast check's frozen forecast): not cancelled with the rest.</summary>
     public volatile bool Pinned;
 
@@ -123,23 +142,33 @@ public sealed class SimJob
         };
         try
         {
-            var outcome = _ex.Run(work);
-            _latest = outcome;
-            _ready.TrySetResult(true);
-            Telemetry.DevEvents.Post(new Telemetry.SearchDone(_label, _context, outcome.Steps, outcome.Copies, outcome.PeakHeld, clock.Elapsed.TotalMilliseconds,
-                gated, outcome.Truncated ? outcome.CapHit ?? "a cap" : null, Cancelled: false));
-            if (outcome.Truncated)
+            int steps, copies, peakHeld;
+            string? capHit, results;
+            if (_ex != null)
             {
-                var cap = outcome.CapHit ?? "a cap";
+                var outcome = _ex.Run(work);
+                _latest = outcome;
+                (steps, copies, peakHeld, capHit, results) = (outcome.Steps, outcome.Copies, outcome.PeakHeld, outcome.Truncated ? outcome.CapHit ?? "a cap" : null, $"{outcome.Branches.Count} outcomes");
+            }
+            else
+            {
+                var projected = SimEngine.Project(_projection!.Value.Start, _projection.Value.Turns, work);
+                _projected = projected;
+                (steps, copies, peakHeld, capHit, results) = (projected.Steps, projected.Copies, projected.PeakHeld, projected.CapHit, $"{projected.Turns.Count} turns");
+            }
+            _ready.TrySetResult(true);
+            Telemetry.DevEvents.Post(new Telemetry.SearchDone(_label, _context, steps, copies, peakHeld, clock.Elapsed.TotalMilliseconds, gated, capHit, Cancelled: false));
+            if (capHit is { } cap)
+            {
                 Caps.AddOrUpdate(cap, 1, (_, index) => index + 1);
                 var line = $"[sim] cap: searching {_label} hit {cap} ({SimWork.MaxHeldStates:N0} states held by every search together, {SimWork.MaxCopies:N0} copies each): " +
-                           $"stopped after {outcome.Steps} steps, {outcome.Copies} copies, holding at most {outcome.PeakHeld} states, after {clock.Elapsed.TotalMilliseconds:F1} ms";
+                           $"stopped after {steps} steps, {copies} copies, holding at most {peakHeld} states, after {clock.Elapsed.TotalMilliseconds:F1} ms";
                 Pending.Enqueue((line, null));
-                CapsHit.Enqueue(new CapHit(_label, cap, line, _ex.Start));
+                CapsHit.Enqueue(new CapHit(_label, cap, line, StartState));
             }
             else if (gated)
-                Pending.Enqueue(($"[sim] searched {_label} in the background: {outcome.Steps} steps, {outcome.Copies} copies, at most {outcome.PeakHeld} states, " +
-                                 $"{outcome.Branches.Count} outcomes, {clock.Elapsed.TotalMilliseconds:F1} ms", null));
+                Pending.Enqueue(($"[sim] searched {_label} in the background: {steps} steps, {copies} copies, at most {peakHeld} states, " +
+                                 $"{results}, {clock.Elapsed.TotalMilliseconds:F1} ms", null));
         }
         catch (OperationCanceledException)
         {

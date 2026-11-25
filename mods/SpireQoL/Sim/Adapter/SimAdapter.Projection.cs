@@ -14,33 +14,26 @@ namespace SpireQoL.Sim;
 public static partial class SimAdapter
 {
     /// <summary>
-    /// The projection of every living enemy's forecast turns from the board now, with each enemy's simulator id. Without the cards in teammates'
-    /// hands unless <paramref name="teammateHands"/> (what's shown: decision #25); the forecast audit uses them all. Null outside a fight's state the
-    /// adapter can read.
+    /// What a projection starts from (decision #304), read from the game on its thread: the adapter's state of the board (Incoming Damage's own:
+    /// TurnEndModel's), each enemy's simulator id, and every living enemy's forecast turns, each move read now. The projection itself is pure and runs
+    /// on a worker (<see cref="StartProjection"/>).
     /// </summary>
-    internal static (Projection Projection, IReadOnlyDictionary<Creature, int> Ids)? Project(Player me, ICombatState combat, bool teammateHands)
-    {
-        try
-        {
-            var state = Build(me, combat, out var ids);
-            if (!teammateHands && state.Teammates.Count > 0) state = state.WithoutTeammateHands();
-            return Project(me, combat, state, ids);
-        }
-        catch (Exception exception)
-        {
-            ModEntry.Log.Detail($"[sim] the forecast's projection failed: {exception.GetType().Name}: {exception.Message}");
-            return null;
-        }
-    }
+    internal sealed record ProjectionInput(SimState State, IReadOnlyDictionary<Creature, int> Ids, IReadOnlyList<IReadOnlyList<ProjectedChoice>> Turns);
 
     /// <summary>
-    /// The projection from <paramref name="state"/>, the adapter's state of the board with its enemies' <paramref name="ids"/> (Incoming Damage's own:
-    /// TurnEndModel's), every living enemy's forecast moves read from the game now. Null when it can't be read.
+    /// A projection's start from <paramref name="state"/> and its enemies' <paramref name="ids"/> (or the board built now, without teammates' hands
+    /// unless <paramref name="teammateHands"/>, when none is given). Null when it can't be read.
     /// </summary>
-    internal static (Projection Projection, IReadOnlyDictionary<Creature, int> Ids)? Project(Player me, ICombatState combat, SimState state, IReadOnlyDictionary<Creature, int> ids)
+    internal static ProjectionInput? ProjectionStart(Player me, ICombatState combat, SimState? state = null, IReadOnlyDictionary<Creature, int>? ids = null, bool teammateHands = false)
     {
         try
         {
+            if (state == null || ids == null)
+            {
+                state = Build(me, combat, out var built);
+                if (!teammateHands && state.Teammates.Count > 0) state = state.WithoutTeammateHands();
+                ids = built;
+            }
             var idOf = IdOfFor(me, combat, ids);
             var mates = Teammates(me, combat);
             var forecasts = new List<(int Id, Creature Creature, List<ForecastTurn> Turns, MoveStateMachineView View)>();
@@ -64,14 +57,17 @@ public static partial class SimAdapter
                 }
                 turns.Add(choices);
             }
-            return (SimEngine.Project(state, turns), ids);
+            return new ProjectionInput(state, ids, turns);
         }
         catch (Exception exception)
         {
-            ModEntry.Log.Detail($"[sim] the forecast's projection failed: {exception.GetType().Name}: {exception.Message}");
+            ModEntry.Log.Detail($"[sim] the forecast's projection couldn't be read: {exception.GetType().Name}: {exception.Message}");
             return null;
         }
     }
+
+    /// <summary>The projection of <paramref name="input"/> on a worker (SimJob, decision #107): the frame waits for it as for any search (SimWait).</summary>
+    internal static SimJob StartProjection(ProjectionInput input, string label) => SimJob.StartProjection(input.State, input.Turns, label);
 
     /// <summary>
     /// A forecast move as the simulator's (ProjectedMove): each attack intent's hits (its DamageCalc's base, with the captured terms on each player, as

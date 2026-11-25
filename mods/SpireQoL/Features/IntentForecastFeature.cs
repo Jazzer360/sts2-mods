@@ -71,8 +71,47 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         _widget.Content.AddChild(_rows);
     }
 
+    /// <summary>
+    /// One read of the hovered enemy's forecast: its turns as shown, its moves' game states, and the projection of their hits (decision #304), searched
+    /// on a worker (SimJob): while it's on its way every move is drawn as the game reads it now, and once it's over the key changes and the rows are
+    /// built again with the projected hits.
+    /// </summary>
+    internal sealed class ForecastRead
+    {
+        public required List<ForecastTurn> Turns { get; init; }
+        public required MoveStateMachineView View { get; init; }
+        /// <summary>The forecast's moves and chances alone (what the game's rules give), the key's first part.</summary>
+        public required string MovesKey { get; init; }
+        /// <summary>The projection's search (null: none to make), and the enemy's simulator id in it.</summary>
+        public SimJob? Job { get; init; }
+        public int EnemyId { get; init; } = -1;
+        /// <summary>The key Build is keyed by: the moves, with each move's projected hits once the search is over.</summary>
+        public string Key { get; set; } = "";
+        /// <summary>The key was made while the search was on its way: made again once it's over.</summary>
+        public bool Pending { get; set; }
+
+        /// <summary>A forecast move's hits on you as they'll land, or null: not known, or the search isn't over.</summary>
+        public IReadOnlyList<int>? Projected(int turn, string move) => Job?.Projected?.Of(turn, EnemyId, move)?.Lands;
+
+        /// <summary>The key from the moves and what's projected now, and whether the search is still on its way.</summary>
+        public void MakeKey()
+        {
+            Pending = Job is { Ready.IsCompleted: false };
+            Key = MovesKey + "|" + string.Join("/", Turns.Select((forecastTurn, turn) => string.Join(",", forecastTurn.Moves.Select(move =>
+                Projected(turn, move.Move) is { } lands ? string.Join(".", lands) : "-"))));
+        }
+
+        /// <summary>
+        /// The same forecast as <paramref name="other"/>: the same moves, and the same projected hits when both searches are over (one on its way and
+        /// one over differ only in time, not in what they say).
+        /// </summary>
+        public static bool Same(ForecastRead? read, ForecastRead? other) =>
+            read == null || other == null ? read == other
+                : read.MovesKey == other.MovesKey && (read.Pending || other.Pending || read.Key == other.Key);
+    }
+
     /// <summary>The hovered enemy's forecast as last read, what it was read for, and dev mode's check of it.</summary>
-    private (List<ForecastTurn> Turns, MoveStateMachineView View, string Key, Func<int, string, IReadOnlyList<int>?> Projected)? _read;
+    private ForecastRead? _read;
     private Creature? _readFor;
     private int _readProbe, _readRevision;
     private bool _haveRead;
@@ -80,27 +119,27 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
 
     /// <summary>
     /// The enemy's next turns, as shown (the certain ones only with chances off: decision #122), with the key Build is keyed by; null
-    /// when there are none to show.
+    /// when there are none to show. Its projection (decision #304: each forecast move's hits on you as they'll land, with no plays of yours) starts
+    /// from Incoming Damage's own state of the board (what's shown: without teammates' hands unless Count teammates' hands is on), read here on the
+    /// game's thread, and is searched on a worker: the frame waits for it as for any search (SimWait), never past its budget. Not before the
+    /// simulator's models are read (SimModels.Loaded: the frame never waits for them).
     /// </summary>
-    private (List<ForecastTurn> Turns, MoveStateMachineView View, string Key, Func<int, string, IReadOnlyList<int>?> Projected)? Read(Creature enemy)
+    private ForecastRead? Read(Creature enemy)
     {
         if (IntentReader.Forecast(enemy) is not { } forecast) return null;
         var (turns, view) = forecast;
         if (!_ctx.Settings.ShowIntentOdds) turns = turns.TakeWhile(forecastTurn => forecastTurn.Certain).ToList();
         if (turns.Count == 0) return null;
-        // Each forecast move's hits on you as they'll land (decision #304: the simulator's projection from the board, with no plays of yours); null
-        // where it isn't known (a roll decides it, or the simulator can't follow what comes before), when the move is drawn as the game reads it now.
-        // From Incoming Damage's own state of the board (what's shown: without teammates' hands unless Count teammates' hands is on).
-        // Not before the models are read (SimModels.Loaded: the frame never waits for them).
-        var projection = SimModels.Loaded && Sts2State.Me is { } me && Sts2State.Combat is { } combat
-            ? SpireQoL.Combat.TurnEndModel.Compute() is { } forecastNow ? SimAdapter.Project(me, combat, forecastNow.State, forecastNow.Ids)
-                : SimAdapter.Project(me, combat, teammateHands: SpireQoL.Combat.TurnEndModel.CountTeammateHands)
+        var input = SimModels.Loaded && Sts2State.Me is { } me && Sts2State.Combat is { } combat
+            ? SpireQoL.Combat.TurnEndModel.Compute() is { } forecastNow ? SimAdapter.ProjectionStart(me, combat, forecastNow.State, forecastNow.Ids)
+                : SimAdapter.ProjectionStart(me, combat, teammateHands: SpireQoL.Combat.TurnEndModel.CountTeammateHands)
             : null;
-        var enemyId = projection is { } read && read.Ids.TryGetValue(enemy, out var id) ? id : -1;
-        IReadOnlyList<int>? Projected(int turn, string move) => projection?.Projection.Of(turn, enemyId, move)?.Lands;
-        var key = enemy.GetHashCode() + "|" + string.Join("/", turns.Select((forecastTurn, turn) => string.Join(",", forecastTurn.Moves.Select(move =>
-            $"{move.Move}:{move.Chance:0.###}:{(Projected(turn, move.Move) is { } lands ? string.Join(".", lands) : "-")}"))));
-        return (turns, view, key, Projected);
+        var job = input != null && input.Ids.TryGetValue(enemy, out _) ? SimAdapter.StartProjection(input, "the Intent Forecast's later turns") : null;
+        if (job != null) SpireQoL.Combat.SimWait.Ready(job);
+        var movesKey = enemy.GetHashCode() + "|" + string.Join("/", turns.Select(forecastTurn => string.Join(",", forecastTurn.Moves.Select(move => $"{move.Move}:{move.Chance:0.###}"))));
+        var read = new ForecastRead { Turns = turns, View = view, MovesKey = movesKey, Job = job, EnemyId = job != null ? input!.Ids[enemy] : -1 };
+        read.MakeKey();
+        return read;
     }
 
     /// <summary>The width a row's side takes (each shown child and a gap), by index: every frame while shown.</summary>
@@ -124,9 +163,16 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
             if (reuse != SpireQoL.Combat.FrameReuse.Reuse)
             {
                 var read = Read(enemy);
-                if (reuse == SpireQoL.Combat.FrameReuse.WorkOutAndCheck) _readReuse.Compare(read?.Key == _read?.Key, "its forecast changed while the board probe didn't");
+                if (reuse == SpireQoL.Combat.FrameReuse.WorkOutAndCheck) _readReuse.Compare(ForecastRead.Same(read, _read), "its forecast changed while the board probe didn't");
+                if (_read?.Job is { Finished: false } replaced) replaced.Cancel(); // its board is gone: nobody reads it
                 (_read, _readFor, _readProbe, _readRevision, _haveRead) = (read, enemy, probe, QolSettings.Revision, true);
             }
+        }
+        // The projection's search was on its way when the forecast was read: once it's over, the key takes its hits, and the rows are built again.
+        if (_read is { Pending: true, Job.Ready.IsCompleted: true } finished)
+        {
+            finished.MakeKey();
+            if (finished.Job!.Ready.IsFaulted) throw finished.Job.Ready.Exception!.GetBaseException(); // the frame loop reports it; the rows stay as the game reads them
         }
         if (enemy == null || _read is not { } now)
         {

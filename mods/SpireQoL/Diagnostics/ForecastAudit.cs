@@ -97,7 +97,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         }
         _frozen = null;
         _frozenPending = null;
-        _projected = null;
+        _projectedJob?.Cancel(); // checked by now, or never will be: nobody reads it
+        (_projectedJob, _projectedIds) = (null, null);
     }
 
     /// <summary>Checks the frozen turn, or counts it as not checked when its forecast never had a result.</summary>
@@ -113,8 +114,12 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         Unfreeze(cancel: false);
     }
 
-    /// <summary>The Intent Forecast's projection of the enemies' next moves (decision #304), made from the board as your turn ended.</summary>
-    private (Projection Projection, IReadOnlyDictionary<MegaCrit.Sts2.Core.Entities.Creatures.Creature, int> Ids)? _projected;
+    /// <summary>
+    /// The Intent Forecast's projection of the enemies' next moves (decision #304), started from the board as your turn ended and searched on a
+    /// worker (SimJob) through the enemy turn, with each enemy's simulator id in it.
+    /// </summary>
+    private SimJob? _projectedJob;
+    private IReadOnlyDictionary<MegaCrit.Sts2.Core.Entities.Creatures.Creature, int>? _projectedIds;
 
     /// <summary>
     /// The Intent Forecast's projection (decision #304), frozen as your turn ended, against each enemy's intent as your next turn starts: the move
@@ -124,7 +129,20 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     /// </summary>
     private void CheckProjection(CombatHistory history)
     {
-        if (_projected is not { } projected || Sts2State.Combat is not { } combat) return;
+        if (_projectedJob is not { } job || _projectedIds is not { } ids || Sts2State.Combat is not { } combat) return;
+        // Its search had the whole enemy turn; one still on its way now gets the audit's own wait (SimWait), then counts as not checked.
+        if (!SimWait.Ready(job, ownBudget: true))
+        {
+            Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "projection: its search was still on its way as your next turn started");
+            return;
+        }
+        if (job.Ready.IsFaulted || job.Projected is not { } projection)
+        {
+            Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "projection: its search failed");
+            ModEntry.Log.Warn($"[audit] [intent] the projection's search failed: {job.Ready.Exception?.GetBaseException().Message}");
+            return;
+        }
+        var projected = (Projection: projection, Ids: ids);
         if (history.Entries.Skip(_frozenAt).Any(entry => entry is CardPlayStartedEntry))
         {
             Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "projection: a card was played after your turn ended");
@@ -310,7 +328,15 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             _frozenAt = _lastHistoryCount;
             _frozenTurn = _lastTurn;
             // The Intent Forecast's projection from the same board (decision #304), checked as your next turn starts.
-            _projected = Sts2State.Combat is { } combat ? SimAdapter.Project(me, combat, _last.FullState, _last.Ids) : null;
+            // Its start is read here, on the game's thread; the search runs on a worker through the enemy turn (decision #107).
+            _projectedJob?.Cancel();
+            (_projectedJob, _projectedIds) = (null, null);
+            if (Sts2State.Combat is { } combat && SimAdapter.ProjectionStart(me, combat, _last.FullState, _last.Ids) is { } input)
+            {
+                _projectedJob = SimAdapter.StartProjection(input, "the forecast audit's projection");
+                _projectedJob.Pinned = true;
+                _projectedIds = input.Ids;
+            }
         }
         _wasPlayerTurn = playerTurn;
     }

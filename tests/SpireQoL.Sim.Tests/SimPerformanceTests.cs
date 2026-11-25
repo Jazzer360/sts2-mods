@@ -180,6 +180,42 @@ public class SimPerformanceTests
         Assert.True(cost.Ms < maxMs, $"{name}: {cost.Ms:0.00} ms per simulation (limit {maxMs} ms)");
     }
 
+    /// <summary>
+    /// The Intent Forecast's projection of a big board (decision #304: SimEngine.Project, on a worker as a SimJob): four enemies, three forecast
+    /// turns, two random picks on the last, three Lightning orbs and Juggernaut (ProjectionTests.BigBoard). Measured (2026-11-25): see the limits.
+    /// </summary>
+    [Fact]
+    public void TheProjectionOfABigBoardStaysInsideItsWork()
+    {
+        var (state, turns) = ProjectionTests.BigBoard();
+        SimEngine.Project(state, turns); // warm up
+        var bytes = GC.GetAllocatedBytesForCurrentThread();
+        var stopwatch = Stopwatch.StartNew();
+        var projection = SimEngine.Project(state, turns);
+        stopwatch.Stop();
+        bytes = GC.GetAllocatedBytesForCurrentThread() - bytes;
+        _out.WriteLine($"projection of a big board: copies {projection.Copies}, stepped {projection.Stepped}, steps {projection.Steps}, most held {projection.PeakHeld}, {bytes} bytes, {stopwatch.Elapsed.TotalMilliseconds:0.00} ms");
+        Assert.Null(projection.CapHit);
+        Assert.True(projection.Copies <= ProjectionLimits.Copies, $"{projection.Copies} state copies (limit {ProjectionLimits.Copies})");
+        Assert.True(projection.Stepped <= ProjectionLimits.Stepped, $"{projection.Stepped} branches stepped (limit {ProjectionLimits.Stepped})");
+        Assert.True(projection.Steps <= ProjectionLimits.Steps, $"{projection.Steps} steps (limit {ProjectionLimits.Steps})");
+        Assert.True(projection.PeakHeld <= ProjectionLimits.Held, $"{projection.PeakHeld} states held (limit {ProjectionLimits.Held})");
+        Assert.True(bytes <= ProjectionLimits.Bytes, $"{bytes} bytes allocated (limit {ProjectionLimits.Bytes})");
+        Assert.True(stopwatch.Elapsed.TotalMilliseconds < ProjectionLimits.Ms, $"{stopwatch.Elapsed.TotalMilliseconds:0.00} ms (limit {ProjectionLimits.Ms} ms)");
+    }
+
+    /// <summary>
+    /// The projection scenario's limits: measured plus about 25% (bytes 50%, time about five times), as the scenarios above. Measured 2026-11-25
+    /// (decision #305): 24,225 copies, 41,427 stepped, 68 steps, 11,628 states held at most, 161.5 MB, about 680 ms in a debug test run. The orbs'
+    /// random targets at each of your three turns' ends keep the enemies' HP apart in most branches, which is most of it.
+    /// </summary>
+    private static class ProjectionLimits
+    {
+        public const int Copies = 30_000, Stepped = 52_000, Steps = 85, Held = 14_500;
+        public const long Bytes = 245_000_000L;
+        public const int Ms = 3_500;
+    }
+
     // ------------------------------------------------------------------ the bound
 
     /// <summary>
