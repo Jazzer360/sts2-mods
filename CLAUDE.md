@@ -24,7 +24,7 @@ Names say what a thing is, in every scope (decision #138): no abbreviations in m
 ## Raise concerns, track decisions
 
 - **Raise concerns and ideas unprompted.** Whenever you notice something questionable (a direction that seems wrong, a fragile design, a gap in the audits, duplicated logic, a refactor that would pay off), say so with a concrete proposal, even when it would be a large or breaking change. Don't wait to be asked: the owner relies on this rather than reviewing every line. End a substantial piece of work with what you'd question or improve next.
-- **Decisions are tracked in docs/DECISIONS.md.** A new design or engineering decision gets an entry (what, why, what it replaced). Revisiting one is fine when there's a good reason: add a new entry naming the old one and the reason. Don't drift back to an earlier path silently, and don't reopen a decision without a reason it didn't already weigh.
+- **Decisions are tracked in docs/DECISIONS.md.** A new design or engineering decision gets an entry (what, why, what it replaced). Revisiting one is fine when there's a good reason: add a new entry naming the old one and the reason. Don't drift back to an earlier path silently, and don't reopen a decision without a reason it didn't already weigh. DECISIONS.md is the index (decision #261): the full text is in docs/decisions/ (one file per hundred); append a new one in full to the newest file, then run `node scripts/decisions.mjs`.
 
 ## Only knowable information (hard rule)
 
