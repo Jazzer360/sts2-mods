@@ -48,8 +48,8 @@ A program is a tree of steps:
 
 - **`Command`**: one game command, kept by name (`CreatureCmd.GainBlock`, `PowerCmd.Apply<VulnerablePower>`, the attack
   builder down to `Execute`), with its arguments' sources.
-  - A source is one of: a card value (`DynamicVars.Block`, `Damage.BaseValue`, `Repeat`, `Cards`, `PowerVar<T>`), a constant,
-    a count the code works out (the hand's size, the cards a loop goes over), the target, or `Unknown`.
+  - A source is one of: a card value (`DynamicVars.Block`, `Damage.BaseValue`, `Repeat`, `Cards`, `PowerVar<T>`; a property of
+    DynamicVarSet by the key its getter looks up, `DynamicVars.Doom` as "DoomPower": decision #282), a constant, a count the code works out (the hand's size, the cards a loop goes over), the target, or `Unknown`.
   - The attack builder's calls (`WithHitCount`, `Targeting`, `TargetingAllOpponents`, `TargetingRandomOpponents`, `FromCard`,
     `BeforeDamage`) become the attack's hit count, spread and hooks.
 - **`Repeat`**: a loop. The count is a card value (`for i < Repeat`), the cards a pile holds (a `foreach` over a list taken from

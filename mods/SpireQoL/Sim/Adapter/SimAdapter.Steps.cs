@@ -610,7 +610,8 @@ public static partial class SimAdapter
     /// <summary>
     /// PowerCmd.Apply&lt;T&gt;: the power to whom its second argument names (you; the card's target, or the teammate it's aimed at; every
     /// enemy you can hit, given whole or as each of a loop over them; a random enemy, a roll, each of its loop's rounds), its amount its third
-    /// argument on the board (the target's own amount of it as it lands: Molten Fist; your own: Cho Ki's Stretch kept for replays). Only
+    /// argument on the board (the target's own amount of it as it lands: Molten Fist; your own: Cho Ki's Stretch kept for replays; what the
+    /// play's attack dealt: Blight Strike), an unknown when it can't be read (decision #282: never a guess). Only
     /// powers the simulator reads (modelled ones, the ones it keeps as numbers, poison, Artifact, a debuff on enemies); Strength and a
     /// temporary Strength on enemies as Strength (a debuff's sign); Focus and a temporary Focus as Focus.
     /// </summary>
@@ -620,7 +621,7 @@ public static partial class SimAdapter
         var card = play.Card;
         if (command.Command.GenericArguments is not [var powerName] || PowerType(card.GetType(), powerName) is not { } type) return new List<SimAction>();
         var whom = ValueAt(command, 1);
-        var amount = Number(play, ValueAt(command, 2), AmountOf(card, type));
+        var amount = ValueAt(command, 2) is { } given && ProgramEvaluator.Number(given, play.Board with { Target = play.Aimed }, play.Program) is { } read ? (int?)read : null;
         // Whom it lands on: (where, which creature) for each.
         var targets = new List<(ApplyPowerAction.Where To, int Creature)>();
         var times = 1;
@@ -651,28 +652,33 @@ public static partial class SimAdapter
     /// one Artifact charge takes all of it), Focus and a temporary Focus on you as Focus, any other power the simulator reads (modelled ones,
     /// the ones it keeps as numbers, poison, Artifact, a debuff on enemies). Null for one it doesn't read.
     /// </summary>
-    private static SimAction? PowerTo(CardEffects.Found found, StepPlay play, Type type, string powerName, int amount, ApplyPowerAction.Where to, int creature, int times)
+    private static SimAction? PowerTo(CardEffects.Found found, StepPlay play, Type type, string powerName, int? read, ApplyPowerAction.Where to, int creature, int times)
     {
         var command = found.Command;
         var card = play.Card;
+        var unread = new NotModelledAction($"{PowerAmountUnread} ({powerName}: {ValueAt(command, 2)})");
+        var amount = read ?? 0;
         var simPowerName = SimPowerName(type);
         var toEnemies = to is ApplyPowerAction.Where.Target or ApplyPowerAction.Where.AllEnemies or ApplyPowerAction.Where.RandomEnemy;
         if (toEnemies && (type == typeof(StrengthPower) || typeof(TemporaryStrengthPower).IsAssignableFrom(type)))
         {
+            if (read == null) return unread;
             var sign = typeof(TemporaryStrengthPower).IsAssignableFrom(type) && SimReaders.IsDebuffType(type) ? -1 : 1;
             return new ApplyPowerAction(PowerId.Strength, sign * amount) { To = to, Debuff = sign * amount < 0 };
         }
         if (to == ApplyPowerAction.Where.You && FocusSignOf(type) is var focusSign && focusSign != 0)
-            return amount != 0 ? new FocusAction(focusSign * amount) : null;
+            return read == null ? unread : amount != 0 ? new FocusAction(focusSign * amount) : null;
         var simulated = SimModels.Has(simPowerName) || SelfPowers.Contains(simPowerName) || simPowerName == nameof(PoisonPower) || simPowerName == nameof(ArtifactPower);
         var debuff = SimReaders.IsDebuffType(type);
         if (debuff ? !toEnemies && !simulated : !simulated) return null;
         if (simPowerName == nameof(StretchPower) && to == ApplyPowerAction.Where.You && CardEffects.KeepsStretchForReplays(card.GetType()))
             return new ApplyPowerAction(new PowerId(simPowerName), Amount: 0) { To = to, CopiesOwn = true };
         var amountOf = command.Values.Count > 2 ? ConditionReader.TargetPowerAmountOf(command.Values[2]) : null;
+        var fromAttack = AttackDealtTo(command, play, to);
+        if (read == null && amountOf == null && !fromAttack) return unread;
         return new ApplyPowerAction(new PowerId(simPowerName), amount)
         {
-            To = to, Creature = creature, Times = times, Debuff = debuff && toEnemies,
+            To = to, Creature = creature, Times = times, Debuff = debuff && toEnemies, FromAttackDealt = fromAttack,
             CopiesTarget = toEnemies && amountOf == powerName,
             TargetsAmountOf = amountOf != null && !(toEnemies && amountOf == powerName) ? PowerId.Of(amountOf) : null,
         };
@@ -682,16 +688,52 @@ public static partial class SimAdapter
         Diagnostics.CardCoverage.PowersApplied(cardType).FirstOrDefault(type => type.Name == name)
         ?? typeof(PowerModel).Assembly.GetTypes().FirstOrDefault(type => type.Name == name && typeof(PowerModel).IsAssignableFrom(type));
 
-    /// <summary>A power's amount when the step's argument can't be read: the card's PowerVar for it, its plain value, or 1.</summary>
-    private static int AmountOf(CardModel card, Type type)
+    /// <summary>What an unknown power amount says: the step's amount isn't one the adapter reads (the card scan and PowerAmountTests hold every card to none).</summary>
+    internal const string PowerAmountUnread = "a power's amount its code gives that isn't read";
+
+    /// <summary>
+    /// The card's power applications whose amount the adapter wouldn't read (decision #282), for the card scan: a power the simulator acts on
+    /// (PowerTo), its amount none of a target's amount of a power, what the play's attack dealt, your own Stretch kept for replays, or a value
+    /// whose every part the board reads (no part the reader couldn't follow, no other command's result, a card value only by a key the card has:
+    /// DynamicVars.Doom's "DoomPower"). What a board gives each part is held by PowerAmountTests on a fight. Each as "Power: amount".
+    /// </summary>
+    internal static IEnumerable<string> PowerAmountsUnread(CardModel card) =>
+        PowerAmountsUnread(CardPrograms.Of(card.GetType()), card.DynamicVars.ContainsKey);
+
+    /// <summary>
+    /// The same for a card's program on either branch (main's read from its assembly in the tests), its values' keys tested by
+    /// <paramref name="hasKey"/>; a power the running game has no class of counts as one the simulator acts on.
+    /// </summary>
+    internal static IEnumerable<string> PowerAmountsUnread(ModelProgram program, Func<string, bool> hasKey)
     {
-        foreach (var dynamicVar in card.DynamicVars.Values)
-            if (IsPowerVar(dynamicVar, type)) return (int)dynamicVar.BaseValue;
-        return PlainSelfPowerAmount(card, type) ?? 1;
+        foreach (var command in program.Commands)
+        {
+            if (command.Command is not { DeclaringType: "PowerCmd", Name: "Apply", GenericArguments: [var powerName] }) continue;
+            var type = typeof(PowerModel).Assembly.GetTypes().FirstOrDefault(each => each.Name == powerName && typeof(PowerModel).IsAssignableFrom(each));
+            var simPowerName = type == null ? powerName : SimPowerName(type);
+            var actedOn = type == null || type == typeof(StrengthPower) || typeof(TemporaryStrengthPower).IsAssignableFrom(type) || FocusSignOf(type) != 0 || SimReaders.IsDebuffType(type)
+                          || SimModels.Has(simPowerName) || SelfPowers.Contains(simPowerName) || simPowerName == nameof(PoisonPower) || simPowerName == nameof(ArtifactPower);
+            if (!actedOn || simPowerName == nameof(StretchPower) && CardEffects.KeepsStretchForReplays(program)) continue;
+            var amount = ValueAt(command, 2);
+            if (amount != null && (ConditionReader.TargetPowerAmountOf(amount) != null
+                                   || CardEffects.ReadsAttackResults(amount) && (amount.Parts().Any(part => part is QueryValue { Name: "OverkillDamage" }) || IsTarget(ValueAt(command, 1)))
+                                   || amount.Parts().All(part => part is not (UnknownValue or ResultValue) && (part is not CardValue { Key: var key } || hasKey(key))))) continue;
+            yield return $"{powerName}: {amount?.ToString() ?? "none"}";
+        }
     }
 
-    private static bool IsPowerVar(DynamicVar dynamicVar, Type power) =>
-        dynamicVar.GetType() is { IsGenericType: true } type && type.GetGenericTypeDefinition() == typeof(PowerVar<>) && type.GetGenericArguments()[0] == power;
+    /// <summary>
+    /// The step's amount is what the play's attack dealt (Blight Strike: the sum of its results' TotalDamage; with their OverkillDamage too, any
+    /// target): AttackAction's own count, block and overkill included, which is TotalDamage alone when the power goes to the target of a
+    /// single-target attack, since a target the hit killed takes no power (PowerCmd.Apply: CanReceivePowers) and one alive has no overkill.
+    /// </summary>
+    private static bool AttackDealtTo(CommandStep command, StepPlay play, ApplyPowerAction.Where to)
+    {
+        if (ValueAt(command, 2) is not { } amount || !CardEffects.ReadsAttackResults(amount)) return false;
+        if (amount.Parts().Any(part => part is QueryValue { Name: "OverkillDamage" })) return true;
+        var attack = play.Program.Commands.TakeWhile(step => !ReferenceEquals(step, command)).LastOrDefault(step => step.Command is { DeclaringType: "DamageCmd", Name: "Attack" });
+        return to == ApplyPowerAction.Where.Target && attack != null && ModeOf(attack, play.Card) == SimPlay.Target.Single;
+    }
 
     /// <summary>Focus a power gives (+1) or takes (-1): FocusPower, or a temporary Focus power (its IsPositive: Hyperbeam's is negative); 0 for any other.</summary>
     private static int FocusSignOf(Type type)

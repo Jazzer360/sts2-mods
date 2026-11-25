@@ -44,6 +44,20 @@ public class AppliedByTests
     }
 
     [Fact]
+    public void BlightStrikesDoomIsWhatItsAttackDealtBlockIncluded()
+    {
+        // BlightStrike.OnPlay: PowerCmd.Apply<DoomPower>(cardPlay.Target, the sum of its attack's results' TotalDamage): 8 to a 5 block is 8 Doom.
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 50, block: 5) } };
+        var doom = new ApplyPowerAction(PowerId.Doom, Amount: 0) { Debuff = true, FromAttackDealt = true };
+        var after = Assert.Single(After(state, Play(Card("BlightStrike", SimCardType.Attack), target: 0, plays: 1, Attack(baseDamage: 8), doom)));
+        Assert.Equal(8, after.Enemy(id: 0)!.Powers[PowerId.Doom]);
+        Assert.Equal(47, after.Enemy(id: 0)!.Hp);
+        // Its target killed by the hit takes no Doom (PowerCmd.Apply: a dead creature can't receive powers), so its overkill counts for nothing.
+        var killed = new SimState { Enemies = { Enemy(id: 0, hp: 4) } };
+        Assert.Equal(0, Assert.Single(After(killed, Play(Card("BlightStrike", SimCardType.Attack), target: 0, plays: 1, Attack(baseDamage: 8), doom))).Enemy(id: 0)!.Powers[PowerId.Doom]);
+    }
+
+    [Fact]
     public void TendersDebuffsHurtYouAndAreItsAppliers()
     {
         // TenderPower.AfterCardPlayed: Strength and Dexterity -1 on you for each card you play: a warning (its debuffs hurt you).

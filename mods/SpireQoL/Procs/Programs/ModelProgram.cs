@@ -345,6 +345,20 @@ public static class ProgramReader
         return found;
     }
 
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Assembly, string), string> DynamicVarKeys = new();
+
+    /// <summary>
+    /// The key a property of DynamicVarSet looks its value up by, read from its getter's code (DynamicVars.Doom is _vars["DoomPower"]); the
+    /// name itself when there's no such getter (an indexed key, or a key the code wrote).
+    /// </summary>
+    public static string DynamicVarKey(Assembly game, string property, Func<MethodBase, List<CodeOp>> read) => DynamicVarKeys.GetOrAdd((game, property), key =>
+    {
+        var set = key.Item1.GetType("MegaCrit.Sts2.Core.Localization.DynamicVars.DynamicVarSet");
+        if (set?.GetProperty(key.Item2, BindingFlags.Instance | BindingFlags.Public)?.GetMethod is not { } getter) return key.Item2;
+        try { return read(getter).FirstOrDefault(instruction => instruction.Text != null)?.Text ?? key.Item2; }
+        catch { return key.Item2; }
+    });
+
     /// <summary>A value reads the game's log of the fight (CombatManager.Instance.History).</summary>
     public static bool ReadsHistory(ProgramValue value) => value.Parts().Any(part => part is QueryValue { Name: "History", Type: "CombatManager" });
 
@@ -508,6 +522,9 @@ public static class ProgramReader
             _helperDepth = helperDepth;
         }
 
+        /// <summary>The key a property of DynamicVarSet looks its value up by, read from its getter in this code's game (ProgramReader.DynamicVarKey).</summary>
+        private string VarKeyOf(string property) => DynamicVarKey(_card.Assembly, property, _read);
+
         /// <summary>
         /// A method of a monster's class read where its owner's power calls it on that monster (decision #275): a property it sets on its own creature
         /// (base.Creature.HpDisplay) is a store, "Creature.HpDisplay", the power's owner's.
@@ -519,20 +536,20 @@ public static class ProgramReader
             List<CodeOp> ops;
             try { ops = _read(method); }
             catch (Exception ex) { return new List<ProgramStep> { new UnknownStep(0, $"{method.Name} can't be read ({ex.GetType().Name})") }; }
-            var flow = Flow.Of(ops, method, depth < MaxDepth ? LambdaOf : null, depth < MaxDepth ? HelperValue : null);
+            var flow = Flow.Of(ops, method, depth < MaxDepth ? LambdaOf : null, depth < MaxDepth ? HelperValue : null, VarKeyOf);
             var steps = new List<ProgramStep>();
             Parse(flow, 0, flow.Ops.Count, steps, outer: null, depth);
             return steps;
         }
 
         /// <summary>What a method returns, as a condition (a getter's value).</summary>
-        public ProgramCondition Returned(MethodBase method) => Flow.Of(_read(method), method, LambdaOf, HelperValue).Returned();
+        public ProgramCondition Returned(MethodBase method) => Flow.Of(_read(method), method, LambdaOf, HelperValue, VarKeyOf).Returned();
 
         /// <summary>What a method returns, as a value (null when no one way returns it).</summary>
-        public ProgramValue? ReturnedValue(MethodBase method) => Flow.Of(_read(method), method, LambdaOf, HelperValue).ReturnedValue();
+        public ProgramValue? ReturnedValue(MethodBase method) => Flow.Of(_read(method), method, LambdaOf, HelperValue, VarKeyOf).ReturnedValue();
 
         /// <summary>What a method returns on each way to a return, in order.</summary>
-        public WaysValue ReturnedWays(MethodBase method) => Flow.Of(_read(method), method, LambdaOf, HelperValue).ReturnedWays();
+        public WaysValue ReturnedWays(MethodBase method) => Flow.Of(_read(method), method, LambdaOf, HelperValue, VarKeyOf).ReturnedWays();
 
         /// <summary>
         /// Each WithMultiplier call in a method's code (a card's CanonicalVars): the calculated value it's asked of, and what its lambda
@@ -540,7 +557,7 @@ public static class ProgramReader
         /// </summary>
         public List<(ProgramValue Created, ProgramValue Returned)> MultiplierValues(MethodBase method, List<CodeOp> ops)
         {
-            var flow = Flow.Of(ops, method, LambdaOf, HelperValue);
+            var flow = Flow.Of(ops, method, LambdaOf, HelperValue, VarKeyOf);
             var values = new List<(ProgramValue, ProgramValue)>();
             for (var i = 0; i < flow.Ops.Count; i++)
             {
@@ -552,7 +569,7 @@ public static class ProgramReader
                     for (var back = i - 1; back >= 0 && back >= i - 8 && pointer == null; back--)
                         if (flow.Ops[back].OpCode == OpCodes.Ldftn) pointer = flow.Ops[back].Member;
                     if (pointer == null || Lambda(pointer) is not { } body) continue;
-                    if (Flow.Of(_read(body), body, LambdaOf, HelperValue).ReturnedValue() is { } returned) values.Add((created, returned));
+                    if (Flow.Of(_read(body), body, LambdaOf, HelperValue, VarKeyOf).ReturnedValue() is { } returned) values.Add((created, returned));
                 }
                 catch
                 {
@@ -565,7 +582,7 @@ public static class ProgramReader
         /// <summary>The values the calls in a method's code work out that read the game's log of the fight (decision #191).</summary>
         public List<ProgramValue> HistoryValues(MethodBase method, List<CodeOp> ops)
         {
-            var flow = Flow.Of(ops, method, LambdaOf, HelperValue);
+            var flow = Flow.Of(ops, method, LambdaOf, HelperValue, VarKeyOf);
             var values = new List<ProgramValue>();
             for (var i = 0; i < flow.Ops.Count; i++)
             {
@@ -598,7 +615,7 @@ public static class ProgramReader
                 || BodyOf(found) != found) return null;
             try
             {
-                var returned = Flow.Of(_read(found), found, LambdaOf, helperOf: _helperDepth is > 0 and < 3 ? new Reader(_card, _read, _helperDepth + 1).HelperValue : null).ReturnedValue();
+                var returned = Flow.Of(_read(found), found, LambdaOf, helperOf: _helperDepth is > 0 and < 3 ? new Reader(_card, _read, _helperDepth + 1).HelperValue : null, varKeyOf: VarKeyOf).ReturnedValue();
                 if (returned == null) return null;
                 var names = found.GetParameters();
                 // A parameter, or a lambda's capture of it (a closure's field named after it: Spite's creature in its Any).
@@ -633,7 +650,7 @@ public static class ProgramReader
             if (Lambda(member) is not { } body) return null;
             try
             {
-                var flow = Flow.Of(_read(body), body, lambdaOf: null, helperOf: null);
+                var flow = Flow.Of(_read(body), body, lambdaOf: null, helperOf: null, varKeyOf: VarKeyOf);
                 var parameter = body.GetParameters() is { Length: > 0 } parameters ? parameters[0].Name ?? "x" : "x";
                 return new LambdaValue(parameter, flow.Returned());
             }
@@ -1127,9 +1144,11 @@ public static class ProgramReader
         private readonly string _site;
         private readonly Func<CodeMember, LambdaValue?>? _lambdaOf;
         private readonly Func<CodeMember, IReadOnlyList<ProgramValue>, ProgramValue?>? _helperOf;
+        /// <summary>The key a property of DynamicVarSet looks its value up by (ProgramReader.DynamicVarKey); its own name when there is none.</summary>
+        private readonly Func<string, string>? _varKeyOf;
 
         private Flow(List<CodeOp> ops, System.Reflection.MethodBase? method, Func<CodeMember, LambdaValue?>? lambdaOf,
-            Func<CodeMember, IReadOnlyList<ProgramValue>, ProgramValue?>? helperOf)
+            Func<CodeMember, IReadOnlyList<ProgramValue>, ProgramValue?>? helperOf, Func<string, string>? varKeyOf)
         {
             Ops = ops;
             for (var i = 0; i < ops.Count; i++) _indexOf[ops[i].Offset] = i;
@@ -1138,6 +1157,7 @@ public static class ProgramReader
             _site = method == null ? "" : method.DeclaringType?.Name + "." + method.Name;
             _lambdaOf = lambdaOf;
             _helperOf = helperOf;
+            _varKeyOf = varKeyOf;
         }
 
         public int IndexOf(int offset) => _indexOf.TryGetValue(offset, out var index) ? index : Ops.Count;
@@ -1147,9 +1167,9 @@ public static class ProgramReader
         public ProgramCondition? LoopEntry(int start) => _loopEntries.TryGetValue(start, out var entry) ? entry : null;
 
         public static Flow Of(List<CodeOp> ops, System.Reflection.MethodBase? method = null, Func<CodeMember, LambdaValue?>? lambdaOf = null,
-            Func<CodeMember, IReadOnlyList<ProgramValue>, ProgramValue?>? helperOf = null)
+            Func<CodeMember, IReadOnlyList<ProgramValue>, ProgramValue?>? helperOf = null, Func<string, string>? varKeyOf = null)
         {
-            var flow = new Flow(ops, method, lambdaOf, helperOf);
+            var flow = new Flow(ops, method, lambdaOf, helperOf, varKeyOf);
             flow.MarkMachinery();
             flow.FindLoops();
             flow.FindStackDepths();
@@ -1669,7 +1689,7 @@ public static class ProgramReader
             if (member.Name is "get_BaseValue" or "get_IntValue" or "Calculate")
             {
                 if (of is QueryValue { Name: "Item", Arguments: [NamedValue key] }) return (new CardValue(key.Name.Trim('"')), cursor);
-                if (of is QueryValue { Of: QueryValue { Name: "DynamicVars" } } value) return (new CardValue(value.Name), cursor);
+                if (of is QueryValue { Of: QueryValue { Name: "DynamicVars" } } value) return (new CardValue(_varKeyOf?.Invoke(value.Name) ?? value.Name), cursor);
             }
             // A foreach's item (enumerator.Current): each item it goes over.
             if (member.Name == "get_Current") return (new NamedValue("each"), cursor);

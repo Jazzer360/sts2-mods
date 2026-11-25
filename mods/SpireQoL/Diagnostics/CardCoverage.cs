@@ -293,9 +293,9 @@ internal static class CardCoverage
             issues.Add("transforms cards (not counted: the proc check's created-card budget)");
         if ((Calls("OrbCmd", "AddSlots") || Calls("OrbCmd", "RemoveSlots")) && None(otherCard => Math.Abs(Procs.Programs.BoardCounts.OrbsOf(otherCard).Slots)))
             issues.Add("changes your orb slots (the simulator doesn't change them)");
-        foreach (var applied in PowersApplied(card.GetType()))
-            if (SimAdapter.PlainSelfPowerAmount(card, applied) == 0)
-                issues.Add($"applies {applied.Name} with no amount the simulator reads");
+        // A power the simulator acts on, its amount one the adapter reads (decision #282): an unread one is an unknown in the play.
+        foreach (var unread in SimAdapter.PowerAmountsUnread(card))
+            issues.Add($"applies {unread} (an amount the simulator doesn't read: an unknown)");
         // Osty attacks are read from the game's tag (Procs.Programs.BoardCounts.IsOstyAttack): a card attacking from Osty without it wouldn't be simulated.
         if (Calls("AttackCommand", "FromOsty") && !Procs.Programs.BoardCounts.IsOstyAttack(card))
             issues.Add("attacks from Osty without the OstyAttack tag (its hit isn't simulated: Procs.Programs.BoardCounts.IsOstyAttack)");

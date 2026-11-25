@@ -27,7 +27,6 @@ public class GameBranchTests
     private static readonly Dictionary<string, string> Reviewed = new()
     {
         ["EndOfTurnDamage.Add((\"Juggernaut\", "] = "Incoming Damage's breakdown label (what the player reads), not the class",
-        ["\"Accelerant\" }; // DynamicVars keys"] = "a card's DynamicVars key (SimAdapter.PlainPowerVars), not the Accelerant card",
     };
 
     private static string RepoRoot()

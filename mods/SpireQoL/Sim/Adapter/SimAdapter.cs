@@ -32,12 +32,6 @@ public static partial class SimAdapter
     };
 
     /// <summary>
-    /// A tracked power the card's code applies without a PowerVar for it: its plain value ("Accelerant"), 0 when it has none (the card scan
-    /// reports it), or null (none, or it has a PowerVar, read with the others).
-    /// </summary>
-    private static readonly string[] PlainPowerVars = { "Accelerant" }; // DynamicVars keys
-
-    /// <summary>
     /// How many times an enemy's poison ticks: 1 plus the Accelerant of every living opponent of it, so every player's
     /// (PoisonPower.TriggerCount). Not capped at its stacks, as the game's count is: stacks added later tick that many times.
     /// </summary>
@@ -45,17 +39,6 @@ public static partial class SimAdapter
     {
         try { return 1 + combat.GetOpponentsOf(enemy).Where(creature => creature.IsAlive).Sum(creature => creature.GetPowerAmount<AccelerantPower>()); }
         catch { return 1; }
-    }
-
-    internal static int? PlainSelfPowerAmount(CardModel card, Type power)
-    {
-        if (!SelfPowers.Contains(power.Name)) return null;
-        var typed = card.DynamicVars.Values.Any(dynamicVar => dynamicVar.GetType() is { IsGenericType: true } type
-                                                     && type.GetGenericTypeDefinition() == typeof(PowerVar<>) && type.GetGenericArguments()[0] == power);
-        if (typed) return null;
-        foreach (var key in PlainPowerVars)
-            if (card.DynamicVars.TryGetValue(key, out var otherDynamicVar)) return (int)otherDynamicVar.BaseValue;
-        return 0;
     }
 
 

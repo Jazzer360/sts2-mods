@@ -758,10 +758,11 @@ public static partial class SimEngine
 
     /// <summary>
     /// An application's amount as it lands: its own, the applier's amount of the power (Cho Ki), the target's (Molten Fist), or the play's
-    /// target's amount of another power (Dominate: its Vulnerable).
+    /// target's amount of another power (Dominate: its Vulnerable), or what the play's last attack dealt (Blight Strike).
     /// </summary>
     private static int AmountOf(SimState state, ApplyPowerAction apply, int applier, int target) =>
-        apply.CopiesOwn ? PowerOn(state, applier, apply.Power)
+        apply.FromAttackDealt ? state.AttackDealt
+        : apply.CopiesOwn ? PowerOn(state, applier, apply.Power)
         : apply.CopiesTarget ? PowerOn(state, target, apply.Power)
         : apply.TargetsAmountOf is { } other ? (state.CurrentPlay?.Target ?? Who.None) is var aimedAt && state.Enemy(aimedAt) is { Alive: true } aimedEnemy
             ? PowerOn(state, aimedEnemy.Id, other) : 0

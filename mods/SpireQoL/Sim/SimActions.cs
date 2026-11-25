@@ -166,6 +166,11 @@ public sealed record ApplyPowerAction(PowerId Power, int Amount) : SimAction
     public bool CopiesTarget { get; init; }
     /// <summary>The amount is what the play's target has of this other power when it lands (Dominate: your Strength, its Vulnerable).</summary>
     public PowerId? TargetsAmountOf { get; init; }
+    /// <summary>
+    /// The amount is what the play's last attack dealt, block included (Blight Strike: PowerCmd.Apply&lt;DoomPower&gt; of the sum of its results'
+    /// TotalDamage), as it lands.
+    /// </summary>
+    public bool FromAttackDealt { get; init; }
     /// <summary>Applications (RandomEnemy: each to a random hittable enemy, a branch per target: Bouncing Flask).</summary>
     public int Times { get; init; } = 1;
 }
