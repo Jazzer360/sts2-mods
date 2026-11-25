@@ -1640,6 +1640,12 @@ public static partial class SimEngine
                 if (HitCount(enemy) > 0) state.SkippedEndOfTurn++;
                 continue;
             }
+            // A projected turn's move the forecast doesn't know (decision #304): what it does isn't followed, so the branch is unknown from here.
+            if (enemy.MoveUnknown is { } unknownMove && !enemy.Stunned)
+            {
+                state.Unmodelled ??= unknownMove;
+                continue;
+            }
             if (enemy.Stunned || HitCount(enemy) == 0 && enemy.Move == null) continue; // a stunned enemy skips its move
 
             var landed = 0;
@@ -1686,6 +1692,7 @@ public static partial class SimEngine
                         state.CancelledHits++;
                         continue;
                     }
+                    if (enemy.ProjectedMove != null) LandsOnYou(state, enemy, perHit); // a projected turn's hit, for the forecast (decision #304)
                     foreach (var player in players)
                     {
                         if (player == Who.You) TakesHit(player, perHit);

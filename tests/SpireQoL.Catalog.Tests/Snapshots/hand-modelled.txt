@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 22 engine rules naming 161 game methods; 3 adapter rules; 32 hand-written models.
+# 23 engine rules naming 162 game methods; 3 adapter rules; 32 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -61,6 +61,9 @@ The players' turn's end: its hooks in their places, Ethereal cards, the cards th
 The enemies' turn: its start's hooks, block cleared, each move in turn order, its end's hooks, the intents read after a play
   game: CombatManager.StartTurn, CombatManager.ExecuteEnemyTurn, MonsterModel.PerformMove, Hook.BeforeSideTurnStart, Hook.AfterSideTurnStart, Hook.ShouldClearBlock, Creature.ClearBlock, CombatManager.EndEnemyTurn, CombatManager.EndEnemyTurnInternal
   simulator: SimEngine.EnemyTurnStart, SimEngine.StartTheEnemiesTurn, SimEngine.EnemyTurn, SimEngine.EnemyTurnEnd, SimEngine.EnemyTurnEndSteps, SimEngine.TheirTurnEndStep, SimEngine.TheirTurnEndUnknownApart, SimEngine.TheirTurnEndGaps, SimEngine.TurnEndBlockBack, SimEngine.ClearsBlock, SimEngine.IntentsAfter
+The Intent Forecast's later turns (decision #304): your next turn's start (block cleared, your hand left out) and end with no plays, the enemies' turn start, each enemy's forecast move (a branch per move of a random pick), their turn's end; each move's hits on you as they land and as its intent reads when your turn starts
+  game: CombatManager.StartTurn, MonsterModel.PerformMove, AttackIntent.GetSingleDamage
+  simulator: SimEngine.Project, SimEngine.TheirTurnIsOver, SimEngine.YourNextTurnStarts, SimEngine.AtYourTurnStart, SimEngine.HitOnYou, SimEngine.GiveMoves, SimEngine.Give, SimEngine.LandsOnYou, SimEngine.Landed
 A heal: up to max HP
   game: CreatureCmd.Heal, Creature.HealInternal
   simulator: SimEngine.Heal

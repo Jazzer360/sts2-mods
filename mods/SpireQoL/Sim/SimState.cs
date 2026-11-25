@@ -247,6 +247,21 @@ public sealed class SimEnemy
     [JsonIgnore] internal int TurnEndBlock = -1;
     [JsonIgnore] internal bool TurnEndBlockBroken;
 
+    /// <summary>The forecast's move it makes in a projected turn (decision #304: SimEngine.Project), by id; null outside a projection.</summary>
+    [JsonIgnore] internal string? ProjectedMove;
+
+    /// <summary>Why its move in a projected turn isn't known (past its rules' first random pick, or unread): the branch is unknown from its move on.</summary>
+    [JsonIgnore] internal string? MoveUnknown;
+
+    /// <summary>
+    /// Each hit of its move on you in a projected turn as it lands (the damage math, before your block), in order; null for none yet. Never changed in
+    /// place (shared between clones).
+    /// </summary>
+    [JsonIgnore] internal int[]? LandedOnYou;
+
+    /// <summary>Some hit in LandedOnYou landed on a branch the simulator couldn't follow by then (SimState.Unmodelled): those numbers aren't known.</summary>
+    [JsonIgnore] internal bool LandedUnknown;
+
     [JsonIgnore]
     public bool Alive => Hp > 0;
 
@@ -270,6 +285,12 @@ public sealed class SimEnemy
         key.Add(Stunned ? 1 : 0); key.Add(IntendsToAttack ? 1 : 0); key.Add(BlockBroken ? 1 : 0); key.Add(KilledByItsPower ? 1 : 0);
         key.Add(MoveBlock); key.Add(Revived ? 1 : 0); key.Add(RevivedBeforeActing ? 1 : 0);
         key.Add(TurnEndBlock); key.Add(TurnEndBlockBroken ? 1 : 0);
+        if (ProjectedMove != null || MoveUnknown != null || LandedOnYou != null || LandedUnknown)
+        {
+            // A projected turn (decision #304): branches that gave it another move, or where its hits landed otherwise, stay apart.
+            key.Add(-91); key.Add(ProjectedMove?.GetHashCode() ?? 0); key.Add(MoveUnknown?.GetHashCode() ?? 0); key.Add(LandedUnknown ? 1 : 0);
+            if (LandedOnYou != null) { key.Add(LandedOnYou.Length); foreach (var hit in LandedOnYou) key.Add(hit); }
+        }
         Powers.Hash(ref key); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         Fields.Hash(ref key);
         key.Add(Hits.Count); foreach (var hit in Hits) key.Add(hit);
