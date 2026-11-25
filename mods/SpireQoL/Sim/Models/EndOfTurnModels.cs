@@ -11,12 +11,7 @@ public abstract class EndOfTurnModel : ProcModel
     public override TabKind? Tab => null;
 }
 
-/// <summary>PlatingPower.BeforeSideTurnEndEarly: its amount of block (unpowered).</summary>
-public sealed class PlatingPower : EndOfTurnModel
-{
-    public override IEnumerable<SimState> BeforeSideTurnEndEarly(SimState state, int owner) =>
-        state.TakesPart(owner) && Amount(state, owner) > 0 ? Block(state, owner, Amount(state, owner)) : One(state);
-}
+// Plating is read from its code (ReadModel, decision #289): its block as its owner's turn ends, an enemy's stacks down by the players' count.
 
 /// <summary>ConsumingShadowPower.AfterSideTurnEnd: its owner's last orb is evoked, its amount of times (OrbCmd.EvokeLast).</summary>
 public sealed class ConsumingShadowPower : EndOfTurnModel

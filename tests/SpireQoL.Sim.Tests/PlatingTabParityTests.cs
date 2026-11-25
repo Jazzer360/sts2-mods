@@ -21,6 +21,25 @@ public class PlatingTabParityTests
     /// <summary>Scenarios whose tabs or numbers a class read from its code places otherwise, each a fix: the scenario, and the game's line that moves them.</summary>
     private static readonly Dictionary<int, string> ReviewedTabs = new();
 
+    /// <summary>
+    /// The recorded line with each living enemy's Plating at the turn's end one less (none below 0) where it's past the fight's first round: a fix,
+    /// reviewed by rule (decision #289). PlatingPower.AfterSideTurnStart: `participants.Contains(base.Owner) && (base.Owner.Player == null || ...)
+    /// && (base.Owner.Side != CombatSide.Enemy || combatState.RoundNumber != 1)` → PowerCmd.ModifyAmount(this, -DynamicVars["Decrement"].BaseValue),
+    /// as the enemies' turn starts, its Decrement 1 here (the players' count it's set to as it's applied, the canonical 1 on these boards), where the
+    /// hand-written model kept it. Nothing a turn shows reads an enemy's Plating after its turn starts (its block comes as its own turn ends).
+    /// </summary>
+    private static string EnemyPlatingDown(int scenario, string recorded)
+    {
+        var (state, _) = Scenario(scenario);
+        if (state.RoundNumber == 1) return recorded;
+        return System.Text.RegularExpressions.Regex.Replace(recorded, @"(\d+) hp (\d+)-(\d+) block (\d+)-(\d+) plating (\d+)-(\d+);", match =>
+        {
+            int Part(int group) => int.Parse(match.Groups[group].Value, System.Globalization.CultureInfo.InvariantCulture);
+            if (Part(3) == 0) return match.Value;
+            return $"{match.Groups[1].Value} hp {match.Groups[2].Value}-{match.Groups[3].Value} block {match.Groups[4].Value}-{match.Groups[5].Value} plating {Math.Max(0, Part(6) - 1)}-{Math.Max(0, Part(7) - 1)};";
+        });
+    }
+
     [Fact]
     public void TheTabsAreWhatTheHandWrittenModelShowed()
     {
@@ -33,7 +52,7 @@ public class PlatingTabParityTests
         var expected = File.ReadAllLines(ParityPath).ToList();
         Assert.Equal(expected.Count, actual.Count);
         var changed = actual.Zip(expected, (now, was) => (Now: now, Was: was)).Select((pair, scenario) => (pair.Now, pair.Was, Scenario: scenario))
-            .Where(entry => entry.Now != entry.Was && !ReviewedTabs.ContainsKey(entry.Scenario)).Select(entry => $"{entry.Was}\n  now: {entry.Now}").ToList();
+            .Where(entry => entry.Now != entry.Was && !ReviewedTabs.ContainsKey(entry.Scenario) && EnemyPlatingDown(entry.Scenario, entry.Was) != entry.Now).Select(entry => $"{entry.Was}\n  now: {entry.Now}").ToList();
         Assert.True(changed.Count == 0, $"the tabs changed in {changed.Count} of {actual.Count} scenarios:\n{string.Join("\n", changed.Take(6))}");
         var stale = ReviewedTabs.Keys.Where(scenario => actual[scenario] == expected[scenario]).ToList();
         Assert.True(stale.Count == 0, $"reviewed, but the tabs are as recorded: {string.Join(", ", stale)}");
@@ -60,6 +79,7 @@ public class PlatingTabParityTests
     {
         var random = new Random(9300 + index);
         var state = new SimState { TurnNumber = 1 + random.Next(3) };
+        state.RoundNumber = state.TurnNumber;
         var enemies = random.Next(1, 4);
         for (var i = 0; i < enemies; i++)
         {

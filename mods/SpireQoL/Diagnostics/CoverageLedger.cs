@@ -237,7 +237,7 @@ internal static partial class CoverageLedger
         ["PaperCutsPower"] = "ignore: AfterDamageGiven max HP",
         ["PersonalHivePower"] = "covered: read from its code (ReadModel, decision #257): AfterDamageReceived makes its amount of Dazed into the draw pile of a powered hit's dealer (Osty's player for his), no creator (no created-card hook hears them); crossed proc tab with the count (decision #161)",
         ["PillarOfCreationPower"] = "covered: read from its code (ReadModel, decision #195): AfterCardGeneratedForCombat block per created card (proc block)",
-        ["PlatingPower"] = "covered: BeforeSideTurnEndEarly block (model PlatingPower)",
+        ["PlatingPower"] = "covered: read from its code (ReadModel, decision #289): BeforeSideTurnEndEarly block for its owner as their side's turn ends; AfterApplied sets an enemy's Decrement to the players' count; AfterSideTurnStart takes that many off an enemy's as the enemies' turn starts past the first round (a player's, as their next turn starts, past the turns a simulation covers); BeforeSideTurnStart's block waits on the players' side's turn starting",
         ["PlowPower"] = "covered: read from its code (ReadModel, decision #275): AfterDamageReceived, HP through that leaves its owner at or below its amount: every Temporary Strength and its Strength removed, Ceremonial Beast's SetStunned (its Ritual on Dread; its flags only show) and a stun with its own stunned move, else a stun; the power goes; its tab judged on how the turn ends",
         ["PossessSpeedPower"] = "ignore: returns stolen Dexterity when it dies",
         ["PossessStrengthPower"] = "ignore: returns stolen Strength when it dies",

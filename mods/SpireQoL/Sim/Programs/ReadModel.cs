@@ -2378,6 +2378,8 @@ public sealed class ReadModel : SimModel
             case HookFact.ApplierIsPlayer: return (in HookArgs args) => Who.IsPlayer(ApplierOf(in args)) ? 1m : 0m;
             case HookFact.PlayIsAppliers: return (in HookArgs args) => args.Play is { } play && ApplierOf(in args) is var applier && applier != Who.None && play.Owner == applier ? 1m : 0m;
             case HookFact.TurnNumber: return (in HookArgs args) => args.State.TurnNumber + (args.NextTurn ? 1 : 0);
+            // The next turn (a payout there) is the next round's.
+            case HookFact.RoundNumber: return (in HookArgs args) => args.State.RoundNumber + (args.NextTurn ? 1 : 0);
             case HookFact.OwnerDead: return (in HookArgs args) => (Who.IsPet(args.Owner) ? SimEngine.PetHp(args.State, args.Owner) <= 0
                 : args.State.Player(args.Owner) is { } player ? player.Died || player.Hp <= 0 : args.State.Enemy(args.Owner) is not { Alive: true }) ? 1m : 0m;
             case HookFact.CreatureThere:

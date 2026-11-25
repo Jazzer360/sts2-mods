@@ -164,6 +164,7 @@ public static partial class ReadModels
         PowerId.PersonalHive.Name,
         PowerId.PillarOfCreation.Name,
         nameof(MegaCrit.Sts2.Core.Models.Orbs.PlasmaOrb),
+        PowerId.Plating.Name,
         PowerId.Plow.Name,
         PowerId.Poison.Name,
         PowerId.PrepTime.Name,

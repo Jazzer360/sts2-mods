@@ -173,6 +173,8 @@ public class ProcModelTests
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 5) } };
         state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Surprise, amount: 1);
         state.Enemies[0].Spawns = new List<SimSpawn> { new("Plated", new[] { 20 }) { Powers = PowerSet.Empty.With(PowerId.Plating, amount: 3), Source = PowerId.Surprise } };
+        // The fight's first round: an enemy's Plating keeps its stacks as the enemies' turn starts (PlatingPower.AfterSideTurnStart: RoundNumber != 1).
+        state.RoundNumber = 1;
         var branch = Assert.Single(SimEngine.Run(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 6))).Branches);
         Assert.Equal(3, branch.Enemy(id: 1)!.Powers[PowerId.Plating]);
     }

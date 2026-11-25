@@ -268,6 +268,8 @@ public enum HookFact
     OwnerDead,
     /// <summary>The players' turn number this turn (base.Owner.PlayerCombatState.TurnNumber: SimState.TurnNumber).</summary>
     TurnNumber,
+    /// <summary>The fight's round (combatState.RoundNumber, base.Owner.CombatState.RoundNumber: SimState.RoundNumber).</summary>
+    RoundNumber,
     /// <summary>The owner's orbs of the kind named in Of (OrbQueue.Orbs.Count(o => o is FrostOrb): an OrbKind's name).</summary>
     OwnerOrbCount,
     /// <summary>
@@ -367,7 +369,10 @@ public enum HookFact
     SourceCardVar,
     /// <summary>The amount a power is applied with as PowerCmd.Apply scales it for the players (GetScaledAmountForMultiplayer's amount: PowerRule).</summary>
     ScaledAmount,
-    /// <summary>The players in the fight (combatState.Players.Count): you and your teammates.</summary>
+    /// <summary>
+    /// The players in the fight (combatState.Players.Count, base.Owner.CombatState.RunState.Players.Count): you and your teammates, one who died among
+    /// them (the run's players stay its players).
+    /// </summary>
     PlayerCount,
     /// <summary>
     /// The fight's multiplayer scaling (MultiplayerScalingModel.GetMultiplayerScaling(encounter, act): SimState.EncounterScaling, read by the adapter

@@ -2533,3 +2533,12 @@ public sealed class SneckoSkull : SimModel
         return amount + SimEngine.RelicsOf(state, owner)[ThisRelic];
     }
 }
+
+// ---- round twenty-eight: the round number and the players' count (Sim/Models/EndOfTurnModels.cs), deleted 2026-11-25
+
+/// <summary>PlatingPower.BeforeSideTurnEndEarly: its amount of block (unpowered).</summary>
+public sealed class PlatingPower : EndOfTurnModel
+{
+    public override IEnumerable<SimState> BeforeSideTurnEndEarly(SimState state, int owner) =>
+        state.TakesPart(owner) && Amount(state, owner) > 0 ? Block(state, owner, Amount(state, owner)) : One(state);
+}

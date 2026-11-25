@@ -26,7 +26,7 @@ public class SimKeyCoverageTests
         ["SimState._teammatesShared"] = Bookkeeping, ["SimPlayer._orbsShared"] = Bookkeeping,
         ["SimState.CardPlaysStarted"] = "a card play's identity within the run (SimCardPlay.Serial): what a model binds is keyed by it, and every bound entry is scratch",
         // Read from the game once and never changed.
-        ["SimState.Vars"] = Constant, ["SimState.Fractions"] = Constant, ["SimState.TurnNumber"] = Constant, ["SimState.Dread"] = Constant, ["SimState.MainRules"] = Constant, ["SimState.History"] = Constant, ["SimState.Titles"] = Constant, ["SimState.TeammatesBeforeMe"] = Constant,
+        ["SimState.Vars"] = Constant, ["SimState.Fractions"] = Constant, ["SimState.TurnNumber"] = Constant, ["SimState.RoundNumber"] = Constant, ["SimState.Dread"] = Constant, ["SimState.MainRules"] = Constant, ["SimState.History"] = Constant, ["SimState.Titles"] = Constant, ["SimState.TeammatesBeforeMe"] = Constant,
         ["SimEnemy.Name"] = Constant, ["SimEnemy.Monster"] = Constant, ["SimEnemy.Hittable"] = Constant, ["SimEnemy.SetMoves"] = Constant,
         ["SimEnemy.StartedAlive"] = Constant, ["SimEnemy.AddedBy"] = "set as a creature a death adds joins, beside its Id (in the key), and never changed",
         ["SimEnemy.Intent"] = SetByAMove, ["SimEnemy.TeammateHits"] = SetByAMove, ["SimEnemy.Move"] = SetByAMove,

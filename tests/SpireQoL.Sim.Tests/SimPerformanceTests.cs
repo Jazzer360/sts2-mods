@@ -140,7 +140,9 @@ public class SimPerformanceTests
     public static IEnumerable<object[]> Scenarios() => new[]
     {
         // Measured (2026-11-19, decision #107: one merged search, nothing cut off): copies, stepped, steps, bytes, ms.
-        new object[] { "branch-heavy hand", 3_600, 4_200, 32, 290_000_000L, 60 },                // 2,874, 3,363, 25, 192.7 MB, 10 ms (was cut off at 128 branches: 926 copies)
+        // branch-heavy hand's stepped: 6,000 from 4,200 (2026-11-25, decision #289): Plating, read from its code, listens to the enemies' turn start (an
+        // enemy's Plating comes down there), so every branch steps through that hook too: 4,767 measured.
+        new object[] { "branch-heavy hand", 3_600, 6_000, 32, 290_000_000L, 60 },                // 2,874, 4,767, 32, 256.6 MB, 26 ms (was cut off at 128 branches: 926 copies)
         // four Defects' bytes: 1,170 MB from 1,140 (2026-11-24, decision #195): each SimPlayer and SimEnemy holds its models' fields (a reference more
         // in each copy), 1,144.6 MB measured, 1.3% more.
         // Bytes measured 2026-11-24 (decision #216: the branch key made by reference, nothing sorted that has no order to choose): branch-heavy

@@ -22,12 +22,12 @@ public static partial class SimAdapter
 {
 
     /// <summary>
-    /// Your powers the simulator tracks that aren't read from their code (Plating, Juggernaut, Accelerant). One read from its code (Feel No Pain,
-    /// Thorns, Flame Barrier) is simulated as any read model is, its amount the card's step's (decision #281).
+    /// Your powers the simulator tracks that aren't read from their code (Juggernaut, Accelerant). One read from its code (Feel No Pain,
+    /// Thorns, Flame Barrier: decision #281; Plating: decision #289) is simulated as any read model is, its amount the card's step's.
     /// </summary>
     internal static readonly HashSet<string> SelfPowers = new()
     {
-        nameof(PlatingPower), nameof(JuggernautPower),
+        nameof(JuggernautPower),
         nameof(AccelerantPower),
     };
 
@@ -86,7 +86,7 @@ public static partial class SimAdapter
     {
         var idMap = new Dictionary<Creature, int>();
         ids = idMap;
-        var state = new SimState { MainRules = BranchRules.MainRulesNow(), TurnNumber = me.PlayerCombatState?.TurnNumber ?? 0, Dread = MoveBranches.DreadRun, EncounterScaling = EncounterScaling(combat) };
+        var state = new SimState { MainRules = BranchRules.MainRulesNow(), TurnNumber = me.PlayerCombatState?.TurnNumber ?? 0, RoundNumber = combat.RoundNumber, Dread = MoveBranches.DreadRun, EncounterScaling = EncounterScaling(combat) };
         var mates = Teammates(me, combat);
         // Any creature's simulator id (Who): an enemy's, you, teammate k, or one of a player's pets the simulator keeps.
         int? PlayerIdOf(Creature creature) => creature == me.Creature ? Who.You

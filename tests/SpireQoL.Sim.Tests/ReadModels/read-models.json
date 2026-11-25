@@ -24410,6 +24410,636 @@
     }
   },
   {
+    "Name": "PlatingPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterApplied",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Var.Decrement",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "PlayerCount"
+            },
+            "When": {
+              "$kind": "HookNot",
+              "Inner": {
+                "$kind": "HookTest",
+                "At": "PlatingPower.AfterApplied:000C",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreatureOnPlayersSide",
+                  "Creature": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "PlatingPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "Var.Decrement",
+                "Canonical": 1
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": -1
+              }
+            },
+            "GoesAtZero": true,
+            "Debuff": false,
+            "By": {
+              "Who": "NoOne",
+              "PetOwner": false
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "Or",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:002C",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "TakesPart"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:003E",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureIsPlayer",
+                              "Creature": {
+                                "Who": "Owner",
+                                "PetOwner": false
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:0069",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureOnPlayersSide",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:008A",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureOnPlayersSide",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:002C",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "TakesPart"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:0056",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "TurnNumber"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:0069",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureOnPlayersSide",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:008A",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureOnPlayersSide",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:002C",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "TakesPart"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:003E",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureIsPlayer",
+                            "Creature": {
+                              "Who": "Owner",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:0077",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "RoundNumber"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:008A",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureOnPlayersSide",
+                        "Creature": {
+                          "Who": "Owner",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:002C",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "TakesPart"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:0056",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "TurnNumber"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:0077",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "RoundNumber"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:008A",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureOnPlayersSide",
+                      "Creature": {
+                        "Who": "Owner",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "Or",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:002C",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "TakesPart"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:003E",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureIsPlayer",
+                              "Creature": {
+                                "Who": "Owner",
+                                "PetOwner": false
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:0069",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureOnPlayersSide",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:008A",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureOnPlayersSide",
+                        "Creature": {
+                          "Who": "Owner",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:002C",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "TakesPart"
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:0056",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "TurnNumber"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:0069",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureOnPlayersSide",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:008A",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureOnPlayersSide",
+                        "Creature": {
+                          "Who": "Owner",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:002C",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "TakesPart"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:003E",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureIsPlayer",
+                            "Creature": {
+                              "Who": "Owner",
+                              "PetOwner": false
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:0077",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "RoundNumber"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:008A",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureOnPlayersSide",
+                      "Creature": {
+                        "Who": "Owner",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:002C",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "TakesPart"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:0056",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "TurnNumber"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:0077",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "RoundNumber"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnStart\u003Ed__14.MoveNext:008A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CreatureOnPlayersSide",
+                    "Creature": {
+                      "Who": "Owner",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeSideTurnEndEarly",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeSideTurnEndEarly\u003Ed__13.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CBeforeSideTurnEndEarly\u003Ed__13.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "PlowPower",
     "Kind": "Power",
     "Hooks": [

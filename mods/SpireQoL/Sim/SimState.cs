@@ -862,6 +862,11 @@ public sealed class SimState
     /// </summary>
     public int TurnNumber;
     /// <summary>
+    /// The fight's round (CombatState.RoundNumber: 1 on its first, one more as each round's players' turn starts, not for an extra turn), read from
+    /// the game. Constant: a simulation never reaches the players' next turn.
+    /// </summary>
+    public int RoundNumber;
+    /// <summary>
     /// The run is on the Dread ascension (AscensionHelper.IsDread, read from the game: beta only, decision #163), which a monster's code asks (Ceremonial
     /// Beast's RitualAmount, as Plow stuns it: decision #275). A player knows it. Constant in a simulation.
     /// </summary>

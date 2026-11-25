@@ -116,7 +116,7 @@ power PanachePower: AfterCardPlayed: read | AfterSideTurnEnd: read | InitInterna
 power PaperCutsPower: AfterDamageGiven: gap: CreatureCmd.LoseMaxHp isn't translated
 power PersonalHivePower: AfterDamageReceived: read
 power PillarOfCreationPower: AfterCardGeneratedForCombat: read
-power PlatingPower: AfterApplied: gap: the value this.Owner.CombatState.RunState.Players.Count | AfterSideTurnStart: gap: the value combatState.RoundNumber | BeforeSideTurnEndEarly: read | BeforeSideTurnStart: gap: the value combatState.RoundNumber | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply's scaling for the players: read into the class's PowerRule and run by the engine as it lands one (decision #234)
+power PlatingPower: AfterApplied: read | AfterSideTurnStart: read | BeforeSideTurnEndEarly: read | BeforeSideTurnStart: not run: its commands wait on the players' side's turn starting, past the turns a simulation covers | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply's scaling for the players: read into the class's PowerRule and run by the engine as it lands one (decision #234)
 power PlowPower: AfterDamageReceived: read
 power PossessSpeedPower: AfterDeath: gap: a loop | AfterPowerAmountChanged: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power PossessStrengthPower: AfterDeath: gap: a loop | AfterPowerAmountChanged: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them

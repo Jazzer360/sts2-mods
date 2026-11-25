@@ -3101,6 +3101,12 @@ public static class HookReader
                 // The players' turn number (base.Owner.PlayerCombatState.TurnNumber).
                 case QueryValue { Name: "TurnNumber", Of: QueryValue { Name: "PlayerCombatState", Of: { } turnOf } } when IsOwner(turnOf):
                     return new HookFactValue(HookFact.TurnNumber);
+                // The fight's round (combatState.RoundNumber, base.Owner.CombatState.RoundNumber).
+                case QueryValue { Name: "RoundNumber", Of: { } roundOf } when IsTheFight(roundOf):
+                    return new HookFactValue(HookFact.RoundNumber);
+                // The players in the fight (base.Owner.CombatState.RunState.Players.Count, combatState.Players.Count).
+                case QueryValue { Name: "Count", Of: QueryValue { Name: "Players", Of: { } playersOf } } when IsTheFight(playersOf) || playersOf is QueryValue { Name: "RunState", Of: { } runOf } && IsTheFight(runOf):
+                    return new HookFactValue(HookFact.PlayerCount);
                 // The owner's block (base.Owner.Creature.Block).
                 case QueryValue { Name: "Block", Of: { } blockOf } when IsOwner(blockOf):
                     return new HookFactValue(HookFact.OwnerBlock);
@@ -3580,6 +3586,15 @@ public static class HookReader
             // Its owner's monster's creature (base.Creature in a method of that monster's class its power calls on it: decision #275).
             QueryValue { Name: "Creature", Of: QueryValue { Name: "Monster", Of: { } monsterOf } } => IsOwner(monsterOf),
             QueryValue { Name: "Player" or "Creature", Of: { } of } => IsOwner(of),
+            _ => false,
+        };
+
+        /// <summary>The fight's combat state: a hook's combatState parameter, the model's own (base.CombatState) or its owner's (base.Owner.CombatState).</summary>
+        private static bool IsTheFight(ProgramValue value) => (value is StoredValue stored ? stored.Value : value) switch
+        {
+            ParameterValue { Name: "combatState" } or NamedValue { Name: "combatState" } => true,
+            QueryValue { Name: "CombatState", Of: NamedValue { Name: "this" } } => true,
+            QueryValue { Name: "CombatState", Of: { } of } => IsOwner(of),
             _ => false,
         };
 
