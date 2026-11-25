@@ -1614,6 +1614,10 @@ public static class HookReader
                 case "CreatureCmd.Stun":
                     if (!IsOwner(values[0])) throw new Gap(Other(values[0]), $"gap: stuns {values[0]}");
                     if (command.Inner.Count > 0) throw new Gap(ReaderCapability.StunOrKill, "gap: a stunned move that calls commands");
+                    // The stunned move it's given is code the reader read (a lambda or a method of its own class: one that called a command would be
+                    // the command's Inner); another class's method (its monster's WakeUpMove) isn't read here: a gap.
+                    if (IndexOf(types, "Func`2") is var moveAt and >= 0 && (moveAt >= values.Count || values[moveAt] is not LambdaValue))
+                        throw new Gap(ReaderCapability.MonsterStateSet, $"gap: a stunned move the reader doesn't read ({(moveAt < values.Count ? values[moveAt] : "none")})");
                     return new StunStep();
                 case "PlayerCmd.GainEnergy":
                     if (!IsOwner(values[1])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, "gap: energy for someone else");

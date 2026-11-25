@@ -147,7 +147,7 @@ power SleightOfFleshPower: AfterPowerAmountChanged: read
 power SlipperyPower: AfterDamageReceived: read | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply's scaling for the players: read into the class's PowerRule and run by the engine as it lands one (decision #234) | ModifyHpLostAfterOsty: read
 power SlothPower: BeforeCardPlayed: read | BeforeSideTurnStart: read | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
 power SlowPower: AfterCardPlayed: read | AfterModifyingDamageAmount: read | AfterSideTurnStart: read | ModifyDamageMultiplicative: read
-power SlumberPower: AfterDamageReceived: read | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | AfterSideTurnEnd: gap: changes a game object outside a command (SlumberingBeetle.WakeUpMove)
+power SlumberPower: AfterDamageReceived: gap: a stunned move the reader doesn't read (?WakeUpMove) | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | AfterSideTurnEnd: gap: changes a game object outside a command (SlumberingBeetle.WakeUpMove)
 power SmoggyPower: AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterCardPlayed: gap: a loop | AfterSideTurnEnd: gap: a loop | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
 power SmokestackPower: AfterCardGeneratedForCombat: read
 power SneakyPower: AfterCardPlayed: read
