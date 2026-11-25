@@ -130,6 +130,43 @@ internal static class MovePowers
         }
     }
 
+    /// <summary>
+    /// Reads every move of each monster class (its powers and its block, as Of and BlockOf ask) into their caches, once a launch on the load's
+    /// worker (decision #254): Intent Details and the intents' corners otherwise read them on the game's thread on a fight's first frame. Each
+    /// read is made outside the lock the frame takes, so the frame never waits on one. Code only, never a monster.
+    /// </summary>
+    /// <returns>How many moves were read.</returns>
+    internal static int ReadAtLoad(IEnumerable<Type> monsters)
+    {
+        var read = 0;
+        foreach (var monster in monsters)
+            foreach (var perform in Procs.Programs.MonsterCode.Moves(monster))
+            {
+                try
+                {
+                    bool have;
+                    lock (Calls) have = Calls.ContainsKey(perform);
+                    if (!have)
+                    {
+                        var calls = Read(perform);
+                        lock (Calls) Calls.TryAdd(perform, calls);
+                    }
+                    lock (BlockCalls) have = BlockCalls.ContainsKey(perform);
+                    if (!have)
+                    {
+                        var block = ReadBlock(perform);
+                        lock (BlockCalls) BlockCalls.TryAdd(perform, block);
+                    }
+                    read++;
+                }
+                catch
+                {
+                    // read on the fight's ask instead, as before
+                }
+            }
+        return read;
+    }
+
     internal static List<BlockCall> ReadBlock(MethodInfo method)
     {
         var body = method.GetCustomAttribute<AsyncStateMachineAttribute>()?.StateMachineType

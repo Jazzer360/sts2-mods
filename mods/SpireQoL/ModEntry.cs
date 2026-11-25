@@ -260,7 +260,9 @@ public static class ModEntry
                 var readMs = watch.ElapsedMilliseconds;
                 var stateTypes = Sim.SimJson.Warm().Count;
                 var methods = FirstUse.Compile(typeof(ModEntry).Assembly);
-                Log.Detail($"[load] {programs} fight programs read in {readMs} ms; {stateTypes} state types written and {methods} methods compiled in {watch.ElapsedMilliseconds - readMs} ms");
+                // A made-up fight through the engine: what compiling doesn't make (its generic code on value types, its first-use state).
+                _ = Sim.SimWarmUp.Run();
+                Log.Detail($"[load] {programs} fight programs read in {readMs} ms; {stateTypes} state types written, {methods} methods compiled and a made-up fight run in {watch.ElapsedMilliseconds - readMs} ms");
             }
             catch (Exception ex)
             {

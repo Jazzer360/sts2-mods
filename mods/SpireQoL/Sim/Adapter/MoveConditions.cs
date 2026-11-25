@@ -51,6 +51,53 @@ internal static class MoveConditions
         }
     }
 
+    /// <summary>
+    /// Reads every conditional branch's lambda of each monster class (a bool-returning method its move rules made: GenerateMoveStateMachine's
+    /// lambdas, on the class or a closure of it) and the getters of its own properties they ask, into the caches Of asks, once a launch on the
+    /// load's worker (decision #254): the first intent forecast of a fight otherwise read them on the game's thread. Code only, never a monster.
+    /// </summary>
+    /// <returns>How many were read.</returns>
+    internal static int ReadAtLoad(IEnumerable<Type> monsters)
+    {
+        const BindingFlags declared = Any | BindingFlags.Static | BindingFlags.DeclaredOnly;
+        var read = 0;
+        foreach (var monster in monsters)
+        {
+            if (monster.IsAbstract) continue;
+            foreach (var owner in new[] { monster }.Concat(monster.GetNestedTypes(BindingFlags.NonPublic)))
+                foreach (var method in owner.GetMethods(declared))
+                {
+                    if (method.ReturnType != typeof(bool) || method.GetParameters().Length != 0 || method.IsGenericMethodDefinition
+                        || !method.Name.StartsWith("<GenerateMoveStateMachine>", StringComparison.Ordinal)) continue;
+                    try
+                    {
+                        var condition = Read.GetOrAdd(method, lambda => ProgramReader.ReadReturned(monster, lambda, RuntimeCode.Read));
+                        read++;
+                        read += ReadGetters(condition, monster, depth: 0);
+                    }
+                    catch
+                    {
+                        // read on the fight's ask instead, as before
+                    }
+                }
+        }
+        return read;
+    }
+
+    /// <summary>The getters of the monster's own properties a condition asks (Translate follows them two deep), read into Getters.</summary>
+    private static int ReadGetters(ProgramCondition condition, Type owner, int depth)
+    {
+        if (depth >= 2) return 0;
+        var read = 0;
+        foreach (var conjunction in condition.Terms)
+            foreach (var literal in conjunction)
+                foreach (var part in literal.Test.Parts())
+                    if (part is QueryValue { IsProperty: true, Of: NamedValue { Name: "this" } } property
+                        && Getters.GetOrAdd((owner, property.Name), key => ProgramReader.ReadProperty(key.Owner, key.Name, RuntimeCode.Read)) is { } getter)
+                        read += 1 + ReadGetters(getter, owner, depth + 1);
+        return read;
+    }
+
     /// <summary>Each lambda's code read once (decision #31); what it's translated to reads the monster now, so that's worked out each time.</summary>
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<MethodInfo, ProgramCondition> Read = new();
 

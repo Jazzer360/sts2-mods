@@ -43,7 +43,7 @@ public class FirstBoardReadTests
         Assert.True(SimAdapter.ReadFightCode(types) > 1000);
 
         // A first fight: a Seapunk about to Bubble Burp (block and Strength: its move's program), a Gremlin Merc whose Surprise adds two
-        // gremlins at its death (its AfterDeath, theirs AfterAddedToRoom), and a Silent's cards in hand and piles.
+        // gremlins at its death (its AfterDeath, theirs AfterAddedToRoom), a Frog Knight, and a Silent's cards in hand and piles.
         var fight = new GameFight();
         fight.Add<StrikeSilent>();
         fight.Add<DefendSilent>();
@@ -56,9 +56,19 @@ public class FirstBoardReadTests
         Enemy<Seapunk>(fight, "BUBBLE_BURP_MOVE");
         var merc = Enemy<GremlinMerc>(fight, "GIMME_MOVE");
         ModelDb.Power<SurprisePower>().ToMutable().ApplyInternal(merc, amount: 1m);
+        // A Frog Knight, whose move rules branch on its HP (a conditional branch's lambda: Intent Forecast).
+        Enemy<FrogKnight>(fight, "TONGUE_LASH");
 
         var (runtimeReads, harmonyReads) = (RuntimeCode.ReadsOnThisThread, GameCode.ReadsOnThisThread);
         var state = SimAdapter.Build(fight.Me, fight.Combat, out _);
+        // The intents' reads on the same frame: each move's powers and block (Intent Details), the move rules with their conditions.
+        foreach (var enemy in fight.Combat.Enemies)
+        {
+            var monster = enemy.Monster!;
+            _ = MovePowers.Of(monster, monster.NextMove);
+            _ = MovePowers.BlockOf(monster, monster.NextMove);
+            Assert.NotNull(IntentReader.Graph(monster.MoveStateMachine!, monster));
+        }
         Assert.Equal((0, 0), (RuntimeCode.ReadsOnThisThread - runtimeReads, GameCode.ReadsOnThisThread - harmonyReads));
         Assert.NotNull(state.Enemies[0].Move); // the move was read (from the load's read)
         Assert.NotNull(state.Enemies[1].Spawns);
