@@ -2426,3 +2426,20 @@ public sealed class HardenedShellPower : SimModel
         return One(state);
     }
 }
+
+// ---- round twenty-five: a parity proof of a class read whole (Sim/Models/EndOfTurnModels.cs), deleted 2026-11-25
+
+/// <summary>MagicBombPower.AfterSideTurnEnd: while its applier lives, its amount to its owner (unpowered, dealt by its owner), then it goes.</summary>
+public sealed class MagicBombPower : TurnEndDebuff
+{
+    /// <summary>Instanced, but nothing in the game applies it (Magi Knight's MAGIC_BOMB is an attack): it's never on anyone twice.</summary>
+    public override bool Instanced => true;
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner)
+    {
+        if (!state.TakesPart(owner) || ApplierDead(state, owner, ThisPower)) return One(state);
+        var amount = Amount(state, owner);
+        SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).Without(ThisPower));
+        return Hurt(state, owner, amount, Unpowered, selfDealt: true);
+    }
+}
+

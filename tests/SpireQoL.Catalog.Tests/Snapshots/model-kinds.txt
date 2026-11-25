@@ -3,9 +3,9 @@
 
 ## Powers and relics
 
-beta powers: 303 classes, 272 with hooks; read from code 143, hand-written 30, neither 101 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 303 classes, 272 with hooks; read from code 144, hand-written 29, neither 101 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 64, hand-written 9, neither 237 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 120, hand-written 27, neither 90 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 121, hand-written 26, neither 90 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 56, hand-written 9, neither 228 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 7, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 1
@@ -133,7 +133,6 @@ SimReaders.Read (powers): SurroundedPower: hand-written; reads its own field Fac
 SimReaders.Read (powers): CoveredPower: hand-written; reads the game's Applier, the game's Owner.Powers: needs more than its own fields and values
 SimReaders.Read (powers): FeralPower: hand-written; reads its own field _internalData, its own field zeroCostAttacksPlayed, the game's DisplayAmount: needs more than its own fields and values
 SimReaders.Read (powers): WitheringPresencePower: hand-written; reads its own value CardsLeft: a read model's own fields and values replace it
-SimReaders.Read (powers): MagicBombPower: hand-written; reads the game's Applier: needs more than its own fields and values
 SimReaders.Read (powers): ImitationLearningPower: hand-written; reads the game's Applier, the game's Owner.Powers, the game's CopiesFrom: needs more than its own fields and values
 SimReaders.Relics: Pocketwatch: hand-written; reads its own field _cardsPlayedThisTurn, its own value CardThreshold: a read model's own fields and values replace it
 SimReaders.Relics: RedSkull: hand-written; reads its own value HpThreshold, its own field StrengthApplied, the game's MaxHp: needs more than its own fields and values
@@ -207,7 +206,6 @@ commands: GainStars: 1 classes, 1 alone: StarPotion (potion)*
 commands: OstyCmd.Summon: 1 classes, 1 alone: BoneBrew (potion)*
 hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*
 hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
-read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 1 classes, 1 alone: MagicBombPower*
 the fight's log (the history ledger, decision #191): 1 classes, 1 alone: UnmovablePower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*
 a command on another power (PowerCmd.Remove of another): 2 classes, 0 alone: AsleepPower, SlumberPower

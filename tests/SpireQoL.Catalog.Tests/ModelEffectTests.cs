@@ -31,7 +31,7 @@ public class ModelEffectTests
         GameModels.EnsureLoaded();
         var report = ModelAmountCheck.Run();
         // Fewer each round: a model read from its code (decision #195) takes its amounts where its code does, and isn't compared.
-        Assert.True(report.Compared > 4, $"only {report.Compared} models compared: the check stopped reading the game's hooks or the models");
+        Assert.True(report.Compared > 3, $"only {report.Compared} models compared: the check stopped reading the game's hooks or the models");
         Assert.True(report.Differences.Count + report.Unread.Count + report.StaleReviews.Count == 0, Describe(report));
     }
 
@@ -49,7 +49,7 @@ public class ModelEffectTests
             && type.Namespace is "MegaCrit.Sts2.Core.Models.Powers" or "MegaCrit.Sts2.Core.Models.Relics");
         var report = ModelAmountCheck.Run(models, code.Read);
         // Fewer each round: a model read from its code (decision #195) takes its amounts where its code does, and isn't compared.
-        Assert.True(report.Compared > 3, $"only {report.Compared} models compared on {branch}");
+        Assert.True(report.Compared > 2, $"only {report.Compared} models compared on {branch}");
         Assert.True(report.Differences.Count + report.Unread.Count == 0, Describe(report));
     }
 

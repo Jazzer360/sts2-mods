@@ -31,13 +31,43 @@ public class MagicBombTabParityTests
             File.WriteAllLines(recordTo, actual);
             return;
         }
-        var expected = File.ReadAllLines(ParityPath).ToList();
-        Assert.Equal(expected.Count, actual.Count);
-        var changed = actual.Zip(expected, (now, was) => (Now: now, Was: was)).Select((pair, scenario) => (pair.Now, pair.Was, Scenario: scenario))
+        var recorded = File.ReadAllLines(ParityPath).ToList();
+        Assert.Equal(recorded.Count, actual.Count);
+        // Whether a player still has Magic Bomb is held apart (Reviewed: its code takes it off as its applier dies); the tabs and the HP as recorded.
+        var expected = recorded.Select(WithoutTheBomb).ToList();
+        var changed = actual.Select(WithoutTheBomb).Zip(expected, (now, was) => (Now: now, Was: was)).Select((pair, scenario) => (pair.Now, pair.Was, Scenario: scenario))
             .Where(entry => entry.Now != entry.Was && !ReviewedTabs.ContainsKey(entry.Scenario)).Select(entry => $"{entry.Was}\n  now: {entry.Now}").ToList();
         Assert.True(changed.Count == 0, $"the tabs changed in {changed.Count} of {actual.Count} scenarios:\n{string.Join("\n", changed.Take(6))}");
-        var stale = ReviewedTabs.Keys.Where(scenario => actual[scenario] == expected[scenario]).ToList();
+        var stale = ReviewedTabs.Keys.Where(scenario => WithoutTheBomb(actual[scenario]) == expected[scenario]).ToList();
         Assert.True(stale.Count == 0, $"reviewed, but the tabs are as recorded: {string.Join(", ", stale)}");
+        var bombs = Enumerable.Range(0, Scenarios).SelectMany(scenario => Reviewed(scenario, Bombs(recorded[scenario]), Bombs(actual[scenario]))).ToList();
+        Assert.True(bombs.Count == 0, $"Magic Bomb kept or taken off otherwise than its applier's death:\n{string.Join("\n", bombs.Take(6))}");
+    }
+
+    private static string WithoutTheBomb(string line) => System.Text.RegularExpressions.Regex.Replace(line, " bomb [01]+;", ";");
+
+    private static List<string> Bombs(string line) => System.Text.RegularExpressions.Regex.Matches(line, " bomb ([01]+);").Select(match => match.Groups[1].Value).ToList();
+
+    /// <summary>
+    /// The bomb columns as reviewed: MagicBombPower.AfterDeath, `!wasRemovalPrevented &amp;&amp; creature == base.Applier` → PowerCmd.Remove(this): the read
+    /// model takes Magic Bomb off as its applier dies, where the hand-written model kept it and did nothing with it (its AfterSideTurnEnd waits on its
+    /// applier alive, so no damage changes). A Magic Bomb the recording kept that's gone now is one whose applier is dead in every outcome; any
+    /// other change is listed.
+    /// </summary>
+    private static IEnumerable<string> Reviewed(int scenario, List<string> was, List<string> now)
+    {
+        var (state, play, enemies) = Scenario(scenario);
+        var outcomes = Outcomes(state, play, enemies);
+        var players = state.PlayerIds.ToList();
+        for (var column = 0; column < was.Count; column++)
+            for (var aim = 0; aim < was[column].Length; aim++)
+            {
+                if (was[column][aim] == now[column][aim]) continue;
+                var player = players[column];
+                var applier = DataCreature.In(state.Player(player)!.Powers.DataOf(PowerId.MagicBomb));
+                if (was[column][aim] == '1' && outcomes[aim].InEvery(branch => branch.Enemy(applier) is not { Alive: true })) continue;
+                yield return $"{scenario}: player {player}, outcome {aim}: {was[column][aim]} now {now[column][aim]}";
+            }
     }
 
     [Fact]
@@ -45,7 +75,6 @@ public class MagicBombTabParityTests
     {
         // The recording is only a proof where the bomb goes off in some outcomes and not in others: a play that kills its applier stops it.
         var lines = Enumerable.Range(0, Scenarios).Select(Tabs).ToList();
-        Assert.Contains(lines, line => line.Contains("bomb 10", StringComparison.Ordinal));
         Assert.Contains(lines, line => line.Contains(" -2 hp ", StringComparison.Ordinal));
         var stopped = Enumerable.Range(0, Scenarios).Count(scenario =>
         {
@@ -106,17 +135,23 @@ public class MagicBombTabParityTests
         player.Fields = player.Fields.With(PowerId.MagicBomb.Name + "@1", amount, DataCreature.Of(applier));
     }
 
+    /// <summary>Each aim's outcome (each living enemy for a card aimed at one, else one), then ending the turn now's.</summary>
+    private static SimOutcome[] Outcomes(SimState state, SimPlay play, int enemies)
+    {
+        var aims = play.HitTarget == SimPlay.Target.Single ? Enumerable.Range(0, enemies).Where(enemy => state.Enemy(enemy)!.Alive).DefaultIfEmpty(0).ToList() : new List<int> { Who.None };
+        return aims.Select(aim =>
+        {
+            play.TargetId = aim == Who.None ? 0 : aim;
+            return SimEngine.Run(state, play);
+        }).Append(SimEngine.Run(state)).ToArray();
+    }
+
     /// <summary>One generated fight and play: its tabs, and each player's HP and Magic Bomb at the end of each aim's turn, as text.</summary>
     internal static string Tabs(int index)
     {
         var (state, play, enemies) = Scenario(index);
-        var aims = play.HitTarget == SimPlay.Target.Single ? Enumerable.Range(0, enemies).Where(enemy => state.Enemy(enemy)!.Alive).DefaultIfEmpty(0).ToList() : new List<int> { Who.None };
-        var outcomes = aims.Select(aim =>
-        {
-            play.TargetId = aim == Who.None ? 0 : aim;
-            return SimEngine.Run(state, play);
-        }).ToArray();
-        var baseline = SimEngine.Run(state);
+        var all = Outcomes(state, play, enemies);
+        var (outcomes, baseline) = (all[..^1], all[^1]);
         var sources = new List<TabSource>();
         foreach (var player in state.PlayerIds)
             foreach (var power in state.Player(player)!.Powers.Items) sources.Add(new TabSource(power.Name.Name, power.Name.Name, player, OutcomePass: 0));

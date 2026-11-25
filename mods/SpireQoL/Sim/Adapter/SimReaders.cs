@@ -90,8 +90,6 @@ public static class SimReaders
             case nameof(FeralPower): data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } feral ? Sts2State.Private(feral, "zeroCostAttacksPlayed", fallback: 0) : Math.Max(0, power.Amount - power.DisplayAmount); break;
             case nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)); break;
             // Whose plays it acts on (DataCreature: 0 is no one).
-            // Gone with their applier (AfterDeath), Magic Bomb only while it lives: the applier.
-            case nameof(MagicBombPower): data = DataCreature.Of(power.Applier is { } caster ? idOf(caster) : null); break;
             // One copy per player it copies (ImitationLearning adds to the copy already copying its target), merged into one entry:
             // you when any copy copies you, so your Power cards set it off whichever copy is read last.
             case nameof(ImitationLearningPower):

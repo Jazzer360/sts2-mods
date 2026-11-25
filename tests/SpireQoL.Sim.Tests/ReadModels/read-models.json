@@ -15391,6 +15391,180 @@
     "HelpsOwner": false
   },
   {
+    "Name": "MagicBombPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDeath",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterDeath\u003Ed__7.MoveNext:002A",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "DeadIsApplier"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0031",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TakesPart"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003E",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HasApplier"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:004B",
+                  "Test": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureAlive",
+                      "Creature": {
+                        "Who": "Applier",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DamageStep",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0031",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TakesPart"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003E",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HasApplier"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:004B",
+                  "Test": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureAlive",
+                      "Creature": {
+                        "Who": "Applier",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0031",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TakesPart"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003E",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HasApplier"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:004B",
+                  "Test": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureAlive",
+                      "Creature": {
+                        "Who": "Applier",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Copies": "EachApplication"
+  },
+  {
     "Name": "MasterPlannerPower",
     "Kind": "Power",
     "Hooks": [

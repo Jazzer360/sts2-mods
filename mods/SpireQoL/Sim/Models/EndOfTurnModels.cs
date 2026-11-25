@@ -44,19 +44,7 @@ public abstract class TurnEndDebuff : EndOfTurnModel
         amount <= 0 ? One(state) : SimEngine.ProcDamagePlayer(state, owner, Name, owner, amount, props, noDealer: !selfDealt, label: SimEngine.Title(state, owner, Name));
 }
 
-/// <summary>MagicBombPower.AfterSideTurnEnd: while its applier lives, its amount to its owner (unpowered, dealt by its owner), then it goes.</summary>
-public sealed class MagicBombPower : TurnEndDebuff
-{
-    /// <summary>Instanced, but nothing in the game applies it (Magi Knight's MAGIC_BOMB is an attack): it's never on anyone twice.</summary>
-    public override bool Instanced => true;
-    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner)
-    {
-        if (!state.TakesPart(owner) || ApplierDead(state, owner, ThisPower)) return One(state);
-        var amount = Amount(state, owner);
-        SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).Without(ThisPower));
-        return Hurt(state, owner, amount, Unpowered, selfDealt: true);
-    }
-}
+// Magic Bomb is read from its code (ReadModel, decision #279).
 
 /// <summary>InsatiableDominionPower.AfterSideTurnEndLate: its Damage (2 + its owner's turn number, unpowered, no dealer) to its owner.</summary>
 public sealed class InsatiableDominionPower : TurnEndDebuff

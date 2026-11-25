@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 156 game methods; 3 adapter rules; 42 hand-written models.
+# 20 engine rules naming 156 game methods; 3 adapter rules; 41 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -105,8 +105,6 @@ InsatiableDominionPower: InsatiableDominionPower.AfterApplied (beta only), Insat
   model: AfterSideTurnEndLate
 LostLutePower: LostLutePower.AfterCardPlayed (beta only)
   model: AfterCardPlayed
-MagicBombPower: MagicBombPower.AfterDeath, MagicBombPower.AfterSideTurnEnd
-  model: AfterSideTurnEnd
 NecroMasteryPower: NecroMasteryPower.AfterCurrentHpChanged
   model: AfterOstyHpLost
 NostalgiaPower: NostalgiaPower.AfterModifyingCardPlayResultLocation, NostalgiaPower.ModifyCardPlayResultLocation
