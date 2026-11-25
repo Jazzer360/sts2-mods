@@ -120,6 +120,7 @@ public static partial class SimAdapter
             {
                 Id = id,
                 Name = Combat.TurnEndModel.SafeTitle(creature.Monster!),
+                Monster = creature.Monster?.GetType().Name ?? "",
                 Hp = creature.CurrentHp,
                 Block = creature.Block,
                 Hittable = creature.IsAlive && creature.IsHittable,
@@ -170,7 +171,12 @@ public static partial class SimAdapter
         }
         // Each enemy's move as its code runs it (decision #195): what it does before a later hit (Vulnerable on you, Strength to an ally),
         // read once every enemy has its id.
-        foreach (var (enemy, monster, hitsPerAttack) in moves) enemy.Move = MoveOf(monster, hitsPerAttack, IdOf, combat);
+        foreach (var (enemy, monster, hitsPerAttack) in moves)
+        {
+            enemy.Move = MoveOf(monster, hitsPerAttack, IdOf, combat);
+            // The monster's own state its move asks (Bowlbug Rock's IsOffBalance: decision #271), as the game has it now.
+            if (enemy.Move != null) enemy.Fields = MoveConditions.StateFields(monster, enemy.Move, enemy.Fields);
+        }
 
         // The history ledger (decision #191): the questions this board's models ask of the fight's log, each player's counts seeded here, once.
         state.History = HistoryLedger.QueriesFor(combat);

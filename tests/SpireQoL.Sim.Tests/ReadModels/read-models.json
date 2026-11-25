@@ -10982,6 +10982,130 @@
     "HelpsOwner": false
   },
   {
+    "Name": "ImbalancedPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageGiven",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageGiven\u003Ed__4.MoveNext:0020",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "DealerIsOwner"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageGiven\u003Ed__4.MoveNext:0032",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "HitFullyBlocked"
+                }
+              }
+            }
+          },
+          {
+            "$kind": "MonsterStateStep",
+            "Field": "Monster.BowlbugRock.IsOffBalance",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageGiven\u003Ed__4.MoveNext:0020",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "DealerIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageGiven\u003Ed__4.MoveNext:0032",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HitFullyBlocked"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageGiven\u003Ed__4.MoveNext:0051",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreatureMonsterIs",
+                  "Of": "BowlbugRock",
+                  "Creature": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StunStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageGiven\u003Ed__4.MoveNext:0020",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "DealerIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageGiven\u003Ed__4.MoveNext:0032",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HitFullyBlocked"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageGiven\u003Ed__4.MoveNext:0051",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CreatureMonsterIs",
+                    "Of": "BowlbugRock",
+                    "Creature": {
+                      "Who": "Owner",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "StunsOnItsOwnHit"
+  },
+  {
     "Name": "InfernoPower",
     "Kind": "Power",
     "Hooks": [

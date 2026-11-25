@@ -2251,3 +2251,15 @@ public sealed class PaelsLegion : SimModel
         return One(state);
     }
 }
+
+// ---- round twenty-two: a monster's own state set (Sim/Models/OutcomeModels.cs), deleted 2026-11-25
+
+/// <summary>
+/// ImbalancedPower: stunned when its first hit on you is fully blocked (the engine: SimEnemy.FirstHitFullyBlocked). A bonus when the
+/// play makes every branch of an aim block it, and ending the turn now wouldn't.
+/// </summary>
+public sealed class ImbalancedPower : SimModel
+{
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
+        Who.IsEnemy(owner) && !now.FirstHitBlockedInAll(owner) ? new(Harmful: false, outcome => outcome.FirstHitBlockedInAll(owner), InPlay: false) : null;
+}

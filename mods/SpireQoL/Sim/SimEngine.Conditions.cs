@@ -145,6 +145,8 @@ public static partial class SimEngine
                 return state.Enemy(monster) is { Alive: true } asking ? asking.Hp : 0;
             case SimCounted.MonsterPower:
                 return counted.Power is { } its && state.Enemy(monster) is { Alive: true } holder ? holder.Powers[its] : 0;
+            case SimCounted.MonsterState:
+                return counted.Field is { } field && state.Enemy(monster) is { Alive: true } stateful && stateful.Fields.Has(field) ? stateful.Fields[field] : 0;
             case SimCounted.MonsterSideAlive:
                 return state.Enemies.Count(enemy => enemy.Alive && !(counted.ExcludingItself && enemy.Id == monster));
             case SimCounted.History:

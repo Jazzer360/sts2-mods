@@ -104,7 +104,7 @@ internal static class MoveConditions
     /// <summary>A monster's own true-or-false properties' getters, each read once.</summary>
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type Owner, string Name), ProgramCondition?> Getters = new();
 
-    private static SimCondition? Translate(ProgramCondition condition, MonsterModel monster, Type owner, int depth)
+    private static SimCondition? Translate(ProgramCondition condition, MonsterModel monster, Type owner, int depth, bool ownState = false)
     {
         if (condition.IsAlways) return new KnownCondition(Holds: true);
         if (condition.IsNever) return new KnownCondition(Holds: false);
@@ -114,7 +114,7 @@ internal static class MoveConditions
             var ands = new List<SimCondition>();
             foreach (var literal in conjunction)
             {
-                if (Test(literal.Test, monster, owner, depth) is not { } test) return null;
+                if (Test(literal.Test, monster, owner, depth, ownState) is not { } test) return null;
                 ands.Add(literal.Holds ? test : new NotCondition(test));
             }
             ors.Add(ands.Count == 1 ? ands[0] : new AllCondition(ands));
@@ -123,7 +123,7 @@ internal static class MoveConditions
     }
 
     /// <summary>One test the lambda makes, as the simulator's: what it follows, else decided now; null when neither.</summary>
-    private static SimCondition? Test(ProgramValue test, MonsterModel monster, Type owner, int depth)
+    private static SimCondition? Test(ProgramValue test, MonsterModel monster, Type owner, int depth, bool ownState = false)
     {
         switch (test)
         {
@@ -132,11 +132,15 @@ internal static class MoveConditions
                 return new CountCondition(SimCounted.MonsterPower, SimCompare.Greater, Than: 0) { Power = PowerId.Of(power) };
             // x == 0 of a true-or-false (the code's !x).
             case CompareValue { Op: Comparison.Equal or Comparison.NotEqual, Right: ConstantValue { Value: 0 } } flag when IsTrueOrFalse(flag.Left, monster, owner):
-                return Test(flag.Left, monster, owner, depth) is { } inner ? flag.Op == Comparison.Equal ? new NotCondition(inner) : inner : null;
+                return Test(flag.Left, monster, owner, depth, ownState) is { } inner ? flag.Op == Comparison.Equal ? new NotCondition(inner) : inner : null;
             case CompareValue compare when Counted(compare.Left) is { } counted && Number(compare.Right, monster) is { } than:
                 return counted with { Compare = Compared(compare.Op), Than = than };
             case CompareValue compare when Counted(compare.Right) is { } counted && Number(compare.Left, monster) is { } than:
                 return counted with { Compare = Compared(Swapped(compare.Op)), Than = than };
+            // A move's step on a true-or-false of its own state a power's code sets (Bowlbug Rock's IsOffBalance, which Imbalanced sets): its state in the
+            // simulated monster's fields (MonsterState, decision #271), seeded from the game's monster (StateFields).
+            case QueryValue { IsProperty: true, Of: NamedValue { Name: "this" }, Name: var stateName } when ownState && OwnStateKey(owner, stateName) is { } key:
+                return new CountCondition(SimCounted.MonsterState, SimCompare.NotEqual, Than: 0) { Field = key };
             // A property of its own (Fabricator's CanFabricate): what its getter returns.
             case QueryValue { IsProperty: true, Of: NamedValue { Name: "this" } } property when depth < 2
                 && Getters.GetOrAdd((owner, property.Name), key => ProgramReader.ReadProperty(key.Owner, key.Name, RuntimeCode.Read)) is { } getter
@@ -151,6 +155,48 @@ internal static class MoveConditions
             int number => new KnownCondition(number != 0),
             _ => null,
         };
+    }
+
+    /// <summary>
+    /// A move step's condition (decision #271: Bowlbug Rock's Headbutt stunning itself when IsOffBalance) as the simulator's, asked of the monster as the
+    /// step runs: what the branch conditions follow, and a true-or-false of its own with a public setter (its state a power's code can set on it, a
+    /// MonsterStateStep) as that state in its fields; null when a test can't be translated.
+    /// </summary>
+    internal static SimCondition? OfStep(MonsterModel monster, ProgramCondition condition)
+    {
+        try { return Translate(condition, monster, monster.GetType(), depth: 0, ownState: true); }
+        catch { return null; }
+    }
+
+    /// <summary>
+    /// A monster's own true-or-false with a public setter, as a power's store names it ("Monster.BowlbugRock.IsOffBalance": ProgramReader.OwnersMonsterPrefix,
+    /// the class that declares it): its key among a simulated monster's fields; null for anything else.
+    /// </summary>
+    internal static string? OwnStateKey(Type owner, string name) =>
+        owner.GetProperty(name, BindingFlags.Instance | BindingFlags.Public) is { PropertyType: var type, SetMethod.IsPublic: true, DeclaringType: { } declaring } && type == typeof(bool)
+            ? ProgramReader.OwnersMonsterPrefix + declaring.Name + "." + name : null;
+
+    /// <summary>
+    /// The monster's own state a move's actions ask (a WhenAction's MonsterState conditions), each as the game's monster has it now (1 or 0): what the
+    /// simulated monster's fields start with.
+    /// </summary>
+    internal static NamedCounts StateFields(MonsterModel monster, IEnumerable<SimAction> actions, NamedCounts fields)
+    {
+        static IEnumerable<CountCondition> Counted(SimCondition? condition) => condition switch
+        {
+            CountCondition { Counted: SimCounted.MonsterState } counted => new[] { counted },
+            NotCondition not => Counted(not.Inner),
+            AllCondition all => all.Parts.SelectMany(Counted),
+            AnyCondition any => any.Parts.SelectMany(Counted),
+            _ => Array.Empty<CountCondition>(),
+        };
+        foreach (var counted in actions.OfType<WhenAction>().SelectMany(when => Counted(when.Condition)))
+        {
+            if (counted.Field is not { } field) continue;
+            var name = field[(field.LastIndexOf('.') + 1)..];
+            if (monster.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public)?.GetValue(monster) is bool holds) fields = fields.With(field, holds ? 1 : 0);
+        }
+        return fields;
     }
 
     /// <summary>A count the simulator follows, on the monster's own state: its HP, its side's living creatures (with or without itself).</summary>

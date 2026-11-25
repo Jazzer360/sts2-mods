@@ -100,6 +100,7 @@ public static partial class ReadModels
         PowerId.HiddenRoots.Name,
         PowerId.HighVoltage.Name,
         PowerId.Honing.Name,
+        PowerId.Imbalanced.Name,
         PowerId.Inferno.Name,
         RelicId.InfusedCore.Name,
         nameof(MegaCrit.Sts2.Core.Models.Enchantments.Inky),

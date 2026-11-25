@@ -4,7 +4,7 @@ power AimPower: AfterAttack: read | BeforeAttack: read | InitInternalData: not r
 power AllIsWellPower: AfterCardGeneratedForCombat: read
 power AmnesiaPower: AfterPlayerTurnStart: not run: it runs as the players' next turn starts, past the turns a simulation covers | AfterSideTurnEnd: read | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 power ArsenalPower: AfterCardGeneratedForCombat: read
-power AsleepPower: AfterDamageReceived: gap: sets LagavulinMatriarch.IsAwake where the reader reads no store | AfterSideTurnEnd: gap: changes a game object outside a command (LagavulinMatriarch.WakeUpMove) | BeforeSideTurnEndVeryEarly: gap: PowerCmd.Remove of another power
+power AsleepPower: AfterDamageReceived: gap: PowerCmd.Remove of another power | AfterSideTurnEnd: gap: changes a game object outside a command (LagavulinMatriarch.WakeUpMove) | BeforeSideTurnEndVeryEarly: gap: PowerCmd.Remove of another power
 power AutomationPower: AfterCardDrawn: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power BarricadePower: AfterApplied: read | ShouldClearBlock: gap: the simulator runs no read model's ShouldClearBlock
 power BattlewornDummyTimeLimitPower: AfterSideTurnEnd: gap: sets BattlewornDummyEventEncounter.RanOutOfTime where the reader reads no store
@@ -32,7 +32,7 @@ power CorruptionPower: AfterModifyingCardPlayResultLocation: gap: the simulator 
 power CoveredPower: AfterApplied: gap: changes a game object outside a command (InterceptPower.AddCoveredCreature) | AfterDeath: read | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | AfterSideTurnEnd: not run: its commands wait on the enemies' side's turn ending, which no simulation reaches | ModifyDamageMultiplicative: read
 power CoveringFirePower: AfterArrowShot: read
 power CrabRagePower: AfterDeath: read
-power CurlUpPower: AfterCardPlayed: gap: sets LouseProgenitor.Curled where the reader reads no store | AfterDamageReceived: gap: keeps cardSource in Data.playedCard | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
+power CurlUpPower: AfterCardPlayed: read | AfterDamageReceived: gap: keeps cardSource in Data.playedCard | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power DampenPower: AfterApplied: gap: changes a collection (IEnumerator`1.get_Current) where the reader reads no step | AfterDeath: gap: changes its own data (casters.Remove) by creature | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power DanseMacabrePower: BeforeCardPlayed: read
 power DarkEmbracePower: AfterCardExhausted: read | AfterSideTurnEnd: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
@@ -78,7 +78,7 @@ power HellraiserPower: AfterCardDrawnEarly: gap: the simulator runs no read mode
 power HexPower: AfterApplied: gap: a loop | AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterDeath: read | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | TryModifyKeywordsInCombat: gap: the simulator runs no read model's TryModifyKeywordsInCombat
 power HighVoltagePower: AfterSideTurnEnd: read
 power IllusionPower: AfterApplied: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterDeath: gap: the reader can't follow it: commands in a callback | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ShouldAllowHitting: read | ShouldCreatureBeRemovedFromCombatAfterDeath: read | ShouldPowerBeRemovedOnDeath: gap: the simulator runs no read model's ShouldPowerBeRemovedOnDeath
-power ImbalancedPower: AfterDamageGiven: gap: sets BowlbugRock.IsOffBalance where the reader reads no store
+power ImbalancedPower: AfterDamageGiven: read
 power ImitationLearningPower: AfterCardPlayed: gap: changes a collection (List`1.FindIndex) where the reader reads no step | BeforeCardPlayed: gap: uses its own field (_playerTarget) directly: what a call on it changes isn't read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power ImpaledPower: AfterApplied: read | AfterDamageReceived: gap: tests source | AfterDeath: gap: a loop | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power InfernoPower: AfterDamageReceived: read | AfterPlayerTurnStart: not run: it runs as the players' next turn starts, past the turns a simulation covers

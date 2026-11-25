@@ -189,6 +189,13 @@ public sealed record MovePowerAction(PowerId Power, int Amount, IReadOnlyList<in
 public sealed record MoveBlockAction(int Amount, IReadOnlyList<int> To) : SimAction;
 
 /// <summary>
+/// An enemy's move stunning itself (CreatureCmd.Stun of its own creature, decision #271: Bowlbug Rock's Headbutt when it's off balance, under a
+/// WhenAction asked of it as the step runs: its own state, SimCounted.MonsterState). Its move this turn is under way, so the
+/// stunned move is its next (SimEngine.Stun: it's stunned for the turn after).
+/// </summary>
+public sealed record MoveStunAction : SimAction;
+
+/// <summary>
 /// HP the card costs its owner (CreatureCmd.Damage of its owner with the props every card's HP cost passes, SimEngine.HpCostProps), dealt by them
 /// from the card in play, through the one path for damage to a player (SimEngine.DamagePlayer, decision #219).
 /// </summary>

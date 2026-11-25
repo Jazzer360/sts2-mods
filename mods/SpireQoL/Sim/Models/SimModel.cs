@@ -175,8 +175,12 @@ public sealed record BlockCtx(int Target, SimProps Props, SimCard? Card, SimCard
 /// <summary>An attack (AttackCommand) for BeforeAttack and AfterAttack: its id in this simulation, who makes it, its props and card.</summary>
 public sealed record AttackInfo(int Id, int Dealer, SimProps Props, SimCard? Card);
 
-/// <summary>A damage event (DamageResult) for the hooks around it.</summary>
-public sealed record DamageEvent(int? Dealer, int Target, SimProps Props, SimCard? Card, int Total, int Blocked, int Unblocked, bool Killed);
+/// <summary>
+/// A damage event (DamageResult) for the hooks around it. <paramref name="FullyBlocked"/>: DamageResult.WasFullyBlocked, as
+/// CreatureCmd.GetDamageResults works it out: a damage that isn't Unblockable, on a target with block before it or whose block took some, and no
+/// HP lost after the HP-loss pipeline (its receiver's: Osty's when he takes it, so a hit Osty takes isn't); a pet's own result (a redirect's) never is.
+/// </summary>
+public sealed record DamageEvent(int? Dealer, int Target, SimProps Props, SimCard? Card, int Total, int Blocked, int Unblocked, bool Killed, bool FullyBlocked = false);
 
 /// <summary>What a creature id names (Who.KindOf); None: no creature (Who.None). Pet: a pet the simulator keeps other than your Osty (Who.PetOf).</summary>
 public enum CreatureKind { You, Teammate, YourOsty, Enemy, None, Pet }

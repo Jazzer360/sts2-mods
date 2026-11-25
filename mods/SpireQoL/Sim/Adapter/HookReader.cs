@@ -461,6 +461,14 @@ public static class HookReader
             if (Requires(step.When, DeadAndOwner, holds: true)) return HookOutcome.KillsAnother;
             if (Requires(step.When, DeadAndOwner, holds: false)) return HookOutcome.KillsOne;
         }
+        // A stun of its owner, or its monster's state set, on a damage its owner deals (AfterDamageGiven, waiting on dealer == base.Owner): its own
+        // attack's, after the play (Imbalanced's).
+        static bool DealerIsOwner(HookFactValue fact) => fact.Fact == HookFact.DealerIsOwner
+            || fact.Fact == HookFact.SameCreature && fact.Creature is { } one && fact.Other is { } other && !one.PetOwner && !other.PetOwner
+               && new[] { one.Who, other.Who }.OrderBy(who => who).SequenceEqual(new[] { HookWho.Owner, HookWho.Dealer }.OrderBy(who => who));
+        if (programs.Where(program => program.Hook == HookName.AfterDamageGiven).SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps())
+                .Where(step => step is StunStep or MonsterStateStep).ToList() is { Count: > 0 } ownHit && ownHit.All(step => Requires(step.When, DealerIsOwner, holds: true)))
+            return HookOutcome.StunsOnItsOwnHit;
         // A stun of its owner (an enemy's) in a hook a play sets off: the play that stuns it.
         if (programs.Where(program => program.Hook != HookName.AfterDeath).Any(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps().Any(step => step is StunStep)))
             return HookOutcome.Stuns;
@@ -1253,6 +1261,9 @@ public static class HookReader
             catch (InvalidOperationException) { return null; }
         }
 
+        /// <summary>A monster class of this branch, by name (MegaCrit.Sts2.Core.Models.Monsters: BowlbugRock), not abstract.</summary>
+        private bool IsMonsterClass(string name) => _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Monsters." + name) is { IsAbstract: false };
+
         /// <summary>A field of its own data that holds an attack ("Data.commandToModify", its Data class's AttackCommand field).</summary>
         private bool HoldsAnAttack(string field) => field.StartsWith(ProgramReader.OwnDataPrefix, StringComparison.Ordinal)
             && Procs.CardCode.NestedTypes(_type).Any(nested => nested.GetField(field[ProgramReader.OwnDataPrefix.Length..], Declared)?.FieldType.Name == "AttackCommand");
@@ -1554,10 +1565,10 @@ public static class HookReader
                 // A property set on its owner's monster (((CorpseSlug)base.Owner.Monster).IsRavenous = true): its monster's own state, which its moves and
                 // its next move's choice read. Read where the hook stuns its owner on the same test (StoresWithAStun): the monster's move this turn is then
                 // the stunned move, so what reads it is a later turn, past every simulation (the simulator runs no monster hook: MonsterHookTests).
-                // Any other is a gap.
+                // Any other is its monster's state set (MonsterStateStep: Imbalanced's IsOffBalance), kept on its owner where its moves' code reads it.
                 case StoreStep monsterStore when monsterStore.Field.StartsWith(ProgramReader.OwnersMonsterPrefix, StringComparison.Ordinal):
-                    if (!StoredWithAStun(monsterStore)) throw new Gap(ReaderCapability.MonsterStateSet, $"gap: sets {monsterStore.Field[ProgramReader.OwnersMonsterPrefix.Length..]} where the reader reads no store");
-                    return Array.Empty<HookStep>();
+                    if (StoredWithAStun(monsterStore)) return Array.Empty<HookStep>();
+                    return new HookStep[] { new MonsterStateStep(monsterStore.Field, Value(monsterStore.Value)) { When = Condition(step.Condition) } };
                 case StoreStep store:
                     // A store to its own state (a field or property of its class, a plain field of its data): simulator state its programs read (HookField).
                     // One of its own values set (DynamicVars["CardsLeft"].BaseValue = ...): its state too, under the value's key.
@@ -2199,10 +2210,13 @@ public static class HookReader
                 // keeps for a player when it's the class Player.Osty gets (read from its code); any other class is a gap.
                 case QueryValue { Name: "is", Of: { } monsterOf, Type: var monsterClass } when Unstored(monsterOf) is WaysValue or QueryValue { Name: "Monster" }:
                 {
+                    // Any other monster class of its owner's (base.Owner.Monster is BowlbugRock: Imbalanced's): the enemy's monster (SimEnemy.Monster).
                     HookValue MonsterIs(ProgramValue monster) => monster is NullValue ? new HookConstant(0m)
                         : Unstored(monster) is QueryValue { Name: "Monster", Of: { } creatureOf } && CreatureOf(creatureOf) is { } creature && monsterClass == OstyClass()
                             ? CreatureFact(HookFact.CreatureIsPet, creature)
-                            : throw new Gap(ReaderCapability.Osty, $"gap: tests {monster} is {monsterClass}");
+                            : Unstored(monster) is QueryValue { Name: "Monster", Of: { } ownerOf } && IsOwner(ownerOf) && IsMonsterClass(monsterClass)
+                                ? CreatureFact(HookFact.CreatureMonsterIs, new HookCreature(HookWho.Owner)) with { Of = monsterClass }
+                                : throw new Gap(ReaderCapability.Osty, $"gap: tests {monster} is {monsterClass}");
                     return Unstored(monsterOf) is WaysValue monsterWays
                         ? new HookWays(monsterWays.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), MonsterIs(way.Value))).ToList())
                         : MonsterIs(monsterOf);
@@ -2329,6 +2343,9 @@ public static class HookReader
                 // The HP a hit took past block tested as true or false (result.UnblockedDamage != 0: Flutter's, Slumber's).
                 case QueryValue { Name: "UnblockedDamage", Of: ParameterValue { Name: "result" } or NamedValue { Name: "result" } } when _hook is "AfterDamageGiven" or "AfterDamageReceived":
                     return new HookMath(HookOperation.NotEqual, new HookFactValue(HookFact.HitUnblocked), new HookConstant(0m));
+                // The hit was fully blocked (result.WasFullyBlocked: Imbalanced's).
+                case QueryValue { Name: "WasFullyBlocked", Of: ParameterValue { Name: "result" } or NamedValue { Name: "result" } } when _hook is "AfterDamageGiven" or "AfterDamageReceived":
+                    return new HookFactValue(HookFact.HitFullyBlocked);
                 // The play is its card play's last (cardPlay.IsLastInSeries: Black Hole's).
                 case QueryValue { Name: "IsLastInSeries", Of: NamedValue { Name: "cardPlay" } or ParameterValue { Name: "cardPlay" } } when IsPlayHook(_hook):
                     return new HookFactValue(HookFact.PlayIsLast);

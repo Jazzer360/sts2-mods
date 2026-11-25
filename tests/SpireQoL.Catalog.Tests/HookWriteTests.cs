@@ -75,7 +75,7 @@ public class HookWriteTests
                 var made = steps.OfType<CommandStep>().Where(step => step.Command.FullName == "CardPileCmd.AddGeneratedCardToCombat" && step.Values.Count > 0).Select(step => step.Values[0].ToString()).ToHashSet(StringComparer.Ordinal);
                 var folded = steps.OfType<CommandStep>().Count(step => step.Command.FullName == "CardCmd.ApplyKeyword" && step.Values.Count > 0 && made.Contains(step.Values[0].ToString()));
                 var commands = steps.OfType<CommandStep>().Count(step => step.Condition is not { IsNever: true }) + steps.OfType<CardActionStep>().Count(step => step.Condition is not { IsNever: true }) - folded;
-                var commandSteps = flat.Count(step => step is not (StoreFieldStep or BindStep or BindAddStep or UnbindStep or RepeatStep or ForEachStep or LetStep or FlashStep));
+                var commandSteps = flat.Count(step => step is not (StoreFieldStep or MonsterStateStep or BindStep or BindAddStep or UnbindStep or RepeatStep or ForEachStep or LetStep or FlashStep));
                 if (commands != commandSteps) dropped.Add($"{type.Name}.{hook.Name}: {commands} commands, {commandSteps} translated");
                 foreach (var store in steps.OfType<StoreStep>())
                     if (!flat.OfType<StoreFieldStep>().Any(step => step.Field == store.Field) && spec.Fields().Contains(store.Field))

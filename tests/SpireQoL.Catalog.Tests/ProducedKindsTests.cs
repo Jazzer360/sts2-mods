@@ -29,6 +29,7 @@ public class ProducedKindsTests
         ["action MoveAttackAction"] = "SimAdapter.Moves: an enemy's move's attack, read from its intent",
         ["action MoveBlockAction"] = "SimAdapter.Moves: an enemy's move's block",
         ["action MovePowerAction"] = "SimAdapter.Moves: an enemy's move's power",
+        ["action MoveStunAction"] = "SimAdapter.Moves: an enemy's move stunning itself (Bowlbug Rock's Headbutt when off balance)",
         ["action UnreadAction"] = "SimAdapter.Play: a step whose code couldn't be read (unknown, never a guess)",
         ["action TriggerPoisonAction"] = "an older report's play, replayed (PoisonTriggerTests): Outbreak's poison is ModelCommandAction now",
         // The play shorthand (SimPlay's own fields): what the simulator tests, the golden fights and older reports' replays write a play as.

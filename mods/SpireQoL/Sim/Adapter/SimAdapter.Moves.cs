@@ -22,6 +22,7 @@ public static partial class SimAdapter
         ["DamageCmd.Attack"] = "MoveAttackAction: the intent's hits of the attack at its place in the move (the game's numbers, through the damage pipeline as each lands)",
         ["PowerCmd.Apply"] = "MovePowerAction: the power (its type argument) on each creature its target argument names, its amount its third argument, read on the monster",
         ["CreatureCmd.GainBlock"] = "MoveBlockAction: block on each creature its first argument names, its amount through the game's block math",
+        ["CreatureCmd.Stun"] = "MoveStunAction: the monster stunning itself (Bowlbug Rock's Headbutt when off balance), on its condition asked of its own state: its next turn's move",
     };
 
     /// <summary>The commands a monster's moves and hooks call that the enemy turn doesn't follow, and why.</summary>
@@ -37,7 +38,6 @@ public static partial class SimAdapter
         ["CreatureCmd.SetMaxAndCurrentHp"] = "HP set as a monster joins or hatches (Decimillipede, Tough Egg): not followed (gap)",
         ["CreatureCmd.Kill"] = "a monster killing itself after its attack (Gas Bomb, Waterfall Giant): its death isn't followed in the enemy turn (gap)",
         ["CreatureCmd.Escape"] = "a monster fleeing (Fat Gremlin, Thieving Hopper): it leaves after its move (gap)",
-        ["CreatureCmd.Stun"] = "a monster stunning itself after its attack (Bowlbug Rock off balance): its next turn's",
         ["ThieveryPower.Steal"] = "gold stolen (Gremlin Merc): not a fight's number",
         ["SwipePower.Steal"] = "a card stolen (Thieving Hopper): your next turn's, not this enemy turn's",
         ["ReattachPower.DoReattach"] = "a Decimillipede segment coming back: its next turn's (gap)",
@@ -50,7 +50,7 @@ public static partial class SimAdapter
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, string> MoveStepGaps = new Dictionary<string, string>
     {
-        ["on a condition"] = "a step the move runs only on a condition (Plow's Strength while it has Plow, Pheromone Spit's by its Personal Hive, Dampen on a target without it): no simulator condition on a monster's own state yet; none of them comes before a later hit this turn",
+        ["on a condition"] = "a step the move runs only on a condition the simulator doesn't ask of it yet (Plow's Strength while it has Plow, Pheromone Spit's by its Personal Hive, Dampen on a target without it; a stun of itself on its own state is asked: decision #271); none of them comes before a later hit this turn",
         ["a power made first"] = "PowerCmd.Apply of a power the move makes and sets up first (Sandpit, Dampen, Swipe, Thievery): its own amounts and targets aren't read",
         ["unread value"] = "a target or an amount the evaluator can't work out on the board",
     };
@@ -136,6 +136,16 @@ public static partial class SimAdapter
     /// <summary>One step's actions (a loop's body once for each creature it goes over); a step that can't be built adds its gap and none.</summary>
     private static IEnumerable<SimAction> MoveStep(ProgramStep step, MoveContext context, Creature? each)
     {
+        // CreatureCmd.Stun of its own creature (Bowlbug Rock's Headbutt when off balance), on its condition as the simulator asks it of the monster's own
+        // state (MoveConditions.OfStep: decision #271); a condition it can't ask is a gap.
+        if (step is CommandStep { Command.FullName: "CreatureCmd.Stun" } stun && stun.Values.Count > 0 && each == null
+            && context.Board.Self is MonsterModel monster && Value(stun.Values[0], context, each) is Creature stunned && ReferenceEquals(stunned, monster.Creature))
+        {
+            if (step.Condition == null) return new SimAction[] { new MoveStunAction() };
+            if (MoveConditions.OfStep(monster, step.Condition) is { } when) return new SimAction[] { new WhenAction(when, new SimAction[] { new MoveStunAction() }) };
+            context.Gaps.Add("on a condition");
+            return Array.Empty<SimAction>();
+        }
         if (step.Condition != null)
         {
             if (step is CommandStep { Command.FullName: "PowerCmd.Apply" or "CreatureCmd.GainBlock" } or LoopStep) context.Gaps.Add("on a condition");

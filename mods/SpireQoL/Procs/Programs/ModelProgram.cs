@@ -410,6 +410,18 @@ public static class ProgramReader
     public const string OwnersMonsterPrefix = "Monster.";
 
     /// <summary>
+    /// Its owner's monster (base.Owner.Monster), cast to its class ((CorpseSlug)base.Owner.Monster) or tested as it and kept (base.Owner.Monster is
+    /// BowlbugRock bowlbugRock: Imbalanced's), in a local or kept across awaits.
+    /// </summary>
+    private static bool IsOwnersMonster(ProgramValue value) => value switch
+    {
+        StoredValue kept => IsOwnersMonster(kept.Value),
+        QueryValue { Name: "is", Of: { } tested } => IsOwnersMonster(tested),
+        QueryValue { Name: "Monster", Of: QueryValue { Name: "Owner", Of: NamedValue { Name: "this" } } } => true,
+        _ => false,
+    };
+
+    /// <summary>
     /// One of the model's own values a value names (base.DynamicVars.Damage, base.DynamicVars["CardsLeft"], kept in a local or not): the
     /// property, or the key as the code writes it ("\"CardsLeft\""); null for anything else.
     /// </summary>
@@ -660,7 +672,7 @@ public static class ProgramReader
                 // A property set on its owner's monster ((CorpseSlug)base.Owner.Monster).IsRavenous = true): a store, "Monster.CorpseSlug.IsRavenous", which the
                 // hook reader translates or names as a gap.
                 if (member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1 } && member.Name.StartsWith("set_", StringComparison.Ordinal) && IsPowerOrRelic
-                    && flow.ReceiverValue(i, arguments: 1) is QueryValue { Name: "Monster", Of: QueryValue { Name: "Owner", Of: NamedValue { Name: "this" } } })
+                    && IsOwnersMonster(flow.ReceiverValue(i, arguments: 1)))
                 {
                     into.Add(new StoreStep(instruction.Offset, OwnersMonsterPrefix + member.DeclaringType + "." + member.Name[4..], flow.ArgumentValues(i, member)[0]) { Condition = condition });
                     continue;

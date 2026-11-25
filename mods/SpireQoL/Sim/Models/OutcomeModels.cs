@@ -54,15 +54,7 @@ public sealed class StockPower : SimModel
         Who.IsEnemy(owner) && SimEngine.PowerOn(start, owner, ThisPower) > 0 ? OutcomeRules.KillsIt(owner) : null;
 }
 
-/// <summary>
-/// ImbalancedPower: stunned when its first hit on you is fully blocked (the engine: SimEnemy.FirstHitFullyBlocked). A bonus when the
-/// play makes every branch of an aim block it, and ending the turn now wouldn't.
-/// </summary>
-public sealed class ImbalancedPower : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        Who.IsEnemy(owner) && !now.FirstHitBlockedInAll(owner) ? new(Harmful: false, outcome => outcome.FirstHitBlockedInAll(owner), InPlay: false) : null;
-}
+// Imbalanced is read from its code (ReadModel, decision #271).
 
 /// <summary>
 /// HandDrill.AfterBlockBroken: Vulnerable (its VulnerablePower value) on an enemy whose block its owner (or their Osty) breaks, so

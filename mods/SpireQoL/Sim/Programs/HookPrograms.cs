@@ -382,6 +382,13 @@ public enum HookFact
     EnchantmentGainsBlock,
     /// <summary>The block a gain came to as the listeners left it (AfterModifyingBlockAmount's modifiedAmount).</summary>
     BlockModified,
+    /// <summary>The hit was fully blocked (AfterDamageGiven's and AfterDamageReceived's result.WasFullyBlocked: DamageEvent.FullyBlocked).</summary>
+    HitFullyBlocked,
+    /// <summary>
+    /// The monster of the creature named in Creature is the class named in Of (base.Owner.Monster is BowlbugRock): an enemy's SimEnemy.Monster; no
+    /// player is a monster, and the pet the simulator keeps is CreatureIsPet's.
+    /// </summary>
+    CreatureMonsterIs,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>
@@ -669,6 +676,14 @@ public sealed record ForEachStep(HookItems Over, IReadOnlyList<HookStep> Steps) 
 public sealed record StunStep : HookStep;
 
 /// <summary>
+/// A property set on its owner's monster (((BowlbugRock)base.Owner.Monster).IsOffBalance = true: Imbalanced's), its monster's own state: kept in its
+/// owner's fields under <paramref name="Field"/> ("Monster.BowlbugRock.IsOffBalance", the class that declares it), where its moves' code reads it (a
+/// move's step on that state's condition: Bowlbug Rock's Headbutt stunning itself when off balance), seeded from the game's monster. On an enemy
+/// that's alive; nothing on anyone else (a player or a pet has no monster of that class).
+/// </summary>
+public sealed record MonsterStateStep(string Field, HookValue Value) : HookStep;
+
+/// <summary>
 /// CreatureCmd.Kill of its owner: an enemy dies (its HP 0, its death told once the hit it's in is over, as every death the engine follows) and is
 /// marked killed by its power (SimEnemy.KilledByItsPower: The Gambit's tab); a player loses all their HP (Creature.LoseHpInternal) and dies unless
 /// Hook.ShouldDie holds it back (Fairy in a Bottle, Lizard Tail), which <paramref name="Forced"/> (the command's force) skips: SimEngine.KillPlayer.
@@ -787,6 +802,13 @@ public enum HookOutcome
     /// the turn now wouldn't (The Gambit's, as a powered attack gets HP through).
     /// </summary>
     KillsItself,
+    /// <summary>
+    /// It stuns its owner, or sets its monster's own state (a MonsterStateStep: what its moves read), on a damage its owner deals (AfterDamageGiven,
+    /// every step waiting on dealer == base.Owner): its own attack, in its turn, after the play. On an enemy, a bonus on a play after which it's
+    /// stunned in every outcome where ending the turn now wouldn't leave it so (Imbalanced's: a hit of its fully blocked), judged on how the turn
+    /// ends, never held to the play (OutcomeRule.InPlay false).
+    /// </summary>
+    StunsOnItsOwnHit,
 }
 
 /// <summary>
@@ -960,6 +982,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             SummonStep summon => Inside(summon.Amount),
             ApplyPowerStep apply => Inside(apply.Amount),
             StoreFieldStep store => Inside(store.Value),
+            MonsterStateStep monsterState => Inside(monsterState.Value),
             BindStep bind => Inside(bind.Value),
             BindAddStep added => Inside(added.Value),
             RepeatStep repeat => Inside(repeat.Times).Concat(repeat.Steps.SelectMany(OfStep)),

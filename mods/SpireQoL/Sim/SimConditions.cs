@@ -71,6 +71,11 @@ public enum SimCounted
     /// when CountCondition.ExcludingItself (Living Shield's allies).
     /// </summary>
     MonsterSideAlive,
+    /// <summary>
+    /// The asking monster's own state (CountCondition.Field: "Monster.BowlbugRock.IsOffBalance", a flag 1 or 0), in its fields (SimEnemy.Fields), seeded
+    /// from the game's monster and set by a power's code on its owner's monster (a MonsterStateStep: Imbalanced's); 0 when it's dead.
+    /// </summary>
+    MonsterState,
 }
 
 /// <summary>
@@ -125,6 +130,8 @@ public sealed record CountCondition(SimCounted Counted, SimCompare Compare, int 
 
     /// <summary>MonsterSideAlive: the asking monster itself isn't counted (c != base.Creature).</summary>
     public bool ExcludingItself { get; init; }
+    /// <summary>MonsterState: its key among the monster's fields ("Monster.BowlbugRock.IsOffBalance").</summary>
+    public string? Field { get; init; }
 }
 
 /// <summary>A test decided when it was read (SimTest.Known): a monster's own flag the simulator doesn't follow, the slot it stands in.</summary>

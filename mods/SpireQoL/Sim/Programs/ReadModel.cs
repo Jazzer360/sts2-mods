@@ -450,7 +450,7 @@ public sealed class ReadModel : SimModel
         {
             // A power an attack spends (its AfterAttack takes its own stacks: Gigantification's Decrement) acts on that play too (decision #228).
             // A play that changes the state its damage term reads (Slow's SlowAmount++ on every card) acts on that play too (decision #229).
-            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or SummonStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or KillStep
+            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or SummonStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep
                 || hook == HookName.AfterAttack && step is DecrementPowerStep or RemovePowerStep
                 || hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed && step is StoreFieldStep { Field: var termField } && _termFields.Contains(termField);
             // An enchantment's effects are its card's (no tab of its own, nothing in the play log: its card's play shows them).
@@ -688,6 +688,8 @@ public sealed class ReadModel : SimModel
         HookOutcome.KillsOne => owner == Who.You ? Models.OutcomeRules.KillsOne : null,
         HookOutcome.ReactsToHpLoss => ReactsToHpLoss(now, owner),
         HookOutcome.Stuns => Models.OutcomeRules.Stuns(now, owner),
+        // Its own hit's: stunned when the turn's over, set off after the play (in its turn), so the play check isn't held to it.
+        HookOutcome.StunsOnItsOwnHit => Models.OutcomeRules.Stuns(now, owner) is { } stuns ? stuns with { InPlay = false } : null,
         HookOutcome.KillsItself => Who.IsEnemy(owner) && !now.KilledByItsPowerInAll(owner) ? new(Harmful: false, outcome => outcome.KilledByItsPowerInAll(owner)) : null,
         _ => _paidWhere.Count > 0 ? PaidWhere(now, owner) : null,
     };
@@ -1307,7 +1309,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or SummonStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or KillStep
+            case FlashStep or GainStarsStep or HealStep or SummonStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1637,6 +1639,19 @@ public sealed class ReadModel : SimModel
                     SimEngine.Stun(enemy);
                     return One(args.State);
                 };
+            case MonsterStateStep monsterState:
+            {
+                // Its owner's monster's own state (its field in the enemy's fields), where that monster's moves read it; a player or a pet has no monster.
+                var value = Compile(monsterState.Value);
+                var field = monsterState.Field;
+                return args =>
+                {
+                    if (args.State.Enemy(args.Owner) is not { Alive: true } enemy) return One(args.State);
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                    enemy.Fields = enemy.Fields.With(field, (int)value(in args));
+                    return One(args.State);
+                };
+            }
             case MakeIntoDrawStep make:
             {
                 var into = Compile(make.For);
@@ -2037,6 +2052,13 @@ public sealed class ReadModel : SimModel
                 var creature = CreatureNamed(fact);
                 return (in HookArgs args) => CreatureOf(in args, creature) is var id && Who.IsPet(id) && Who.PetKindOf(id) == PetKind.Osty ? 1m : 0m;
             }
+            case HookFact.CreatureMonsterIs:
+            {
+                // An enemy's monster class (SimEnemy.Monster); no player or pet is a monster of a class a power's code names.
+                var creature = CreatureNamed(fact);
+                return (in HookArgs args) => args.State.Enemy(CreatureOf(in args, creature)) is { } enemy && enemy.Monster == named ? 1m : 0m;
+            }
+            case HookFact.HitFullyBlocked: return (in HookArgs args) => args.Hit?.FullyBlocked == true ? 1m : 0m;
             case HookFact.CreatureId:
             {
                 var creature = CreatureNamed(fact);

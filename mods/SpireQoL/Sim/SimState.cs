@@ -69,6 +69,11 @@ public sealed class SimEnemy
 {
     public int Id;
     public string Name = "";
+    /// <summary>
+    /// Its monster's class (MonsterModel's: "BowlbugRock"), as a power's code tests it (base.Owner.Monster is BowlbugRock); "" for none read (a
+    /// test's enemy), which is no class a power's code names.
+    /// </summary>
+    public string Monster = "";
     public int Hp;
     public int Block;
     /// <summary>Can be targeted and hit (alive and hittable when the simulation starts).</summary>

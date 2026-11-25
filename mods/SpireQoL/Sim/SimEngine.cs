@@ -497,7 +497,9 @@ public static partial class SimEngine
         // After the HP loss, before the damage hooks (the game's results loop in CreatureCmd.Damage). A hit that killed it is told to its
         // own powers too: the game kills it after these hooks.
         if (blockBroken) foreach (var (model, o) in ListenersWith(state, enemy.Id)) model.AfterBlockBroken(state, o, enemy.Id, dealer);
-        var hit = new DamageEvent(dealer, enemy.Id, props, card, absorbed + Math.Min(toHp, Math.Max(0, hpBefore)), absorbed, toHp, hpBefore > 0 && enemy.Hp <= 0);
+        // DamageResult.WasFullyBlocked (CreatureCmd.GetDamageResults): not Unblockable, block before it or block that took some, no HP past the pipeline.
+        var fullyBlocked = !props.HasFlag(SimProps.Unblockable) && (hadBlock || absorbed > 0) && toHp == 0;
+        var hit = new DamageEvent(dealer, enemy.Id, props, card, absorbed + Math.Min(toHp, Math.Max(0, hpBefore)), absorbed, toHp, hpBefore > 0 && enemy.Hp <= 0, fullyBlocked);
         if (props.IsPoweredAttack() && dealer is Who.You or Who.YourOsty) BiggestHit(state, hit.Total);
         foreach (var (m, o) in ListenersWith(state, enemy.Id)) m.AfterDamageGiven(state, o, hit);
         foreach (var (m, o) in ListenersWith(state, enemy.Id)) m.AfterDamageReceived(state, o, hit);
@@ -762,11 +764,11 @@ public static partial class SimEngine
     /// Reflect hit back...), told of the player's result whatever it came to: CreatureCmd.Damage tells every result, one Wuppy, Osty or the HP-loss
     /// pipeline left at 0 included (its results loop). The fight's log has it already (RecordDamageReceived).
     /// </summary>
-    private static void PlayerDamaged(SimState state, int player, int? dealer, SimProps props, int blocked, int lost, SimCard? card)
+    private static void PlayerDamaged(SimState state, int player, int? dealer, SimProps props, int blocked, int lost, SimCard? card, bool fullyBlocked)
     {
         var listeners = Listeners(state);
         if (listeners.Count == 0) return;
-        var hit = new DamageEvent(dealer, player, props, card, blocked + lost, blocked, lost, Killed: false);
+        var hit = new DamageEvent(dealer, player, props, card, blocked + lost, blocked, lost, Killed: false, fullyBlocked);
         foreach (var (model, o) in listeners) model.AfterDamageGiven(state, o, hit);
         foreach (var (simModel, o) in Listeners(state)) simModel.AfterDamageReceived(state, o, hit);
     }
@@ -805,6 +807,7 @@ public static partial class SimEngine
         var receivedFirst = ReceivedFirst(state);
         if (receivedFirst) TellReceived(state, listeners, player, amount, props, dealer, card);
         var before = state.Player(player)!;
+        var blockBefore = before.Block;
         // Hook.ModifyPreBlockDamageTarget: a creature that takes the damage whole before the player's block (Wuppy's Loyalty, read from its code), its
         // HP as Creature.LoseHpInternal takes it; only what it can't take (its overkill) goes on.
         var preBlock = RedirectTarget(state, listeners, preBlock: true, player, amount, props, dealer, card);
@@ -867,7 +870,8 @@ public static partial class SimEngine
         if (preBlock != Who.None) RecordDamageReceived(state, preBlock, props, toPreBlock);
         if (redirect && !ostyFirst) RecordOstyHit(state, player, props, toOsty);
         if (ostyFirst) TellOstyHit(state, player, dealer, props, card, toOsty, hpLoss.OstyKilled);
-        PlayerDamaged(state, player, dealer, props, blocked, lost, card);
+        // DamageResult.WasFullyBlocked: not Unblockable, block before it or block that took some, no HP lost past the pipeline (Osty's when he takes it).
+        PlayerDamaged(state, player, dealer, props, blocked, lost, card, fullyBlocked: !unblockable && (blocked > 0 || blockBefore > 0) && hpLoss.ToOsty == 0 && lost == 0);
         if (preBlock != Who.None) PetDamaged(state, preBlock, dealer, props, card, toPreBlock, preBlockKilled);
         if (redirect && !ostyFirst) TellOstyHit(state, player, dealer, props, card, toOsty, hpLoss.OstyKilled);
         return new PlayerHit(past, blocked, toOsty, lost);
@@ -1569,23 +1573,35 @@ public static partial class SimEngine
             {
                 // Its move as its code runs it (decision #195, MonsterModel.PerformMove): each step in turn, to the move's end even when your
                 // Thorns killed it during its attack (nothing in PerformMove or PowerCmd.Apply stops there), while the fight goes on.
-                foreach (var action in enemy.Move)
+                void MoveActions(IReadOnlyList<SimAction> actions)
                 {
-                    if (!state.Enemies.Any(simEnemy => simEnemy.Alive)) break; // the fight is ending (PowerCmd.Apply: CombatManager.IsEnding)
-                    switch (action)
+                    foreach (var action in actions)
                     {
-                        case MoveAttackAction moveAttackAction: Attack(moveAttackAction.FirstHit, moveAttackAction.Hits); break;
-                        case MovePowerAction movePowerAction: MovePowers(state, enemy.Id, movePowerAction); break;
-                        case MoveBlockAction moveBlockAction:
-                            foreach (var to in moveBlockAction.To)
-                            {
-                                if (state.Enemy(to) is not { Alive: true } gainer) continue;
-                                gainer.MoveBlock += moveBlockAction.Amount;
-                                gainer.Block += moveBlockAction.Amount;
-                            }
-                            break;
+                        if (!state.Enemies.Any(simEnemy => simEnemy.Alive)) return; // the fight is ending (PowerCmd.Apply: CombatManager.IsEnding)
+                        switch (action)
+                        {
+                            case MoveAttackAction moveAttackAction: Attack(moveAttackAction.FirstHit, moveAttackAction.Hits); break;
+                            case MovePowerAction movePowerAction: MovePowers(state, enemy.Id, movePowerAction); break;
+                            case MoveBlockAction moveBlockAction:
+                                foreach (var to in moveBlockAction.To)
+                                {
+                                    if (state.Enemy(to) is not { Alive: true } gainer) continue;
+                                    gainer.MoveBlock += moveBlockAction.Amount;
+                                    gainer.Block += moveBlockAction.Amount;
+                                }
+                                break;
+                            // CreatureCmd.Stun of itself (Creature.StunInternal: nothing once it's dead): its next move is the stunned move.
+                            case MoveStunAction when enemy.Alive: Stun(enemy); break;
+                            // A step on its own state (Bowlbug Rock's IsOffBalance: decision #271), asked of it as the step runs.
+                            case WhenAction whenAction:
+                                var holds = Holds(state, whenAction.Condition, enemy.Id);
+                                if (holds == null) state.Unmodelled ??= $"{enemy.Name}'s move acts on a test the simulator can't tell";
+                                else if (holds.Value) MoveActions(whenAction.Then);
+                                break;
+                        }
                     }
                 }
+                MoveActions(enemy.Move);
             }
             if (landed > 0) if (state.Log) state.Blockable.Add((hitsLanded > 1 ? $"{enemy.Name} ({hitsLanded} hits)" : enemy.Name, landed));
             // An enemy killed during the enemy turn (your Thorns, Flame Barrier or Reflect hitting back during its attack): its death hooks ran

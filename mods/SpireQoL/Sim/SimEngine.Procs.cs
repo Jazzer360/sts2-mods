@@ -175,7 +175,8 @@ public static partial class SimEngine
         RecordOstyHit(state, player, props, ostyLost);
         if (!receivedFirst && blocked > 0) RecordDamageReceived(state, player, props, lost: 0);
         TellOstyHit(state, player, dealer, props, card: null, ostyLost, killed: hpBefore > 0 && lost >= hpBefore);
-        if (!receivedFirst && blocked > 0) PlayerDamaged(state, player, dealer, props, blocked, lost: 0, card: null);
+        // The block redirect's result (WasFullyBlocked: its player's block took some and Osty lost no HP).
+        if (!receivedFirst && blocked > 0) PlayerDamaged(state, player, dealer, props, blocked, lost: 0, card: null, fullyBlocked: lost == 0);
         return new[] { state };
     }
 

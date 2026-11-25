@@ -28,7 +28,11 @@ public class MonsterStateTabParityTests
     /// Scenarios whose tabs a class read from its code places otherwise, each a fix: the scenario, and the game's line that moves them. Every other
     /// scenario is held as recorded.
     /// </summary>
-    private static readonly Dictionary<int, string> ReviewedTabs = new();
+    private static readonly Dictionary<int, string> ReviewedTabs = new()
+    {
+        // ImbalancedPower.AfterDamageGiven: `dealer == base.Owner && result.WasFullyBlocked`, for every player's result.
+        [169] = "Imbalanced: the play kills the Asleep enemy whose attack would have spent your teammate's 11 block, so the block takes the Imbalanced enemy's 9 whole: stunned in every outcome (a teammate's full block sets it off, where the hand-written model judged only your first hit)",
+    };
 
     [Fact]
     public void TheTabsAreWhatTheHandWrittenModelsShowed()
@@ -39,8 +43,12 @@ public class MonsterStateTabParityTests
             File.WriteAllLines(recordTo, actual);
             return;
         }
-        var expected = File.ReadAllLines(ParityPath);
-        Assert.Equal(expected.Length, actual.Count);
+        // The tabs and what the play check holds the play to; what the simulations end with for each enemy (its column, as recorded) is shown, not
+        // held: a class read from its code simulates what the hand-written model only judged (Imbalanced's stun now lands in the enemy turn).
+        static string TabsOf(string line) => line.Split(" | enemies ")[0];
+        var expected = File.ReadAllLines(ParityPath).Select(TabsOf).ToList();
+        actual = actual.Select(TabsOf).ToList();
+        Assert.Equal(expected.Count, actual.Count);
         var changed = actual.Zip(expected, (now, was) => (Now: now, Was: was)).Select((pair, scenario) => (pair.Now, pair.Was, Scenario: scenario))
             .Where(entry => entry.Now != entry.Was && !ReviewedTabs.ContainsKey(entry.Scenario)).Select(entry => $"{entry.Was}\n  now: {entry.Now}").ToList();
         Assert.True(changed.Count == 0, $"the tabs changed in {changed.Count} of {actual.Count} scenarios:\n{string.Join("\n", changed.Take(6))}");
@@ -58,8 +66,8 @@ public class MonsterStateTabParityTests
         Assert.Contains(lines, line => line.Contains("aimed", StringComparison.Ordinal));
     }
 
-    /// <summary>One generated fight and play: its tabs, as text.</summary>
-    internal static string Tabs(int index)
+    /// <summary>One generated fight and its play.</summary>
+    internal static (SimState State, SimPlay Play, int Enemies) Scenario(int index)
     {
         var random = new Random(9400 + index);
         var state = new SimState { TurnNumber = 1 };
@@ -100,6 +108,13 @@ public class MonsterStateTabParityTests
             play.Hits = random.Next(1, 5);
             for (var i = 0; i < enemies; i++) play.HitDamage[i] = random.Next(1, 20);
         }
+        return (state, play, enemies);
+    }
+
+    /// <summary>One generated fight and play: its tabs, as text.</summary>
+    internal static string Tabs(int index)
+    {
+        var (state, play, enemies) = Scenario(index);
         // One simulation per aim: each enemy for a card aimed at one, else one.
         var aims = play.HitTarget == SimPlay.Target.Single ? Enumerable.Range(0, enemies).ToList() : new List<int> { Who.None };
         var outcomes = aims.Select(aim =>

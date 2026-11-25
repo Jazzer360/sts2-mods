@@ -70,9 +70,10 @@ public class OutcomeTabTests
     }
 
     [Fact]
-    public void ImbalancedShowsOnlyWhenEndingTheTurnNowWouldntBlockItsFirstHit()
+    public void ImbalancedShowsOnlyWhenEndingTheTurnNowWouldntStunIt()
     {
-        var blocked = new SimState { Enemies = { new SimEnemy { Id = 0, Hp = 10, FirstHitFullyBlocked = true } } };
+        // Read from its code (decision #271): stunned by a hit of its fully blocked, in its turn.
+        var blocked = new SimState { Enemies = { new SimEnemy { Id = 0, Hp = 10, StunnedThisTurn = true } } };
         var hit = new SimState { Enemies = { new SimEnemy { Id = 0, Hp = 10 } } };
         Assert.Null(Model("ImbalancedPower").OutcomeTab(hit, Ended(blocked), owner: 0));
         var rule = Model("ImbalancedPower").OutcomeTab(hit, Ended(hit), owner: 0)!;
