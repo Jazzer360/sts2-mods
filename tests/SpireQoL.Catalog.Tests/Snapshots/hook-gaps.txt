@@ -1,5 +1,5 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by the capability the reader names.
-# 64 hand-written models.
+# 63 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
@@ -15,7 +15,6 @@ commands: a card made (AddGeneratedCardToCombat, a made card): 2 classes, 2 alon
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
 hooks: the power amount given: 2 classes, 2 alone: SneckoSkull*, UnsettlingLamp*
 orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first): 2 classes, 2 alone: ConsumingShadowPower*, TrashToTreasurePower*
-read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 2 classes, 2 alone: ConquerorPower*, MagicBombPower*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*
 another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 3 classes, 1 alone: CoveredPower, HardenedShellPower*, SurprisePower
 card costs and keywords (cards' own hooks, Part B3): 3 classes, 1 alone: ChemicalX*, CorruptionPower, PhantomBladesPower
@@ -26,6 +25,7 @@ commands: AutoPlayFromDrawPile: 1 classes, 1 alone: LostLutePower*
 hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*
 hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
 outcomes: a stun or a kill (outcome tabs): 1 classes, 1 alone: TheGambitPower*
+read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 1 classes, 1 alone: MagicBombPower*
 the fight's log (the history ledger, decision #191): 1 classes, 1 alone: UnmovablePower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*
 a death the game holds back (ShouldStopCombatFromEnding, ShouldDie and the like): 4 classes, 0 alone: InfestedPower, SteamEruptionPower, StockPower, SurprisePower
@@ -46,7 +46,6 @@ BurrowedPower: [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifying
 CalamityPower: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: changes a collection (Enumerator.get_Current) where the reader reads no step
 ChemicalX: [card costs and keywords (cards' own hooks, Part B3)] ModifyXValue: gap: the simulator runs no read model's ModifyXValue
 CompostPower: [a command on another creature (the players, a card's owner, a roll's list)] AfterDeath: gap: energy for someone else
-ConquerorPower: [read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule)] read whole
 ConsumingShadowPower: [orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first)] AfterSideTurnEnd: gap: OrbCmd.EvokeLast isn't translated
 CorruptionPower: [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation | [card costs and keywords (cards' own hooks, Part B3)] TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
 CoveredPower: [another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount)] AfterApplied: gap: changes a game object outside a command (InterceptPower.AddCoveredCreature) | [queries: the owner's powers] AfterSideTurnEnd: gap: tests Contains(this.Owner.Powers, this)
