@@ -1140,6 +1140,7 @@ public static partial class SimEngine
             case DamageAction damageAction: RunDamage(branches, damageAction); break;
             case ExecuteAction ex: RunExecute(branches, ex); break;
             case StripBlockAction stripBlockAction: branches.Do(branch => StripBlock(branch, stripBlockAction)); break;
+            case RemoveOwnPowerAction removeOwnPowerAction: branches.Do(branch => RemovePower(branch, branch.CurrentPlay?.Owner ?? Who.You, removeOwnPowerAction.Power)); break;
             case ModelCommandAction command: branches.Each(branch => RunModelCommand(branch, command.Power, command.Method)); break;
             case TriggerPoisonAction: branches.Each(branch => RunModelCommand(branch, PowerId.Poison.Name, "Trigger")); break;
             case KillOstyAction: branches.Do(branch => OstyLoses(branch, Who.You, branch.You.OstyHp)); break;

@@ -59,9 +59,56 @@ public class StepTranslationTests
     public void EveryCommandNotFollowedHasAnOpenTrackerItem()
     {
         var open = File.ReadLines(Path.Combine(RepoRoot(), "docs", "TRACKER.md")).Where(line => line.TrimStart().StartsWith("- [ ]", StringComparison.Ordinal)).ToList();
-        var untracked = SimAdapter.CommandsNotTranslated.Keys.Where(command => !open.Any(line => line.Contains("`" + command + "`", StringComparison.Ordinal))).ToList();
-        Assert.True(untracked.Count == 0, "Commands the simulator can't follow with no open TRACKER item naming them (in backticks):\n" + string.Join("\n", untracked));
+        var untracked = SimAdapter.CommandsNotTranslated.Keys.Concat(SimAdapter.ShapesNotFollowed.Keys).Distinct()
+            .Where(command => !open.Any(line => line.Contains("`" + command + "`", StringComparison.Ordinal))).ToList();
+        Assert.True(untracked.Count == 0, "Commands (or shapes of them) the simulator can't follow with no open TRACKER item naming them (in backticks):\n" + string.Join("\n", untracked));
     }
+
+    /// <summary>
+    /// Decision #300: a command step no case of the translation takes (a named gap, a translated command in a shape its case doesn't read, a
+    /// power's own command its model can't run, one a game update added) is an unknown with its reason where it runs, never nothing; only a
+    /// command reviewed as changing nothing the simulator predicts is nothing.
+    /// </summary>
+    [Fact]
+    public void ACommandNoCaseTakesIsNeverDroppedSilently()
+    {
+        var commands = SimAdapter.CommandsTranslated.Keys.Concat(SimAdapter.CommandsNotTranslated.Keys).Concat(SimAdapter.ShapesNotFollowed.Keys)
+            .Append("SomeCmd.AddedByAGameUpdate").Distinct();
+        foreach (var command in commands)
+        {
+            var action = Assert.IsType<NotModelledAction>(SimAdapter.Untranslated(command));
+            Assert.StartsWith(command + ": ", action.Reason, StringComparison.Ordinal);
+        }
+        foreach (var command in SimAdapter.CommandsOutsideTheFight.Keys) Assert.Null(SimAdapter.Untranslated(command));
+        Assert.Subset(SimAdapter.CommandsTranslated.Keys.ToHashSet(), SimAdapter.ShapesNotFollowed.Keys.ToHashSet());
+    }
+
+    /// <summary>
+    /// Every card's step of a translated command is in a shape its translation reads (SimAdapter.ShapeNotFollowed), on both branches: a card
+    /// a game update adds in another shape (a creature killed other than your Osty) fails here, so its unknown is reviewed before anyone plays it.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Branches))]
+    public void EveryCardStepIsInAShapeItsTranslationReads(string branch)
+    {
+        if (!File.Exists(PathOf(branch))) return;
+        var code = BranchCode.Of(PathOf(branch));
+        var unread = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (var type in code.Cards())
+        {
+            var program = ProgramReader.Read(type, code.Read);
+            foreach (var command in program.Commands)
+                if (SimAdapter.ShapeNotFollowed(command, program) is { } why && !KnownShapesNotFollowed.Contains($"{type.Name}: {command.Command.FullName}"))
+                    unread.Add($"{type.Name}: {command.Command.FullName}({string.Join(", ", command.Arguments)}): {why}");
+        }
+        Assert.True(unread.Count == 0, $"Card steps in a shape the simulator doesn't follow ({branch}):\n" + string.Join("\n", unread));
+    }
+
+    /// <summary>
+    /// The card steps in a shape not followed yet, each unknown where it runs and named in the open TRACKER item on ShapesNotFollowed: End of
+    /// Days' kill of every doomed enemy (DoomPower.DoomKill's CreatureCmd.Kill of each of GetDoomedCreatures, read into its play).
+    /// </summary>
+    private static readonly HashSet<string> KnownShapesNotFollowed = new(StringComparer.Ordinal) { "EndOfDays: CreatureCmd.Kill" };
 
     private static bool Named(string command) =>
         SimAdapter.CommandsTranslated.ContainsKey(command) || SimAdapter.CommandsNotTranslated.ContainsKey(command) || SimAdapter.CommandsOutsideTheFight.ContainsKey(command);

@@ -39,7 +39,7 @@ public static partial class SimAdapter
         ["CreatureCmd.Stun"] = "StunTargetAction (the target: its next move the stunned move)",
         ["CreatureCmd.LoseBlock"] = "StripBlockAction (the target's block, and its Artifact when the play removes it)",
         ["PowerCmd.Apply"] = "ApplyPowerAction (or FocusAction) to whom its second argument names, its amount its third",
-        ["PowerCmd.Remove"] = "the target's Artifact, folded into StripBlockAction; a shot's own powers removed: not modelled",
+        ["PowerCmd.Remove"] = "the target's Artifact, folded into StripBlockAction; a power of the card's owner taken off them (RemoveOwnPowerAction)",
         ["CardPileCmd.Draw"] = "CardEventAction(Drawn), or a teammate's draws, its count its own argument",
         ["CardPileCmd.DrawWithoutBlockingOnOtherPlayers"] = "the same as Draw, for each player its loop goes over",
         ["CardPileCmd.Add"] = "TakeToHandAction into your hand, TakeFromHandAction back onto your draw pile or with your whole hand",
@@ -205,6 +205,8 @@ public static partial class SimAdapter
     {
         var found = play.Found[command];
         var none = (new List<SimAction>(), (ProgramCondition?)null);
+        // A shape of a translated command its translation doesn't follow (a creature other than the one its case reads): unknown where it runs.
+        if (ShapeNotFollowed(command, play.Program) is { } shape) return (new List<SimAction> { new NotModelledAction($"{command.Command.FullName}: {shape}") }, null);
         switch (command.Command.DeclaringType, command.Command.Name)
         {
             case ("DamageCmd", "Attack"):
@@ -220,24 +222,30 @@ public static partial class SimAdapter
                 actions.Add(new ImpaleAction());
                 return (actions, null);
             }
-            case ("ArrowCmd", "DislodgeArrow") when Argument(command, 0) == "cardPlay.Target":
+            case ("ArrowCmd", "DislodgeArrow"):
                 return (new List<SimAction> { new DislodgeAllAction() }, null);
             case ("CreatureCmd", "GainBlock"):
                 return (BlocksFrom(found, play, times: null), null);
             case ("CreatureCmd", "Damage"):
                 return (DamageFrom(found, play), null);
-            case ("CreatureCmd", "Kill") when Argument(command, 0) == "Owner.Osty":
+            case ("CreatureCmd", "Kill"):
                 return (new List<SimAction> { new KillOstyAction() }, null);
             case ("OstyCmd", "Summon"):
                 return (SummonsFrom(found, play), null);
             case ("CreatureCmd", "Heal"):
                 return (HealsFrom(found, play), null);
-            case ("CreatureCmd", "SetCurrentHp") when Argument(command, 0) == "cardPlay.Target":
+            case ("CreatureCmd", "SetCurrentHp"):
                 return (new List<SimAction> { new ExecuteAction(ThresholdOf(found, play)) }, null);
-            case ("CreatureCmd", "Stun") when Argument(command, 0) == "cardPlay.Target":
+            case ("CreatureCmd", "Stun"):
                 return (new List<SimAction> { new StunTargetAction() }, null);
-            case ("CreatureCmd", "LoseBlock") when Argument(command, 1) == "cardPlay.Target":
-                return (new List<SimAction> { new StripBlockAction(RemoveArtifact: play.Program.Commands.Any(other => other.Command is { DeclaringType: "PowerCmd", Name: "Remove" } && Argument(other, 0) == "cardPlay.Target")) }, null);
+            case ("CreatureCmd", "LoseBlock"):
+                return (new List<SimAction> { new StripBlockAction(RemoveArtifact: play.Program.Commands.Any(other => RemovesTargetsArtifact(other, play.Program))) }, null);
+            // The target's Artifact after its block (Expose): folded into the strip above.
+            case ("PowerCmd", "Remove") when RemovesTargetsArtifact(command, play.Program):
+                return none;
+            // A power of the card's owner taken off (Rain Shot's Aim and Quietus after its shot), its AfterRemoved told.
+            case ("PowerCmd", "Remove"):
+                return (new List<SimAction> { new RemoveOwnPowerAction(PowerId.Of(command.Command.GenericArguments[0])) }, null);
             case ("PowerCmd", "Apply"):
                 return (PowersFrom(found, play), null);
             // A power's own command the card calls on each enemy's instance of it (Outbreak: PoisonPower.Trigger), read from the power's code.
@@ -247,7 +255,7 @@ public static partial class SimAdapter
                 return (DrawsFrom(found, play), null);
             case ("PlayerCmd", "GainEnergy"):
                 return (EnergyFrom(found, play), null);
-            case ("PlayerCmd", "GainStars") when Argument(command, 1) == "Owner":
+            case ("PlayerCmd", "GainStars"):
                 return (new List<SimAction> { new CardEventAction(CardEvent.StarsGained, Count: 1) }, null);
             case ("OrbCmd", "Channel" or "EvokeNext" or "AddSlots" or "RemoveSlots"):
                 return OrbsFrom(found, play);
@@ -270,10 +278,58 @@ public static partial class SimAdapter
         }
         // A command the simulator can't follow yet: the play's outcome is unknown where it runs (decision #292), never left out. One whose only
         // effect on the fight is the hook it runs (gold, a potion) has nothing to follow when no listener's class overrides that hook.
-        if (!CommandsNotTranslated.TryGetValue(command.Command.FullName, out var notFollowed)) return none;
         if (HookOnlyCommands.TryGetValue(command.Command.FullName, out var hook) && !AnyListenerOverrides(play, hook)) return none;
-        return (new List<SimAction> { new NotModelledAction($"{command.Command.FullName}: {notFollowed}") }, null);
+        return Untranslated(command.Command.FullName) is { } unknown ? (new List<SimAction> { unknown }, null) : none;
     }
+
+    /// <summary>
+    /// What a command step no case of Translate took stands for (decision #300): nothing only for a command reviewed as changing nothing the
+    /// simulator predicts (CommandsOutsideTheFight); a named gap's reason for one not followed yet; for any other (a power's own command its
+    /// model can't run, a command a game update added), an unknown with why. Never nothing for a command that can change the fight.
+    /// </summary>
+    internal static SimAction? Untranslated(string command) =>
+        CommandsOutsideTheFight.ContainsKey(command) ? null
+        : CommandsNotTranslated.TryGetValue(command, out var notFollowed) ? new NotModelledAction($"{command}: {notFollowed}")
+        : new NotModelledAction($"{command}: {ShapesNotFollowed.GetValueOrDefault(command, "a use of it the simulator doesn't follow")}");
+
+    /// <summary>
+    /// The translated commands whose translation reads one shape of them (whom an argument names), each with what isn't followed in any other
+    /// (decision #300): a step in another shape is unknown where it runs (ShapeNotFollowed), never left out. Each is an open docs/TRACKER.md item
+    /// naming it (StepTranslationTests), and the card scan lists every card's step in a shape not followed on both branches.
+    /// </summary>
+    internal static readonly IReadOnlyDictionary<string, string> ShapesNotFollowed = new Dictionary<string, string>
+    {
+        ["ArrowCmd.DislodgeArrow"] = "an arrow pulled out of a creature other than the card's target: not followed",
+        ["CreatureCmd.Kill"] = "a creature other than your Osty killed: not followed",
+        ["CreatureCmd.SetCurrentHp"] = "the HP of a creature other than the card's target set: not followed",
+        ["CreatureCmd.Stun"] = "a creature other than the card's target stunned: not followed",
+        ["CreatureCmd.LoseBlock"] = "block taken from a creature other than the card's target: not followed",
+        ["PlayerCmd.GainStars"] = "stars gained by a player other than the card's owner: not followed",
+        ["PowerCmd.Remove"] = "a power taken off a creature other than the card's owner (bar the target's Artifact with its block): not followed",
+    };
+
+    /// <summary>
+    /// Why a translated command's step is in a shape its translation doesn't read (<see cref="ShapesNotFollowed"/>), or null when it reads it.
+    /// Pure on the step's code, so the card scan asks it of every card on both branches (StepTranslationTests).
+    /// </summary>
+    internal static string? ShapeNotFollowed(CommandStep command, ModelProgram program)
+    {
+        var followed = command.Command.FullName switch
+        {
+            "ArrowCmd.DislodgeArrow" or "CreatureCmd.SetCurrentHp" or "CreatureCmd.Stun" => Argument(command, 0) == "cardPlay.Target",
+            "CreatureCmd.Kill" => Argument(command, 0) == "Owner.Osty",
+            "CreatureCmd.LoseBlock" => Argument(command, 1) == "cardPlay.Target",
+            "PlayerCmd.GainStars" => Argument(command, 1) == "Owner",
+            "PowerCmd.Remove" => RemovesTargetsArtifact(command, program) || command.Command.GenericArguments.Count == 1 && IsYou(ValueAt(command, 0)),
+            _ => true,
+        };
+        return followed ? null : ShapesNotFollowed[command.Command.FullName];
+    }
+
+    /// <summary>PowerCmd.Remove&lt;ArtifactPower&gt; of the card's target, in a play that takes the target's block (Expose): StripBlockAction's.</summary>
+    private static bool RemovesTargetsArtifact(CommandStep command, ModelProgram program) =>
+        command.Command is { DeclaringType: "PowerCmd", Name: "Remove", GenericArguments: [nameof(ArtifactPower)] } && Argument(command, 0) == "cardPlay.Target"
+        && program.Commands.Any(other => other.Command is { DeclaringType: "CreatureCmd", Name: "LoseBlock" } && Argument(other, 1) == "cardPlay.Target");
 
     /// <summary>
     /// The commands not followed whose only effect on the fight is the hook they run (PlayerCmd.GainGold runs Hook.AfterGoldGained;
@@ -384,7 +440,7 @@ public static partial class SimAdapter
         var command = found.Command;
         var card = play.Card;
         var mode = ModeOf(command, card);
-        if (mode == SimPlay.Target.None) return new List<SimAction>();
+        if (mode == SimPlay.Target.None) return new List<SimAction> { new NotModelledAction($"{card.GetType().Name} attacks by a targeting its translation doesn't read ({command.Builder})") };
         var byOsty = command.Builder.Contains("FromOsty");
         var aimed = mode == SimPlay.Target.Single ? play.Aimed : null;
         var hits = BoardCounts.HitsOf(command, play.Board with { Target = aimed }, play.Program) * RoundsOf(found, play);
@@ -551,10 +607,13 @@ public static partial class SimAdapter
         // BeforeAttack or AfterAttack in the game (TRACKER).
         if (card.Type == CardType.Attack && IsEveryEnemy(whom))
             return new List<SimAction> { AttackAction(card, key, SimPlay.Target.All, hits: 1, byOsty: false, play) };
-        if (!IsTarget(whom) || play.Aimed is not { } target || !play.Ids.TryGetValue(target, out var targetId)) return new List<SimAction>();
+        // Damage to anyone else (every enemy from a card that isn't an attack, a creature its code picks): unknown where it runs, never left out.
+        if (!IsTarget(whom)) return new List<SimAction> { new NotModelledAction($"{card.GetType().Name} damages a creature its translation doesn't name ({whom})") };
+        if (play.Aimed is not { } target || !play.Ids.TryGetValue(target, out var targetId)) return new List<SimAction>();
         if (card.Type == CardType.Attack || InsideShot(command, play))
             return new List<SimAction> { AttackAction(card, key, SimPlay.Target.Single, hits: 1, byOsty: false, play) with { NeedsArrow = InsideShot(command, play) } };
-        if (key == null || !card.DynamicVars.TryGetValue(key, out var value) || value is not DamageVar damage) return new List<SimAction>();
+        if (key == null || !card.DynamicVars.TryGetValue(key, out var value) || value is not DamageVar damage)
+            return new List<SimAction> { new NotModelledAction($"{card.GetType().Name} damages its target by a value its translation doesn't read ({ValueAt(command, 2)})") };
         return new List<SimAction>
         {
             new DamageAction(new DamageSpec(damage.BaseValue, SimReaders.Props(damage.Props))
@@ -602,9 +661,11 @@ public static partial class SimAdapter
         }
         if (IsYou(gainer)) return BlockFor(found, play, gains, Who.You, play.Me.Creature) is { } block ? new List<SimAction> { block } : new List<SimAction>();
         // The teammate it's aimed at (Lift, Demonic Shield; Constellation's target's player): none with no teammate to aim at.
-        if ((IsTarget(gainer) || gainer is QueryValue { Name: "Creature" } && IsTarget(((QueryValue)gainer).Of)) && play.AllyId != Who.None && play.Ally != null)
+        var toTarget = IsTarget(gainer) || gainer is QueryValue { Name: "Creature" } && IsTarget(((QueryValue)gainer).Of);
+        if (toTarget && play.AllyId != Who.None && play.Ally != null)
             return BlockFor(found, play, gains, play.AllyId, play.Ally) is { } allyBlock ? new List<SimAction> { allyBlock } : new List<SimAction>();
-        return new List<SimAction>();
+        // Block to anyone else (an enemy, a creature its code picks): unknown where it runs, never left out.
+        return toTarget ? new List<SimAction>() : new List<SimAction> { new NotModelledAction($"{card.GetType().Name} gives block to a creature its translation doesn't name ({gainer})") };
     }
 
     private static GainBlockAction? BlockFor(CardEffects.Found found, StepPlay play, int gains, int to, Creature gainer)
@@ -673,7 +734,8 @@ public static partial class SimAdapter
     {
         var command = found.Command;
         var card = play.Card;
-        if (command.Command.GenericArguments is not [var powerName] || PowerType(card.GetType(), powerName) is not { } type) return new List<SimAction>();
+        if (command.Command.GenericArguments is not [var powerName] || PowerType(card.GetType(), powerName) is not { } type)
+            return new List<SimAction> { new NotModelledAction($"{card.GetType().Name} applies a power its translation can't name ({(command.Command.GenericArguments.Count > 0 ? command.Command.GenericArguments[0] : ValueAt(command, 1)?.ToString())})") };
         var whom = ValueAt(command, 1);
         var amount = ValueAt(command, 2) is { } given && ProgramEvaluator.Number(given, play.Board with { Target = play.Aimed }, play.Program) is { } read ? (int?)read : null;
         // Whom it lands on: (where, which creature) for each.
@@ -695,6 +757,10 @@ public static partial class SimAdapter
         else if (whom != null && (whom.Parts().Any(part => part is QueryValue { Name: "GetTeammatesOf" }) || IsEach(whom) && found.Loops.Any(OverPlayers)))
             foreach (var player in IsEach(whom) ? PlayersOf(found, play) : PlayersIn(whom, play))
                 targets.Add(player == Who.You ? (ApplyPowerAction.Where.You, 0) : (ApplyPowerAction.Where.Creature, player));
+        // On anyone else (a creature its code picks other than these): unknown where it runs, never left out, when the power is one the
+        // simulator reads (one it doesn't changes nothing it predicts on anyone: PowerTo's rule).
+        else if (Simulated(SimPowerName(type)) || SimReaders.IsDebuffType(type) || type == typeof(StrengthPower) || typeof(TemporaryStrengthPower).IsAssignableFrom(type) || FocusSignOf(type) != 0)
+            return new List<SimAction> { new NotModelledAction($"{card.GetType().Name} applies {powerName} to a creature its translation doesn't name ({whom})") };
         var actions = new List<SimAction>();
         foreach (var (to, creature) in targets)
             if (PowerTo(found, play, type, powerName, amount, to, creature, times) is { } action) actions.Add(action);
@@ -941,7 +1007,7 @@ public static partial class SimAdapter
         CardEventAction Gain(int to) => new(CardEvent.EnergyGained, amount) { Player = to };
         if (IsOwnerPlayer(whom)) return new List<SimAction> { Gain(play.Owner) };
         if (IsTarget(whom)) return Who.KindOf(play.AllyId) == CreatureKind.Teammate ? new List<SimAction> { Gain(play.AllyId) } : new List<SimAction>();
-        if (!IsEach(whom) || !found.Loops.Any(OverPlayers)) return new List<SimAction>();
+        if (!IsEach(whom) || !found.Loops.Any(OverPlayers)) return new List<SimAction> { new NotModelledAction($"{play.Name} gives energy to a player its translation doesn't name ({whom})") };
         // Teammates are numbered from your side: a teammate's own card (Howl from Beyond) giving you energy isn't followed (it'd need their
         // numbering of the players).
         var players = PlayersOf(found, play);
@@ -968,6 +1034,7 @@ public static partial class SimAdapter
         else if (overPlayers != null)
             foreach (var player in PlayersIn(overPlayers.Items, play).Where(player => player == Who.You || play.Owner == Who.You))
                 for (var round = 0; round < rounds; round++) actions.Add(new SummonAction(amount) { Player = player == Who.You ? play.Owner : player });
+        else actions.Add(new NotModelledAction($"{play.Name} summons for a player its translation doesn't name ({summoner})"));
         return actions;
     }
 
@@ -981,7 +1048,7 @@ public static partial class SimAdapter
         var amount = Number(play, ValueAt(command, 1), Sts2State.Var(play.Card, "Heal"));
         if (IsYou(ValueAt(command, 0))) return new List<SimAction> { new HealAction(amount) };
         if (Argument(command, 0) == "Owner.Osty") return new List<SimAction> { new HealAction(amount) { Osty = true } };
-        return new List<SimAction>();
+        return new List<SimAction> { new NotModelledAction($"{play.Name} heals a creature its translation doesn't name ({ValueAt(command, 0)})") };
     }
 
     // ---------------------------------------------------------------- orbs
@@ -1000,7 +1067,7 @@ public static partial class SimAdapter
         {
             case "Channel":
             {
-                if (CardEffects.OrbOf(command) is not { } kind) return none;
+                if (CardEffects.OrbOf(command) is not { } kind) return (new List<SimAction> { new NotModelledAction($"{play.Name} channels an orb its translation can't name") }, null);
                 var to = command.Arguments.Contains("cardPlay.Target.Player") ? play.AllyId : play.Owner;
                 if (to == Who.None) return none;
                 var times = RoundsOf(found, play);
@@ -1251,7 +1318,8 @@ public static partial class SimAdapter
     /// </summary>
     private static List<SimAction> MadeFrom(CardEffects.Found found, StepPlay play)
     {
-        if (MadeCards.Of(play.Type).FirstOrDefault(make => ReferenceEquals(make.Found?.Command, found.Command)) is not { } make) return new List<SimAction>();
+        if (MadeCards.Of(play.Type).FirstOrDefault(make => ReferenceEquals(make.Found?.Command, found.Command)) is not { } make)
+            return new List<SimAction> { new NotModelledAction($"{play.Name} makes cards its translation can't read ({found.Command.Command.FullName})") };
         if (make.By == MadeCards.Way.Forged)
             return MadeCards.HasBlade(play.Card) ? new List<SimAction>()
                 : new List<SimAction> { new FirstPlayOnly(new SimAction[] { new CardEventAction(CardEvent.Generated, Count: 1) { Indirect = true, JoinsHand = true, Card = MadeSimCard(make.Card) } }) };

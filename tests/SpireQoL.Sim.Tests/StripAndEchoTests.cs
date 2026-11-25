@@ -34,6 +34,21 @@ public class StripAndEchoTests
     }
 
     [Fact]
+    public void RainShotTakesItsOwnersAimAndQuietusOffAfterItsHit()
+    {
+        // RainShot.OnPlay's shot: CreatureCmd.Damage of its target, then PowerCmd.Remove<AimPower>(base.Owner.Creature) and
+        // PowerCmd.Remove<QuietusPower>(base.Owner.Creature): only its owner's, the enemy's untouched; one it doesn't have is nothing.
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 30) } };
+        state.You.Powers = PowerSet.Empty.With(PowerId.Aim, amount: 2).With(PowerId.Dexterity, amount: 1);
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Aim, amount: 1);
+        var after = After(state, Play(Card("RainShot"), target: 0, plays: 1,
+            new RemoveOwnPowerAction(PowerId.Aim), new RemoveOwnPowerAction(PowerId.Quietus))).Single();
+        Assert.False(after.You.Powers.Has(PowerId.Aim));
+        Assert.Equal(1, after.You.Powers[PowerId.Dexterity]);
+        Assert.Equal(1, after.Enemy(id: 0)!.Powers[PowerId.Aim]);
+    }
+
+    [Fact]
     public void EchoingSlashRepeatsOncePerKillUntilARoundKillsNone()
     {
         // The report's fight: 9 per hit on Gardeners at 16, 28, 32 and 5 HP. Round 1 kills the 5; round 2 kills the 7 left of

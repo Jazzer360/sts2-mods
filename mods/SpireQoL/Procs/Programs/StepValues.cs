@@ -39,13 +39,23 @@ public static class StepValues
         return false;
     }
 
-    /// <summary>Every enemy you can hit (CombatState.HittableEnemies, or that when there's a fight: a value two ways leave, the other null).</summary>
-    public static bool IsEveryEnemy(ProgramValue? value) => value switch
+    /// <summary>
+    /// Every enemy you can hit (CombatState.HittableEnemies, or that when there's a fight: a value two ways leave, the other null; or the card
+    /// owner's opponents that can be hit, ToList(Where(GetOpponentsOf(Owner.Creature), e => e.IsHittable)): Timber's).
+    /// </summary>
+    public static bool IsEveryEnemy(ProgramValue? value) => Unstored(value) switch
     {
         QueryValue { Name: "HittableEnemies" } => true,
+        QueryValue { Name: "ToList", Arguments: [var listed] } => IsEveryEnemy(listed),
+        QueryValue { Type: "Enumerable", Name: "Where", Arguments: [var filtered, LambdaValue hittable] } when ReadsOwn(hittable, "IsHittable") =>
+            Unstored(filtered) is QueryValue { Name: "GetOpponentsOf", Arguments: [var whose] } && IsYou(Unstored(whose)),
         WaysValue ways => ways.Ways.Any(way => IsEveryEnemy(Unstored(way.Value))) && ways.Ways.All(way => IsEveryEnemy(Unstored(way.Value)) || way.Value is NullValue),
         _ => false,
     };
+
+    /// <summary>A lambda that gives its parameter's property by this name (e => e.IsHittable).</summary>
+    private static bool ReadsOwn(LambdaValue lambda, string property) =>
+        lambda.Body.Terms is [[{ Holds: true, Test: QueryValue { Name: var name, Of: ParameterValue { Name: var given } } }]] && name == property && given == lambda.Parameter;
 
     public static bool IsYou(ProgramValue? value) => value is QueryValue { Name: "Creature", Of: QueryValue { Name: "Owner", Of: NamedValue { Name: "this" } } };
 

@@ -421,6 +421,12 @@ public sealed record TriggerPoisonAction : SimAction;
 /// </summary>
 public sealed record StripBlockAction(bool RemoveArtifact) : SimAction;
 
+/// <summary>
+/// A power of the play's owner taken off them (PowerCmd.Remove&lt;T&gt;(Owner.Creature): Rain Shot's Aim and Quietus after its shot), its
+/// AfterRemoved told (SimEngine.RemovePower). Nothing when they don't have it.
+/// </summary>
+public sealed record RemoveOwnPowerAction(PowerId Power) : SimAction;
+
 /// <summary>The play's target dies if it's alive at or below this HP (Judgement: CreatureCmd.SetCurrentHp to 0).</summary>
 public sealed record ExecuteAction(int Threshold) : SimAction;
 
