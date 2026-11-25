@@ -443,7 +443,7 @@ public sealed class ReadModel : SimModel
         {
             // A power an attack spends (its AfterAttack takes its own stacks: Gigantification's Decrement) acts on that play too (decision #228).
             // A play that changes the state its damage term reads (Slow's SlowAmount++ on every card) acts on that play too (decision #229).
-            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or StunStep or KillStep
+            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeIntoDrawStep or StunStep or KillStep
                 || hook == HookName.AfterAttack && step is DecrementPowerStep or RemovePowerStep
                 || hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed && step is StoreFieldStep { Field: var termField } && _termFields.Contains(termField);
             // An enchantment's effects are its card's (no tab of its own, nothing in the play log: its card's play shows them).
@@ -741,6 +741,10 @@ public sealed class ReadModel : SimModel
     /// <summary>It keeps its applier as its Data (its code asks base.Applier): the engine lands it so (SimEngine.ApplyPower). Worked out once.</summary>
     public bool UsesApplier => _usesApplier ??= Spec.UsesApplier();
     private bool? _usesApplier;
+
+    /// <summary>The classes of the cards its code makes into a draw pile (MakeIntoDrawStep: Biiig Hug's Soot): the adapter reads their profiles for a later draw. Worked out once.</summary>
+    public IReadOnlyList<string> CardsMadeIntoDraw => _cardsMadeIntoDraw ??= Spec.Steps().OfType<MakeIntoDrawStep>().Select(make => make.Card).Distinct(StringComparer.Ordinal).ToArray();
+    private string[]? _cardsMadeIntoDraw;
 
     /// <summary>
     /// Its own fields its programs read or store (ModelSpec.Fields), and each one's key among its owner's (FieldKey), worked out once: the
@@ -1235,7 +1239,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or DestroyArrowStep or StunStep or KillStep
+            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeIntoDrawStep or DestroyArrowStep or StunStep or KillStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1504,6 +1508,32 @@ public sealed class ReadModel : SimModel
                     SimEngine.Stun(enemy);
                     return One(args.State);
                 };
+            case MakeIntoDrawStep make:
+            {
+                var into = Compile(make.For);
+                // The card the created-card hooks hear (its class, type and tags), made once per class's step.
+                var card = new SimCard(make.Card, make.Type) { Tags = make.Tags.ToHashSet() };
+                var counts = Tab == TabKind.CardsMade;
+                return args =>
+                {
+                    var player = (int)into(in args);
+                    if (!Who.IsPlayer(player))
+                    {
+                        args.State.Unmodelled ??= $"{Name} makes a {make.Card} for a creature that isn't a player";
+                        return One(args.State);
+                    }
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                    if (counts) args.State.LogAmount(Name, amount: 1, args.Owner);
+                    var creator = make.ByOwner ? args.Owner : Who.None;
+                    // Inside a hit, where hooks can't branch: it joins the pile, and its hook hears it, once the hit is over (SimEngine.DrainPending).
+                    if (InHit(args.Hook))
+                    {
+                        args.State.PendingIntoDraw = args.State.PendingIntoDraw.Add(new PendingMade(player, make.Card, creator, card));
+                        return One(args.State);
+                    }
+                    return SimEngine.MadeIntoDrawPile(args.State, new PendingMade(player, make.Card, creator, card));
+                };
+            }
             case KillStep kill:
                 return args =>
                 {

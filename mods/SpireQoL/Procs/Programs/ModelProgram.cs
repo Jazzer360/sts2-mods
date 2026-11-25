@@ -1352,7 +1352,15 @@ public static class ProgramReader
             if (instruction.Integer is { } constant && name.StartsWith("ldc", StringComparison.Ordinal)) return (new ConstantValue(constant), at);
             if (instruction.OpCode == OpCodes.Ldnull) return (NullValue.Instance, at);
             if (instruction.OpCode == OpCodes.Ldstr) return (new NamedValue("\"" + instruction.Text + "\""), at);
-            if (name.StartsWith("ldarg", StringComparison.Ordinal)) return (Argument(instruction.Slot ?? 0), at);
+            if (name.StartsWith("ldarg", StringComparison.Ordinal))
+            {
+                var argument = Argument(instruction.Slot ?? 0);
+                // A parameter the body sets (starg) before this read: its last store on each way, else what it was given.
+                if (instruction.Slot is { } argumentSlot && argument is ParameterValue
+                    && ParameterSet(index => Ops[index].Slot == argumentSlot && Ops[index].OpCode.Name!.StartsWith("starg", StringComparison.Ordinal), argument, at, depth) is { } set)
+                    return (set, at);
+                return (argument, at);
+            }
             if (name.StartsWith("ldloc", StringComparison.Ordinal))
             {
                 if (instruction.Slot is { } slot && StoredOnce(slot) is { } store && ReadBack(store, depth + 1) is { Start: >= 0 } stored)
@@ -1416,7 +1424,13 @@ public static class ProgramReader
                     if (field.Name.Contains(">5__", StringComparison.Ordinal) && instruction.OpCode == OpCodes.Ldfld
                         && PassedOut(index => Ops[index].OpCode == OpCodes.Ldflda && Ops[index].Member?.Name == field.Name, depth) is { } givenOut)
                         return (givenOut, receiver.Start);
-                    return (new NamedValue(FieldName(field.Name)), receiver.Start);
+                    var named = new NamedValue(FieldName(field.Name));
+                    // A parameter the state machine keeps, set by the body before this read (Personal Hive's `dealer = dealer.PetOwner.Creature` for
+                    // Osty's hit): its last store on each way, else what it was given.
+                    if (field.DeclaringType.Contains(">d__", StringComparison.Ordinal) && !field.Name.StartsWith('<')
+                        && ParameterSet(index => Ops[index].OpCode == OpCodes.Stfld && Ops[index].Member?.Name == field.Name, named, at, depth) is { } set)
+                        return (set, receiver.Start);
+                    return (named, receiver.Start);
                 }
                 return (new QueryValue(field.DeclaringType, field.Name, receiver.Value, Array.Empty<ProgramValue>(), field.ValueType), receiver.Start);
             }
@@ -1791,6 +1805,39 @@ public static class ProgramReader
                 else truths = false;
             }
             return truths ? new ConditionValue(value) : new WaysValue(ways);
+        }
+
+        /// <summary>
+        /// A parameter the body sets before the read at <paramref name="loadAt"/> (a store <paramref name="isStore"/> finds): what the read gives on
+        /// each way, the last store reached there or, where none is, the parameter as it was given (<paramref name="given"/>). Null when the body
+        /// never sets it before the read; an unknown value when a store can't be read or one in a loop with the read can come from an earlier
+        /// round, so a parameter set is never read as the one given.
+        /// </summary>
+        private ProgramValue? ParameterSet(Func<int, bool> isStore, ProgramValue given, int loadAt, int depth)
+        {
+            var stores = new List<int>();
+            for (var i = 0; i < Ops.Count; i++)
+            {
+                if (!isStore(i)) continue;
+                if (_loopEnds.Any(loop => loop.Key <= loadAt && loadAt <= loop.Value && loop.Key <= i && i <= loop.Value)) return new UnknownValue($"{given} set in a loop");
+                if (i < loadAt) stores.Add(i);
+            }
+            if (stores.Count == 0) return null;
+            var later = ProgramCondition.Never;
+            var ways = new List<(ProgramCondition When, ProgramValue Value)>();
+            for (var storeIndex = stores.Count - 1; storeIndex >= 0; storeIndex--)
+            {
+                var store = stores[storeIndex];
+                if (store >= _reached.Length || _reached[store] is not { } reached) return new UnknownValue($"{given} set");
+                var stored = ReadBack(store, depth + 1);
+                if (stored.Start < 0) return new UnknownValue($"{given} set");
+                var last = reached.And(later.Not());
+                later = later.Or(reached);
+                if (!last.IsNever) ways.Insert(0, (last, stored.Value));
+            }
+            var unset = later.Not();
+            if (!unset.IsNever) ways.Add((unset, given));
+            return ways.Count == 1 && ways[0].When.IsAlways ? ways[0].Value : new WaysValue(ways);
         }
 
         /// <summary>

@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 138 game methods; 3 adapter rules; 62 hand-written models.
+# 20 engine rules naming 138 game methods; 3 adapter rules; 60 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -30,7 +30,7 @@ Draws: a full hand, No Draw, the discard pile shuffled in (a card its enchantmen
   simulator: SimEngine.DrawCards, SimEngine.DrawOne, SimEngine.DrawsStopped, SimEngine.DrawPrevented, SimEngine.Drawn, SimEngine.DrawReactions, SimEngine.DrawsFromPile, SimEngine.RoomIn, SimEngine.JoinHand, SimEngine.RunDrawnCard, SimDrawPile.Shuffled, SimDrawPile.ShuffledWithDiscard
 Cards leaving and joining piles mid-play: taken, discarded, exhausted, made; the card events and their listeners
   game: CardCmd.Discard, CardCmd.Exhaust, CardPileCmd.Add, CardPileCmd.AddGeneratedCardToCombat, Hook.AfterCardDiscarded, Hook.AfterCardExhausted, Hook.AfterCardChangedPiles, Hook.AfterCardGeneratedForCombat, PlayerCmd.GainEnergy, Hook.AfterEnergySpent, PlayerCmd.GainStars, Hook.AfterStarsGained, Hook.AfterStarsSpent
-  simulator: SimEngine.RunTakeFromHand, SimEngine.TakeFromHand, SimEngine.TakenEvents, SimEngine.TakenKey, SimEngine.ZeroedMatching, SimEngine.JoinsTakes, SimEngine.RunLeaveHand, SimEngine.RunExhaustFromHand, SimEngine.ExhaustChosenFromDrawPile, SimEngine.RunTakeToHand, SimEngine.TakeToHand, SimEngine.TakeOne, SimEngine.Less, SimEngine.InPile, SimEngine.ProfileIn, SimEngine.TakenId, SimEngine.Discarded, SimEngine.IntoDrawPile, SimEngine.AddToHand, SimEngine.CardEvents, SimEngine.CardEventsOf, SimEngine.OneCardEvent, SimEngine.RunCardEvent, SimEngine.FireCardEvent, SimEngine.CountEvent, SimEngine.ProcCardEvent, SimEngine.Raise, SimEngine.DrainPending
+  simulator: SimEngine.RunTakeFromHand, SimEngine.TakeFromHand, SimEngine.TakenEvents, SimEngine.TakenKey, SimEngine.ZeroedMatching, SimEngine.JoinsTakes, SimEngine.RunLeaveHand, SimEngine.RunExhaustFromHand, SimEngine.ExhaustChosenFromDrawPile, SimEngine.RunTakeToHand, SimEngine.TakeToHand, SimEngine.TakeOne, SimEngine.Less, SimEngine.InPile, SimEngine.ProfileIn, SimEngine.TakenId, SimEngine.Discarded, SimEngine.IntoDrawPile, SimEngine.MadeIntoDrawPile, SimEngine.AddToHand, SimEngine.CardEvents, SimEngine.CardEventsOf, SimEngine.OneCardEvent, SimEngine.RunCardEvent, SimEngine.FireCardEvent, SimEngine.CountEvent, SimEngine.ProcCardEvent, SimEngine.Raise, SimEngine.DrainPending
 Auto-plays: from the top of the draw pile, from the hand at the turn's end, the cards that play themselves
   game: CardPileCmd.AutoPlayFromDrawPile, CardCmd.AutoPlay, Hook.BeforeCardAutoPlayed, Hook.AfterAutoPostPlayPhaseEntered, HellraiserPower.AfterCardDrawnEarly, IAmInvincible.AfterAutoPostPlayPhaseEntered
   simulator: SimEngine.AutoPlayFromDraw, SimEngine.AutoPlayTop, SimEngine.PlayFromPile, SimEngine.HellraiserPlays, SimEngine.InvincibleFromPile, SimEngine.AutoPlayFromHand, SimEngine.AutoPostPlay, SimEngine.AutoPostPlayOf
@@ -81,8 +81,6 @@ Fairy in a Bottle and Lizard Tail: a death held back, healed from 0
 
 AsleepPower: AsleepPower.AfterDamageReceived, AsleepPower.AfterSideTurnEnd, AsleepPower.BeforeSideTurnEndVeryEarly
   model: AfterDamageReceived, OutcomeTab
-BiiigHug: BiiigHug.AfterObtained, BiiigHug.AfterShuffle
-  model: AfterCardEvent
 BurrowedPower: BurrowedPower.AfterBlockBroken, BurrowedPower.AfterRemoved, BurrowedPower.ShouldClearBlock
   model: AfterBlockBroken, OutcomeTab
 CalamityPower: CalamityPower.AfterCardPlayed, CalamityPower.BeforeCardPlayed, CalamityPower.InitInternalData
@@ -141,8 +139,6 @@ ParryPower: no hooks of its own
   model: nothing it overrides
 PenNib: PenNib.AfterCardPlayed, PenNib.BeforeCardPlayed, PenNib.ModifyDamageMultiplicative
   model: AfterCardPlayed, BeforeCardPlayed, ModifyDamageMultiplicative
-PersonalHivePower: PersonalHivePower.AfterDamageReceived
-  model: AfterDamageReceived
 PhantomBladesPower: PhantomBladesPower.AfterApplied, PhantomBladesPower.AfterRemoved, PhantomBladesPower.ModifyDamageAdditive, PhantomBladesPower.TryModifyKeywordsInCombat
   model: ModifyDamageAdditive
 PlatingPower: PlatingPower.AfterApplied, PlatingPower.AfterSideTurnStart, PlatingPower.BeforeSideTurnEndEarly, PlatingPower.BeforeSideTurnStart, PlatingPower.GetScaledAmountForMultiplayer

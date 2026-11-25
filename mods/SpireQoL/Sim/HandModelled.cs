@@ -53,7 +53,7 @@ public static class HandModelled
         new("Cards leaving and joining piles mid-play: taken, discarded, exhausted, made; the card events and their listeners",
             new[] { "SimEngine.RunTakeFromHand", "SimEngine.TakeFromHand", "SimEngine.TakenEvents", "SimEngine.TakenKey", "SimEngine.ZeroedMatching", "SimEngine.JoinsTakes", "SimEngine.RunLeaveHand",
                 "SimEngine.RunExhaustFromHand", "SimEngine.ExhaustChosenFromDrawPile", "SimEngine.RunTakeToHand", "SimEngine.TakeToHand", "SimEngine.TakeOne", "SimEngine.Less", "SimEngine.InPile",
-                "SimEngine.ProfileIn", "SimEngine.TakenId", "SimEngine.Discarded", "SimEngine.IntoDrawPile", "SimEngine.AddToHand", "SimEngine.CardEvents", "SimEngine.CardEventsOf", "SimEngine.OneCardEvent", "SimEngine.RunCardEvent",
+                "SimEngine.ProfileIn", "SimEngine.TakenId", "SimEngine.Discarded", "SimEngine.IntoDrawPile", "SimEngine.MadeIntoDrawPile", "SimEngine.AddToHand", "SimEngine.CardEvents", "SimEngine.CardEventsOf", "SimEngine.OneCardEvent", "SimEngine.RunCardEvent",
                 "SimEngine.FireCardEvent", "SimEngine.CountEvent", "SimEngine.ProcCardEvent", "SimEngine.Raise", "SimEngine.DrainPending" },
             new[] { "CardCmd.Discard", "CardCmd.Exhaust", "CardPileCmd.Add", "CardPileCmd.AddGeneratedCardToCombat", "Hook.AfterCardDiscarded", "Hook.AfterCardExhausted", "Hook.AfterCardChangedPiles",
                 "Hook.AfterCardGeneratedForCombat", "PlayerCmd.GainEnergy", "Hook.AfterEnergySpent", "PlayerCmd.GainStars", "Hook.AfterStarsGained", "Hook.AfterStarsSpent" }),

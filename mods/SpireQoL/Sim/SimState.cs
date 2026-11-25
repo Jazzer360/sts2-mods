@@ -823,7 +823,7 @@ public sealed class SimState
     /// <summary>Card events raised inside a hit or a death, run once it's over (SimEngine.Raise, DrainPending).</summary>
     internal ImmutableArray<PendingEvent> Pending = ImmutableArray<PendingEvent>.Empty;
     /// <summary>Cards made into a player's draw pile inside a hit (Personal Hive's Dazed), put in once it's over (DrainPending).</summary>
-    internal ImmutableArray<(int Player, string Card)> PendingIntoDraw = ImmutableArray<(int Player, string Card)>.Empty;
+    internal ImmutableArray<PendingMade> PendingIntoDraw = ImmutableArray<PendingMade>.Empty;
     /// <summary>Enemies whose death adds creatures (SimEnemy.Spawns), added once the hit is over (DrainPending).</summary>
     internal ImmutableArray<int> PendingSpawns = ImmutableArray<int>.Empty;
     /// <summary>Powers landed inside a hit or a death, their listeners told once it's over (SimEngine.ApplyInHit, DrainPending).</summary>

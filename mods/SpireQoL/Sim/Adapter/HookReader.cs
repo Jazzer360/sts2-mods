@@ -624,6 +624,8 @@ public static class HookReader
                 case DamageStep: return TabKind.Damage;
                 case DrawStep: return TabKind.Draw;
                 case GainEnergyStep: return TabKind.Energy;
+                // Cards made into a player's draw pile: how many (decision #161), unless its crossing makes it a trigger.
+                case MakeIntoDrawStep: return TabKind.CardsMade;
             }
         // A pass of the HP-loss pipeline changes the HP a hit takes: it acts (the hand-written models' trigger: Tungsten Rod, The Boot). A power an
         // attack spends (its AfterAttack takes its own stacks: Gigantification's Decrement) acts on that play (decision #228).
@@ -676,7 +678,9 @@ public static class HookReader
     internal static bool HurtsOwnerOf(IReadOnlyList<HookProgram> programs) =>
         programs.Where(program => program.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed)
             .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps())
-            .Any(step => step is ApplyPowerStep { Target: HookTarget.Owner, Debuff: true });
+            .Any(step => step is ApplyPowerStep { Target: HookTarget.Owner, Debuff: true })
+        // A Status or a Curse made into its owner's own draw pile (Biiig Hug's Soot on a shuffle a play sets off).
+        || new ModelSpec("", ModelKind.Power, programs).Steps().Any(step => step is MakeIntoDrawStep { Harms: true } make && MadeFor(make).All(creature => creature is { Who: HookWho.Owner, PetOwner: false }));
 
     /// <summary>
     /// A play sets off something that hurts the player who made it: a play hook's damage or debuff on the card's owner (Galvanic's damage to
@@ -691,7 +695,17 @@ public static class HookReader
         // attack hurts the player who made it (or their pet).
         || programs.Where(program => program.Hook is HookName.BeforeDamageReceived or HookName.AfterDamageReceived)
             .SelectMany(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps())
-            .Any(step => step is DamageStep { Target: HookTarget.Dealer });
+            .Any(step => step is DamageStep { Target: HookTarget.Dealer }
+                // A Status or a Curse made into the draw pile of the hit's dealer (or its pet's player: Personal Hive's Dazed).
+                || step is MakeIntoDrawStep { Harms: true } make && MadeFor(make).All(creature => creature is { Who: HookWho.Dealer }));
+
+    /// <summary>The creatures a made card's player is, on each way its code sets it (MakeIntoDrawStep.For).</summary>
+    private static IEnumerable<HookCreature?> MadeFor(MakeIntoDrawStep make) => make.For switch
+    {
+        HookWays ways => ways.Ways.Select(way => (way.Value as HookFactValue)?.Creature),
+        HookFactValue fact => new[] { fact.Creature },
+        _ => new HookCreature?[] { null },
+    };
 
     /// <summary>The condition holds only when the fact does (it's one of the condition's ands, not under a not).</summary>
     private static bool Needs(HookValue? when, HookFact fact) => when switch
@@ -1491,6 +1505,9 @@ public static class HookReader
                 }
                 case ChoiceStep:
                     throw new Gap(ReaderCapability.Pick, "gap: a pick");
+                // A card its code makes (CombatState.CreateCard<T>) that a command of the body adds to a pile: that command's step makes it (MakeIntoDrawStep).
+                case CreateStep create when MadeByACommand(create):
+                    return Array.Empty<HookStep>();
                 case CreateStep create:
                     throw new Gap(ReaderCapability.CardMade, $"gap: makes a {create.Card}");
                 default:
@@ -1498,6 +1515,77 @@ public static class HookReader
             }
         }
 
+        /// <summary>A CreateStep whose card a command of the body adds to a pile (CardPileCmd.AddGeneratedCardToCombat of CreateCard&lt;T&gt;: MadeOfAClass).</summary>
+        private bool MadeByACommand(CreateStep create) => _body != null && _body.All().OfType<CommandStep>().Any(command => command.Command.FullName == "CardPileCmd.AddGeneratedCardToCombat"
+            && command.Values.Count > 0 && MadeOfAClass(command.Values[0]) is { } made && made.GenericArguments[0] == create.Card);
+
+        /// <summary>The card a command adds, when the code makes it there of a class it names (CombatState.CreateCard&lt;T&gt;(player)); null otherwise.</summary>
+        private static QueryValue? MadeOfAClass(ProgramValue value) =>
+            Unstored(value) is QueryValue { Name: "CreateCard", GenericArguments.Count: 1, Arguments.Count: 1 } create ? create : null;
+
+        /// <summary>
+        /// CardPileCmd.AddGeneratedCardToCombat(CreateCard&lt;T&gt;(player), PileType.Draw, creator, CardPilePosition.Random): MakeIntoDrawStep, its card
+        /// the class's canonical one (its type and tags: what the created-card hooks test), for the player the code names (a creature of the hook's: the
+        /// owner, the dealer or its pet's player, on each way the code sets it), its creator the owner or none. Any other pile, position or creator is a gap.
+        /// </summary>
+        private HookStep MakeIntoDraw(QueryValue created, IReadOnlyList<ProgramValue> values, IReadOnlyList<string> types)
+        {
+            var card = created.GenericArguments[0];
+            var pileAt = IndexOf(types, "PileType");
+            var creatorAt = IndexOf(types, "Player");
+            var positionAt = IndexOf(types, "CardPilePosition");
+            if (pileAt < 0 || values[pileAt] is not ConstantValue pile || EnumName(_type.Assembly, "PileType", pile.Value) != "Draw")
+                throw new Gap(ReaderCapability.CardMade, $"gap: a {card} made into another pile");
+            if (positionAt < 0 || values[positionAt] is not ConstantValue position || EnumName(_type.Assembly, "CardPilePosition", position.Value) != "Random")
+                throw new Gap(ReaderCapability.CardMade, $"gap: a {card} made into a draw pile not at a random spot");
+            var byOwner = creatorAt >= 0 && IsOwner(values[creatorAt]);
+            if (!byOwner && (creatorAt < 0 || values[creatorAt] is not NullValue)) throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: a {card} made by {(creatorAt >= 0 ? values[creatorAt] : "none")}");
+            var (madeType, madeTags) = MadeCardFacts(card);
+            return new MakeIntoDrawStep(card, madeType, madeTags, PlayerIdOf(created.Arguments[0]), byOwner);
+        }
+
+        /// <summary>
+        /// A made card's type and tags, read from its class's code as the created-card hooks test them: its type the constant its constructor passes
+        /// CardModel's (base(cost, CardType.Status, ...)), its tags none unless the class overrides CanonicalTags (then a gap: not read yet).
+        /// </summary>
+        private (SimCardType Type, IReadOnlyList<SimCardTag> Tags) MadeCardFacts(string card)
+        {
+            var cardType = _type.Assembly.GetTypes().FirstOrDefault(candidate => candidate.Name == card && Derives(candidate, "CardModel"))
+                ?? throw new Gap(ReaderCapability.CardMade, $"gap: a {card} whose class isn't found");
+            if (cardType.GetMethods(Declared).Any(method => method.Name == "get_CanonicalTags")) throw new Gap(ReaderCapability.CardMade, $"gap: the tags of a made {card}");
+            foreach (var constructor in cardType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                var ops = _read(constructor);
+                for (var i = 0; i < ops.Count; i++)
+                {
+                    if (ops[i] is not { OpCode.Name: "call", Member: { Name: ".ctor", DeclaringType: "CardModel" } baseConstructor }) continue;
+                    var at = baseConstructor.ParameterTypes.ToList().IndexOf("CardType");
+                    var count = baseConstructor.ParameterTypes.Count;
+                    // The arguments pushed as constants just before the call, in order.
+                    if (at < 0 || i < count || ops.Skip(i - count).Take(count).Any(argument => argument.Integer == null)) break;
+                    var name = EnumName(_type.Assembly, "CardType", ops[i - count + at].Integer!.Value);
+                    return (name switch
+                    {
+                        "Attack" => SimCardType.Attack, "Skill" => SimCardType.Skill, "Power" => SimCardType.Power, "Status" => SimCardType.Status, "Curse" => SimCardType.Curse,
+                        _ => throw new Gap(ReaderCapability.CardMade, $"gap: a made {card} of type {name}"),
+                    }, Array.Empty<SimCardTag>());
+                }
+            }
+            throw new Gap(ReaderCapability.CardMade, $"gap: a made {card} whose type its constructor doesn't pass as a constant");
+        }
+
+        /// <summary>
+        /// The player a creature value of the hook names, as a creature id (HookFact.CreatureId): one creature of the hook's, or each way of a value
+        /// the code sets on several (PersonalHivePower's dealer, or its pet's player). Anything else is a gap.
+        /// </summary>
+        private HookValue PlayerIdOf(ProgramValue value)
+        {
+            var unstored = Unstored(value);
+            if (unstored is QueryValue { Name: "Player", Of: { } of } && Unstored(of) is WaysValue ways)
+                return new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), PlayerIdOf(new QueryValue("Creature", "Player", way.Value, Array.Empty<ProgramValue>(), "Player") { IsProperty = true }))).ToList());
+            if (CreatureOf(unstored) is { } creature) return CreatureFact(HookFact.CreatureId, creature);
+            throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: a card made for {value}");
+        }
         /// <summary>The hook body's program being read (BodySteps), for what a step asks of the steps around it.</summary>
         private ModelProgram? _body;
 
@@ -1597,6 +1685,8 @@ public static class HookReader
                     var creatorAt = IndexOf(types, "Player");
                     // A copy of a card event's card (AfterCardExhausted's card.CreateClone(): Burning Sticks'), the keywords it has kept.
                     var ofEventCard = values.Count > 0 && Unstored(values[0]) is QueryValue { Name: "CreateClone", Of: { } eventCloned } && IsEventCard(eventCloned) && _hook != "AfterCardPlayed";
+                    // A card of a class its code names (CombatState.CreateCard<T>(player)) into a draw pile at a random spot: Biiig Hug's Soot, Personal Hive's Dazed.
+                    if (values.Count > 0 && MadeOfAClass(values[0]) is { } created) return MakeIntoDraw(created, values, types);
                     if (values.Count == 0 || !IsCopyOfPlayCard(values[0]) && !ofEventCard) throw new Gap(ReaderCapability.CardMade, $"gap: makes {(values.Count > 0 ? values[0] : "nothing")}");
                     if (pileAt < 0 || values[pileAt] is not ConstantValue pile || EnumName(_type.Assembly, "PileType", pile.Value) != "Hand") throw new Gap(ReaderCapability.CardMade, "gap: a card made into another pile");
                     if (creatorAt < 0 || !IsOwner(values[creatorAt])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, "gap: a card made for someone else");

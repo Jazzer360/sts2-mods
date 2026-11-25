@@ -450,6 +450,17 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// CardPileCmd.AddGeneratedCardToCombat of a card into a player's draw pile at a random spot, as the game does it: the card into the pile
+    /// (IntoDrawPile), then Hook.AfterCardGeneratedForCombat told of it for its creator (none: no one's created-card hooks; the fight's log has it
+    /// under its creator, CombatHistory.CardGenerated, so none for no one).
+    /// </summary>
+    internal static IEnumerable<SimState> MadeIntoDrawPile(SimState state, PendingMade made)
+    {
+        var placed = IntoDrawPile(state, made.Player, made.Card);
+        return made.Made is not { } card ? placed : Then(placed.ToList(), branch => ProcCardEvent(branch, CardEvent.Generated, count: 1, made.Creator, card: card));
+    }
+
+    /// <summary>
     /// A card made into a player's draw pile at a random spot (CardPileCmd.AddGeneratedCardToCombat, CardPilePosition.Random: Personal
     /// Hive's Dazed, Biiig Hug's Soot), so a later draw in the same simulation can draw it: with cards known on top, a branch for each
     /// spot among them (1 in the pile's count + 1 each) and one for anywhere below them, into the unordered rest. Its profile is the

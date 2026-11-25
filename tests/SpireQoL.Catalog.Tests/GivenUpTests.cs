@@ -20,7 +20,7 @@ public class GivenUpTests
         GameModels.EnsureLoaded();
         var relics = typeof(RelicModel).Assembly.GetTypes().Where(type => !type.IsAbstract && typeof(RelicModel).IsAssignableFrom(type)).ToDictionary(type => type.Name);
         foreach (var name in SimModels.Names)
-            if (SimModels.Get(name) is { Harmful: true } model && relics.TryGetValue(name, out var relic))
+            if (SimModels.Get(name) is { } model && model.HarmfulFor(Who.You) && relics.TryGetValue(name, out var relic))
                 yield return (name, model.Seen, relic);
     }
 

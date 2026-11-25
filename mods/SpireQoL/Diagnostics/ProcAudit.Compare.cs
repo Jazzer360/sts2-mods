@@ -209,9 +209,9 @@ public sealed partial class ProcAudit
         {
             foreach (var type in every!)
             {
-                // Powers, and relics whose crossed tab a model fires when it acts and flashes (Biiig Hug); plain relic tabs are
+                // Powers, and relics whose crossed tab (on you: a relic is yours) a model fires when it acts and flashes; plain relic tabs are
                 // checked above, and crossed ones that give up a bonus by what the game shows instead (GivenUpIssues).
-                var flashingRelic = typeof(RelicModel).IsAssignableFrom(type) && SimModels.Get(type.Name) is { Harmful: true, Seen: ActedSeen.Flash };
+                var flashingRelic = typeof(RelicModel).IsAssignableFrom(type) && SimModels.Get(type.Name) is { Seen: ActedSeen.Flash } relicModel && relicModel.HarmfulFor(Who.You);
                 if (!(typeof(PowerModel).IsAssignableFrom(type) || flashingRelic) || LaterPlayOnly.Contains(type.Name)) continue;
                 if (!CodeIndex.FlashesOutsideAmountHooks(type)) continue;
                 if (flashed.Any(otherModel => otherModel.GetType() == type)) continue;

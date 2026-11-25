@@ -115,6 +115,12 @@ public sealed record PendingEvent(CardEvent Event, int Player, string? Source, i
 /// <summary>A power that landed where hooks can't branch (inside a hit or a death), its AfterPowerApplied listeners told once that's over.</summary>
 public sealed record PendingPower(PowerId Power, int Amount, int Applier, int Target, bool Debuff);
 
+/// <summary>
+/// A card made into a player's draw pile (CardPileCmd.AddGeneratedCardToCombat, CardPilePosition.Random): whose pile, the card's class, its creator
+/// (Who.None: none, a null in the game's code) and the card Hook.AfterCardGeneratedForCombat hears (null: no hook told, as before a read model made it).
+/// </summary>
+public sealed record PendingMade(int Player, string Card, int Creator, SimCard? Made);
+
 /// <summary>How many of each card event the current play has caused for its player (Unceasing Top: nothing drawn or created). Immutable.</summary>
 public sealed class CardEventCounts
 {

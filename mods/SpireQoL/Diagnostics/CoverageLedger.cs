@@ -43,7 +43,7 @@ internal static partial class CoverageLedger
         // ======== relics
         ["ArtOfWar"] = "covered: read from its code (ReadModel, decision #239): AfterCardPlayed marks an Attack played this turn, AfterSideTurnEnd keeps it as last turn's; its AfterEnergyReset pays its energy on !AnyAttacksPlayedLastTurn (past the turn predicted), so the play that turns that off gives it up: its crossed tab, checked by the relic going dark (its AfterCardPlayed sets Status Normal)",
         ["BeatingRemnant"] = "covered: read from its code (ReadModel, decision #195): ModifyHpLostAfterOsty caps HP its owner loses at MaxHpLoss less its DamageReceivedThisTurn, which AfterDamageReceived counts (its BeforeSideTurnStart reset comes as its owner's next turn starts)",
-        ["BiiigHug"] = "covered: AfterShuffle adds a Soot to the draw pile; crossed shuffle tab (its model; the Soot's own created-card event, AddGeneratedCardToCombat with you as its creator, isn't raised yet: TRACKER 22)",
+        ["BiiigHug"] = "covered: read from its code (ReadModel, decision #257): AfterShuffle makes a Soot into your draw pile at a random spot (AddGeneratedCardToCombat, you its creator: your created-card hooks hear it); crossed shuffle tab",
         ["BingBong"] = "ignore: AfterCardChangedPiles copies cards added to your deck (deck, not combat piles)",
         ["BoneFlute"] = "covered: read from its code (ReadModel, decision #228): AfterAttack gains block when its owner's Osty made the attack (command.Attacker's monster of the type Player.Osty gets, its PetOwner the owner); block tab for Osty-attack cards",
         ["BookOfFiveRings"] = "ignore: AfterCardChangedPiles heals when cards are added to your deck (deck, not combat)",
@@ -234,7 +234,7 @@ internal static partial class CoverageLedger
         ["PaleBlueDotPower"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed applies Draw Cards Next Turn after 5 cards this turn (the fight's log; proc tab, tracker); AfterSideTurnEnd lets it act again",
         ["PanachePower"] = "covered: read from its code (ReadModel, decision #195), each copy on its own (decision #196): AfterCardPlayed damages all enemies every 5 cards (proc damage, tracker)",
         ["PaperCutsPower"] = "ignore: AfterDamageGiven max HP",
-        ["PersonalHivePower"] = "covered: AfterDamageReceived Dazed into your draw pile, its amount per hit (crossed proc tab with the count: decision #161)",
+        ["PersonalHivePower"] = "covered: read from its code (ReadModel, decision #257): AfterDamageReceived makes its amount of Dazed into the draw pile of a powered hit's dealer (Osty's player for his), no creator (no created-card hook hears them); crossed proc tab with the count (decision #161)",
         ["PillarOfCreationPower"] = "covered: read from its code (ReadModel, decision #195): AfterCardGeneratedForCombat block per created card (proc block)",
         ["PlatingPower"] = "covered: BeforeSideTurnEndEarly block (model PlatingPower)",
         ["PlowPower"] = "covered: AfterDamageReceived stuns at its HP threshold (simulator)",

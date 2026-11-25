@@ -114,7 +114,7 @@ power PainfulStabsPower: AfterAttack: gap: a loop | ShouldCreatureBeRemovedFromC
 power PaleBlueDotPower: AfterCardPlayed: read | AfterSideTurnEnd: read | AfterSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power PanachePower: AfterCardPlayed: read | AfterSideTurnEnd: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power PaperCutsPower: AfterDamageGiven: gap: CreatureCmd.LoseMaxHp isn't translated
-power PersonalHivePower: AfterDamageReceived: gap: makes a Dazed
+power PersonalHivePower: AfterDamageReceived: read
 power PillarOfCreationPower: AfterCardGeneratedForCombat: read
 power PlatingPower: AfterApplied: gap: the value this.Owner.CombatState.RunState.Players.Count | AfterSideTurnStart: gap: the value combatState.RoundNumber | BeforeSideTurnEndEarly: read | BeforeSideTurnStart: gap: the value side | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply's scaling for the players: read into the class's PowerRule and run by the engine as it lands one (decision #234)
 power PlowPower: AfterDamageReceived: gap: changes a game object outside a command (CeremonialBeast.SetStunned)
@@ -194,7 +194,7 @@ power WuppysLoyaltyPower: ModifyPreBlockDamageTarget: gap: the simulator runs no
 power YahPower: AfterArrowDislodged: read | BeforeSideTurnStart: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 relic ArtOfWar: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterEnergyReset: not run: it runs as the players' next turn starts, past the turns a simulation covers | AfterSideTurnEnd: read
 relic BeatingRemnant: AfterDamageReceived: read | AfterModifyingHpLostAfterOsty: read | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers | ModifyHpLostAfterOsty: read
-relic BiiigHug: AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterShuffle: gap: makes a Soot
+relic BiiigHug: AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterShuffle: read
 relic BingBong: AfterCardChangedPiles: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic BoneFlute: AfterAttack: read
 relic BookOfFiveRings: AfterCardChangedPiles: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)

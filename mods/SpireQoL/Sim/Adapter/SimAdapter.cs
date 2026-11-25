@@ -410,21 +410,29 @@ public static partial class SimAdapter
             if (handCards.Any(card => Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType())))
                 foreach (var card in handCards) Remembered(card);
             DrawProfiles = profiles;
-            // Cards something on this board makes into your draw pile (Personal Hive's Dazed, Biiig Hug's Soot): their profiles, from
-            // the game's own card (ModelDb), for a draw later in the same simulation.
+            // Cards something on this board makes into a draw pile (its code's MakeIntoDrawStep: Personal Hive's Dazed, Biiig Hug's Soot): their
+            // profiles, from the game's own card, for a draw later in the same simulation.
             var made = new Dictionary<string, SimDrawCard>();
-            void Made<T>() where T : CardModel
+            void Made(string cardClass)
             {
+                if (made.ContainsKey(cardClass)) return;
                 try
                 {
-                    var card = ModelDb.Card<T>();
-                    made[typeof(T).Name] = Profile(card);
+                    if (Procs.Programs.MadeCards.CanonicalOf(cardClass) is not { } card) return;
+                    made[cardClass] = Profile(card);
                     // It listens from your piles once made (none of it there yet).
                     if (SimReaders.CardListenerOf(card) is { } listener) player.Cards = player.Cards.Add(listener, delta: 0);
                 }
                 catch { /* not built: a draw of it is unknown */ }
             }
-            if (combat.Enemies.Any(enemy => enemy.Powers.Any(power => power.GetType().Name == nameof(PersonalHivePower)))) Made<Dazed>();
+            void MadeBy(AbstractModel model)
+            {
+                if (SimModels.Get(SimReaders.ModelName(model)) is ReadModel { CardsMadeIntoDraw: { Count: > 0 } cards }) foreach (var cardClass in cards) Made(cardClass);
+            }
+            // Your draw pile's: what an enemy's powers, your powers and your relics make into it.
+            foreach (var creature in combat.Enemies.Append(me.Creature))
+                foreach (var power in creature.Powers) MadeBy(power);
+            foreach (var relic in me.Relics) MadeBy(relic);
             // The cards your hand's cards make into your hand: into a full one they go to your discard pile (CardEventAction.MadeCard).
             foreach (var maker in handCards)
                 if (MadeCardOf(maker) is { } madeByPlay && !made.ContainsKey(madeByPlay.GetType().Name))
@@ -432,7 +440,6 @@ public static partial class SimAdapter
                     try { made[madeByPlay.GetType().Name] = Profile(madeByPlay); }
                     catch { /* not built: it isn't followed into the pile */ }
                 }
-            if (me.Relics.Any(relic => relic.GetType().Name == nameof(MegaCrit.Sts2.Core.Models.Relics.BiiigHug))) Made<Soot>();
             player.MadeCards = made.Count > 0 ? made : null;
         }
         catch

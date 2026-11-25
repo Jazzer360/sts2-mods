@@ -191,14 +191,14 @@ public static partial class SimEngine
         var spawns = state.PendingSpawns;
         var powers = state.PendingPowers;
         state.Pending = ImmutableArray<PendingEvent>.Empty;
-        state.PendingIntoDraw = ImmutableArray<(int Player, string Card)>.Empty;
+        state.PendingIntoDraw = ImmutableArray<PendingMade>.Empty;
         state.PendingSpawns = ImmutableArray<int>.Empty;
         state.PendingPowers = ImmutableArray<PendingPower>.Empty;
         IEnumerable<SimState> states = new[] { state };
         foreach (var dead in spawns) states = Then(states.ToList(), branch => Spawn(branch, dead));
         // The powers that landed: each one's listeners told in the order they landed (Hook.AfterPowerAmountChanged).
         foreach (var (power, amount, applier, target, debuff) in powers) states = Then(states.ToList(), branch => Tell(branch, power, amount, applier, target, debuff));
-        foreach (var (player, card) in intoDraw) states = Then(states.ToList(), branch => IntoDrawPile(branch, player, card));
+        foreach (var made in intoDraw) states = Then(states.ToList(), branch => MadeIntoDrawPile(branch, made));
         foreach (var (cardEvent, player, source, count) in pending)
         {
             var tally = source != null && SimModels.Get(source) is { } model ? TallyFor(model.Name, model.Tab, cardEvent, player) : null;

@@ -668,6 +668,19 @@ public sealed record FreeInHandStep : HookStep;
 /// </summary>
 /// <param name="OfEventCard">A copy of the card event's card instead (AfterCardExhausted's card.CreateClone(): Burning Sticks').</param>
 public sealed record MakeCopyStep(bool Ethereal, bool OfEventCard = false) : HookStep;
+/// <summary>
+/// CardPileCmd.AddGeneratedCardToCombat(CombatState.CreateCard&lt;Card&gt;(player), PileType.Draw, creator, CardPilePosition.Random): a card of a class
+/// its code names made into <paramref name="For"/>'s draw pile at a random spot (SimEngine.IntoDrawPile: a later draw can find it), then
+/// Hook.AfterCardGeneratedForCombat told of it (its class, type and tags, the canonical card's), its creator the owner or none
+/// (<paramref name="ByOwner"/>: a null creator, Personal Hive's, is no one's, so no created-card hook of anyone's hears it). Inside a hit it waits
+/// for the hit (SimState.PendingIntoDraw). Biiig Hug's Soot, Personal Hive's Dazed.
+/// </summary>
+/// <param name="For">Whose card and pile it is: a creature id (the owner, the hit's dealer or its pet's player).</param>
+public sealed record MakeIntoDrawStep(string Card, SimCardType Type, IReadOnlyList<SimCardTag> Tags, HookValue For, bool ByOwner) : HookStep
+{
+    /// <summary>A card against the player whose pile it goes into (a Status or a Curse: Dazed, Soot, Wound).</summary>
+    public bool Harms => Type is SimCardType.Status or SimCardType.Curse;
+}
 
 /// <summary>PowerCmd.Remove(this): the power itself goes from its owner.</summary>
 public sealed record RemovePowerStep : HookStep;
@@ -882,6 +895,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             RepeatStep repeat => Inside(repeat.Times).Concat(repeat.Steps.SelectMany(OfStep)),
             ForEachStep each => Inside(each.Where).Concat(each.Steps.SelectMany(OfStep)),
             LetStep let => Inside(let.Value),
+            MakeIntoDrawStep make => Inside(make.For),
             _ => Array.Empty<HookValue>(),
         });
         return Hooks.SelectMany(program => Inside(program.Returns).Concat(program.Steps.SelectMany(OfStep)))

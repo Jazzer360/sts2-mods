@@ -130,7 +130,7 @@ public sealed partial class ProcAudit
         foreach (var (relic, (_, statusBefore)) in window.FullBefore.Relics)
         {
             var name = relic.GetType().Name;
-            if (SimModels.Get(name) is not { Harmful: true } simModel || simModel.Seen == ActedSeen.Flash) continue;
+            if (SimModels.Get(name) is not { } simModel || !simModel.HarmfulFor(Who.You) || simModel.Seen == ActedSeen.Flash) continue;
             var tabbed = sourceOf.TryGetValue(name, out var tab) && tab.Crossed;
             bool givenUp;
             string what;

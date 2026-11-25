@@ -2072,3 +2072,31 @@ public sealed class TheGambitPower : SimModel
         enemy.Hp = 0;
     }
 }
+
+// ---- cards made into a draw pile (round eighteen: Sim/Models/ProcPowerModels.cs and ProcRelicModels.cs, deleted 2026-11-24)
+
+/// <summary>
+/// PersonalHivePower.AfterDamageReceived: each powered attack hit on it from a player puts its amount of Dazed into their draw pile at
+/// random spots (bad for you), where a later draw can find them. Its tab counts them (decision #161): the hits of the play times its amount.
+/// </summary>
+public sealed class PersonalHivePower : ProcModel
+{
+    public override TabKind? Tab => TabKind.CardsMade;
+    public override bool Harmful => true;
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Target != owner || hit.Dealer is not { } dealer || !Who.IsPlayer(dealer) || !hit.Props.IsPoweredAttack()) return;
+        var amount = Amount(state, owner);
+        state.LogFired(Name, amount, owner);
+        // Each Dazed goes into the attacker's draw pile at a random spot (CardPilePosition.Random), once the hit is over (no created-card hook told).
+        for (var i = 0; i < amount; i++) state.PendingIntoDraw = state.PendingIntoDraw.Add(new PendingMade(dealer, CardId.Dazed.Name, Who.None, Made: null));
+    }
+}
+
+/// <summary>BiiigHug.AfterShuffle: a Soot into your draw pile at a random spot on every shuffle (bad for you), where a later draw can find it.</summary>
+public sealed class BiiigHug : RelicProc
+{
+    public override bool Harmful => true;
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
+        cardEvent == CardEvent.Shuffled && player == owner ? Fire(state, owner).SelectMany(branch => SimEngine.IntoDrawPile(branch, owner, CardId.Soot.Name)).ToList() : One(state);
+}
