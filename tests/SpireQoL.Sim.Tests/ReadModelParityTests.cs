@@ -459,12 +459,15 @@ public class ReadModelParityTests
                     {
                         // As the engine runs a play: BeforeCardPlayed, the play started counted, the play finished counted, AfterCardPlayed.
                         branch.CurrentPlay = play;
+                        // What it's the first of this turn, as it starts (SimEngine's Count: SimCardPlay.FirstThisTurn).
+                        var started = play with { FirstThisTurn = SimKeys.FirstThisTurn(SimEngine.TurnOf(branch, play.Owner), play.Card) };
                         return model.BeforeCardPlayed(branch, owner, play).Select(before =>
                         {
                             var player = before.MutablePlayer(play.Owner);
                             player.Turn = SimKeys.CountPlay(SimKeys.CountPlay(player.Turn, PlayStage.Started, play.Card.Type, play.Card.Tags), PlayStage.Finished, play.Card.Type, play.Card.Tags);
+                            before.CurrentPlay = started;
                             return before;
-                        }).SelectMany(after => model.AfterCardPlayed(after, owner, play)).ToList();
+                        }).SelectMany(after => model.AfterCardPlayed(after, owner, started)).ToList();
                     }));
                 foreach (var play in Plays(others))
                 {

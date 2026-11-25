@@ -151,7 +151,7 @@ power SlumberPower: AfterDamageReceived: gap: a stunned move the reader doesn't 
 power SmoggyPower: AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterCardPlayed: gap: a loop | AfterSideTurnEnd: gap: a loop | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
 power SmokestackPower: AfterCardGeneratedForCombat: read
 power SneakyPower: AfterCardPlayed: read
-power SongPathPower: AfterCardPlayed: gap: tests FirstOrDefault(Instance.History.CardPlaysStarted, e => e.HappenedThisTurn(cardPlay.Player.Creature.CombatState) and Contains(e.CardPlay.Card.Tags, 7) and e.CardPlay.Player == cardPlay.Player)
+power SongPathPower: AfterCardPlayed: read
 power SoulboundPower: AfterCardGeneratedForCombat: gap: the value creator.Creature
 power SpeedsterPower: AfterCardDrawn: read
 power SpiritOfAshPower: BeforeCardPlayed: read
@@ -184,7 +184,7 @@ power UnderworldPower: AfterDamageGiven: read | AfterSideTurnEnd: not run: its c
 power VeilpiercerPower: BeforeCardPlayed: gap: tests {cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Keywords.Contains(2) and not cardPlay.Card.Pile: ?local; cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Keywords.Contains(2) and cardPlay.Card.Pile: new Nullable`1(cardPlay.Card.Pile.Type)}.HasValue | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
 power ViciousPower: AfterPowerAmountChanged: read
 power VigorPower: AfterAttack: read | BeforeAttack: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyDamageAdditive: read
-power ViolentChordPower: AfterCardPlayed: gap: tests FirstOrDefault(Instance.History.CardPlaysStarted, e => e.HappenedThisTurn(cardPlay.Player.Creature.CombatState) and Contains(e.CardPlay.Card.Tags, 6) and e.CardPlay.Player == cardPlay.Player)
+power ViolentChordPower: AfterCardPlayed: read
 power VitalSparkPower: AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterCardPlayed: read | AfterPowerAmountChanged: not run: it only sets what its cards show (an affliction's amount): no code a fight runs reads it | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | BeforeCombatStart: not run: before the fight: the state is read after it
 power VoidFormPower: AfterApplied: read | AfterCardPlayed: gap: tests cardPlay | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | BeforeApplied: gap: the simulator runs no read model's BeforeApplied | BeforePowerAmountChanged: gap: the simulator runs no read model's BeforePowerAmountChanged | BeforeSideTurnStart: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate | TryModifyStarCost: gap: the simulator runs no read model's TryModifyStarCost
 power VulnerablePower: AfterSideTurnEnd: not run: its commands wait on the enemies' side's turn ending, which no simulation reaches | ModifyDamageMultiplicative: read

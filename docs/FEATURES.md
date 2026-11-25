@@ -433,8 +433,8 @@ Beside the last number (the heart line when there is one): a skull when this mig
 | Biiig Hug | cards whose draw causes a shuffle (a Soot into your draw pile) | trigger, crossed |
 | Lost Wisp | powers | damage |
 | Kusarigama, Letter Opener | completing card | damage |
-| Violent Chord (the Fool) | your first Wah this turn | damage to every enemy |
-| Song Path (the Fool) | your first Cho this turn | block |
+| Violent Chord (the Fool) | your first Wah this turn (the play itself, as the game asks it: one Lost Lute auto-plays inside it leaves it the first; worked out from its code, decision #247) | damage to every enemy |
+| Song Path (the Fool) | your first Cho this turn (the play itself, as Violent Chord; worked out from its code, decision #247) | block |
 | Lullaby (the Fool) | the card that completes Wah, Cho and Ki this turn (once a turn) | block |
 | Motif, Lost Lute (the Fool) | your first Wah, Cho or Ki this turn | trigger (draws / plays the top of your draw pile) |
 | Conductor's Baton | the card that brings you to three melodies this turn | trigger (powered attacks on you deal 75% until your next turn; Incoming Damage counts it from that play on) |

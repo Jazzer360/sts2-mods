@@ -24369,6 +24369,101 @@
     "HelpsOwner": false
   },
   {
+    "Name": "SongPathPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004C",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardTag",
+                    "Of": "Cho"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:005F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsFirst",
+                  "Of": "Tag:Cho"
+                }
+              }
+            }
+          },
+          {
+            "$kind": "GainBlockStep",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004C",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardTag",
+                    "Of": "Cho"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:005F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsFirst",
+                  "Of": "Tag:Cho"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Block",
+    "HelpsOwner": false
+  },
+  {
     "Name": "Sown",
     "Kind": "Enchantment",
     "Hooks": [
@@ -29298,6 +29393,103 @@
       }
     ],
     "Tab": "Trigger",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "ViolentChordPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004C",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardTag",
+                    "Of": "Wah"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:005F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsFirst",
+                  "Of": "Tag:Wah"
+                }
+              }
+            }
+          },
+          {
+            "$kind": "DamageStep",
+            "Target": "AllEnemies",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Props": {
+              "$kind": "HookConstant",
+              "Value": 4
+            },
+            "NoDealer": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:002F",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:004C",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardTag",
+                    "Of": "Wah"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:005F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsFirst",
+                  "Of": "Tag:Wah"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Damage",
     "HelpsOwner": false
   },
   {

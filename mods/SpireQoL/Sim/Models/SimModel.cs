@@ -147,6 +147,9 @@ public sealed record SimCardPlay(SimCard Card, int Owner, [property: JsonConvert
     /// (decision #117).
     /// </summary>
     public int ArrowEnergy { get; init; }
+
+    /// <summary>What this play is the first of this turn among its player's plays, set as it starts (SimKeys.FirstThisTurn's bits).</summary>
+    public int FirstThisTurn { get; init; }
 }
 
 /// <summary>A damage calculation's inputs (Hook.ModifyDamage): who deals it to whom, its props, and the card it's from.</summary>

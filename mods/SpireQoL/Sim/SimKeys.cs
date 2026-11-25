@@ -78,6 +78,27 @@ public static class SimKeys
     /// </summary>
     public static string PlayEvent(CardEvent cardEvent) => EventNames[(int)cardEvent]!;
 
+    /// <summary>
+    /// What a play about to start is the first of this turn among its player's plays, from their turn counts before it (SimCardPlay.FirstThisTurn):
+    /// the first play at all (bit 0), the first of its type (bit 1 + its SimCardType), the first with each of its tags (bit 8 + its SimCardTag).
+    /// The game's log answers it by the play itself (MelodyCmd.IsFirstPlayThisTurn: the first such entry is this play), so a play started inside
+    /// this one (Lost Lute's auto-play in its AfterCardPlayed) doesn't change it, as a count after it would.
+    /// </summary>
+    public static int FirstThisTurn(NamedCounts turnBefore, SimCard card)
+    {
+        var bits = turnBefore[Plays(PlayStage.Started)] == 0 ? 1 : 0;
+        if (card.Type != SimCardType.None && turnBefore[Plays(PlayStage.Started, card.Type)] == 0) bits |= FirstOfType(card.Type);
+        foreach (var tag in card.Tags)
+            if (turnBefore[Plays(PlayStage.Started, tag)] == 0) bits |= FirstWithTag(tag);
+        return bits;
+    }
+
+    /// <summary>The bit of FirstThisTurn for the first play of a type.</summary>
+    public static int FirstOfType(SimCardType type) => 1 << (1 + (int)type);
+
+    /// <summary>The bit of FirstThisTurn for the first play with a tag.</summary>
+    public static int FirstWithTag(SimCardTag tag) => 1 << (8 + (int)tag);
+
     /// <summary>A player's turn counts with one more play at this stage: in all, of its type, and of each of its tags.</summary>
     public static NamedCounts CountPlay(NamedCounts turn, PlayStage stage, SimCardType type, IEnumerable<SimCardTag> tags)
     {

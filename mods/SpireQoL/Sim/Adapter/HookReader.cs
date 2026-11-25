@@ -2229,6 +2229,7 @@ public static class HookReader
         {
             if (AttackCompare(compare) is { } attacks) return attacks;
             if (SourceCompare(compare) is { } sources) return sources;
+            if (FirstPlayCompare(compare) is { } firstPlay) return firstPlay;
             // The stars a gain gave against none (AfterStarsGained's amount > 0: Black Hole's): the simulator raises a stars-gained event for a
             // PlayerCmd.GainStars alone, and every one in the game gains a Stars value or a power's amount, at least 1 (StarsGainTests holds it to the
             // code). Any other comparison of it is a gap: the simulator keeps no count of stars.
@@ -2582,6 +2583,55 @@ public static class HookReader
                 return new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), Value(way.Value))).ToList());
             if (value is QueryValue { Of: { } receiver } call && ModelCall(call, receiver) is { } called) return called;
             throw new Gap(ReaderCapabilities.OfValue(value), $"gap: the value {value}");
+        }
+
+        /// <summary>
+        /// The card played compared with the play of the first entry of the fight's log a FirstOrDefault finds (MelodyCmd.IsFirstPlayThisTurn's
+        /// FirstOrDefault(CardPlaysStarted, e =&gt; this turn, a tag, its player's)?.CardPlay == cardPlay, read where its helper is called): the play is
+        /// that first one (HookFact.PlayIsFirst). Every way of the value is null (none found: never the play) or that entry's play. Null for any other
+        /// comparison.
+        /// </summary>
+        private HookValue? FirstPlayCompare(CompareValue compare)
+        {
+            if (compare.Op is not (Comparison.Equal or Comparison.NotEqual) || !IsPlayHook(_hook)) return null;
+            foreach (var (one, other) in new[] { (compare.Left, compare.Right), (compare.Right, compare.Left) })
+            {
+                if (Unstored(other) is not (ParameterValue { Name: "cardPlay" } or NamedValue { Name: "cardPlay" })) continue;
+                var values = Unstored(one) is WaysValue ways ? ways.Ways.Select(way => Unstored(way.Value)).ToList() : new List<ProgramValue> { Unstored(one) };
+                QueryValue? first = null;
+                foreach (var value in values)
+                {
+                    if (value is NullValue) continue;
+                    if (value is not QueryValue { Name: "CardPlay", Of: { } foundOf } || Unstored(foundOf) is not QueryValue { Name: "FirstOrDefault" } found || !ProgramReader.ReadsHistory(found)) return null;
+                    if (first != null && found.ToString() != first.ToString()) return null;
+                    first = found;
+                }
+                if (first == null) return null;
+                var isFirst = FirstPlay(first);
+                return compare.Op == Comparison.Equal ? isFirst : Not(isFirst);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// The first entry a FirstOrDefault of the fight's log finds is the card played (HookFact.PlayIsFirst): an entry of the plays started this turn,
+        /// its player's (e.CardPlay.Player == cardPlay.Player: the turn counts the play's FirstThisTurn is read from are its player's), of every play,
+        /// of a type or with a tag (the ledger's own reading of the rest of its tests). Anything else is a gap.
+        /// </summary>
+        private HookValue FirstPlay(QueryValue first)
+        {
+            if (first.Arguments is not [var source, LambdaValue lambda] || lambda.Body.Terms is not [var tests]) throw new Gap(ReaderCapability.FightLog, $"gap: the fight's log's first entry of {first}");
+            bool IsEntryPlayer(ProgramValue value) => Unstored(value) is QueryValue { Name: "Player", Of: QueryValue { Name: "CardPlay", Of: ParameterValue { Name: var entry } } } && entry == lambda.Parameter;
+            static bool IsPlayPlayer(ProgramValue value) => value is QueryValue { Name: "Player", Of: ParameterValue { Name: "cardPlay" } or NamedValue { Name: "cardPlay" } };
+            bool PlaysPlayer(ConditionLiteral literal) => literal.Holds && literal.Test is CompareValue { Op: Comparison.Equal } player
+                && (IsEntryPlayer(player.Left) && IsPlayPlayer(player.Right) || IsEntryPlayer(player.Right) && IsPlayPlayer(player.Left));
+            if (tests.Count(PlaysPlayer) != 1) throw new Gap(ReaderCapability.FightLog, $"gap: the fight's log's first entry, not of the play's player: {first}");
+            var rest = tests.Where(literal => !PlaysPlayer(literal)).Aggregate(ProgramCondition.Always, (condition, literal) => condition.And(literal));
+            var reading = HistoryQueryReader.Read(first with { Name = "Count", Arguments = new ProgramValue[] { source, lambda with { Body = rest } } }, (enumType, number) => EnumName(_type.Assembly, enumType, number));
+            if (reading.Query is not { Kind: HistoryKind.CardPlayStarted, Scope: HistoryScope.ThisTurn, Whose: HistoryWhose.Anyone, Details: HistoryDetail.None, Power: null, Card: null, Orb: null } query
+                || query.CardType != SimCardType.None && query.CardTag != null)
+                throw new Gap(ReaderCapability.FightLog, $"gap: the fight's log's first entry ({reading.Gap ?? "not a first play"}: {reading.Why}): {first}");
+            return new HookFactValue(HookFact.PlayIsFirst) { Of = query.CardTag is { } tag ? "Tag:" + tag : query.CardType != SimCardType.None ? "Type:" + query.CardType : "" };
         }
 
         /// <summary>

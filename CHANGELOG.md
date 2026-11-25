@@ -25,6 +25,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Black Hole is worked out from its own code (its damage after a card that spent stars, and on each stars gain). Its tab is unchanged.
 - An enemy's Shriek, Flutter and Ravenous are worked out from their own code (the stun each gives its owner, Flutter's halved damage, Ravenous' Strength). Their tabs are unchanged.
 - Burning Sticks is worked out from its own code (the copy of the first Skill you exhaust each combat). Its tab is unchanged.
+- Violent Chord and Song Path are worked out from their own code (your first Wah or Cho this turn). Their tabs are unchanged but for the fix below.
 - Art of War, Ripple Basin and Parrying Shield are worked out from their own code: the tab that says a card gives up (or sets up) their bonus comes from the condition each pays out on, as the play leaves it. What's shown is unchanged.
 - Self-Forming Clay, Emotion Chip, Demon Tongue and an enemy's Slippery are worked out from their own code (what each does when its owner loses HP, and the tab that says a card makes it act). What's shown is unchanged.
 - Monarch's Gaze is worked out from its own code (the temporary Strength loss each of your powered hits gives its target). What's shown is unchanged.
@@ -64,6 +65,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Fixed
 - Much less garbage in fights: the check for a change on the board asked every power on every creature, on every frame, whether its code keeps who applied it, and worked that out from the power's code each time (about 9 KB a frame in a fight, two thirds of what the mod allocated on the game's thread, and the collections that came with it). That and a power's, relic's or enchantment's own fields are now worked out once.
+- Violent Chord and Song Path count your first Wah or Cho this turn by the play itself, as the game does: a Wah or Cho that Lost Lute plays off your draw pile inside it no longer stops the card you played from counting as the first (it showed no damage or block from them).
 - Play Preview: Incoming Damage, Teammate Incoming Damage and the Death Skull show the held card's turn instead of disappearing (they now read the totals the card's own search keeps, not the breakdown by source only the turn forecast keeps), and the line through an enemy's damage and the new number above it sit on the game's number wherever its label puts it.
 - Play Preview: a held card's prediction counts as for the board now when it was worked out from the same board, not only from the same read of it, so the board read again (as dev mode does once a second) no longer hides the preview. Dev mode logs why a card ready to play shows no preview.
 - The update notice on the main menu no longer builds its text again on every frame, and a card shown as a tiny card (tabs, Relic Counters, the map's reminders, the settings menu) stops re-fitting once it's in place: neither makes garbage on a frame where nothing changed.

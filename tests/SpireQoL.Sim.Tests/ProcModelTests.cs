@@ -338,6 +338,25 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void AMelodyAutoPlayedInsideThePlayLeavesItTheFirst()
+    {
+        // MelodyCmd.IsFirstPlayThisTurn compares the first started entry with the play itself, "so a nested play can land in the history before the
+        // outer play's hook sees it" (its own comment): Lost Lute, listening before Violent Chord, auto-plays a Wah off your draw pile in the Wah's
+        // AfterCardPlayed; Violent Chord then hears the outer Wah, still the first (its 3 to every enemy), and not the inner one.
+        var wah = Card("WahSlap", SimCardType.Attack, SimCardTag.Wah);
+        var state = Power(Power(State(), PowerId.LostLute, amount: 1), PowerId.ViolentChord, amount: 3);
+        var inner = new SimPlay
+        {
+            Name = "WahStep", AutoPlay = true, TargetId = Who.None,
+            Card = new SimCardPlay(new SimCard("WahStep", SimCardType.Skill) { Tags = new() { SimCardTag.Wah } }, Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: true),
+        };
+        state.You.Draw = new SimDrawPile { Top = { new SimDrawCard("wah step") { FromPile = new SimHandCard { Name = "WahStep", Plays = { inner } } } } };
+        var after = One(state, Play(wah, target: 0, plays: 1, Attack(baseDamage: 0)));
+        Assert.Equal(1, after.AutoPlayed);
+        Assert.Equal(97, after.Enemy(id: 0)!.Hp);
+    }
+
+    [Fact]
     public void LullabyAndConductorsBatonFireOnTheThirdMelody()
     {
         var card = Card("KiStep", SimCardType.Skill, SimCardTag.Ki);

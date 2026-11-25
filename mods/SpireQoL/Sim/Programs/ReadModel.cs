@@ -1754,6 +1754,14 @@ public sealed class ReadModel : SimModel
                 : IsCardEventHook(args.Hook) ? args.State.EventCard?.Ethereal : args.Play?.Card.Ethereal) == true ? 1m : 0m;
             case HookFact.CardEnergy: return (in HookArgs args) => args.Play?.Card.Energy ?? 0;
             case HookFact.PlayStars: return (in HookArgs args) => args.Play?.Card.Stars ?? 0;
+            case HookFact.PlayIsFirst:
+            {
+                // Its bit of the play's FirstThisTurn: the first play at all, of a type, with a tag (read once, never per call).
+                var firstOf = fact.Of ?? "";
+                var bit = firstOf.StartsWith("Type:", StringComparison.Ordinal) ? SimKeys.FirstOfType(Enum.Parse<SimCardType>(firstOf[5..]))
+                    : firstOf.StartsWith("Tag:", StringComparison.Ordinal) ? SimKeys.FirstWithTag(Enum.Parse<SimCardTag>(firstOf[4..])) : 1;
+                return (in HookArgs args) => args.Play is { } first && (first.FirstThisTurn & bit) != 0 ? 1m : 0m;
+            }
             case HookFact.PlayIsLast: return (in HookArgs args) => args.Play is { } last && last.PlayIndex == last.PlayCount - 1 ? 1m : 0m;
             // As the plays before left it: once upgraded, the card in play is its upgraded copy (decision #218).
             case HookFact.CardUpgradable: return (in HookArgs args) => args.Play?.Card.Upgradable == true ? 1m : 0m;

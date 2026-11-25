@@ -476,6 +476,8 @@ public static partial class SimEngine
         foreach (var (model, owner) in Listeners(state))
             if (model is ReadModel { PayoutReadsThePlayLog: true } read) (watching ??= new()).Add((read, owner, read.PayoutOn(state, owner)));
         var player = state.MutablePlayer(play.Owner);
+        // What it's the first of this turn, as it starts (the game's log knows the play itself: MelodyCmd.IsFirstPlayThisTurn).
+        if (stage == PlayStage.Started && ReferenceEquals(state.CurrentPlay, play)) state.CurrentPlay = play with { FirstThisTurn = SimKeys.FirstThisTurn(player.Turn, play.Card) };
         player.Turn = SimKeys.CountPlay(player.Turn, stage, play.Card.Type, play.Card.Tags);
         if (state.History.Count > 0) RecordPlay(state, play, stage);
         if (watching != null)

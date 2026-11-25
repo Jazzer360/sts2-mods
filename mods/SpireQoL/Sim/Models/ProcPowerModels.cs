@@ -254,21 +254,7 @@ internal static class Melodies
     }
 }
 
-/// <summary>ViolentChordPower.AfterCardPlayed: the first Wah each turn deals its amount to every hittable enemy (unpowered).</summary>
-public sealed class ViolentChordPower : ProcModel
-{
-    public override TabKind? Tab => TabKind.Damage;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && Melodies.First(state, play, SimCardTag.Wah) ? DamageAll(state, owner, Amount(state, owner)) : One(state);
-}
-
-/// <summary>SongPathPower.AfterCardPlayed: the first Cho each turn gains its amount of block (unpowered).</summary>
-public sealed class SongPathPower : ProcModel
-{
-    public override TabKind? Tab => TabKind.Block;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && Melodies.First(state, play, SimCardTag.Cho) ? Block(state, owner, Amount(state, owner)) : One(state);
-}
+// Violent Chord and Song Path are read from their code (ReadModel, decision #247).
 
 
 /// <summary>

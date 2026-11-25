@@ -3,7 +3,7 @@
 
 ## Powers and relics
 
-beta powers: 304 classes, 273 with hooks; read from code 121, hand-written 50, neither 104 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 304 classes, 273 with hooks; read from code 123, hand-written 48, neither 104 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 59, hand-written 13, neither 238 (each by its first gap: Snapshots/hook-readings.txt)
 main powers: 265 classes, 235 with hooks; read from code 103, hand-written 43, neither 91 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 51, hand-written 13, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
@@ -201,7 +201,6 @@ a pick: 3 classes, 3 alone: StratagemPower*, DropletOfPrecognition (potion)*, Ga
 commands: OstyCmd.Summon: 3 classes, 3 alone: DevourLifePower*, SicEmPower*, BoneBrew (potion)*
 commands: another command (no translation): 3 classes, 3 alone: BottledPotential (potion)*, FruitJuice (potion)*, KingsCourage (potion)*
 orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first): 3 classes, 3 alone: ConsumingShadowPower*, TrashToTreasurePower*, PotionOfCapacity (potion)*
-the fight's log (the history ledger, decision #191): 3 classes, 3 alone: SongPathPower*, UnmovablePower*, ViolentChordPower*
 the simulator's own model (no game class by its name): 3 classes, 3 alone: ImpaledPowerOther*, Regret*, Void*
 queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 6 classes, 2 alone: CurlUpPower, PaelsEye, PenNib*, PhantomBladesPower, TagTeamPower*, Vambrace
 hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount): 4 classes, 2 alone: BurrowedPower*, HandDrill*, PaelsLegion, Vambrace
@@ -219,6 +218,7 @@ commands: GainStars: 1 classes, 1 alone: StarPotion (potion)*
 hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*
 hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
 outcomes: a stun or a kill (outcome tabs): 1 classes, 1 alone: TheGambitPower*
+the fight's log (the history ledger, decision #191): 1 classes, 1 alone: UnmovablePower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*
 a death the game holds back (ShouldStopCombatFromEnding, ShouldDie and the like): 4 classes, 0 alone: InfestedPower, SteamEruptionPower, StockPower, SurprisePower
 a model's own method (its body read where it's called): 3 classes, 0 alone: FeralPower, SurroundedPower, FairyInABottle (potion)

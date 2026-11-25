@@ -338,6 +338,12 @@ public enum HookFact
     /// whose HP the simulation doesn't know makes it unknown.
     /// </summary>
     CreatureHp,
+    /// <summary>
+    /// The card played is the first its player started this turn of the plays named in Of ("" every play, "Type:Attack", "Tag:Cho"): the game's
+    /// FirstOrDefault(CardPlaysStarted, e =&gt; this turn, its player's, ...)?.CardPlay == cardPlay (MelodyCmd.IsFirstPlayThisTurn), the play itself,
+    /// as it started (SimCardPlay.FirstThisTurn).
+    /// </summary>
+    PlayIsFirst,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>
