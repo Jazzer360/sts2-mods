@@ -16,6 +16,8 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Play Preview: while you hold a card where letting go would play it (aimed at its target, for one that needs one; above the hand's play line, or once selected with a controller or the keyboard, for one that doesn't), Incoming Damage, Teammate Incoming Damage and the Death Skull show the turn as it would go after you play it, tinted lavender, and an enemy intent the play changes gets a line through its damage and the new number above it in the same font (Weak lowering it, Strength raising it; the line alone for an enemy the play kills in every outcome). Every outcome of the play was already worked out for each card and target, so it shows at once; the card tabs don't change. A new check holds it to the board the play leaves.
 
 #### Changed
+- Tender's and Slow's tags start on: play order matters with either (the Hunter Seeker fight), so every card says so. A tag you've switched keeps your choice.
+- Dev dashboard: a note's kinds are Bug, Feedback, Perf, Display, Insight and Other; older notes keep the kind they were written with.
 - Game v0.114.0 (beta) coverage. Every card's new numbers, Optimism, Twin Shot (Rapid Shot's new name) and the reworked Fool cards (Arrow Stab, Florescence, Growth, Punch of Joy, Recall, Trick Shot, Timber, Wah Ki) are worked out from their own code. v0.111.1 (main) is still supported, and what its code does differently is followed there.
 - Tune's tag shows on your first Ki card each turn, which now upgrades random cards in your hand (v0.114.0): no longer the free card it gave next turn. The turn's forecast is uncertain (`?`) when an upgradable card in your hand acts as your turn ends (an Ethereal card, Burn).
 - Hard to Kill caps the HP a hit takes past block, as v0.114.0 does, instead of the damage before block.
@@ -174,6 +176,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Voltaic channels a Lightning for each Lightning channeled this fight as it plays, so replayed it channels again for the ones its first play channeled.
 
 #### Removed
+- Biiig Hug's tag and its settings row: the Soot it adds on a shuffle never makes a shuffle worth avoiding. The Soot is still worked out (a later draw can find it, and your relics and powers that react to a card you make hear it).
 - The Free Card tag and its settings row (Tune's free card): game v0.114.0 took the power out. Free Attack, Free Skill and Free Power keep theirs.
 - Quietus' arrow no longer breaks as it impales: game v0.114.0 took that out, and the prediction follows.
 

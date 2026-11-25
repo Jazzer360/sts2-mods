@@ -143,6 +143,8 @@ public sealed partial class SettingsMenu
 
         Paragraph("Teammates' tags: in multiplayer, a teammate's power or relic that your card sets off gets a tag like your own, "
             + "with their icon (Rally's block setting off their Juggernaut). One you both have shares a tag, the amounts added.");
+        Paragraph("Powers that act on every card you play and never run out (Afterimage, Serpent Form, Oblivion...) would tag every card, so their tags start off: "
+            + "switch each on in the Tags by source page. Tender's and Slow's start on.");
     }
 
     // ------------------------------------------------------------------ beside you: potion tags

@@ -1526,7 +1526,7 @@ function renderOverview() {
     const notes = fbNotes.filter((n) => n.kind !== "report"), open = notes.filter((n) => n.status !== "handled");
     setCheck("chk-notes", open.length ? "warn" : "good", open.length ? `${open.length} note(s) not dealt with yet.` : "Every note is dealt with.",
       [[fmt(open.length, 0), "open", open.length ? "warn" : "good"], [fmt(notes.length - open.length, 0), "handled"]]);
-    setHTML($("ovNotes"), open.length ? open.slice(0, 5).map((n) => `<div class="li"><span class="pill">${esc(n.kind)}</span> ${esc(n.text.length > 140 ? n.text.slice(0, 137) + "…" : n.text)} <span class="faint">${when(n.at)}</span></div>`).join("")
+    setHTML($("ovNotes"), open.length ? open.slice(0, 5).map((n) => `<div class="li"><span class="pill">${esc(kindLabel(n.kind))}</span> ${esc(n.text.length > 140 ? n.text.slice(0, 137) + "…" : n.text)} <span class="faint">${when(n.at)}</span></div>`).join("")
       : `<div class="empty">Nothing open. Write one any time.</div>`);
   }
   // ---- the mod's log
@@ -1570,20 +1570,23 @@ $("fightStrips").addEventListener("mouseover", (e) => {
 });
 $("fightStrips").addEventListener("mouseout", () => { tip.style.display = "none"; });
 
-// ---- a note's kind: a row of buttons (one chosen), read as kindOf(id)
-const KINDS = ["bug", "idea", "performance", "looks", "prediction", "other"];
+// ---- a note's kind: a row of buttons (one chosen), read as kindOf(id). Older notes' kinds (idea, performance, looks, prediction) are shown as they were written.
+const KINDS = ["bug", "feedback", "perf", "display", "insight", "other"];
+/** A note's kind as shown: its label, or an older note's kind as it was written (a function: hoisted, so a page drawn before this line can use it). */
+function kindLabel(kind) { return ({ bug: "Bug", feedback: "Feedback", perf: "Perf", display: "Display", insight: "Insight", other: "Other" })[kind] || kind || ""; }
 function kindPicker(id) {
   const box = $(id);
   box.dataset.value = KINDS[0];
   for (const k of KINDS) {
     const b = document.createElement("button");
     b.type = "button";
-    b.textContent = k;
+    b.textContent = kindLabel(k);
+    b.dataset.kind = k;
     b.setAttribute("role", "radio");
     b.addEventListener("click", () => { box.dataset.value = k; paint(); });
     box.appendChild(b);
   }
-  function paint() { for (const b of box.children) { const on = b.textContent === box.dataset.value; b.classList.toggle("on", on); b.setAttribute("aria-checked", on); } }
+  function paint() { for (const b of box.children) { const on = b.dataset.kind === box.dataset.value; b.classList.toggle("on", on); b.setAttribute("aria-checked", on); } }
   paint();
 }
 const kindOf = (id) => $(id).dataset.value;
@@ -1591,7 +1594,7 @@ const kindOf = (id) => $(id).dataset.value;
 function cycleKind(id, back) {
   const box = $(id), i = KINDS.indexOf(box.dataset.value);
   const next = KINDS[(i + (back ? KINDS.length - 1 : 1)) % KINDS.length];
-  [...box.children].find((b) => b.textContent === next)?.click();
+  [...box.children].find((b) => b.dataset.kind === next)?.click();
 }
 // Tab in a note's text box picks its kind (Shift+Tab the one before) instead of moving the focus away.
 for (const [text, kind] of [["noteText", "noteKind"], ["fbText", "fbKind"]])
@@ -2057,7 +2060,7 @@ function renderFeedback() {
   const c = context();
   $("fbContext").textContent = `${c.mod}${c.encounter ? ` · ${c.encounter}, turn ${c.turn}` : " · not in a fight"}`;
   const f = $("fbFilter").value, list = fbNotes.filter((n) => n.kind !== "report" && (f === "all" || (f === "done" ? n.status === "handled" : n.status !== "handled")));
-  setHTML($("fbList"), list.length ? list.map((n) => `<div class="note"><div class="meta"><span class="pill">${esc(n.kind)}</span> ${new Date(n.at).toLocaleString()} · ${esc(n.mod)}${n.encounter ? ` · ${esc(n.encounter)}, turn ${n.turn}` : ""}
+  setHTML($("fbList"), list.length ? list.map((n) => `<div class="note"><div class="meta"><span class="pill">${esc(kindLabel(n.kind))}</span> ${new Date(n.at).toLocaleString()} · ${esc(n.mod)}${n.encounter ? ` · ${esc(n.encounter)}, turn ${n.turn}` : ""}
      <button style="float:right;padding:1px 8px" data-toggle="${esc(n.id)}">${n.status === "handled" ? "Reopen" : "Mark handled"}</button></div><div class="body">${esc(n.text)}</div>
      ${n.images?.length ? `<div class="shots">${n.images.map((p) => `<div class="shot"><img data-src="${esc(p)}" alt="${esc(p)}"></div>`).join("")}</div>` : ""}
      ${(fbComments[n.id] || []).map((c) => `<div class="comment ${c.status ? "dim" : ""}"><span class="faint">${new Date(c.at).toLocaleString()}</span> ${esc(c.text)}</div>`).join("")}
@@ -2386,7 +2389,7 @@ function demoInit() {
   // Trace reports as scripts/trace-report.ps1 writes them (tools/TraceReport): a Memory one and a Full one.
   DEMO.files["traces/trace-20261119-190000-memory.json"] = JSON.stringify(demoTraceReport("memory", 0, 120));
   DEMO.files["traces/trace-20261119-190200-full.json"] = JSON.stringify(demoTraceReport("full", 120, 200));
-  DEMO.files["feedback.jsonl"] = JSON.stringify({ id: "demo1", at: new Date(Date.now() - 864e5).toISOString(), kind: "idea", text: "Incoming Damage's ? felt late on the Beacon board.", mod: "1.21.0", encounter: "Byrdonis", combat: 2, turn: 3 }) + "\n";
+  DEMO.files["feedback.jsonl"] = JSON.stringify({ id: "demo1", at: new Date(Date.now() - 864e5).toISOString(), kind: "feedback", text: "Incoming Damage's ? felt late on the Beacon board.", mod: "1.21.0", encounter: "Byrdonis", combat: 2, turn: 3 }) + "\n";
   const old = [];
   for (let i = 0; i < 400; i++) old.push(JSON.stringify({ t: i * 0.25, kind: "frame-rollup", seconds: 0.25, frames: 30, modP50: 0.9, modP95: 2.6 + rand(), modMax: 4 + rand() * 6, gapMax: 18, slow: 0, featureMean: { "proc-indicators": 0.6, "incoming-damage": 0.3 }, featureMax: {}, heapMb: 500, allocatedMb: 1, gen0: 0, gen1: 0, gen2: 0, gcPauseMs: 0, heldStates: 0, searching: 0, simMb: 0, compiles: 0, nodes: 2400, orphanNodes: 12 }));
   DEMO.files["stream-20261118-201500.jsonl"] = JSON.stringify({ t: 0, kind: "stream-started", format: 1, mod: "1.20.13" }) + "\n" + old.join("\n") + "\n";

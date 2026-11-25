@@ -153,7 +153,6 @@ public static class SettingsCatalog
         new(nameof(Regalite), SourceGroup.Relic, "Cards that create cards (first this turn): block"),
         new(nameof(TheAbacus), SourceGroup.Relic, "Cards whose draw causes a shuffle: block"),
         new(nameof(WhittlingKnife), SourceGroup.Relic, "Cards whose draw causes a shuffle: Aim"),
-        new(nameof(BiiigHug), SourceGroup.Relic, "Cards whose draw causes a shuffle: a Soot into your draw pile (crossed)"),
         new(nameof(Metronome), SourceGroup.Relic, "Cards whose channels reach its orb count: damage to all", "Orbs channeled, toward the hit"),
         new(nameof(BoneFlute), SourceGroup.Relic, "Cards that make Osty attack: block"),
         new(nameof(UnceasingTop), SourceGroup.Relic, "Your last card in hand, if it draws nothing"),
@@ -336,7 +335,7 @@ public static class SettingsCatalog
         new(nameof(SeekingEdgePower), SourceGroup.YourPower, "Sovereign Blade: hits all enemies"),
         new(nameof(ParryPower), SourceGroup.YourPower, "Sovereign Blade: block"),
         new(nameof(SwordSagePower), SourceGroup.YourPower, "Sovereign Blade: replays"),
-        new(nameof(TenderPower), SourceGroup.YourPower, Crossed + "every card", TagDefault: false),
+        new(nameof(TenderPower), SourceGroup.YourPower, Crossed + "every card"),
         new(nameof(SmoggyPower), SourceGroup.YourPower, Crossed + "skills"),
 
         // ------------------------------------------------------------------ powers on enemies
@@ -345,7 +344,7 @@ public static class SettingsCatalog
         new(nameof(SicEmPower), SourceGroup.EnemyPower, "Yours, on an enemy. Cards whose Osty hit damages it: summon"),
         new(nameof(OblivionPower), SourceGroup.EnemyPower, "Yours, on an enemy. Every card", TagDefault: false),
         new(nameof(ConquerorPower), SourceGroup.EnemyPower, "On an enemy (from anyone's Conqueror). Sovereign Blade hitting it: double damage to it (the aim marker when another target has none)"),
-        new(nameof(SlowPower), SourceGroup.EnemyPower, "Every card: it takes more damage", TagDefault: false),
+        new(nameof(SlowPower), SourceGroup.EnemyPower, "Every card: it takes more damage"),
         new(nameof(BurrowedPower), SourceGroup.EnemyPower, "Attacks that break its block: stuns it"),
         new(nameof(FlutterPower), SourceGroup.EnemyPower, "Attacks that hit it enough times: stuns it"),
         new(nameof(PlowPower), SourceGroup.EnemyPower, "Attacks that bring it to its threshold"),

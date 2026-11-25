@@ -36,18 +36,26 @@ public class MadeCardTabParityTests
     {
         // The recording is only a proof where the tabs show: every source has a tab in some scenario.
         var lines = Enumerable.Range(0, Scenarios).Select(Tabs).ToList();
-        foreach (var name in new[] { PowerId.PersonalHive.Name, RelicId.BiiigHug.Name })
-            Assert.True(lines.Any(line => line.Contains($"proc:{name} ", StringComparison.Ordinal)), $"no scenario shows {name}'s tab");
+        Assert.True(lines.Any(line => line.Contains($"proc:{PowerId.PersonalHive.Name} ", StringComparison.Ordinal)), "no scenario shows Personal Hive's tab");
+        // Biiig Hug has no tab (no settings row: decision #263), and its Soot is still made in some scenario.
+        Assert.DoesNotContain(lines, line => line.Contains($"proc:{RelicId.BiiigHug.Name} ", StringComparison.Ordinal));
+        Assert.Contains(lines, line => System.Text.RegularExpressions.Regex.IsMatch(line, @"\| piles .*[1-9]s"));
     }
 
     /// <summary>
     /// The recording as reviewed: what the play check holds a play to (FiresBy) for Personal Hive is its code's flashes (decision #199), and
     /// PersonalHivePower.AfterDamageReceived never calls Flash(): none expected, where the hand-written model expected one wherever it acted. The
     /// in-game check never asked it (ProcAudit only expects a flash of a power whose code flashes: CodeIndex.FlashesOutsideAmountHooks). Its tab
-    /// is unchanged.
+    /// is unchanged. Biiig Hug's tab is gone with its settings row (decision #263, the owner's call), and with it what the play check holds it to;
+    /// its Soot is made as before (the piles).
     /// </summary>
-    private static string Reviewed(string line) => System.Text.RegularExpressions.Regex.Replace(line, @"(\| checked [^|]*?PersonalHivePower )([01]+)/([01]+)",
-        match => match.Groups[1].Value + new string('0', match.Groups[2].Length) + "/" + new string('0', match.Groups[3].Length));
+    private static string Reviewed(string line)
+    {
+        line = System.Text.RegularExpressions.Regex.Replace(line, @"(\| checked [^|]*?PersonalHivePower )([01]+)/([01]+)",
+            match => match.Groups[1].Value + new string('0', match.Groups[2].Length) + "/" + new string('0', match.Groups[3].Length));
+        line = System.Text.RegularExpressions.Regex.Replace(line, @"proc:BiiigHug [^;]*; ", "");
+        return System.Text.RegularExpressions.Regex.Replace(line, @"(?<=\| checked [^|]*)BiiigHug [01]+/[01]+; ", "");
+    }
 
     /// <summary>One generated fight and play: its tabs, as text.</summary>
     private static string Tabs(int index)

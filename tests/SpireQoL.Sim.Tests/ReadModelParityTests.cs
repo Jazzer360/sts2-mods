@@ -25,6 +25,12 @@ public class ReadModelParityTests
         ["SneakyPower"] = "its block on another player's Attack helps its owner, a player (the owner board): your side, a plain tab, where the hand-written model's was crossed on the enemy it wrongly acted on (a fix)",
     };
 
+    /// <summary>Classes whose settings row was taken out since their conversion (the owner's call): no tab; what they do is compared as before.</summary>
+    private static readonly Dictionary<string, string> RemovedTabs = new(StringComparer.Ordinal)
+    {
+        ["BiiigHug"] = "its settings row taken out (decision #263, the owner's call: the Soot it makes on a shuffle never makes a shuffle worth avoiding): no tab, its Soot simulated as before",
+    };
+
     /// <summary>
     /// Classes given a settings row since their conversion (decision #244, the owner's call): their tab is new, judged on the turn's outcome where the
     /// hand-written model had none (BonusTabRowTests holds it to their code); what they do is compared as before.
@@ -202,7 +208,8 @@ public class ReadModelParityTests
     {
         var hand = HandWritten[name];
         var read = Assert.IsType<ReadModel>(SimModels.Get(name));
-        Assert.Equal(hand.Tab, read.Tab);
+        if (RemovedTabs.ContainsKey(name)) Assert.Null(read.Tab);
+        else Assert.Equal(hand.Tab, read.Tab);
         Assert.Equal(hand.Seen, read.Seen);
         Assert.Equal(hand.Instanced, read.Instanced);
         if (!NewTabs.ContainsKey(name)) Assert.Equal(hand.JudgedOnOutcome, read.JudgedOnOutcome);
