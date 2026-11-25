@@ -21,6 +21,7 @@ public class ConditionRuleTests
         ["CardPlayAction.Body"] = "the card's play itself",
         ["TakeFromHandAction.EachCard"] = "a loop's other commands, once per card taken (Second Wind's block): no condition",
         ["FirstPlayOnly.Actions"] = "the test shorthand's totals and the first play's own (Swift's draw, the forged blade): a test of the play's index, still apart from a SimCondition (TRACKER 20)",
+        ["FirstPlayOnly.LaterPlays"] = "a replay's later plays' own, where a test the board decides for the first play stands (decision #311: unknown, with the board's answer)",
         ["DrawnCardAction.Block"] = "Escape Plan's block on the drawn card's type: still fused with its draw (TRACKER 20, docs/CARD_PROGRAMS.md A5)",
     };
 

@@ -164,6 +164,13 @@ public static class ConditionReader
         ConditionReading Simulated(SimCondition condition) => new(ConditionWay.Simulated) { Condition = condition with { At = at } };
         ConditionReading NotRead(string why) => new(ConditionWay.NotRead) { Reason = why, Unread = test };
 
+        // A comparison the code makes by calling its type's operator (decimal's op_GreaterThan(a, b)): the comparison.
+        if (test is QueryValue { Of: null, Arguments: [var compared, var against] } call && OperatorComparisons.TryGetValue(call.Name, out var comparison))
+            return Test(new CompareValue(comparison, compared, against), context, at, depth);
+        // A helper of the card's own class it's given the card to (Sovereign Blade's GetOwnerParryAmount(this)): what it returns for the card played.
+        if (depth < 2 && test.Parts().Any(part => OwnHelperCall(part, context) != null))
+            return Test(test.Map(part => OwnHelperCall(part, context)), context, at, depth + 1);
+
         // The attack's kill: Any over the results of AttackCommand.Execute of WasTargetKilled (Sunder, Knockout Blow), or of a card's CreatureCmd.Damage
         // (Timber, v0.114.0: its damage inside its attack context, simulated as its attack; any other card's, a DamageAction): both record the kill.
         if (test is QueryValue { Name: "Any" } any && any.Parts().Any(part => part is QueryValue { Name: "WasTargetKilled" })
@@ -510,4 +517,158 @@ public static class ConditionReader
     }
 
     private static ProgramValue Unstored(ProgramValue value) => value is StoredValue stored ? Unstored(stored.Value) : value;
+
+    /// <summary>A number type's comparison operators, called by name (decimal's).</summary>
+    private static readonly Dictionary<string, Comparison> OperatorComparisons = new(StringComparer.Ordinal)
+    {
+        ["op_Equality"] = Comparison.Equal,
+        ["op_Inequality"] = Comparison.NotEqual,
+        ["op_LessThan"] = Comparison.Less,
+        ["op_LessThanOrEqual"] = Comparison.LessOrEqual,
+        ["op_GreaterThan"] = Comparison.Greater,
+        ["op_GreaterThanOrEqual"] = Comparison.GreaterOrEqual,
+    };
+
+    /// <summary>
+    /// What a call to a static helper of the card's own class, given the card, returns for the card played (Sovereign Blade's GetOwnerParryAmount(this):
+    /// its owner's Parry): read from its code with its parameters what the call passes, the way the played card takes (every test on the way
+    /// one the card in play passes: <see cref="PlayedCardPasses"/>). Null for any other value, or a helper with no such one way.
+    /// </summary>
+    private static ProgramValue? OwnHelperCall(ProgramValue value, Context context)
+    {
+        if (value is not QueryValue { Of: null, IsProperty: false } call || call.Type != context.CardType.Name
+            || !call.Arguments.Any(argument => argument is NamedValue { Name: "this" })) return null;
+        var method = context.CardType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+            .SingleOrDefault(candidate => candidate.Name == call.Name && candidate.GetParameters().Length == call.Arguments.Count);
+        if (method == null) return null;
+        WaysValue ways;
+        try { ways = ProgramReader.ReadReturnedWays(context.CardType, method, context.ReadCode); }
+        catch { return null; }
+        var parameters = method.GetParameters();
+        ProgramValue Passed(ProgramValue part) => part.Map(inner => inner is ParameterValue parameter
+            && Array.FindIndex(parameters, candidate => candidate.Name == parameter.Name) is var index and >= 0 ? call.Arguments[index] : null);
+        var taken = ways.Ways.Where(way => way.When.Terms.Any(term => term.All(literal => PlayedCardPasses(Passed(literal.Test), literal.Holds)))).ToList();
+        return taken.Count == 1 ? Passed(taken[0].Value) : null;
+    }
+
+    /// <summary>
+    /// The card being played passes the test (or fails it, <paramref name="holds"/> false) wherever it's played: it's mutable, has an owner and a
+    /// pile, and that pile (its play pile) is one of the fight's; it's in a fight.
+    /// </summary>
+    private static bool PlayedCardPasses(ProgramValue test, bool holds) => holds && test is QueryValue
+    {
+        IsProperty: true,
+        Name: "IsMutable" or "Owner" or "Pile" or "CombatState" or "IsCombatPile",
+        Of: NamedValue { Name: "this" } or QueryValue { Name: "Pile", Of: NamedValue { Name: "this" } },
+    } tested && (tested.Name == "IsCombatPile") == tested.Of is QueryValue;
+
+    // ---- what a decided test reads (decision #311)
+
+    /// <summary>
+    /// The first input of <paramref name="condition"/> the play itself could change (a creature's HP, block or powers, a pile's cards, your orbs,
+    /// the enemies there are, the fight's log, what a command gave, a card field its own code stores, a value the reader couldn't follow), named;
+    /// null when every input is fixed for the play. What may be decided on the board before the play (decision #311): only a test of inputs
+    /// fixed for it. Read from each part of each test, never from the card: every query is a change the play can make to what it gives unless
+    /// it's one of <see cref="FixedQueries"/> (the card's own values and upgrade, the fight's room and run, the owner's character and card
+    /// pools, the objects the play is about, a roll's source of randomness, the collection operators), each of whose own inputs is read in
+    /// turn; a pick's card is a card (decision #188).
+    /// </summary>
+    public static string? ChangeableInput(ProgramCondition condition, Context context) =>
+        condition.Literals.Select(literal => ChangeableInput(literal.Test, context)).FirstOrDefault(input => input != null);
+
+    /// <summary>The first input of one test the play itself could change, named; null when it reads only what's fixed for the play.</summary>
+    public static string? ChangeableInput(ProgramValue test, Context context)
+    {
+        var stored = context.Program.All().OfType<StoreStep>().Select(store => store.Field).ToHashSet(StringComparer.Ordinal);
+        // A pick's card is a card (decision #188); a roll's source of randomness is never read (the roll is a branch per outcome, never
+        // looked at before it): its receiver (NextItem, TakeRandom) or its last argument (GetDistinctForCombat, StableShuffle), as the game declares them.
+        var asRead = test.Map(part => part switch
+        {
+            ResultValue result when result.Command.StartsWith("CardSelectCmd.", StringComparison.Ordinal) => new ConstantValue(1),
+            QueryValue { Name: "NextItem" or "TakeRandom" } roll => roll with { Of = null },
+            QueryValue { Name: "GetDistinctForCombat" or "StableShuffle", Arguments.Count: > 0 } roll => roll with { Arguments = roll.Arguments.Take(roll.Arguments.Count - 1).ToList() },
+            _ => null,
+        });
+        foreach (var part in asRead.Parts())
+            switch (part)
+            {
+                case UnknownValue unknown:
+                    return $"a value the reader couldn't follow ({unknown})";
+                case ResultValue result:
+                    return $"what {result.Command} gave";
+                case QueryValue query when !IsFixedQuery(query, context, stored):
+                    return query.Of is NamedValue { Name: "this" } ? $"the card's {query.Name}" : query.Name;
+            }
+        return null;
+    }
+
+    /// <summary>
+    /// What the query gives is fixed for the play, given its inputs: one of <see cref="FixedQueries"/>, an operator, the card's upgrade or X, or
+    /// the card's own state (a property stored on it, a field of its class) that its own code doesn't store to (<paramref name="storedByThePlay"/>).
+    /// </summary>
+    private static bool IsFixedQuery(QueryValue query, Context context, IReadOnlySet<string> storedByThePlay)
+    {
+        if (query.Of is NamedValue { Name: "this" } && storedByThePlay.Contains(query.Name)) return false;
+        if (FixedQueries.Contains(query.Name)) return true;
+        if (query.Of == null && query.Name.StartsWith("op_", StringComparison.Ordinal)) return true;
+        // The game's own fixed numbers (a hand's limit).
+        if (query.Of == null && IsCardsOwn(query, context)) return true;
+        if (query.Of is not NamedValue { Name: "this" }) return false;
+        if (query.Name is "IsUpgraded" or "ResolveEnergyXValue" or "ResolveStarXValue") return true;
+        if (query.IsProperty) return IsStoredOnCard(context, query.Name);
+        return query.Arguments.Count == 0 && IsFieldOfCard(context.CardType, query.Name);
+    }
+
+    /// <summary>A field of the card's class or a base class (a read of it is a QueryValue with no arguments, not a property).</summary>
+    private static bool IsFieldOfCard(Type cardType, string field)
+    {
+        for (var type = cardType; type != null; type = type.BaseType)
+            if (type.GetField(field, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly) != null) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// The test is read before the play runs any command (decision #311), so on its first play it reads the board as the play starts: a test
+    /// of a step that's in no loop or command's delegate with no command before it in the code (none the reader couldn't follow, none only
+    /// another way through the code runs: an if's other side), or one whose every input the play can change is in a local the code stores
+    /// before its first command (Optimism's count of your Sadness, Storm of Steel's hand).
+    /// </summary>
+    public static bool ReadBeforeAnyCommand(ProgramValue test, CommandStep step, Context context)
+    {
+        var program = context.Program;
+        if (program.Steps.Any(top => ReferenceEquals(top, step))
+            && !program.All().TakeWhile(before => !ReferenceEquals(before, step))
+                .Any(before => before is CommandStep or SpireQoL.Procs.Programs.UnknownStep && !Exclusive(before.Condition, step.Condition)))
+            return true;
+        bool StoredFirst(int offset) => !program.All().Any(before => before is CommandStep or SpireQoL.Procs.Programs.UnknownStep && before.Offset < offset);
+        if (!test.Parts().Any(part => part is StoredValue stored && StoredFirst(stored.Offset))) return false;
+        return ChangeableInput(test.Map(part => part is StoredValue stored && StoredFirst(stored.Offset) ? new ConstantValue(0) : null), context) == null;
+    }
+
+    /// <summary>No way through the code runs both: each way of one takes a branch the other way of the other doesn't (an if and its else).</summary>
+    public static bool Exclusive(ProgramCondition? first, ProgramCondition? second) =>
+        first != null && second != null && !first.IsAlways && !second.IsAlways
+        && first.Terms.All(firstWay => second.Terms.All(secondWay =>
+            firstWay.Any(literal => secondWay.Any(other => other.At == literal.At && other.Holds != literal.Holds))));
+
+    /// <summary>
+    /// The queries a play can't change what they give (ChangeableInput): each reads its own inputs (what it's asked of, its arguments), which are
+    /// read in turn. Anything not here is an input the play can change.
+    /// </summary>
+    internal static readonly IReadOnlySet<string> FixedQueries = new HashSet<string>(StringComparer.Ordinal)
+    {
+        // The objects the play is about, as references (what's asked of them is read in turn): the card's owner, their creature, the target, a
+        // teammate's player, the fight's state and run, the game's fight manager.
+        "Owner", "Creature", "Player", "Target", "CombatState", "RunState", "Instance",
+        // Facts of the fight a play can't change: its room (a combat room for every play), the fight going on (the simulator stops at its end),
+        // the owner's character, unlocks and card pools.
+        "CurrentRoom", "is", "IsOverOrEnding", "Character", "CardPool", "UnlockState", "CardMultiplayerConstraint", "GetUnlockedCards",
+        // A card's kind, asked of a card a collection gives (the collection is read in turn): its type, tags, targeting, whether it upgrades.
+        "Type", "Tags", "TargetType", "IsUpgradable", "Rarity",
+        // A roll: what it picks from is its argument (read in turn); its source of randomness is left out before (ChangeableInput).
+        "NextItem", "GetDistinctForCombat", "StableShuffle", "TakeRandom",
+        // Collection and number operators: what they give is their inputs'.
+        "Where", "Select", "SelectMany", "ToList", "ToArray", "AsEnumerable", "Count", "Any", "All", "FirstOrDefault", "First", "OfType", "Except",
+        "Take", "Contains", "Min", "Max", "MinBy", "MaxBy", "Sum", "HasValue", "Value", ".ctor",
+    };
 }

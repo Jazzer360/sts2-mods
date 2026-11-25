@@ -1234,7 +1234,9 @@ public static partial class SimEngine
         {
             case FixedHitsAction fixedHitsAction: RunFixedHits(branches, fixedHitsAction); break;
             case HitYouAction hitYouAction: branches.Do(branch => LandBlockable(branch, hitYouAction.Name, hitYouAction.Amount)); break;
-            case FirstPlayOnly firstPlayOnly: if (branches.States.Count > 0 && branches.States[0].CurrentPlay is not { PlayIndex: > 0 }) foreach (var simAction in firstPlayOnly.Actions) Run(branches, simAction); break;
+            case FirstPlayOnly firstPlayOnly:
+                foreach (var simAction in branches.States.Count > 0 && branches.States[0].CurrentPlay is { PlayIndex: > 0 } ? firstPlayOnly.LaterPlays ?? Array.Empty<SimAction>() : firstPlayOnly.Actions) Run(branches, simAction);
+                break;
             case CardResolvedAction cardResolvedAction:
                 branches.Do(branch => CardResolved(branch, cardResolvedAction));
                 HookStep(branches, nameof(SimModel.AfterPlayResolved), (model, owner, branch) => model.AfterPlayResolved(branch, owner, cardResolvedAction.Owner));

@@ -153,8 +153,10 @@ whole hand) as a `TakeFromHandAction` or `TakeToHandAction`; a shot's arrow, the
 exhaust and upgrading callback; a shuffle and the draw pile count its condition tests. Where an amount can only come from the game's own
 math on the board (damage and block terms through the pipelines, B1), those terms are still read; never whether the step happens.
 
-The step's condition is the action's (decision #190, `SimAdapter.Guard`): a `WhenAction` when the simulator asks it, left out when it's
-decided false on the card's own values, and decided on the board when it has no translation yet (a gap the card scan lists). A test of a
+The step's condition is the action's (decision #190, `SimAdapter.Guard` and `Decide`): a `WhenAction` when the simulator asks it; decided
+on the board only when it reads what the play can't change (decision #311, `ConditionReader.ChangeableInput`: the card's own values, a pick,
+the fight's room), left out when that's false; one the play can change with no translation yet holds as the board says on the first play
+when it's read before the play runs any command (a `FirstPlayOnly` whose later plays are unknown), and is unknown anywhere else. A test of a
 take's card is the take's filter; an evoke's test of your orbs and a shuffle's test of your draw pile are what those actions ask themselves.
 A loop's body is walked once: its rounds are what its steps' actions count (hits, gains, channels, draws), and a take's loop runs its other
 steps after each card (Second Wind's block). The play order and the guard put on the facts' actions after the fact are gone with the facts' gating: whether an attack, a

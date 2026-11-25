@@ -86,6 +86,66 @@ public static class StepValues
         return kept;
     }
 
+    /// <summary>The condition without the tests <paramref name="dropped"/> picks, on each of its ways.</summary>
+    public static ProgramCondition Without(ProgramCondition condition, Func<ConditionLiteral, bool> dropped)
+    {
+        if (!condition.Literals.Any(dropped)) return condition;
+        var result = ProgramCondition.Never;
+        foreach (var way in condition.Terms)
+        {
+            var kept = ProgramCondition.Always;
+            foreach (var literal in way)
+                if (!dropped(literal)) kept = kept.And(literal);
+            result = result.Or(kept);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// The test is that a roll the step acts on found something (Cinder's card from your hand, Bouncing Flask's enemy: x != null), which the
+    /// step's action rolls itself as it runs: a branch per outcome, none with nothing to roll over (decision #311).
+    /// </summary>
+    public static bool TestsOwnRoll(ConditionLiteral literal, CommandStep step)
+    {
+        var (tested, found) = literal.Test switch
+        {
+            CompareValue { Op: Comparison.NotEqual, Right: NullValue } notNull => (notNull.Left, literal.Holds),
+            CompareValue { Op: Comparison.Equal, Right: NullValue } isNull => (isNull.Left, !literal.Holds),
+            var truthy => (truthy, literal.Holds),
+        };
+        var rolled = Unstored(tested)!;
+        if (!found || !IsRoll(rolled is QueryValue { Name: "FirstOrDefault", Arguments: [var first] } ? Unstored(first) : rolled)) return false;
+        var text = rolled.ToString();
+        return step.Values.Any(value => value.Parts().Any(part => Unstored(part)!.ToString() == text));
+    }
+
+    /// <summary>
+    /// The test is that a collection of cards the step takes from has any (Ki Chant's top cards: topCards.Count != 0), when the step is a take
+    /// (<paramref name="take"/>; <paramref name="takenFrom"/>: its arguments and what the loops around it go over): its action takes the cards
+    /// there are as it runs, none with none there (decision #311).
+    /// </summary>
+    public static bool TestsOwnTake(ConditionLiteral literal, IReadOnlyList<ProgramValue> takenFrom, bool take)
+    {
+        if (!take) return false;
+        var (counted, any) = literal.Test switch
+        {
+            CompareValue { Op: Comparison.NotEqual or Comparison.Greater, Right: ConstantValue { Value: 0 } } above => (above.Left, literal.Holds),
+            CompareValue { Op: Comparison.Equal or Comparison.LessOrEqual, Right: ConstantValue { Value: 0 } } none => (none.Left, !literal.Holds),
+            var truthy => (truthy, literal.Holds),
+        };
+        var collection = Unstored(counted) switch
+        {
+            QueryValue { Name: "Count", IsProperty: true, Of: { } of } => of,
+            QueryValue { Type: "Enumerable", Name: "Count" or "Any", Arguments: [var source] } => source,
+            _ => null,
+        };
+        if (!any || collection == null) return false;
+        var text = Unstored(collection)!.ToString();
+        return takenFrom.Any(value => value.Parts().Any(part => Unstored(part)!.ToString() == text));
+    }
+
+    private static bool IsRoll(ProgramValue? value) => value is QueryValue { Name: "NextItem" or "TakeRandom" or "GetDistinctForCombat" or "StableShuffle" };
+
     /// <summary>The value is the count of your draw pile's cards (GetPile(Draw).Cards.Count).</summary>
     public static bool DrawPileCount(ProgramValue value) =>
         Unstored(value) is QueryValue { Name: "Count" } count && count.Parts().Any(part => part is QueryValue { Name: "GetPile", Arguments: [ConstantValue { Value: var pile }, ..] } && pile == (int)MegaCrit.Sts2.Core.Entities.Cards.PileType.Draw);

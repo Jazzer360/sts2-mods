@@ -175,30 +175,94 @@ public static partial class SimAdapter
                 case CommandStep command when !play.Consumed.Contains(command):
                     var (actions, guard) = Translate(command, play);
                     if (actions.Count == 0) break;
-                    Guard(inner ? command.Condition ?? ProgramCondition.Always : guard ?? play.Found[command].Condition, actions, play, into);
+                    Guard(command, inner ? command.Condition ?? ProgramCondition.Always : guard ?? play.Found[command].Condition, actions, play, into);
                     break;
             }
     }
 
     /// <summary>
-    /// The step's actions under its condition (decision #190): a WhenAction when the simulator asks it, left out when it's decided false on
-    /// the board (the card's own values, a pick), and decided on the board when it has no translation yet (a gap the card scan lists).
+    /// The step's actions under its condition (decision #190): a WhenAction when the simulator asks it; decided on the board when it reads
+    /// only what the play can't change (the card's own values, a pick, the fight's room: decision #311), left out when that's false; and
+    /// decided on the board, a gap the card scan lists, when it has no translation yet. A test decided on the board that reads what the play
+    /// can change (ConditionReader.ChangeableInput) holds as the board says on the first play when the play runs no command before it's read;
+    /// anywhere else the step is unknown where it runs (a NotModelledAction with its reason, then the board's answer), never left out.
     /// </summary>
-    private static void Guard(ProgramCondition condition, List<SimAction> actions, StepPlay play, List<SimAction> into)
+    private static void Guard(CommandStep command, ProgramCondition condition, List<SimAction> actions, StepPlay play, List<SimAction> into)
     {
-        var reading = PlayConditions.Reading(play.Card, condition);
-        switch (reading.Way)
+        var decision = Decide(play.Card, command, condition, play.Board with { Target = play.Aimed }, play.Found.GetValueOrDefault(command));
+        switch (decision.Way)
         {
-            case ConditionWay.Decided when reading.Holds == false:
+            case StepDecision.Always:
+                into.AddRange(actions);
                 return;
-            case ConditionWay.NotRead when ProgramEvaluator.Holds(condition, play.Board with { Target = play.Aimed }, play.Program) == false:
-                return;
-            case ConditionWay.Simulated:
-                play.Asks.AddRange(reading.AskFirst);
-                into.Add(new WhenAction(reading.Condition!, actions));
+            case StepDecision.Asked:
+                play.Asks.AddRange(decision.Reading.AskFirst);
+                into.Add(new WhenAction(decision.Reading.Condition!, actions));
                 return;
         }
-        into.AddRange(actions);
+        var onTheBoard = decision.Holds == false ? new List<SimAction>() : actions;
+        if (decision.Way == StepDecision.Fixed)
+        {
+            into.AddRange(onTheBoard);
+            return;
+        }
+        // A step that's unknown wherever it runs (a command not followed) stays unknown where the board can't tell, whatever it says.
+        var unknown = actions.All(action => action is NotModelledAction) ? actions
+            : onTheBoard.Prepend(new NotModelledAction($"{play.Name}: {command.Command.FullName} on a test the simulator doesn't ask, which the play can change ({decision.Input})")).ToList();
+        if (decision.Way == StepDecision.FirstPlayOnTheBoard)
+            into.Add(new FirstPlayOnly(onTheBoard) { LaterPlays = unknown });
+        else
+            into.AddRange(unknown);
+    }
+
+    /// <summary>How a step's condition is taken for the play (Decide, decision #311).</summary>
+    internal enum StepDecision
+    {
+        /// <summary>No condition: the step runs.</summary>
+        Always,
+        /// <summary>The simulator asks it as the step runs (a WhenAction).</summary>
+        Asked,
+        /// <summary>Decided on the board: it reads only what the play can't change.</summary>
+        Fixed,
+        /// <summary>Decided on the board for the first play, read before the play runs any command; unknown on a replay's later plays.</summary>
+        FirstPlayOnTheBoard,
+        /// <summary>Unknown where it runs: the play can change what it reads before it's read.</summary>
+        Unknown,
+    }
+
+    /// <summary>A step's condition as the play takes it (its own tests of a roll or a take it acts on left out): how, whether it holds on the board, and the input the play can change.</summary>
+    internal sealed record StepDecisionReading(StepDecision Way, ProgramCondition Condition, ConditionReading Reading, bool? Holds = null, string? Input = null);
+
+    /// <summary>
+    /// How the step's condition is taken (decision #311): asked by the simulator when it's translated; otherwise decided on the board, which only
+    /// a test of what the play can't change may be (ConditionReader.ChangeableInput: the card's own values and upgrade, a pick, the fight's
+    /// room...). One the play can change is decided on the board for the first play when it's read before the play runs any command, and
+    /// unknown anywhere else. Before that, where the board would decide it, a test that the roll the step acts on found something, or that the
+    /// cards a take takes from are there, is the step's action's own: it rolls, or takes the cards there are, as it runs.
+    /// </summary>
+    internal static StepDecisionReading Decide(CardModel card, CommandStep command, ProgramCondition condition, ProgramBoard board, CardEffects.Found? found)
+    {
+        var type = card.GetType();
+        var reading = PlayConditions.Reading(card, condition);
+        if (reading.Way is ConditionWay.Decided or ConditionWay.NotRead)
+        {
+            var take = CardEffects.ExhaustsOfOthers(type).Concat(CardEffects.Discards(type)).Concat(CardEffects.Transforms(type))
+                .Concat(CardEffects.TakesIntoHandOf(type)).Any(taken => ReferenceEquals(taken.Command, command));
+            var takenFrom = command.Values.Concat(found?.Loops.Select(loop => loop.Items).OfType<ProgramValue>() ?? Array.Empty<ProgramValue>()).ToList();
+            var withoutOwn = Without(condition, literal => TestsOwnRoll(literal, command) || TestsOwnTake(literal, takenFrom, take));
+            if (!ReferenceEquals(withoutOwn, condition)) reading = PlayConditions.Reading(card, condition = withoutOwn);
+        }
+        var holds = reading.Way switch
+        {
+            ConditionWay.Simulated => (bool?)null,
+            ConditionWay.Decided => reading.Holds,
+            ConditionWay.NotRead => ProgramEvaluator.Holds(condition, board, CardPrograms.Of(type)),
+            _ => true,
+        };
+        if (reading.Way == ConditionWay.Always) return new StepDecisionReading(StepDecision.Always, condition, reading);
+        if (reading.Way == ConditionWay.Simulated) return new StepDecisionReading(StepDecision.Asked, condition, reading);
+        if (PlayConditions.ChangeableInput(card, command, condition, board) is not { } changeable) return new StepDecisionReading(StepDecision.Fixed, condition, reading, holds);
+        return new StepDecisionReading(changeable.BeforeAnyCommand ? StepDecision.FirstPlayOnTheBoard : StepDecision.Unknown, condition, reading, holds, changeable.Input);
     }
 
     /// <summary>
@@ -229,6 +293,9 @@ public static partial class SimAdapter
             }
             case ("ArrowCmd", "DislodgeArrow"):
                 return (new List<SimAction> { new DislodgeAllAction() }, null);
+            // A block only for the card its draw gave (Escape Plan's Skill): the draw's action asks it (UseDrawnCard moves the block into it).
+            case ("CreatureCmd", "GainBlock") when DrawnCardReaderOf(play.Type) is { BlockIf: true }:
+                return (BlocksFrom(found, play, times: null), Without(found.Condition, literal => literal.Test.Parts().Any(part => part is ResultValue { Command: "CardPileCmd.Draw" })));
             case ("CreatureCmd", "GainBlock"):
                 return (BlocksFrom(found, play, times: null), null);
             case ("CreatureCmd", "Damage"):
@@ -254,8 +321,9 @@ public static partial class SimAdapter
             case ("PowerCmd", "Apply"):
                 return (PowersFrom(found, play), null);
             // A power's own command the card calls on each enemy's instance of it (Outbreak: PoisonPower.Trigger), read from the power's code.
+            // Its tests of the enemy its loop is at are the action's own: it goes over each enemy's instance of the power.
             case (var power, var method) when SimModels.Get(power) is ReadModel read && read.HasCommand(method):
-                return (new List<SimAction> { new ModelCommandAction(power, method) }, null);
+                return (new List<SimAction> { new ModelCommandAction(power, method) }, Without(found.Condition, literal => literal.Test.Parts().Any(part => part is NamedValue { Name: "each" })));
             case ("CardPileCmd", "Draw" or "DrawWithoutBlockingOnOtherPlayers"):
                 return (DrawsFrom(found, play), null);
             case ("PlayerCmd", "GainEnergy"):

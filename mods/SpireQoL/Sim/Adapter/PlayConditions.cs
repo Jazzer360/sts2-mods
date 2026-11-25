@@ -18,6 +18,33 @@ internal static class PlayConditions
         return ConditionReader.Read(condition, new ConditionReader.Context(type, RuntimeCode.Read, new ProgramBoard(card), CardPrograms.Of(type)));
     }
 
+    /// <summary>
+    /// The first input of the step's condition the play can change (decision #311), with whether every test that reads one is read before the play
+    /// runs any command (ConditionReader.ReadBeforeAnyCommand); null when it reads only what's fixed for the play.
+    /// </summary>
+    internal static (string Input, bool BeforeAnyCommand)? ChangeableInput(CardModel card, CommandStep step, ProgramCondition condition, ProgramBoard board)
+    {
+        var type = card.GetType();
+        var program = CardPrograms.Of(type);
+        var context = new ConditionReader.Context(type, RuntimeCode.Read, Board: null, program);
+        string? first = null;
+        var beforeAnyCommand = true;
+        foreach (var way in condition.Terms)
+        {
+            // A way a test of what's fixed for the play closes on the board (Charge's upgrade) is closed whatever its other tests read.
+            if (way.Any(literal => ConditionReader.ChangeableInput(literal.Test, context) == null
+                                   && ProgramEvaluator.Holds(ProgramCondition.Of(literal), board, program) == false))
+                continue;
+            foreach (var literal in way)
+            {
+                if (ConditionReader.ChangeableInput(literal.Test, context) is not { } input) continue;
+                first ??= input;
+                beforeAnyCommand &= ConditionReader.ReadBeforeAnyCommand(literal.Test, step, context);
+            }
+        }
+        return first == null ? null : (first, beforeAnyCommand);
+    }
+
     /// <summary>The step's condition from the card's code alone (no board): how the card scan classifies it.</summary>
     internal static ConditionReading CodeReading(Type cardType, ProgramCondition condition) =>
         ConditionReader.Read(condition, new ConditionReader.Context(cardType, RuntimeCode.Read, Board: null, CardPrograms.Of(cardType)));

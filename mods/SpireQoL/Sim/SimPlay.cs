@@ -130,8 +130,16 @@ public sealed record FixedHitsAction(SimPlay.Target Spread, [property: JsonConve
 /// <summary>Blockable damage to you from an effect (unpowered; Galvanic-like in the test shorthand).</summary>
 public sealed record HitYouAction(string Name, int Amount) : SimAction;
 
-/// <summary>Actions that run on a card play's first play only (the test shorthand gives a replay's totals at once).</summary>
-public sealed record FirstPlayOnly(IReadOnlyList<SimAction> Actions) : SimAction;
+/// <summary>
+/// Actions that run on a card play's first play only (the test shorthand gives a replay's totals at once; a test read on the board before
+/// the play, which holds for its first play only: decision #311), and <see cref="LaterPlays"/> on each later play of a replay.
+/// </summary>
+public sealed record FirstPlayOnly(IReadOnlyList<SimAction> Actions) : SimAction
+{
+    /// <summary>What runs instead on a replay's later plays (null: nothing).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<SimAction>? LaterPlays { get; init; }
+}
 
 /// <summary>
 /// The card has left its owner's hand (Owner: you, or a teammate's auto-play): their hand's size, the hand Stampede and Simpleton
