@@ -638,7 +638,7 @@ public static class HookReader
     {
         GainBlockStep { To: null } or GainEnergyStep or DrawStep or ChannelStep or HealStep or GainStarsStep or SummonStep => true,
         DamageStep damage => damage.Target is not (HookTarget.Owner or HookTarget.PlayOwner or HookTarget.LivingPlayers),
-        ApplyPowerStep apply => apply.Target == HookTarget.Owner ? !apply.Debuff : apply.Target is HookTarget.AllEnemies && apply.Debuff,
+        ApplyPowerStep apply => apply.Target == HookTarget.Owner ? !apply.Debuff : apply.Target is HookTarget.AllEnemies or HookTarget.LivingOpponents && apply.Debuff,
         _ => false,
     };
 
@@ -2248,7 +2248,7 @@ public static class HookReader
                         : values[applierAt] is NullValue ? new HookCreature(HookWho.NoOne)
                         : throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: {power} applied by someone else");
                     var amount = Value(values[amountAt]);
-                    if (Targets(values[targetAt]) is not (HookTarget.Owner or HookTarget.PowerOwner or HookTarget.AllEnemies or HookTarget.HitTarget or HookTarget.PlayTarget or HookTarget.PlayOwner)) throw new Gap(Other(values[targetAt]), $"gap: {power} on {values[targetAt]}");
+                    if (Targets(values[targetAt]) is not (HookTarget.Owner or HookTarget.PowerOwner or HookTarget.AllEnemies or HookTarget.HitTarget or HookTarget.PlayTarget or HookTarget.PlayOwner or HookTarget.LivingOpponents)) throw new Gap(Other(values[targetAt]), $"gap: {power} on {values[targetAt]}");
                     // A temporary Strength or Dexterity power (Helical Dart's) lands as the Strength or Dexterity its BeforeApplied applies, by its sign
                     // (TemporaryStrengthPower, TemporaryDexterityPower: IsPositive), as the card programs land it (SimAdapter.PowersFrom).
                     if (TemporaryOf(power) is { } underlying)
@@ -2462,6 +2462,9 @@ public static class HookReader
             if (IsOwner(value)) return HookTarget.Owner;
             // Every living player creature (CombatState.PlayerCreatures.Where(c => c.IsAlive), listed or not: Explosive's).
             if (LivingPlayerCreatures(value)) return HookTarget.LivingPlayers;
+            // A player's model's living opponents (Where(combatState.GetOpponentsOf(base.Owner.Creature), c => c.IsAlive): Brimstone's), hittable or not:
+            // the living enemies.
+            if (_kind is ModelKind.Relic or ModelKind.Orb && LivingOpponents(value)) return HookTarget.LivingOpponents;
             // The player who played the card (cardPlay.Card.Owner.Creature).
             if (Unstored(value) is QueryValue { Name: "Creature", Of: QueryValue { Name: "Owner", Of: { } ownedCard } } && IsPlayCard(ownedCard)) return HookTarget.PlayOwner;
             if (value is QueryValue { Name: "HittableEnemies" }) return HookTarget.AllEnemies;

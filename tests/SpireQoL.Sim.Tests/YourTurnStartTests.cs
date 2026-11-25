@@ -44,15 +44,43 @@ public class YourTurnStartTests
     }
 
     [Fact]
-    public void ARelicWhoseTurnStartIsntReadLeavesTheTurnUnknown()
+    public void BrimstonesStrengthOnTheEnemiesShowsInTheirLaterAttacks()
     {
-        // Brimstone.AfterSideTurnStart gives every enemy 1 Strength as your turn starts, which the forecast's numbers carry, but its targets (the
-        // living opponents, a Where) aren't read: that turn is unknown, with why (decision #92), never 5 as if it weren't there.
+        // Brimstone.AfterSideTurnStart (participants.Contains(base.Owner.Creature)): 2 Strength to you, then 1 to each of your living opponents
+        // (Where(combatState.GetOpponentsOf(base.Owner.Creature), c => c.IsAlive), HookTarget.LivingOpponents) as each of your turns starts: the jab of 5
+        // lands for 6 the next turn and 7 the one after.
         var state = Fight(Attacker(id: 0, hp: 40, hit: 5));
         state.You.Relics = state.You.Relics.With(RelicId.Brimstone, 0);
-        var hits = SimEngine.Project(state, new[] { JabTurn(damage: 5) }).Of(turn: 0, enemyId: 0, move: "JAB")!;
-        Assert.Null(hits.Lands);
-        Assert.Contains(RelicId.Brimstone.Name, hits.Unknown, StringComparison.Ordinal);
+        var projection = SimEngine.Project(state, new[] { JabTurn(damage: 5), JabTurn(damage: 5) });
+        var next = projection.Of(turn: 0, enemyId: 0, move: "JAB")!;
+        Assert.True(next.Unknown == null, next.Unknown);
+        Assert.Equal(new[] { 6 }, next.Lands);
+        Assert.Equal(new[] { 7 }, projection.Of(turn: 1, enemyId: 0, move: "JAB")!.Lands);
+    }
+
+    [Fact]
+    public void BrimstonesStrengthLandsOnAnEnemyThatCantBeHitToo()
+    {
+        // Its targets are the living opponents, not the hittable enemies (CombatState.HittableEnemies): an enemy that can't be hit (a Reattach
+        // segment, an Illusion) still gains the Strength, as PowerCmd.Apply only asks CanReceivePowers.
+        var hidden = Attacker(id: 0, hp: 40, hit: 4);
+        hidden.Hittable = false;
+        var state = Fight(hidden);
+        state.You.Relics = state.You.Relics.With(RelicId.Brimstone, 0);
+        var hits = SimEngine.Project(state, new[] { JabTurn(damage: 4) }).Of(turn: 0, enemyId: 0, move: "JAB")!;
+        Assert.Equal(new[] { 5 }, hits.Lands);
+    }
+
+    [Fact]
+    public void BrimstoneActsOnlyAsItsOwnersSideStarts()
+    {
+        // As the enemies' turn starts its owner doesn't take part: a card's simulation, which ends with the enemy turn, gives the enemy no Strength
+        // (its attack this turn lands for its intent's 5).
+        var state = Fight(Attacker(id: 0, hp: 40, hit: 5));
+        state.You.Relics = state.You.Relics.With(RelicId.Brimstone, 0);
+        var after = Assert.Single(SimEngine.Run(state).Branches);
+        Assert.Equal(5, after.Taken);
+        Assert.False(after.Enemy(id: 0)!.Powers.Has(PowerId.Strength));
     }
 
     [Fact]

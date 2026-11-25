@@ -666,6 +666,11 @@ public enum HookTarget
     /// player's pet (Osty), an enemy.
     /// </summary>
     Dealer,
+    /// <summary>
+    /// Every living opponent of its owner, a player (Where(CombatState.GetOpponentsOf(base.Owner), c =&gt; c.IsAlive): Brimstone's Strength on the
+    /// enemies), hittable or not, in their order, each skipped once dead as the lazy filter reaches it.
+    /// </summary>
+    LivingOpponents,
 }
 
 /// <summary>One command of a hook's code, on the condition its code runs it on (null: always).</summary>

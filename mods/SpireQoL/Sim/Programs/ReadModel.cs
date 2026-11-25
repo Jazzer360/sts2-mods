@@ -1732,6 +1732,9 @@ public sealed class ReadModel : SimModel
                             case HookTarget.AllEnemies:
                                 foreach (var enemy in state.Targetable.ToList()) SimEngine.ApplyInHit(state, applier, enemy.Id, power, given, debuff);
                                 break;
+                            case HookTarget.LivingOpponents:
+                                foreach (var enemy in state.Enemies.Where(enemy => enemy.Alive).ToList()) SimEngine.ApplyInHit(state, applier, enemy.Id, power, given, debuff);
+                                break;
                             default: throw new InvalidOperationException($"{Name}: no power on {target}");
                         }
                         return One(state);
@@ -1752,10 +1755,12 @@ public sealed class ReadModel : SimModel
                         case HookTarget.PowerOwner or HookTarget.HitTarget: return SimEngine.ApplyAndTell(state, applier, args.Target, power, given, debuff);
                         // The player who played the card (cardPlay.Card.Owner.Creature: Vital Spark's Tainted on whoever plays a Tainted card).
                         case HookTarget.PlayOwner: return args.Play is { } played ? SimEngine.ApplyAndTell(state, applier, played.Owner, power, given, debuff) : One(state);
-                        case HookTarget.AllEnemies:
+                        // Every hittable enemy as the command starts; or every living one, hittable or not (a player's model's living opponents:
+                        // Brimstone's), each as the lazy filter reaches it.
+                        case HookTarget.AllEnemies or HookTarget.LivingOpponents:
                         {
                             IEnumerable<SimState> states = One(state);
-                            foreach (var enemy in state.Targetable.ToList())
+                            foreach (var enemy in target == HookTarget.AllEnemies ? state.Targetable.ToList() : state.Enemies.Where(enemy => enemy.Alive).ToList())
                             {
                                 var id = enemy.Id;
                                 states = SimEngine.Then(states, branch => branch.Enemy(id) is { Alive: true } ? SimEngine.ApplyAndTell(branch, applier, id, power, given, debuff) : One(branch));

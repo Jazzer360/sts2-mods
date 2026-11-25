@@ -3765,11 +3765,60 @@
         "Hook": "AfterSideTurnStart",
         "Steps": [
           {
-            "$kind": "UnknownStep",
-            "Why": "Brimstone\u0027s AfterSideTurnStart isn\u0027t read (gap: acts on Where(combatState.GetOpponentsOf(this.Owner.Creature), c =\u003E c.IsAlive))",
+            "$kind": "FlashStep",
             "When": {
-              "$kind": "HookFactValue",
-              "Fact": "TakesPart"
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__8.MoveNext:0031",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "SelfStrength",
+              "Canonical": 2
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "DebuffWhenNegative": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__8.MoveNext:0031",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "LivingOpponents",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "EnemyStrength",
+              "Canonical": 1
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "DebuffWhenNegative": true,
+            "By": {
+              "Who": "NoOne",
+              "PetOwner": false
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnStart\u003Ed__8.MoveNext:0031",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
             }
           }
         ]
