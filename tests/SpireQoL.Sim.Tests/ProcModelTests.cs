@@ -473,8 +473,7 @@ public class ProcModelTests
         Assert.Equal(2, after.You.Block);
         Assert.Equal(1, after.You.Arrows);
         // A kill lets every arrow go.
-        var kill = State(enemies: 2, hp: 5);
-        kill.Enemies[1].Hp = 100; // the fight goes on
+        var kill = WithBystander(State(hp: 5)); // the fight goes on
         Relic(kill, RelicId.Twine, vars: ("Block", 2));
         kill.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Impaled, amount: 2, data: 3);
         var killed = One(kill, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 9)));

@@ -1,4 +1,5 @@
 using Xunit;
+using static SpireQoL.Sim.Tests.ScriptBuilder;
 
 namespace SpireQoL.Sim.Tests;
 
@@ -17,13 +18,6 @@ public class SimConditionTests
         var state = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "E0", Hp = enemyHp } } };
         state.You.HandCount = hand;
         state.You.Energy = energy;
-        return state;
-    }
-
-    /// <summary>Another enemy, out of the play's way, so a kill of the first doesn't end the fight (decision #301).</summary>
-    private static SimState WithBystander(SimState state)
-    {
-        state.Enemies.Add(new SimEnemy { Id = 1, Name = "E1", Hp = 100 });
         return state;
     }
 

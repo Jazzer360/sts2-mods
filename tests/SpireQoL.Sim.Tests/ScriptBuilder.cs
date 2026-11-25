@@ -20,6 +20,19 @@ internal static class ScriptBuilder
 
     public static SimEnemy Enemy(int id, int hp, int block = 0) => new() { Id = id, Name = $"E{id}", Hp = hp, Block = block };
 
+    /// <summary>
+    /// An enemy out of the way (100 HP, no block, no hits, no powers): on a board that means the fight goes on, it stays alive so the others'
+    /// deaths don't end the fight (decision #301: no primary enemy alive ends it, and every command after that does nothing).
+    /// </summary>
+    public static SimEnemy Bystander(int id) => new() { Id = id, Name = $"E{id}", Hp = 100 };
+
+    /// <summary>The board with a <see cref="Bystander"/> added after its enemies (the next id): the fight goes on past their deaths.</summary>
+    public static SimState WithBystander(SimState state)
+    {
+        state.Enemies.Add(Bystander(id: state.Enemies.Count == 0 ? 0 : state.Enemies.Max(enemy => enemy.Id) + 1));
+        return state;
+    }
+
     /// <summary>The state after running a script (one branch expected).</summary>
     public static List<SimState> After(SimState state, SimScript script)
     {
