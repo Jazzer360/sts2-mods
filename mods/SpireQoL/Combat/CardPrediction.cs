@@ -56,6 +56,13 @@ public sealed class CardPrediction
     /// <summary>Its simulation was still running when the frame stopped waiting: its simulator tabs may be missing.</summary>
     public bool SimPending { get; set; }
 
+    /// <summary>
+    /// For the play check's prediction whose simulation was still running as the play began (decision #298): reads it once its background run is
+    /// done, from the start state it was given and the board it was made on, into this prediction (SimPending then false), and gives its tabs;
+    /// null while it's still running (given true: waits for it, two seconds at most). Null when nothing was left running.
+    /// </summary>
+    public Func<bool, List<SpireQoL.Cards.TabSpec>?>? FinishLater { get; set; }
+
     /// <summary>Its tabs came from a simulation stopped at a cap (decision #107): what's shown carries the ?.</summary>
     public bool SimIncomplete { get; set; }
 

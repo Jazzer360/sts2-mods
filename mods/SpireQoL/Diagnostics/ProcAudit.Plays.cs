@@ -113,6 +113,11 @@ public sealed partial class ProcAudit
     private PlayRecord? _current;
     private readonly Dictionary<GameAction, PlayRecord> _running = new(ReferenceEqualityComparer.Instance);
     private readonly Queue<PlayRecord> _finished = new();
+    /// <summary>
+    /// Plays whose prediction's simulation was still running as they began (decision #298), with the fight's log as they finished (the fight's
+    /// end clears it) and the frames waited: checked once it's done, as any other.
+    /// </summary>
+    private readonly List<(PlayRecord Record, List<CombatHistoryEntry> Entries, int Frames)> _waiting = new();
     private int _attributed;
 
     public void OnFrame(OverlayHost host)
@@ -122,6 +127,8 @@ public sealed partial class ProcAudit
         var combat = Sts2State.Combat;
         if (me == null || combat == null)
         {
+            if (_waiting.Count > 0 && Sts2State.Me is { } leaving) CheckWaiting(leaving, wait: true);
+            _waiting.Clear();
             _finished.Clear();
             _running.Clear();
             _countAtFrame.Clear(); // trimmed by frame below, which skips the frames out of a fight
@@ -146,6 +153,7 @@ public sealed partial class ProcAudit
         var history = CombatManager.Instance.History;
         if (!ReferenceEquals(history, _history))
         {
+            CheckWaiting(me, wait: true);
             Summarize();
             DetachHistory();
             _history = history;
@@ -171,7 +179,43 @@ public sealed partial class ProcAudit
         _countAtFrame[_ctx.Decor.Frame] = history.Entries.Count();
         _countAtFrame.Remove(_ctx.Decor.Frame - 600); // frames count up by one: the oldest kept is 600 back
 
-        while (_finished.Count > 0) Check(_finished.Dequeue(), me);
+        while (_finished.Count > 0)
+        {
+            var rec = _finished.Dequeue();
+            if (rec.Prediction?.FinishLater is { } finish && _history != null)
+            {
+                if (finish(false) is { } finished) rec.Predicted = finished;
+                else
+                {
+                    _waiting.Add((rec, _history.Entries.ToList(), 0));
+                    continue;
+                }
+            }
+            Check(rec, me);
+        }
+        CheckWaiting(me, wait: false);
+    }
+
+    /// <summary>
+    /// The plays waiting on their prediction's simulation (decision #298): each one done is checked with its own log; one still running after 600
+    /// frames, or (<paramref name="wait"/>) as the fight's log goes, is waited for (two seconds at most), then checked: still running then, as a
+    /// pending one (its simulator checks counted as not checked).
+    /// </summary>
+    private void CheckWaiting(Player me, bool wait)
+    {
+        for (var i = 0; i < _waiting.Count; i++)
+        {
+            var (rec, entries, frames) = _waiting[i];
+            var last = wait || frames >= 600;
+            if (rec.Prediction?.FinishLater?.Invoke(last) is { } finished) rec.Predicted = finished;
+            else if (!last)
+            {
+                _waiting[i] = (rec, entries, frames + 1);
+                continue;
+            }
+            _waiting.RemoveAt(i--);
+            Check(rec, me, entries);
+        }
     }
 
     private void DetachHistory()
@@ -554,10 +598,10 @@ public sealed partial class ProcAudit
     }
 
     /// <summary>Checks one finished play of yours (see PlayRecord) and logs and reports what didn't match.</summary>
-    private void Check(PlayRecord rec, Player me)
+    private void Check(PlayRecord rec, Player me, List<CombatHistoryEntry>? entries = null)
     {
-        if (_history == null) return;
-        var hist = _history.Entries.ToList();
+        if (entries == null && _history == null) return;
+        var hist = entries ?? _history!.Entries.ToList();
         var indices = rec.Indices.Where(index => index < hist.Count).ToList();
         var start = indices.FirstOrDefault(index => hist[index] is CardPlayStartedEntry { CardPlay: var play } && play.Card.Owner == me && play.IsFirstInSeries && !play.IsAutoPlay, -1);
         if (start < 0) return; // nothing was played (the card couldn't be played after all)

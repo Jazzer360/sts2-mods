@@ -90,6 +90,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Fixed
 - A card whose play does something the predictions don't follow yet shows `?` and a range where it does it, instead of leaving it out: a card it upgrades (Armaments, Apotheosis, Begone...), plays (Beat Down, Uproar, Catastrophe...), gives a keyword or an enchantment (Snap, Sculpting Strike, Hand Trick, Blade of Ink), an orb's passive (Darkness, Tesla Coil), an enemy it stuns (Whistle), max HP (Feed, Brightest Flame), an arrow slot (Quiver), and gold or a potion when one of your relics reacts to it (Hand of Greed, Alchemize).
+- The play audit checks a play whose prediction was still being worked out as it began, once it's done, instead of skipping its checks; and it holds Play Preview to a play that wins the fight (no damage after it, every enemy it killed dead in some outcome).
 - Map Reminders: Pael's Growth's icon beside Rest shows only while a card in your deck has Clone (v0.114.0 offers its rest-site option only then).
 - The Death Skull shows on the Waterfall Giant when your end of turn would kill it: Steam Eruption keeps it in the fight about to blow, but it died before acting. The lethal tag on cards is unchanged.
 - Misery's spread is predicted: the debuffs on the enemy it hits (as they were before its hit) go onto every other enemy, each as the game applies it (Artifact takes one), for the turn's damage and the lethal tag. A debuff it can't follow (a temporary one, or one someone else applied) shows `?`.

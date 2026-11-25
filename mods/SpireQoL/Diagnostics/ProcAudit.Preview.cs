@@ -1,6 +1,7 @@
 using MegaCrit.Sts2.Core.Combat.History;
 using MegaCrit.Sts2.Core.Combat.History.Entries;
 using SpireQoL.Sim;
+using Sts2Mods.Core.Game;
 
 namespace SpireQoL.Diagnostics;
 
@@ -29,10 +30,14 @@ public sealed partial class ProcAudit
             model.Skip("preview", AutoPlayReason(window, entries, "auto-played cards"));
             return;
         }
-        if (window.FightEnded || window.After == null || window.AfterIds == null)
+        if (window.FightEnded)
         {
-            // The play ended the fight: nothing after it to compare (an expected skip, CheckSkip.FightEnded, as the other checks' are).
-            model.Skip("preview", window.FightEnded ? CheckSkip.FightEnded : window.AfterSkipped ?? "the board after the play wasn't captured");
+            FightEndPreviewIssues(window, sim, preview, issues, model);
+            return;
+        }
+        if (window.After == null || window.AfterIds == null)
+        {
+            model.Skip("preview", window.AfterSkipped ?? "the board after the play wasn't captured");
             return;
         }
         if (PostPlay(window, sim) is not { } post)
@@ -50,6 +55,25 @@ public sealed partial class ProcAudit
             if (now < intent.Least || now > intent.Most)
                 issues.Add($"Play Preview: {enemy.Name}'s intent showed {Range(intent.Least, intent.Most)} a hit, the board the play left gives {now}");
         }
+    }
+
+    /// <summary>
+    /// Play Preview of a play that won the fight (decision #298): there's no end of turn after it, so you take nothing, which the preview's range
+    /// must hold (some outcome of the play ends the fight); and an enemy dead as the fight ends died in this play, which its intent must have
+    /// allowed (dead in some outcome). One the fight ended with you, or whose dead weren't read, isn't checked (counted).
+    /// </summary>
+    private static void FightEndPreviewIssues(Window window, Combat.SimInputs sim, SimOutcome preview, List<string> issues, ModelLines model)
+    {
+        if (window.DeadAtFightEnd == null || Sts2State.Me?.Creature is not { IsAlive: true })
+        {
+            model.Skip("preview", CheckSkip.FightEnded + (window.DeadAtFightEnd == null ? ": who it killed wasn't read" : ": it ended with you"));
+            return;
+        }
+        if (preview.TakenMin > 0)
+            issues.Add($"Play Preview: the play won the fight, but the preview showed {Range(preview.TakenMin, preview.TakenMax)} damage at the end of the turn in every outcome");
+        foreach (var (creature, id) in sim.Ids)
+            if (window.DeadAtFightEnd.Contains(creature) && sim.Start.Enemy(id) is { Hp: > 0 } start && preview.IntentsAfterPlay.TryGetValue(id, out var intent) && !intent.DeadInSome)
+                issues.Add($"Play Preview: {start.Name} died in the play that won the fight, but its intent showed it alive in every outcome");
     }
 
     /// <summary>

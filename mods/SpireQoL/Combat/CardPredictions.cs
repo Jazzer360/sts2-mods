@@ -408,7 +408,33 @@ public sealed class CardPredictions
         {
             if (self.Prepare(card, Sources(me, combat), record: false) is not { } prepared) return null;
             if (prepared.Sim is { IsCompleted: false } batch) SimWait.All(batch.Jobs, ownBudget: true);
-            return (self.Finish(card, prepared), prepared.F);
+            var tabs = self.Finish(card, prepared);
+            // Still running past its wait (decision #298): it goes on in the background, from the start state it was given, and the play check
+            // reads it once it's done, with this board's objects and forecast, as any other.
+            if (prepared.F.SimPending && prepared.Sim is { } running && self._uncached.Remove(running))
+            {
+                var board = (Me: me, Combat: combat, live.Model, live.Start);
+                prepared.F.FinishLater = wait =>
+                {
+                    if (!running.IsCompleted && wait) Task.WaitAll(running.Jobs.Select(job => (Task)job.Ready).ToArray(), millisecondsTimeout: 2000);
+                    if (!running.IsCompleted) return null;
+                    var saved = (self._me, self._cs, self._turnEnd, self._start, self._turnEndFrame, self._startFrame);
+                    (self._me, self._cs, self._turnEnd, self._start, self._turnEndFrame, self._startFrame) = (board.Me, board.Combat, board.Model, board.Start, self._ctx.Decor.Frame, self._ctx.Decor.Frame);
+                    self._noCache = true;
+                    try
+                    {
+                        prepared.F.SimPending = false;
+                        prepared.F.FinishLater = null;
+                        return self.Finish(card, prepared);
+                    }
+                    finally
+                    {
+                        self._noCache = false;
+                        (self._me, self._cs, self._turnEnd, self._start, self._turnEndFrame, self._startFrame) = saved;
+                    }
+                };
+            }
+            return (tabs, prepared.F);
         }
         finally
         {
