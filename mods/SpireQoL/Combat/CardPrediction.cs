@@ -101,9 +101,21 @@ public sealed class CardPrediction
         CardsBack = ReturnToHand.Back(card, me, plays),
         ChosenTransformsAtMost = Procs.Programs.BoardCounts.TransformsChosen(card)
             ? Procs.Programs.BoardCounts.TransformCount(card, Sts2State.Hand(me).Where(other => !ReferenceEquals(other, card)).ToList(), Sts2State.DrawPileCount(me)) : 0,
+        // A card aimed at a random enemy whose every attack its code aims itself at the least-HP enemy (Memento Mori: decision #320) rolls nothing.
         RandomOutcome = card.TargetType == MegaCrit.Sts2.Core.Entities.Cards.TargetType.RandomEnemy
-                        && card.CombatState?.HittableEnemies.Count(creature => creature.IsAlive) > 1,
+                        && card.CombatState?.HittableEnemies.Count(creature => creature.IsAlive) > 1
+                        && !AimsItselfAtTheLeastHp(card),
     };
+
+    /// <summary>
+    /// The card's code attacks, and every attack is aimed at the enemy you can hit with the least HP (StepValues.IsLeastHpEnemy: Memento Mori's
+    /// MinBy): whom it hits is the rules', not a roll (its other randomness, if any, shows as its outcome's branches: CardPredictions).
+    /// </summary>
+    private static bool AimsItselfAtTheLeastHp(CardModel card)
+    {
+        var attacks = Procs.Programs.CardPrograms.Of(card.GetType()).Commands.Where(command => command.Command.FullName == "DamageCmd.Attack").ToList();
+        return attacks.Count > 0 && attacks.All(attack => Procs.Programs.StepValues.IsLeastHpEnemy(attack.TargetValue));
+    }
 
     /// <summary>The play's outcome at the target it was played at (its aim's simulation), when it finished without a cap; null otherwise.</summary>
     public SimOutcome? OutcomeAt(Creature? target) =>

@@ -40,6 +40,9 @@ public sealed record CommandStep(int Offset, CodeMember Command, IReadOnlyList<s
     /// <summary>WithHitCount's argument as a value (Dismantle's {target Vulnerable: HitCount; else 1}, a card's X); null with no hit count (one hit).</summary>
     public ProgramValue? HitCountValue { get; init; }
 
+    /// <summary>An attack's Targeting argument as a value (the creature it's aimed at: the play's target, Memento Mori's least-HP enemy); null with none.</summary>
+    public ProgramValue? TargetValue { get; init; }
+
     /// <summary>
     /// The steps of a delegate the command is given and runs (ArrowCmd.ShootArrowAtTarget runs Blossom Shot's attack after the
     /// shot): they follow the command.
@@ -995,7 +998,7 @@ public static class ProgramReader
                 CommandStep command => command with
                 {
                     Values = command.Values.Select(value => value.Map(replace)).ToList(), Inner = command.Inner.Select(inner => Bound(inner, replace)).ToList(),
-                    HitCountValue = command.HitCountValue?.Map(replace),
+                    HitCountValue = command.HitCountValue?.Map(replace), TargetValue = command.TargetValue?.Map(replace),
                 },
                 _ => bound,
             };
@@ -1014,7 +1017,7 @@ public static class ProgramReader
         {
             var builder = new List<string>();
             string? hitCount = null;
-            ProgramValue? hitCountValue = null;
+            ProgramValue? hitCountValue = null, targetValue = null;
             for (var j = at + 1; j < flow.Ops.Count; j++)
             {
                 if (flow.Ops[j].Member is not { DeclaringType: "AttackCommand" } call || !flow.Ops[j].IsCall) continue;
@@ -1025,9 +1028,10 @@ public static class ProgramReader
                     hitCount = flow.Source(j, call, parameter: 0);
                     hitCountValue = flow.ArgumentValues(j, call)[0];
                 }
+                if (call.Name == "Targeting" && call.ParameterCount >= 1) targetValue = flow.ArgumentValues(j, call)[0];
             }
             return new CommandStep(flow.Ops[at].Offset, member, Arguments(flow, at, member))
-                { Builder = builder, HitCount = hitCount, HitCountValue = hitCountValue, Values = flow.ArgumentValues(at, member) };
+                { Builder = builder, HitCount = hitCount, HitCountValue = hitCountValue, TargetValue = targetValue, Values = flow.ArgumentValues(at, member) };
         }
 
         /// <summary>

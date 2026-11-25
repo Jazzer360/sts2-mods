@@ -53,6 +53,25 @@ public static class StepValues
         _ => false,
     };
 
+    /// <summary>
+    /// The value is the enemy you can hit with the least HP, the first of them on a tie: MinBy over every enemy you can hit by each one's CurrentHp
+    /// (Memento Mori's), or OrderBy by it, then its First (a stable sort keeps the fight's order among equals, as MinBy does).
+    /// </summary>
+    public static bool IsLeastHpEnemy(ProgramValue? value) => Unstored(value) switch
+    {
+        QueryValue { Type: "Enumerable", Name: "MinBy", Arguments: [var source, LambdaValue key] } => IsEveryEnemy(source) && ReadsOwn(key, "CurrentHp"),
+        QueryValue { Type: "Enumerable", Name: "First" or "FirstOrDefault", Arguments: [var ordered] } =>
+            Unstored(ordered) is QueryValue { Type: "Enumerable", Name: "OrderBy", Arguments: [var source, LambdaValue key] } && IsEveryEnemy(source) && ReadsOwn(key, "CurrentHp"),
+        _ => false,
+    };
+
+    /// <summary>
+    /// The value is a creature its code picks by an order of a collection (MinBy, MaxBy, OrderBy, OrderByDescending): the scan holds every attack
+    /// aimed at one to a shape the translation reads (IsLeastHpEnemy).
+    /// </summary>
+    public static bool PicksByOrder(ProgramValue? value) =>
+        value != null && value.Parts().Any(part => part is QueryValue { Type: "Enumerable", Name: "MinBy" or "MaxBy" or "OrderBy" or "OrderByDescending" or "ThenBy" or "ThenByDescending" });
+
     /// <summary>A lambda that gives its parameter's property by this name (e => e.IsHittable).</summary>
     private static bool ReadsOwn(LambdaValue lambda, string property) =>
         lambda.Body.Terms is [[{ Holds: true, Test: QueryValue { Name: var name, Of: ParameterValue { Name: var given } } }]] && name == property && given == lambda.Parameter;

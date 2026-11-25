@@ -314,7 +314,7 @@ public static partial class SimAdapter
     /// </summary>
     private static bool TestsOwnTargets(ConditionLiteral literal, CommandStep command, CardModel card)
     {
-        if (command.Command.FullName != "DamageCmd.Attack" || ModeOf(command, card) is not (SimPlay.Target.Random or SimPlay.Target.All)) return false;
+        if (command.Command.FullName != "DamageCmd.Attack" || ModeOf(command, card) is not (SimPlay.Target.Random or SimPlay.Target.All or SimPlay.Target.LeastHp)) return false;
         var (counted, any) = literal.Test switch
         {
             CompareValue { Op: Comparison.NotEqual or Comparison.Greater, Right: ConstantValue { Value: 0 } } some => (some.Left, literal.Holds),
@@ -444,6 +444,7 @@ public static partial class SimAdapter
         ["CreatureCmd.LoseBlock"] = "block taken from a creature other than the card's target: not followed",
         ["PlayerCmd.GainStars"] = "stars gained by a player other than the card's owner: not followed",
         ["PowerCmd.Remove"] = "a power taken off a creature other than the card's owner (bar the target's Artifact with its block): not followed",
+        ["DamageCmd.Attack"] = "an attack aimed at a creature its code picks by an order other than the enemy you can hit with the least HP: not followed",
     };
 
     /// <summary>
@@ -459,6 +460,8 @@ public static partial class SimAdapter
             "CreatureCmd.LoseBlock" => Argument(command, 1) == "cardPlay.Target",
             "PlayerCmd.GainStars" => Argument(command, 1) == "Owner",
             "PowerCmd.Remove" => RemovesTargetsArtifact(command, program) || command.Command.GenericArguments.Count == 1 && IsYou(ValueAt(command, 0)),
+            // Its Targeting's creature: one its code picks by an order is read only as the least-HP enemy (SimPlay.Target.LeastHp).
+            "DamageCmd.Attack" => command.TargetValue is not { } aimedAt || !PicksByOrder(aimedAt) || IsLeastHpEnemy(aimedAt),
             _ => true,
         };
         return followed ? null : ShapesNotFollowed[command.Command.FullName];
@@ -676,11 +679,17 @@ public static partial class SimAdapter
 
     /// <summary>
     /// Whom an attack hits, from its builder: every enemy (TargetingAllOpponents), random ones (TargetingRandomOpponents), the one it targets
-    /// (Targeting: a roll's target on a card aimed at a random enemy, Memento Mori's); with none of those, or several on different ways
-    /// (Shiv's every enemy with Fan of Knives), the card's own targeting.
+    /// (Targeting: the enemy you can hit with the least HP when its argument is that, read from its shape (StepValues.IsLeastHpEnemy: Memento
+    /// Mori's MinBy); another creature its code picks by an order isn't read; else a roll's target on a card aimed at a random enemy, or the card's
+    /// target); with none of those, or several on different ways (Shiv's every enemy with Fan of Knives), the card's own targeting.
     /// </summary>
     private static SimPlay.Target ModeOf(CommandStep command, CardModel card)
     {
+        if (command.Builder.Contains("Targeting") && command.TargetValue is { } aimedAt)
+        {
+            if (IsLeastHpEnemy(aimedAt)) return SimPlay.Target.LeastHp;
+            if (PicksByOrder(aimedAt)) return SimPlay.Target.None;
+        }
         var byCard = card.TargetType switch
         {
             TargetType.AnyEnemy => SimPlay.Target.Single,

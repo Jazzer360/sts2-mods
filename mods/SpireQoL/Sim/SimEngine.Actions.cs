@@ -495,6 +495,19 @@ public static partial class SimEngine
     {
         // A shot with no arrow does nothing: no attack, so no hooks either.
         if (at.NeedsArrow && branches.States.All(branch => branch.ArrowAwayAt < 0)) return;
+        // The hittable enemy with the least HP, picked as the attack starts (Memento Mori's MinBy over HittableEnemies), in each branch: an attack
+        // at it, with no attack at all when there's no enemy to hit.
+        if (at.Mode == SimPlay.Target.LeastHp)
+        {
+            branches.Each(branch =>
+            {
+                if (LeastHp(branch) is not { } target) return new[] { branch };
+                var aimed = new BranchSet(branch, nested: true);
+                RunAttack(aimed, at with { Mode = SimPlay.Target.Single, TargetId = target });
+                return aimed.States;
+            });
+            return;
+        }
         // Its hits, each branch its own when it reads them as it runs (decision #189: Fiend Fire's cards taken); none at all: no attack.
         // A count of the fight's log adds hits as the simulation goes (Finisher: decision #191).
         int HitsOf(SimState state) => CountOf(state, at.HitsFrom, at.Hits) + (at.HitsLogged is { } logged ? (int)logged.More(state, state.CurrentPlay?.Owner ?? Who.You) : 0);
@@ -557,6 +570,18 @@ public static partial class SimEngine
             }
             return Then(states, branch => HitAllRound(branch, rounds - 1 + (at.RepeatPerKill ? ids.Count(id => branch.Enemy(id) is { Alive: false }) : 0)));
         }
+    }
+
+    /// <summary>
+    /// The hittable enemy with the least HP (Enumerable.MinBy over CombatState.HittableEnemies, by CurrentHp): the first in the fight's order among
+    /// equals, as MinBy keeps the first it meets (the order is the board's, nothing hidden); null with none to hit.
+    /// </summary>
+    private static int? LeastHp(SimState state)
+    {
+        SimEnemy? least = null;
+        foreach (var enemy in state.Enemies)
+            if (enemy.Hittable && enemy.Alive && (least == null || enemy.Hp < least.Hp)) least = enemy;
+        return least?.Id;
     }
 
     /// <summary>One random living enemy: a branch per possible target.</summary>

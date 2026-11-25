@@ -105,7 +105,8 @@ public class BoardDecidedConditionTests
     public void MementoMorisLaterPlayAttacksWithNoQuestion()
     {
         // MementoMori.OnPlay: if (HittableEnemies.Count != 0) an attack on one of them. Played twice, its second test is read after its first attack,
-        // but it's the attack's own (decision #316): the attack finds its target among the hittable enemies as it runs, none with none.
+        // but it's the attack's own (decision #316): the attack finds its target among the hittable enemies as it runs, the one with the least HP
+        // (decision #320), none with none.
         var gameFight = new GameFight();
         var enemy = gameFight.Combat.CreateCreature(ModelDb.Monster<Axebot>().ToMutable(), CombatSide.Enemy, slot: null);
         gameFight.Combat.AddCreature(enemy);
@@ -117,7 +118,7 @@ public class BoardDecidedConditionTests
         var play = SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, ids[enemy], plays: 2);
         Assert.Empty(play.Body.OfType<FirstPlayOnly>());
         Assert.Empty(play.Body.OfType<NotModelledAction>());
-        Assert.Equal(SimPlay.Target.Random, Assert.IsType<AttackAction>(Assert.Single(play.Body)).Mode);
+        Assert.Equal(SimPlay.Target.LeastHp, Assert.IsType<AttackAction>(Assert.Single(play.Body)).Mode);
     }
 
     [Fact]

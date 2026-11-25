@@ -12,7 +12,11 @@ namespace SpireQoL.Sim;
 /// </summary>
 public sealed class SimPlay
 {
-    public enum Target { None, Single, All, Random }
+    /// <summary>
+    /// Whom an attack hits: no one, one enemy, every enemy, a random one (a branch each), or the hittable enemy with the least HP as the attack
+    /// starts, the first in the fight's order on a tie (LeastHp: Memento Mori's MinBy over HittableEnemies; no attack with none to hit).
+    /// </summary>
+    public enum Target { None, Single, All, Random, LeastHp }
 
     public string Name = "";
     /// <summary>
