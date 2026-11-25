@@ -339,7 +339,7 @@ public class ReadModelParityTests
         nameof(SimModel.AfterRemoved),
         nameof(SimModel.AfterEnergyReset), nameof(SimModel.AfterEnergyResetLate), nameof(SimModel.BeforeHandDraw), nameof(SimModel.BeforeHandDrawLate),
         nameof(SimModel.AfterPlayerTurnStartEarly), nameof(SimModel.AfterPlayerTurnStart), nameof(SimModel.AfterPlayerTurnStartLate),
-        nameof(SimModel.AfterDiedToDoom),
+        nameof(SimModel.AfterDiedToDoom), nameof(SimModel.BeforePotionUsed), nameof(SimModel.AfterPotionUsed),
     };
 
     [Fact]
@@ -815,6 +815,20 @@ public class ReadModelParityTests
             case nameof(SimModel.AfterEnergyReset) or nameof(SimModel.AfterEnergyResetLate) or nameof(SimModel.BeforeHandDraw) or nameof(SimModel.BeforeHandDrawLate)
                 or nameof(SimModel.AfterPlayerTurnStartEarly) or nameof(SimModel.AfterPlayerTurnStart) or nameof(SimModel.AfterPlayerTurnStartLate):
                 yield return ("your next turn starting", (model, state) => YourTurnStarting(model, state, owner));
+                break;
+            case nameof(SimModel.BeforePotionUsed) or nameof(SimModel.AfterPotionUsed):
+                // A potion each player uses, at no one and at enemy 0, with potions still in their belt and with none left (Belt Buckle's test):
+                // what it does (decision #313).
+                foreach (var user in others.Where(Who.IsPlayer))
+                    foreach (var left in new[] { 0, 2 })
+                        foreach (var target in new[] { Who.None, 0 })
+                            yield return ($"a potion of {user}'s used at {target}, {left} left", (model, state) =>
+                            {
+                                if (state.Player(user) is null) return "no such player";
+                                state.MutablePlayer(user).Potions = left;
+                                var use = new SimPotionUse("Potion", user, target);
+                                return Branches(hook == nameof(SimModel.BeforePotionUsed) ? model.BeforePotionUsed(state, owner, use) : model.AfterPotionUsed(state, owner, use));
+                            });
                 break;
             case nameof(SimModel.AfterOrbChanneled):
                 // Twelve orbs channeled for its owner in turn (a counter's count), and one for each other player.

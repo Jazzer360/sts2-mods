@@ -504,6 +504,13 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> AfterArrowImpaled(SimState state, int owner, int target, int shooter) => One(state);
     /// <summary>An orb was channeled for a player (AfterOrbChanneled): Metronome.</summary>
     public virtual IEnumerable<SimState> AfterOrbChanneled(SimState state, int owner, int player) => One(state);
+    /// <summary>
+    /// Hook.BeforePotionUsed: a potion has left its owner's belt and is about to act (PotionModel.OnUseWrapper, decision #313): Surrounded turns
+    /// you to face its target.
+    /// </summary>
+    public virtual IEnumerable<SimState> BeforePotionUsed(SimState state, int owner, SimPotionUse use) => One(state);
+    /// <summary>Hook.AfterPotionUsed: a potion acted and was logged (Reptile Trinket's Strength, Belt Buckle's Dexterity with none left).</summary>
+    public virtual IEnumerable<SimState> AfterPotionUsed(SimState state, int owner, SimPotionUse use) => One(state);
     /// <summary>Hook.ModifyOrbValue: an orb's value as this listener leaves it (Focus, Infused Core). Pure: reads the state, changes nothing.</summary>
     public virtual decimal ModifyOrbValue(SimState state, int owner, OrbCtx orb, decimal value) => value;
     /// <summary>Hook.ModifyOrbPassiveTriggerCount: how many times an orb's passive goes off (Gold-Plated Cables on the front orb). Pure.</summary>

@@ -26,10 +26,27 @@ public sealed class SurroundedPower : SimModel
     public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         if (play.Owner != owner || play.Target < 0) return One(state);
+        Face(state, owner, play.Target);
+        return One(state);
+    }
+
+    /// <summary>
+    /// BeforePotionUsed (decision #313): a potion of its owner's with a target (potion.Owner == base.Owner.Player, target != null) turns them to face
+    /// it, as a card aimed at it does (UpdateDirection).
+    /// </summary>
+    public override IEnumerable<SimState> BeforePotionUsed(SimState state, int owner, SimPotionUse use)
+    {
+        if (use.Owner != owner || use.Target == Who.None) return One(state);
+        Face(state, owner, use.Target);
+        return One(state);
+    }
+
+    /// <summary>UpdateDirection: a target behind you (its back-attack power for the way you face) turns you round; any other leaves you as you are.</summary>
+    private void Face(SimState state, int owner, int target)
+    {
         var powers = SimEngine.PowersOf(state, owner);
         var facing = powers.DataOf(ThisPower);
-        if (SimEngine.PowersOf(state, play.Target).Has(BehindPower(facing))) SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], facing == FacingRight ? FacingLeft : FacingRight));
-        return One(state);
+        if (SimEngine.PowersOf(state, target).Has(BehindPower(facing))) SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], facing == FacingRight ? FacingLeft : FacingRight));
     }
 
     /// <summary>

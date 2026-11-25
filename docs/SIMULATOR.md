@@ -82,6 +82,7 @@ Non-goals:
 - **A card play** (`CardModel.OnPlayWrapper`): result location; play count (`ModifyCardPlayCount`); then for each play:
   `BeforeCardPlayed`; `OnPlay` (the card's commands, each awaited in turn, hooks nested inside); the enchantment's
   `OnPlay`; the affliction's `OnPlay`; card play finished; `AfterCardPlayed` (Early, normal, Late).
+- **A potion's use** (`PotionModel.OnUseWrapper`, decision #313): it leaves its owner's belt (`RemoveBeforeUse`); `BeforePotionUsed`; `OnUse` (its commands, read from its code by the card program reader and translated by `SimAdapter.Potion`); the game's log of it; `AfterPotionUsed` while its owner lives. Both potion hooks loop over the run's listeners, whatever the fight's state. A use is a `SimPlay` with `Potion` set: its script is one `PotionUseAction`, and nothing of a card play's runs around it.
 - **An attack** (`AttackCommand`): per hit: `BeforeDamageReceived` (Thorns), damage through the pipeline, block, HP loss
   pipeline, `AfterDamageGiven`, `AfterDamageReceived`, deaths; after the last hit `AfterAttack` (Vigor, Gigantification,
   Quietus are spent here).

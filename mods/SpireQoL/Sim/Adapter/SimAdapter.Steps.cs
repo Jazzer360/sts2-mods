@@ -1108,15 +1108,23 @@ public static partial class SimAdapter
             if (mates[teammateIndex].Creature is not { IsAlive: true } mate) continue;
             var who = Who.Teammate(teammateIndex);
             if (players != null ? !players.Contains(who) : yours != null || mate != play.Ally) continue;
-            // Their draws: as many as their hand has room for and their piles hold; a shuffle when the draw pile runs out.
-            var hand = PileType.Hand.GetPile(mates[teammateIndex]).Cards.Count;
-            var drawPile = PileType.Draw.GetPile(mates[teammateIndex]).Cards.Count;
-            var discard = PileType.Discard.GetPile(mates[teammateIndex]).Cards.Count;
-            var drawn = Math.Min(cards, Math.Min(Math.Max(0, CardPile.MaxCardsInHand - hand), drawPile + discard));
-            if (drawn > drawPile) actions.Add(new CardEventAction(CardEvent.Shuffled, Count: 1) { Player = who, Indirect = true });
-            if (drawn > 0) actions.Add(new CardEventAction(CardEvent.Drawn, drawn) { Player = who, Indirect = true });
+            actions.AddRange(TeammateDraws(mates[teammateIndex], who, cards));
         }
         return actions;
+    }
+
+    /// <summary>
+    /// A teammate's draws (their piles on the board: a teammate's aren't simulated): as many as their hand has room for and their piles hold; a
+    /// shuffle when the draw pile runs out.
+    /// </summary>
+    private static IEnumerable<SimAction> TeammateDraws(Player mate, int who, int cards)
+    {
+        var hand = PileType.Hand.GetPile(mate).Cards.Count;
+        var drawPile = PileType.Draw.GetPile(mate).Cards.Count;
+        var discard = PileType.Discard.GetPile(mate).Cards.Count;
+        var drawn = Math.Min(cards, Math.Min(Math.Max(0, CardPile.MaxCardsInHand - hand), drawPile + discard));
+        if (drawn > drawPile) yield return new CardEventAction(CardEvent.Shuffled, Count: 1) { Player = who, Indirect = true };
+        if (drawn > 0) yield return new CardEventAction(CardEvent.Drawn, drawn) { Player = who, Indirect = true };
     }
 
     /// <summary>One draw of yours: a count of the cards the play took (Calculated Gamble) or of your hand's room (Scrawl) read as it runs; else its own count.</summary>

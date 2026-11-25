@@ -165,7 +165,7 @@ power StretchPower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInterna
 power SubroutinePower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power SuckPower: AfterAttack: gap: the value command.TargetSide
 power SurprisePower: AfterDeath: gap: sets PowerModel.Target where the reader reads no store | ShouldStopCombatFromEnding: read
-power SurroundedPower: AfterDeath: gap: tests All(this.Owner.CombatState.HittableEnemies, e => e.HasPower<BackAttackLeftPower>()) | BeforeCardPlayed: gap: tests cardPlay.Target | BeforePotionUsed: gap: the simulator runs no read model's BeforePotionUsed | ModifyDamageMultiplicative: read
+power SurroundedPower: AfterDeath: gap: tests All(this.Owner.CombatState.HittableEnemies, e => e.HasPower<BackAttackLeftPower>()) | BeforeCardPlayed: gap: tests cardPlay.Target | BeforePotionUsed: gap: tests target | ModifyDamageMultiplicative: read
 power SwipePower: BeforeDeath: gap: the simulator runs no read model's BeforeDeath
 power SwordSagePower: AfterCardEnteredCombat: gap: the simulator runs no read model's AfterCardEnteredCombat | AfterPowerAmountChanged: read | AfterRemoved: unknown where it runs: gap: sets CardModel.BaseReplayCount where the reader reads no store
 power TaintedPower: AfterSideTurnEnd: read | ModifyDamageAdditive: read

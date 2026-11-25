@@ -159,6 +159,12 @@ public enum HookName
     /// (Book Repair Knife heals for each enemy whose death set off Fatal).
     /// </summary>
     AfterDiedToDoom,
+    /// <summary>
+    /// Hook.BeforePotionUsed and AfterPotionUsed (PotionModel.OnUseWrapper, decision #313): a potion of the hook's player is about to act, and
+    /// acted; the hook's player its owner (potion.Owner: HookFact.EventIsOwners).
+    /// </summary>
+    BeforePotionUsed,
+    AfterPotionUsed,
 }
 
 /// <summary>When an orb's passive goes off: the OrbModel trigger hook its class overrides with a call of TriggerPassive (OrbQueue calls them).</summary>
@@ -483,6 +489,8 @@ public enum HookFact
     /// amount), read from that power's code (ModelSpec.Tests) for that creature: 0 when it doesn't have the power.
     /// </summary>
     CreaturePowerTest,
+    /// <summary>The potions in the owner's belt (base.Owner.Potions.Count(); Any() is this above 0): SimPlayer.Potions (decision #313).</summary>
+    OwnerPotionCount,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>

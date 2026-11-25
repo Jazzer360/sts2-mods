@@ -256,7 +256,9 @@ public static class ProgramEvaluator
 
     private static object CardNumber(string key, ProgramBoard board)
     {
-        if (!board.Card.DynamicVars.TryGetValue(key, out var dynamicVar)) return Unknown;
+        // A potion's own value where the model evaluated is a potion (its OnUse: decision #313), else the card's.
+        var vars = board.Card?.DynamicVars ?? (board.Self as PotionModel)?.DynamicVars;
+        if (vars == null || !vars.TryGetValue(key, out var dynamicVar)) return Unknown;
         return dynamicVar is CalculatedVar calculated ? calculated.Calculate(board.Target) : dynamicVar.BaseValue;
     }
 
@@ -346,15 +348,16 @@ public static class ProgramEvaluator
         // string's == and != (a monster's slot: SlotName == "first"), null against a text included.
         if (query is { Of: null, Name: "op_Equality" or "op_Inequality", Type: nameof(String) } && arguments is [var leftText, var rightText])
             return Equals(leftText, rightText) == (query.Name == "op_Equality");
-        // decimal's operators on numbers (Shared Fate's -EnemyStrengthLoss; Sovereign Blade's Parry above 0).
+        // decimal's operators on numbers (Shared Fate's -EnemyStrengthLoss; Sovereign Blade's Parry above 0; a Blood Potion's share of max HP).
         if (query.Of == null && query.Name is "op_UnaryNegation" or "op_Addition" or "op_Subtraction" or "op_Multiply"
-                or "op_GreaterThan" or "op_GreaterThanOrEqual" or "op_LessThan" or "op_LessThanOrEqual" or "op_Equality" or "op_Inequality")
+                or "op_Division" or "op_GreaterThan" or "op_GreaterThanOrEqual" or "op_LessThan" or "op_LessThanOrEqual" or "op_Equality" or "op_Inequality")
             return (query.Name, arguments.Select(ToNumber).ToList()) switch
             {
                 ("op_UnaryNegation", [{ } only]) => -only,
                 ("op_Addition", [{ } left, { } right]) => left + right,
                 ("op_Subtraction", [{ } left, { } right]) => left - right,
                 ("op_Multiply", [{ } left, { } right]) => left * right,
+                ("op_Division", [{ } left, { } right]) when right != 0m => left / right,
                 ("op_GreaterThan", [{ } left, { } right]) => left > right,
                 ("op_GreaterThanOrEqual", [{ } left, { } right]) => left >= right,
                 ("op_LessThan", [{ } left, { } right]) => left < right,

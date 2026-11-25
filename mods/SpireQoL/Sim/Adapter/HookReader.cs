@@ -87,6 +87,10 @@ public static class HookReader
         ["AfterRoomEntered"] = "entering a room: outside the fight's turns",
         ["BeforeRoomEntered"] = "entering a room: outside the fight's turns",
         ["AfterObtained"] = "when the relic is obtained: outside the fight's turns",
+        // Decision #313: a potion procured or discarded is no decision the simulator follows; a card's or a potion's PotionCmd.TryToProcure is unknown
+        // where a listener's class overrides AfterPotionProcured (SimAdapter.HookOnlyCommands).
+        ["AfterPotionProcured"] = "a potion procured: no simulated decision procures one without its outcome being unknown where this hook is overridden",
+        ["AfterPotionDiscarded"] = "a potion discarded: no simulated decision discards one",
     };
 
     /// <summary>
@@ -2675,6 +2679,9 @@ public static class HookReader
                     return new HookMath(HookOperation.Equal, new HookFactValue(HookFact.OwnerHandCount), new HookConstant(0m));
                 case QueryValue { Name: "Count", Of: { } countedCards } when IsOwnersHandCards(countedCards):
                     return new HookMath(HookOperation.NotEqual, new HookFactValue(HookFact.OwnerHandCount), new HookConstant(0m));
+                // The owner holds potions (base.Owner.Potions.Any(): Belt Buckle's, decision #313).
+                case QueryValue { Type: "Enumerable", Name: "Any", Arguments: [var potions] } when IsOwnersPotions(potions):
+                    return new HookMath(HookOperation.NotEqual, new HookFactValue(HookFact.OwnerPotionCount), new HookConstant(0m));
                 // Its own data's Remove(cardPlay.Card, out value): what it bound to the play is taken, 1 when there was one.
                 case var take when IsTakeBound(take):
                     return new HookFactValue(HookFact.TakeBound);
@@ -3149,6 +3156,8 @@ public static class HookReader
             if (other is NamedValue { Name: "player" or "shuffler" } or ParameterValue { Name: "player" or "shuffler" } && _hook is "AfterOrbChanneled" or "AfterShuffle"
                 || other is NamedValue { Name: "gainer" } or ParameterValue { Name: "gainer" } && _hook == "AfterStarsGained")
                 return new HookFactValue(HookFact.EventIsOwners);
+            // The potion's owner (BeforePotionUsed's and AfterPotionUsed's potion.Owner, a player, or its Creature): the hook's player (decision #313).
+            if (_hook is "BeforePotionUsed" or "AfterPotionUsed" && IsPotionOwner(other)) return new HookFactValue(HookFact.EventIsOwners);
             // The player whose next turn starts (AfterEnergyReset's, AfterPlayerTurnStart's player: a payout's hook, decision #239): asked of its owner's.
             if (other is NamedValue { Name: "player" } or ParameterValue { Name: "player" } && PlayersTurnStartHooks.Contains(_hook))
                 return new HookFactValue(HookFact.EventIsOwners);
@@ -3377,6 +3386,9 @@ public static class HookReader
                 // The cards in the owner's hand (PileType.Hand.GetPile(base.Owner).Cards.Count, its Cards kept in a local or not).
                 case QueryValue { Name: "Count", Of: { } cards } when IsOwnersHandCards(cards):
                     return new HookFactValue(HookFact.OwnerHandCount);
+                // The potions the owner holds (base.Owner.Potions.Count(), decision #313).
+                case QueryValue { Type: "Enumerable", Name: "Count", Arguments: [var potions] } when IsOwnersPotions(potions):
+                    return new HookFactValue(HookFact.OwnerPotionCount);
                 // The owner's orbs of a kind (OrbQueue.Orbs.Count(o => o is FrostOrb)).
                 case QueryValue { Type: "Enumerable", Name: "Count", Arguments: [var orbs, LambdaValue lambda] } when IsOwnersOrbs(orbs) && OrbKindTested(lambda) is { } orbKind:
                     return new HookFactValue(HookFact.OwnerOrbCount) { Of = orbKind.ToString() };
@@ -3878,6 +3890,15 @@ public static class HookReader
         /// <summary>The cards in the owner's hand: GetPile(Hand, base.Owner).Cards, kept in a local or not.</summary>
         private bool IsOwnersHandCards(ProgramValue value) =>
             (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Cards", Of: { } pile } && IsOwnersHand(pile);
+
+        /// <summary>The owner's potions: base.Owner.Potions (decision #313).</summary>
+        private static bool IsOwnersPotions(ProgramValue value) =>
+            (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Potions", Of: { } player } && IsOwner(player);
+
+        /// <summary>The potion a potion hook is given's owner (potion.Owner, a player, or its Creature: decision #313).</summary>
+        private static bool IsPotionOwner(ProgramValue value) =>
+            (value is StoredValue stored ? stored.Value : value) is QueryValue { Name: "Owner", Of: ParameterValue { Name: "potion" } or NamedValue { Name: "potion" } }
+            || value is QueryValue { Type: "Player", Name: "Creature", Of: { } player } && IsPotionOwner(player);
 
         /// <summary>The owner's orbs: base.Owner.Player.PlayerCombatState.OrbQueue.Orbs.</summary>
         private static bool IsOwnersOrbs(ProgramValue value) =>

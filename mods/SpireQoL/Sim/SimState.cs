@@ -598,6 +598,11 @@ public sealed class SimPlayer
     /// you to (30% of max HP, at least 1); then Lizard Tail's (50%, once: LizardTail.ShouldDieLate), 0 when used or none.
     /// </summary>
     public int Fairies, FairyHeal, LizardTailHeal;
+    /// <summary>
+    /// The potions in their belt (Player.Potions: on screen), which a potion's use takes one from as it starts (PotionModel.RemoveBeforeUse) and
+    /// Belt Buckle's code counts (decision #313). Constant otherwise.
+    /// </summary>
+    public int Potions;
 
     // ---- results, for every player (decision #93: one engine; yours are read through SimState too: Taken, Died...)
     /// <summary>HP lost (after block and the HP-loss modifiers, overkill included), damage through block, and lost by Osty.</summary>

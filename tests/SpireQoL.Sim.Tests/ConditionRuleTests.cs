@@ -19,6 +19,7 @@ public class ConditionRuleTests
         ["WhenAction.Then"] = "what it guards",
         ["AskAction.Condition"] = "a test the code stores before its first command, asked there",
         ["CardPlayAction.Body"] = "the card's play itself",
+        ["PotionUseAction.Body"] = "the potion's use itself (decision #313)",
         ["TakeFromHandAction.EachCard"] = "a loop's other commands, once per card taken (Second Wind's block): no condition",
         ["FirstPlayOnly.Actions"] = "the test shorthand's totals and the first play's own (Swift's draw, the forged blade): a test of the play's index, still apart from a SimCondition (TRACKER 20)",
         ["FirstPlayOnly.LaterPlays"] = "a replay's later plays' own, where a test the board decides for the first play stands (decision #311: unknown, with the board's answer)",

@@ -218,6 +218,19 @@ public static class CardPrograms
     }
 }
 
+/// <summary>The loaded game's potion programs (decision #313): each potion's OnUse read once per potion type, as a card's OnPlay is.</summary>
+public static class PotionPrograms
+{
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, ModelProgram> Cache = new();
+
+    /// <summary>The potion's use (its OnUse), or an empty program when its code can't be read.</summary>
+    public static ModelProgram Of(Type potionType) => Cache.GetOrAdd(potionType, type =>
+    {
+        try { return ProgramReader.Read(type, RuntimeCode.Read, "OnUse"); }
+        catch { return ModelProgram.Empty; }
+    });
+}
+
 /// <summary>
 /// Reads a card's OnPlay (its async state machine, the local functions it calls) into a <see cref="ModelProgram"/>. Works on any
 /// branch's code: types are matched by name, and the instructions come from the reader it's given (the loaded game's module, or

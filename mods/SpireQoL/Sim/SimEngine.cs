@@ -1261,6 +1261,7 @@ public static partial class SimEngine
             case SummonAction summonAction: RunSummon(branches, summonAction); break;
             case HealAction healAction: RunHeal(branches, healAction); break;
             case CardPlayAction cardPlayAction: RunCardPlay(branches, cardPlayAction); break;
+            case PotionUseAction potionUseAction: RunPotionUse(branches, potionUseAction); break;
             case AttackAction at: RunAttack(branches, at); break;
             case GainBlockAction gainBlockAction: RunBlock(branches, gainBlockAction); break;
             case ApplyPowerAction applyPowerAction: RunApplyPower(branches, applyPowerAction); break;

@@ -4,9 +4,9 @@
 ## Powers and relics
 
 beta powers: 303 classes, 272 with hooks; read from code 181, hand-written 20, neither 73 (each by its first gap: Snapshots/hook-readings.txt)
-beta relics: 316 classes, 310 with hooks; read from code 116, hand-written 7, neither 187 (each by its first gap: Snapshots/hook-readings.txt)
+beta relics: 316 classes, 310 with hooks; read from code 118, hand-written 7, neither 185 (each by its first gap: Snapshots/hook-readings.txt)
 main powers: 265 classes, 235 with hooks; read from code 152, hand-written 18, neither 67 (each by its first gap: Snapshots/hook-readings.txt)
-main relics: 299 classes, 293 with hooks; read from code 103, hand-written 7, neither 183 (each by its first gap: Snapshots/hook-readings.txt)
+main relics: 299 classes, 293 with hooks; read from code 105, hand-written 7, neither 181 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 7, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 1
 
@@ -187,8 +187,8 @@ orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first): 2 classes, 
 the engine runs no read potion (its bodies read whole but for that): 2 classes, 2 alone: PotionOfBinding (potion)*, ShacklingPotion (potion)*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*
 queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 4 classes, 1 alone: PaelsEye, PhantomBladesPower, TagTeamPower*, UnsettlingLamp
-hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...): 3 classes, 1 alone: SmoggyPower, SurroundedPower, UnceasingTop*
-queries: a creature's side or presence: 2 classes, 1 alone: EssenceOfDarkness (potion)*, FairyInABottle (potion)
+queries: a creature's side or presence: 3 classes, 1 alone: SurroundedPower, EssenceOfDarkness (potion)*, FairyInABottle (potion)
+hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...): 2 classes, 1 alone: SmoggyPower, UnceasingTop*
 commands: GainStars: 1 classes, 1 alone: StarPotion (potion)*
 commands: OstyCmd.Summon: 1 classes, 1 alone: BoneBrew (potion)*
 hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*

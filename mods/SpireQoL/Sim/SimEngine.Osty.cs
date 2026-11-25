@@ -128,15 +128,24 @@ public static partial class SimEngine
 
     private static void RunDamage(BranchSet branches, DamageAction damageAction) => branches.Each(branch =>
     {
-        var target = branch.CurrentPlay?.Target ?? Who.None;
-        if (branch.Enemy(target) is not { Alive: true } enemy) return new[] { branch };
+        // Its targets: every hittable enemy as the command starts (CreatureCmd.Damage of a list: each in turn, the dead skipped, the deaths after
+        // the last), or the one it names, or the play's target.
+        var targets = damageAction.EveryEnemy ? branch.Targetable.Select(enemy => enemy.Id).ToList()
+            : new List<int> { damageAction.TargetId ?? branch.CurrentPlay?.Target ?? Who.None };
         var spec = damageAction.Damage;
         var card = branch.CurrentPlay?.Card;
-        var amount = spec.Fixed ? Math.Max(0, (int)spec.BaseFor(target))
-            : ModifiedDamage(branch, spec.BaseFor(target), new DamageCtx(Who.You, target, spec.Props, card, branch.CurrentPlay), spec.TermsFor(target));
-        if (amount > 0) Damage(branch, enemy, amount, Who.You, spec.Props, card);
-        // Its DamageResult's WasTargetKilled, as an attack's hit records it (SimTest.AttackKilled: the play's last damage killed).
-        branch.AttackKilled = enemy.Hp <= 0;
+        var hit = false;
+        foreach (var target in targets)
+        {
+            if (branch.Enemy(target) is not { Alive: true } enemy) continue;
+            var amount = spec.Fixed ? Math.Max(0, (int)spec.BaseFor(target))
+                : ModifiedDamage(branch, spec.BaseFor(target), new DamageCtx(Who.You, target, spec.Props, card, branch.CurrentPlay), spec.TermsFor(target));
+            if (amount > 0) Damage(branch, enemy, amount, Who.You, spec.Props, card);
+            // Its DamageResult's WasTargetKilled, as an attack's hit records it (SimTest.AttackKilled: the play's last damage killed).
+            branch.AttackKilled = enemy.Hp <= 0;
+            hit = true;
+        }
+        if (!hit) return new[] { branch };
         AllyDeaths(branch);
         return DrainPending(branch);
     });

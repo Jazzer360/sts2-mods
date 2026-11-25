@@ -561,6 +561,8 @@ public sealed class ReadModel : SimModel
         HookName.AfterPlayerTurnStart => nameof(AfterPlayerTurnStart),
         HookName.AfterPlayerTurnStartLate => nameof(AfterPlayerTurnStartLate),
         HookName.AfterOrbChanneled => nameof(AfterOrbChanneled),
+        HookName.BeforePotionUsed => nameof(BeforePotionUsed),
+        HookName.AfterPotionUsed => nameof(AfterPotionUsed),
         HookName.ModifyHpLostBeforeOsty => nameof(ModifyHpLostBeforeOsty),
         HookName.ModifyHpLostBeforeOstyLate => nameof(ModifyHpLostBeforeOstyLate),
         HookName.ModifyHpLostAfterOsty => nameof(ModifyHpLostAfterOsty),
@@ -660,6 +662,14 @@ public sealed class ReadModel : SimModel
     /// <summary>Hook.AfterOrbChanneled: an orb was channeled for <paramref name="player"/> (the hook's player, EventIsOwners).</summary>
     public override IEnumerable<SimState> AfterOrbChanneled(SimState state, int owner, int player) =>
         Run(HookName.AfterOrbChanneled, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Player = player });
+
+    /// <summary>Hook.BeforePotionUsed (decision #313): a potion of <see cref="SimPotionUse.Owner"/>'s is about to act (the hook's player its owner, EventIsOwners).</summary>
+    public override IEnumerable<SimState> BeforePotionUsed(SimState state, int owner, SimPotionUse use) =>
+        Run(HookName.BeforePotionUsed, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Player = use.Owner, Target = use.Target });
+
+    /// <summary>Hook.AfterPotionUsed (decision #313): a potion of <see cref="SimPotionUse.Owner"/>'s acted (Reptile Trinket, Belt Buckle).</summary>
+    public override IEnumerable<SimState> AfterPotionUsed(SimState state, int owner, SimPotionUse use) =>
+        Run(HookName.AfterPotionUsed, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Player = use.Owner, Target = use.Target });
 
     /// <summary>Hook.ModifyOrbValue: the value of its code's first way that holds (Focus: max(value + Amount, 0) on its owner's orbs).</summary>
     public override decimal ModifyOrbValue(SimState state, int owner, OrbCtx orb, decimal value)
@@ -2619,6 +2629,7 @@ public sealed class ReadModel : SimModel
             case HookFact.ResultLocationSoFar: return (in HookArgs args) => (int)args.Location;
             case HookFact.OwnerBlock: return (in HookArgs args) => args.State.Player(args.Owner)?.Block ?? args.State.Enemy(args.Owner)?.Block ?? 0;
             case HookFact.OwnerHandCount: return (in HookArgs args) => args.State.Player(args.Owner)?.HandCount ?? 0;
+            case HookFact.OwnerPotionCount: return (in HookArgs args) => args.State.Player(args.Owner)?.Potions ?? 0;
             case HookFact.OwnerOrbCount when named == null:
                 return (in HookArgs args) => args.State.Player(args.Owner)?.Orbs.Count ?? 0;
             case HookFact.OwnerOrbCount:

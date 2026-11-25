@@ -25,6 +25,7 @@ public class ProducedKindsTests
         ["condition KnownCondition"] = "MoveConditions: a monster move rule's condition the adapter settles on the board (always, never, or worked out)",
         // Actions the engine or the adapter makes, not a card's program.
         ["action CardPlayAction"] = "SimPlay: the play itself, as the engine runs it (and SimWarmUp's made-up fight)",
+        ["action PotionUseAction"] = "SimPlay.Of: a potion's use, its body read from its OnUse (SimAdapter.Potion, decision #313)",
         ["action LeaveHandAction"] = "SimEngine.Actions: the card played leaving its owner's hand",
         ["action MoveAttackAction"] = "SimAdapter.Moves: an enemy's move's attack, read from its intent",
         ["action MoveBlockAction"] = "SimAdapter.Moves: an enemy's move's block",

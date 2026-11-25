@@ -24,6 +24,11 @@ public sealed class SimPlay
     public int TargetId = Who.None;
     /// <summary>The card play (its hooks run around each play); null: a card named Name, Attack when IsAttack. Its Target is set from TargetId.</summary>
     public SimCardPlay? Card;
+    /// <summary>
+    /// A potion's use instead of a card play (decision #313): its body runs once between BeforePotionUsed and AfterPotionUsed, and nothing of a card
+    /// play's runs (no card leaves a hand). Its Target is set from TargetId.
+    /// </summary>
+    public SimPotionUse? Potion;
     /// <summary>What each play does (OnPlay, then the enchantment's), in order.</summary>
     public List<SimAction> Body = new();
     /// <summary>
@@ -165,6 +170,16 @@ public sealed class SimScript
     {
         var script = new SimScript { Name = simPlay.Name };
         script.Actions.AddRange(simPlay.Before);
+        // A potion's use (decision #313): no card is played, so nothing of a card play's runs around its body.
+        if (simPlay.Potion is { } potion)
+        {
+            var useBody = new List<SimAction>(simPlay.Body);
+            var useShorthand = Shorthand(simPlay);
+            if (useShorthand.Count > 0) useBody.Add(new FirstPlayOnly(useShorthand));
+            script.Actions.Add(new PotionUseAction(potion with { Target = simPlay.TargetId }, useBody));
+            script.Actions.AddRange(simPlay.After);
+            return script;
+        }
         var play = simPlay.Card is { } card ? card with { Target = simPlay.TargetId } : new SimCardPlay(new SimCard(simPlay.Name, simPlay.IsAttack ? SimCardType.Attack : SimCardType.Skill), Who.You, simPlay.TargetId, PlayIndex: 0,
             Math.Max(1, simPlay.Plays), simPlay.AutoPlay);
         // Its count is the plays the simulator doesn't decide itself (SimPlay.Plays), and its models' (Echo Form) as it starts.

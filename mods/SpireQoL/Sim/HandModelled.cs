@@ -20,6 +20,9 @@ public static class HandModelled
     /// <summary>The engine's rules, each with the game's methods it stands in for.</summary>
     public static readonly IReadOnlyList<HandModelledRule> Engine = new HandModelledRule[]
     {
+        new("A potion's use (decision #313): it leaves its owner's belt, BeforePotionUsed, its body (its OnUse read from its code), the log, AfterPotionUsed while its owner lives",
+            new[] { "SimEngine.RunPotionUse" },
+            new[] { "PotionModel.OnUseWrapper", "PotionModel.RemoveBeforeUse", "Hook.BeforePotionUsed", "Hook.AfterPotionUsed" }),
         new("A card play: its shape (play count, result location), each play's hooks and its body in its program's order",
             new[] { "SimEngine.RunCardPlay", "SimEngine.PlayOnce", "SimEngine.RunEnchantment", "SimEngine.DecideCardPlay", "SimEngine.ApplyPlay", "SimEngine.ApplyPlayTo", "SimEngine.RunScript", "SimEngine.RunScriptTo", "SimEngine.Count", "SimEngine.CardResolved", "SimEngine.RunFixedHits" },
             new[] { "CardModel.OnPlayWrapper", "EnchantmentModel.OnPlay", "Hook.ModifyCardPlayCount", "Hook.AfterModifyingCardPlayCount", "Hook.ModifyCardPlayResultLocation", "Hook.BeforeCardPlayed", "Hook.AfterCardPlayed", "CardCmd.AutoPlay" }),

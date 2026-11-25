@@ -36,6 +36,20 @@ public sealed record CardPlayAction(SimCardPlay Play, IReadOnlyList<SimAction> B
 public sealed record CardVersion(SimCard Card, IReadOnlyList<SimAction> Body);
 
 /// <summary>
+/// A potion drunk or thrown (PotionModel.OnUseWrapper, decision #313): its class, whose it is, and its target (an enemy's id, a player: you or a
+/// teammate it's thrown at; Who.None for none).
+/// </summary>
+/// <param name="Fairy">It's one of the potions <see cref="SimPlayer.Fairies"/> counts: using it leaves one fewer to hold back a death.</param>
+public sealed record SimPotionUse(string Name, int Owner, int Target, bool Fairy = false);
+
+/// <summary>
+/// A potion's use (PotionModel.OnUseWrapper, decision #313): it leaves its owner's belt (RemoveBeforeUse), BeforePotionUsed, its OnUse (the
+/// body, read from its code: SimAdapter.Potion), the game's log of it (History.PotionUsed), then AfterPotionUsed. No card is played: nothing
+/// a card play counts or reacts to runs.
+/// </summary>
+public sealed record PotionUseAction(SimPotionUse Use, IReadOnlyList<SimAction> Body) : SimAction;
+
+/// <summary>
 /// The damage of one attack, worked out at each hit from the state (docs/SIMULATOR.md "Pipelines"): the card's base value
 /// (per target when it's calculated on the target), its props, and the captured terms of sources the simulator doesn't model,
 /// per target. Fixed: the numbers are final (no modelled terms are added).
@@ -404,7 +418,16 @@ public sealed record CardEventAction(CardEvent Event, int Count) : SimAction
 /// Damage from a card that isn't an attack (CreatureCmd.Damage: Capture Spirit) to the play's target, through the damage pipeline
 /// with the card as its source. No BeforeAttack or AfterAttack: Curl Up, Flutter and the like don't react.
 /// </summary>
-public sealed record DamageAction(DamageSpec Damage) : SimAction;
+public sealed record DamageAction(DamageSpec Damage) : SimAction
+{
+    /// <summary>The enemy it's dealt to when it isn't the play's target (a potion's: decision #313); null: the play's target.</summary>
+    public int? TargetId { get; init; }
+    /// <summary>
+    /// Every hittable enemy as the command starts, one after another, the deaths after the last (CreatureCmd.Damage of a list: Explosive
+    /// Ampoule's HittableEnemies).
+    /// </summary>
+    public bool EveryEnemy { get; init; }
+}
 
 /// <summary>
 /// A card calling a power's own command on each hittable enemy's instance of it, one enemy after another (Outbreak: PoisonPower.Trigger on each

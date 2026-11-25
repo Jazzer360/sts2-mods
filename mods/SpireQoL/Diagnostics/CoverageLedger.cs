@@ -281,7 +281,7 @@ internal static partial class CoverageLedger
         ["SubroutinePower"] = "covered: read from its code (ReadModel, decision #195): BeforeCardPlayed binds its amount to a Power played, AfterCardPlayed gives that much energy, one at a time (proc tab)",
         ["SuckPower"] = "ignore: AfterAttack Strength after its own attack (later attacks)",
         ["SurprisePower"] = "covered: AfterDeath effect (crossed kill tab from the simulator); the gremlins it adds read from its code (SimAdapter.SpawnsOf: each CreatureCmd.Add, its monster's HP range and starting powers); ShouldStopCombatFromEnding true",
-        ["SurroundedPower"] = "covered: BeforeCardPlayed turns you to face a back-attacking target; AfterDeath turns you to face the first enemy left when all are on one side; ModifyDamageMultiplicative: the one behind you hits 50% harder (intents after your targeted play or a kill; potions aren't predicted)",
+        ["SurroundedPower"] = "covered: BeforeCardPlayed turns you to face a back-attacking target; AfterDeath turns you to face the first enemy left when all are on one side; BeforePotionUsed turns you to face a back-attacking potion target (decision #313); ModifyDamageMultiplicative: the one behind you hits 50% harder (intents after your targeted play or potion, or a kill)",
         ["SwipePower"] = "ignore: BeforeDeath returns a stolen card",
         ["SwordSagePower"] = "covered: Sovereign Blade replays (double-play row, Sovereign Blade tab)",
         ["TaintedPower"] = "covered: read from its code (ReadModel, decision #195): ModifyDamageAdditive; AfterSideTurnEnd removes itself after the enemies' turn (decision #302: the enemies' side's turn end, run after their turn)",
