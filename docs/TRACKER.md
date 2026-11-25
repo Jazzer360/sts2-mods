@@ -361,6 +361,7 @@ An indicator on a choice outside combat when one of your relics changes what it 
 
 - [ ] Play test: event icon placement (left of the option) on every event layout, ancients included. ~~The card reward panel's default spot.~~ (The panel is gone: decision #82.)
 - [ ] Card removal (shop, events): no relic reacts today (`BeforeCardRemoved` has no relic); recheck each game update.
+- [ ] **Event options read as programs** (the read-from-code goal, decision #195): an option's effects (gold, HP, max HP, cards and curses to the deck, potions, relics, upgrades, removals, a fight) are read today by a flag-level scan of its code (`ChoiceEffect`), which the event audit checks against what happened. Read each option's code with ProgramReader into steps with their amounts and conditions, as cards are, so the reminders' icons and the audit come from the same reading, and a relic an option gives is read through its own `AfterObtained` the same way. Neow's Hefty Tablet's curse (report 20261125-010503-1b7d90) is the scan missing a relic's `AfterObtained` curse.
 - [ ] Ancient options: relics whose `AfterObtained` adds cards or gold are covered through the relic's code; check what other ancient pickups do in play.
 - [ ] Test in game (co-op): a teammate's tab on your card (Rally with a teammate's Juggernaut), and no false tab on yours for their firing.
 - [ ] Test in game: the card reward tabs (Bing Bong, Lucky Fysh, Book of Five Rings on the healing pick) beside Strike Dummy's.
