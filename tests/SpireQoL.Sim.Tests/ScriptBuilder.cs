@@ -22,9 +22,11 @@ internal static class ScriptBuilder
 
     /// <summary>
     /// An enemy out of the way (100 HP, no block, no hits, no powers): on a board that means the fight goes on, it stays alive so the others'
-    /// deaths don't end the fight (decision #301: no primary enemy alive ends it, and every command after that does nothing).
+    /// deaths don't end the fight (decision #301: no primary enemy alive ends it, and every command after that does nothing). It can't be hit
+    /// (SimEnemy.Hittable false, as the game's IsHittable is for an Illusion: not among CombatState.HittableEnemies), so no random hit, hit to every
+    /// enemy or power on every hittable enemy reaches it: it's in no branch and no outcome of the play.
     /// </summary>
-    public static SimEnemy Bystander(int id) => new() { Id = id, Name = $"E{id}", Hp = 100 };
+    public static SimEnemy Bystander(int id) => new() { Id = id, Name = $"E{id}", Hp = 100, Hittable = false };
 
     /// <summary>The board with a <see cref="Bystander"/> added after its enemies (the next id): the fight goes on past their deaths.</summary>
     public static SimState WithBystander(SimState state)
