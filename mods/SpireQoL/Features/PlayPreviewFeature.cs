@@ -81,11 +81,21 @@ public sealed class PlayPreviewFeature : IFeature, IFrameFeature
             label.RemoveAndFree();
             return;
         }
-        // The game's number: its text's width, where the label puts it (centred in its rect), and its font.
+        // The game's number: its text's size, where the label puts it in its rect (its own alignment, set in the game's scene), and its font.
         var width = Math.Max(12f, value.GetContentWidth());
-        var left = value.Position.X + (value.Size.X - width) / 2;
         var height = Math.Max(value.GetContentHeight(), 16f);
-        var top = value.Position.Y + (value.Size.Y - height) / 2;
+        var left = value.Position.X + value.HorizontalAlignment switch
+        {
+            HorizontalAlignment.Left or HorizontalAlignment.Fill => 0,
+            HorizontalAlignment.Right => value.Size.X - width,
+            _ => (value.Size.X - width) / 2,
+        };
+        var top = value.Position.Y + value.VerticalAlignment switch
+        {
+            VerticalAlignment.Top or VerticalAlignment.Fill => 0,
+            VerticalAlignment.Bottom => value.Size.Y - height,
+            _ => (value.Size.Y - height) / 2,
+        };
         if (strike == null)
         {
             strike = new ColorRect { Name = GodotNames.Name(StrikeName), Color = PlayPreview.Tint, MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -112,7 +122,9 @@ public sealed class PlayPreviewFeature : IFeature, IFrameFeature
         var damage = after.Least == after.Most ? after.Most.ToString() : $"{after.Least}-{after.Most}";
         var text = after.Hits > 1 ? $"{damage}x{after.Hits}" : damage;
         if (label.Text != text) label.Text = text;
-        label.Position = new Vector2(value.Position.X, top - height);
-        label.Size = new Vector2(value.Size.X, height);
+        // Centred over the game's number (not its rect): the label as wide as its own text.
+        var size = label.GetMinimumSize();
+        label.Size = size;
+        label.Position = new Vector2(left + (width - size.X) / 2, top - size.Y);
     }
 }

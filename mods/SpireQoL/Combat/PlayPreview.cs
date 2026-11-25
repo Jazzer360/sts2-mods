@@ -61,6 +61,7 @@ internal static class PlayPreview
         if (TurnEndModel.Begin() is not { } start) return NotShown(card, NoPreview.NoForecast);
         if (start.StateKey != inputs.StartKey) return NotShown(card, NoPreview.AnotherBoard);
         if (_built is { } built && ReferenceEquals(built.Outcome, outcome) && ReferenceEquals(built.Card, card)) return built;
+        // The card's own result: its search keeps the totals the displays show (not the breakdown by source: TurnEndModel._breakdown).
         return _built = new Shown(card, outcome, TurnEndModel.Preview(start, outcome), start.Ids);
     }
 

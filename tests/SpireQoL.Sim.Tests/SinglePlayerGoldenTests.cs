@@ -41,7 +41,7 @@ public class SinglePlayerGoldenTests
     }
 
     /// <summary>One generated single-player fight and play (no teammates).</summary>
-    private static (SimState State, SimPlay? Play) Scenario(int index)
+    internal static (SimState State, SimPlay? Play) Scenario(int index)
     {
         var random = new Random(1000 + index);
         var state = new SimState();

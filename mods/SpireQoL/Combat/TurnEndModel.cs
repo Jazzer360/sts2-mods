@@ -77,13 +77,23 @@ public sealed class TurnEndModel
     public (int Incoming, int Block, (int Taken, bool Dies)? Osty, int Through, int? Unblockable) Sum(TurnOutcome outcome)
     {
         var branch = outcome.Branch;
-        int? unblockable = branch.Unblockable.Count > 0 ? outcome.UnblockableTaken : null;
-        return (branch.Blockable.Sum(source => source.Amount), CurrentBlock + branch.EndOfTurnBlock.Sum(source => source.Amount),
-            OstyHp > 0 ? (branch.OstyTaken, branch.OstyTaken >= OstyHp) : null, outcome.Taken - (unblockable ?? 0), unblockable);
+        // A search without the breakdown (a card's, for Play Preview) has the same totals as plain numbers (UnloggedTotalsTests).
+        int? unblockable = (branch.Log ? branch.Unblockable.Count > 0 : branch.You.UnblockableTaken > 0) ? outcome.UnblockableTaken : null;
+        var incoming = branch.Log ? branch.Blockable.Sum(source => source.Amount) : branch.You.Incoming;
+        var block = branch.Log ? CurrentBlock + branch.EndOfTurnBlock.Sum(source => source.Amount) : branch.BlockAtEnemyTurn;
+        return (incoming, block, OstyHp > 0 ? (branch.OstyTaken, branch.OstyTaken >= OstyHp) : null, outcome.Taken - (unblockable ?? 0), unblockable);
     }
 
-    public int BlockGain => Total(EndOfTurnBlock);
-    public int BlockableTotal => Total(Blockable);
+    /// <summary>
+    /// Whether this was built from a search that kept the breakdown (the turn forecast's: what each source deals and blocks). A card's search
+    /// keeps only the totals (SimState.Log off), which Play Preview's model is built from: the totals below read them (UnloggedTotalsTests:
+    /// they're what the breakdown adds up to), and the lists stay empty.
+    /// </summary>
+    private bool _breakdown;
+    private int _incoming, _blockAtEnemyTurn;
+
+    public int BlockGain => _breakdown ? Total(EndOfTurnBlock) : _blockAtEnemyTurn - CurrentBlock;
+    public int BlockableTotal => _breakdown ? Total(Blockable) : _incoming;
 
     /// <summary>The amounts added up, by index: the widgets read these every frame, and LINQ's Sum boxed an enumerator each time (decision #177).</summary>
     private static int Total(List<Source> sources)
@@ -97,7 +107,7 @@ public sealed class TurnEndModel
     /// Incoming Damage shows it on its own line, under what gets through your block (Taken − this).
     /// </summary>
     public int UnblockableTaken { get; private set; }
-    public int UnblockableTotal => Total(Unblockable);
+    public int UnblockableTotal => _breakdown ? Total(Unblockable) : UnblockableTaken;
     public int ExpectedBlock => CurrentBlock + BlockGain;
 
     /// <summary>
@@ -485,6 +495,9 @@ public sealed class TurnEndModel
             FairiesUsed = branch.FairiesUsed,
             LizardTailUsed = branch.LizardTailUsed,
             HpAfter = branch.You.Hp == int.MaxValue ? myHp : branch.You.Hp,
+            _breakdown = branch.Log,
+            _incoming = branch.You.Incoming,
+            _blockAtEnemyTurn = branch.BlockAtEnemyTurn,
         };
         // Same-name entries (one per Frost trigger, per Feel No Pain exhaust...) are summed for display.
         foreach (var bySource in branch.EndOfTurnBlock.GroupBy(nameAmount => nameAmount.Name)) forecast.EndOfTurnBlock.Add(new Source(bySource.Key, bySource.Sum(nameAmount => nameAmount.Amount)));
