@@ -2,6 +2,7 @@
   "CloakClasp": "GivesUp, Reduces",
   "FakeOrichalcum": "GivesUp",
   "HailstormPower": "Default, SetsUpByChance",
+  "IterationPower": "Default, FiresByChance",
   "ObsidianVice": "GivesUp, Reduces",
   "Orichalcum": "GivesUp",
   "ParryingShield": "SetsUp",

@@ -32,6 +32,15 @@ public class ReadModelParityTests
     };
 
     /// <summary>
+    /// Classes given a settings row since their conversion whose tab is the read model's own log (its commands' kind): new where the hand-written model
+    /// had none (IterationTabTests holds it to its code); what they do is compared as before.
+    /// </summary>
+    private static readonly Dictionary<string, TabKind> NewLogTabs = new(StringComparer.Ordinal)
+    {
+        ["IterationPower"] = TabKind.Draw, // its draws on the play that draws your first Status this turn (decision #297, the owner's call)
+    };
+
+    /// <summary>
     /// Classes given a settings row since their conversion (decision #244, the owner's call): their tab is new, judged on the turn's outcome where the
     /// hand-written model had none (BonusTabRowTests holds it to their code); what they do is compared as before.
     /// </summary>
@@ -240,6 +249,7 @@ public class ReadModelParityTests
         var hand = HandWritten[name];
         var read = Assert.IsType<ReadModel>(SimModels.Get(name));
         if (RemovedTabs.ContainsKey(name)) Assert.Null(read.Tab);
+        else if (NewLogTabs.TryGetValue(name, out var newTab)) Assert.Equal(newTab, read.Tab);
         else Assert.Equal(hand.Tab, read.Tab);
         Assert.Equal(hand.Seen, read.Seen);
         Assert.Equal(hand.Instanced, read.Instanced);

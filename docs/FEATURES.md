@@ -360,6 +360,7 @@ Beside the last number (the heart line when there is one): a skull when this mig
   - Cloak Clasp (block per card left in your hand) and Obsidian Vice (damage per card in your hand to a random enemy): **crossed** on a card that leaves fewer cards in your hand at the turn's end, so nearly every card: **off by default**. No number.
   - Screaming Flagon (its damage to every enemy with an empty hand): plain on the card that leaves your hand empty.
   - Hailstorm (its damage to every enemy while you have a Frost orb): plain on the card that channels your first Frost, and with its chance on one that might (Chaos with no Frost: 20%; its row shows a bonus by chance, decision #249); **crossed** on one that evokes your last, with the chance when a random orb decides it (Chaos into full slots: 80%).
+  - Iteration (AfterCardDrawn: draws its amount when the Status you draw is your turn's first, read from its code): plain with its draws on the card whose draw surely gives your first Status this turn, and with its chance on one whose draw might (decision #297; with Show chances off, only a certain one). It acts during the play, so the play audit holds it to the draws.
   - Tune (v0.114.0, AfterCardPlayed: upgrades its amount of random upgradable cards in your hand on your first Ki of the turn): plain on that Ki. What it upgrades is a roll: followed exactly unless an upgradable card in your hand acts as the turn ends (an Ethereal card, Burn), when the turn's forecast is uncertain.
   - Not tagged (the owner's call): Regen, Ritual, The Bomb (a [Relic Counters](#relic-counters) row instead).
 
@@ -463,7 +464,7 @@ Beside the last number (the heart line when there is one): a skull when this mig
 
 **Procs of procs:** the simulated play runs every proc through the game's hooks, so one sets off the next as in the game: Storm's Lightning and Trash to Treasure's orbs toward Metronome, The Sealed Throne's stars toward Black Hole, Dark Embrace's draws toward Speedster, an arrow knocked loose toward Yah and Twine. Juggernaut counts every block gain the play makes (its own block, block procs, Frost evokes), and its hits count toward kills, block breaks and stuns.
 
-**Not shown on purpose:** procs that fire on *drawing* a card (Pagestorm, Iteration, Automation, Speedster on draw...) happen when the card is drawn, not when you play it, so there's no choice to inform.
+**Not shown on purpose:** procs that fire on *drawing* a card (Pagestorm, Automation, Speedster on draw...) happen when the card is drawn, not when you play it, so there's no choice to inform. Iteration is the exception (decision #297, the owner's call): its tag shows on the card whose draw gives your turn's first Status (its draws), and with its chance on a card whose draw might (`25%`: one Status among four cards, with Show chances on; its row shows a proc by chance, `TabShows.FiresByChance`), key `proc:IterationPower`.
 
 **Audit data:** every damage tag also records the exact range of damage it predicts across its targets, with each target's own modifiers: the sum over every enemy for all-enemy procs, the least- to most-damaged enemy for random ones, or the exact amount for a known target. Thorns on an enemy expects 0 to its full damage when a single-target or random attack could hit an enemy without Thorns instead. The play audit checks real plays against it.
 

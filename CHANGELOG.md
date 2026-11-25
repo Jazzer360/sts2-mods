@@ -8,6 +8,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ### Spire QoL 2.0.0
 #### Added
+- Proc Tags: Iteration's tag (its own switch, on by default): its draws on a card whose draw gives your first Status this turn, and its chance on one whose draw might (with Show chances on).
 - Relic Counters: a row for each of your Bombs, with its damage to all enemies and the turns until it explodes (its own switch, on by default).
 - Tags for the bonuses paid as your turn ends, each with its own switch: Orichalcum and Fake Orichalcum crossed on a card that gives you block when you'd end the turn with none; Screaming Flagon on the card that leaves your hand empty; Hailstorm on the card that channels your first Frost orb, crossed on one that evokes your last (with the chance when a random orb decides it); Cloak Clasp and Obsidian Vice crossed on a card that leaves fewer cards in your hand (nearly every card, so off by default); Tune on your first Ki of the turn, the card that earns next turn's free card.
 - Ethereal Fade has its own switch (In fights), with the Ethereal opacity slider under it: Ethereal cards fading was part of Card Indicators, and isn't a tag. It starts on or off as Card Indicators was.

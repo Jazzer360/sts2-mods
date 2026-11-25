@@ -291,6 +291,8 @@ public static class SettingsCatalog
         new(nameof(ThunderPower), SourceGroup.YourPower, "Cards that evoke Lightning: damage to its target again"),
         new(nameof(HailstormPower), SourceGroup.YourPower, "Cards that channel your first Frost orb: its damage to all at the end of your turn, with the chance when a random orb decides it (Chaos: 20%). Crossed on cards that evoke your last, with the chance too",
             Shows: Sim.TabShows.Default | Sim.TabShows.SetsUpByChance),
+        new(nameof(IterationPower), SourceGroup.YourPower, "Cards that draw your first Status this turn: its draws, with the chance when what you draw decides it",
+            Shows: Sim.TabShows.Default | Sim.TabShows.FiresByChance),
         new(nameof(PanachePower), SourceGroup.YourPower, "The card that completes its count: damage to all", "Cards this turn, toward the next hit"),
         new(nameof(BlackHolePower), SourceGroup.YourPower, "Cards that spend or gain stars: damage to all"),
         new(nameof(HauntPower), SourceGroup.YourPower, "Soul: damage"),

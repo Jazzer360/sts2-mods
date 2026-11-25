@@ -28,6 +28,11 @@ public enum TabShows
     /// the owner's: Hailstorm when Chaos might channel your first Frost). With Show chances off, set up in every outcome only, as without it.
     /// </summary>
     SetsUpByChance = 8,
+    /// <summary>
+    /// A plain proc tab too where only some outcomes of the play set the source off during it, carrying their chance in place of its amount
+    /// (decision #297, the owner's: Iteration when a draw might be your turn's first Status). With Show chances off, set off in every outcome only.
+    /// </summary>
+    FiresByChance = 16,
     /// <summary>Every row's unless it says otherwise: both directions of a payout, as decision #239 showed them.</summary>
     Default = SetsUp | GivesUp,
 }
@@ -137,13 +142,16 @@ public sealed class CardTabs
         }
         // A payout the play decides, given up (decision #239): a tab only where its row shows that direction (decision #244).
         if (model is ReadModel { GivesUpDuringTheTurn: true } && (source.Shows & TabShows.GivesUp) == 0) return;
-        Func<SimOutcome, bool> at = harmful ? outcome => Fired(outcome.PlayFiredAny) : outcome => Fired(outcome.PlayFiredEvery);
+        // A plain tab some outcomes set off, where its row asks and chances are shown (FiresByChance, decision #297): as a warning's, with their chance.
+        var byChance = !harmful && Chances && (source.Shows & TabShows.FiresByChance) != TabShows.None;
+        Func<SimOutcome, bool> at = harmful || byChance ? outcome => Fired(outcome.PlayFiredAny) : outcome => Fired(outcome.PlayFiredEvery);
         if (!outcomes.Any(at)) return;
         // Which aims give the tab, across every source sharing it (several enemies with the same power).
         var tabKey = "proc:" + source.Class;
         var firesAt = FiresAt(tabKey, outcomes.Select(at).ToArray());
         var aimed = firesAt.Length > 1 && !firesAt.All(fires => fires);
-        var amount = harmful
+        // A plain tab by chance that some aim sets off in every outcome has a plain tab's amount; else (its chance shows instead) the most.
+        var amount = harmful || byChance && !outcomes.Any(outcome => Fired(outcome.PlayFiredEvery))
             ? outcomes.Max(outcome => outcome.PlayFiredAny.DataOf(key))
             : outcomes.Where(outcome => Fired(outcome.PlayFiredEvery)).Max(outcome => outcome.PlayFiredEvery.DataOf(key));
         var min = outcomes.Min(outcome => outcome.PlayFiredEvery.DataOf(key));
@@ -159,7 +167,7 @@ public sealed class CardTabs
         // A warning only some outcomes set off (a random hit on a Thorns enemy): its chance in the corner instead of its amount (decision
         // #159), from each branch's own log: fired in every branch merged into it (Fired) up to in some (FiredAny).
         string? chance = null;
-        if (harmful && Chances) chance = WarningChance(outcomes.Where(at).Select(outcome => outcome.LoggedChance(Fired)));
+        if ((harmful || byChance) && Chances) chance = WarningChance(outcomes.Where(at).Select(outcome => outcome.LoggedChance(Fired)));
         if (chance != null) number = null;
         Tabs[tabKey] = new SourceTab(tabKey, harmful, number, kind == TabKind.Trigger ? null : kind, amount, min, max, chance, aimed);
     }
