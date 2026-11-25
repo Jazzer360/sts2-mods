@@ -220,8 +220,17 @@ public static class RuntimeCode
 
     public static List<CodeOp> Read(MethodBase method) => Cache.GetOrAdd(method, ReadNow);
 
+    /// <summary>
+    /// How many methods this thread has read (not found in the cache): what the tests hold a fight's first board read to (none once the load
+    /// has read the code it asks: decision #254).
+    /// </summary>
+    public static int ReadsOnThisThread => _readsOnThisThread;
+
+    [ThreadStatic] private static int _readsOnThisThread;
+
     private static List<CodeOp> ReadNow(MethodBase method)
     {
+        _readsOnThisThread++;
         var code = method.GetMethodBody()?.GetILAsByteArray();
         if (code == null) return new List<CodeOp>();
         var typeArguments = method.DeclaringType is { IsGenericType: true } declaring ? declaring.GetGenericArguments() : null;

@@ -224,7 +224,8 @@ public static class ModEntry
     /// <summary>
     /// Reads the game's code the simulator needs, once a launch, on workers so neither the launch nor a fight waits on the game's thread: the
     /// powers, relics and the other models read from their code (decision #195; a prediction waits for them: SimWait.Models), and every card's
-    /// program (decision #182; a card a fight asks for before its turn is read then). How long each took goes to the dev log.
+    /// program (decision #182; a card a fight asks for before its turn is read then), and what a fight's first frames did the first time
+    /// (decision #254). How long each took goes to the dev log.
     /// </summary>
     private static void StartReadingCode()
     {
@@ -247,6 +248,26 @@ public static class ModEntry
                 Log.Warn($"reading the card programs at load failed: {ex.GetType().Name}: {ex.Message}");
             }
         });
+        // What a fight's first frames did on the game's thread the first time (decision #254): the code its first board read asks (monsters'
+        // moves, powers' and monsters' hooks, the log's questions), how a state is written for its key, and the mod's own code compiled. A
+        // thread below the game's, so the launch doesn't wait on it; a fight that comes first reads what it asks then, as before.
+        new Thread(() =>
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            try
+            {
+                var programs = Sim.SimAdapter.ReadFightCode(Diagnostics.CoverageLedger.ModelTypes().ToList());
+                var readMs = watch.ElapsedMilliseconds;
+                var stateTypes = Sim.SimJson.Warm().Count;
+                var methods = FirstUse.Compile(typeof(ModEntry).Assembly);
+                Log.Detail($"[load] {programs} fight programs read in {readMs} ms; {stateTypes} state types written and {methods} methods compiled in {watch.ElapsedMilliseconds - readMs} ms");
+            }
+            catch (Exception ex)
+            {
+                // Each read is the same cache a fight asks: what wasn't read here is read then.
+                Log.Warn($"getting the fight's code ready at load failed: {ex.GetType().Name}: {ex.Message}");
+            }
+        }) { IsBackground = true, Priority = ThreadPriority.BelowNormal, Name = "SpireQoL first use" }.Start();
     }
 
     /// <summary>Resets saved positions whose defaults changed, so players get the new defaults.</summary>

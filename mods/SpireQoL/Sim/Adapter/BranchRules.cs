@@ -49,9 +49,11 @@ internal static class BranchRules
 
     /// <summary>The simulator's flags for main's behaviour in the running game (SimState.MainRules).</summary>
     /// <remarks>Worked out once: the running game's code doesn't change, and it's read on every board read.</remarks>
-    public static MainRule MainRulesNow() => _mainRules ??= All.Where(rule => rule.Sim != MainRule.None && !BetaBehaviour(rule)).Aggregate(MainRule.None, (flags, rule) => flags | rule.Sim);
+    public static MainRule MainRulesNow() => MainRules.Value;
 
-    private static MainRule? _mainRules;
+    /// <summary>Worked out once by whichever thread asks first (the load's worker: SimAdapter.ReadFightCode), never half-written for another.</summary>
+    private static readonly Lazy<MainRule> MainRules = new(() => All.Where(rule => rule.Sim != MainRule.None && !BetaBehaviour(rule))
+        .Aggregate(MainRule.None, (flags, rule) => flags | rule.Sim), LazyThreadSafetyMode.ExecutionAndPublication);
 
     /// <summary>Whether the fact holds in the running game's code (false when its method isn't there).</summary>
     internal static bool Holds(CodeFact fact)

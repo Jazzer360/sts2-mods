@@ -14,6 +14,19 @@ namespace SpireQoL.Sim.Tests;
 public class SimJsonTests
 {
     [Fact]
+    public void TheLoadWorksOutEveryTypeAStateIsWrittenWith()
+    {
+        // SimJson.Warm (decision #254) follows a state's members to every kind of action and condition (each written under its name), not
+        // just the state: what the first board's key would otherwise work out on the game's thread.
+        var types = SimJson.Warm();
+        Assert.Contains(typeof(SimEnemy), types);
+        Assert.Contains(typeof(SimPlayer), types);
+        Assert.Contains(typeof(SimHandCard), types);
+        Assert.All(SimJson.ActionKinds, kind => Assert.Contains(kind, types));
+        Assert.All(SimJson.ConditionKinds, kind => Assert.Contains(kind, types));
+    }
+
+    [Fact]
     public void EveryActionRoundTripsWithEveryMember()
     {
         Assert.NotEmpty(SimJson.ActionKinds);

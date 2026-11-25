@@ -39,6 +39,40 @@ public static class SimJson
         TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { ActionsByKind } },
     };
 
+    /// <summary>
+    /// Works out how every type a state and a hand card's key are written with is written (each type the options meet: its members, its
+    /// elements, its kinds), once a launch, on a worker as the mod loads: the first board a fight reads is keyed by its JSON (SimState.FullKey)
+    /// and its hand cards by theirs (SimHandCard.Key), and working that out for the whole state on the game's thread took a tenth of a second.
+    /// Then an empty state and hand card are written, so the writers' own code is ready too. Nothing is shared but the options' caches.
+    /// </summary>
+    /// <returns>Every type worked out.</returns>
+    public static IReadOnlySet<Type> Warm()
+    {
+        var types = new HashSet<Type>();
+        foreach (var (options, root) in new[] { (Options, typeof(SimState)), (KeyOptions, typeof(SimHandCard)), (Options, typeof(SimHandCard)) })
+        {
+            var seen = new HashSet<Type>();
+            var pending = new Stack<Type>();
+            pending.Push(root);
+            while (pending.Count > 0)
+            {
+                var type = pending.Pop();
+                if (!seen.Add(type)) continue;
+                JsonTypeInfo info;
+                try { info = options.GetTypeInfo(type); }
+                catch (Exception ex) when (ex is NotSupportedException or InvalidOperationException or ArgumentException) { continue; } // a type it can't write: met only as null
+                types.Add(type);
+                foreach (var property in info.Properties) pending.Push(property.PropertyType);
+                if (info.ElementType is { } element) pending.Push(element);
+                if (info.KeyType is { } key) pending.Push(key);
+                foreach (var kind in info.PolymorphismOptions?.DerivedTypes ?? (IList<JsonDerivedType>)Array.Empty<JsonDerivedType>()) pending.Push(kind.DerivedType);
+            }
+        }
+        _ = new SimState().FullKey();
+        _ = new SimHandCard { Name = "", Plays = new List<SimPlay> { new() } }.Key;
+        return types;
+    }
+
     /// <summary>Every kind of condition (each record deriving from SimCondition), by name, found the same way.</summary>
     public static readonly IReadOnlyList<Type> ConditionKinds = typeof(SimCondition).Assembly.GetTypes()
         .Where(type => !type.IsAbstract && typeof(SimCondition).IsAssignableFrom(type))

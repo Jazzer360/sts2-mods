@@ -14,6 +14,12 @@ internal static class GameCode
 
     public static List<CodeInstruction> Instructions(MethodBase method)
     {
+        _readsOnThisThread++;
         lock (Gate) return PatchProcessor.GetOriginalInstructions(method);
     }
+
+    /// <summary>How many methods this thread has read here: what the tests hold a fight's first board read to (none once the load has read the code it asks: decision #254).</summary>
+    public static int ReadsOnThisThread => _readsOnThisThread;
+
+    [ThreadStatic] private static int _readsOnThisThread;
 }
