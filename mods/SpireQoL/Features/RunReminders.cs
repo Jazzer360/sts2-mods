@@ -895,7 +895,7 @@ public sealed partial class RunReminders
             calls.Add(otherMethod.DeclaringType.Name + "." + otherMethod.Name);
             // The card it makes is a curse (Wuppy's Injury: ModelDb.Card<Injury>; the Museum's pick from the curse pool): whatever
             // command adds it, a curse joins the deck.
-            if (MakesCurse(otherMethod)) calls.Add(ChoiceReminders.CurseMade);
+            if (MakesCurse(otherMethod) || ins.opcode == OpCodes.Newobj && IsCurseCard(otherMethod.DeclaringType)) calls.Add(ChoiceReminders.CurseMade);
             if (owner != null && IsWithin(otherMethod.DeclaringType, owner)) Walk(otherMethod, owner, calls, seen, depth + 1, cards);
             // A delegate the event keeps in its state, called by the option (the Endless Conveyor's dish:
             // GrabSomethingOffTheBelt runs CurrentDish.action): read the ones the event holds now.
@@ -916,14 +916,27 @@ public sealed partial class RunReminders
         }
     }
 
-    /// <summary>ModelDb.Card&lt;T&gt; of a curse card, or ModelDb.CardPool&lt;CurseCardPool&gt;.</summary>
-    private static bool MakesCurse(MethodBase method)
+    /// <summary>
+    /// A call that makes or names a curse card: any generic method given a curse card's class (ModelDb.Card&lt;Injury&gt;, Hefty Tablet's
+    /// RunState.CreateCard&lt;Injury&gt;, a combat's CreateCard&lt;T&gt;), or ModelDb.CardPool&lt;CurseCardPool&gt; (the Museum's pick from the curse pool).
+    /// By the card's class, not by the method that takes it, so a new way of making one is read too.
+    /// </summary>
+    internal static bool MakesCurse(MethodBase method)
     {
-        if (method is not MethodInfo { IsGenericMethod: true } otherMethod || otherMethod.DeclaringType?.Name != nameof(ModelDb)) return false;
-        var arg = otherMethod.GetGenericArguments()[0];
-        if (otherMethod.Name == nameof(ModelDb.CardPool)) return arg.Name == "CurseCardPool";
-        if (otherMethod.Name != nameof(ModelDb.Card)) return false;
-        try { return ModelDb.AllCards.FirstOrDefault(card => card.GetType() == arg)?.Type == MegaCrit.Sts2.Core.Entities.Cards.CardType.Curse; }
+        if (method is not MethodInfo { IsGenericMethod: true } otherMethod) return false;
+        foreach (var arg in otherMethod.GetGenericArguments())
+        {
+            if (arg.Name == "CurseCardPool" && otherMethod.Name == nameof(ModelDb.CardPool)) return true;
+            if (IsCurseCard(arg)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>A card class whose canonical card is a Curse (CardModel's type, as the game's model of it has it).</summary>
+    internal static bool IsCurseCard(Type type)
+    {
+        if (!typeof(CardModel).IsAssignableFrom(type) || type.IsAbstract) return false;
+        try { return ModelDb.AllCards.FirstOrDefault(card => card.GetType() == type)?.Type == MegaCrit.Sts2.Core.Entities.Cards.CardType.Curse; }
         catch { return false; }
     }
 

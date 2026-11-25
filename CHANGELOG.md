@@ -71,6 +71,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Fixed
 - Osty's summons are worked out as the game runs them: Bodyguard, Reanimate, Afterlife, Pull Aggro, Cleanse, Dirge, Spur, Necro Mastery and Legion of Bone raise his max HP and heal him while he lives, bring him back at the amount when he's dead, and give you one with Die For You when you have none, so Incoming Damage, Play Preview and the Death Skull count the hits he'll take for you after the play. Spur's heal of Osty and Not Yet's heal of you are worked out too. Devour Life's summon on a Soul and Sic 'Em's on Osty's hits now raise Osty for the rest of the turn too (they only showed their tag); both are worked out from their own code.
+- Neow's Hefty Tablet reads as adding a curse (its Injury) as well as a card, so your relics that react to a curse joining your deck show beside it; any relic or option that makes a curse card is read so, however its code makes it.
 - Esc and back close the settings menu and the inspect screen on game v0.114.0 (its hotkeys now name the screen they belong to), and the game's hotkeys come back when they close on every game version.
 - Upgraded copies of cards (what The Devil+ and a replayed upgrade play) are worked out on game v0.114.0, and on main, whose upgrade takes no arguments.
 - An enemy's damage on game v0.114.0 is worked out before its Thorns hits back, then lands as worked out: a Thorns kill whose death explodes no longer spends your Buffer before the hit.
