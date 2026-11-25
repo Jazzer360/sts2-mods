@@ -126,6 +126,7 @@ public class InstancedCopyTests
         covered.Powers = covered.Powers.With(PowerId.Covered, amount: 1, data: Models.CoveredPower.CovererBit(Who.Teammate(teammateIndex: 1)));
         var coverer = new SimPlayer { Hp = 50, HandCount = 0 };
         coverer.Powers = coverer.Powers.With(PowerId.Intercept, amount: 1);
+        coverer.Fields = coverer.Fields.With(Models.CoveredPower.CoveredCount, 1);
         state.Teammates.Add(covered);
         state.Teammates.Add(coverer);
         var play = Play(Card("Intercept", SimCardType.Skill), Who.Teammate(teammateIndex: 0), plays: 1,
@@ -148,6 +149,8 @@ public class InstancedCopyTests
         covered.Powers = covered.Powers.With(PowerId.Covered, amount: 1, data: Models.CoveredPower.CovererBit(Who.You));
         state.Teammates.Add(covered);
         state.You.Powers = state.You.Powers.With(PowerId.Intercept, amount: 1);
+        // Read from its code (decision #270): the creatures it covers are its own data's count.
+        SimEngine.SetField(state, Who.You, Models.CoveredPower.CoveredCount, 1);
         var play = Play(Card("Intercept", SimCardType.Skill), Who.Teammate(teammateIndex: 0), plays: 1,
             new ApplyPowerAction(PowerId.Covered, Amount: 1) { To = ApplyPowerAction.Where.Creature, Creature = Who.Teammate(teammateIndex: 0) });
         var outcome = SimEngine.Run(state, play);

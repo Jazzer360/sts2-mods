@@ -514,6 +514,7 @@ in Sim/Programs), and one generic model runs them (`ReadModel`), compiled once p
 | a store in a Modify block hook as it works out its value (`gaveBonusBlock = true`) | a `StoreFieldStep` of the hook's program beside its `Returns`, run once the value is worked out (`HookReader.StoresWorkingOut`) |
 | `AfterModifyingBlockAmount(modifiedAmount, cardSource, cardPlay)` | `HookName.AfterModifyingBlockAmount`, `HookFact.BlockModified`; a Modify block term is the class acting (`ModelSpec.TermActs`) |
 | a static method of its own class giving a true-or-false (`GainsBlock(card)`); `card.GainsBlock`, `card.Enchantment != null`, `card.Enchantment?.GainsBlock` | its body's returned value, its parameters the arguments; `HookFact.CardGainsBlock`, `CardEnchanted`, `EnchantmentGainsBlock` (Of "Source": the block's or damage's card) |
+| a list of its own data counted (`data.coveredCreatures.Count`); `base.Owner.Powers.Contains(this)` | its state, `HookField("Data.coveredCreatures.Count")`, which another class's call of its own method changes (Covered's: decision #270); 1 |
 | a counter loop (`for (i = 0; i < n; i++)`) | `RepeatStep`: its body n times, n worked out as it starts, a firing on the first round only |
 | `OrbCmd.Channel<T>(owner)` | `ChannelStep` (`SimEngine.ChannelKind`) |
 | the players' side's turn-end hooks (BeforeSideTurnEndVeryEarly, Early, BeforeSideTurnEnd, AfterSideTurnEnd, AfterSideTurnEndLate) | run where the engine runs every model's (decision #51) |

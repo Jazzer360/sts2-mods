@@ -161,6 +161,8 @@ public class ReadModelParityTests
         [PowerId.Orbit.Name] = (3, new[] { ("Data.energySpent", 1), ("Data.triggerCount", 0) }),
         // JugglingPower: the Attacks its owner played this turn (its data's attacksPlayedThisTurn).
         [PowerId.Juggling.Name] = (0, new[] { ("Data.attacksPlayedThisTurn", 0) }),
+        // InterceptPower: the creatures it covers (its data's coveredCreatures.Count), which the hand-written model kept as its amount (the board's 3).
+        [PowerId.Intercept.Name] = (0, new[] { ("Data.coveredCreatures.Count", 3) }),
     };
 
     /// <summary>

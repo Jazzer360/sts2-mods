@@ -2303,6 +2303,9 @@ public static class HookReader
                 // Its owner's or its own fight is there (base.Owner.Creature.CombatState != null): in a simulation, always.
                 case QueryValue { Name: "CombatState", Of: var stateOf } when stateOf is NamedValue { Name: "this" } || stateOf != null && IsOwner(stateOf):
                     return new HookConstant(1m);
+                // It's on its owner (base.Owner.Powers.Contains(this): Intercept's, Covered's): a power runs its hooks only while it is.
+                case QueryValue { Name: "Contains", Arguments: [QueryValue { Name: "Powers", Of: { } powersOf }, NamedValue { Name: "this" }] } when _kind == ModelKind.Power && IsOwner(powersOf):
+                    return new HookConstant(1m);
                 // The hittable enemies tested as there (a ?? on CombatState?.HittableEnemies: Serpent Form's): a list, in a fight always.
                 case QueryValue { Name: "HittableEnemies" }:
                     return new HookConstant(1m);
@@ -2736,6 +2739,11 @@ public static class HookReader
                 // The player of a card play its code keeps (Data.cardPlay.Player).
                 case var keptPlayer when KeptPlayPlayer(keptPlayer) is { } playerField:
                     return new HookField(playerField);
+                // How many a collection of its own data holds (Intercept's coveredCreatures.Count): its state ("Data.coveredCreatures.Count"), which only its
+                // own methods another class calls change (InterceptPower.AddCoveredCreature, from Covered's AfterApplied: decision #270).
+                case QueryValue { Name: "Count" or "get_Count", Arguments.Count: 0, Of: QueryValue { Name: var collection, Of: { } collectionOf, Arguments.Count: 0 } } when ProgramReader.IsOwnData(collectionOf)
+                    && Procs.CardCode.NestedTypes(_type).Any(nested => nested.GetField(collection, Declared)?.FieldType is { IsGenericType: true } listType && listType.Name.StartsWith("List", StringComparison.Ordinal)):
+                    return new HookField(ProgramReader.OwnDataPrefix + collection + ".Count");
                 // The energy a spend took (AfterEnergySpent's amount): the simulator raises one energy-spent event for each energy spent.
                 case NamedValue { Name: "amount" } or ParameterValue { Name: "amount" } when _hook == "AfterEnergySpent": return new HookConstant(1m);
                 // The stars a spend took (AfterStarsSpent's amount): the play's stars, as the simulator spends them (one event a play).

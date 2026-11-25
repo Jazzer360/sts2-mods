@@ -11341,6 +11341,74 @@
     "HelpsOwner": false
   },
   {
+    "Name": "InterceptPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "InterceptPower.ModifyDamageMultiplicative:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "InterceptPower.ModifyDamageMultiplicative:0015",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Add",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "Data.coveredCreatures.Count"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "IntimidatingHelmet",
     "Kind": "Relic",
     "Hooks": [

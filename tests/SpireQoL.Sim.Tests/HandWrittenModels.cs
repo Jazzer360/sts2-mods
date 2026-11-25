@@ -2212,6 +2212,16 @@ public sealed class StretchPower : SimModel
 }
 
 /// <summary>
+/// InterceptPower.ModifyDamageMultiplicative: powered attacks on its owner deal × (players covered + 1): its amount is the count. (Sim/Models/
+/// TargetModels.cs, deleted 2026-11-25: its count is its own data's coveredCreatures.Count now, which CoveredPower.AfterApplied adds to.)
+/// </summary>
+public sealed class InterceptPower : SimModel
+{
+    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
+        damage.Target == owner && damage.Props.IsPoweredAttack() ? SimEngine.PowerOn(state, owner, ThisPower) + 1 : 1m;
+}
+
+/// <summary>
 /// Pael's Legion (relic): Amount is its cooldown (turns), Data 1 while a play is bound. Off cooldown, a card's block from its
 /// owner is doubled (ModifyBlockMultiplicative) for the first play whose block lands (AfterModifyingBlockAmount binds it);
 /// AfterCardPlayed of that play flashes and starts the cooldown (its Turns var: the counter's own value when read).

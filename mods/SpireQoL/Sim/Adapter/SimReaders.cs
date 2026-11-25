@@ -103,14 +103,6 @@ public static class SimReaders
                 data = DataCreature.Of(copiesYou ? Who.You : CopiedBy(power));
                 break;
             }
-            case nameof(InterceptPower):
-            {
-                // The players it covers (InterceptPower's internal coveredCreatures): Intercept multiplies by count + 1.
-                var internalData = Sts2State.Private<object?>(power, "_internalData", fallback: null);
-                var covered = internalData == null ? null : Sts2State.Private<System.Collections.ICollection?>(internalData, "coveredCreatures", fallback: null);
-                amount = covered?.Count ?? 1;
-                break;
-            }
         }
         // A power read from its code that asks who applied it (base.Applier: Constrict's AfterDeath) keeps its applier as its Data (decision #195).
         if (SimModels.Get(name) is ReadModel { UsesApplier: true }) data = DataCreature.Of(power.Applier is { } applier ? idOf(applier) : null);

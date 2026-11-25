@@ -49,6 +49,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Music Box is worked out from its own code (the Ethereal copy of the first Attack you play each turn). What's shown is unchanged.
 - Serpent Form, Calamity and Juggling are worked out from their own code (on the game's main branch, Juggling's copies come as its code makes them there, as the third Attack is played). Calamity's random cards are Attacks to whatever reacts to a card made. Their tabs are unchanged.
 - Stretch, Pael's Legion and Mystic Lighter are worked out from their own code. Their tabs are unchanged but for the fix below.
+- Intercept is worked out from its own code (the players it covers, as it counts them). What's shown is unchanged.
 - Afflictions (Bound, Entangled, Galvanized, Hexed, Ringing, Smog, Tainted) are worked out from their own code: each is a fact of its card the powers' code tests, with nothing of its own to run; one a game update changes shows the plays of its cards as uncertain. What's shown is unchanged.
 - Perfect Fit (the card on top after a shuffle) and Swift (its draws, for the Return tags) are worked out from their own code. What's shown is unchanged.
 - An enemy's Vital Spark and Mummified Hand are worked out from their own code (the Tainted a Tainted card puts on whoever plays it; the card in your hand a Power makes free). What's shown is unchanged but for the fixes below.

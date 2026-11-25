@@ -51,8 +51,9 @@ public sealed class SurroundedPower : SimModel
 /// <summary>
 /// CoveredPower (on a teammate covered with Intercept): powered attacks on its owner deal nothing. Each Intercept played on them
 /// is a copy of its own (instanced), each zeroing the same attacks; Data holds the players covering them, a bit each (CovererBit).
-/// Each copy gives its applier Intercept counting its owner once (CoveredPower.AfterApplied: InterceptPower.AddCoveredCreature
-/// skips a creature it already covers), so a second player's Intercept on them gives that player Intercept too.
+/// Each copy gives its applier Intercept (PowerCmd.Apply of 1 when they have none) and counts its owner once in it (CoveredPower.AfterApplied:
+/// InterceptPower.AddCoveredCreature skips a creature it already covers; Intercept, read from its code, keeps the count in its own data's
+/// coveredCreatures.Count: decision #270), so a second player's Intercept on them gives that player Intercept too.
 /// </summary>
 public sealed class CoveredPower : SimModel
 {
@@ -70,13 +71,12 @@ public sealed class CoveredPower : SimModel
         if ((powers.DataOf(ThisPower) & bit) != 0) return;
         SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], powers.DataOf(ThisPower) | bit));
         var otherPowers = SimEngine.PowersOf(state, applier);
-        SimEngine.SetPowers(state, applier, otherPowers.With(PowerId.Intercept, otherPowers[PowerId.Intercept] + 1));
+        if (!otherPowers.Has(PowerId.Intercept)) SimEngine.SetPowers(state, applier, otherPowers.With(PowerId.Intercept, amount: 1));
+        SimEngine.SetField(state, applier, CoveredCount, SimEngine.FieldsOf(state, applier)[CoveredCount] + 1);
     }
+
+    /// <summary>Intercept's count of the creatures it covers (its own data's coveredCreatures.Count, its read model's state).</summary>
+    public static readonly string CoveredCount = PowerId.Intercept.Name + ".Data.coveredCreatures.Count";
 }
 
-/// <summary>InterceptPower.ModifyDamageMultiplicative: powered attacks on its owner deal × (players covered + 1): its amount is the count.</summary>
-public sealed class InterceptPower : SimModel
-{
-    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
-        damage.Target == owner && damage.Props.IsPoweredAttack() ? SimEngine.PowerOn(state, owner, ThisPower) + 1 : 1m;
-}
+// Intercept is read from its code (ReadModel, decision #270): powered attacks on its owner deal × (the creatures it covers + 1), its own data's count.
