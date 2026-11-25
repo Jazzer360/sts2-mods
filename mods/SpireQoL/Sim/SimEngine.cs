@@ -249,7 +249,7 @@ public static partial class SimEngine
             }
             catch (SimCapped)
             {
-                foreach (var branch in branches.States) { TurnEndBlockBack(branch); TheirTurnEndUnknownApart(branch); }
+                foreach (var branch in branches.States) { TurnEndBlockBack(branch); branch.SideEnding = TurnSide.None; TheirTurnEndUnknownApart(branch); }
                 // Stopped at a cap: the branches where it stopped, each part-way through (BranchSet keeps them whole).
                 outcome ??= PlayResults(branches.States, start, aliveAtStart, complete: false);
                 outcome.Truncated = true;
@@ -1388,7 +1388,7 @@ public static partial class SimEngine
         else EndOfTurnSteps(branches);
         branches.Do(branch =>
         {
-            branch.EndOfTurnNow = false;
+            (branch.EndOfTurnNow, branch.SideEnding) = (false, TurnSide.None);
             branch.BlockAtEnemyTurn = branch.You.Block;
             foreach (var enemy in branch.Enemies) { enemy.HpAtTurnEnd = Math.Max(0, enemy.Hp); enemy.UnblockedAtTurnEnd = enemy.UnblockedInstances; }
         });
@@ -1396,7 +1396,7 @@ public static partial class SimEngine
 
     private static void EndOfTurnSteps(BranchSet branches)
     {
-        branches.Do(branch => branch.EndOfTurnNow = true);
+        branches.Do(branch => (branch.EndOfTurnNow, branch.SideEnding) = (true, TurnSide.Players));
         HookStep(branches, nameof(SimModel.BeforeSideTurnEndVeryEarly), (model, owner, branch) => model.BeforeSideTurnEndVeryEarly(branch, owner));
         HookStep(branches, nameof(SimModel.BeforeSideTurnEndEarly), (model, owner, branch) => model.BeforeSideTurnEndEarly(branch, owner));
         DeathCheck(branches);
@@ -1765,9 +1765,41 @@ public static partial class SimEngine
     private static void EnemyTurnEnd(BranchSet branches)
     {
         // An unknown met here is the state after it's (SimState.UnmodelledAtTheirTurnEnd, decision #302), not what's read through the enemy turn.
-        foreach (var branch in branches.States) branch.TheirTurnEndKeptApart = branch.Unmodelled == null;
+        foreach (var branch in branches.States)
+        {
+            branch.TheirTurnEndKeptApart = branch.Unmodelled == null;
+            branch.SideEnding = TurnSide.Enemies; // the side its hooks are told is ending, and whose creatures take part
+            TheirTurnEndGaps(branch);
+        }
         EnemyTurnEndSteps(branches);
-        foreach (var branch in branches.States) TheirTurnEndUnknownApart(branch);
+        foreach (var branch in branches.States)
+        {
+            branch.SideEnding = TurnSide.None;
+            TheirTurnEndUnknownApart(branch);
+        }
+    }
+
+    /// <summary>
+    /// A listener on the board with no model whose code acts as the enemies' side's turn ends (SimModels.TheirTurnEndGap, decision #303: Doom's kill of
+    /// the doomed, Battleworn Dummy's time limit): the simulator doesn't follow it there, so the state after that turn's end is unknown, with why.
+    /// The players' powers, relics and pets' powers, and each living enemy's powers (the participants' and the listeners' as that turn ends).
+    /// </summary>
+    private static void TheirTurnEndGaps(SimState state)
+    {
+        if (state.Unmodelled != null) return;
+        foreach (var id in state.PlayerIds)
+        {
+            var player = state.Player(id)!;
+            foreach (var entry in player.Powers.Items) if (SimModels.TheirTurnEndGap(entry.Name.Name, enemyOwner: false) is { } why) { state.Unmodelled = why; return; }
+            foreach (var entry in player.Relics.Items) if (SimModels.TheirTurnEndGap(entry.Name.Name, enemyOwner: false) is { } why) { state.Unmodelled = why; return; }
+            foreach (var kind in PetKinds)
+                foreach (var entry in player.PetPowers(kind).Items) if (SimModels.TheirTurnEndGap(entry.Name.Name, enemyOwner: false) is { } why) { state.Unmodelled = why; return; }
+        }
+        foreach (var enemy in state.Enemies)
+        {
+            if (!enemy.Alive) continue;
+            foreach (var entry in enemy.Powers.Items) if (SimModels.TheirTurnEndGap(entry.Name.Name, enemyOwner: true) is { } why) { state.Unmodelled = why; return; }
+        }
     }
 
     /// <summary>A branch known until the enemies' turn's end: what that end left unknown is the state after it's (SimState.UnmodelledAtTheirTurnEnd).</summary>

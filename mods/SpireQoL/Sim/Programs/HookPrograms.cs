@@ -1234,6 +1234,25 @@ public sealed record PowerRule(string Name)
     public string? Unread { get; init; }
 }
 
+/// <summary>
+/// A power or relic class with no model (no hand-written one, its hooks not read whole) whose code acts as a side's turn ends (decision #303): the
+/// simulator doesn't follow it as the enemies' side's turn ends, so the state after that turn's end is unknown where it's on the board
+/// (SimState.UnmodelledAtTheirTurnEnd), with why. Whether it acts there is read from its turn's-end hooks for each kind of owner: a hook that
+/// doesn't read acts for both; a read one acts unless every step waits on what doesn't hold there (participants.Contains(base.Owner) for a
+/// player's: HookFact.TakesPart; side != CombatSide.Enemy: HookFact.EnemiesTurn). Pure data: the same in the game and in the tests
+/// (ReadModels/turn-end-gaps.json).
+/// </summary>
+public sealed record TurnEndGap(string Name, string Why)
+{
+    /// <summary>It may act as the enemies' side's turn ends when an enemy owns it.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ActsForAnEnemy { get; init; }
+
+    /// <summary>It may act as the enemies' side's turn ends when a player (or a player's pet) owns it.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ActsForAPlayer { get; init; }
+}
+
 /// <summary>How hook programs are written as JSON (the simulator tests' read models: Cases/read-models.json).</summary>
 public static class HookProgramJson
 {
@@ -1266,4 +1285,8 @@ public static class HookProgramJson
     public static string WriteRules(IEnumerable<PowerRule> rules) => System.Text.Json.JsonSerializer.Serialize(rules.OrderBy(rule => rule.Name, StringComparer.Ordinal).ToList(), Options);
 
     public static List<PowerRule> ReadRules(string json) => System.Text.Json.JsonSerializer.Deserialize<List<PowerRule>>(json, Options) ?? new List<PowerRule>();
+
+    public static string WriteTurnEndGaps(IEnumerable<TurnEndGap> gaps) => System.Text.Json.JsonSerializer.Serialize(gaps.OrderBy(gap => gap.Name, StringComparer.Ordinal).ToList(), Options);
+
+    public static List<TurnEndGap> ReadTurnEndGaps(string json) => System.Text.Json.JsonSerializer.Deserialize<List<TurnEndGap>>(json, Options) ?? new List<TurnEndGap>();
 }

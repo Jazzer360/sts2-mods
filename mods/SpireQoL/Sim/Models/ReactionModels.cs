@@ -125,7 +125,7 @@ public sealed class SkittishPower : SimModel
     /// <summary>AfterSideTurnEnd: the other side's turn ending (side != base.Owner.Side) clears HasGainedBlockThisTurn.</summary>
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner)
     {
-        if (Who.IsEnemy(owner) == state.EnemyTurnNow || SimEngine.PowersOf(state, owner) is not { } powers || !powers.Has(ThisPower)) return One(state);
+        if (Who.IsEnemy(owner) == state.EnemiesSideNow || SimEngine.PowersOf(state, owner) is not { } powers || !powers.Has(ThisPower)) return One(state);
         SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], powers.DataOf(ThisPower) & ~UsedThisTurn));
         return One(state);
     }

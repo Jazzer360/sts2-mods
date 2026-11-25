@@ -138,6 +138,96 @@ public static partial class ReadModels
         return rules;
     }
 
+    /// <summary>The turn's-end hooks in the order a side's turn end runs them (Hook.BeforeSideTurnEnd: VeryEarly, Early, its own; Hook.AfterSideTurnEnd, then Late).</summary>
+    private static readonly string[] TurnEndRunOrder = { "BeforeSideTurnEndVeryEarly", "BeforeSideTurnEndEarly", "BeforeSideTurnEnd", "AfterSideTurnEnd", "AfterSideTurnEndLate" };
+
+    /// <summary>The running game's turn's-end listeners the simulator doesn't follow (TurnEndGap, decision #303), for SimModels (on a worker, with the models).</summary>
+    public static IEnumerable<TurnEndGap> TurnEndGaps() => TurnEndGaps(Diagnostics.CoverageLedger.ModelTypes(), RuntimeCode.Read);
+
+    /// <summary>
+    /// Every power and relic class of <paramref name="types"/> with no model (SimModels.IsHandWritten, or read whole and compiled: ReadModels.Specs)
+    /// whose code acts as a side's turn ends (a turn's-end hook it overrides: HookReader.EndsATurn), with why, and for which owners it may act as the
+    /// enemies' side's turn ends (decision #303). A class read whole at the reviewed builds that isn't now is unread already (every simulation it's
+    /// in is unknown: Specs), so it isn't listed.
+    /// </summary>
+    public static List<TurnEndGap> TurnEndGaps(IEnumerable<Type> types, Func<MethodBase, List<CodeOp>> read)
+    {
+        var all = types.ToList();
+        var gaps = new List<TurnEndGap>();
+        foreach (var type in HookReader.Powers(all).Concat(HookReader.Relics(all)).OrderBy(type => type.Name, StringComparer.Ordinal))
+        {
+            if (SimModels.IsHandWritten(type.Name) || ReadWholeAtReview.Contains(type.Name)) continue;
+            var turnEnds = HookReader.Hooks(type).Where(hook => HookReader.EndsATurn(hook.Name)).Select(hook => hook.Name).ToHashSet(StringComparer.Ordinal);
+            if (turnEnds.Count == 0) continue;
+            ModelReading reading;
+            try { reading = HookReader.Read(type, read); }
+            catch (Exception exception)
+            {
+                gaps.Add(new TurnEndGap(type.Name, $"{type.Name}'s hooks couldn't be read ({exception.GetType().Name}): what it does as the enemies' turn ends isn't simulated") { ActsForAnEnemy = true, ActsForAPlayer = true });
+                continue;
+            }
+            var compiled = reading.Whole && Compiles(reading.Spec) == null;
+            if (compiled) continue; // modelled from its code: it runs there itself
+            var (forEnemy, forPlayer) = (false, false);
+            string? first = null;
+            foreach (var hook in TurnEndRunOrder.Where(turnEnds.Contains)) // in the order a turn's end runs them
+            {
+                var hookReading = reading.Hooks.FirstOrDefault(each => each.Hook == hook);
+                bool enemy, player;
+                if (hookReading is not { Translated: true } || !Enum.TryParse<HookName>(hook, out var name))
+                    (enemy, player) = (hookReading?.NotRun == null, hookReading?.NotRun == null); // a body not read acts for both
+                else if (reading.Spec.Of(name) is not { } program) (enemy, player) = (false, false); // read: nothing it runs there
+                else (enemy, player) = (ActsAtTheirTurnEnd(program, enemyOwner: true), ActsAtTheirTurnEnd(program, enemyOwner: false));
+                if ((enemy || player) && first == null) first = hookReading is { Read: false } ? $"{hook} ({hookReading.Gap})" : $"{hook}, its other hooks not read ({string.Join("; ", reading.Gaps.Take(1))})";
+                forEnemy |= enemy;
+                forPlayer |= player;
+            }
+            var why = first != null ? $"{type.Name} acts as the enemies' turn ends and isn't simulated there: {first}"
+                : $"{type.Name} isn't modelled, and its turn's-end hooks never act as the enemies' turn ends";
+            gaps.Add(new TurnEndGap(type.Name, why) { ActsForAnEnemy = forEnemy, ActsForAPlayer = forPlayer });
+        }
+        return gaps;
+    }
+
+    /// <summary>
+    /// Some step of a read turn's-end <paramref name="program"/> may run as the enemies' side's turn ends for an owner of that side or the players':
+    /// its condition isn't known to fail there, the side ending the enemies' (HookFact.EnemiesTurn) and its owner taking part only when an enemy
+    /// (HookFact.TakesPart, OwnersTurn, CreatureOnEndingSide of the owner).
+    /// </summary>
+    private static bool ActsAtTheirTurnEnd(HookProgram program, bool enemyOwner) => program.Steps.Any(step => Holds(step.When, enemyOwner) != 0m);
+
+    /// <summary>A condition's value as the enemies' side's turn ends for an owner of a side (null: not known there).</summary>
+    private static decimal? Holds(HookValue? value, bool enemyOwner)
+    {
+        static decimal? Truth(bool holds) => holds ? 1m : 0m;
+        switch (value)
+        {
+            case null: return 1m;
+            case HookConstant constant: return constant.Value;
+            case HookTest test: return Holds(test.Test, enemyOwner);
+            case HookNot not: return Holds(not.Inner, enemyOwner) is { } inner ? Truth(inner == 0m) : null;
+            case HookFactValue { Fact: HookFact.EnemiesTurn }: return 1m;
+            case HookFactValue { Fact: HookFact.TakesPart or HookFact.OwnersTurn }: return Truth(enemyOwner);
+            case HookFactValue { Fact: HookFact.CreatureOnEndingSide, Creature.Who: HookWho.Owner }: return Truth(enemyOwner);
+            case HookMath { Operation: HookOperation.And } both:
+            {
+                var (left, right) = (Holds(both.Left, enemyOwner), Holds(both.Right, enemyOwner));
+                return left == 0m || right == 0m ? 0m : left != null && right != null ? 1m : null;
+            }
+            case HookMath { Operation: HookOperation.Or } either:
+            {
+                var (left, right) = (Holds(either.Left, enemyOwner), Holds(either.Right, enemyOwner));
+                return left is { } leftValue && leftValue != 0m || right is { } rightValue && rightValue != 0m ? 1m : left == 0m && right == 0m ? 0m : null;
+            }
+            case HookMath { Operation: HookOperation.Equal or HookOperation.NotEqual } compare:
+            {
+                if (Holds(compare.Left, enemyOwner) is not { } left || Holds(compare.Right, enemyOwner) is not { } right) return null;
+                return Truth((left == right) == (compare.Operation == HookOperation.Equal));
+            }
+            default: return null;
+        }
+    }
+
     /// <summary>Why the simulator can't compile a spec read whole (ReadModel's constructor refuses it), or null when it can.</summary>
     private static string? Compiles(ModelSpec spec)
     {

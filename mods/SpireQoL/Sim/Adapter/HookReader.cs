@@ -127,7 +127,7 @@ public static class HookReader
     };
 
     /// <summary>The hook runs as a side's turn ends (the players' or the enemies': the side ending is a fact of the turn's end it runs at).</summary>
-    private static bool EndsATurn(string? hook) => hook != null && SideTurnEndHooks.Contains(hook);
+    internal static bool EndsATurn(string? hook) => hook != null && SideTurnEndHooks.Contains(hook);
 
     /// <summary>A collection's methods that only ask (they change nothing of the model's own data).</summary>
     private static readonly HashSet<string> CollectionQueries = new(StringComparer.Ordinal)

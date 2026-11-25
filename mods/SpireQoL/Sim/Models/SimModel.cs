@@ -466,7 +466,7 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) => One(state);
     // ---- end of a side's turn (Hook.BeforeSideTurnEnd: every listener's VeryEarly, then Early, then BeforeSideTurnEnd;
     // Hook.AfterSideTurnEnd: AfterSideTurnEnd, then Late): the players' as your turn ends, then the enemies' after their turn
-    // (SimState.EnemyTurnNow). Every listener; the participants are SimState.EndsTheirTurn's.
+    // (SimState.SideEnding). Every listener; the participants are SimState.EndsTheirTurn's.
 
     public virtual IEnumerable<SimState> BeforeSideTurnEndVeryEarly(SimState state, int owner) => One(state);
     public virtual IEnumerable<SimState> BeforeSideTurnEndEarly(SimState state, int owner) => One(state);
@@ -573,6 +573,9 @@ public static class SimModels
     /// <summary>Where every power class's rules come from (PowerRule: decision #234), set with <see cref="Read"/>. Null: none (no class can go below 0, none scales).</summary>
     public static Func<IEnumerable<PowerRule>>? ReadRules { get; set; }
 
+    /// <summary>Where the turn's-end listeners the simulator doesn't follow come from (TurnEndGap: decision #303), set with <see cref="Read"/>. Null: none.</summary>
+    public static Func<IEnumerable<TurnEndGap>>? ReadTurnEndGaps { get; set; }
+
     /// <summary>The read started on a worker (StartReading), or null: the models are read on the first ask, on its thread.</summary>
     private static volatile Task<LoadedModels>? _reading;
 
@@ -582,10 +585,11 @@ public static class SimModels
     /// until it is (<see cref="Loaded"/>, SimWait.Models: a prediction is pending until then, never made without the models).
     /// </summary>
     /// <returns>The read, so the caller can say when it's done (the dev log's load times).</returns>
-    public static Task StartReading(Func<IEnumerable<ModelSpec>> read, Func<IEnumerable<PowerRule>> readRules)
+    public static Task StartReading(Func<IEnumerable<ModelSpec>> read, Func<IEnumerable<PowerRule>> readRules, Func<IEnumerable<TurnEndGap>>? readTurnEndGaps = null)
     {
         Read = read;
         ReadRules = readRules;
+        ReadTurnEndGaps = readTurnEndGaps;
         var reading = Task.Run(Load);
         _reading = reading;
         return reading;
@@ -611,7 +615,7 @@ public static class SimModels
     /// their kind (an orb is never a listener: the engine runs its programs where OrbCmd and OrbQueue do).
     /// </summary>
     private sealed record LoadedModels(IReadOnlyDictionary<string, SimModel> ByName, IReadOnlyDictionary<string, string> Unread, IReadOnlyDictionary<OrbKind, ReadModel> Orbs,
-        IReadOnlyDictionary<string, ReadModel> Enchantments, IReadOnlyDictionary<string, LoadedRule> Rules);
+        IReadOnlyDictionary<string, ReadModel> Enchantments, IReadOnlyDictionary<string, LoadedRule> Rules, IReadOnlyDictionary<string, TurnEndGap> TurnEndGaps);
 
     /// <summary>A power class's rules as the engine asks them (PowerRule), its scaling compiled once.</summary>
     private sealed record LoadedRule(bool AllowNegative, Func<SimState, int, decimal>? Scaled, string? Unread, bool Debuff, bool Counter);
@@ -676,7 +680,10 @@ public static class SimModels
             catch (InvalidOperationException exception) { unreadRule = $"{rule.Name}'s scaling for the players couldn't be compiled ({exception.Message})"; }
             rules[rule.Name] = new LoadedRule(rule.AllowNegative, scaled, unreadRule, rule.Debuff, rule.Counter);
         }
-        return new LoadedModels(byName, unread, orbs, enchantments, rules);
+        var turnEndGaps = new Dictionary<string, TurnEndGap>(StringComparer.Ordinal);
+        foreach (var gap in ReadTurnEndGaps?.Invoke() ?? Enumerable.Empty<TurnEndGap>())
+            if (!byName.ContainsKey(gap.Name) && (gap.ActsForAnEnemy || gap.ActsForAPlayer)) turnEndGaps[gap.Name] = gap;
+        return new LoadedModels(byName, unread, orbs, enchantments, rules, turnEndGaps);
     }
 
     /// <summary>The power can go below 0 (PowerModel.AllowNegative, read from its code: decision #234): ShouldRemoveDueToAmount takes it at exactly 0.</summary>
@@ -727,6 +734,13 @@ public static class SimModels
     /// is unknown (SimState.Unmodelled), never exact without it (decision #92). Null: read, hand-written, or never modelled.
     /// </summary>
     public static string? UnreadReason(string name) => Models.Value.Unread.GetValueOrDefault(name);
+
+    /// <summary>
+    /// Why the class, owned by an enemy (<paramref name="enemyOwner"/>) or a player, acts as the enemies' side's turn ends where the simulator doesn't
+    /// follow it (TurnEndGap, decision #303): the state after that turn's end is unknown. Null: modelled, or it never acts there.
+    /// </summary>
+    public static string? TheirTurnEndGap(string name, bool enemyOwner) =>
+        Models.Value.TurnEndGaps.GetValueOrDefault(name) is { } gap && (enemyOwner ? gap.ActsForAnEnemy : gap.ActsForAPlayer) ? gap.Why : null;
 
     public static SimModel? Get(string name) => ByName.GetValueOrDefault(name);
 

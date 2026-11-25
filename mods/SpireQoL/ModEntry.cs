@@ -230,7 +230,7 @@ public static class ModEntry
     private static void StartReadingCode()
     {
         var modelsWatch = System.Diagnostics.Stopwatch.StartNew();
-        Sim.SimModels.StartReading(Sim.ReadModels.Specs, Sim.ReadModels.PowerRules).ContinueWith(reading =>
+        Sim.SimModels.StartReading(Sim.ReadModels.Specs, Sim.ReadModels.PowerRules, Sim.ReadModels.TurnEndGaps).ContinueWith(reading =>
         {
             if (reading.IsCompletedSuccessfully) Log.Detail($"[load] {Sim.SimModels.Count} models read from the game's code in {modelsWatch.ElapsedMilliseconds} ms");
         }, TaskScheduler.Default);

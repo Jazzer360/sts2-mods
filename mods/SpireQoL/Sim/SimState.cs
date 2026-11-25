@@ -27,6 +27,9 @@ public enum MainRule
     DebuffSkipsTickOnAnyTurn = 16,
 }
 
+/// <summary>A side of the fight whose turn is ending (SimState.SideEnding): none, the players' or the enemies'.</summary>
+public enum TurnSide { None, Players, Enemies }
+
 /// <summary>
 /// Plain combat state for the outcome simulator: no game types, so the simulator can be tested on
 /// its own (tests/SpireQoL.Sim.Tests). SimAdapter builds it from the live game.
@@ -916,6 +919,17 @@ public sealed class SimState
     internal int AttackSerial, CurrentAttack;
     /// <summary>The enemy turn is under way (the players' side's turn is over: Inferno doesn't react).</summary>
     internal bool EnemyTurnNow;
+    /// <summary>
+    /// The side whose turn is ending while a turn's end runs (CombatManager's side for Hook.BeforeSideTurnEnd and AfterSideTurnEnd: the players' as
+    /// your turn ends, the enemies' after their turn), None otherwise: what a turn's-end hook's side and participants are (decision #303).
+    /// </summary>
+    internal TurnSide SideEnding;
+
+    /// <summary>
+    /// The side the game's CombatState.CurrentSide is on is the enemies': the side ending while a turn's end runs (SideEnding), else the enemy turn
+    /// under way (EnemyTurnNow).
+    /// </summary>
+    internal bool EnemiesSideNow => SideEnding != TurnSide.None ? SideEnding == TurnSide.Enemies : EnemyTurnNow;
     /// <summary>Your side's turn is ending (EndOfTurn): block and damage from models go into the Incoming Damage breakdown.</summary>
     internal bool EndOfTurnNow;
     /// <summary>Relics' and powers' names as the game shows them ("id:Name"), for the Incoming Damage breakdown. Shared, never changed.</summary>
@@ -1023,7 +1037,7 @@ public sealed class SimState
     /// The creature is among the participants of the side's turn now ending (a SideTurnEnd hook's participants.Contains): a player taking part as
     /// your turn ends, a living enemy as the enemies' turn does (CombatManager.EndEnemyTurnInternal: CreaturesOnCurrentSide).
     /// </summary>
-    public bool EndsTheirTurn(int id) => EnemyTurnNow ? Enemy(id) is { Alive: true } : TakesPart(id);
+    public bool EndsTheirTurn(int id) => EnemiesSideNow ? Enemy(id) is { Alive: true } : TakesPart(id);
 
     /// <summary>Every player's id in player order (Who.InPlayerOrder).</summary>
     [JsonIgnore] public int[] PlayerIds => Who.InPlayerOrder(Teammates.Count, TeammatesBeforeMe);

@@ -60,7 +60,7 @@ The players' turn's end: its hooks in their places, Ethereal cards, the cards th
   simulator: SimEngine.EndOfTurn, SimEngine.EndOfTurnSteps, SimEngine.Exhausting, SimEngine.CardsActInHand
 The enemies' turn: its start's hooks, block cleared, each move in turn order, its end's hooks, the intents read after a play
   game: CombatManager.StartTurn, CombatManager.ExecuteEnemyTurn, MonsterModel.PerformMove, Hook.BeforeSideTurnStart, Hook.AfterSideTurnStart, Hook.ShouldClearBlock, Creature.ClearBlock, CombatManager.EndEnemyTurn, CombatManager.EndEnemyTurnInternal
-  simulator: SimEngine.EnemyTurnStart, SimEngine.StartTheEnemiesTurn, SimEngine.EnemyTurn, SimEngine.EnemyTurnEnd, SimEngine.EnemyTurnEndSteps, SimEngine.TheirTurnEndStep, SimEngine.TheirTurnEndUnknownApart, SimEngine.TurnEndBlockBack, SimEngine.ClearsBlock, SimEngine.IntentsAfter
+  simulator: SimEngine.EnemyTurnStart, SimEngine.StartTheEnemiesTurn, SimEngine.EnemyTurn, SimEngine.EnemyTurnEnd, SimEngine.EnemyTurnEndSteps, SimEngine.TheirTurnEndStep, SimEngine.TheirTurnEndUnknownApart, SimEngine.TheirTurnEndGaps, SimEngine.TurnEndBlockBack, SimEngine.ClearsBlock, SimEngine.IntentsAfter
 A heal: up to max HP
   game: CreatureCmd.Heal, Creature.HealInternal
   simulator: SimEngine.Heal

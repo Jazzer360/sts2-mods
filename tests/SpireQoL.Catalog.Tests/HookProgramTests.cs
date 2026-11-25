@@ -15,6 +15,7 @@ internal static class CatalogReadModels
     {
         SimModels.Read = () => InstalledCode.Specs;
         SimModels.ReadRules = () => ReadModels.PowerRules(CoverageLedger.ModelTypes(), RuntimeCode.Read);
+        SimModels.ReadTurnEndGaps = () => ReadModels.TurnEndGaps(CoverageLedger.ModelTypes(), RuntimeCode.Read);
     }
 }
 

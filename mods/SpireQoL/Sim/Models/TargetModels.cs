@@ -78,7 +78,7 @@ public sealed class CoveredPower : SimModel
     /// <summary>AfterSideTurnEnd: the enemies' side's turn ending (side == CombatSide.Enemy), every copy on its owner goes (PowerCmd.Remove).</summary>
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner)
     {
-        if (state.EnemyTurnNow) SimEngine.RemovePower(state, owner, ThisPower);
+        if (state.EnemiesSideNow) SimEngine.RemovePower(state, owner, ThisPower);
         return One(state);
     }
 

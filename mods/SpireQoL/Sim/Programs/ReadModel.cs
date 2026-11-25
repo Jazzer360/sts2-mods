@@ -2283,8 +2283,8 @@ public sealed class ReadModel : SimModel
                 };
             case HookFact.SourceCardIs:
                 return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card)?.Name == named ? 1m : 0m;
-            case HookFact.OwnersTurn: return (in HookArgs args) => Who.IsPlayer(args.Owner) != args.State.EnemyTurnNow ? 1m : 0m;
-            case HookFact.EnemiesTurn: return (in HookArgs args) => args.State.EnemyTurnNow ? 1m : 0m;
+            case HookFact.OwnersTurn: return (in HookArgs args) => Who.IsPlayer(args.Owner) != args.State.EnemiesSideNow ? 1m : 0m;
+            case HookFact.EnemiesTurn: return (in HookArgs args) => args.State.EnemiesSideNow ? 1m : 0m;
             case HookFact.OrbIsOwners: return (in HookArgs args) => args.Orb.Player == args.Owner ? 1m : 0m;
             case HookFact.OrbIs:
             {
@@ -2499,7 +2499,7 @@ public sealed class ReadModel : SimModel
             case HookFact.CreatureOnEndingSide:
             {
                 var creature = CreatureNamed(fact);
-                return (in HookArgs args) => CreatureOf(in args, creature) is var id && id != Who.None && Who.IsEnemy(id) == args.State.EnemyTurnNow ? 1m : 0m;
+                return (in HookArgs args) => CreatureOf(in args, creature) is var id && id != Who.None && Who.IsEnemy(id) == args.State.EnemiesSideNow ? 1m : 0m;
             }
             default: throw new InvalidOperationException($"{Name}: no fact {fact.Fact}");
         }

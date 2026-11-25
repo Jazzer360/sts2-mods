@@ -152,6 +152,46 @@ public class EnemyTurnEndTests
     }
 
     [Fact]
+    public void DoomOnAnEnemyMakesTheStateAfterTheirTurnEndUnknown()
+    {
+        // DoomPower.BeforeSideTurnEnd (side != CombatSide.Player): the doomed enemies die as their side's turn ends, which the reader can't follow
+        // (commands in a callback: turn-end-gaps.json, decision #303). The enemy turn before it stays known; the state after it is unknown, with why.
+        var state = Fight(Attacker(id: 0, hp: 10, hit: 6));
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Doom, amount: 12);
+        var after = AfterTheTurn(state);
+        Assert.Null(after.Unmodelled);
+        Assert.Equal(6, after.Taken);
+        Assert.Contains(PowerId.Doom.Name, after.UnmodelledAtTheirTurnEnd, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AnUnmodelledPowerThatWaitsOnItsOwnerTakingPartLeavesTheirTurnEndKnown()
+    {
+        // NoDrawPower.AfterSideTurnEnd: participants.Contains(base.Owner), which no player is as the enemies' side's turn ends: nothing unknown there.
+        // A dead enemy's Doom hears nothing (its powers go with it).
+        var state = Fight(Attacker(id: 0, hp: 40, hit: 6), Attacker(id: 1, hp: 5, hit: 3));
+        state.You.Powers = PowerSet.Empty.With(PowerId.NoDraw, amount: 1);
+        state.Enemies[1].Powers = PowerSet.Empty.With(PowerId.Doom, amount: 3);
+        var strike = new SimPlay { Name = "Strike", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 1, HitDamage = { [1] = 9 }, Hits = 1 };
+        var after = AfterTheTurn(state, SimScript.Of(strike));
+        Assert.False(after.Enemy(id: 1)!.Alive);
+        Assert.Null(after.UnmodelledAtTheirTurnEnd);
+    }
+
+    [Fact]
+    public void ATurnsEndToldItsSideByTheSideEnding()
+    {
+        // The side a turn's-end hook is told (SimState.SideEnding), not the enemy turn's flag: Weak on you ticks at the enemies' side's turn end
+        // (side == CombatSide.Enemy), not at yours; Flame Barrier on you goes at the enemies' (base.Owner.Side != side), not at yours.
+        var state = Fight(Attacker(id: 0, hp: 40, hit: 6));
+        state.You.Powers = PowerSet.Empty.With(PowerId.Weak, amount: 2).With(PowerId.FlameBarrier, amount: 4);
+        var after = AfterTheTurn(state);
+        Assert.Equal(1, after.You.Powers[PowerId.Weak]);
+        Assert.False(after.You.Powers.Has(PowerId.FlameBarrier));
+        Assert.Equal(TurnSide.None, after.SideEnding);
+    }
+
+    [Fact]
     public void TheBlockYourTurnLeftComesBackAfterTheEnemiesTurnEnd()
     {
         // The enemy's block this turn (cleared, then its move's) is what its turn's end meets; once it's over, the outcome reads what your turn left it.

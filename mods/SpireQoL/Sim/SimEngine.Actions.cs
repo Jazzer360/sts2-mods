@@ -796,7 +796,7 @@ public static partial class SimEngine
     private static void NewInstanceTickSkip(SimState state, int target, PowerId power, bool debuff)
     {
         var key = SimKeys.Owned(power.Name, target);
-        var skips = debuff && !Who.IsEnemy(target) && (state.EnemyTurnNow || (state.MainRules & MainRule.DebuffSkipsTickOnAnyTurn) != 0);
+        var skips = debuff && !Who.IsEnemy(target) && (state.EnemiesSideNow || (state.MainRules & MainRule.DebuffSkipsTickOnAnyTurn) != 0);
         if (skips) state.TickSkips = state.TickSkips.With(key, amount: 1);
         else if (state.TickSkips.Count > 0) state.TickSkips = state.TickSkips.Without(key);
     }
