@@ -194,8 +194,8 @@ pipelines), so a command's pipeline is one piece of code wherever it is used. Th
 checked against their game hooks by Part B. Reading their hooks as programs too is the natural next step once this works;
 it isn't part of this plan.
 
-A command with no action yet is a named gap (`SimAdapter.CommandsNotTranslated`, with why: a card upgraded mid-play, Osty summoned, a
-heal...), and `StepTranslationTests` holds every command every card calls, on both branches, to one or the other. A gap adds no
+A command with no action yet is a named gap (`SimAdapter.CommandsNotTranslated`, with why: a card upgraded mid-play, a
+power's amount changed in place...), and `StepTranslationTests` holds every command every card calls, on both branches, to one or the other. A gap adds no
 `NotModelledAction`: a new `?` on screen is the owner's call, so they're listed, not shown (TRACKER).
 
 **Built first (2026-11-23): the order.** `PlayOrder` gave each action the command it stood for and put the adapter's actions in the

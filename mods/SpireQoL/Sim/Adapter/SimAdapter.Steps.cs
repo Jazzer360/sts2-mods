@@ -33,6 +33,8 @@ public static partial class SimAdapter
         ["CreatureCmd.GainBlock"] = "GainBlockAction: its block value through the block pipeline, to the creature its first argument names",
         ["CreatureCmd.Damage"] = "LoseHpAction on its owner (an HP cost); DamageAction on the target (no attack); a shot's damage on the target",
         ["CreatureCmd.Kill"] = "KillOstyAction (your Osty)",
+        ["OstyCmd.Summon"] = "SummonAction: its amount for the player its second argument names (you, or each player its loop goes over), as OstyCmd.Summon runs (SimEngine.Summon)",
+        ["CreatureCmd.Heal"] = "HealAction: its amount on you or your Osty, up to max HP",
         ["CreatureCmd.SetCurrentHp"] = "ExecuteAction (the target, on its condition)",
         ["CreatureCmd.LoseBlock"] = "StripBlockAction (the target's block, and its Artifact when the play removes it)",
         ["PowerCmd.Apply"] = "ApplyPowerAction (or FocusAction) to whom its second argument names, its amount its third",
@@ -76,10 +78,8 @@ public static partial class SimAdapter
         ["CardCmd.ApplySingleTurnRetain"] = "Retain given to a card this turn (main): the turn's end reads your hand from the game (gap)",
         ["CardCmd.Enchant"] = "an enchantment given to a card: not simulated (gap)",
         ["CardPileCmd.RemoveFromDeck"] = "a card taken out of your deck: outside the fight",
-        ["OstyCmd.Summon"] = "Osty summoned or given HP: not simulated (gap)",
         ["OrbCmd.Passive"] = "an orb's passive set off by a card: not simulated (gap)",
         ["PowerCmd.ModifyAmount"] = "a power's amount changed in place: not simulated (gap)",
-        ["CreatureCmd.Heal"] = "HP healed: not simulated (gap)",
         ["CreatureCmd.Stun"] = "an enemy stunned by a card: not simulated (gap)",
         ["CreatureCmd.GainMaxHp"] = "max HP gained: not simulated (gap)",
         ["CreatureCmd.LoseMaxHp"] = "max HP lost: not simulated (gap)",
@@ -205,6 +205,10 @@ public static partial class SimAdapter
                 return (DamageFrom(found, play), null);
             case ("CreatureCmd", "Kill") when Argument(command, 0) == "Owner.Osty":
                 return (new List<SimAction> { new KillOstyAction() }, null);
+            case ("OstyCmd", "Summon"):
+                return (SummonsFrom(found, play), null);
+            case ("CreatureCmd", "Heal"):
+                return (HealsFrom(found, play), null);
             case ("CreatureCmd", "SetCurrentHp") when Argument(command, 0) == "cardPlay.Target":
                 return (new List<SimAction> { new ExecuteAction(ThresholdOf(found, play)) }, null);
             case ("CreatureCmd", "LoseBlock") when Argument(command, 1) == "cardPlay.Target":
@@ -777,6 +781,42 @@ public static partial class SimAdapter
         // numbering of the players).
         var players = PlayersOf(found, play);
         return players.Where(player => player == Who.You || play.Owner == Who.You).Select(player => (SimAction)Gain(player == Who.You ? play.Owner : player)).ToList();
+    }
+
+    // ---------------------------------------------------------------- Osty and heals
+
+    /// <summary>
+    /// OstyCmd.Summon(choiceContext, summoner, amount, source): its amount (the card value its third argument names) for the player its second
+    /// argument names: you (base.Owner), or each player of your side its loop goes over (Legion of Bone: each, a teammate's own card only for
+    /// itself, as a teammate's numbering isn't followed). Its loops' other rounds repeat it.
+    /// </summary>
+    private static List<SimAction> SummonsFrom(CardEffects.Found found, StepPlay play)
+    {
+        var command = found.Command;
+        var amount = Number(play, ValueAt(command, 2), Sts2State.Var(play.Card, "Summon"));
+        var summoner = ValueAt(command, 1);
+        var overPlayers = IsEach(summoner) ? found.Loops.LastOrDefault(loop => OverPlayers(loop) || OverPlayerCreatures(loop)) : null;
+        var rounds = RoundsOf(found, play, loop => ReferenceEquals(loop, overPlayers));
+        var actions = new List<SimAction>();
+        if (IsOwnerPlayer(summoner))
+            for (var round = 0; round < rounds; round++) actions.Add(new SummonAction(amount));
+        else if (overPlayers != null)
+            foreach (var player in PlayersIn(overPlayers.Items, play).Where(player => player == Who.You || play.Owner == Who.You))
+                for (var round = 0; round < rounds; round++) actions.Add(new SummonAction(amount) { Player = player == Who.You ? play.Owner : player });
+        return actions;
+    }
+
+    /// <summary>The loop goes over the fight's players (CombatState.PlayerCreatures, its own filter applied: Legion of Bone's living ones).</summary>
+    private static bool OverPlayerCreatures(LoopStep loop) => loop.Items?.Parts().Any(part => part is QueryValue { Name: "PlayerCreatures" }) == true;
+
+    /// <summary>CreatureCmd.Heal(creature, amount): its amount on you (base.Owner.Creature: Not Yet) or your Osty (base.Owner.Osty: Spur).</summary>
+    private static List<SimAction> HealsFrom(CardEffects.Found found, StepPlay play)
+    {
+        var command = found.Command;
+        var amount = Number(play, ValueAt(command, 1), Sts2State.Var(play.Card, "Heal"));
+        if (IsYou(ValueAt(command, 0))) return new List<SimAction> { new HealAction(amount) };
+        if (Argument(command, 0) == "Owner.Osty") return new List<SimAction> { new HealAction(amount) { Osty = true } };
+        return new List<SimAction>();
     }
 
     // ---------------------------------------------------------------- orbs

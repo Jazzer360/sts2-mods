@@ -385,6 +385,12 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> AfterSideTurnStartLate(SimState state, int owner) => One(state);
     /// <summary>A player's Osty lost HP (AfterCurrentHpChanged with a loss on Osty): Necro Mastery. Runs inside the damage.</summary>
     public virtual void AfterOstyHpLost(SimState state, int owner, int player, int lost) { }
+    /// <summary>Hook.ModifySummonAmount: a summon's amount for <paramref name="summoner"/> as this listener leaves it (OstyCmd.Summon). Pure.</summary>
+    public virtual decimal ModifySummonAmount(SimState state, int owner, int summoner, decimal amount) => amount;
+    /// <summary>Hook.AfterSummon: <paramref name="summoner"/> summoned <paramref name="amount"/> (OstyCmd.Summon's last step).</summary>
+    public virtual IEnumerable<SimState> AfterSummon(SimState state, int owner, int summoner, int amount) => One(state);
+    /// <summary>Hook.AfterOstyRevived: <paramref name="player"/>'s dead Osty came back with a summon.</summary>
+    public virtual IEnumerable<SimState> AfterOstyRevived(SimState state, int owner, int player) => One(state);
     /// <summary>A player tried a shot (AfterArrowShot: with or without an arrow): Covering Fire.</summary>
     public virtual IEnumerable<SimState> AfterArrowShot(SimState state, int owner, int shooter) => One(state);
     /// <summary>A shooter's arrow impaled an enemy (AfterArrowImpaled): Explosive Arrows.</summary>

@@ -180,8 +180,6 @@ public sealed partial class ProcAudit
         var startP = (sim.FullStart ?? sim.Start).You;
         var me = window.Card.Owner;
         int? drawn = startP.Draw == null ? null : entries.OfType<CardDrawnEntry>().Count(cardDrawnEntry => cardDrawnEntry.Actor == me.Creature && !cardDrawnEntry.FromHandDraw);
-        // Summoning raises Osty's HP in ways the simulator doesn't model: Osty isn't compared then.
-        var summoned = entries.OfType<SummonedEntry>().Any();
 
         List<string> Diff(SimState pred)
         {
@@ -227,7 +225,8 @@ public sealed partial class ProcAudit
             Cmp("Thorns", player.Thorns, simPlayer.Thorns);
             Cmp("Flame Barrier", player.FlameBarrier, simPlayer.FlameBarrier);
             Cmp("Feel No Pain", player.FeelNoPain, simPlayer.FeelNoPain);
-            if (!summoned) Cmp("Osty HP", player.OstyHp, simPlayer.OstyHp);
+            // A summon is simulated as OstyCmd.Summon runs (SimEngine.Summon): Osty is held to it like any other number.
+            Cmp("Osty HP", player.OstyHp, simPlayer.OstyHp);
             // An orb the simulator doesn't know (another mod's) is Unknown: any orb matches it. A random one (Chaos) is a branch per orb.
             static string Orb(SimOrb orb) => $"{orb.Kind} {orb.Passive}/{orb.Evoke}";
             var orbsMatch = player.Orbs.Count == simPlayer.Orbs.Count

@@ -19,6 +19,68 @@ public static partial class SimEngine
         return lost;
     }
 
+    /// <summary>
+    /// OstyCmd.Summon of <paramref name="amount"/> for <paramref name="player"/>, as the game runs it: the amount through Hook.ModifySummonAmount (every
+    /// listener's, in order; none at 0); then Osty alive gains that much max HP and is healed by it (CreatureCmd.GainMaxHp: SetMaxHp, then Heal), Osty
+    /// dead is revived (his max HP set to it, healed by it: CreatureCmd.SetMaxHp, Heal) and Hook.AfterOstyRevived told, and a player with no Osty
+    /// yet gets one (PlayerCmd.AddPet, Die For You on him, then the same max HP and heal); then the fight's log records the summon
+    /// (CombatHistory.Summoned) and Hook.AfterSummon is told. A heal of Osty tells AfterCurrentHpChanged a gain, which nothing the simulator runs acts
+    /// on (Necro Mastery acts on a loss). <paramref name="log"/>: a model's summon logs its tab's amount under its name (Devour Life, Sic 'Em).
+    /// </summary>
+    internal static IEnumerable<SimState> Summon(SimState state, int player, decimal amount, string? log = null, int? logOwner = null)
+    {
+        if (state.Player(player) == null) return new[] { state };
+        foreach (var (model, owner) in Listeners(state))
+            if (model.Overrides(nameof(SimModel.ModifySummonAmount))) amount = model.ModifySummonAmount(state, owner, player, amount);
+        if (amount == 0m) return new[] { state };
+        var summoned = (int)amount;
+        var summoner = state.MutablePlayer(player);
+        var revived = false;
+        if (summoner.OstyHp > 0)
+        {
+            // GainMaxHp: SetMaxHp(MaxHp + amount), then Heal by the change.
+            if (summoner.OstyMaxHp != int.MaxValue) summoner.OstyMaxHp += summoned;
+            summoner.OstyHp = (int)Math.Min(summoner.OstyMaxHp, (long)summoner.OstyHp + summoned);
+        }
+        else
+        {
+            revived = summoner.OstyShields; // a dead Osty stays in the fight with his Die For You (ShouldPowerBeRemovedAfterOwnerDeath: false)
+            summoner.OstyShields = true;
+            summoner.OstyMaxHp = summoned;
+            summoner.OstyHp = summoned;
+        }
+        if (log != null) state.LogFired(log, summoned, logOwner ?? player);
+        IEnumerable<SimState> states = new[] { state };
+        if (revived) states = Then(states.ToList(), branch => Hook(branch, nameof(SimModel.AfterOstyRevived), (model, owner, copy) => model.AfterOstyRevived(copy, owner, player)));
+        return Then(states.ToList(), branch =>
+        {
+            Record(branch, new HistoryEvent(HistoryKind.Summoned, player));
+            return Hook(branch, nameof(SimModel.AfterSummon), (model, owner, copy) => model.AfterSummon(copy, owner, player, summoned));
+        });
+    }
+
+    /// <summary>A card's summon (SummonAction): its amount for its summoner, the play's player unless it names another.</summary>
+    private static void RunSummon(BranchSet branches, SummonAction summon) =>
+        branches.Each(branch => Summon(branch, summon.Player ?? branch.CurrentPlay?.Owner ?? Who.You, summon.Amount));
+
+    /// <summary>
+    /// CreatureCmd.Heal of a player's Osty: up to his max HP, from 0 too (Creature.HealInternal sets his HP; a dead Osty comes back). A player with no
+    /// Osty has nothing to heal.
+    /// </summary>
+    internal static void HealOsty(SimState state, int player, int amount)
+    {
+        if (amount <= 0 || state.Player(player) is not { OstyShields: true }) return;
+        var healed = state.MutablePlayer(player);
+        healed.OstyHp = (int)Math.Min(healed.OstyMaxHp, (long)healed.OstyHp + amount);
+    }
+
+    private static void RunHeal(BranchSet branches, HealAction heal) => branches.Do(branch =>
+    {
+        var player = branch.CurrentPlay?.Owner ?? Who.You;
+        if (heal.Osty) HealOsty(branch, player, heal.Amount);
+        else Heal(branch, player, heal.Amount);
+    });
+
     private static void RunDamage(BranchSet branches, DamageAction damageAction) => branches.Each(branch =>
     {
         var target = branch.CurrentPlay?.Target ?? Who.None;

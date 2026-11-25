@@ -79,9 +79,8 @@ internal static class CardCoverage
         [nameof(HuddleUp)] = "every living player of your side draws (GetTeammatesOf: you too): yours are simulated, a teammate's (as many as their hand and piles allow) are their card events (SimAdapter.DrawsFrom)",
         [nameof(BladeSymphony)] = "Shivs into every living player's hand (GetTeammatesOf: you too), each made by its owner: their created-card events (SimAdapter.MadeForPlayers)",
         [nameof(GlimpseBeyond)] = "Souls into every living player's draw pile (GetTeammatesOf: you too), created by you: your created-card events, per Soul (SimAdapter.MadeForPlayers)",
-        // LegionOfBone.OnPlay: OstyCmd.Summon for every living player. Nothing reacts to a summon (no model overrides AfterSummon
-        // or ModifySummonAmount, v0.113.1); it only raises each player's Osty, which is read from the game after the play.
-        [nameof(LegionOfBone)] = "summons every player's Osty: nothing reacts to a summon, and each Osty's HP is read after the play",
+        // LegionOfBone.OnPlay: OstyCmd.Summon for every living player of your side.
+        [nameof(LegionOfBone)] = "summons every living player's Osty (GetTeammatesOf: you too), each through OstyCmd.Summon's steps (SimAdapter.SummonsFrom, SimEngine.Summon)",
         // Reviewed: nothing in this turn's outcome (the end of turn and the enemy turn).
         [nameof(BelieveInYou)] = "energy for the teammate",
         [nameof(Blaze)] = "Strength for the teammate: their attacks, not your end of turn",

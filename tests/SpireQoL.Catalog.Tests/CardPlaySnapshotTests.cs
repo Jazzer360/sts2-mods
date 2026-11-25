@@ -192,7 +192,7 @@ public class CardPlaySnapshotTests
 
     /// <summary>
     /// The play's outcome: each branch it ends in, in the simulator's order, as "weight you=HP/block e(energy) h(hand) d(draw)/(discard)
-    /// [teammates] enemies [the play's card events] ?(what isn't modelled)", and "capped" when the search stopped at a cap.
+    /// osty(HP)/(max HP) [teammates] enemies [the play's card events] ?(what isn't modelled)", and "capped" when the search stopped at a cap.
     /// </summary>
     private static string OutcomeText(SimState start, SimPlay play)
     {
@@ -202,7 +202,9 @@ public class CardPlaySnapshotTests
         catch (Exception ex) { return "sim error " + ex.GetType().Name; }
         var culture = System.Globalization.CultureInfo.InvariantCulture;
         static string Player(SimPlayer player) =>
-            $"{player.Hp}/{player.Block} e{player.Energy} h{player.HandCount}" + (player.Draw is { } piles ? $" d{piles.Count}/{piles.DiscardCount}" : "");
+            $"{player.Hp}/{player.Block} e{player.Energy} h{player.HandCount}" + (player.Draw is { } piles ? $" d{piles.Count}/{piles.DiscardCount}" : "")
+            // Osty, once the play gives the board's Osty-less player one (OstyCmd.Summon): his HP and max HP.
+            + (player.OstyHp > 0 ? $" osty{player.OstyHp}/{player.OstyMaxHp}" : "");
         var lines = branches.Select(branch =>
         {
             var parts = new List<string> { branch.Weight.ToString("0.####", culture), "you=" + Player(branch.You) };

@@ -436,7 +436,12 @@ public sealed class SimPlayer
     [JsonIgnore] public int Focus { get => Powers[PowerId.Focus]; set => Set(PowerId.Focus, value); }
     [JsonIgnore] public int Buffer { get => Powers[PowerId.Buffer]; set => Set(PowerId.Buffer, value); }
     public int OstyHp;
-    /// <summary>Osty takes the hits aimed at his owner first (DieForYouPower).</summary>
+    /// <summary>Osty's max HP (int.MaxValue: not tracked): a heal of him stops there (CreatureCmd.Heal), a summon raises it or sets it (OstyCmd.Summon).</summary>
+    public int OstyMaxHp = int.MaxValue;
+    /// <summary>
+    /// The player has an Osty, alive or dead, with Die For You (DieForYouPower: he takes the hits aimed at his owner while he lives, and keeps
+    /// the power at his death). False: none yet, so a summon adds him (OstyCmd.Summon: PlayerCmd.AddPet, Die For You).
+    /// </summary>
     public bool OstyShields = true;
     /// <summary>
     /// Your pet Wuppy's HP (Wuppy relic, v0.113.0): while it lives, every powered attack aimed at you hits it instead,
@@ -519,7 +524,7 @@ public sealed class SimPlayer
     internal void Hash(ref BranchKey key)
     {
         key.Add(Block); key.Add(Hp); key.Add(MaxHp); key.Add(Taken); key.Add(Through); key.Add(OstyTaken); key.Add(UnblockableTaken); key.Add(Incoming); key.Add(BlockGained);
-        key.Add(WuppyHp); key.Add(WuppyTaken); key.Add(OstyHp); key.Add(Died ? 1 : 0); key.Add(LizardTailUsed ? 1 : 0); key.Add(LizardTailHeal); key.Add(FairiesUsed); key.Add(Fairies);
+        key.Add(WuppyHp); key.Add(WuppyTaken); key.Add(OstyHp); key.Add(OstyMaxHp); key.Add(OstyShields ? 1 : 0); key.Add(Died ? 1 : 0); key.Add(LizardTailUsed ? 1 : 0); key.Add(LizardTailHeal); key.Add(FairiesUsed); key.Add(Fairies);
         key.Add(BlockGains); key.Add(Energy); key.Add(HandCount); key.Add(PlayingFromHand); key.Add(Arrows); key.Add(Fading); key.Add(UpgradableAtTurnEnd); key.Add(HexFading); key.Add(HexFrom); key.Add(Drawn); key.Add(ExhaustPile); key.Add(TakenToHand);
         key.Add(OrbCapacity); key.Add(BeaconGiving ? 1 : 0); key.Add(InvincibleBlock); key.Add(InvincibleDrawPile);
         Draw?.Hash(ref key);

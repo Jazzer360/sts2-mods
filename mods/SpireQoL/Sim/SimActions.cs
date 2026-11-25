@@ -394,3 +394,19 @@ public sealed record ExecuteAction(int Threshold) : SimAction;
 
 /// <summary>Your Osty dies (CreatureCmd.Kill: Sacrifice, Bone Shards), losing all his HP (Necro Mastery reacts).</summary>
 public sealed record KillOstyAction : SimAction;
+
+/// <summary>
+/// OstyCmd.Summon of <paramref name="Amount"/> for a player (Bodyguard, Reanimate, Legion of Bone's each player), as SimEngine.Summon runs it.
+/// </summary>
+public sealed record SummonAction(int Amount) : SimAction
+{
+    /// <summary>The summoner (null: the play's player).</summary>
+    public int? Player { get; init; }
+}
+
+/// <summary>CreatureCmd.Heal of <paramref name="Amount"/> on a player or their Osty (Not Yet, Spur), up to max HP (SimEngine.Heal).</summary>
+public sealed record HealAction(int Amount) : SimAction
+{
+    /// <summary>The play's player's Osty, not the player.</summary>
+    public bool Osty { get; init; }
+}

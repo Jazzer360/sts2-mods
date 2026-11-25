@@ -44,7 +44,7 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.ExhaustAutoPlays), nameof(SimPlayer.InvincibleBlock), nameof(SimPlayer.InvincibleDrawPile),
         nameof(SimPlayer.Orbs), nameof(SimPlayer.OrbCapacity), nameof(SimPlayer.SlotOnFirstChannel),
         nameof(SimPlayer.BlockGains), 
-        nameof(SimPlayer.OstyHp), nameof(SimPlayer.OstyShields), nameof(SimPlayer.WuppyHp), nameof(SimPlayer.Hp), nameof(SimPlayer.MaxHp),
+        nameof(SimPlayer.OstyHp), nameof(SimPlayer.OstyMaxHp), nameof(SimPlayer.OstyShields), nameof(SimPlayer.WuppyHp), nameof(SimPlayer.Hp), nameof(SimPlayer.MaxHp),
         nameof(SimPlayer.Fairies), nameof(SimPlayer.FairyHeal), nameof(SimPlayer.LizardTailHeal), // their potions and relics are on screen
         nameof(SimPlayer.Taken), nameof(SimPlayer.Through), nameof(SimPlayer.OstyTaken), nameof(SimPlayer.Incoming),
         nameof(SimPlayer.UnblockableTaken), nameof(SimPlayer.WuppyTaken), nameof(SimPlayer.Died), nameof(SimPlayer.LizardTailUsed), nameof(SimPlayer.FairiesUsed), // results

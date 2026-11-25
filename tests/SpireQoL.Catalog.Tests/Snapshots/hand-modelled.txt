@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 138 game methods; 3 adapter rules; 60 hand-written models.
+# 20 engine rules naming 146 game methods; 3 adapter rules; 60 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -40,9 +40,9 @@ Orbs: the slots, a channel into them (the front one evoked when they're full), a
 Arrows: shot, impaled, knocked loose (a shot at a dead target keeps its arrow: ArrowCmd.ShootArrowAtTarget retrieves it)
   game: ArrowCmd.ShootArrowAtTarget (beta only), ArrowCmd.ImpaleTarget (beta only), ArrowCmd.DislodgeArrow (beta only), ArrowCmd.RetrieveArrow (beta only), Hook.AfterArrowShot (beta only), Hook.AfterArrowImpaled (beta only), Hook.AfterArrowDislodged (beta only)
   simulator: SimEngine.IsImpaled, SimEngine.RunShoot, SimEngine.RunImpale, SimEngine.RunDislodgeAll, SimEngine.Dislodge, SimEngine.PlaysStartingImpaled, SimEngine.TakeArrows
-Osty: the HP he loses for his player
-  game: Hook.AfterCurrentHpChanged, Hook.ModifyUnblockedDamageTarget
-  simulator: SimEngine.OstyLoses
+Osty: the HP he loses for his player; a summon (his max HP raised and a heal, a revive, a first summon adding him with Die For You, its hooks) and a heal of him
+  game: Hook.AfterCurrentHpChanged, Hook.ModifyUnblockedDamageTarget, OstyCmd.Summon, Hook.ModifySummonAmount, Hook.AfterSummon, Hook.AfterOstyRevived, CreatureCmd.GainMaxHp, CreatureCmd.SetMaxHp, PlayerCmd.AddPet, CombatHistory.Summoned
+  simulator: SimEngine.OstyLoses, SimEngine.Summon, SimEngine.RunSummon, SimEngine.HealOsty, SimEngine.RunHeal
 Poison: Outbreak's trigger of every enemy's poison, and the game's preview of the next tick (the tick itself is PoisonPower's code: decision #201)
   game: PoisonPower.Trigger, PoisonPower.CalculateTotalDamageNextTurn
   simulator: SimEngine.RunModelCommand, SimEngine.PoisonTick

@@ -1013,6 +1013,8 @@ public static partial class SimEngine
             case ModelCommandAction command: branches.Each(branch => RunModelCommand(branch, command.Power, command.Method)); break;
             case TriggerPoisonAction: branches.Each(branch => RunModelCommand(branch, PowerId.Poison.Name, "Trigger")); break;
             case KillOstyAction: branches.Do(branch => OstyLoses(branch, Who.You, branch.You.OstyHp)); break;
+            case SummonAction summonAction: RunSummon(branches, summonAction); break;
+            case HealAction healAction: RunHeal(branches, healAction); break;
             case CardPlayAction cardPlayAction: RunCardPlay(branches, cardPlayAction); break;
             case AttackAction at: RunAttack(branches, at); break;
             case GainBlockAction gainBlockAction: RunBlock(branches, gainBlockAction); break;

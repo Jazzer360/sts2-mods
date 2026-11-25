@@ -688,6 +688,7 @@ public static partial class SimAdapter
 
         var osty = me.Osty;
         player.OstyHp = osty != null && osty.IsAlive ? osty.CurrentHp : 0;
+        if (osty != null) player.OstyMaxHp = osty.MaxHp;
         player.OstyShields = osty != null && osty.HasPower<DieForYouPower>();
         player.WuppyHp = SafeInt(() => me.Creature.Pets.Where(pet => pet.IsAlive && pet.Powers.Any(power => power.GetType().Name == nameof(WuppysLoyaltyPower))).Sum(pet => pet.CurrentHp));
     }

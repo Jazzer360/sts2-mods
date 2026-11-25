@@ -535,4 +535,46 @@ public class PlayBehaviourTests
         Assert.Equal(shivs, after.You.HandCount);
         Assert.Equal(mateHand + shivs, after.Teammates[0].HandCount);
     }
+
+    /// <summary>Your Osty (PlayerCmd.AddPet's steps: a pet of yours on your side, with Die For You), at <paramref name="hp"/> of <paramref name="maxHp"/>.</summary>
+    private static Creature Osty(GameFight gameFight, int hp, int maxHp)
+    {
+        var osty = gameFight.Combat.CreateCreature(ModelDb.Monster<MegaCrit.Sts2.Core.Models.Monsters.Osty>().ToMutable(), CombatSide.Player, slot: null);
+        gameFight.Me.PlayerCombatState!.AddPetInternal(osty);
+        gameFight.Combat.AddCreature(osty);
+        osty.SetMaxHpInternal(maxHp);
+        osty.SetCurrentHpInternal(hp);
+        Power<DieForYouPower>(osty, amount: 1);
+        return osty;
+    }
+
+    [Fact]
+    public void BodyguardsSummonRaisesOstysMaxHpAndHeals()
+    {
+        // Reports 20261125-014429-7e641d and 20261125-025845-b055ab: Bodyguard.OnPlay is OstyCmd.Summon(Summon), which the play's simulation
+        // left out (Osty took the enemy's hit at the HP he had before it). Osty alive: CreatureCmd.GainMaxHp, its heal.
+        var gameFight = Fight();
+        Osty(gameFight, hp: 2, maxHp: 2);
+        Enemy(gameFight);
+        var card = gameFight.Add<Bodyguard>();
+        var summon = Sts2Mods.Core.Game.Sts2State.Var(card, "Summon");
+        Assert.True(summon > 0);
+        var after = Only(PlayOut(gameFight, card));
+        Assert.Equal(2 + summon, after.You.OstyHp);
+        Assert.Equal(2 + summon, after.You.OstyMaxHp);
+    }
+
+    [Fact]
+    public void SpurSummonsThenHealsOsty()
+    {
+        // Spur.OnPlay: OstyCmd.Summon(Summon), then CreatureCmd.Heal(base.Owner.Osty, Heal): up to his max HP.
+        var gameFight = Fight();
+        Osty(gameFight, hp: 1, maxHp: 10);
+        Enemy(gameFight);
+        var card = gameFight.Add<Spur>();
+        var summon = Sts2Mods.Core.Game.Sts2State.Var(card, "Summon");
+        var heal = Sts2Mods.Core.Game.Sts2State.Var(card, "Heal");
+        var after = Only(PlayOut(gameFight, card));
+        Assert.Equal(Math.Min(10 + summon, 1 + summon + heal), after.You.OstyHp);
+    }
 }
