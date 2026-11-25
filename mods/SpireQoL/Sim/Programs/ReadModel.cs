@@ -1410,7 +1410,9 @@ public sealed class ReadModel : SimModel
             case ForEachStep each:
             {
                 // foreach over the items as the loop starts (the players in their order, the hittable enemies, its owner's side): its body once for
-                // each the loop's filter lets through (asked of each item as the loop reaches it, on each branch), the item Each.
+                // each the loop's filter lets through (asked of each item as the loop reaches it, on each branch), the item Each. Each item starts
+                // from the run's kept answers as the loop started (HookArgs.On copies them): its filter's and body's tests are asked for it, never
+                // kept from another item's (SimCoveringFireTests: a dead teammate first, then a living one).
                 var body = CompileSteps(each.Steps, new List<HookStep>(), firstRound: true);
                 var over = each.Over;
                 var where = each.Where == null ? null : Compile(each.Where);
