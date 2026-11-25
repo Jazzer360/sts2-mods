@@ -98,6 +98,8 @@ public class ReadModelParityTests
         ["PersonalHivePower.AfterDamageReceived"] = "target == base.Owner && dealer != null && props.IsPoweredAttack(): `if (dealer.Monster is Osty) dealer = dealer.PetOwner.Creature`, then base.Amount of CardPileCmd.AddGeneratedCardToCombat(CreateCard<Dazed>(dealer.Player), PileType.Draw, null, Random): your Osty's powered hit makes them for you, where the hand-written model wanted a player dealer (a fix); each is told to Hook.AfterCardGeneratedForCombat with no creator, which no created-card hook hears. An enemy's own attack on itself (the board's dealer 0) has no player to make them for (dealer.Player is null): the read model marks that simulation unknown; no enemy's attack hits an enemy",
         ["SicEmPower.AfterDamageGiven"] = "dealer?.Monster is Osty osty && osty.Creature.PetOwner != null && base.Applier != null && osty.Creature.PetOwner.Creature == base.Applier && target == base.Owner: OstyCmd.Summon(choiceContext, dealer.PetOwner, base.Amount, this): the summon happens (Osty's max HP and HP up by its amount: SimEngine.Summon), where the hand-written model only logged its tab (a fix, its tab the same). Its code asks nothing of the damage, so a hit fully blocked summons too, as the hand-written model's Total > 0 allowed",
         ["BiiigHug.AfterCardEvent"] = "AfterShuffle: CardPileCmd.AddGeneratedCardToCombat(CreateCard<Soot>(base.Owner), PileType.Draw, base.Owner, Random): the Soot is a card you made, so Hook.AfterCardGeneratedForCombat tells your created-card hooks of it (a Status: Pillar of Creation's block, Smokestack's damage, Arsenal's Strength, Regalite, Supermassive's count), where the hand-written model only put it in the pile (a fix)",
+        ["StretchPower.AfterModifyingBlockAmount"] = "GainsBlock(card): card.GainsBlock || card.Enchantment?.GainsBlock: the read model binds a play whose enchantment gains block (Adroit), as the hand-written model did while SimCard.GainsBlock held both; its frozen copy reads the card's own block only since the two were split (SimCard.EnchantmentGainsBlock). No prediction changes",
+        ["PaelsLegion.AfterModifyingBlockAmount"] = "its term changing a block is what it does (ModelSpec.TermActs, decision #269): the read model logs its firing as the engine tells it the term changed a block, where the hand-written model logged it at AfterCardPlayed of the play it kept: the same play's log, so the same tab (OwnDataTabParityTests); the engine tells it only of a block its term changed (CreatureCmd.GainBlock), never of one at 0",
         ["ViciousPower.AfterPowerApplied"] = "amount > 0 && applier == base.Owner && power is VulnerablePower, with no test of the target: Vulnerable you put on a player sets it off too (the hand-written model wanted an enemy). Nothing of yours puts Vulnerable on a player today",
     };
 
@@ -170,6 +172,8 @@ public class ReadModelParityTests
         [RelicId.BeatingRemnant.Name] = (6, "DamageReceivedThisTurn"),
         // Joss Paper: the Ethereal exhausts its turn end counted (its EtherealCount; the hand-written model's Data).
         [RelicId.JossPaper.Name] = (1, "EtherealCount"),
+        // Pael's Legion: off cooldown and no play kept (the hand-written model's Data 0; its amount the cooldown, 0), the read model's Cooldown 0.
+        [RelicId.PaelsLegion.Name] = (0, "Cooldown"),
     };
 
     /// <summary>
@@ -272,7 +276,7 @@ public class ReadModelParityTests
     private static readonly string[] Hooks =
     {
         nameof(SimModel.ModifyDamageAdditive), nameof(SimModel.ModifyDamageMultiplicative), nameof(SimModel.ModifyDamageMultiplicativeLate),
-        nameof(SimModel.ModifyBlockAdditive), nameof(SimModel.ModifyBlockMultiplicative),
+        nameof(SimModel.ModifyBlockAdditive), nameof(SimModel.ModifyBlockMultiplicative), nameof(SimModel.AfterModifyingBlockAmount),
         nameof(SimModel.BeforeCardPlayed), nameof(SimModel.AfterCardPlayed), nameof(SimModel.AfterCardEvent), nameof(SimModel.AfterPowerApplied),
         nameof(SimModel.BeforeSideTurnEndVeryEarly), nameof(SimModel.BeforeSideTurnEndEarly), nameof(SimModel.BeforeSideTurnEnd), nameof(SimModel.AfterSideTurnEnd),
         nameof(SimModel.AfterSideTurnEndLate), nameof(SimModel.ModifyCardPlayCount), nameof(SimModel.AfterModifyingCardPlayCount),
@@ -470,11 +474,48 @@ public class ReadModelParityTests
                 foreach (var block in Blocks(owner))
                     yield return ($"{block}", (model, state) => Number(hook == nameof(SimModel.ModifyBlockAdditive) ? model.ModifyBlockAdditive(state, owner, block) : model.ModifyBlockMultiplicative(state, owner, block)));
                 break;
+            case nameof(SimModel.AfterModifyingBlockAmount):
+                // Its term changed a block (the engine tells the ones that did: CreatureCmd.GainBlock), with the amount it came to and the gain's play.
+                foreach (var amount in new[] { 0, 5 })
+                    foreach (var play in new SimCardPlay?[] { null }.Concat(Plays(others).Where(play => play.PlayIndex == 0 && play.Card.Energy == 1)))
+                        yield return ($"after it changed a block to {amount}, {(play == null ? "no play" : Describe(play))}", (model, state) =>
+                        {
+                            state.CurrentPlay = play;
+                            model.AfterModifyingBlockAmount(state, owner, amount, play);
+                            return Branches(new[] { state });
+                        });
+                // A play that gains block, as the engine runs it (decision #269: Stretch, Pael's Legion): BeforeCardPlayed, the block's terms (each compared),
+                // AfterModifyingBlockAmount where a term changed it, a second gain the same way, AfterCardPlayed. Its card gains block, its enchantment does, or neither.
+                foreach (var play in Plays(others).Where(play => play.PlayIndex == 0 && play.Card.Type is SimCardType.Skill or SimCardType.Attack))
+                    foreach (var gains in new[] { "card", "enchantment", "neither" })
+                        foreach (var props in new[] { SimProps.Move, SimProps.Unpowered })
+                        {
+                            var gaining = play with { Card = play.Card with { GainsBlock = gains == "card", Enchanted = gains == "enchantment", EnchantmentGainsBlock = gains == "enchantment" } };
+                            yield return ($"a {props} block gain in {Describe(gaining)}, {gains} gaining block", (model, state) =>
+                            {
+                                state.CurrentPlay = gaining;
+                                var terms = new StringBuilder();
+                                var after = model.BeforeCardPlayed(state, owner, gaining).Select(branch =>
+                                {
+                                    foreach (var gain in new[] { 5, 3 })
+                                    {
+                                        var block = new BlockCtx(gaining.Owner, props, gaining.Card, gaining);
+                                        var add = model.ModifyBlockAdditive(branch, owner, block);
+                                        var multiply = model.ModifyBlockMultiplicative(branch, owner, block);
+                                        terms.Append($"+{Number(add)} x{Number(multiply)} ");
+                                        if (add != 0m || multiply != 1m) model.AfterModifyingBlockAmount(branch, owner, (int)((gain + add) * multiply), gaining);
+                                    }
+                                    return branch;
+                                }).SelectMany(branch => model.AfterCardPlayed(branch, owner, gaining)).ToList();
+                                return terms + Branches(after);
+                            });
+                        }
+                break;
             case nameof(SimModel.BeforeCardPlayed) or nameof(SimModel.AfterCardPlayed):
                 // A run of plays in turn, each through both hooks (a counter's count, a once-a-turn flag), each step's outcome compared.
                 var run = Plays(others).Where(play => play.Owner == owner && play.PlayIndex == 0 && play.Card.Energy == 1).ToList();
                 if (run.Count > 0)
-                    yield return ("a run of plays in turn", (model, state) => Sequence(state, Enumerable.Range(0, 24).Select(index => run[index * 7 % run.Count]), (branch, play) =>
+                    yield return ("a run of plays in turn", (model, state) => Sequence(state, Enumerable.Range(0, 24).Select(index => run[index * 7 % run.Count] with { Serial = 200 + index }), (branch, play) =>
                     {
                         // As the engine runs a play: BeforeCardPlayed, the play started counted, the play finished counted, AfterCardPlayed.
                         branch.CurrentPlay = play;
@@ -749,7 +790,8 @@ public class ReadModelParityTests
                     {
                         var card = new SimCard("Played", type) { Energy = energy, Ethereal = energy == 1, Stars = energy == 2 ? 2 : 0, Upgradable = energy == 3, Tags = energy == 2 ? new() { SimCardTag.Wah } : new(),
                             Affliction = energy switch { 1 => SimAffliction.Galvanized, 2 => SimAffliction.Tainted, _ => SimAffliction.None } };
-                        yield return new SimCardPlay(card, player, Target: 0, index, count, AutoPlay: energy == 3);
+                        // Each card play its own (SimCardPlay.Serial, numbered from 1 as the engine numbers them, a later play of a card play keeping its first's: a play a model keeps is told apart).
+                        yield return new SimCardPlay(card, player, Target: 0, index, count, AutoPlay: energy == 3) { Serial = 1 + Array.IndexOf(Types, type) * 16 + energy * 2 + (player == Who.You ? 0 : 1) };
                     }
     }
 
@@ -784,7 +826,7 @@ public class ReadModelParityTests
             foreach (var props in new[] { SimProps.Move, SimProps.Move | SimProps.Unpowered, SimProps.Unpowered, SimProps.None })
                 foreach (var player in new[] { (int?)null, owner, Who.You, Who.Teammate(0) }.Distinct())
                 {
-                    var play = player is { } playedBy && Who.IsPlayer(playedBy) ? new SimCardPlay(card, playedBy, target, PlayIndex: 0, PlayCount: 1, AutoPlay: false) : null;
+                    var play = player is { } playedBy && Who.IsPlayer(playedBy) ? new SimCardPlay(card, playedBy, target, PlayIndex: 0, PlayCount: 1, AutoPlay: false) { Serial = 1 } : null;
                     yield return new BlockCtx(target, props, play?.Card, play);
                 }
     }

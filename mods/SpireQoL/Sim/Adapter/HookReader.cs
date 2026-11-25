@@ -184,7 +184,9 @@ public static class HookReader
         {
             Tab = outcome != null || payouts.Any(payout => payout.DuringTheTurn == null) ? null : payouts.Count > 0 ? TabKind.Trigger
                 : (helpsOwner || hurtsOwner) && TabOf(programs) != null ? TabKind.Trigger : TabOf(programs),
-            Payouts = payouts.Count > 0 ? payouts : null, DarkensOnPlay = darkens,
+            // Going dark labels a bonus given up only with a payout the play decides: with none, it's a bonus spent on the play (Pael's Legion's doubled
+            // block), shown by its flash beside it.
+            Payouts = payouts.Count > 0 ? payouts : null, DarkensOnPlay = darkens && payouts.Any(payout => payout.DuringTheTurn != null),
             HelpsOwner = helpsOwner, HurtsOwner = hurtsOwner, HurtsPlayOwner = hurtsPlayOwner, Outcome = outcome,
             Copies = kind == ModelKind.Power ? reader.Copies() : PowerCopies.One,
             Commands = commands.Count > 0 ? commands : null,
@@ -200,7 +202,10 @@ public static class HookReader
     /// </summary>
     internal static bool TermActsOf(IReadOnlyList<HookProgram> programs) =>
         programs.Any(program => program.Returns != null && program.Hook is HookName.ModifyDamageAdditive or HookName.ModifyDamageMultiplicative or HookName.ModifyDamageMultiplicativeLate or HookName.ModifyDamageCap)
-        && programs.All(program => program.Hook != HookName.AfterModifyingDamageAmount);
+        && programs.All(program => program.Hook != HookName.AfterModifyingDamageAmount)
+        // A Modify block hook's term (Pael's Legion's doubled block): the game tells it changed a block (Hook.AfterModifyingBlockAmount), whatever its code
+        // does there (decision #269).
+        || programs.Any(program => program.Returns != null && program.Hook is HookName.ModifyBlockAdditive or HookName.ModifyBlockMultiplicative);
 
     /// <summary>
     /// A model of a kind the engine runs no read program for (an enchantment, an affliction, a potion, an orb: decision #195's last kinds): each of
@@ -890,6 +895,25 @@ public static class HookReader
             }
         }
 
+        /// <summary>
+        /// The stores a Modify hook's code makes as it works out its value (Stretch's gaveBonusBlock = true on the way that gives its bonus), each on its
+        /// way's condition: StoreFieldSteps run once the value is worked out, so a store to a field the value reads is a gap; any other step is one too.
+        /// </summary>
+        private List<HookStep> StoresWorkingOut(MethodInfo hook, HookValue returns)
+        {
+            ModelProgram program;
+            try { program = ProgramReader.Read(_type, _read, hook.Name); }
+            catch (InvalidOperationException) { return new List<HookStep>(); }
+            var stores = program.All().Where(step => step is StoreStep or DataStep).ToList();
+            if (stores.Count == 0) return new List<HookStep>();
+            _body = program;
+            var steps = stores.SelectMany(Step).ToList();
+            if (steps.FirstOrDefault(step => step is not StoreFieldStep) is { } other) throw new Gap(ReaderCapability.OwnData, $"gap: {hook.Name} changes its own state ({other.GetType().Name}) as it works out its value");
+            var read = new ModelSpec("", ModelKind.Power, new[] { new HookProgram(HookName.ModifyBlockAdditive, Array.Empty<HookStep>()) { Returns = returns } }).Values().OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
+            if (steps.OfType<StoreFieldStep>().FirstOrDefault(store => read.Contains(store.Field)) is { } readBack) throw new Gap(ReaderCapability.OwnData, $"gap: {hook.Name} stores {readBack.Field}, which its value reads");
+            return steps;
+        }
+
         /// <summary>One hook body of a kind the engine runs no read program for, read to its first gap (ReadEffects).</summary>
         public HookReading Effect(MethodInfo hook)
         {
@@ -951,7 +975,10 @@ public static class HookReader
                 if (name is HookName.ShouldAllowHitting or HookName.ShouldCreatureBeRemovedFromCombatAfterDeath or HookName.ShouldPowerBeRemovedAfterOwnerDeath && hook.ReturnType.Name == "Boolean")
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(TestWays(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
                 if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name is HookName.ModifyCardPlayCount or HookName.ModifyOrbPassiveTriggerCounts)
-                    return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(Ways(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
+                {
+                    var returns = Pruned(Ways(ProgramReader.ReadReturnedWays(_type, hook, _read)));
+                    return (new HookProgram(name, StoresWorkingOut(hook, returns)) { Returns = returns }, null, null);
+                }
                 var body = BodySteps(hook);
                 if (body.Gap is { } bodyGap) return (null, bodyGap, null);
                 var steps = body.Steps!;
@@ -1137,6 +1164,60 @@ public static class HookReader
             || Unstored(value) is NamedValue { Name: var named } && KeepsACard(named)
             // A card field of its own data (Juggling's GetInternalData<Data>().cardToClone).
             || Unstored(value) is QueryValue { Name: var dataField, Of: { } dataOf, Arguments.Count: 0 } && ProgramReader.IsOwnData(dataOf) && KeepsACard(ProgramReader.OwnDataPrefix + dataField);
+
+        /// <summary>
+        /// A card play its code keeps (Stretch's data's cardPlay, Pael's Legion's AffectedCardPlay): the field's name ("Data.cardPlay", "AffectedCardPlay"),
+        /// whose state is the play's identity (HookFact.PlaySerial, 0 for none) and, beside it, its player ("….Player"); else null.
+        /// </summary>
+        private string? KeptPlay(ProgramValue value) => Unstored(value) switch
+        {
+            QueryValue { Of: NamedValue { Name: "this" }, Name: var member, Arguments.Count: 0 } when KeepsAPlay(member) => member,
+            QueryValue { Name: var dataField, Of: { } dataOf, Arguments.Count: 0 } when ProgramReader.IsOwnData(dataOf) && KeepsAPlay(ProgramReader.OwnDataPrefix + dataField) => ProgramReader.OwnDataPrefix + dataField,
+            _ => null,
+        };
+
+        /// <summary>Which card a card fact names: "" the card played, "Source" the card a damage or block comes from (cardSource); null for any other.</summary>
+        private string? CardNamed(ProgramValue value) => IsPlayCard(Unstored(value)) ? "" : IsSourceCard(Unstored(value)) ? "Source" : null;
+
+        /// <summary>A card fact's Of for the card <see cref="CardNamed"/> names: null for the card played.</summary>
+        private static string? CardOf(string named) => named.Length == 0 ? null : named;
+
+        /// <summary>
+        /// The true-or-false a static method of its own class returns (Stretch's GainsBlock(card): card.GainsBlock || card.Enchantment?.GainsBlock ?? false),
+        /// read from its body, its parameters the call's arguments; null for a method that isn't one (or calls itself).
+        /// </summary>
+        private ProgramValue? OwnStaticTest(string method, IReadOnlyList<ProgramValue> arguments)
+        {
+            var found = _type.GetMethods(Declared | BindingFlags.Static).FirstOrDefault(candidate => candidate.IsStatic && candidate.Name == method && candidate.ReturnType.Name == "Boolean"
+                && candidate.GetParameters().Length == arguments.Count);
+            if (found == null || !_inlining.Add("static:" + method)) return null;
+            try
+            {
+                var parameters = found.GetParameters().Select((parameter, index) => (parameter.Name!, arguments[index])).ToDictionary(pair => pair.Item1, pair => pair.Item2, StringComparer.Ordinal);
+                return ProgramReader.ReadReturnedWays(_type, found, _read).Map(part => part switch
+                {
+                    ParameterValue { Name: var name } when parameters.TryGetValue(name, out var argument) => argument,
+                    NamedValue { Name: var name } when parameters.TryGetValue(name, out var argument) => argument,
+                    _ => null,
+                });
+            }
+            finally { _inlining.Remove("static:" + method); }
+        }
+
+        /// <summary>The player of a card play its code keeps (internalData.cardPlay.Player): that field's player ("Data.cardPlay.Player"), else null.</summary>
+        private string? KeptPlayPlayer(ProgramValue value) =>
+            Unstored(value) is QueryValue { Name: "Player", Of: { } playOf } && KeptPlay(playOf) is { } field ? field + ".Player" : null;
+
+        /// <summary>A field or property of its own class, or a field of its own data ("Data.cardPlay"), that holds a card play.</summary>
+        private bool KeepsAPlay(string member) => member.StartsWith(ProgramReader.OwnDataPrefix, StringComparison.Ordinal)
+            ? Procs.CardCode.NestedTypes(_type).Any(nested => nested.GetField(member[ProgramReader.OwnDataPrefix.Length..], Declared)?.FieldType.Name == "CardPlay")
+            : (_type.GetProperty(member, Declared)?.PropertyType ?? _type.GetField(member, Declared)?.FieldType) is { Name: "CardPlay" };
+
+        /// <summary>The card play the hook is given (its cardPlay: a play hook's, a Modify or AfterModifying hook's block's or damage's).</summary>
+        private static bool IsHookPlay(ProgramValue value) => Unstored(value) is ParameterValue { Name: "cardPlay" } or NamedValue { Name: "cardPlay" };
+
+        /// <summary>The hooks given a card play of their own beside the play hooks (a block's or damage's: cardPlay).</summary>
+        private static readonly HashSet<string> GivenAPlay = new(StringComparer.Ordinal) { "ModifyBlockAdditive", "ModifyBlockMultiplicative", "AfterModifyingBlockAmount", "BeforeCardPlayed", "AfterCardPlayed" };
 
         /// <summary>
         /// A field or property of its own class (not a base class's: an enchantment's base.Card is its card), or a field of its own data ("Data.cardToClone"),
@@ -1433,6 +1514,21 @@ public static class HookReader
                     return translated == null ? Array.Empty<HookStep>() : new[] { translated with { When = Condition(step.Condition) } };
                 // A card its code keeps in a field of its own (MusicBox's CardBeingPlayed): the card played kept binds the play in progress (BindStep),
                 // null lets it go (UnbindStep), as a power's own data's Add(cardPlay.Card, ...) and Remove do; any other card is a gap.
+                // A card play its code keeps (Stretch's data's cardPlay = cardPlay, Pael's Legion's AffectedCardPlay): the play's identity and its player,
+                // each its state (KeptPlay); null lets it go. Any other play kept is a gap.
+                case StoreStep playStore when KeepsAPlay(playStore.Field):
+                {
+                    var keptWhen = Condition(step.Condition);
+                    if (IsHookPlay(playStore.Value) && GivenAPlay.Contains(_hook!))
+                        return new HookStep[]
+                        {
+                            new StoreFieldStep(playStore.Field, new HookFactValue(HookFact.PlaySerial)) { When = keptWhen },
+                            new StoreFieldStep(playStore.Field + ".Player", CreatureFact(HookFact.CreatureId, new HookCreature(HookWho.PlayOwner))) { When = keptWhen },
+                        };
+                    if (playStore.Value is NullValue)
+                        return new HookStep[] { new StoreFieldStep(playStore.Field, new HookConstant(0m)) { When = keptWhen }, new StoreFieldStep(playStore.Field + ".Player", new HookConstant(Who.None)) { When = keptWhen } };
+                    throw new Gap(ReaderCapability.OwnData, $"gap: keeps {playStore.Value} in {playStore.Field}");
+                }
                 case StoreStep cardStore when KeepsACard(cardStore.Field):
                     if (IsPlayCard(cardStore.Value)) return new HookStep[] { new BindStep(new HookConstant(1m)) { When = Condition(step.Condition) } };
                     if (cardStore.Value is NullValue) return new HookStep[] { new UnbindStep { When = Condition(step.Condition) } };
@@ -2082,6 +2178,23 @@ public static class HookReader
                 // Its kept card tested as there (MusicBox's CardBeingPlayed): a play bound to it.
                 case var kept when IsKeptCard(kept):
                     return new HookFactValue(HookFact.BoundHeld);
+                // A card play its code keeps, tested as there (Stretch's data's cardPlay != null): one is kept, whichever.
+                case var keptPlay when KeptPlay(keptPlay) is { } playField:
+                    return new HookMath(HookOperation.NotEqual, new HookField(playField), new HookConstant(0m));
+                // The card play the hook is given, tested as there (AfterModifyingBlockAmount's cardPlay: a block from a card play).
+                case ParameterValue { Name: "cardPlay" } or NamedValue { Name: "cardPlay" } when _hook == nameof(HookName.AfterModifyingBlockAmount):
+                    return new HookMath(HookOperation.NotEqual, new HookFactValue(HookFact.PlaySerial), new HookConstant(0m));
+                // A card's own block (card.GainsBlock), its enchantment there or its enchantment's block (card.Enchantment?.GainsBlock: Stretch's GainsBlock), for
+                // the card played or the damage's or block's card.
+                case QueryValue { Name: "GainsBlock", Of: { } gainsOf } when CardNamed(gainsOf) is { } gainer:
+                    return new HookFactValue(HookFact.CardGainsBlock) { Of = CardOf(gainer) };
+                case QueryValue { Name: "GainsBlock", Of: { } enchantmentGains } when Unstored(enchantmentGains) is QueryValue { Name: "Enchantment", Of: { } enchantedOf } && CardNamed(enchantedOf) is { } enchanted:
+                    return new HookFactValue(HookFact.EnchantmentGainsBlock) { Of = CardOf(enchanted) };
+                case QueryValue { Name: "Enchantment", Of: { } enchantmentOf } when CardNamed(enchantmentOf) is { } hasEnchantment:
+                    return new HookFactValue(HookFact.CardEnchanted) { Of = CardOf(hasEnchantment) };
+                // A static method of its own class giving a true-or-false (Stretch's GainsBlock(card)): its body's returned value, its parameters the arguments.
+                case QueryValue { Of: null, Name: var ownStatic, Arguments: var ownArguments, Type: var ownClass } when ownClass == _type.Name && OwnStaticTest(ownStatic, ownArguments) is { } returned:
+                    return Test(returned);
                 // A creature's monster is a class (command.Attacker?.Monster is Osty, way by way for a null-conditional chain): the pet the simulator
                 // keeps for a player when it's the class Player.Osty gets (read from its code); any other class is a gap.
                 case QueryValue { Name: "is", Of: { } monsterOf, Type: var monsterClass } when Unstored(monsterOf) is WaysValue or QueryValue { Name: "Monster" }:
@@ -2164,6 +2277,9 @@ public static class HookReader
                 }
                 case NullValue:
                     return new HookConstant(0m);
+                // A constant tested as true or false (a ?? false's false: Stretch's GainsBlock).
+                case ConstantValue constantTest:
+                    return new HookConstant(constantTest.Value != 0 ? 1m : 0m);
                 // A true-or-false the code worked out on several ways and kept (bool flag = a && b && c): its condition.
                 case ConditionValue kept:
                     return Condition(kept.Condition) ?? new HookConstant(1m);
@@ -2408,6 +2524,15 @@ public static class HookReader
             if (ArrowCompare(compare) is { } arrows) return arrows;
             if (compare.Op is Comparison.Equal or Comparison.NotEqual)
             {
+                // A card play its code keeps against none, or against the card play the hook is given (Stretch's cardPlay != internalData.cardPlay): its
+                // identity against 0, or against that play's (decision #269).
+                var (keptPlay, otherPlay) = KeptPlay(compare.Left) is { } leftPlay ? (leftPlay, compare.Right) : KeptPlay(compare.Right) is { } rightPlay ? (rightPlay, compare.Left) : (null, compare.Left);
+                if (keptPlay != null && (otherPlay is NullValue || IsHookPlay(otherPlay) && GivenAPlay.Contains(_hook!)))
+                    return new HookMath(OperationOf(compare.Op), new HookField(keptPlay), otherPlay is NullValue ? new HookConstant(0m) : new HookFactValue(HookFact.PlaySerial));
+                // The player of a card play it keeps against the player whose card a damage or block comes from (Stretch's cardPlay.Player != cardSource.Owner).
+                var (keptPlayer, otherPlayer) = KeptPlayPlayer(compare.Left) is { } leftPlayer ? (leftPlayer, compare.Right) : KeptPlayPlayer(compare.Right) is { } rightPlayer ? (rightPlayer, compare.Left) : (null, compare.Left);
+                if (keptPlayer != null && CardOwnerOf(Unstored(otherPlayer)) is { } ownedCard && IsSourceCard(Unstored(ownedCard)))
+                    return new HookMath(OperationOf(compare.Op), new HookField(keptPlayer), CreatureFact(HookFact.CreatureId, new HookCreature(HookWho.SourceCardOwner)));
                 // Its kept card is there (CardBeingPlayed != null: any card play's), or is the card played (cardPlay.Card == CardBeingPlayed: this card
                 // play's, not one it's played inside: decision #267).
                 if (IsKeptCard(compare.Left) && (compare.Right is NullValue || IsPlayCard(compare.Right)) || IsKeptCard(compare.Right) && (compare.Left is NullValue || IsPlayCard(compare.Left)))
@@ -2605,6 +2730,12 @@ public static class HookReader
                 // No cap (ModifyDamageCap's return for a damage it doesn't cap).
                 case NamedValue { Name: "Decimal.MaxValue" }: return new HookConstant(decimal.MaxValue);
                 case NamedValue { Name: "amount" } when _hook == "AfterPowerAmountChanged": return new HookFactValue(HookFact.PowerAmount);
+                // The block a gain came to (AfterModifyingBlockAmount's modifiedAmount).
+                case NamedValue { Name: "modifiedAmount" } or ParameterValue { Name: "modifiedAmount" } when _hook == nameof(HookName.AfterModifyingBlockAmount):
+                    return new HookFactValue(HookFact.BlockModified);
+                // The player of a card play its code keeps (Data.cardPlay.Player).
+                case var keptPlayer when KeptPlayPlayer(keptPlayer) is { } playerField:
+                    return new HookField(playerField);
                 // The energy a spend took (AfterEnergySpent's amount): the simulator raises one energy-spent event for each energy spent.
                 case NamedValue { Name: "amount" } or ParameterValue { Name: "amount" } when _hook == "AfterEnergySpent": return new HookConstant(1m);
                 // The stars a spend took (AfterStarsSpent's amount): the play's stars, as the simulator spends them (one event a play).
@@ -3266,8 +3397,14 @@ public static class HookReader
         {
             QueryValue { Type: "CardModel", Name: "Owner", Of: { } card } => card,
             QueryValue { Type: "Player", Name: "Creature", Of: QueryValue { Type: "CardModel", Name: "Owner", Of: { } card } } => card,
+            // A card play's player (cardPlay.Player, its Creature: Stretch's): its card's owner, the player who played it.
+            QueryValue { Type: "CardPlay", Name: "Player", Of: { } play } when IsHookPlay(play) => PlayedCard(play),
+            QueryValue { Type: "Player", Name: "Creature", Of: QueryValue { Type: "CardPlay", Name: "Player", Of: { } play } } when IsHookPlay(play) => PlayedCard(play),
             _ => null,
         };
+
+        /// <summary>The card of the card play the hook is given (cardPlay.Card).</summary>
+        private static QueryValue PlayedCard(ProgramValue play) => new("CardPlay", "Card", Unstored(play), Array.Empty<ProgramValue>(), "CardModel") { IsProperty = true };
 
         /// <summary>
         /// The ways of a command's creatures when they're a local of several ways naming different creatures (each way's test, the argument's place,

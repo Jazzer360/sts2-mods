@@ -59,8 +59,10 @@ public sealed record SimCard(string Name, SimCardType Type)
     public bool Upgraded { get; init; }
     public bool Enchanted { get; init; }
     public bool Ethereal { get; init; }
-    /// <summary>It gains block (CardModel.GainsBlock, or its enchantment's): Stretch binds to such a play.</summary>
+    /// <summary>It gains block (CardModel.GainsBlock): Stretch binds to such a play (or one whose enchantment does: <see cref="EnchantmentGainsBlock"/>).</summary>
     public bool GainsBlock { get; init; }
+    /// <summary>Its enchantment gains block on play (EnchantmentModel.GainsBlock, beta: Adroit's powered block).</summary>
+    public bool EnchantmentGainsBlock { get; init; }
     /// <summary>Its cost when played (X costs: the energy spent), and its energy value (CardPlay.Resources.EnergyValue).</summary>
     public int Energy { get; init; }
     public bool CostsX { get; init; }

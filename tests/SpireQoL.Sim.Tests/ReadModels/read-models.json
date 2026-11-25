@@ -18141,6 +18141,97 @@
     "HelpsOwner": false
   },
   {
+    "Name": "MysticLighter",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "ModifyDamageAdditive",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "MysticLighter.ModifyDamageAdditive:0006",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "MysticLighter.ModifyDamageAdditive:001C",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "MysticLighter.ModifyDamageAdditive:0010",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "FromCard"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardEnchanted",
+                      "Of": "Source"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "MysticLighter.ModifyDamageAdditive:0031",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookVar",
+                "Key": "Damage",
+                "Canonical": 9
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "NeurosurgePower",
     "Kind": "Power",
     "Hooks": [
@@ -19562,6 +19653,521 @@
     ],
     "Tab": "Block",
     "HelpsOwner": false
+  },
+  {
+    "Name": "PaelsLegion",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__35.MoveNext:001A",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "AffectedCardPlay"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__35.MoveNext:002D",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "AffectedCardPlay"
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlaySerial"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AffectedCardPlay",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__35.MoveNext:001A",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "AffectedCardPlay"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__35.MoveNext:002D",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "AffectedCardPlay"
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlaySerial"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Cooldown",
+            "Value": {
+              "$kind": "HookVar",
+              "Key": "Turns",
+              "Canonical": 2
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__35.MoveNext:001A",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "AffectedCardPlay"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__35.MoveNext:002D",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "AffectedCardPlay"
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlaySerial"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterModifyingBlockAmount",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "AffectedCardPlay",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "PlaySerial"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "Or",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "PaelsLegion.AfterModifyingBlockAmount:000B",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "LessOrEqual",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "BlockModified"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "PaelsLegion.AfterModifyingBlockAmount:0014",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlaySerial"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "PaelsLegion.AfterModifyingBlockAmount:0022",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AffectedCardPlay"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "PaelsLegion.AfterModifyingBlockAmount:000B",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "LessOrEqual",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "BlockModified"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "PaelsLegion.AfterModifyingBlockAmount:0014",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlaySerial"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "PaelsLegion.AfterModifyingBlockAmount:002B",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "AffectedCardPlay"
+                    },
+                    "Right": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PlaySerial"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyBlockMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "PaelsLegion.ModifyBlockMultiplicative:0006",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardOrMonsterMove"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "PaelsLegion.ModifyBlockMultiplicative:0010",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "FromCard"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "PaelsLegion.ModifyBlockMultiplicative:0025",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "PaelsLegion.ModifyBlockMultiplicative:0034",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "Cooldown"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "PaelsLegion.ModifyBlockMultiplicative:0034",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Cooldown"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "PaelsLegion.ModifyBlockMultiplicative:0042",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AffectedCardPlay"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "PaelsLegion.ModifyBlockMultiplicative:004C",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AffectedCardPlay"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlaySerial"
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "PaelsLegion.ModifyBlockMultiplicative:0034",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Cooldown"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "PaelsLegion.ModifyBlockMultiplicative:0042",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "AffectedCardPlay"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "PaelsLegion.ModifyBlockMultiplicative:0034",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Cooldown"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "PaelsLegion.ModifyBlockMultiplicative:004C",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "AffectedCardPlay"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlaySerial"
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 2
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": false,
+    "TermActs": true
   },
   {
     "Name": "PagestormPower",
@@ -26279,6 +26885,1875 @@
       }
     ],
     "HelpsOwner": false
+  },
+  {
+    "Name": "StretchPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.cardPlay",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__11.MoveNext:0024",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "Data.cardPlay"
+                },
+                "Right": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlaySerial"
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.cardPlay.Player",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": -2147483648
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterCardPlayed\u003Ed__11.MoveNext:0024",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "Equal",
+                "Left": {
+                  "$kind": "HookField",
+                  "Field": "Data.cardPlay"
+                },
+                "Right": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlaySerial"
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.gaveBonusBlock",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__11.MoveNext:0024",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "Data.cardPlay"
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlaySerial"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__11.MoveNext:0038",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "Data.gaveBonusBlock"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StretchPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "Data.amountWhenCardStarted"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": -1
+              }
+            },
+            "GoesAtZero": true,
+            "Debuff": false,
+            "By": {
+              "Who": "NoOne",
+              "PetOwner": false
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__11.MoveNext:0024",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "Data.cardPlay"
+                  },
+                  "Right": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlaySerial"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__11.MoveNext:0038",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "Data.gaveBonusBlock"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.cardPlay",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "PlaySerial"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "StretchPower.BeforeCardPlayed:0011",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "StretchPower.BeforeCardPlayed:0024",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "StretchPower.GainsBlock:0006",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardGainsBlock"
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "StretchPower.GainsBlock:0010",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardEnchanted"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "EnchantmentGainsBlock"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.GainsBlock:0006",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardGainsBlock"
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "StretchPower.BeforeCardPlayed:0039",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "Data.cardPlay"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.cardPlay.Player",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "CreatureId",
+              "Creature": {
+                "Who": "PlayOwner",
+                "PetOwner": false
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "StretchPower.BeforeCardPlayed:0011",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "StretchPower.BeforeCardPlayed:0024",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "StretchPower.GainsBlock:0006",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardGainsBlock"
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "StretchPower.GainsBlock:0010",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardEnchanted"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "EnchantmentGainsBlock"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.GainsBlock:0006",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardGainsBlock"
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "StretchPower.BeforeCardPlayed:0039",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "Data.cardPlay"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.amountWhenCardStarted",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "StretchPower.BeforeCardPlayed:0011",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "StretchPower.BeforeCardPlayed:0024",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "StretchPower.GainsBlock:0006",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardGainsBlock"
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "StretchPower.GainsBlock:0010",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardEnchanted"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "EnchantmentGainsBlock"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.GainsBlock:0006",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardGainsBlock"
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "StretchPower.BeforeCardPlayed:0039",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "Data.cardPlay"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyBlockAdditive",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.gaveBonusBlock",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "Or",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "StretchPower.ModifyBlockAdditive:0002",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "FromCard"
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "StretchPower.ModifyBlockAdditive:001C",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardIsOwners"
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "StretchPower.ModifyBlockAdditive:0031",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookField",
+                                "Field": "Data.cardPlay"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "StretchPower.ModifyBlockAdditive:0049",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredBlock"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0053",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "FromPlay"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "StretchPower.ModifyBlockAdditive:0073",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardPlay"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "StretchPower.ModifyBlockAdditive:008D",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "Data.cardPlay.Player"
+                    },
+                    "Right": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureId",
+                      "Creature": {
+                        "Who": "SourceCardOwner",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "StretchPower.ModifyBlockAdditive:0002",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "FromCard"
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "StretchPower.ModifyBlockAdditive:001C",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardIsOwners"
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "StretchPower.ModifyBlockAdditive:003B",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "Data.cardPlay"
+                            },
+                            "Right": {
+                              "$kind": "HookFactValue",
+                              "Fact": "PlaySerial"
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "StretchPower.ModifyBlockAdditive:0049",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredBlock"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0053",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "FromPlay"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "StretchPower.ModifyBlockAdditive:0073",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardPlay"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "StretchPower.ModifyBlockAdditive:008D",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "Data.cardPlay.Player"
+                    },
+                    "Right": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureId",
+                      "Creature": {
+                        "Who": "SourceCardOwner",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "StretchPower.ModifyBlockAdditive:0002",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "FromCard"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "StretchPower.ModifyBlockAdditive:001C",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "StretchPower.ModifyBlockAdditive:0031",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "Data.cardPlay"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "StretchPower.ModifyBlockAdditive:003B",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardPlay"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlaySerial"
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0031",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.cardPlay"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0049",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredBlock"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "StretchPower.ModifyBlockAdditive:003B",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardPlay"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlaySerial"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0049",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredBlock"
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "StretchPower.ModifyBlockAdditive:0031",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.cardPlay"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0049",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredBlock"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0053",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "FromPlay"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:003B",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.cardPlay"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PlaySerial"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0049",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PoweredBlock"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0053",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "FromPlay"
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookWays",
+                "Ways": [
+                  {
+                    "When": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "StretchPower.ModifyBlockAdditive:0031",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "Data.cardPlay"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 0
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "StretchPower.ModifyBlockAdditive:0049",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "PoweredBlock"
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "StretchPower.ModifyBlockAdditive:0053",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "FromPlay"
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "StretchPower.ModifyBlockAdditive:005C",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Or",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookMath",
+                                  "Operation": "And",
+                                  "Left": {
+                                    "$kind": "HookNot",
+                                    "Inner": {
+                                      "$kind": "HookTest",
+                                      "At": "StretchPower.GainsBlock:0006",
+                                      "Test": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardGainsBlock",
+                                        "Of": "Source"
+                                      }
+                                    }
+                                  },
+                                  "Right": {
+                                    "$kind": "HookTest",
+                                    "At": "StretchPower.GainsBlock:0010",
+                                    "Test": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardEnchanted",
+                                      "Of": "Source"
+                                    }
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "EnchantmentGainsBlock",
+                                  "Of": "Source"
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "StretchPower.GainsBlock:0006",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardGainsBlock",
+                                  "Of": "Source"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "StretchPower.ModifyBlockAdditive:003B",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "Data.cardPlay"
+                                },
+                                "Right": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "PlaySerial"
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "StretchPower.ModifyBlockAdditive:0049",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "PoweredBlock"
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "StretchPower.ModifyBlockAdditive:0053",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "FromPlay"
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "StretchPower.ModifyBlockAdditive:005C",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Or",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookMath",
+                                  "Operation": "And",
+                                  "Left": {
+                                    "$kind": "HookNot",
+                                    "Inner": {
+                                      "$kind": "HookTest",
+                                      "At": "StretchPower.GainsBlock:0006",
+                                      "Test": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardGainsBlock",
+                                        "Of": "Source"
+                                      }
+                                    }
+                                  },
+                                  "Right": {
+                                    "$kind": "HookTest",
+                                    "At": "StretchPower.GainsBlock:0010",
+                                    "Test": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardEnchanted",
+                                      "Of": "Source"
+                                    }
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "EnchantmentGainsBlock",
+                                  "Of": "Source"
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "StretchPower.GainsBlock:0006",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardGainsBlock",
+                                  "Of": "Source"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Value": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  },
+                  {
+                    "When": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "StretchPower.ModifyBlockAdditive:0031",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "Data.cardPlay"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 0
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "StretchPower.ModifyBlockAdditive:0049",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "PoweredBlock"
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "StretchPower.ModifyBlockAdditive:0053",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "FromPlay"
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "StretchPower.ModifyBlockAdditive:005C",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Or",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "StretchPower.GainsBlock:0006",
+                                    "Test": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardGainsBlock",
+                                      "Of": "Source"
+                                    }
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookTest",
+                                  "At": "StretchPower.GainsBlock:0010",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardEnchanted",
+                                    "Of": "Source"
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookFactValue",
+                                "Fact": "EnchantmentGainsBlock",
+                                "Of": "Source"
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "StretchPower.GainsBlock:0006",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardGainsBlock",
+                                "Of": "Source"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "StretchPower.ModifyBlockAdditive:003B",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "Data.cardPlay"
+                                },
+                                "Right": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "PlaySerial"
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "StretchPower.ModifyBlockAdditive:0049",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "PoweredBlock"
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "StretchPower.ModifyBlockAdditive:0053",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "FromPlay"
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "StretchPower.ModifyBlockAdditive:005C",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Or",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "And",
+                                "Left": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "StretchPower.GainsBlock:0006",
+                                    "Test": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardGainsBlock",
+                                      "Of": "Source"
+                                    }
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookTest",
+                                  "At": "StretchPower.GainsBlock:0010",
+                                  "Test": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardEnchanted",
+                                    "Of": "Source"
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookFactValue",
+                                "Fact": "EnchantmentGainsBlock",
+                                "Of": "Source"
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "StretchPower.GainsBlock:0006",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardGainsBlock",
+                                "Of": "Source"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Value": {
+                      "$kind": "HookFactValue",
+                      "Fact": "Amount"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "StretchPower.ModifyBlockAdditive:0031",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "Data.cardPlay"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "StretchPower.ModifyBlockAdditive:0049",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredBlock"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0053",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "FromPlay"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0073",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.cardPlay"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "StretchPower.ModifyBlockAdditive:003B",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookField",
+                            "Field": "Data.cardPlay"
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PlaySerial"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "StretchPower.ModifyBlockAdditive:0049",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PoweredBlock"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0053",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "FromPlay"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0073",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.cardPlay"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "StretchPower.ModifyBlockAdditive:0031",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookField",
+                                "Field": "Data.cardPlay"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "StretchPower.ModifyBlockAdditive:0049",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PoweredBlock"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "StretchPower.ModifyBlockAdditive:0053",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "FromPlay"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0073",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.cardPlay"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:008D",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.cardPlay.Player"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureId",
+                          "Creature": {
+                            "Who": "SourceCardOwner",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "StretchPower.ModifyBlockAdditive:003B",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "Data.cardPlay"
+                            },
+                            "Right": {
+                              "$kind": "HookFactValue",
+                              "Fact": "PlaySerial"
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "StretchPower.ModifyBlockAdditive:0049",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PoweredBlock"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "StretchPower.ModifyBlockAdditive:0053",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "FromPlay"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0073",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.cardPlay"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:008D",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.cardPlay.Player"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureId",
+                          "Creature": {
+                            "Who": "SourceCardOwner",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "StretchPower.ModifyBlockAdditive:0031",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookField",
+                                "Field": "Data.cardPlay"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "StretchPower.ModifyBlockAdditive:0049",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PoweredBlock"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "StretchPower.ModifyBlockAdditive:0053",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "FromPlay"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0073",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.cardPlay"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "StretchPower.ModifyBlockAdditive:008D",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardPlay.Player"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureId",
+                        "Creature": {
+                          "Who": "SourceCardOwner",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "StretchPower.ModifyBlockAdditive:003B",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "Data.cardPlay"
+                            },
+                            "Right": {
+                              "$kind": "HookFactValue",
+                              "Fact": "PlaySerial"
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "StretchPower.ModifyBlockAdditive:0049",
+                          "Test": {
+                            "$kind": "HookFactValue",
+                            "Fact": "PoweredBlock"
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "StretchPower.ModifyBlockAdditive:0053",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "FromPlay"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "StretchPower.ModifyBlockAdditive:0073",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.cardPlay"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "StretchPower.ModifyBlockAdditive:008D",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardPlay.Player"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureId",
+                        "Creature": {
+                          "Who": "SourceCardOwner",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookField",
+                "Field": "Data.amountWhenCardStarted"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "Tab": "Trigger",
+    "HelpsOwner": true
   },
   {
     "Name": "SubroutinePower",

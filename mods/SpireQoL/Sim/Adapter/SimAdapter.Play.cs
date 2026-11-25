@@ -107,7 +107,7 @@ public static partial class SimAdapter
             return new CardVersion(original with
             {
                 Upgraded = upgradedCard.Upgraded, Upgradable = upgradedCard.Upgradable, Vars = upgradedCard.Vars, Ethereal = upgradedCard.Ethereal, Tags = upgradedCard.Tags,
-                Enchantment = upgradedCard.Enchantment, GainsBlock = upgradedCard.GainsBlock, Targets = upgradedCard.Targets,
+                Enchantment = upgradedCard.Enchantment, GainsBlock = upgradedCard.GainsBlock, EnchantmentGainsBlock = upgradedCard.EnchantmentGainsBlock, Targets = upgradedCard.Targets,
             }, upgraded.Body);
         }
         catch

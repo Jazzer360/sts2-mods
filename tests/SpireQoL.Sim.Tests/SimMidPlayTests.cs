@@ -178,11 +178,11 @@ public class SimMidPlayTests
     [Fact]
     public void StretchBoostsAnAdroitBlockOnlyOnTheFirstPlay()
     {
-        // An Adroit 3 attack played twice with Stretch 4 (v0.113.1: StretchPower counts the enchantment's block): 7 on the
+        // An Adroit 3 attack played twice with Stretch 4 (v0.113.1: StretchPower.GainsBlock counts the enchantment's block, its Enchantment?.GainsBlock): 7 on the
         // first play, which spends the Stretch, then 3.
         var state = new SimState { Enemies = { E(id: 1, hp: 50) } };
         state.You.Powers = state.You.Powers.With(PowerId.Stretch, amount: 4);
-        var adroit = new SimCard("Strike", SimCardType.Attack) { GainsBlock = true, Enchanted = true };
+        var adroit = new SimCard("Strike", SimCardType.Attack) { Enchanted = true, EnchantmentGainsBlock = true };
         var after = Assert.Single(ScriptBuilder.After(state, ScriptBuilder.Play(adroit, target: Who.None, plays: 2, ScriptBuilder.Block(baseBlock: 3))));
         Assert.Equal(10, after.You.Block);
         Assert.Equal(2, after.You.BlockGains);

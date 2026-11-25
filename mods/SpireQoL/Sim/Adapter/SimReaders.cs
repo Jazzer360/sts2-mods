@@ -188,10 +188,6 @@ public static class SimReaders
                 case nameof(Vambrace):
                     data = (Sts2State.Private<object?>(relic, "TriggeringCard", fallback: null) != null ? Models.Vambrace.Bound : 0) | (Sts2State.Private(relic, "BlockGainedThisCombat", fallback: false) ? Models.Vambrace.GainedThisCombat : 0);
                     break;
-                case nameof(PaelsLegion):
-                    amount = Sts2State.Private(relic, "Cooldown", fallback: 0);
-                    data = Sts2State.Private<object?>(relic, "AffectedCardPlay", fallback: null) != null ? Models.PaelsLegion.BoundToPlay : 0;
-                    break;
                 case nameof(Pocketwatch): amount = Sts2State.Private(relic, "_cardsPlayedThisTurn", fallback: 0); data = Sts2State.Var(relic, "CardThreshold", fallback: 3); break;
                 // The HP at or below which it gives Strength (its threshold of your max HP).
                 case nameof(RedSkull):
@@ -339,10 +335,10 @@ public static class SimReaders
         var tags = TagsOf(card).ToHashSet();
         var affliction = card.Affliction == null ? SimAffliction.None
             : Enum.TryParse<SimAffliction>(card.Affliction.GetType().Name, out var simAffliction) ? simAffliction : SimAffliction.Other;
-        bool gainsBlock;
-        // Read by name (Fool.StretchCard): EnchantmentModel.GainsBlock is beta-only (v0.113.1), and naming it here made this whole
-        // method fail to compile on main (MissingMethodException: no card simulated at all).
-        try { gainsBlock = SpireQoL.Procs.Fool.StretchCard(card); } catch { gainsBlock = false; }
+        bool enchantmentGainsBlock;
+        // Read through its gate (Fool.EnchantmentGainsBlock): EnchantmentModel.GainsBlock is beta-only (v0.113.1), and naming it here made this
+        // whole method fail to compile on main (MissingMethodException: no card simulated at all).
+        try { enchantmentGainsBlock = SpireQoL.Procs.Fool.EnchantmentGainsBlock(card); } catch { enchantmentGainsBlock = false; }
         return new SimCard(card.GetType().Name, TypeOf(card))
         {
             Tags = tags,
@@ -354,7 +350,8 @@ public static class SimReaders
             CostsX = card.EnergyCost.CostsX,
             HandId = card.Pile?.Type == PileType.Hand ? SimAdapter.HandId(card) : 0,
             Vars = vars,
-            GainsBlock = gainsBlock,
+            GainsBlock = card.GainsBlock,
+            EnchantmentGainsBlock = enchantmentGainsBlock,
             Enchantment = EnchantmentOf(card),
         };
     }
@@ -473,8 +470,15 @@ public static class SimReaders
                     // What an attack it keeps names (decision #228): its card by its identity (the HandId the simulator's cards carry), its attacker by id.
                     CardModel card => SimAdapter.HandId(card),
                     Creature creature => idOf?.Invoke(creature) ?? Who.None,
+                    // A card play's player it keeps (Stretch's cardPlay.Player), by its creature's id.
+                    MegaCrit.Sts2.Core.Entities.Players.Player keptPlayer => idOf?.Invoke(keptPlayer.Creature) ?? Who.None,
                     // An attack it keeps (Vigor's commandToModify), one under way as the state was read: there, and no simulated attack's id.
                     AttackCommand => KeptOutside,
+                    // A card play it keeps (Stretch's cardPlay, Pael's Legion's AffectedCardPlay: decision #268), one under way as the state was read: there,
+                    // and no simulated card play's identity.
+                    MegaCrit.Sts2.Core.Entities.Cards.CardPlay => KeptOutside,
+                    // None kept: its player is no one.
+                    null when field.EndsWith(".Player", StringComparison.Ordinal) => Who.None,
                     _ => 0,
                 });
         }
@@ -489,6 +493,8 @@ public static class SimReaders
         field.StartsWith(Procs.Programs.ProgramReader.OwnDataPrefix, StringComparison.Ordinal)
             ? Sts2State.Private<object?>(model, "_internalData", fallback: null) is { } data ? DataPath(data, field[Procs.Programs.ProgramReader.OwnDataPrefix.Length..]) : null
             : field.StartsWith(HookReader.VarFieldPrefix, StringComparison.Ordinal) ? Sts2State.Var(model, field[HookReader.VarFieldPrefix.Length..])
+            // What a member of its own names ("AffectedCardPlay.Player": the player of the card play it keeps), read in turn.
+            : field.Contains('.', StringComparison.Ordinal) ? DataPath(model, field)
             : Sts2State.Private<object?>(model, field, fallback: null);
 
     /// <summary>

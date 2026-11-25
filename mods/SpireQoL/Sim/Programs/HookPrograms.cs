@@ -35,6 +35,11 @@ public enum HookName
     ModifyDamageMultiplicativeLate,
     ModifyBlockAdditive,
     ModifyBlockMultiplicative,
+    /// <summary>
+    /// Hook.AfterModifyingBlockAmount(modifiedAmount, cardSource, cardPlay): told to the listeners whose term changed a block (CreatureCmd.GainBlock),
+    /// with the amount it came to and its card play (Pael's Legion keeps the play whose block it doubled).
+    /// </summary>
+    AfterModifyingBlockAmount,
     /// <summary>PowerModel.AfterApplied: a new instance of the power landed (a copy of an instanced one: each application).</summary>
     AfterApplied,
     /// <summary>Hook.BeforeSideTurnStart as the enemies' turn starts (the one turn start a simulation reaches): its participants the enemies.</summary>
@@ -359,6 +364,24 @@ public enum HookFact
     /// as it started (SimCardPlay.FirstThisTurn).
     /// </summary>
     PlayIsFirst,
+    /// <summary>
+    /// The identity of the card play the hook names (its cardPlay: a play hook's, a Modify or AfterModifying hook's block's or damage's), as a model keeps
+    /// it (a CardPlay kept in its own data or a field: Stretch's, Pael's Legion's): SimCardPlay.Serial, 0 for none (decision #269).
+    /// </summary>
+    PlaySerial,
+    /// <summary>
+    /// The card played gains block (CardModel.GainsBlock: SimCard.GainsBlock); with Of "Source", the card a damage or block comes from (cardSource).
+    /// </summary>
+    CardGainsBlock,
+    /// <summary>The card played has an enchantment (card.Enchantment != null: SimCard.Enchanted); with Of "Source", the damage's or block's card.</summary>
+    CardEnchanted,
+    /// <summary>
+    /// The card played's enchantment gains block on play (EnchantmentModel.GainsBlock, beta: Adroit's: SimCard.EnchantmentGainsBlock); with Of "Source",
+    /// the damage's or block's card's.
+    /// </summary>
+    EnchantmentGainsBlock,
+    /// <summary>The block a gain came to as the listeners left it (AfterModifyingBlockAmount's modifiedAmount).</summary>
+    BlockModified,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>
@@ -388,6 +411,10 @@ public enum HookWho
     RedirectSoFar,
     /// <summary>The creature a Should hook asks about (ShouldAllowHitting's and ShouldCreatureBeRemovedFromCombatAfterDeath's creature).</summary>
     Asked,
+    /// <summary>The player of the card play the hook names (cardPlay.Player: a play hook's, a Modify or AfterModifying hook's block's or damage's play).</summary>
+    PlayOwner,
+    /// <summary>The player whose card a damage or block comes from (cardSource.Owner: its card play's player).</summary>
+    SourceCardOwner,
 }
 
 /// <summary>A creature a hook's code names (HookWho), or the player who owns it when it's a pet (creature.PetOwner.Creature: Osty's player).</summary>
@@ -726,7 +753,10 @@ public sealed record RemovePowerStep : HookStep;
 /// <summary>PowerCmd.Decrement(this), PowerCmd.TickDownDuration(this): the power itself goes down by one, gone at 0.</summary>
 public sealed record DecrementPowerStep : HookStep;
 
-/// <summary>One hook of a model, as its code runs it: its commands in order, or for a Modify hook the value it returns.</summary>
+/// <summary>
+/// One hook of a model, as its code runs it: its commands in order, or for a Modify hook the value it returns, with the stores its code makes as it
+/// works it out (Stretch's gaveBonusBlock: StoreFieldSteps only, of fields its value doesn't read, run once it's worked out).
+/// </summary>
 public sealed record HookProgram(HookName Hook, IReadOnlyList<HookStep> Steps)
 {
     /// <summary>A Modify hook's value (null for a hook that runs commands).</summary>
@@ -850,7 +880,8 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     /// <summary>
     /// Its damage term changing a damage is it acting (decision #247: Conqueror's ×2 on a Sovereign Blade's hit on its owner): a class whose own
     /// commands give it no tab but whose Modify damage hook returns a term, which the game tells it changed a damage (Hook.AfterModifyingDamageAmount
-    /// on the modifiers) where its code answers nothing there. Its trigger tab is logged then. False with no settings row (ReadModels.Specs).
+    /// on the modifiers) where its code answers nothing there; or its block term changing a block (decision #269: Pael's Legion's doubled block), told
+    /// by Hook.AfterModifyingBlockAmount whatever its code does there. Its trigger tab is logged then. False with no settings row (ReadModels.Specs).
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool TermActs { get; init; }

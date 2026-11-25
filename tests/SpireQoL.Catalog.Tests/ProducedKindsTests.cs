@@ -20,7 +20,6 @@ public class ProducedKindsTests
     private static readonly Dictionary<string, string> ProducedElsewhere = new(StringComparer.Ordinal)
     {
         // Facts the reader translates for code only the hand-written models hold today (their conversions are queued: decision #195).
-        ["fact CardOrMonsterMove"] = "the reader's ValueProp.IsCardOrMonsterMove test: Unmovable's ModifyBlockMultiplicative (hand-written) asks it",
         ["fact CreatureIsMonster"] = "the reader's Creature.IsMonster test: asked by monster-side hooks the hand-written models hold (the monster-state conversions)",
         // Conditions of a monster's move rules (MoveConditions), not of a card's steps.
         ["condition KnownCondition"] = "MoveConditions: a monster move rule's condition the adapter settles on the board (always, never, or worked out)",

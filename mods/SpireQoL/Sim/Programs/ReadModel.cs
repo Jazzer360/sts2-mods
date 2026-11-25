@@ -29,6 +29,8 @@ internal readonly struct HookArgs
     public int PlayCount { get; init; }
     /// <summary>The HP the hit would take as an HP-loss pass starts (Hook.ModifyHpLost*'s amount).</summary>
     public decimal HpLost { get; init; }
+    /// <summary>The block a gain came to (AfterModifyingBlockAmount's modifiedAmount).</summary>
+    public int BlockModified { get; init; }
     /// <summary>The damage or block being worked out (the Modify hooks).</summary>
     public DamageCtx? Damage { get; init; }
     public BlockCtx? Block { get; init; }
@@ -253,6 +255,11 @@ public sealed class ReadModel : SimModel
             // A test that guards more than one step is asked once too: the game asks it once at its branch, though the first step it guards
             // changes what it tests (if (Block == 0) { GainBlock; GainEnergy }). One that guards a single step can't tell.
             _asksOnce[(int)program.Hook] = one.Steps().Any(step => step is StoreFieldStep) || _takes[(int)program.Hook] || GuardsSeveral(one);
+            // A Modify hook's stores as it works out its value (decision #269) are run where a block gain's terms are worked out (CalcBlock, once a gain), by a
+            // model kept as one; a damage's terms are asked for intents and previews too, where a store would run again.
+            if (program.Returns != null && program.Steps.Count > 0
+                && (HasCopies || program.Steps.Any(step => step is not StoreFieldStep) || program.Hook is not (HookName.ModifyBlockAdditive or HookName.ModifyBlockMultiplicative)))
+                throw new InvalidOperationException($"{Name}: {program.Hook} changes its state as it works out its value, which the engine doesn't run there");
             if (program.Returns != null) _returns[(int)program.Hook] = Compile(program.Returns);
             _steps[(int)program.Hook] = CompileSteps(program.Steps, new List<HookStep>(), firstRound: true, program.Hook);
         }
@@ -485,6 +492,7 @@ public sealed class ReadModel : SimModel
         HookName.ModifyHpLostAfterOsty => nameof(ModifyHpLostAfterOsty),
         HookName.ModifyHpLostAfterOstyLate => nameof(ModifyHpLostAfterOstyLate),
         HookName.AfterModifyingHpLostBeforeOsty or HookName.AfterModifyingHpLostAfterOsty => nameof(AfterModifyingHpLost),
+        HookName.AfterModifyingBlockAmount => nameof(AfterModifyingBlockAmount),
         HookName.ModifyOrbValue => nameof(ModifyOrbValue),
         HookName.ModifyOrbPassiveTriggerCounts => nameof(ModifyOrbPassiveTriggerCounts),
         HookName.AfterModifyingOrbPassiveTriggerCount => nameof(AfterModifyingOrbPassiveTriggerCount),
@@ -829,6 +837,20 @@ public sealed class ReadModel : SimModel
         _returns[(int)HookName.ShouldPowerBeRemovedAfterOwnerDeath] is { } returns && returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ShouldPowerBeRemovedAfterOwnerDeath }) == 0m;
     public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block) => Returned(HookName.ModifyBlockMultiplicative, state, owner, block, otherwise: 1m);
 
+    /// <summary>
+    /// Hook.AfterModifyingBlockAmount: told by the block's gain when its term changed the block (CreatureCmd.GainBlock), with the amount it came to and
+    /// the gain's card play (Pael's Legion keeps the play whose block it doubled), inside the gain. Its block term changing a block is what a model whose
+    /// commands give it no tab does (ModelSpec.TermActs, decision #269: Pael's Legion).
+    /// </summary>
+    public override void AfterModifyingBlockAmount(SimState state, int owner, int amount, SimCardPlay? play)
+    {
+        if (Spec.TermActs) state.LogFired(Name, amount: 0, owner);
+        if (_steps[(int)HookName.AfterModifyingBlockAmount] == null) return;
+        var args = new HookArgs { State = state, Owner = owner, Play = play, Block = new BlockCtx(Who.None, SimProps.None, play?.Card, play), BlockModified = amount };
+        foreach (var branch in Run(HookName.AfterModifyingBlockAmount, args))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingBlockAmount branched inside a block gain");
+    }
+
     public override decimal ModifyHpLostBeforeOsty(SimState state, int owner, DamageCtx damage, decimal amount) => HpLost(HookName.ModifyHpLostBeforeOsty, state, owner, damage, amount);
     public override decimal ModifyHpLostBeforeOstyLate(SimState state, int owner, DamageCtx damage, decimal amount) => HpLost(HookName.ModifyHpLostBeforeOstyLate, state, owner, damage, amount);
     public override decimal ModifyHpLostAfterOsty(SimState state, int owner, DamageCtx damage, decimal amount) => HpLost(HookName.ModifyHpLostAfterOsty, state, owner, damage, amount);
@@ -885,7 +907,9 @@ public sealed class ReadModel : SimModel
         if (!HasCopies)
         {
             var args = new HookArgs { State = state, Owner = owner, Block = block, Play = block.Play };
-            return returns(in args);
+            var value = returns(in args);
+            StoresWorkingOut(hook, args);
+            return value;
         }
         var total = otherwise;
         foreach (var copy in CopiesOrOne(state, owner))
@@ -894,6 +918,18 @@ public sealed class ReadModel : SimModel
             total = hook == HookName.ModifyBlockAdditive ? total + returns(in args) : total * returns(in args);
         }
         return total;
+    }
+
+    /// <summary>
+    /// The stores a Modify hook's code makes as it works out its value (Stretch's gaveBonusBlock on the way that gives its bonus: HookReader's
+    /// StoresWorkingOut), run once the value is worked out, on the state it was worked out on (they store nothing the value reads). A copied model's
+    /// aren't run (none has any): a gap if one did.
+    /// </summary>
+    private void StoresWorkingOut(HookName hook, in HookArgs args)
+    {
+        if (_steps[(int)hook] is not { Length: > 0 }) return;
+        foreach (var branch in Run(hook, args))
+            if (!ReferenceEquals(branch, args.State)) throw new InvalidOperationException($"{Name}: {hook} branched as it worked out its value");
     }
 
     /// <summary>
@@ -1921,6 +1957,25 @@ public sealed class ReadModel : SimModel
                 return (in HookArgs args) => args.Play is { } first && (first.FirstThisTurn & bit) != 0 ? 1m : 0m;
             }
             case HookFact.PlayIsLast: return (in HookArgs args) => args.Play is { } last && last.PlayIndex == last.PlayCount - 1 ? 1m : 0m;
+            // The card play the hook names (a play hook's, a block's or damage's: HookArgs.Play, none for a gain from no play), by its identity (decision #269).
+            case HookFact.PlaySerial: return (in HookArgs args) => args.Play?.Serial ?? 0;
+            case HookFact.BlockModified: return (in HookArgs args) => args.BlockModified;
+            // A card's block, its enchantment and its enchantment's block: the card played's, or the damage's or block's card's (Of "Source").
+            case HookFact.CardGainsBlock or HookFact.CardEnchanted or HookFact.EnchantmentGainsBlock:
+            {
+                var source = named == "Source";
+                var asked = fact.Fact;
+                return (in HookArgs args) =>
+                {
+                    var card = source ? args.Damage?.Card ?? args.Block?.Card : args.Play?.Card;
+                    return (asked switch
+                    {
+                        HookFact.CardGainsBlock => card?.GainsBlock,
+                        HookFact.CardEnchanted => card?.Enchanted,
+                        _ => card?.EnchantmentGainsBlock,
+                    }) == true ? 1m : 0m;
+                };
+            }
             // As the plays before left it: once upgraded, the card in play is its upgraded copy (decision #218).
             case HookFact.CardUpgradable: return (in HookArgs args) => args.Play?.Card.Upgradable == true ? 1m : 0m;
             case HookFact.HpLostSoFar: return (in HookArgs args) => args.HpLost;
@@ -2180,6 +2235,8 @@ public sealed class ReadModel : SimModel
             HookWho.Each => args.Each,
             HookWho.Attacker => args.Attack?.Dealer ?? Who.None,
             HookWho.AttackCardOwner => args.Attack?.Card != null ? args.Play?.Owner ?? Who.None : Who.None,
+            HookWho.PlayOwner => args.Play?.Owner ?? Who.None,
+            HookWho.SourceCardOwner => (args.Damage?.Play ?? args.Block?.Play)?.Owner ?? Who.None,
             _ => Who.None,
         };
         return creature.PetOwner ? Who.PetOwnerOf(id) : id;

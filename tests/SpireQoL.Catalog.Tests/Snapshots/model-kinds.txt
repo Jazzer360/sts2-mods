@@ -3,10 +3,10 @@
 
 ## Powers and relics
 
-beta powers: 303 classes, 272 with hooks; read from code 133, hand-written 40, neither 101 (each by its first gap: Snapshots/hook-readings.txt)
-beta relics: 316 classes, 310 with hooks; read from code 60, hand-written 12, neither 238 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 303 classes, 272 with hooks; read from code 134, hand-written 39, neither 101 (each by its first gap: Snapshots/hook-readings.txt)
+beta relics: 316 classes, 310 with hooks; read from code 62, hand-written 11, neither 237 (each by its first gap: Snapshots/hook-readings.txt)
 main powers: 265 classes, 235 with hooks; read from code 112, hand-written 35, neither 90 (each by its first gap: Snapshots/hook-readings.txt)
-main relics: 299 classes, 293 with hooks; read from code 52, hand-written 12, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
+main relics: 299 classes, 293 with hooks; read from code 54, hand-written 11, neither 228 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 7, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 1
 
@@ -139,7 +139,6 @@ SimReaders.Read (powers): ImitationLearningPower: hand-written; reads the game's
 SimReaders.Read (powers): InterceptPower: hand-written; reads its own field _internalData, its own field coveredCreatures, the game's Applier: needs more than its own fields and values
 SimReaders.Relics: PenNib: hand-written; reads its own field AttacksPlayed, its own field AttackToDouble: a read model's own fields and values replace it
 SimReaders.Relics: Vambrace: hand-written; reads its own field TriggeringCard, its own field BlockGainedThisCombat: a read model's own fields and values replace it
-SimReaders.Relics: PaelsLegion: hand-written; reads its own field Cooldown, its own field AffectedCardPlay: a read model's own fields and values replace it
 SimReaders.Relics: Pocketwatch: hand-written; reads its own field _cardsPlayedThisTurn, its own value CardThreshold: a read model's own fields and values replace it
 SimReaders.Relics: RedSkull: hand-written; reads its own value HpThreshold, its own field StrengthApplied, the game's MaxHp: needs more than its own fields and values
 SimReaders.Relics: PaelsTears: hand-written; reads nothing named: needs more than its own fields and values
@@ -178,7 +177,7 @@ name gate: QuietusPower in Procs/Fool.cs: read from code: a gate its reading cou
 name gate: SandpitPower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule
 name gate: SpeedsterPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
 name gate: StrengthPower in Sim/Adapter/MoveBranches.cs: read from code: a gate its reading could replace
-name gate: StretchPower in Procs/Fool.cs, Sim/Adapter/SimAdapter.Steps.cs: hand-written: goes with its model
+name gate: StretchPower in Procs/Fool.cs, Sim/Adapter/SimAdapter.Steps.cs: read from code: a gate its reading could replace
 name gate: SwipePower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule
 name gate: ThornsPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
 
@@ -189,9 +188,9 @@ commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn): 10 classes,
 a command on another creature (the players, a card's owner, a roll's list): 9 classes, 9 alone: CompostPower*, Clarity (potion)*, CureAll (potion)*, Duplicator (potion)*, EnergyPotion (potion)*, ExplosiveAmpoule (potion)*, FocusPotion (potion)*, RadiantTincture (potion)*, SwiftPotion (potion)*
 the engine runs no read enchantment (its bodies read whole but for that): 5 classes, 5 alone: Clone (enchantment)*, Glam (enchantment)*, Imbued (enchantment)*, Slither (enchantment)*, Spiral (enchantment)*
 a loop over items (creatures, cards): 7 classes, 4 alone: ImpaledPower, PaelsEye, SmoggyPower, BlessingOfTheForge (potion)*, CosmicConcoction (potion)*, EntropicBrew (potion)*, GlowwaterPotion (potion)*
-its own data: a card or a play kept, a field used directly: 7 classes, 4 alone: CurlUpPower, ImitationLearningPower*, InterceptPower, PaelsLegion, StretchPower*, WitheringPresencePower*, Ashwater (potion)*
 a monster's own state set (its flag, its next move): 8 classes, 3 alone: AsleepPower, CurlUpPower, ImbalancedPower*, InfestedPower, PlowPower*, SlumberPower*, SteamEruptionPower, StockPower
 a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 6 classes, 3 alone: ImpaledPower, InsatiableDominionPower*, PlatingPower, ShadowmeldPower*, SkittishPower*, SmoggyPower
+its own data: a card or a play kept, a field used directly: 6 classes, 3 alone: CurlUpPower, ImitationLearningPower*, InterceptPower, Vambrace, WitheringPresencePower*, Ashwater (potion)*
 another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 5 classes, 3 alone: CoveredPower, HardenedShellPower*, SurprisePower, Goopy (enchantment)*, FoulPotion (potion)*
 a pick: 3 classes, 3 alone: StratagemPower*, DropletOfPrecognition (potion)*, GamblersBrew (potion)*
 commands: a card made (AddGeneratedCardToCombat, a made card): 3 classes, 3 alone: CrystallineEuphoria (potion)*, CunningPotion (potion)*, PotOfGhouls (potion)*
@@ -199,10 +198,10 @@ commands: another command (no translation): 3 classes, 3 alone: BottledPotential
 orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first): 3 classes, 3 alone: ConsumingShadowPower*, TrashToTreasurePower*, PotionOfCapacity (potion)*
 the simulator's own model (no game class by its name): 3 classes, 3 alone: ImpaledPowerOther*, Regret*, Void*
 queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 5 classes, 2 alone: PaelsEye, PenNib*, PhantomBladesPower, TagTeamPower*, Vambrace
-hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount): 4 classes, 2 alone: BurrowedPower*, HandDrill*, PaelsLegion, Vambrace
 the play's result location (ModifyCardPlayResultLocation): 4 classes, 2 alone: CorruptionPower, FeralPower, NostalgiaPower*, ReboundPower*
 commands: AutoPlayFromDrawPile: 2 classes, 2 alone: LostLutePower*, DistilledChaos (potion)*
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
+hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount): 2 classes, 2 alone: BurrowedPower*, HandDrill*
 hooks: the power amount given: 2 classes, 2 alone: SneckoSkull*, UnsettlingLamp*
 the engine runs no read potion (its bodies read whole but for that): 2 classes, 2 alone: PotionOfBinding (potion)*, ShacklingPotion (potion)*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*

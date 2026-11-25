@@ -2,86 +2,8 @@ namespace SpireQoL.Sim.Models;
 
 // Block sources that change during your turn (decompile v0.113.1). Each is bound to one play the way the game binds it.
 
-/// <summary>
-/// StretchPower: BeforeCardPlayed binds the first play of its owner's that gains block (Data 1: bound to the play in progress);
-/// that play's powered block gets the amount it had when the play started (ModifyBlockAdditive, v0.114.0: amountWhenCardStarted); AfterCardPlayed of that play spends the amount it had when
-/// the play started, if the bonus was given (Data 2: bound and given). The amount at the start lives in the high bits.
-/// </summary>
-public sealed class StretchPower : SimModel
-{
-    public override TabKind? Tab => TabKind.Trigger;
-    private const int Bound = 1, Gave = 2;
-
-    public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        var powers = SimEngine.PowersOf(state, owner);
-        if (play.Owner != owner || !play.Card.GainsBlock || !powers.Has(ThisPower) || (powers.DataOf(ThisPower) & Bound) != 0) return One(state);
-        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], Bound | (powers[ThisPower] << 4)));
-        return One(state);
-    }
-
-    public override decimal ModifyBlockAdditive(SimState state, int owner, BlockCtx block)
-    {
-        if (block.Card == null || block.Play?.Owner != owner || !block.Props.IsPoweredBlock()) return 0m;
-        var powers = SimEngine.PowersOf(state, owner);
-        // v0.114.0: the amount it had when the play started (internalData.amountWhenCardStarted), whatever the play gave it since.
-        var data = powers.DataOf(ThisPower);
-        return (data & Bound) != 0 ? data >> 4 : 0m;
-    }
-
-    public override void AfterModifyingBlockAmount(SimState state, int owner, int amount, SimCardPlay? play)
-    {
-        var powers = SimEngine.PowersOf(state, owner);
-        if ((powers.DataOf(ThisPower) & Bound) != 0) SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], powers.DataOf(ThisPower) | Gave));
-    }
-
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        var powers = SimEngine.PowersOf(state, owner);
-        var data = powers.DataOf(ThisPower);
-        if (play.Owner != owner || (data & Bound) == 0) return One(state);
-        if ((data & Gave) == 0)
-        {
-            SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], data: 0));
-            return One(state);
-        }
-        var left = powers[ThisPower] - (data >> 4);
-        SimEngine.SetPowers(state, owner, left <= 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left, data: 0));
-        state.LogFired(Name, amount: 0, owner);
-        return One(state);
-    }
-}
-
-/// <summary>
-/// Pael's Legion (relic): Amount is its cooldown (turns), Data 1 while a play is bound. Off cooldown, a card's block from its
-/// owner is doubled (ModifyBlockMultiplicative) for the first play whose block lands (AfterModifyingBlockAmount binds it);
-/// AfterCardPlayed of that play flashes and starts the cooldown (its Turns var: the counter's own value when read).
-/// </summary>
-public sealed class PaelsLegion : SimModel
-{
-    /// <summary>Its Data: a play is bound to have its block doubled (the game's AffectedCardPlay).</summary>
-    public const int BoundToPlay = 1;
-    public override TabKind? Tab => TabKind.Trigger;
-    public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block)
-    {
-        if (!block.Props.IsCardOrMonsterMove() || block.Card == null || block.Play?.Owner != owner) return 1m;
-        var relics = SimEngine.RelicsOf(state, owner);
-        return relics[ThisRelic] > 0 ? 1m : 2m; // bound or not: within one play, the play in progress is the bound one
-    }
-    public override void AfterModifyingBlockAmount(SimState state, int owner, int amount, SimCardPlay? play)
-    {
-        var relics = SimEngine.RelicsOf(state, owner);
-        if (amount > 0 && play != null && relics[ThisRelic] <= 0) SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], data: BoundToPlay));
-    }
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        var relics = SimEngine.RelicsOf(state, owner);
-        if (relics.DataOf(ThisRelic) != BoundToPlay) return One(state);
-        state.LogFired(Name, amount: 0, owner);
-        SimEngine.SetRelics(state, owner, relics.With(ThisRelic, amount: 2, data: 0)); // Turns: 2 (PaelsLegion.CanonicalVars)
-        return One(state);
-    }
-}
+// Stretch and Pael's Legion are read from their code (ReadModel, decision #269): the card play each keeps (its identity and player), Stretch's bonus
+// given as its block term works it out, Pael's Legion's play kept as its term changes the block (AfterModifyingBlockAmount).
 
 /// <summary>
 /// Vambrace (relic): Data bit 1 = a card is bound (its block was doubled), bit 2 = block gained this combat. Until then, a card's
