@@ -225,6 +225,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Tag Team (multiplayer): your own Tag Team doesn't replay your next Attack at its target in the predictions, and a teammate's and yours on one enemy each replay only the other player's Attack, as in the game.
 - Malaise takes its X in Strength from its target as well as giving it Weak: its Strength loss wasn't predicted.
 - Voltaic channels a Lightning for each Lightning channeled this fight as it plays, so replayed it channels again for the ones its first play channeled.
+- Doom's kill as the enemies' turn ends runs each doomed enemy's own death effects as it dies, before Book Repair Knife's heal, as the game does: Explosive's damage comes first, so the heal isn't lost to your max HP.
 - A card's step on a test of something the play itself can change is no longer decided before the play and left out or kept on that: Sovereign Blade's block follows your Parry as it plays, and where a test isn't followed yet the card shows `?` and a range instead: a replay's later play of Memento Mori, Dredge, Optimism, Storm of Steel, The Moon and Imitation Learning, whose first play reads things as they stand.
 
 #### Removed

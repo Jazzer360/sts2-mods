@@ -93,6 +93,39 @@ public class DoomTests
     }
 
     [Fact]
+    public void EachDeathsHooksRunBeforeTheKillTellsItsList()
+    {
+        // DoomPower.DoomKill: CreatureCmd.Kill of each in turn, each running Hook.AfterDeath as it dies (Explosive's 10 to every living player),
+        // then Hook.AfterDiedToDoom of the list (Book Repair Knife's 3). At full HP, 80 - 10 + 3 = 73; told first, the heal was lost to the cap
+        // and the explosion left 70.
+        var doomed = Doomed(new SimEnemy { Id = 0, Name = "E0", Hp = 5 }, doom: 9);
+        doomed.Powers = doomed.Powers.With(PowerId.Explosive, amount: 10);
+        var state = WithBystander(Fight(doomed));
+        state.You.Hp = 80;
+        state.You.Relics = state.You.Relics.With(RelicId.BookRepairKnife, 0);
+        var after = AfterTheTurn(state);
+        Assert.False(after.Enemy(id: 0)!.Alive);
+        Assert.Equal(73, after.You.Hp);
+    }
+
+    [Fact]
+    public void EndOfDaysRunsEachDeathsHooksBeforeTellingItsList()
+    {
+        // The same order in End of Days' play: its kill of E0 sets off Explosive's 10 before Book Repair Knife's 3.
+        var exploding = Attacker(id: 0, hp: 20, hit: 6);
+        exploding.Powers = exploding.Powers.With(PowerId.Explosive, amount: 10);
+        var state = Fight(exploding, Attacker(id: 1, hp: 40, hit: 4));
+        state.You.Hp = 80;
+        state.You.Relics = state.You.Relics.With(RelicId.BookRepairKnife, 0);
+        var play = Play(Card("EndOfDays", SimCardType.Skill), target: -1, plays: 1,
+            new ApplyPowerAction(PowerId.Doom, Amount: 29) { To = ApplyPowerAction.Where.AllEnemies, Debuff = true },
+            new KillEachAction(PowerId.Doom, "IsOwnerDoomed") { TellsDiedToDoom = true });
+        var after = Assert.Single(After(state, play));
+        Assert.False(after.Enemy(id: 0)!.Alive);
+        Assert.Equal(73, after.You.Hp);
+    }
+
+    [Fact]
     public void DoomOnYouKillsYouAsYourTurnEnds()
     {
         // DoomPower.AfterSideTurnEnd: side != CombatSide.Enemy, so a player's Doom (Neurosurge's) kills them as the players' side's turn ends, before

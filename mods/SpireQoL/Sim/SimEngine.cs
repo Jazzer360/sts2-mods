@@ -1030,9 +1030,10 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// CreatureCmd.Kill of each creature of a list in turn (DoomPower.DoomKill: the doomed it worked out first), each not dead yet: an enemy dies (its
-    /// death told once the step it's in is over, as every death the engine follows), a player loses all their HP unless something holds the death
-    /// back (KillPlayer). A pet killed so isn't followed: unknown. A projection follows no one's death (decision #308).
+    /// CreatureCmd.Kill of each creature of a list in turn (DoomPower.DoomKill: the doomed it worked out first), each not dead yet: an enemy dies and
+    /// its death's hooks run before the next is killed (CreatureCmd.Kill runs Hook.AfterDeath as it dies: AllyDeaths, a main enemy's Minions with
+    /// it), so they run before the kill tells its list (Hook.AfterDiedToDoom, after DoomKill's foreach); a player loses all their HP unless something
+    /// holds the death back (KillPlayer). A pet killed so isn't followed: unknown. A projection follows no one's death (decision #308).
     /// </summary>
     internal static void KillEach(SimState state, IReadOnlyList<int> creatures, string killer)
     {
@@ -1041,13 +1042,17 @@ public static partial class SimEngine
         {
             if (Who.IsPet(creature)) { if (PetHp(state, creature) > 0) state.Unmodelled ??= $"{killer} kills a pet, which isn't followed"; }
             else if (Who.IsPlayer(creature)) KillPlayer(state, creature, forced: false);
-            else if (state.Enemy(creature) is { Alive: true } enemy) enemy.Hp = 0;
+            else if (state.Enemy(creature) is { Alive: true } enemy)
+            {
+                enemy.Hp = 0;
+                AllyDeaths(state);
+            }
         }
     }
 
     /// <summary>
     /// A card's kill of each hittable enemy whose own power answers its question (End of Days: DoomPower.DoomKill of GetDoomedCreatures(HittableEnemies)):
-    /// the list worked out first, each killed in turn (its death's hooks as it dies: AllyDeaths), then the listeners told the list (AfterDiedToDoom).
+    /// the list worked out first, each killed in turn (its death's hooks as it dies: KillEach), then the listeners told the list (AfterDiedToDoom).
     /// A question the power's code wasn't read for makes it unknown.
     /// </summary>
     private static IEnumerable<SimState> RunKillEach(SimState state, KillEachAction kill)
@@ -1065,7 +1070,6 @@ public static partial class SimEngine
         }
         if (killed.Count == 0 || state.Forecasting) return new[] { state };
         KillEach(state, killed, kill.Power.Name);
-        AllyDeaths(state);
         if (kill.TellsDiedToDoom) TellDiedToDoom(state, killed);
         return DrainPending(state);
     }
