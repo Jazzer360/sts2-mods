@@ -145,7 +145,7 @@ internal static partial class CoverageLedger
         ["BarricadePower"] = "covered: ShouldClearBlock keeps enemy block (simulator Barricade)",
         ["BattlewornDummyTimeLimitPower"] = "ignore: AfterSideTurnEnd the dummy escapes",
         ["BeaconOfHopePower"] = "covered: AfterBlockGained gives every other player half of each block its owner gains on the players' side: the simulator shares every block gain (yours and teammates', their end-of-turn Plating, Orichalcum and Frost included), one hop as the game does",
-        ["BlackHolePower"] = "covered: AfterCardPlayed/AfterStarsGained damages all enemies on stars (proc damage, second pass)",
+        ["BlackHolePower"] = "covered: read from its code (ReadModel, decision #244): AfterCardPlayed damages every hittable enemy its amount (unpowered) on the last play of its owner's card that spent stars (cardPlay.Resources.StarsSpent, IsLastInSeries), AfterStarsGained on each stars gain of its owner's (proc damage, second pass)",
         ["BlockNextTurnPower"] = "ignore: AfterBlockCleared block at the start of your next turn",
         ["BlurPower"] = "ignore: ShouldClearBlock keeps your block into your next turn",
         ["BorrowedTimePower"] = "ignore: AfterSideTurnEnd removes itself",

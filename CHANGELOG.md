@@ -22,6 +22,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Rupture is worked out from its own code. Its tab is unchanged.
 - Parrying Shield's tag shows only on a card that makes it fire as your turn ends; a card that stops it no longer gets a crossed tag.
 - Conqueror is worked out from its own code: its tag on Sovereign Blade shows where the Blade hits an enemy with Conqueror, with the aim marker when another target has none (it was on every Sovereign Blade played).
+- Black Hole is worked out from its own code (its damage after a card that spent stars, and on each stars gain). Its tab is unchanged.
 - Art of War, Ripple Basin and Parrying Shield are worked out from their own code: the tab that says a card gives up (or sets up) their bonus comes from the condition each pays out on, as the play leaves it. What's shown is unchanged.
 - Self-Forming Clay, Emotion Chip, Demon Tongue and an enemy's Slippery are worked out from their own code (what each does when its owner loses HP, and the tab that says a card makes it act). What's shown is unchanged.
 - Monarch's Gaze is worked out from its own code (the temporary Strength loss each of your powered hits gives its target). What's shown is unchanged.

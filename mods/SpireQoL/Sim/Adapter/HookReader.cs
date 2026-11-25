@@ -2025,6 +2025,9 @@ public static class HookReader
                     return new HookFactValue(HookFact.PoweredBlock);
                 case QueryValue { Name: "IsCardOrMonsterMove", Arguments: [var props] } when IsProps(props):
                     return new HookFactValue(HookFact.CardOrMonsterMove);
+                // The play is its card play's last (cardPlay.IsLastInSeries: Black Hole's).
+                case QueryValue { Name: "IsLastInSeries", Of: NamedValue { Name: "cardPlay" } or ParameterValue { Name: "cardPlay" } } when IsPlayHook(_hook):
+                    return new HookFactValue(HookFact.PlayIsLast);
                 // The card played can still be upgraded (Razor Tooth's cardPlay.Card.IsUpgradable).
                 case QueryValue { Name: "IsUpgradable", Of: { } upgradableOf } when IsPlayCard(upgradableOf):
                     return new HookFactValue(HookFact.CardUpgradable);
@@ -2187,6 +2190,13 @@ public static class HookReader
         {
             if (AttackCompare(compare) is { } attacks) return attacks;
             if (SourceCompare(compare) is { } sources) return sources;
+            // The stars a gain gave against none (AfterStarsGained's amount > 0: Black Hole's): the simulator raises a stars-gained event for a
+            // PlayerCmd.GainStars alone, and every one in the game gains a Stars value or a power's amount, at least 1 (StarsGainTests holds it to the
+            // code). Any other comparison of it is a gap: the simulator keeps no count of stars.
+            if (_hook == "AfterStarsGained" && (compare.Left, compare.Right) is (NamedValue { Name: "amount" } or ParameterValue { Name: "amount" }, ConstantValue { Value: 0 }))
+                return new HookMath(OperationOf(compare.Op), new HookConstant(1m), new HookConstant(0m));
+            if (_hook == "AfterStarsGained" && (compare.Left is NamedValue { Name: "amount" } or ParameterValue { Name: "amount" } || compare.Right is NamedValue { Name: "amount" } or ParameterValue { Name: "amount" }))
+                throw new Gap(ReaderCapability.HookAmount, $"gap: compares the stars gained {compare}");
             if (ArrowCompare(compare) is { } arrows) return arrows;
             if (compare.Op is Comparison.Equal or Comparison.NotEqual)
             {
@@ -2317,8 +2327,9 @@ public static class HookReader
             if (IsDealer(other)) return new HookFactValue(HookFact.DealerIsOwner);
             if (other is ParameterValue { Name: "target" } or NamedValue { Name: "target" }) return new HookFactValue(HookFact.TargetIsOwner);
             if (other is NamedValue { Name: "applier" } or ParameterValue { Name: "applier" }) return new HookFactValue(HookFact.ApplierIsOwner);
-            // The player an event happened to (AfterOrbChanneled's player, AfterShuffle's): the event's player is its owner.
-            if (other is NamedValue { Name: "player" or "shuffler" } or ParameterValue { Name: "player" or "shuffler" } && _hook is "AfterOrbChanneled" or "AfterShuffle")
+            // The player an event happened to (AfterOrbChanneled's player, AfterShuffle's, AfterStarsGained's gainer): the event's player is its owner.
+            if (other is NamedValue { Name: "player" or "shuffler" } or ParameterValue { Name: "player" or "shuffler" } && _hook is "AfterOrbChanneled" or "AfterShuffle"
+                || other is NamedValue { Name: "gainer" } or ParameterValue { Name: "gainer" } && _hook == "AfterStarsGained")
                 return new HookFactValue(HookFact.EventIsOwners);
             // The player whose next turn starts (AfterEnergyReset's, AfterPlayerTurnStart's player: a payout's hook, decision #239): asked of its owner's.
             if (other is NamedValue { Name: "player" } or ParameterValue { Name: "player" } && PlayersTurnStartHooks.Contains(_hook))
@@ -2447,6 +2458,9 @@ public static class HookReader
                     return new HookField(fieldName);
                 case QueryValue { Name: "EnergyValue", Of: { } resources } when (resources is StoredValue stored ? stored.Value : resources) is QueryValue { Name: "Resources", Of: NamedValue { Name: "cardPlay" } or ParameterValue { Name: "cardPlay" } }:
                     return new HookFactValue(HookFact.CardEnergy);
+                // The stars the card played spent (cardPlay.Resources.StarsSpent: Black Hole's), each play of its card play the same.
+                case QueryValue { Name: "StarsSpent", Of: { } starsOf } when Unstored(starsOf) is QueryValue { Name: "Resources", Of: NamedValue { Name: "cardPlay" } or ParameterValue { Name: "cardPlay" } } && IsPlayHook(_hook):
+                    return new HookFactValue(HookFact.PlayStars);
                 case QueryValue { Name: "GetResolved", Of: QueryValue { Name: "EnergyCost", Of: { } costOf } } when IsPlayCard(costOf):
                     return new HookFactValue(HookFact.CardEnergy);
                 // Whole numbers divided (int energySpent / 4: Orbit's) leave the whole part, as the CPU's div does: (a - a rem b) / b.

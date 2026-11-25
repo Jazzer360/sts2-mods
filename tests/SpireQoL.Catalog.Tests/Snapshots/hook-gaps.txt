@@ -3,7 +3,7 @@
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
-its own data: a card or a play kept, a field used directly: 9 classes, 6 alone: BlackHolePower, CalamityPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, PaelsLegion, SerpentFormPower*, StretchPower*, WitheringPresencePower*
+its own data: a card or a play kept, a field used directly: 8 classes, 6 alone: CalamityPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, PaelsLegion, SerpentFormPower*, StretchPower*, WitheringPresencePower*
 a monster's own state set (its flag, its next move): 10 classes, 4 alone: AsleepPower, CurlUpPower, FlutterPower*, ImbalancedPower*, InfestedPower, PlowPower*, RavenousPower*, SlumberPower, SteamEruptionPower, StockPower
 a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 4 classes, 3 alone: InsatiableDominionPower*, PlatingPower, ShadowmeldPower*, SkittishPower*
 commands: a card made (AddGeneratedCardToCombat, a made card): 3 classes, 3 alone: BiiigHug*, BurningSticks*, PersonalHivePower*
@@ -38,13 +38,11 @@ arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd): 1 classe
 multiplayer scaling (GetScaledAmountForMultiplayer, the players' count): 1 classes, 0 alone: PlatingPower
 queries: a creature's side or presence: 1 classes, 0 alone: PlatingPower
 queries: the hit's result: 1 classes, 0 alone: SlumberPower
-queries: the hook's amount: 1 classes, 0 alone: BlackHolePower
 
 ## Classes, each hook body's gap in reading order
 
 AsleepPower: [a monster's own state set (its flag, its next move)] AfterDamageReceived: gap: sets LagavulinMatriarch.IsAwake where the reader reads no store | [a monster's own state set (its flag, its next move)] AfterSideTurnEnd: gap: changes a game object outside a command (LagavulinMatriarch.WakeUpMove) | [a command on another power (PowerCmd.Remove of another)] BeforeSideTurnEndVeryEarly: gap: PowerCmd.Remove of another power
 BiiigHug: [commands: a card made (AddGeneratedCardToCombat, a made card)] AfterShuffle: gap: makes a Soot
-BlackHolePower: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: the value cardPlay.Resources.StarsSpent | [queries: the hook's amount] AfterStarsGained: gap: the value amount
 BurningSticks: [commands: a card made (AddGeneratedCardToCombat, a made card)] AfterCardExhausted: gap: makes card.CreateClone()
 BurrowedPower: [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount)] AfterBlockBroken: gap: the simulator runs no read model's AfterBlockBroken | [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount)] ShouldClearBlock: gap: the simulator runs no read model's ShouldClearBlock
 CalamityPower: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: changes a collection (Enumerator.get_Current) where the reader reads no step

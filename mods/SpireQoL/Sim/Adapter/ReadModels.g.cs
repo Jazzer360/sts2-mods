@@ -22,6 +22,7 @@ public static partial class ReadModels
         PowerId.Automation.Name,
         RelicId.BeatingRemnant.Name,
         PowerId.BiasedCognition.Name,
+        PowerId.BlackHole.Name,
         RelicId.BoneFlute.Name,
         nameof(MegaCrit.Sts2.Core.Models.Afflictions.Bound),
         PowerId.Buffer.Name,

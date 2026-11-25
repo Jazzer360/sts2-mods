@@ -383,7 +383,7 @@ Beside the last number (the heart line when there is one): a skull when this mig
 | Gravity, Serpent Form | every card | damage |
 | Thunder | cards that evoke a Lightning orb (Dualcast, channelling into full slots...) | damage: its amount per Lightning evoke, to that orb's target if it's still alive |
 | Panache | the card that completes its count | damage |
-| Black Hole | cards that spend stars or gain stars (Gather Light, Venerate...; every card under The Sealed Throne) | damage per trigger |
+| Black Hole | cards that spend stars or gain stars (Gather Light, Venerate...; every card under The Sealed Throne); worked out from its code (decision #244) | damage per trigger |
 | Haunt | Soul | damage |
 | Sleight of Flesh | cards that apply debuffs to enemies | damage × debuffs that land (Artifact cancels one each; single-target cards use the best target) |
 | Juggernaut | cards whose play gains block (its own, block procs such as Afterimage or Feel No Pain, Frost evokes), counted by the simulator | damage per block gain |

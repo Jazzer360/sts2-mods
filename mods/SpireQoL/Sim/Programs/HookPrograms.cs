@@ -326,6 +326,13 @@ public enum HookFact
     /// from the game's own math).
     /// </summary>
     EncounterScaling,
+    /// <summary>
+    /// The stars the card played spent (cardPlay.Resources.StarsSpent): its card's stars (SimCard.Stars), the same on each play of its card play,
+    /// as the game hands every play the one resources the card was paid with (CardModel.OnPlayWrapper).
+    /// </summary>
+    PlayStars,
+    /// <summary>The play is its card play's last (cardPlay.IsLastInSeries: PlayIndex == PlayCount - 1).</summary>
+    PlayIsLast,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>

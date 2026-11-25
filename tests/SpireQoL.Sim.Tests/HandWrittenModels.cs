@@ -1941,3 +1941,18 @@ public sealed class ConquerorPower : ProcModel
     public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage) =>
         damage.Card?.Name == CardId.SovereignBlade.Name && damage.Props.IsPoweredAttack() && damage.Target == owner ? 2m : 1m;
 }
+
+// ---- the stars a play spent, a play's last (round seventeen: Sim/Models/ProcPowerModels.cs, deleted 2026-11-24)
+
+/// <summary>
+/// BlackHolePower: its amount to every hittable enemy (unpowered) each time its owner gains stars (AfterStarsGained), and after
+/// the last play of a card that spent stars (AfterCardPlayed, IsLastInSeries).
+/// </summary>
+public sealed class BlackHolePower : ProcModel
+{
+    public override TabKind? Tab => TabKind.Damage;
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
+        cardEvent == CardEvent.StarsGained && player == owner ? DamageAll(state, owner, Amount(state, owner)) : One(state);
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
+        Mine(play, owner) && play.Card.Stars > 0 && play.PlayIndex == play.PlayCount - 1 ? DamageAll(state, owner, Amount(state, owner)) : One(state);
+}

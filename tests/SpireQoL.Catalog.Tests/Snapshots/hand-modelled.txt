@@ -83,8 +83,6 @@ AsleepPower: AsleepPower.AfterDamageReceived, AsleepPower.AfterSideTurnEnd, Asle
   model: AfterDamageReceived, OutcomeTab
 BiiigHug: BiiigHug.AfterObtained, BiiigHug.AfterShuffle
   model: AfterCardEvent
-BlackHolePower: BlackHolePower.AfterCardPlayed, BlackHolePower.AfterStarsGained
-  model: AfterCardEvent, AfterCardPlayed
 BurningSticks: BurningSticks.AfterCardExhausted, BurningSticks.AfterCombatEnd, BurningSticks.AfterRoomEntered
   model: AfterCardEvent
 BurrowedPower: BurrowedPower.AfterBlockBroken, BurrowedPower.AfterRemoved, BurrowedPower.ShouldClearBlock

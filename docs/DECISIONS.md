@@ -1391,3 +1391,10 @@ A read class whose own commands give it no tab, no outcome rule and no payout, b
 A settings row can show a plain "sets it up" tab where only some outcomes of the play set the payout up, carrying their chance (`TabShows.SetsUpByChance`), with Show chances on; off, a plain tab stays a certainty. Only Hailstorm's row asks: Chaos with no Frost orb channels one in one outcome of five, so its card shows Hailstorm plain with 20% (upgraded, two random orbs, the outcomes give their own). The play check holds such a tab to every outcome only where every one sets it up.
 *Why:* the owner: "show 20% chance with chaos (unupgraded) to enable hailstorm's proc".
 *Replaces:* for Hailstorm's row, decision #155's "good outcomes need every branch" (every other plain tab keeps it).
+
+### 244. A play's stars and whether it's its card play's last are facts; a stars gain's amount is tested only against none; Black Hole is read from its code — active (2026-11-24)
+`cardPlay.Resources.StarsSpent` is the stars the card played spent (`HookFact.PlayStars`: its card's stars, the same on each of its plays, as `CardModel.OnPlayWrapper` hands every play the one resources the card was paid with), and `cardPlay.IsLastInSeries` is a fact (`HookFact.PlayIsLast`: PlayIndex == PlayCount - 1). AfterStarsGained's `gainer` is the event's player, as AfterShuffle's shuffler is. Its `amount` is read only against 0 (`amount > 0` holds): the simulator keeps no count of stars and raises one stars-gained event for each `PlayerCmd.GainStars`, and every one in the game gains its model's own Stars value (at least 1) or a power's own amount (a power at 0 goes: decision #234), which `StarsGainTests` holds to both branches' code; any other use of it is a gap.
+Read so, the hand-written model frozen in the tests first: Black Hole (parity: its damage tab, every play of every cost and stars, every card event for every player).
+*Why:* by classes unlocked: its own data (Black Hole's two values were the last it waited on).
+*Replaced:* the hand-written BlackHolePower.
+*What changed:* nothing shown; the single-player golden and the card snapshots are unchanged.

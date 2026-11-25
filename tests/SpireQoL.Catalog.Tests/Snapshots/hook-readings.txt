@@ -9,7 +9,7 @@ power AutomationPower: AfterCardDrawn: read | InitInternalData: not run: makes t
 power BarricadePower: AfterApplied: read | ShouldClearBlock: gap: the simulator runs no read model's ShouldClearBlock
 power BattlewornDummyTimeLimitPower: AfterSideTurnEnd: gap: sets BattlewornDummyEventEncounter.RanOutOfTime where the reader reads no store
 power BeaconOfHopePower: AfterBlockGained: gap: the simulator runs no read model's AfterBlockGained
-power BlackHolePower: AfterCardPlayed: gap: the value cardPlay.Resources.StarsSpent | AfterStarsGained: gap: the value amount
+power BlackHolePower: AfterCardPlayed: read | AfterStarsGained: read
 power BlockNextTurnPower: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
 power BlurPower: AfterPreventingBlockClear: gap: the simulator runs no read model's AfterPreventingBlockClear | AfterSideTurnStart: read | ShouldClearBlock: gap: the simulator runs no read model's ShouldClearBlock
 power BorrowedTimePower: AfterSideTurnEnd: read | TryModifyEnergyCostInCombat: gap: the simulator runs no read model's TryModifyEnergyCostInCombat

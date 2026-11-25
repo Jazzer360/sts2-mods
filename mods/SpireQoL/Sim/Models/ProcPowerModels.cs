@@ -55,18 +55,7 @@ public sealed class JugglingPower : ProcModel
         Mine(play, owner) && TakeBound(state, owner) is { } bound ? MakeInHand(Fire(state, owner), play.Card, bound, owner) : One(state);
 }
 
-/// <summary>
-/// BlackHolePower: its amount to every hittable enemy (unpowered) each time its owner gains stars (AfterStarsGained), and after
-/// the last play of a card that spent stars (AfterCardPlayed, IsLastInSeries).
-/// </summary>
-public sealed class BlackHolePower : ProcModel
-{
-    public override TabKind? Tab => TabKind.Damage;
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
-        cardEvent == CardEvent.StarsGained && player == owner ? DamageAll(state, owner, Amount(state, owner)) : One(state);
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Stars > 0 && play.PlayIndex == play.PlayCount - 1 ? DamageAll(state, owner, Amount(state, owner)) : One(state);
-}
+// Black Hole is read from its code (ReadModel, decision #244).
 
 /// <summary>DevourLifePower.AfterCardPlayed: each Soul its owner plays summons its amount (Osty).</summary>
 public sealed class DevourLifePower : ProcModel
