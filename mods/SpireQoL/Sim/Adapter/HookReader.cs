@@ -57,7 +57,8 @@ public static class HookReader
         ["CreatureCmd.LoseBlock"] = "LoseBlockStep: the owner loses up to that much block, AfterBlockBroken told when it breaks, its remover the owner or no one",
         ["OstyCmd.Summon"] = "SummonStep: a summon for its owner, the player who played the card or the hit's dealer's player, as OstyCmd.Summon runs (SimEngine.Summon)",
         ["CreatureCmd.Stun"] = "StunStep: the owner (an enemy) stunned, when the stunned move it's given calls no command",
-        ["CreatureCmd.Kill"] = "KillStep: the owner killed: an enemy marked killed by its power, a player losing all their HP unless a death prevention holds it back",
+        ["CreatureCmd.Kill"] = "KillStep: the owner killed: an enemy marked killed by its power, a player losing all their HP unless a death prevention holds it back; KillEachStep: each of a list the code works out (a foreach killing its item: DoomPower.DoomKill)",
+        ["Hook.AfterDiedToDoom"] = "KillEachStep.Tells: the listeners told the list a kill went over (DoomPower.DoomKill, after its foreach)",
         ["CardPileCmd.Draw"] = "DrawStep: cards drawn by the owner, each a card event",
         ["PlayerCmd.GainEnergy"] = "GainEnergyStep: energy for the owner, each a card event",
         ["PlayerCmd.GainStars"] = "GainStarsStep: stars for the owner, one stars-gained event (as a card's)",
@@ -282,6 +283,7 @@ public static class HookReader
             HelpsOwner = helpsOwner, HurtsOwner = hurtsOwner, HurtsPlayOwner = hurtsPlayOwner, Outcome = outcome,
             Copies = kind == ModelKind.Power ? reader.Copies() : PowerCopies.One,
             Commands = commands.Count > 0 ? commands : null,
+            Tests = kind == ModelKind.Power ? reader.OwnQuestions() : null,
         };
         // Nothing else gives it a tab, and its damage term changing a damage is it acting (decision #247: Conqueror on a Sovereign Blade's hit).
         if (spec.Tab == null && outcome == null && payouts.Count == 0 && TermActsOf(inTheTurn)) spec = spec with { Tab = TabKind.Trigger, TermActs = true };
@@ -1001,6 +1003,22 @@ public static class HookReader
             _read = read;
         }
 
+        /// <summary>
+        /// Its own questions (Questions: DoomPower.IsOwnerDoomed), each read from its code as a value for its owner; one the reader stops in is left out
+        /// (a caller asking it is then unknown where it asks).
+        /// </summary>
+        public IReadOnlyDictionary<string, HookValue>? OwnQuestions()
+        {
+            var read = new SortedDictionary<string, HookValue>(StringComparer.Ordinal);
+            foreach (var method in Questions(_type))
+            {
+                _hook = method.Name;
+                try { read[method.Name] = Pruned(TestWays(ProgramReader.ReadReturnedWays(_type, method, _read))); }
+                catch (Exception exception) when (exception is Gap or InvalidOperationException or NotSupportedException) { }
+            }
+            return read.Count > 0 ? read : null;
+        }
+
         /// <summary>One of its own commands another class calls, read whole into steps; null where the reader stops (it's then not read).</summary>
         public IReadOnlyList<HookStep>? OwnCommand(MethodInfo method)
         {
@@ -1399,10 +1417,11 @@ public static class HookReader
         /// The true-or-false a static method of its own class returns (Stretch's GainsBlock(card): card.GainsBlock || card.Enchantment?.GainsBlock ?? false),
         /// read from its body, its parameters the call's arguments; null for a method that isn't one (or calls itself).
         /// </summary>
-        private ProgramValue? OwnStaticTest(string method, IReadOnlyList<ProgramValue> arguments)
+        private ProgramValue? OwnStaticTest(string method, IReadOnlyList<ProgramValue> arguments, bool isStatic = true)
         {
-            var found = _type.GetMethods(Declared | BindingFlags.Static).FirstOrDefault(candidate => candidate.IsStatic && candidate.Name == method && candidate.ReturnType.Name == "Boolean"
-                && candidate.GetParameters().Length == arguments.Count);
+            // Or one of its own (this.ShouldDoomTrigger(participants): Doom's), read the same way, its this its own.
+            var found = _type.GetMethods(Declared | BindingFlags.Static).FirstOrDefault(candidate => candidate.IsStatic == isStatic && candidate.Name == method && candidate.ReturnType.Name == "Boolean"
+                && candidate.GetParameters().Length == arguments.Count && !candidate.IsVirtual);
             if (found == null || !_inlining.Add("static:" + method)) return null;
             try
             {
@@ -1840,6 +1859,10 @@ public static class HookReader
                     return new[] { Data(data) with { When = Condition(step.Condition) } };
                 case LoopStep loop:
                 {
+                    // A kill of each creature of a list the code works out (DoomPower.DoomKill's foreach over GetDoomedCreatures: CreatureCmd.Kill of each
+                    // one not dead yet, beside what only shows), then the hook its code tells that list (Hook.AfterDiedToDoom): KillEachStep.
+                    if (loop.Items is { } killedItems && KillsEach(loop) && CreatureList(killedItems) is { } killed)
+                        return new HookStep[] { new KillEachStep(killed.Over) { Where = killed.Where, Tells = TellsOf(killedItems), When = Condition(step.Condition) } };
                     // A loop removing every power its owner has of a class (foreach over base.Owner.GetPowerInstances<TemporaryStrengthPower>().ToList():
                     // PowerCmd.Remove(item): Plow's): each power class of the game's that is one off its owner (decision #275).
                     if (loop.Items is { } instances && OwnersPowersOf(instances) is { } powerClass && loop.Body is [CommandStep { Command.FullName: "PowerCmd.Remove" } removeEach]
@@ -1907,6 +1930,38 @@ public static class HookReader
                 default:
                     throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: {step}");
             }
+        }
+
+        /// <summary>
+        /// A loop whose body kills its item and does nothing else (CreatureCmd.Kill(each), on the item not being dead and being in the fight, beside
+        /// commands that change nothing a simulation follows: MonsterModel.OnDieToDoom's looks).
+        /// </summary>
+        private static bool KillsEach(LoopStep loop)
+        {
+            var acting = loop.Body.Where(step => step is not CommandStep { Command.FullName: var name } || !SimAdapter.CommandsOutsideTheFight.ContainsKey(name)).ToList();
+            if (acting is not [CommandStep { Command.FullName: "CreatureCmd.Kill", Values: [var killedValue, ..] } kill] || !StepValues.IsEach(Unstored(killedValue))) return false;
+            return kill.Condition == null || kill.Condition.Terms is [var only] && only.All(literal => Unstored(literal.Test) is QueryValue { Of: { } of } tested && StepValues.IsEach(Unstored(of))
+                && (tested.Name == "IsDead" && !literal.Holds || tested.Name is "IsAlive" or "CombatState" && literal.Holds));
+        }
+
+        /// <summary>The steps of this hook's body that tell a hook a list a kill went over, taken by that kill's step (TellsOf).</summary>
+        private readonly HashSet<ProgramStep> _told = new(ReferenceEqualityComparer.Instance);
+
+        /// <summary>
+        /// The hook the body tells the list a kill went over (Hook.AfterDiedToDoom(combatState, creatures), its list the loop's items), taken by that
+        /// kill's step; null where it tells none.
+        /// </summary>
+        private HookName? TellsOf(ProgramValue items)
+        {
+            if (_body == null) return null;
+            foreach (var told in _body.Steps.OfType<CommandStep>())
+            {
+                if (!ProgramReader.IsHookTold(told.Command) || !told.Values.Any(value => Equals(Unstored(value), Unstored(items)))) continue;
+                if (!Enum.TryParse<HookName>(told.Command.Name, out var hook)) throw new Gap(ReaderCapability.CommandNotTranslated, $"gap: tells {told.Command.FullName}, which the simulator doesn't run");
+                _told.Add(told);
+                return hook;
+            }
+            return null;
         }
 
         /// <summary>A CreateStep whose card a command of the body adds to a pile (CardPileCmd.AddGeneratedCardToCombat of CreateCard&lt;T&gt;: MadeOfAClass).</summary>
@@ -2046,6 +2101,11 @@ public static class HookReader
             var member = command.Command;
             var types = member.ParameterTypes;
             var values = command.Values;
+            // A hook the code tells itself: the list a kill went over, its kill's step's (KillEachStep.Tells); any other is a gap.
+            if (ProgramReader.IsHookTold(member))
+                return _told.Contains(command) ? null : throw new Gap(ReaderCapability.CommandNotTranslated, $"gap: tells {member.FullName} itself");
+            // A command that changes nothing a simulation follows (MonsterModel.OnDieToDoom: a monster's looks as Doom kills it).
+            if (SimAdapter.CommandsOutsideTheFight.ContainsKey(member.FullName)) return null;
             switch (member.FullName)
             {
                 case "CreatureCmd.GainBlock":
@@ -2554,6 +2614,25 @@ public static class HookReader
                 // A static method of its own class giving a true-or-false (Stretch's GainsBlock(card)): its body's returned value, its parameters the arguments.
                 case QueryValue { Of: null, Name: var ownStatic, Arguments: var ownArguments, Type: var ownClass } when ownClass == _type.Name && OwnStaticTest(ownStatic, ownArguments) is { } returned:
                     return Test(returned);
+                // One of its own true-or-false methods (Doom's ShouldDoomTrigger(participants)): its body's returned value, its parameters the arguments.
+                case QueryValue { Of: NamedValue { Name: "this" }, IsProperty: false, Name: var ownMethod, Arguments: var methodArguments, Type: var methodClass } when methodClass == _type.Name
+                    && OwnStaticTest(ownMethod, methodArguments, isStatic: false) is { } ownReturned:
+                    return Test(ownReturned);
+                // The fight is over or ending (CombatManager.Instance.IsOverOrEnding: Doom's turn-end kill waits on it not being).
+                case QueryValue { Type: "CombatManager", Name: "IsOverOrEnding" }:
+                    return new HookFactValue(HookFact.FightEnding);
+                // A list of creatures the code works out has any, or any that pass a filter (GetDoomedCreatures(side).Count, Count(creatures, c => ...),
+                // tested as true or false).
+                case var countedList when CountOfList(countedList) is { } counted:
+                    return new HookMath(HookOperation.NotEqual, counted, new HookConstant(0m));
+                // A power's own question asked of it on a creature (c.GetPower<DoomPower>().IsOwnerDoomed(): its owner's HP at most its amount), read from
+                // that power's code for that creature (ModelSpec.Tests).
+                case QueryValue { IsProperty: false, Name: var question, Arguments.Count: 0, Of: { } asked } when Getter(asked) is { Relic: false } got && IsPowerQuestion(got.Model, question):
+                    return CreatureFact(HookFact.CreaturePowerTest, got.Holder) with { Of = got.Model + "." + question };
+                // Every power on a creature answers that its death sets off Fatal (c.Powers.All(p => p.ShouldOwnerDeathTriggerFatal()): Book Repair Knife's).
+                case QueryValue { Type: "Enumerable", Name: "All", Arguments: [QueryValue { Name: "Powers", Of: { } powersOf }, LambdaValue fatal] }
+                    when CreatureOf(powersOf) is { } dying && LambdaReads(fatal, "ShouldOwnerDeathTriggerFatal"):
+                    return CreatureFact(HookFact.CreatureDeathSetsOffFatal, dying);
                 // A creature's monster is a class (command.Attacker?.Monster is Osty, way by way for a null-conditional chain): the pet the simulator
                 // keeps for a player when it's the class Player.Osty gets (read from its code); any other class is a gap.
                 case QueryValue { Name: "is", Of: { } monsterOf, Type: var monsterClass } when Unstored(monsterOf) is WaysValue or QueryValue { Name: "Monster" }:
@@ -2663,8 +2742,9 @@ public static class HookReader
                     return Not(new HookFactValue(HookFact.OwnerDead));
                 case QueryValue { Type: "CombatManager", Name: "IsInProgress" }:
                     return new HookConstant(1m);
-                // Its owner's or its own fight is there (base.Owner.Creature.CombatState != null): in a simulation, always.
-                case QueryValue { Name: "CombatState", Of: var stateOf } when stateOf is NamedValue { Name: "this" } || stateOf != null && IsOwner(stateOf):
+                // Its owner's or its own fight is there (base.Owner.Creature.CombatState != null), or a creature's it names (DoomKill's creature.CombatState
+                // != null): in a simulation, always.
+                case QueryValue { Name: "CombatState", Of: var stateOf } when stateOf is NamedValue { Name: "this" } || stateOf != null && (IsOwner(stateOf) || CreatureOf(stateOf) != null):
                     return new HookConstant(1m);
                 // It's on its owner (base.Owner.Powers.Contains(this): Intercept's, Covered's): a power runs its hooks only while it is.
                 case QueryValue { Name: "Contains", Arguments: [QueryValue { Name: "Powers", Of: { } powersOf }, NamedValue { Name: "this" }] } when _kind == ModelKind.Power && IsOwner(powersOf):
@@ -2890,6 +2970,15 @@ public static class HookReader
         /// <summary>A comparison: of the owner with what the hook was given (a fact), of the card's type, of a power's type for its amount, or of values.</summary>
         private HookValue Compare(CompareValue compare)
         {
+            // The first creature of a list the code works out against a creature it names (GetDoomedCreatures(base.Owner.Side).First() != base.Owner:
+            // Doom's first doomed of its side), as creature ids.
+            if (compare.Op is Comparison.Equal or Comparison.NotEqual)
+            {
+                if (FirstOfList(compare.Left) is { } firstLeft && CreatureOf(compare.Right) is { } rightCreature)
+                    return new HookMath(OperationOf(compare.Op), firstLeft, CreatureFact(HookFact.CreatureId, rightCreature));
+                if (FirstOfList(compare.Right) is { } firstRight && CreatureOf(compare.Left) is { } leftCreature)
+                    return new HookMath(OperationOf(compare.Op), CreatureFact(HookFact.CreatureId, leftCreature), firstRight);
+            }
             if (AttackCompare(compare) is { } attacks) return attacks;
             if (SourceCompare(compare) is { } sources) return sources;
             if (FirstPlayCompare(compare) is { } firstPlay) return firstPlay;
@@ -3103,6 +3192,9 @@ public static class HookReader
                 // How many enemies can be hit (HittableEnemies.Count, kept in a local or not: Haunt's != 0).
                 case QueryValue { Name: "Count", Of: { } hittableCounted } when IsHittableEnemies(hittableCounted):
                     return new HookFactValue(HookFact.HittableEnemyCount);
+                // How many of a list of creatures the code works out there are, or pass a filter (Book Repair Knife's Count(creatures, c => ...)).
+                case var listCount when CountOfList(listCount) is { } counted:
+                    return counted;
                 // A question to the fight's log (Count or Any of its entries): the history ledger's count (decision #191).
                 case QueryValue { Name: "Count" or "Any" } logged when ProgramReader.ReadsHistory(logged):
                     return History(logged);
@@ -3916,6 +4008,104 @@ public static class HookReader
             if (unstored is QueryValue { Type: "Enumerable", Name: "ToList", Arguments: [var listed] }) unstored = Unstored(listed);
             return unstored is QueryValue { Type: "Enumerable", Name: "Where", Arguments: [QueryValue { Name: "PlayerCreatures", Of: QueryValue { Name: "CombatState" } }, LambdaValue alive] }
                 && alive.Body.Terms is [[{ Holds: true, Test: QueryValue { Name: "IsAlive", Of: ParameterValue { Name: var tested } } }]] && tested == alive.Parameter;
+        }
+
+        /// <summary>
+        /// A list of creatures the code works out, as what it goes over and its filter (each item HookWho.Each): a side's creatures (the side whose turn
+        /// is ending, CombatState.GetCreaturesOnSide(side) in a turn's-end hook; its owner's, GetCreaturesOnSide(base.Owner.Side) or GetTeammatesOf),
+        /// the hittable enemies, the creatures the hook is told (AfterDiedToDoom's creatures), a Where of one, ToList'd or not, kept in a local or not,
+        /// or what a method of a model's class returns for the call's arguments (DoomPower.GetDoomedCreatures(creatures): a Where of them on each one's
+        /// own Doom). Null for anything else.
+        /// </summary>
+        private (HookItems Over, HookValue? Where)? CreatureList(ProgramValue value)
+        {
+            var unstored = Unstored(value);
+            // The hittable enemies, filtered on IsHittable or not (an orb's Where(GetOpponentsOf(base.Owner), e => e.IsHittable)).
+            if (IsHittableEnemies(unstored)) return (HookItems.HittableEnemies, null);
+            if (unstored is QueryValue { Type: "Enumerable", Name: "ToList", Arguments: [var listed] }) return CreatureList(listed);
+            if (unstored is QueryValue { Type: "Enumerable", Name: "Where", Arguments: [var filtered, LambdaValue filter] })
+            {
+                if (CreatureList(filtered) is not { } inner) return null;
+                var where = Condition(filter.Body.Map(part => part is ParameterValue { Name: var name } && name == filter.Parameter ? new NamedValue("each") : null)) ?? new HookConstant(1m);
+                return (inner.Over, inner.Where == null ? where : Simplified(new HookMath(HookOperation.And, inner.Where, where)));
+            }
+            if (unstored is QueryValue { Name: "GetTeammatesOf", Arguments: [var whose] } && IsOwner(whose)) return (HookItems.Teammates, null);
+            if (unstored is QueryValue { Name: "GetCreaturesOnSide", Arguments: [var side] })
+            {
+                if (Unstored(side) is QueryValue { Name: "Side", Of: { } sideOf } && IsOwner(sideOf)) return (HookItems.Teammates, null);
+                if (Unstored(side) is ParameterValue { Name: "side" } or NamedValue { Name: "side" } && TurnEndHooks.Contains(_hook ?? "")) return (HookItems.SideEnding, null);
+                return null;
+            }
+            if (unstored is ParameterValue { Name: "creatures" } or NamedValue { Name: "creatures" } && _hook == nameof(HookName.AfterDiedToDoom)) return (HookItems.Told, null);
+            // A method of a model's class that gives a list (DoomPower.GetDoomedCreatures, static or its own): what its code returns, its parameters the
+            // call's arguments.
+            if (unstored is QueryValue { Name: var method, Arguments: var arguments, Type: var declaring } call && !call.IsProperty
+                && (call.Of == null || call.Of is NamedValue { Name: "this" } && declaring == _type.Name) && _inlining.Add("list:" + declaring + "." + method))
+            {
+                try { return ListMethodReturned(declaring, method, arguments, call.Of == null) is { } returned ? CreatureList(returned) : null; }
+                finally { _inlining.Remove("list:" + declaring + "." + method); }
+            }
+            return null;
+        }
+
+        /// <summary>The first creature of a list the code works out (First(list): HookFirst), or null for any other value.</summary>
+        private HookFirst? FirstOfList(ProgramValue value) =>
+            Unstored(value) is QueryValue { Type: "Enumerable", Name: "First", Arguments: [var list] } && CreatureList(list) is { } listed ? new HookFirst(listed.Over, listed.Where) : null;
+
+        /// <summary>
+        /// How many creatures of a list the code works out there are (list.Count), or pass a filter (Count(list, c => ...): Book Repair Knife's), as
+        /// HookCount; null for any other value.
+        /// </summary>
+        private HookCount? CountOfList(ProgramValue value)
+        {
+            var unstored = Unstored(value);
+            // The hittable enemies' count is HookFact.HittableEnemyCount's (the cases above it).
+            if (unstored is QueryValue { Name: "Count", Of: { } countedList, Arguments.Count: 0 } && !IsHittableEnemies(countedList) && CreatureList(countedList) is { } counted)
+                return new HookCount(counted.Over, counted.Where);
+            if (unstored is QueryValue { Type: "Enumerable", Name: "Count", Arguments: [var list, LambdaValue filter] } && CreatureList(list) is { } listed)
+            {
+                var where = Condition(filter.Body.Map(part => part is ParameterValue { Name: var name } && name == filter.Parameter ? new NamedValue("each") : null)) ?? new HookConstant(1m);
+                return new HookCount(listed.Over, listed.Where == null ? where : Simplified(new HookMath(HookOperation.And, listed.Where, where)));
+            }
+            return null;
+        }
+
+        /// <summary>A question of a power class's own (one of its <see cref="Questions"/>: DoomPower.IsOwnerDoomed).</summary>
+        private bool IsPowerQuestion(string power, string question) =>
+            _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + power) is { } powerType && Questions(powerType).Any(method => method.Name == question);
+
+        /// <summary>
+        /// A class's own questions another class's code may ask of it: its instance methods that take nothing and give a true-or-false, not a hook (not
+        /// virtual) nor a property's getter (DoomPower.IsOwnerDoomed). Read into ModelSpec.Tests.
+        /// </summary>
+        internal static IEnumerable<MethodInfo> Questions(Type type) => type.GetMethods(Declared)
+            .Where(method => !method.IsStatic && !method.IsVirtual && !method.IsSpecialName && !method.Name.StartsWith('<') && method.GetParameters().Length == 0 && method.ReturnType.Name == "Boolean");
+
+        /// <summary>The turn's-end hooks, told the side whose turn is ending (their side parameter).</summary>
+        private static readonly HashSet<string> TurnEndHooks = new(StringComparer.Ordinal) { "BeforeSideTurnEndVeryEarly", "BeforeSideTurnEndEarly", "BeforeSideTurnEnd", "AfterSideTurnEnd", "AfterSideTurnEndLate" };
+
+        /// <summary>
+        /// What a method of its own class or of a power class returns, read from its code, its parameters the call's arguments (its this its own), for a
+        /// method that gives a list of creatures; null otherwise.
+        /// </summary>
+        private ProgramValue? ListMethodReturned(string declaring, string method, IReadOnlyList<ProgramValue> arguments, bool isStatic)
+        {
+            var owner = declaring == _type.Name ? _type : _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + declaring);
+            if (owner == null) return null;
+            var found = owner.GetMethods(Declared | BindingFlags.Static).FirstOrDefault(candidate => candidate.Name == method && candidate.IsStatic == isStatic
+                && candidate.GetParameters().Length == arguments.Count && candidate.ReturnType.Name.StartsWith("IReadOnlyList", StringComparison.Ordinal));
+            if (found == null) return null;
+            try
+            {
+                var parameters = found.GetParameters().Select((parameter, index) => (parameter.Name!, arguments[index])).ToDictionary(pair => pair.Item1, pair => pair.Item2, StringComparer.Ordinal);
+                return ProgramReader.ReadReturnedValue(owner, found, _read)?.Map(part => part switch
+                {
+                    ParameterValue { Name: var name } when parameters.TryGetValue(name, out var argument) => argument,
+                    NamedValue { Name: var name } when parameters.TryGetValue(name, out var argument) => argument,
+                    _ => null,
+                });
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException) { return null; }
         }
 
         /// <summary>The owner's living opponents (Where(CombatState.GetOpponentsOf(base.Owner), c => c.IsAlive)), kept in a local or not.</summary>

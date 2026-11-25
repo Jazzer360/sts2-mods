@@ -32,7 +32,8 @@ public static partial class SimAdapter
         ["DamageCmd.Attack"] = "AttackAction: its damage value, hits (WithHitCount's argument), targeting and dealer from its builder",
         ["CreatureCmd.GainBlock"] = "GainBlockAction: its block value through the block pipeline, to the creature its first argument names",
         ["CreatureCmd.Damage"] = "LoseHpAction on its owner (an HP cost); DamageAction on the target (no attack); a shot's damage on the target",
-        ["CreatureCmd.Kill"] = "KillOstyAction (your Osty)",
+        ["CreatureCmd.Kill"] = "KillOstyAction (your Osty); KillEachAction (each hittable enemy a power's own question picks: End of Days' DoomPower.DoomKill)",
+        ["Hook.AfterDiedToDoom"] = "KillEachAction's tell: the listeners told the list its kill went over (DoomPower.DoomKill, after its foreach)",
         ["OstyCmd.Summon"] = "SummonAction: its amount for the player its second argument names (you, or each player its loop goes over), as OstyCmd.Summon runs (SimEngine.Summon)",
         ["CreatureCmd.Heal"] = "HealAction: its amount on you or your Osty, up to max HP",
         ["CreatureCmd.SetCurrentHp"] = "ExecuteAction (the target, on its condition)",
@@ -163,6 +164,10 @@ public static partial class SimAdapter
                 // A spread of the target's debuffs (Misery's loops): one action, with what it can't follow on this board.
                 case LoopStep loop when play.Spread is { } spread && ReferenceEquals(loop, spread.Over):
                     into.AddRange(SpreadFrom(play));
+                    break;
+                // A kill of each creature of a list its code works out (End of Days' DoomPower.DoomKill: each doomed enemy), then the hook it tells.
+                case LoopStep loop when KillsEachItem(loop):
+                    into.Add(KillEachFrom(loop, play));
                     break;
                 case LoopStep loop:
                     Walk(loop.Body, play, into, inner);
@@ -317,13 +322,83 @@ public static partial class SimAdapter
         var followed = command.Command.FullName switch
         {
             "ArrowCmd.DislodgeArrow" or "CreatureCmd.SetCurrentHp" or "CreatureCmd.Stun" => Argument(command, 0) == "cardPlay.Target",
-            "CreatureCmd.Kill" => Argument(command, 0) == "Owner.Osty",
+            "CreatureCmd.Kill" => Argument(command, 0) == "Owner.Osty" || program.All().OfType<LoopStep>().Any(loop => KillsEachItem(loop) && loop.Body.Contains(command)),
             "CreatureCmd.LoseBlock" => Argument(command, 1) == "cardPlay.Target",
             "PlayerCmd.GainStars" => Argument(command, 1) == "Owner",
             "PowerCmd.Remove" => RemovesTargetsArtifact(command, program) || command.Command.GenericArguments.Count == 1 && IsYou(ValueAt(command, 0)),
             _ => true,
         };
         return followed ? null : ShapesNotFollowed[command.Command.FullName];
+    }
+
+    /// <summary>
+    /// A loop over a list its code works out whose body kills its item and does nothing else a fight follows (DoomPower.DoomKill's foreach:
+    /// CreatureCmd.Kill(creature) of each one not dead yet, beside MonsterModel.OnDieToDoom's looks).
+    /// </summary>
+    private static bool KillsEachItem(LoopStep loop) =>
+        loop.Items != null && loop.Body.Where(step => step is not CommandStep { Command.FullName: var name } || !CommandsOutsideTheFight.ContainsKey(name)).ToList()
+            is [CommandStep { Command.FullName: "CreatureCmd.Kill" } kill] && IsEach(ValueAt(kill, 0));
+
+    /// <summary>
+    /// A card's kill of each creature of a list (KillsEachItem): KillEachAction where the list is the hittable enemies filtered on each one's own power's
+    /// question (End of Days: DoomPower.GetDoomedCreatures(HittableEnemies), its Where(c => c.GetPower&lt;DoomPower&gt;()?.IsOwnerDoomed()), read from
+    /// that power's code), telling Hook.AfterDiedToDoom where the code then tells it that list (that step taken here); unknown, with why, for any
+    /// other list.
+    /// </summary>
+    private static SimAction KillEachFrom(LoopStep loop, StepPlay play)
+    {
+        var told = play.Program.Commands.FirstOrDefault(command => ProgramReader.IsHookTold(command.Command) && command.Values.Any(value => Equals(StepValues.Unstored(value), StepValues.Unstored(loop.Items!))));
+        if (told != null) play.Consumed.Add(told);
+        if (DoomedFilter(loop.Items!, play.Card.GetType().Assembly) is not { } filter) return new NotModelledAction($"CreatureCmd.Kill: each of {loop.Items}, a list the simulator doesn't read");
+        if (told != null && told.Command.Name != nameof(HookName.AfterDiedToDoom)) return new NotModelledAction($"{told.Command.FullName}: told by the card, which the simulator doesn't run");
+        return new KillEachAction(filter.Power, filter.Question) { TellsDiedToDoom = told != null };
+    }
+
+    /// <summary>
+    /// The power and its own question a list of the hittable enemies is filtered on (Where(HittableEnemies, c => c.GetPower&lt;P&gt;()?.Q() ?? false)), the
+    /// list as a power's static method gives it (DoomPower.GetDoomedCreatures(creatures), its code read with its parameters the call's arguments) or
+    /// as the code makes it; null for any other list.
+    /// </summary>
+    private static (PowerId Power, string Question)? DoomedFilter(ProgramValue items, System.Reflection.Assembly game)
+    {
+        var list = StepValues.Unstored(items);
+        if (list is QueryValue { Of: null, IsProperty: false, Name: var method, Type: var declaring, Arguments: var arguments }
+            && game.GetType("MegaCrit.Sts2.Core.Models.Powers." + declaring) is { } owner
+            && owner.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly)
+                .FirstOrDefault(candidate => candidate.Name == method && candidate.GetParameters().Length == arguments.Count) is { } found)
+        {
+            var parameters = found.GetParameters();
+            ProgramValue? returned;
+            try { returned = ProgramReader.ReadReturnedValue(owner, found, RuntimeCode.Read); }
+            catch (InvalidOperationException) { return null; }
+            list = returned?.Map(part => part is ParameterValue or NamedValue && Array.FindIndex(parameters, parameter => parameter.Name == (part as ParameterValue)?.Name || parameter.Name == (part as NamedValue)?.Name) is var index and >= 0
+                ? arguments[index] : null);
+            if (list == null) return null;
+            list = StepValues.Unstored(list);
+        }
+        if (list is QueryValue { Name: "ToList", Arguments: [var listed] }) list = StepValues.Unstored(listed);
+        if (list is not QueryValue { Type: "Enumerable", Name: "Where", Arguments: [var among, LambdaValue filter] } || !IsEveryEnemy(among)) return null;
+        // The filter: the item has the power (the ?.'s test) and the power answers its question.
+        string? power = null, question = null;
+        if (filter.Body.Terms is not [var only]) return null;
+        foreach (var literal in only)
+        {
+            if (!literal.Holds) return null;
+            switch (literal.Test)
+            {
+                case QueryValue { Name: "GetPower", GenericArguments: [var has], Of: ParameterValue { Name: var tested } } when tested == filter.Parameter:
+                    power ??= has;
+                    if (power != has) return null;
+                    break;
+                case QueryValue { Name: var asked, Arguments.Count: 0, Of: QueryValue { Name: "GetPower", GenericArguments: [var askedOf], Of: ParameterValue { Name: var holder } } } when holder == filter.Parameter:
+                    if (question != null || power != null && power != askedOf) return null;
+                    (power, question) = (askedOf, asked);
+                    break;
+                default:
+                    return null;
+            }
+        }
+        return power != null && question != null ? (PowerId.Of(power), question) : null;
     }
 
     /// <summary>PowerCmd.Remove&lt;ArtifactPower&gt; of the card's target, in a play that takes the target's block (Expose): StripBlockAction's.</summary>

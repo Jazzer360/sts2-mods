@@ -157,19 +157,6 @@ public class EnemyTurnEndTests
     }
 
     [Fact]
-    public void DoomOnAnEnemyMakesTheStateAfterTheirTurnEndUnknown()
-    {
-        // DoomPower.BeforeSideTurnEnd (side != CombatSide.Player): the doomed enemies die as their side's turn ends, which the reader can't follow
-        // (commands in a callback: turn-end-gaps.json, decision #303). The enemy turn before it stays known; the state after it is unknown, with why.
-        var state = Fight(Attacker(id: 0, hp: 10, hit: 6));
-        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Doom, amount: 12);
-        var after = AfterTheTurn(state);
-        Assert.Null(after.Unmodelled);
-        Assert.Equal(6, after.Taken);
-        Assert.Contains(PowerId.Doom.Name, after.UnmodelledAtTheirTurnEnd, StringComparison.Ordinal);
-    }
-
-    [Fact]
     public void AnUnmodelledPowerThatWaitsOnItsOwnerTakingPartLeavesTheirTurnEndKnown()
     {
         // NoDrawPower.AfterSideTurnEnd: participants.Contains(base.Owner), which no player is as the enemies' side's turn ends: nothing unknown there.

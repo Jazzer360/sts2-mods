@@ -105,10 +105,10 @@ public class StepTranslationTests
     }
 
     /// <summary>
-    /// The card steps in a shape not followed yet, each unknown where it runs and named in the open TRACKER item on ShapesNotFollowed: End of
-    /// Days' kill of every doomed enemy (DoomPower.DoomKill's CreatureCmd.Kill of each of GetDoomedCreatures, read into its play).
+    /// The card steps in a shape not followed yet, each unknown where it runs and named in the open TRACKER item on ShapesNotFollowed: none now (End
+    /// of Days' kill of every doomed enemy is KillEachAction).
     /// </summary>
-    private static readonly HashSet<string> KnownShapesNotFollowed = new(StringComparer.Ordinal) { "EndOfDays: CreatureCmd.Kill" };
+    private static readonly HashSet<string> KnownShapesNotFollowed = new(StringComparer.Ordinal);
 
     private static bool Named(string command) =>
         SimAdapter.CommandsTranslated.ContainsKey(command) || SimAdapter.CommandsNotTranslated.ContainsKey(command) || SimAdapter.CommandsOutsideTheFight.ContainsKey(command);

@@ -30,7 +30,7 @@ public class SimKeyCoverageTests
         ["SimEnemy.Name"] = Constant, ["SimEnemy.Monster"] = Constant, ["SimEnemy.Hittable"] = Constant, ["SimEnemy.SetMoves"] = Constant,
         ["SimEnemy.StartedAlive"] = Constant, ["SimEnemy.AddedBy"] = "set as a creature a death adds joins, beside its Id (in the key), and never changed",
         ["SimEnemy.Intent"] = SetByAMove, ["SimEnemy.TeammateHits"] = SetByAMove, ["SimEnemy.Move"] = SetByAMove,
-        ["SimEnemy.PoisonTriggers"] = Constant,
+        ["SimEnemy.PoisonTriggers"] = Constant, ["SimEnemy.DeathSetsOffFatal"] = Constant,
         ["SimPlayer.SlotOnFirstChannel"] = Constant,
         ["SimPlayer.OstyShields"] = Constant, ["SimPlayer.FairyHeal"] = Constant, ["SimPlayer.BeaconOfHope"] = Constant,
         ["SimPlayer.Stampede"] = Constant, ["SimPlayer.Simpleton"] = Constant, ["SimPlayer.ExhaustAutoPlays"] = Constant,

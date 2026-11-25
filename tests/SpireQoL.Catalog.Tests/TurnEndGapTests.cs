@@ -45,15 +45,16 @@ public class TurnEndGapTests
     }
 
     /// <summary>
-    /// Doom (DoomPower.BeforeSideTurnEnd: side != CombatSide.Player, its owner taking part and doomed) kills as the enemies' side's turn ends, on an
-    /// enemy it's on; No Draw's AfterSideTurnEnd waits on its owner taking part (participants.Contains(base.Owner)), which no player does then.
+    /// Battleworn Dummy's time limit (AfterSideTurnEnd: its encounter's RanOutOfTime) acts as the enemies' side's turn ends, on an enemy it's on; No
+    /// Draw's AfterSideTurnEnd waits on its owner taking part (participants.Contains(base.Owner)), which no player does then. Doom's kill of the
+    /// doomed (DoomPower.BeforeSideTurnEnd) is read from its code (decision #310), so it's no gap.
     /// </summary>
     [Fact]
     public void WhoActsThereIsReadFromTheHooks()
     {
         var gaps = ReadModels.TurnEndGaps(CoverageLedger.ModelTypes(), RuntimeCode.Read).ToDictionary(gap => gap.Name, StringComparer.Ordinal);
-        Assert.True(gaps[PowerId.Doom.Name].ActsForAnEnemy);
-        Assert.Contains("BeforeSideTurnEnd", gaps[PowerId.Doom.Name].Why, StringComparison.Ordinal);
+        Assert.DoesNotContain(PowerId.Doom.Name, gaps.Keys);
+        Assert.Contains("AfterSideTurnEnd", gaps[PowerId.BattlewornDummyTimeLimit.Name].Why, StringComparison.Ordinal);
         Assert.False(gaps[PowerId.NoDraw.Name].ActsForAPlayer);
         Assert.True(gaps[PowerId.BattlewornDummyTimeLimit.Name].ActsForAnEnemy);
     }

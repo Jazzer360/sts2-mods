@@ -362,6 +362,22 @@ public static class ProgramReader
     /// <summary>A value reads the game's log of the fight (CombatManager.Instance.History).</summary>
     public static bool ReadsHistory(ProgramValue value) => value.Parts().Any(part => part is QueryValue { Name: "History", Type: "CombatManager" });
 
+    /// <summary>
+    /// The method of <paramref name="methods"/> a call names: its name and number of parameters, and among overloads that share both (DoomPower's
+    /// GetDoomedCreatures(CombatSide) beside its static GetDoomedCreatures(IReadOnlyList&lt;Creature&gt;)), the one that's static or not as the call
+    /// is, with the parameter types the call names. Null: none.
+    /// </summary>
+    internal static MethodInfo? Called(IEnumerable<MethodInfo> methods, CodeMember member)
+    {
+        var named = methods.Where(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount).ToList();
+        if (named.Count <= 1) return named.FirstOrDefault();
+        var sameKind = named.Where(method => method.IsStatic != member.HasThis).ToList();
+        if (sameKind.Count == 0) sameKind = named;
+        if (sameKind.Count > 1 && member.ParameterTypes.Count == member.ParameterCount)
+            return sameKind.FirstOrDefault(method => method.GetParameters().Select(parameter => parameter.ParameterType.Name).SequenceEqual(member.ParameterTypes, StringComparer.Ordinal)) ?? sameKind[0];
+        return sameKind[0];
+    }
+
     /// <summary>The method whose code runs: an async method's state machine's MoveNext, else the method itself.</summary>
     internal static MethodBase? Body(Type owner, string method) =>
         owner.GetMethods(All).FirstOrDefault(candidate => candidate.Name == method) is { } found ? BodyOf(found) : null;
@@ -380,6 +396,13 @@ public static class ProgramReader
     internal static bool IsCommand(CodeMember member) =>
         member.Kind == CodeMemberKind.Method && member.Namespace == "MegaCrit.Sts2.Core.Commands" && !ShowOnlyTypes.Contains(member.DeclaringType)
         && !ShowsOnly(member.Name) && !Asks(member.Name);
+
+    /// <summary>
+    /// A hook the code tells its listeners itself (Hook.AfterDiedToDoom, awaited by DoomPower.DoomKill): a static method of the game's Hook class
+    /// that returns a task.
+    /// </summary>
+    internal static bool IsHookTold(CodeMember member) =>
+        member is { Kind: CodeMemberKind.Method, HasThis: false, DeclaringType: "Hook", Namespace: "MegaCrit.Sts2.Core.Hooks" } && member.ValueType.StartsWith("Task", StringComparison.Ordinal);
 
     /// <summary>
     /// A power's own action the card runs, awaited (Outbreak's PoisonPower.Trigger on each enemy's poison): a method of a power that
@@ -621,7 +644,7 @@ public static class ProgramReader
                 return helped != null && ReadsHistory(helped) ? helped : null;
             }
             if (member.Kind != CodeMemberKind.Method || !member.ReturnsValue || member.Name.StartsWith("get_", StringComparison.Ordinal) || member.DeclaringType != _card.Name) return null;
-            if (_card.GetMethods(All).FirstOrDefault(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount) is not MethodInfo found
+            if (Called(_card.GetMethods(All), member) is not MethodInfo found
                 || BodyOf(found) != found) return null;
             try
             {
@@ -654,13 +677,25 @@ public static class ProgramReader
             catch { return false; }
         });
 
+        /// <summary>How deep in lambdas the one being read is (a lambda's own lambdas are read up to a few deep).</summary>
+        private int _lambdaDepth;
+
+        /// <summary>A lambda inside a lambda being read: read as one is, a level deeper.</summary>
+        private LambdaValue? NestedLambdaOf(CodeMember member)
+        {
+            _lambdaDepth++;
+            try { return LambdaOf(member); }
+            finally { _lambdaDepth--; }
+        }
+
         /// <summary>A lambda the code makes (a predicate for Any, Where...): its parameter and what it returns.</summary>
         private LambdaValue? LambdaOf(CodeMember member)
         {
             if (Lambda(member) is not { } body) return null;
             try
             {
-                var flow = Flow.Of(_read(body), body, lambdaOf: null, helperOf: null, varKeyOf: VarKeyOf);
+                // A lambda inside it is read too (Book Repair Knife's c => c.Powers.All(p => p.ShouldOwnerDeathTriggerFatal())).
+                var flow = Flow.Of(_read(body), body, lambdaOf: _lambdaDepth < 3 ? NestedLambdaOf : null, helperOf: null, varKeyOf: VarKeyOf);
                 var parameter = body.GetParameters() is { Length: > 0 } parameters ? parameters[0].Name ?? "x" : "x";
                 return new LambdaValue(parameter, flow.Returned());
             }
@@ -842,6 +877,13 @@ public static class ProgramReader
                     into.Add(Attack(flow, i, member) with { Condition = condition });
                     continue;
                 }
+                // A hook the code tells the listeners itself (DoomPower.DoomKill's Hook.AfterDiedToDoom): what every listener does there runs at this
+                // step, so it's a step like a command, never left out.
+                if (IsHookTold(member))
+                {
+                    into.Add(new CommandStep(instruction.Offset, member, Arguments(flow, i, member)) { Condition = condition, Values = flow.ArgumentValues(i, member) });
+                    continue;
+                }
                 // A power's action on itself (PoisonPower.AfterSideTurnStart's Trigger(), Black Hole's DealDamageToAllEnemies) is its own method, read
                 // where it's called below; another's (Outbreak's PoisonPower.Trigger on each enemy's poison) is a step named by its power and method.
                 if (IsCommand(member) || IsPowerAction(member) && (member.DeclaringType != _card.Name || OwnMethod(member) == null))
@@ -871,7 +913,9 @@ public static class ProgramReader
                 // The card's own methods and the local functions its OnPlay declares: their steps run here.
                 if (OwnMethod(member) is { } own)
                 {
-                    if (depth >= MaxDepth) into.Add(new UnknownStep(instruction.Offset, $"{member.Name}: calls nested too deep") { Condition = condition });
+                    // Past the depth the reader follows, a method whose code calls nothing but getters (a question: DoomPower.IsOwnerDoomed in the
+                    // filter GetDoomedCreatures gives Where) has no steps to miss.
+                    if (depth >= MaxDepth) { if (MayAct(own.Body)) into.Add(new UnknownStep(instruction.Offset, $"{member.Name}: calls nested too deep") { Condition = condition }); }
                     else
                     {
                         // Its parameters are what this call passes (MadScience.ExecuteRider(TinkerTimeRider, ...): its tests of rider are tests
@@ -973,6 +1017,20 @@ public static class ProgramReader
                 { Builder = builder, HitCount = hitCount, HitCountValue = hitCountValue, Values = flow.ArgumentValues(at, member) };
         }
 
+        /// <summary>
+        /// The code may do something: it calls a method that isn't a property's getter (a command, a hook, another method that might call one), or
+        /// it can't be read. False only for code that reads properties and works with what they give.
+        /// </summary>
+        private bool MayAct(MethodBase body)
+        {
+            try
+            {
+                return _read(body).Any(instruction => instruction.IsCall && instruction.Member is { Kind: CodeMemberKind.Method } called && !called.Name.StartsWith("get_", StringComparison.Ordinal)
+                    && !(called.DeclaringType == "Decimal" && called.Name.StartsWith("op_", StringComparison.Ordinal)));
+            }
+            catch { return true; }
+        }
+
         /// <summary>The card's own method (its type or a base type's private helper) or a local function OnPlay declares.</summary>
         private (MethodBase Called, MethodBase Body)? OwnMethod(CodeMember member)
         {
@@ -983,7 +1041,7 @@ public static class ProgramReader
             foreach (var type in OwnTypes())
             {
                 if (type.Name != member.DeclaringType) continue;
-                var found = type.GetMethods(All).FirstOrDefault(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount);
+                var found = Called(type.GetMethods(All), member);
                 if (found == null) continue;
                 // An async helper's code is its state machine's (nested in its type, or in the card for a local function).
                 return (found, BodyOf(found));
@@ -997,7 +1055,7 @@ public static class ProgramReader
             if (member.Kind != CodeMemberKind.Method || member.HasThis || IsCommand(member) || member.Name.StartsWith('<') || member.Name.StartsWith("op_", StringComparison.Ordinal)) return null;
             if (!member.Namespace.StartsWith("MegaCrit.Sts2.Core.Models", StringComparison.Ordinal) || member.Name.StartsWith("get_", StringComparison.Ordinal)) return null;
             if (_card.Assembly.GetType(member.Namespace + "." + member.DeclaringType) is not { } owner) return null;
-            if (owner.GetMethods(All).FirstOrDefault(method => method.Name == member.Name && method.GetParameters().Length == member.ParameterCount) is not { } found) return null;
+            if (Called(owner.GetMethods(All), member) is not { } found) return null;
             return (owner, found, BodyOf(found));
         }
 

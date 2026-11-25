@@ -78,7 +78,11 @@ public class HookWriteTests
                 // A keyword applied to a copy the same hook then makes (Music Box's ApplyKeyword on cardPlay.Card.CreateClone()) is the made card's, one step with it.
                 var made = steps.OfType<CommandStep>().Where(step => step.Command.FullName == "CardPileCmd.AddGeneratedCardToCombat" && step.Values.Count > 0).Select(step => step.Values[0].ToString()).ToHashSet(StringComparer.Ordinal);
                 var folded = steps.OfType<CommandStep>().Count(step => step.Command.FullName == "CardCmd.ApplyKeyword" && step.Values.Count > 0 && made.Contains(step.Values[0].ToString()));
-                var commands = steps.OfType<CommandStep>().Count(step => step.Condition is not { IsNever: true }) + steps.OfType<CardActionStep>().Count(step => step.Condition is not { IsNever: true }) - folded;
+                // A hook the code tells the list a kill went over is that kill's step's (KillEachStep.Tells: Doom's Hook.AfterDiedToDoom), and a command that
+                // changes nothing a simulation follows (MonsterModel.OnDieToDoom's looks) has no step.
+                var told = flat.OfType<KillEachStep>().Count(step => step.Tells != null);
+                var commands = steps.OfType<CommandStep>().Count(step => step.Condition is not { IsNever: true } && !SimAdapter.CommandsOutsideTheFight.ContainsKey(step.Command.FullName))
+                    + steps.OfType<CardActionStep>().Count(step => step.Condition is not { IsNever: true }) - folded - told;
                 var commandSteps = flat.Count(step => step is not (StoreFieldStep or MonsterStateStep or BindStep or BindAddStep or UnbindStep or RepeatStep or ForEachStep or LetStep or FlashStep));
                 if (commands != commandSteps) dropped.Add($"{type.Name}.{hook.Name}: {commands} commands, {commandSteps} translated");
                 foreach (var store in steps.OfType<StoreStep>())
@@ -196,7 +200,8 @@ public class HookWriteTests
         if (instruction.OpCode == OpCodes.Stfld || instruction.OpCode == OpCodes.Stsfld)
             return member.DeclaringType.StartsWith('<') || member.Name.StartsWith('<') ? null : new Write("store", member.Name);
         if (!instruction.IsCall || member.Kind != CodeMemberKind.Method || member.Name == ".ctor" || member.Name.StartsWith('<') || ShowsOnly.Contains(member.Name)) return null;
-        if (member.Namespace.Contains(".Nodes", StringComparison.Ordinal) || member.DeclaringType.StartsWith('<') || Helpers.Contains(member.DeclaringType)) return null;
+        // The scene's nodes, and the game's bindings to its animation engine (MegaSpine's MegaTrackEntry.SetTimeScale: Doom's kill animation), only show.
+        if (member.Namespace.Contains(".Nodes", StringComparison.Ordinal) || member.Namespace.Contains(".Bindings", StringComparison.Ordinal) || member.DeclaringType.StartsWith('<') || Helpers.Contains(member.DeclaringType)) return null;
         // A text set (a StringVar's StringValue: words a tooltip shows) only shows.
         if (member.Name.StartsWith("set_", StringComparison.Ordinal) && member.HasThis && member.ParameterTypes is ["String"]) return null;
         if (member.Name.StartsWith("set_", StringComparison.Ordinal) && member.HasThis)

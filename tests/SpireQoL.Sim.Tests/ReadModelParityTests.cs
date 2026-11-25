@@ -339,6 +339,7 @@ public class ReadModelParityTests
         nameof(SimModel.AfterRemoved),
         nameof(SimModel.AfterEnergyReset), nameof(SimModel.AfterEnergyResetLate), nameof(SimModel.BeforeHandDraw), nameof(SimModel.BeforeHandDrawLate),
         nameof(SimModel.AfterPlayerTurnStartEarly), nameof(SimModel.AfterPlayerTurnStart), nameof(SimModel.AfterPlayerTurnStartLate),
+        nameof(SimModel.AfterDiedToDoom),
     };
 
     [Fact]
@@ -731,6 +732,16 @@ public class ReadModelParityTests
                         state.Enemy(dead)!.Hp = 0;
                         model.AfterDeath(state, owner, dead);
                         return Branches(new[] { state }) + " // " + Sequence(state, TurnEndHooks, (branch, turnEndHook) => turnEndHook(model, branch, owner));
+                    });
+                break;
+            case nameof(SimModel.AfterDiedToDoom):
+                // A Doom kill took one enemy, or both (DoomPower.DoomKill tells the list it killed).
+                foreach (var killed in new[] { new[] { 0 }, new[] { 0, 1 } })
+                    yield return ($"enemies {string.Join(" and ", killed)} die to Doom", (model, state) =>
+                    {
+                        foreach (var dead in killed) state.Enemy(dead)!.Hp = 0;
+                        model.AfterDiedToDoom(state, owner, killed);
+                        return Branches(new[] { state });
                     });
                 break;
             case nameof(SimModel.AfterApplied):

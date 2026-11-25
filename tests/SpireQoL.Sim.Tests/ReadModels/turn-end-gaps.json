@@ -23,12 +23,6 @@
     "ForecastIgnores": true
   },
   {
-    "Name": "DoomPower",
-    "Why": "DoomPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: BeforeSideTurnEnd (gap: the reader can\u0027t follow it: commands in a callback)",
-    "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
-  },
-  {
     "Name": "EncorePower",
     "Why": "EncorePower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterApplied: gap: the value Max(0, (this.Amount sub this.GetInternalData\u003CData\u003E().numberOfCardsPlayedSinceApplied())))",
     "ActsForAnEnemy": true,

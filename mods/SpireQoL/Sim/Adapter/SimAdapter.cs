@@ -82,6 +82,40 @@ public static partial class SimAdapter
         catch (ArgumentOutOfRangeException) { return null; }
     }
 
+    /// <summary>
+    /// Whether a creature's death sets off Fatal (every power on it answers PowerModel.ShouldOwnerDeathTriggerFatal true: Book Repair Knife's count of
+    /// the Doom kills), read from each power's class: one that doesn't override it answers true (PowerModel's own); one whose override returns a
+    /// constant (Minion's false), that; any other (Reattach's: whether its other segments are dead, which can change before it dies) null, unknown.
+    /// </summary>
+    private static bool? DeathSetsOffFatal(Creature creature)
+    {
+        var answer = true;
+        foreach (var power in creature.Powers)
+        {
+            var type = power.GetType();
+            var fatal = FatalAnswers.GetOrAdd(type, ReadFatalAnswer);
+            if (fatal == null) return null;
+            answer &= fatal.Value;
+        }
+        return answer;
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool?> FatalAnswers = new();
+
+    /// <summary>A power class's answer to ShouldOwnerDeathTriggerFatal, read from its code: true without an override, a constant's, or null.</summary>
+    private static bool? ReadFatalAnswer(Type type)
+    {
+        var method = type.GetMethod(nameof(PowerModel.ShouldOwnerDeathTriggerFatal), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public, Type.EmptyTypes);
+        if (method == null || method.DeclaringType == typeof(PowerModel)) return true;
+        try
+        {
+            var ways = SpireQoL.Procs.Programs.ProgramReader.ReadReturnedWays(method.DeclaringType!, method, SpireQoL.Procs.Programs.RuntimeCode.Read).Ways;
+            return ways.Count > 0 && ways.All(way => way.Value is SpireQoL.Procs.Programs.ConstantValue) && ways.Select(way => ((SpireQoL.Procs.Programs.ConstantValue)way.Value).Value != 0).Distinct().Count() == 1
+                ? ((SpireQoL.Procs.Programs.ConstantValue)ways[0].Value).Value != 0 : null;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException) { return null; }
+    }
+
     private static SimState BuildFromGame(Player me, ICombatState combat, out Dictionary<Creature, int> ids)
     {
         var idMap = new Dictionary<Creature, int>();
@@ -118,6 +152,7 @@ public static partial class SimAdapter
             // Plow, Shriek, The Gambit, Slippery, Hard to Kill, Intangible, Hardened Shell, Barricade, Strength, Weak...).
             enemy.Powers = SimReaders.Powers(creature, IdOf);
             enemy.Fields = SimReaders.Fields(creature.Powers, IdOf);
+            enemy.DeathSetsOffFatal = DeathSetsOffFatal(creature);
             foreach (var power in creature.Powers) SimReaders.AddVars(state, id, power);
             enemy.StartedAlive = creature.IsAlive;
             // The creatures its death adds (Surprise's gremlins), read from its powers' AfterDeath code, with every HP each can start with.

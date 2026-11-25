@@ -205,14 +205,27 @@ public class ProjectionTests
     [Fact]
     public void WhatTheEnemiesTurnEndCantFollowLeavesTheLaterTurnsUnknown()
     {
-        // Doom on it (decision #303: its kill isn't followed as the enemies' turn ends): the state after this turn is unknown, so the next turn is.
+        // Shrink on it (ShrinkPower.AfterSideTurnEnd acts there, its AfterApplied not read: turn-end-gaps.json, decision #303), which changes its
+        // attacks: the state after this turn is unknown, so the next turn is.
         var state = Fight(Attacker(id: 0, hp: 60, hit: 5));
-        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Doom, amount: 3);
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Shrink, amount: 3);
         var projection = SimEngine.Project(state, Turns(new[] { Certain(enemyId: 0, Attack("JAB", damage: 5)) }));
         var hits = projection.Of(turn: 0, enemyId: 0, move: "JAB")!;
         Assert.Null(hits.Lands);
         Assert.Null(hits.AtYourTurnStart);
-        Assert.Contains(PowerId.Doom.Name, hits.Unknown, StringComparison.Ordinal);
+        Assert.Contains(PowerId.Shrink.Name, hits.Unknown, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void DoomAtTheEnemiesTurnEndIsFollowedButKillsNoOneInAProjection()
+    {
+        // DoomPower.BeforeSideTurnEnd is read (decision #310), so the turn after it is projected; a projection works out no one's death (decision
+        // #308), so the enemy its Doom would kill (3 HP under 5 Doom) still shows its next attack.
+        var state = Fight(Attacker(id: 0, hp: 3, hit: 5));
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Doom, amount: 5);
+        var hits = SimEngine.Project(state, Turns(new[] { Certain(enemyId: 0, Attack("JAB", damage: 5)) })).Of(turn: 0, enemyId: 0, move: "JAB")!;
+        Assert.True(hits.Unknown == null, hits.Unknown);
+        Assert.Equal(new[] { 5 }, hits.Lands);
     }
 
     [Fact]

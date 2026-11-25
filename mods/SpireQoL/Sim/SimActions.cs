@@ -412,6 +412,16 @@ public sealed record DamageAction(DamageSpec Damage) : SimAction;
 /// </summary>
 public sealed record ModelCommandAction(string Power, string Method) : SimAction;
 
+/// <summary>
+/// CreatureCmd.Kill of each hittable enemy whose own <paramref name="Power"/> answers its <paramref name="Question"/> (End of Days: DoomPower.DoomKill of
+/// GetDoomedCreatures(HittableEnemies), each one's Doom at least its HP, the question read from the power's code: ModelSpec.Tests), the list worked
+/// out as the action starts, then the listeners told it (Hook.AfterDiedToDoom: <see cref="TellsDiedToDoom"/>) unless it's empty.
+/// </summary>
+public sealed record KillEachAction(PowerId Power, string Question) : SimAction
+{
+    public bool TellsDiedToDoom { get; init; }
+}
+
 /// <summary>An older report's name for Outbreak's ModelCommandAction (PoisonPower.Trigger on each enemy's poison), read as it.</summary>
 public sealed record TriggerPoisonAction : SimAction;
 

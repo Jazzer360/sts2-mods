@@ -36,6 +36,8 @@ internal readonly struct HookArgs
     public BlockCtx? Block { get; init; }
     /// <summary>The attack a BeforeAttack or AfterAttack is told of (its AttackCommand: id, attacker, props, card).</summary>
     public AttackInfo? Attack { get; init; }
+    /// <summary>The creatures the hook is told (AfterDiedToDoom's: the list a Doom kill killed), HookItems.Told.</summary>
+    public int[]? Told { get; init; }
 
     /// <summary>
     /// The answers of the code's tests this hook run has asked (HookTest, by its slot: 0 not yet, 1 held, 2 didn't), for a program that stores to
@@ -291,6 +293,7 @@ public sealed class ReadModel : SimModel
             if (program.Returns != null) _returns[(int)program.Hook] = Compile(program.Returns);
             _steps[(int)program.Hook] = CompileSteps(program.Steps, new List<HookStep>(), firstRound: true, program.Hook);
         }
+        foreach (var (question, test) in spec.Tests ?? new Dictionary<string, HookValue>()) _tests[question] = Compile(test);
         foreach (var command in spec.Commands ?? Array.Empty<CommandProgram>())
         {
             var one = new ModelSpec(spec.Name, spec.Kind, new[] { new HookProgram(HookName.OwnCommand, command.Steps) });
@@ -430,6 +433,9 @@ public sealed class ReadModel : SimModel
     /// <summary>Its own commands another class calls (ModelSpec.Commands), compiled, and whether a run asks each test once.</summary>
     private readonly Dictionary<string, (CompiledStep[] Steps, bool AsksOnce)> _commands = new(StringComparer.Ordinal);
 
+    /// <summary>Its own questions read from its code (ModelSpec.Tests), each compiled for its owner.</summary>
+    private readonly Dictionary<string, Evaluate> _tests = new(StringComparer.Ordinal);
+
     /// <summary>It has this command of its own read (PoisonPower's Trigger).</summary>
     public bool HasCommand(string method) => _commands.ContainsKey(method);
 
@@ -478,7 +484,7 @@ public sealed class ReadModel : SimModel
         {
             // A power an attack spends (its AfterAttack takes its own stacks: Gigantification's Decrement) acts on that play too (decision #228).
             // A play that changes the state its damage term reads (Slow's SlowAmount++ on every card) acts on that play too (decision #229).
-            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or SummonStep or ApplyPowerStep or ChannelStep or EvokeLastStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep
+            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or SummonStep or ApplyPowerStep or ChannelStep or EvokeLastStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep or KillEachStep
                 || hook == HookName.AfterAttack && step is DecrementPowerStep or RemovePowerStep
                 // Not a store of 0, which lets go of what it kept (Pen Nib's AttackToDouble = null as its 10th Attack ends: decision #272).
                 || hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed && step is StoreFieldStep { Field: var termField, Value: not HookConstant { Value: 0m } } && _termFields.Contains(termField);
@@ -536,6 +542,7 @@ public sealed class ReadModel : SimModel
         HookName.AfterDamageGiven => nameof(AfterDamageGiven),
         HookName.AfterDamageReceived => nameof(AfterDamageReceived),
         HookName.AfterDeath => nameof(AfterDeath),
+        HookName.AfterDiedToDoom => nameof(AfterDiedToDoom),
         HookName.ModifyDamageAdditive => nameof(ModifyDamageAdditive),
         HookName.ModifyDamageMultiplicative => nameof(ModifyDamageMultiplicative),
         HookName.ModifyDamageMultiplicativeLate => nameof(ModifyDamageMultiplicativeLate),
@@ -789,6 +796,20 @@ public sealed class ReadModel : SimModel
         foreach (var branch in Run(HookName.AfterDeath, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Target = dead }))
             if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterDeath branched");
     }
+
+    /// <summary>A Doom kill killed these creatures (Hook.AfterDiedToDoom, as DoomPower.DoomKill tells it: SimEngine.TellDiedToDoom): deterministic, on the state given.</summary>
+    public override void AfterDiedToDoom(SimState state, int owner, IReadOnlyList<int> creatures)
+    {
+        foreach (var branch in Run(HookName.AfterDiedToDoom, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Told = creatures.ToArray() }))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterDiedToDoom branched");
+    }
+
+    /// <summary>
+    /// Its own question (ModelSpec.Tests: DoomPower.IsOwnerDoomed) for a creature that has it, on the state given; null for a question its code
+    /// wasn't read for.
+    /// </summary>
+    public bool? Answers(string question, SimState state, int owner) =>
+        _tests.TryGetValue(question, out var test) ? test(new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay }) != 0m : null;
 
     /// <summary>
     /// Its tab judged on how the turn ends, by what its AfterDeath waits on (ModelSpec.Outcome): an enemy's own death or an ally's, a warning on a
@@ -1395,12 +1416,7 @@ public sealed class ReadModel : SimModel
                 var where = each.Where == null ? null : Compile(each.Where);
                 return args =>
                 {
-                    var items = over switch
-                    {
-                        HookItems.Players => args.State.PlayerIds.ToList(),
-                        HookItems.Teammates => Teammates(args.State, args.Owner),
-                        _ => args.State.Targetable.Select(enemy => enemy.Id).ToList(),
-                    };
+                    var items = ItemsOf(in args, over);
                     IEnumerable<SimState> states = One(args.State);
                     foreach (var item in items)
                     {
@@ -1520,7 +1536,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or LoseBlockStep or UnknownStep or SummonStep or ChannelStep or EvokeLastStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep or SpawnStep or SetHpStep or SetMoveStep
+            case FlashStep or GainStarsStep or HealStep or LoseBlockStep or UnknownStep or SummonStep or ChannelStep or EvokeLastStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep or KillEachStep or SpawnStep or SetHpStep or SetMoveStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1994,6 +2010,26 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
+            case KillEachStep killEach:
+            {
+                // DoomPower.DoomKill: each creature of the list (worked out once, as GetDoomedCreatures makes it) that isn't dead yet killed, then the
+                // hook its code tells that list (Hook.AfterDiedToDoom), unless the list is empty. A projection follows no one's death (decision #308).
+                if (killEach.Tells is { } told && told != HookName.AfterDiedToDoom) throw new InvalidOperationException($"{Name}: a kill that tells {told}, which the engine doesn't run");
+                var over = killEach.Over;
+                var where = killEach.Where == null ? null : Compile(killEach.Where);
+                var tellsDoom = killEach.Tells == HookName.AfterDiedToDoom;
+                return args =>
+                {
+                    var state = args.State;
+                    if (state.Forecasting) return One(state);
+                    var killed = Filtered(in args, over, where);
+                    if (killed.Count == 0) return One(state);
+                    if (fires) state.LogFired(Name, amount: 0, args.Owner);
+                    SimEngine.KillEach(state, killed, Name);
+                    if (tellsDoom) SimEngine.TellDiedToDoom(state, killed);
+                    return One(state);
+                };
+            }
             case KillStep kill:
                 return args =>
                 {
@@ -2041,12 +2077,52 @@ public sealed class ReadModel : SimModel
     /// </summary>
     private static List<int> Teammates(SimState state, int owner)
     {
-        if (Who.IsEnemy(owner)) return state.Enemies.Where(enemy => enemy.Alive).Select(enemy => enemy.Id).ToList();
+        return Who.IsEnemy(owner) ? state.Enemies.Where(enemy => enemy.Alive).Select(enemy => enemy.Id).ToList() : PlayersSide(state);
+    }
+
+    /// <summary>The players' side (CombatState.Allies): every player in their order, then each one's pets while they live.</summary>
+    private static List<int> PlayersSide(SimState state)
+    {
         var side = state.PlayerIds.ToList();
         foreach (var player in state.PlayerIds)
             foreach (var kind in new[] { PetKind.Osty, PetKind.Wuppy })
                 if (state.Player(player)!.PetHp(kind) > 0) side.Add(Who.PetOf(player, kind));
         return side;
+    }
+
+    /// <summary>
+    /// The creatures a list of a model's code goes over, as the list is made (a foreach's items, a filtered list's: HookItems): the fight's players,
+    /// its owner's side, the side whose turn is ending (none while no turn's end runs), the creatures the hook was told, or the hittable enemies.
+    /// </summary>
+    private static List<int> ItemsOf(in HookArgs args, HookItems over) => over switch
+    {
+        HookItems.Players => args.State.PlayerIds.ToList(),
+        HookItems.Teammates => Teammates(args.State, args.Owner),
+        HookItems.SideEnding => args.State.SideEnding switch
+        {
+            TurnSide.Enemies => args.State.Enemies.Where(enemy => enemy.Alive).Select(enemy => enemy.Id).ToList(),
+            TurnSide.Players => PlayersSide(args.State),
+            _ => new List<int>(),
+        },
+        HookItems.Told => args.Told?.ToList() ?? new List<int>(),
+        _ => args.State.Targetable.Select(enemy => enemy.Id).ToList(),
+    };
+
+    /// <summary>
+    /// The items of a list that pass its filter (asked of each with the item HookWho.Each, its tests asked afresh for each: none kept from another
+    /// item's), in order, on the state given.
+    /// </summary>
+    private static List<int> Filtered(in HookArgs args, HookItems over, Evaluate? where)
+    {
+        var items = ItemsOf(in args, over);
+        if (where == null) return items;
+        var kept = new List<int>(items.Count);
+        foreach (var item in items)
+        {
+            var asked = args with { Each = item, Asked = null };
+            if (where(in asked) != 0m) kept.Add(item);
+        }
+        return kept;
     }
 
     /// <summary>
@@ -2160,6 +2236,20 @@ public sealed class ReadModel : SimModel
             }
             case HookFactValue fact:
                 return CompileFact(fact);
+            // A count of a list's creatures that pass its filter (Count(creatures, c => ...): Book Repair Knife's Fatal deaths), and the first that does
+            // (First(GetDoomedCreatures(side)): Doom's first doomed of its side), as the list is now.
+            case HookCount count:
+            {
+                var over = count.Over;
+                var where = count.Where == null ? null : Compile(count.Where);
+                return (in HookArgs args) => Filtered(in args, over, where).Count;
+            }
+            case HookFirst first:
+            {
+                var over = first.Over;
+                var where = first.Where == null ? null : Compile(first.Where);
+                return (in HookArgs args) => Filtered(in args, over, where) is { Count: > 0 } kept ? kept[0] : Who.None;
+            }
             case HookTest test:
             {
                 var inner = Compile(test.Test);
@@ -2383,6 +2473,36 @@ public sealed class ReadModel : SimModel
                 return (in HookArgs args) => args.State.Enemy(CreatureOf(in args, creature)) is { } enemy && enemy.Monster == named ? 1m : 0m;
             }
             case HookFact.HitFullyBlocked: return (in HookArgs args) => args.Hit?.FullyBlocked == true ? 1m : 0m;
+            case HookFact.FightEnding: return (in HookArgs args) => SimEngine.FightEnding(args.State) ? 1m : 0m;
+            case HookFact.CreatureDeathSetsOffFatal:
+            {
+                // A player's death sets off no Fatal a model counts here (Book Repair Knife counts enemies alone); an enemy's is its powers' answer, read
+                // by the adapter (SimEnemy.DeathSetsOffFatal), unknown where one couldn't be.
+                var creature = CreatureNamed(fact);
+                return (in HookArgs args) =>
+                {
+                    if (args.State.Enemy(CreatureOf(in args, creature)) is not { } enemy) return 1m;
+                    if (enemy.DeathSetsOffFatal is { } fatal) return fatal ? 1m : 0m;
+                    args.State.Unmodelled ??= $"{Name} asks whether {enemy.Name}'s death sets off Fatal, which its powers' code doesn't say as the fight stands";
+                    return 1m;
+                };
+            }
+            case HookFact.CreaturePowerTest:
+            {
+                // A power's own question for the creature that has it (DoomPower.IsOwnerDoomed), from that power's read model: 0 without the power.
+                var creature = CreatureNamed(fact);
+                var split = named!.LastIndexOf('.');
+                var power = new PowerId(named[..split]);
+                var question = named[(split + 1)..];
+                return (in HookArgs args) =>
+                {
+                    var id = CreatureOf(in args, creature);
+                    if (!SimEngine.PowersOf(args.State, id).Has(power)) return 0m;
+                    if (SimModels.Get(power.Name) is ReadModel { } model && model.Answers(question, args.State, id) is { } answer) return answer ? 1m : 0m;
+                    args.State.Unmodelled ??= $"{Name} asks {power.Name}'s {question}, which isn't read from its code";
+                    return 0m;
+                };
+            }
             case HookFact.CreatureId:
             {
                 var creature = CreatureNamed(fact);

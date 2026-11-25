@@ -516,6 +516,9 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> AfterPowerApplied(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff) => One(state);
     /// <summary>A creature died (AfterDeath; once per death): Crab Rage, Ravenous.</summary>
     public virtual void AfterDeath(SimState state, int owner, int dead) { }
+
+    /// <summary>A Doom kill killed these creatures (Hook.AfterDiedToDoom, once per kill, with the list it killed): Book Repair Knife.</summary>
+    public virtual void AfterDiedToDoom(SimState state, int owner, IReadOnlyList<int> creatures) { }
     /// <summary>
     /// After this power was applied to its owner (the game's AfterApplied): Covered sets up Intercept on its applier. Once, when it
     /// lands on a creature without it; for an instanced power (<see cref="Instanced"/>) on every copy.

@@ -86,6 +86,12 @@ public sealed class SimEnemy
     public int Block;
     /// <summary>Can be targeted and hit (alive and hittable when the simulation starts).</summary>
     public bool Hittable = true;
+    /// <summary>
+    /// Its death sets off Fatal: every power on it answers ShouldOwnerDeathTriggerFatal true (PowerModel's; Minion's says no), read by the adapter from
+    /// its powers' code as the simulation starts (Book Repair Knife's count of the Doom kills). Null where one's answer couldn't be read (Reattach's:
+    /// whether its other segments are dead).
+    /// </summary>
+    public bool? DeathSetsOffFatal = true;
     /// <summary>Damage of its poison tick at the start of its turn.</summary>
     public int Poison;
     /// <summary>Barricade, its power: whether its block is kept between turns is its ShouldClearBlock's, read from its code (SimEngine.ClearsBlock).</summary>

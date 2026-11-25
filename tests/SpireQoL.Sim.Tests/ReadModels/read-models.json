@@ -3546,6 +3546,162 @@
     "HelpsOwner": false
   },
   {
+    "Name": "BookRepairKnife",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterDiedToDoom",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "BookRepairKnife.AfterDiedToDoom:0027",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "NotEqual",
+                "Left": {
+                  "$kind": "HookCount",
+                  "Over": "Told",
+                  "Where": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003C\u003Ec.\u003CAfterDiedToDoom\u003Eb__6_0:0006",
+                      "Test": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureOnPlayersSide",
+                          "Creature": {
+                            "Who": "Each",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003C\u003Ec.\u003CAfterDiedToDoom\u003Eb__6_0:0032",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureDeathSetsOffFatal",
+                        "Creature": {
+                          "Who": "Each",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                }
+              }
+            }
+          },
+          {
+            "$kind": "HealStep",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookVar",
+                "Key": "Heal",
+                "Canonical": 3
+              },
+              "Right": {
+                "$kind": "HookCount",
+                "Over": "Told",
+                "Where": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "\u003C\u003Ec.\u003CAfterDiedToDoom\u003Eb__6_0:0006",
+                    "Test": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureOnPlayersSide",
+                        "Creature": {
+                          "Who": "Each",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003C\u003Ec.\u003CAfterDiedToDoom\u003Eb__6_0:0032",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CreatureDeathSetsOffFatal",
+                      "Creature": {
+                        "Who": "Each",
+                        "PetOwner": false
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "BookRepairKnife.AfterDiedToDoom:0027",
+              "Test": {
+                "$kind": "HookMath",
+                "Operation": "NotEqual",
+                "Left": {
+                  "$kind": "HookCount",
+                  "Over": "Told",
+                  "Where": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003C\u003Ec.\u003CAfterDiedToDoom\u003Eb__6_0:0006",
+                      "Test": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureOnPlayersSide",
+                          "Creature": {
+                            "Who": "Each",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003C\u003Ec.\u003CAfterDiedToDoom\u003Eb__6_0:0032",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureDeathSetsOffFatal",
+                        "Creature": {
+                          "Who": "Each",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 0
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "Bound",
     "Kind": "Affliction",
     "Hooks": [],
@@ -9350,6 +9506,478 @@
       }
     ],
     "HelpsOwner": false
+  },
+  {
+    "Name": "DoomPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "KillEachStep",
+            "Over": "SideEnding",
+            "Where": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003C\u003Ec.\u003CGetDoomedCreatures\u003Eb__7_0:0007",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreatureHasPower",
+                  "Of": "DoomPower",
+                  "Creature": {
+                    "Who": "Each",
+                    "PetOwner": false
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003C\u003Ec.\u003CGetDoomedCreatures\u003Eb__7_0:0011",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreaturePowerTest",
+                  "Of": "DoomPower.IsOwnerDoomed",
+                  "Creature": {
+                    "Who": "Each",
+                    "PetOwner": false
+                  }
+                }
+              }
+            },
+            "Tells": "AfterDiedToDoom",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__9.MoveNext:0018",
+                  "Test": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookFactValue",
+                      "Fact": "EnemiesTurn"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__9.MoveNext:002B",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "DoomPower.ShouldDoomTrigger:000A",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "FightEnding"
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "DoomPower.ShouldDoomTrigger:001A",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "TakesPart"
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "DoomPower.ShouldDoomTrigger:0029",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "OwnerDead"
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "DoomPower.ShouldDoomTrigger:0033",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "LessOrEqual",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureHp",
+                            "Creature": {
+                              "Who": "Owner",
+                              "PetOwner": false
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "Amount"
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "DoomPower.ShouldDoomTrigger:0055",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookFirst",
+                          "Over": "Teammates",
+                          "Where": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "\u003C\u003Ec.\u003CGetDoomedCreatures\u003Eb__7_0:0007",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreatureHasPower",
+                                "Of": "DoomPower",
+                                "Creature": {
+                                  "Who": "Each",
+                                  "PetOwner": false
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "\u003C\u003Ec.\u003CGetDoomedCreatures\u003Eb__7_0:0011",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreaturePowerTest",
+                                "Of": "DoomPower.IsOwnerDoomed",
+                                "Creature": {
+                                  "Who": "Each",
+                                  "PetOwner": false
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureId",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CDoomKill\u003Ed__6.MoveNext:001D",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookCount",
+                    "Over": "SideEnding",
+                    "Where": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "\u003C\u003Ec.\u003CGetDoomedCreatures\u003Eb__7_0:0007",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureHasPower",
+                          "Of": "DoomPower",
+                          "Creature": {
+                            "Who": "Each",
+                            "PetOwner": false
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "\u003C\u003Ec.\u003CGetDoomedCreatures\u003Eb__7_0:0011",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreaturePowerTest",
+                          "Of": "DoomPower.IsOwnerDoomed",
+                          "Creature": {
+                            "Who": "Each",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "KillEachStep",
+            "Over": "SideEnding",
+            "Where": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003C\u003Ec.\u003CGetDoomedCreatures\u003Eb__7_0:0007",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreatureHasPower",
+                  "Of": "DoomPower",
+                  "Creature": {
+                    "Who": "Each",
+                    "PetOwner": false
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003C\u003Ec.\u003CGetDoomedCreatures\u003Eb__7_0:0011",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreaturePowerTest",
+                  "Of": "DoomPower.IsOwnerDoomed",
+                  "Creature": {
+                    "Who": "Each",
+                    "PetOwner": false
+                  }
+                }
+              }
+            },
+            "Tells": "AfterDiedToDoom",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeSideTurnEnd\u003Ed__8.MoveNext:0018",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EnemiesTurn"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeSideTurnEnd\u003Ed__8.MoveNext:002B",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "DoomPower.ShouldDoomTrigger:000A",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "FightEnding"
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "DoomPower.ShouldDoomTrigger:001A",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "TakesPart"
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "DoomPower.ShouldDoomTrigger:0029",
+                            "Test": {
+                              "$kind": "HookFactValue",
+                              "Fact": "OwnerDead"
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "DoomPower.ShouldDoomTrigger:0033",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "LessOrEqual",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CreatureHp",
+                            "Creature": {
+                              "Who": "Owner",
+                              "PetOwner": false
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookFactValue",
+                            "Fact": "Amount"
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "DoomPower.ShouldDoomTrigger:0055",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookFirst",
+                          "Over": "Teammates",
+                          "Where": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "\u003C\u003Ec.\u003CGetDoomedCreatures\u003Eb__7_0:0007",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreatureHasPower",
+                                "Of": "DoomPower",
+                                "Creature": {
+                                  "Who": "Each",
+                                  "PetOwner": false
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "\u003C\u003Ec.\u003CGetDoomedCreatures\u003Eb__7_0:0011",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreaturePowerTest",
+                                "Of": "DoomPower.IsOwnerDoomed",
+                                "Creature": {
+                                  "Who": "Each",
+                                  "PetOwner": false
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureId",
+                          "Creature": {
+                            "Who": "Owner",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CDoomKill\u003Ed__6.MoveNext:001D",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookCount",
+                    "Over": "SideEnding",
+                    "Where": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "\u003C\u003Ec.\u003CGetDoomedCreatures\u003Eb__7_0:0007",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreatureHasPower",
+                          "Of": "DoomPower",
+                          "Creature": {
+                            "Who": "Each",
+                            "PetOwner": false
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "\u003C\u003Ec.\u003CGetDoomedCreatures\u003Eb__7_0:0011",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CreaturePowerTest",
+                          "Of": "DoomPower.IsOwnerDoomed",
+                          "Creature": {
+                            "Who": "Each",
+                            "PetOwner": false
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Tests": {
+      "IsOwnerDoomed": {
+        "$kind": "HookMath",
+        "Operation": "LessOrEqual",
+        "Left": {
+          "$kind": "HookFactValue",
+          "Fact": "CreatureHp",
+          "Creature": {
+            "Who": "Owner",
+            "PetOwner": false
+          }
+        },
+        "Right": {
+          "$kind": "HookFactValue",
+          "Fact": "Amount"
+        }
+      }
+    }
   },
   {
     "Name": "DoubleDamagePower",

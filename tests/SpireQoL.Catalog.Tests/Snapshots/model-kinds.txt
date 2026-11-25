@@ -3,10 +3,10 @@
 
 ## Powers and relics
 
-beta powers: 303 classes, 272 with hooks; read from code 180, hand-written 20, neither 74 (each by its first gap: Snapshots/hook-readings.txt)
-beta relics: 316 classes, 310 with hooks; read from code 115, hand-written 7, neither 188 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 151, hand-written 18, neither 68 (each by its first gap: Snapshots/hook-readings.txt)
-main relics: 299 classes, 293 with hooks; read from code 102, hand-written 7, neither 184 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 303 classes, 272 with hooks; read from code 181, hand-written 20, neither 73 (each by its first gap: Snapshots/hook-readings.txt)
+beta relics: 316 classes, 310 with hooks; read from code 116, hand-written 7, neither 187 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 152, hand-written 18, neither 67 (each by its first gap: Snapshots/hook-readings.txt)
+main relics: 299 classes, 293 with hooks; read from code 103, hand-written 7, neither 183 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 7, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 1
 

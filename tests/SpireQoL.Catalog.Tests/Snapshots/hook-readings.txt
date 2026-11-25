@@ -42,7 +42,7 @@ power DevourLifePower: AfterCardPlayed: read
 power DieForYouPower: ModifyUnblockedDamageTarget: read | ShouldAllowHitting: read | ShouldCreatureBeRemovedFromCombatAfterDeath: read | ShouldPowerBeRemovedAfterOwnerDeath: read
 power DisintegrationPower: AfterSideTurnEndLate: read
 power DislikeYouPower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
-power DoomPower: AfterSideTurnEnd: gap: the reader can't follow it: commands in a callback | BeforeSideTurnEnd: gap: the reader can't follow it: commands in a callback
+power DoomPower: AfterSideTurnEnd: read | BeforeSideTurnEnd: read
 power DoubleDamagePower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power DuplicationPower: AfterModifyingCardPlayCount: read | AfterSideTurnEnd: read | ModifyCardPlayCount: read
 power EchoFormPower: AfterApplied: read | AfterCardPlayed: read | AfterModifyingCardPlayCount: read | AfterRemoved: read | BeforeSideTurnStart: not run: nothing in its body acts | ModifyCardPlayCount: read
@@ -198,7 +198,7 @@ relic BiiigHug: AfterObtained: not run: when the relic is obtained: outside the 
 relic BingBong: AfterCardChangedPiles: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic BoneFlute: AfterAttack: read
 relic BookOfFiveRings: AfterCardChangedPiles: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
-relic BookRepairKnife: AfterDiedToDoom: gap: the simulator runs no read model's AfterDiedToDoom
+relic BookRepairKnife: AfterDiedToDoom: read
 relic BrilliantScarf: AfterCardPlayed: gap: tests cardPlay.IsAutoPlay | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: read | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate | TryModifyStarCost: gap: the simulator runs no read model's TryModifyStarCost
 relic BurningSticks: AfterCardExhausted: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns
 relic Byrdpip: AfterCardPlayed: read | AfterObtained: not run: when the relic is obtained: outside the fight's turns | BeforeCombatStart: not run: before the fight: the state is read after it | TryModifyRestSiteOptions: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)

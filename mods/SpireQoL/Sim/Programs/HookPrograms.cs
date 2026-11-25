@@ -154,6 +154,11 @@ public enum HookName
     AfterPlayerTurnStartEarly,
     AfterPlayerTurnStart,
     AfterPlayerTurnStartLate,
+    /// <summary>
+    /// Hook.AfterDiedToDoom: the creatures a Doom kill killed (DoomPower.DoomKill tells every listener the list it killed), HookItems.Told inside it
+    /// (Book Repair Knife heals for each enemy whose death set off Fatal).
+    /// </summary>
+    AfterDiedToDoom,
 }
 
 /// <summary>When an orb's passive goes off: the OrbModel trigger hook its class overrides with a call of TriggerPassive (OrbQueue calls them).</summary>
@@ -177,6 +182,13 @@ public enum HookItems
     /// your Osty while he lives (the pets the simulator keeps), for an enemy's the living enemies.
     /// </summary>
     Teammates,
+    /// <summary>
+    /// The creatures of the side whose turn is ending (CombatState.GetCreaturesOnSide(side), its side a turn's-end hook's: SimState.SideEnding), alive:
+    /// every player and their pets for the players', every living enemy for the enemies'.
+    /// </summary>
+    SideEnding,
+    /// <summary>The creatures the hook is told (AfterDiedToDoom's creatures: the list a Doom kill killed), in its order.</summary>
+    Told,
 }
 
 /// <summary>A command of a model's own (a public method of its class that returns a Task and takes nothing: PoisonPower.Trigger), read as a program.</summary>
@@ -456,6 +468,21 @@ public enum HookFact
     /// player is a monster, and the pet the simulator keeps is CreatureIsPet's.
     /// </summary>
     CreatureMonsterIs,
+    /// <summary>
+    /// The fight is over or ending (CombatManager.IsOverOrEnding: no primary enemy alive and nothing holding the end back, SimEngine.FightEnding), as a
+    /// model's code asks it (Doom's turn-end kill doesn't run then).
+    /// </summary>
+    FightEnding,
+    /// <summary>
+    /// The death of the creature named in Creature sets off Fatal (every power on it answers ShouldOwnerDeathTriggerFatal true: Book Repair Knife's
+    /// count): SimEnemy.DeathSetsOffFatal, as the adapter read it from its powers' code; unknown where it couldn't be read.
+    /// </summary>
+    CreatureDeathSetsOffFatal,
+    /// <summary>
+    /// The power on the creature named in Creature answers its own question, Of naming both ("DoomPower.IsOwnerDoomed": its owner's HP at most its
+    /// amount), read from that power's code (ModelSpec.Tests) for that creature: 0 when it doesn't have the power.
+    /// </summary>
+    CreaturePowerTest,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>
@@ -584,6 +611,18 @@ public sealed record HookMath(HookOperation Operation, HookValue Left, HookValue
 /// needs it, as the game asks it once at its branch (MiniRegent's !UsedThisTurn, asked before the store that sets it, holds for the Strength after it).
 /// </summary>
 public sealed record HookTest(string At, HookValue Test) : HookValue;
+
+/// <summary>
+/// How many of a list of creatures pass a filter (Count(creatures, c => ...), the Count of a list the code filtered: a Doom kill's doomed), each item
+/// HookWho.Each in <see cref="Where"/> (null: every item).
+/// </summary>
+public sealed record HookCount(HookItems Over, HookValue? Where) : HookValue;
+
+/// <summary>
+/// The first creature of a list that passes a filter (First(Where(creatures, c => ...)): the first doomed creature of a side), as a creature id
+/// (HookFact.CreatureId's), Who.None when none does.
+/// </summary>
+public sealed record HookFirst(HookItems Over, HookValue? Where) : HookValue;
 
 /// <summary>Not: 1 when the value is 0.</summary>
 public sealed record HookNot(HookValue Inner) : HookValue;
@@ -748,6 +787,23 @@ public sealed record RepeatStep(HookValue Times, IReadOnlyList<HookStep> Steps) 
 /// as it was then.
 /// </summary>
 public sealed record LetStep(string Name, HookValue Value) : HookStep;
+
+/// <summary>
+/// CreatureCmd.Kill of each creature of a list the code works out once, as the step starts (<see cref="Over"/> filtered by <see cref="Where"/>, each item
+/// HookWho.Each: DoomPower.GetDoomedCreatures of the side whose turn ends, each one's own Doom at least its HP), one already dead left out
+/// (DoomPower.DoomKill: !creature.IsDead), then the hook its code tells that list (<see cref="Tells"/>: Hook.AfterDiedToDoom), unless the list is
+/// empty. An enemy dies (its death told once the step is over, as every death the engine follows); a player loses all their HP unless a death
+/// prevention holds it back (SimEngine.KillPlayer). A projection follows no one's death (decision #308): nothing.
+/// </summary>
+public sealed record KillEachStep(HookItems Over) : HookStep
+{
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public HookValue? Where { get; init; }
+
+    /// <summary>The hook its code tells the list it killed, or null for none.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public HookName? Tells { get; init; }
+}
 
 /// <summary>A loop over items (foreach): its steps once for each item, in order, the item HookWho.Each (HookTarget.Each) inside it.</summary>
 public sealed record ForEachStep(HookItems Over, IReadOnlyList<HookStep> Steps) : HookStep
@@ -1073,6 +1129,13 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<CommandProgram>? Commands { get; init; }
 
+    /// <summary>
+    /// Its own questions another class's code asks of it (a power's parameterless true-or-false method: DoomPower.IsOwnerDoomed, which its
+    /// GetDoomedCreatures filter asks of each creature's Doom), each read from its code as a value for its owner (HookFact.CreaturePowerTest). Null: none.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyDictionary<string, HookValue>? Tests { get; init; }
+
     /// <summary>An orb's kind (the engine's name for its class, OrbKind); null for a power or a relic.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public OrbKind? Orb { get; init; }
@@ -1164,10 +1227,13 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             HookTest test => new[] { value }.Concat(Inside(test.Test)),
             HookWays ways => new[] { value }.Concat(ways.Ways.SelectMany(way => Inside(way.When).Concat(Inside(way.Value)))),
             HookOrbValue orbValue => new[] { value }.Concat(Inside(orbValue.Base)),
+            HookCount count => new[] { value }.Concat(Inside(count.Where)),
+            HookFirst first => new[] { value }.Concat(Inside(first.Where)),
             _ => new[] { value },
         };
         static IEnumerable<HookValue> OfStep(HookStep step) => Inside(step.When).Concat(step switch
         {
+            KillEachStep kill => Inside(kill.Where),
             GainBlockStep gain => Inside(gain.Amount).Concat(Inside(gain.Props)),
             DamageStep damage => Inside(damage.Amount).Concat(Inside(damage.Props)),
             DrawStep draw => Inside(draw.Count),
@@ -1193,6 +1259,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
         return Hooks.SelectMany(program => Inside(program.Returns).Concat(program.Steps.SelectMany(OfStep)))
             .Concat((Commands ?? Array.Empty<CommandProgram>()).SelectMany(command => command.Steps.SelectMany(OfStep)))
             .Concat((OrbValues ?? new Dictionary<string, HookValue>()).Values.SelectMany(Inside))
+            .Concat((Tests ?? new Dictionary<string, HookValue>()).Values.SelectMany(Inside))
             .Concat((Payouts ?? Array.Empty<Payout>()).SelectMany(payout => Inside(payout.Condition).Concat(Inside(payout.DuringTheTurn))));
     }
 
