@@ -5,7 +5,7 @@ namespace SpireQoL.Sim.Tests;
 
 /// <summary>
 /// Every model runs for its owner, you or a teammate (decision #75: the team is one evaluation). A model line that names your
-/// player directly (Who.You, or your SimPlayer through s.P) would make a teammate's copy of that relic or power act as yours or
+/// player directly (Who.You, or your SimPlayer through s.P), in a hand-written model or the read model, would make a teammate's copy of that relic or power act as yours or
 /// not at all, so each one is reviewed here with why it's right (decision #80). A new one fails until it's reviewed: use the
 /// owner (SimEngine.PlayerOf, PowersOf, the hook's owner) instead, or add it with its reason.
 /// </summary>
@@ -20,14 +20,21 @@ public class SimModelOwnerScanTests
         ["play.Owner != Who.You"] = "Withering Presence counts its Target's cards; the adapter loads only the one aimed at you (SimReaders.Powers)",
         ["if (owner != Who.You) return null;"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
         ["var hp = start.You.Hp;"] = "Red Skull's outcome tab is yours only (the line before returns for anyone else): your HP",
+        // The read models (Sim/Programs/ReadModel.cs): every class read from its code runs through it.
+        ["Owner = Who.You, Hook = HookName.OnPlay, Card = card"] = "an enchantment's OnPlay draws counted outside a simulation (the Return tags' hand size): the card in your hand, yours",
+        ["HookOutcome.KillsOne => owner == Who.You ||"] = "a tab judged on how your turn ends, on your cards: yours, or any player's whose death code rewards each player on its side (Compost: decision #277)",
+        ["HookOutcome.BreaksBlock => owner == Who.You"] = "Hand Drill's tab judged on the outcome, on your cards: the play's breaks are its own player's (a teammate's Hand Drill isn't set off by your play: decision #285)",
+        ["if (owner == Who.You)"] = "a reaction to its owner losing HP, on your cards: the play's HP loss is its own player's (a teammate's tab would be judged on HP your play doesn't cost them)",
+        ["query.Whose == HistoryWhose.Anyone ? Who.You : Who.None"] = "an enemy's model asking the fight's log for anyone's entries: every player's ledger holds them, yours among them",
     };
 
-    private static string ModelsDir()
+    /// <summary>The model files the scan reads: the hand-written models (Sim/Models) and the read model every class read from its code runs through.</summary>
+    private static IEnumerable<string> ModelFiles()
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
         {
             var models = Path.Combine(directory.FullName, "mods", "SpireQoL", "Sim", "Models");
-            if (Directory.Exists(models)) return models;
+            if (Directory.Exists(models)) return Directory.GetFiles(models, "*.cs").Append(Path.Combine(directory.FullName, "mods", "SpireQoL", "Sim", "Programs", "ReadModel.cs"));
         }
         throw new DirectoryNotFoundException("mods/SpireQoL/Sim/Models not found above the test's folder");
     }
@@ -39,7 +46,7 @@ public class SimModelOwnerScanTests
     {
         var used = new HashSet<string>();
         var unreviewed = new List<string>();
-        foreach (var file in Directory.GetFiles(ModelsDir(), "*.cs"))
+        foreach (var file in ModelFiles())
         {
             var lines = File.ReadAllLines(file);
             for (var i = 0; i < lines.Length; i++)

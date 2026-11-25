@@ -3384,7 +3384,7 @@ public static class HookReader
         private SimResultLocation LocationOf(IReadOnlyList<(string Field, ProgramValue Value)> fields)
         {
             string? Named(string field, string enumType) =>
-                fields.FirstOrDefault(set => set.Field == field).Value is ConstantValue { Value: var number } ? EnumMembers(enumType).FirstOrDefault(member => member.Value == number).Name : null;
+                fields.FirstOrDefault(set => set.Field == field).Value is ConstantValue { Value: var number } ? (EnumMembers(_type.Assembly, enumType) ?? throw new Gap(ReaderCapability.ResultLocation, $"gap: no enum {enumType}")).FirstOrDefault(member => member.Value == number).Name : null;
             var pile = Named("pileType", "PileType") ?? throw new Gap(ReaderCapability.ResultLocation, "gap: a location whose pile the reader can't follow");
             var position = Named("position", "CardPilePosition");
             return (pile, position) switch
@@ -3398,18 +3398,13 @@ public static class HookReader
             };
         }
 
-        /// <summary>An enum of the game's, by name: its members' names and numbers (read from its fields' constants: the assembly may be read apart from the runtime).</summary>
-        private List<(string Name, long Value)> EnumMembers(string enumType) =>
-            (_type.Assembly.GetTypes().FirstOrDefault(type => type.IsEnum && type.Name == enumType) ?? throw new Gap(ReaderCapability.ResultLocation, $"gap: no enum {enumType}"))
-                .GetFields(BindingFlags.Public | BindingFlags.Static).Select(field => (field.Name, Convert.ToInt64(field.GetRawConstantValue(), System.Globalization.CultureInfo.InvariantCulture))).ToList();
-
         /// <summary>
         /// The pile a location so far is in (ModifyCardPlayResultLocation's location.pileType), as the game's PileType number: the simulator's
         /// location so far, each way its pile.
         /// </summary>
         private HookValue PileSoFar()
         {
-            var piles = EnumMembers("PileType");
+            var piles = EnumMembers(_type.Assembly, "PileType") ?? throw new Gap(ReaderCapability.ResultLocation, "gap: no enum PileType");
             decimal Number(string pile) => piles.FirstOrDefault(member => member.Name == pile) is { Name: not null } found ? found.Value : throw new Gap(ReaderCapability.ResultLocation, $"gap: no PileType.{pile}");
             HookWay Way(SimResultLocation location, string pile) =>
                 new(new HookMath(HookOperation.Equal, new HookFactValue(HookFact.ResultLocationSoFar), new HookConstant((int)location)), new HookConstant(Number(pile)));
@@ -3870,14 +3865,19 @@ public static class HookReader
         };
     }
 
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Assembly, string), Type?> Enums = new();
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Assembly, string), IReadOnlyList<(string Name, long Value)>?> Enums = new();
 
-    /// <summary>An enum member's name by its number, on this branch's types (main's numbers can differ).</summary>
-    private static string? EnumName(Assembly assembly, string enumType, long value)
-    {
-        var type = Enums.GetOrAdd((assembly, enumType), key => key.Item1.GetTypes()
-            .FirstOrDefault(candidate => candidate.IsEnum && candidate.Name == key.Item2 && candidate.Namespace?.StartsWith("MegaCrit", StringComparison.Ordinal) == true));
-        return type?.GetFields(BindingFlags.Public | BindingFlags.Static)
-            .FirstOrDefault(field => field.IsLiteral && Convert.ToInt64(field.GetRawConstantValue(), System.Globalization.CultureInfo.InvariantCulture) == value)?.Name;
-    }
+    /// <summary>
+    /// An enum of the game's on this branch's types, by name: its members' names and numbers, read from its fields' constants (the assembly may be
+    /// read apart from the runtime; main's numbers can differ), read once; null where it has none by that name.
+    /// </summary>
+    private static IReadOnlyList<(string Name, long Value)>? EnumMembers(Assembly assembly, string enumType) =>
+        Enums.GetOrAdd((assembly, enumType), key => key.Item1.GetTypes()
+            .FirstOrDefault(candidate => candidate.IsEnum && candidate.Name == key.Item2 && candidate.Namespace?.StartsWith("MegaCrit", StringComparison.Ordinal) == true)
+            ?.GetFields(BindingFlags.Public | BindingFlags.Static).Where(field => field.IsLiteral)
+            .Select(field => (field.Name, Convert.ToInt64(field.GetRawConstantValue(), System.Globalization.CultureInfo.InvariantCulture))).ToList());
+
+    /// <summary>An enum member's name by its number (EnumMembers'); null where the enum or the number isn't there.</summary>
+    private static string? EnumName(Assembly assembly, string enumType, long value) =>
+        EnumMembers(assembly, enumType)?.FirstOrDefault(member => member.Value == value).Name;
 }
