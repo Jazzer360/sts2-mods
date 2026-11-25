@@ -606,7 +606,7 @@ public static class SimModels
         IReadOnlyDictionary<string, ReadModel> Enchantments, IReadOnlyDictionary<string, LoadedRule> Rules);
 
     /// <summary>A power class's rules as the engine asks them (PowerRule), its scaling compiled once.</summary>
-    private sealed record LoadedRule(bool AllowNegative, Func<SimState, int, decimal>? Scaled, string? Unread);
+    private sealed record LoadedRule(bool AllowNegative, Func<SimState, int, decimal>? Scaled, string? Unread, bool Debuff, bool Counter);
 
     private static readonly Lazy<LoadedModels> Models = new(() => _reading?.GetAwaiter().GetResult() ?? Load(), LazyThreadSafetyMode.ExecutionAndPublication);
 
@@ -666,13 +666,25 @@ public static class SimModels
             var unreadRule = rule.Unread;
             try { if (rule.ScaledForPlayers is { } value) scaled = ReadModel.CompileScaling(rule.Name, value); }
             catch (InvalidOperationException exception) { unreadRule = $"{rule.Name}'s scaling for the players couldn't be compiled ({exception.Message})"; }
-            rules[rule.Name] = new LoadedRule(rule.AllowNegative, scaled, unreadRule);
+            rules[rule.Name] = new LoadedRule(rule.AllowNegative, scaled, unreadRule, rule.Debuff, rule.Counter);
         }
         return new LoadedModels(byName, unread, orbs, enchantments, rules);
     }
 
     /// <summary>The power can go below 0 (PowerModel.AllowNegative, read from its code: decision #234): ShouldRemoveDueToAmount takes it at exactly 0.</summary>
     public static bool AllowsNegative(PowerId power) => Models.Value.Rules.GetValueOrDefault(power.Name)?.AllowNegative == true;
+
+    /// <summary>
+    /// The power at <paramref name="amount"/> is a debuff (PowerModel.GetTypeForAmount, its Type, StackType and AllowNegative read from its code:
+    /// decision #293): a counter that can go below 0 is one below 0 (Strength -2); a debuff that can't is a buff below 0; any other is its Type.
+    /// </summary>
+    public static bool IsDebuffAt(PowerId power, int amount)
+    {
+        if (Models.Value.Rules.GetValueOrDefault(power.Name) is not { } rule) return false;
+        if (rule.Counter && rule.AllowNegative && amount < 0) return true;
+        if (!rule.AllowNegative && rule.Debuff && amount < 0) return false;
+        return rule.Debuff;
+    }
 
     /// <summary>
     /// A new <paramref name="power"/> on an enemy as PowerCmd.Apply lands it in a fight of more than one player: <paramref name="amount"/> scaled by its

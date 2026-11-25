@@ -1,6 +1,16 @@
 [
   {
+    "Name": "AeonglassDominionPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "AmnesiaPower",
+    "Debuff": true
+  },
+  {
     "Name": "ArtifactPower",
+    "Counter": true,
     "ScaledForPlayers": {
       "$kind": "HookMath",
       "Operation": "Subtract",
@@ -23,7 +33,37 @@
     }
   },
   {
+    "Name": "BiasedCognitionPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "BorrowedTimePower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "ChainsOfBindingPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "ConfusedPower",
+    "Debuff": true
+  },
+  {
+    "Name": "ConquerorPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "ConstrictPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
     "Name": "CurlUpPower",
+    "Counter": true,
     "ScaledForPlayers": {
       "$kind": "HookMath",
       "Operation": "Multiply",
@@ -46,11 +86,52 @@
     }
   },
   {
+    "Name": "DampenPower",
+    "Debuff": true
+  },
+  {
+    "Name": "DebilitatePower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "DemisePower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
     "Name": "DexterityPower",
+    "Counter": true,
     "AllowNegative": true
   },
   {
+    "Name": "DisintegrationPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "DislikeYouPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "DoomPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "EncorePower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "FlankingPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
     "Name": "FlutterPower",
+    "Counter": true,
     "ScaledForPlayers": {
       "$kind": "HookMath",
       "Operation": "Multiply",
@@ -74,10 +155,22 @@
   },
   {
     "Name": "FocusPower",
+    "Counter": true,
     "AllowNegative": true
   },
   {
+    "Name": "FrailPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "HangPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
     "Name": "HardenedShellPower",
+    "Counter": true,
     "ScaledForPlayers": {
       "$kind": "HookMath",
       "Operation": "Multiply",
@@ -100,7 +193,63 @@
     }
   },
   {
+    "Name": "HexPower",
+    "Debuff": true
+  },
+  {
+    "Name": "ImbalancedPower",
+    "Debuff": true
+  },
+  {
+    "Name": "InsatiableDominionPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "KnockdownPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "LagavulinMatriarchDominionPower",
+    "Debuff": true
+  },
+  {
+    "Name": "MagicBombPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "MindRotPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "NeurosurgePower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "NoBlockPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "NoDrawPower",
+    "Debuff": true
+  },
+  {
+    "Name": "NoEnergyGainPower",
+    "Debuff": true
+  },
+  {
+    "Name": "OblivionPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
     "Name": "PlatingPower",
+    "Counter": true,
     "ScaledForPlayers": {
       "$kind": "HookMath",
       "Operation": "Multiply",
@@ -140,6 +289,8 @@
   },
   {
     "Name": "PlowPower",
+    "Debuff": true,
+    "Counter": true,
     "ScaledForPlayers": {
       "$kind": "HookMath",
       "Operation": "Multiply",
@@ -162,7 +313,13 @@
     }
   },
   {
+    "Name": "PoisonPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
     "Name": "RampartPower",
+    "Counter": true,
     "ScaledForPlayers": {
       "$kind": "HookMath",
       "Operation": "Multiply",
@@ -209,6 +366,7 @@
   },
   {
     "Name": "RegenPower",
+    "Counter": true,
     "ScaledForPlayers": {
       "$kind": "HookMath",
       "Operation": "Multiply",
@@ -231,7 +389,13 @@
     }
   },
   {
+    "Name": "RingingPower",
+    "Debuff": true
+  },
+  {
     "Name": "ShriekPower",
+    "Debuff": true,
+    "Counter": true,
     "AllowNegative": true,
     "ScaledForPlayers": {
       "$kind": "HookMath",
@@ -256,10 +420,17 @@
   },
   {
     "Name": "ShrinkPower",
+    "Debuff": true,
     "AllowNegative": true
   },
   {
+    "Name": "SicEmPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
     "Name": "SkittishPower",
+    "Counter": true,
     "ScaledForPlayers": {
       "$kind": "HookMath",
       "Operation": "Multiply",
@@ -299,6 +470,7 @@
   },
   {
     "Name": "SlipperyPower",
+    "Counter": true,
     "ScaledForPlayers": {
       "$kind": "HookMath",
       "Operation": "Multiply",
@@ -313,7 +485,79 @@
     }
   },
   {
+    "Name": "SlothPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "SlowPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "SmoggyPower",
+    "Debuff": true
+  },
+  {
+    "Name": "StranglePower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
     "Name": "StrengthPower",
+    "Counter": true,
     "AllowNegative": true
+  },
+  {
+    "Name": "SurroundedPower",
+    "Debuff": true
+  },
+  {
+    "Name": "TagTeamPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "TaintedPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "TangledPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "TenderPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "TheGambitPower",
+    "Debuff": true
+  },
+  {
+    "Name": "VulnerablePower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "WasteAwayPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "WeakPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "WraithFormPower",
+    "Debuff": true,
+    "Counter": true
+  },
+  {
+    "Name": "YouAreMinePower",
+    "Debuff": true
   }
 ]

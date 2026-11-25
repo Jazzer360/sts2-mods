@@ -868,6 +868,42 @@ public static partial class SimEngine
         return states;
     }
 
+    /// <summary>Where a play keeps a debuff it took from its target (SimState.PlayTests: the power's name after it, its amount).</summary>
+    private const string KeptDebuffKey = "kept debuff:";
+
+    /// <summary>
+    /// KeepTargetDebuffsAction: each power on the play's target whose amount is a debuff (SimModels.IsDebuffAt: Misery's TypeForCurrentAmount
+    /// test), in the target's order, with its amount, kept for the play. None with no enemy targeted.
+    /// </summary>
+    private static void KeepTargetDebuffs(SimState state)
+    {
+        if (state.CurrentPlay?.Target is not { } target || !Who.IsEnemy(target) || state.Enemy(target) is null) return;
+        foreach (var entry in PowersOf(state, target).Items)
+            if (entry.Amount != 0 && SimModels.IsDebuffAt(entry.Name, entry.Amount))
+                state.PlayTests = state.PlayTests.With(KeptDebuffKey + entry.Name.Name, entry.Amount);
+    }
+
+    /// <summary>
+    /// SpreadKeptDebuffsAction: the debuffs the play kept onto every hittable enemy but its target (CombatState.HittableEnemies as the loop starts),
+    /// enemy by enemy, each power in turn, applied by the play's owner as PowerCmd applies it (ApplyPower: the amount hooks, Artifact taking a
+    /// debuff, AfterPowerApplied for one that landed).
+    /// </summary>
+    private static IEnumerable<SimState> SpreadKeptDebuffs(SimState branch)
+    {
+        var kept = branch.PlayTests.Items.Where(entry => entry.Name.StartsWith(KeptDebuffKey, StringComparison.Ordinal))
+            .Select(entry => (Power: new PowerId(entry.Name[KeptDebuffKey.Length..]), entry.Amount)).ToList();
+        if (kept.Count == 0) return new[] { branch };
+        var applier = branch.CurrentPlay?.Owner ?? Who.You;
+        var target = branch.CurrentPlay?.Target;
+        IEnumerable<SimState> states = new[] { branch };
+        foreach (var enemy in branch.Targetable.Select(enemy => enemy.Id).Where(id => id != target).ToList())
+            foreach (var (power, amount) in kept)
+                states = Then(states, copy => ApplyPower(copy, applier, enemy, power, amount, debuff: true, out var landed)
+                    ? Hook(copy, nameof(SimModel.AfterPowerApplied), (model, owner, state) => model.AfterPowerApplied(state, owner, power, landed, applier, enemy, true))
+                    : new[] { copy });
+        return states;
+    }
+
     /// <summary>A card play's card events on one branch (CardEvents), for a read enchantment's draws and energy (ReadModel: its card's).</summary>
     internal static IEnumerable<SimState> CardEventsOf(SimState state, CardEventAction cardEventAction) => CardEvents(state, cardEventAction);
 

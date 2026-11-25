@@ -216,6 +216,20 @@ public sealed record UnreadAction(string Member) : SimAction;
 public sealed record NotModelledAction(string Reason) : SimAction;
 
 /// <summary>
+/// The play's target's debuffs as the card's code takes them where it runs (Misery, decision #293: each power on the target whose amount is a
+/// debuff, PowerModel.TypeForCurrentAmount, with its amount, before its attack), kept for the rest of the play (SimState.PlayTests) for
+/// <see cref="SpreadKeptDebuffsAction"/>.
+/// </summary>
+public sealed record KeepTargetDebuffsAction : SimAction;
+
+/// <summary>
+/// The debuffs <see cref="KeepTargetDebuffsAction"/> kept, onto every hittable enemy but the play's target, enemy by enemy, each in the order the
+/// target had them (Misery's loops: PowerCmd.ModifyAmount of the one already there, else PowerCmd.Apply of a clone: both through the amount
+/// hooks and Artifact), applied by the play's owner.
+/// </summary>
+public sealed record SpreadKeptDebuffsAction : SimAction;
+
+/// <summary>
 /// Cards of the playing player's leaving their hand mid-play: the ones it discards and exhausts from there (its takes: TakeFromHandAction),
 /// right after they go. Count: how many (Whole: every card in the hand now, whatever they were).
 /// </summary>

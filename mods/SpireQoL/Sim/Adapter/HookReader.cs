@@ -296,12 +296,14 @@ public static class HookReader
         var reader = new Translation(type, ModelKind.Power, read);
         try
         {
+            var (debuff, counter) = reader.Kind();
             var (allowNegative, scaled) = reader.Rule();
-            return new PowerRule(type.Name) { AllowNegative = allowNegative, ScaledForPlayers = scaled };
+            return new PowerRule(type.Name) { Debuff = debuff, Counter = counter, AllowNegative = allowNegative, ScaledForPlayers = scaled };
         }
         catch (Exception exception) when (exception is Gap or InvalidOperationException or NotSupportedException)
         {
-            return new PowerRule(type.Name) { Unread = $"{type.Name}'s scaling for the players couldn't be read from the game's code (a game update?): {exception.Message}" };
+            var (unreadDebuff, unreadCounter) = reader.Kind();
+            return new PowerRule(type.Name) { Debuff = unreadDebuff, Counter = unreadCounter, Unread = $"{type.Name}'s scaling for the players couldn't be read from the game's code (a game update?): {exception.Message}" };
         }
     }
 
@@ -2293,6 +2295,11 @@ public static class HookReader
             if (negative && Returned(powerType, "get_AllowNegative") is ConstantValue { Value: 1 }) return true;
             return Returned(powerType, "get_Type") is ConstantValue type && EnumName(powerType.Assembly, "PowerType", type.Value) == "Debuff";
         }
+
+        /// <summary>The class's Type is PowerType.Debuff, and its StackType PowerStackType.Counter, read from their getters (its own or PowerModel's).</summary>
+        public (bool Debuff, bool Counter) Kind() =>
+            (Returned(_type, "get_Type") is ConstantValue type && EnumName(_type.Assembly, "PowerType", type.Value) == "Debuff",
+             Returned(_type, "get_StackType") is ConstantValue stack && EnumName(_type.Assembly, "PowerStackType", stack.Value) == "Counter");
 
         /// <summary>
         /// The class's own PowerCmd rules (PowerRule): its AllowNegative, and its GetScaledAmountForMultiplayer's returned value (its own or

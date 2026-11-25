@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 157 game methods; 3 adapter rules; 32 hand-written models.
+# 21 engine rules naming 158 game methods; 3 adapter rules; 32 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -25,6 +25,9 @@ Block: the block math, its hooks, a power's or relic's block, block lost
 A power lands: the amount given, Artifact, the players' scaling of a new one on an enemy (its class's own scaling read from its code: decision #234), its instances and copies, the listeners told; a power changed, decremented or removed, gone at the amount its class's AllowNegative says, its AfterRemoved told as it goes
   game: PowerCmd.Apply, PowerCmd.ModifyAmount, PowerModel.ShouldRemoveDueToAmount, PowerModel.ApplyInternal, PowerCmd.FindExistingInstanceForStacking, PowerCmd.Decrement, PowerCmd.Remove, PowerModel.AfterRemoved, PowerCmd.TickDownDuration, Hook.ModifyPowerAmountGiven, Hook.AfterModifyingPowerAmountGiven, Hook.BeforePowerAmountChanged, Hook.AfterPowerAmountChanged, Creature.ApplyPowerInternal, Creature.CanReceivePowers, Hook.ShouldAllowHitting
   simulator: SimEngine.ApplyPower, SimEngine.AmountGiven, SimEngine.ApplyAndTell, SimEngine.ApplyInHit, SimEngine.Tell, SimEngine.RunApplyPower, SimEngine.ApplyPowerOf, SimEngine.AmountOf, SimEngine.MovePowers, SimEngine.DecrementPower, SimEngine.RemovePower, SimEngine.TellRemoved, SimEngine.CanReceivePowers
+A play's spread of its target's debuffs onto the other enemies (its loops read from the card's code, decision #293): each power whose amount is a debuff (its class's Type, StackType and AllowNegative read from its code), taken where the code takes them, onto every other hittable enemy as PowerCmd applies it
+  game: PowerModel.GetTypeForAmount
+  simulator: SimEngine.KeepTargetDebuffs, SimEngine.SpreadKeptDebuffs
 Draws: a full hand, No Draw, the discard pile shuffled in (a card its enchantment puts on top, read from its code), the drawn card's reactions
   game: CardPileCmd.Draw, CardPileCmd.DrawInternal, CardPileCmd.Shuffle, CardPileCmd.ShuffleIfNecessary, Hook.ShouldDraw, Hook.AfterPreventingDraw, Hook.AfterCardDrawn, Hook.ModifyShuffleOrder, Hook.AfterShuffle
   simulator: SimEngine.DrawCards, SimEngine.DrawOne, SimEngine.DrawsStopped, SimEngine.DrawPrevented, SimEngine.Drawn, SimEngine.DrawReactions, SimEngine.DrawsFromPile, SimEngine.RoomIn, SimEngine.JoinHand, SimEngine.RunDrawnCard, SimDrawPile.Shuffled, SimDrawPile.ShuffledWithDiscard

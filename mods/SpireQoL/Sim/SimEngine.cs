@@ -1169,6 +1169,8 @@ public static partial class SimEngine
             case LeaveHandAction leaveHandAction: branches.Do(branch => RunLeaveHand(branch, leaveHandAction)); break;
             case TakeFromHandAction takeFromHandAction: RunTakeFromHand(branches, takeFromHandAction); break;
             case NotModelledAction notModelledAction: branches.Do(branch => branch.Unmodelled ??= notModelledAction.Reason); break;
+            case KeepTargetDebuffsAction: branches.Do(KeepTargetDebuffs); break;
+            case SpreadKeptDebuffsAction: branches.Each(SpreadKeptDebuffs); break;
             case UnreadAction unreadAction: branches.Do(branch => branch.Unmodelled ??= SimState.Unread(unreadAction.Member)); break;
             case GainEnergyAsHeldAction:
                 branches.Each(branch => (branch.CurrentPlay?.Owner ?? Who.You) is var playOwner && branch.Player(playOwner) is { Energy: > 0 } player

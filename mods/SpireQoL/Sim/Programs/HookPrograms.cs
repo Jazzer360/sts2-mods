@@ -1186,10 +1186,19 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
 /// What PowerCmd does with a power class's amounts, read from its code for every power class (decision #234), whatever models it: whether it can go
 /// below 0 (PowerModel.AllowNegative: ShouldRemoveDueToAmount takes it at 0, else at 0 or less), and its amount as PowerCmd.Apply scales a new one
 /// on an enemy for the players (GetScaledAmountForMultiplayer, when its ShouldScaleInMultiplayer is true). Pure data: the same in the game and in
-/// the tests (ReadModels/power-rules.json). Only a class that differs from PowerModel's own is listed: one not listed can't go below 0 and isn't scaled.
+/// the tests (ReadModels/power-rules.json). Its type and stack type say what its amount is (PowerModel.GetTypeForAmount: a debuff or not).
+/// Only a class that differs from PowerModel's own is listed: one not listed can't go below 0, isn't scaled and isn't a debuff.
 /// </summary>
 public sealed record PowerRule(string Name)
 {
+    /// <summary>Its Type is PowerType.Debuff (Vulnerable, Poison, Weak).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Debuff { get; init; }
+
+    /// <summary>Its StackType is PowerStackType.Counter: with AllowNegative, an amount below 0 is a debuff (GetTypeForAmount).</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool Counter { get; init; }
+
     /// <summary>It can go below 0 (Strength, Dexterity, Focus): gone at exactly 0.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool AllowNegative { get; init; }

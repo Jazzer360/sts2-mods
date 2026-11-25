@@ -2392,12 +2392,12 @@ Mirage [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 [Exhausted1]
 Mirage [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Exhausted1]
 Mirage [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted1]
 Mirage [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 [Exhausted1]
-Misery [Standard] 1 you=80/0 e3 h3 d6/3 enemy0=193/0 [] ?PowerCmd.ModifyAmount: a power's amount changed in place: not followed
-Misery [Upgraded] 1 you=80/0 e3 h3 d6/3 enemy0=191/0 [] ?PowerCmd.ModifyAmount: a power's amount changed in place: not followed
-Misery [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=193/0 enemy1=30/0 [] ?PowerCmd.ModifyAmount: a power's amount changed in place: not followed
-Misery [Replayed] 1 you=80/0 e3 h3 d6/3 enemy0=186/0 [] ?PowerCmd.ModifyAmount: a power's amount changed in place: not followed
-Misery [Teammate] 1 you=80/0 e3 h3 d6/3 mate0=70/0 e3 h2 enemy0=193/0 [] ?PowerCmd.ModifyAmount: a power's amount changed in place: not followed
-Misery [Alone] 1 you=80/0 e3 h0 d6/3 enemy0=193/0 [] ?PowerCmd.ModifyAmount: a power's amount changed in place: not followed
+Misery [Standard] 1 you=80/0 e3 h3 d6/3 enemy0=193/0 []
+Misery [Upgraded] 1 you=80/0 e3 h3 d6/3 enemy0=191/0 []
+Misery [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=193/0 enemy1=30/0 []
+Misery [Replayed] 1 you=80/0 e3 h3 d6/3 enemy0=186/0 []
+Misery [Teammate] 1 you=80/0 e3 h3 d6/3 mate0=70/0 e3 h2 enemy0=193/0 []
+Misery [Alone] 1 you=80/0 e3 h0 d6/3 enemy0=193/0 []
 Modded [Standard] 1 you=80/0 e3 h4 d5/3 enemy0=200/0 [Drawn1]
 Modded [Upgraded] 1 you=80/0 e3 h5 d4/3 enemy0=200/0 [Drawn2]
 Modded [Crowded] 1 you=80/0 e3 h10 d2/0 enemy0=200/0 enemy1=30/0 [Drawn1 Shuffled1]

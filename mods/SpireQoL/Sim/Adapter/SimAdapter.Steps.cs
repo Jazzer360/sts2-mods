@@ -130,6 +130,8 @@ public static partial class SimAdapter
         public Dictionary<CommandStep, List<SimAction>> Takes { get; set; } = new(ReferenceEqualityComparer.Instance);
         /// <summary>The tests the code stores before its first command: asked at the play's start (AskAction).</summary>
         public List<SimCondition> Asks { get; } = new();
+        /// <summary>A spread of the target's debuffs onto the other enemies its code makes (Misery), or null.</summary>
+        public DebuffSpread? Spread { get; set; }
         public Type Type => Card.GetType();
         public string Name => Card.GetType().Name;
     }
@@ -140,6 +142,11 @@ public static partial class SimAdapter
         var body = new List<SimAction>();
         Walk(play.Program.Steps, play, body, inner: false);
         var first = play.Asks.Where(condition => condition.At != null).DistinctBy(condition => condition.At).Select(condition => (SimAction)new AskAction(condition));
+        // The target's debuffs a spread takes, where its code takes them: before its first command (Misery's, before its attack).
+        if (play.Spread is { } spread)
+            first = first.Append(play.Program.Commands.All(command => command.Offset > spread.TakenAt)
+                ? new KeepTargetDebuffsAction()
+                : new NotModelledAction($"{play.Name} takes its target's debuffs after its first command"));
         return first.Concat(body).ToList();
     }
 
@@ -153,6 +160,10 @@ public static partial class SimAdapter
         foreach (var step in steps)
             switch (step)
             {
+                // A spread of the target's debuffs (Misery's loops): one action, with what it can't follow on this board.
+                case LoopStep loop when play.Spread is { } spread && ReferenceEquals(loop, spread.Over):
+                    into.AddRange(SpreadFrom(play));
+                    break;
                 case LoopStep loop:
                     Walk(loop.Body, play, into, inner);
                     break;
@@ -317,6 +328,7 @@ public static partial class SimAdapter
             if (command.Command is { DeclaringType: "PowerCmd", Name: "Apply", GenericArguments: [nameof(StretchPower)] } && command.Values.Count > 2 && ReadsResults(command.Values[2]))
                 stepPlay.Consumed.Add(command);
         stepPlay.Takes = TakesOf(card, stepPlay);
+        stepPlay.Spread = DebuffSpreadOf(program);
         return stepPlay;
     }
 
@@ -723,6 +735,66 @@ public static partial class SimAdapter
             TargetsAmountOf = amountOf != null && !(toEnemies && amountOf == powerName) ? PowerId.Of(amountOf) : null,
         };
     }
+    /// <summary>
+    /// A spread of the play's target's debuffs onto the other enemies, as the card's code makes it (Misery, decision #293): a loop over the
+    /// enemies you can hit (<paramref name="Over"/>) around a loop over a collection taken from the target's powers whose amount is a debuff
+    /// (TypeForCurrentAmount == Debuff) at <paramref name="TakenAt"/>, whose every command applies one of them (PowerCmd.Apply of a clone, not
+    /// generic, or PowerCmd.ModifyAmount of the one already there).
+    /// </summary>
+    internal sealed record DebuffSpread(LoopStep Over, int TakenAt);
+
+    /// <summary>The program's spread of its target's debuffs (<see cref="DebuffSpread"/>), or null.</summary>
+    internal static DebuffSpread? DebuffSpreadOf(ModelProgram program)
+    {
+        foreach (var over in program.All().OfType<LoopStep>())
+        {
+            if (!IsEveryEnemy(over.Items)) continue;
+            foreach (var each in over.Body.OfType<LoopStep>())
+            {
+                if (each.Items is not { } items || !TakesTargetDebuffs(items)) continue;
+                var commands = new ModelProgram("", each.Body).Commands.ToList();
+                if (commands.Count == 0 || !commands.All(command => IsCloneApplied(command) || command.Command is { DeclaringType: "PowerCmd", Name: "ModifyAmount" })
+                    || !commands.Any(IsCloneApplied)) continue;
+                return new DebuffSpread(over, items is StoredValue stored ? stored.Offset : int.MaxValue);
+            }
+        }
+        return null;
+    }
+
+    /// <summary>The collection is taken from the target's powers, those whose amount is a debuff (Where(cardPlay.Target.Powers, p => p.TypeForCurrentAmount == Debuff)).</summary>
+    private static bool TakesTargetDebuffs(ProgramValue items) =>
+        items.Parts().Any(part => part is QueryValue { Name: "Powers" } powers && IsTarget(powers.Of))
+        && items.Parts().Any(part => part is CompareValue { Op: Comparison.Equal, Left: QueryValue { Name: "TypeForCurrentAmount" }, Right: ConstantValue { Value: var type } }
+                                     && type == (long)MegaCrit.Sts2.Core.Entities.Powers.PowerType.Debuff);
+
+    /// <summary>PowerCmd.Apply, not generic, of a clone of the loop's item (each.Key.ClonePreservingMutability()), its amount the item's.</summary>
+    private static bool IsCloneApplied(CommandStep command) =>
+        command.Command is { DeclaringType: "PowerCmd", Name: "Apply", GenericArguments.Count: 0 }
+        && ValueAt(command, 1) is { } power && power.Parts().Any(part => part is QueryValue { Name: "ClonePreservingMutability" }) && IsEach(power);
+
+    /// <summary>
+    /// The spread's actions: the kept debuffs onto every other enemy you can hit (SpreadKeptDebuffsAction), and an unknown for a debuff on the
+    /// target the simulator can't spread as the game does: a temporary one (ITemporaryPower: its amount is added to the power it applies before
+    /// the spread), one instanced (its stacking finds no one already there), or one another applied (the spread's applier is the debuff's own).
+    /// </summary>
+    private static List<SimAction> SpreadFrom(StepPlay play)
+    {
+        var actions = new List<SimAction>();
+        foreach (var power in play.Aimed?.Powers ?? Enumerable.Empty<PowerModel>())
+        {
+            if (power.TypeForCurrentAmount != MegaCrit.Sts2.Core.Entities.Powers.PowerType.Debuff) continue;
+            var why = power is ITemporaryPower ? "a temporary debuff, added to the power it applies"
+                : power.InstanceType != MegaCrit.Sts2.Core.Entities.Powers.PowerInstanceType.None ? "an instanced debuff"
+                : play.Owner != Who.You || !ReferenceEquals(power.Applier, play.Me.Creature) ? "a debuff another applied, spread as theirs"
+                : null;
+            if (why == null) continue;
+            actions.Add(new NotModelledAction($"{play.Name} spreads {why} ({power.GetType().Name})"));
+            break;
+        }
+        actions.Add(new SpreadKeptDebuffsAction());
+        return actions;
+    }
+
     /// <summary>The power type a step names, among the ones the card's code applies.</summary>
     private static Type? PowerType(Type cardType, string name) =>
         Diagnostics.CardCoverage.PowersApplied(cardType).FirstOrDefault(type => type.Name == name)

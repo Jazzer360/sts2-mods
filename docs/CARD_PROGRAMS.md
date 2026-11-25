@@ -177,6 +177,7 @@ Commands, by how many beta cards call them:
 | `CardCmd.Exhaust`, `Discard`, `DiscardAndDraw` | 28 | `LeaveHandAction` + card events |
 | `CreatureCmd.Damage`, `Kill`, `LoseHp` (self) | 14+ | `DamageAction`, `ExecuteAction`, `LoseHpAction` |
 | `ForgeCmd`, `OstyCmd`, `PlayerCmd.GainStars`, `CardCmd.AutoPlay`, `Transform` | 40 | their actions today |
+| a loop over `HittableEnemies` around a loop over the target's powers whose `TypeForCurrentAmount == Debuff`, applying each one's clone (`PowerCmd.Apply`, not generic) or `ModifyAmount` of the one there | 1 (Misery) | `KeepTargetDebuffsAction` where the collection is taken, `SpreadKeptDebuffsAction` where the loops run (decision #293) |
 
 Each translation is written once, and every card, enchantment and potion that calls the command goes through it. Relics' and
 powers' models already call the same engine functions for the same commands (`SimEngine.ApplyPower`, the block and damage
