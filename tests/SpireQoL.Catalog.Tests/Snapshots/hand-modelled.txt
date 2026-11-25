@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 156 game methods; 3 adapter rules; 44 hand-written models.
+# 20 engine rules naming 156 game methods; 3 adapter rules; 43 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -85,8 +85,6 @@ BurrowedPower: BurrowedPower.AfterBlockBroken, BurrowedPower.AfterRemoved, Burro
   model: AfterBlockBroken, OutcomeTab
 ChemicalX: ChemicalX.BeforeCardPlayed, ChemicalX.ModifyXValue
   model: BeforeCardPlayed
-CompostPower: CompostPower.AfterDeath (beta only)
-  model: AfterDeath, OutcomeTab
 ConsumingShadowPower: ConsumingShadowPower.AfterSideTurnEnd
   model: AfterSideTurnEnd
 CorruptionPower: CorruptionPower.AfterModifyingCardPlayResultLocation, CorruptionPower.ModifyCardPlayResultLocation, CorruptionPower.TryModifyEnergyCostInCombatLate

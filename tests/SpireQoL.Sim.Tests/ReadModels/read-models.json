@@ -4578,6 +4578,118 @@
     "HelpsOwner": false
   },
   {
+    "Name": "CompostPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDeath",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterDeath\u003Ed__8.MoveNext:0027",
+              "Test": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookFactValue",
+                  "Fact": "SameSide",
+                  "Creature": {
+                    "Who": "Dead",
+                    "PetOwner": false
+                  },
+                  "Other": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ForEachStep",
+            "Over": "Teammates",
+            "Steps": [
+              {
+                "$kind": "GainEnergyStep",
+                "Amount": {
+                  "$kind": "HookFactValue",
+                  "Fact": "Amount"
+                },
+                "To": "Each"
+              }
+            ],
+            "Where": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003C\u003Ec.\u003CAfterDeath\u003Eb__8_0:0001",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CreatureThere",
+                    "Creature": {
+                      "Who": "Each",
+                      "PetOwner": false
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003C\u003Ec.\u003CAfterDeath\u003Eb__8_0:0009",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CreatureAlive",
+                    "Creature": {
+                      "Who": "Each",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003C\u003Ec.\u003CAfterDeath\u003Eb__8_0:0011",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreatureIsPlayer",
+                  "Creature": {
+                    "Who": "Each",
+                    "PetOwner": false
+                  }
+                }
+              }
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterDeath\u003Ed__8.MoveNext:0027",
+              "Test": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookFactValue",
+                  "Fact": "SameSide",
+                  "Creature": {
+                    "Who": "Dead",
+                    "PetOwner": false
+                  },
+                  "Other": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "KillsOne"
+  },
+  {
     "Name": "ConcoctPower",
     "Kind": "Power",
     "Hooks": [

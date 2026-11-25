@@ -592,7 +592,12 @@ public sealed record HealStep(HookValue Amount) : HookStep;
 public sealed record DrawStep(HookValue Count) : HookStep;
 
 /// <summary>PlayerCmd.GainEnergy for the owner.</summary>
-public sealed record GainEnergyStep(HookValue Amount) : HookStep;
+public sealed record GainEnergyStep(HookValue Amount) : HookStep
+{
+    /// <summary>Who gains it, when it isn't the owner (a loop's player: Compost's energy for each living player on its side). Null: the owner.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public HookTarget? To { get; init; }
+}
 
 /// <summary>
 /// PlayerCmd.GainStars for the owner: one stars-gained event (the game's one AfterStarsGained), as a card's GainStars is (SimAdapter.Steps); the

@@ -2388,3 +2388,19 @@ public sealed class StockPower : SimModel
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
         Who.IsEnemy(owner) && SimEngine.PowerOn(start, owner, ThisPower) > 0 ? OutcomeRules.KillsIt(owner) : null;
 }
+
+// ---- round twenty-four: a command on another creature (Sim/Models/OutcomeModels.cs), deleted 2026-11-25
+
+/// <summary>CompostPower.AfterDeath (yours or a teammate's): its amount of energy for every living player on your side when an enemy dies.</summary>
+public sealed class CompostPower : SimModel
+{
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => Who.IsPlayer(owner) ? OutcomeRules.KillsOne : null;
+    public override void AfterDeath(SimState state, int owner, int dead)
+    {
+        if (!Who.IsPlayer(owner) || !Who.IsEnemy(dead)) return;
+        var amount = SimEngine.PowerOn(state, owner, ThisPower);
+        if (amount <= 0) return;
+        state.LogFired(Name, amount, owner);
+        foreach (var player in state.PlayerIds.Where(id => state.Player(id) is { Died: false }).ToList()) SimEngine.Raise(state, CardEvent.EnergyGained, player, amount, Name);
+    }
+}

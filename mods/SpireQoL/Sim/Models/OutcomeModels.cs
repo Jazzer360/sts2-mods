@@ -67,19 +67,7 @@ public sealed class HandDrill : SimModel
     }
 }
 
-/// <summary>CompostPower.AfterDeath (yours or a teammate's): its amount of energy for every living player on your side when an enemy dies.</summary>
-public sealed class CompostPower : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => Who.IsPlayer(owner) ? OutcomeRules.KillsOne : null;
-    public override void AfterDeath(SimState state, int owner, int dead)
-    {
-        if (!Who.IsPlayer(owner) || !Who.IsEnemy(dead)) return;
-        var amount = SimEngine.PowerOn(state, owner, ThisPower);
-        if (amount <= 0) return;
-        state.LogFired(Name, amount, owner);
-        foreach (var player in state.PlayerIds.Where(id => state.Player(id) is { Died: false }).ToList()) SimEngine.Raise(state, CardEvent.EnergyGained, player, amount, Name);
-    }
-}
+// Compost is read from its code (ReadModel, decision #277).
 
 // Rupture is read from its code (ReadModel, decision #243).
 

@@ -1972,6 +1972,8 @@ public static class HookReader
                     return new KillStep(Forced: forceAt >= 0 && values[forceAt] is ConstantValue { Value: not 0 });
                 }
                 case "PlayerCmd.GainEnergy":
+                    // Energy for a loop's player (item.Player over the owner's living players: Compost's), each in turn.
+                    if (CreatureOf(values[1]) is { Who: HookWho.Each, PetOwner: false }) return new GainEnergyStep(Value(values[0])) { To = HookTarget.Each };
                     if (!IsOwner(values[1])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, "gap: energy for someone else");
                     return new GainEnergyStep(Value(values[0]));
                 case "PlayerCmd.GainStars":

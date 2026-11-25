@@ -38,6 +38,7 @@ public static partial class ReadModels
         PowerId.ChildOfTheStars.Name,
         RelicId.CloakClasp.Name,
         PowerId.Colossus.Name,
+        PowerId.Compost.Name,
         PowerId.Concoct.Name,
         RelicId.ConductorsBaton.Name,
         PowerId.ConductorsBaton.Name,

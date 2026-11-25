@@ -115,6 +115,14 @@ public sealed class ReadModel : SimModel
     /// </summary>
     private readonly Dictionary<HookName, (Evaluate Condition, Evaluate Amount)[]> _paidWhere = new();
 
+    /// <summary>
+    /// Its AfterDeath gives each player on its owner's side (a loop over them, a command to each: Compost's energy), not its owner alone: a teammate's
+    /// reward is yours too.
+    /// </summary>
+    private bool RewardsItsSide => Spec.Of(HookName.AfterDeath) is { } death
+        && new ModelSpec(Name, Spec.Kind, new[] { death }).Steps().OfType<ForEachStep>().Any(each => each.Over is HookItems.Teammates or HookItems.Players
+            && each.Steps.Any(step => step is GainEnergyStep { To: HookTarget.Each } or GainBlockStep { To: HookTarget.Each }));
+
     /// <summary>The fields its payouts a play decides read: a play hook's store to one can give the bonus up.</summary>
     private readonly HashSet<string> _payoutFields = new(StringComparer.Ordinal);
 
@@ -686,7 +694,8 @@ public sealed class ReadModel : SimModel
     {
         HookOutcome.KillsIt => Who.IsEnemy(owner) ? Models.OutcomeRules.KillsIt(owner) : null,
         HookOutcome.KillsAnother => Who.IsEnemy(owner) ? Models.OutcomeRules.KillsAnother(owner) : null,
-        HookOutcome.KillsOne => owner == Who.You ? Models.OutcomeRules.KillsOne : null,
+        // Yours; or any player's whose death code gives each player on its side (Compost's energy for each living player): yours too.
+        HookOutcome.KillsOne => owner == Who.You || Who.IsPlayer(owner) && RewardsItsSide ? Models.OutcomeRules.KillsOne : null,
         HookOutcome.ReactsToHpLoss => ReactsToHpLoss(now, owner),
         HookOutcome.Stuns => Models.OutcomeRules.Stuns(now, owner),
         // Its own hit's: stunned when the turn's over, set off after the play (in its turn), so the play check isn't held to it.
@@ -1441,7 +1450,8 @@ public sealed class ReadModel : SimModel
             case GainEnergyStep energy:
             {
                 var amount = Compile(energy.Amount);
-                return args => Cause(args, CardEvent.EnergyGained, (int)amount(in args), fires);
+                var toEach = energy.To == HookTarget.Each;
+                return args => Cause(args, CardEvent.EnergyGained, (int)amount(in args), fires, toEach ? args.Each : args.Owner);
             }
             case FlashStep flash:
             {
@@ -1853,21 +1863,30 @@ public sealed class ReadModel : SimModel
     /// <summary>Its own key among what's bound, whatever card play: "Model@owner" (or the copy's).</summary>
     private string BoundOwnerKey(in HookArgs args) => args.Copy > 0 ? SimKeys.Owned(CopyKey(args.Copy), args.Owner) : SimKeys.Owned(Name, args.Owner);
 
-    /// <summary>Card events it causes (draws, energy), each through every listener; a draw or energy tab counts what they gave (decision #132).</summary>
-    private IEnumerable<SimState> Cause(HookArgs args, CardEvent cardEvent, int count, bool fires)
+    /// <summary>
+    /// Card events it causes (draws, energy), each through every listener; a draw or energy tab counts what they gave (decision #132), under its owner.
+    /// <paramref name="player"/>: whose they are (a loop's player: Compost's energy for each), its owner by default.
+    /// </summary>
+    private IEnumerable<SimState> Cause(HookArgs args, CardEvent cardEvent, int count, bool fires, int? player = null)
     {
         // None to draw or gain (Dark Embrace's amount × an Ethereal count of 0 as the turn ends): CardPileCmd.Draw and PlayerCmd.GainEnergy do nothing.
         if (count <= 0) return One(args.State);
         if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+        var whose = player ?? args.Owner;
+        if (player != null && !Who.IsPlayer(whose))
+        {
+            args.State.Unmodelled ??= $"{Name} gives a card event to a creature that isn't a player";
+            return One(args.State);
+        }
         // A death's or a hit's (AfterDamageReceived: Centennial Puzzle's draws): queued until the hit or action is over (SimEngine.Raise), as
         // the simulator can't branch inside a hit; a draw or energy tab
         // counts them as they come.
         if (InHit(args.Hook))
         {
-            SimEngine.Raise(args.State, cardEvent, args.Owner, count, source: SimEngine.TallyFor(Name, Tab, cardEvent, args.Owner) != null ? Name : null);
+            SimEngine.Raise(args.State, cardEvent, whose, count, source: SimEngine.TallyFor(Name, Tab, cardEvent, args.Owner) != null ? Name : null);
             return One(args.State);
         }
-        return SimEngine.ProcCardEvent(args.State, cardEvent, count, args.Owner, onEach: SimEngine.TallyFor(Name, Tab, cardEvent, args.Owner));
+        return SimEngine.ProcCardEvent(args.State, cardEvent, count, whose, onEach: SimEngine.TallyFor(Name, Tab, cardEvent, args.Owner));
     }
 
     // ---- values
