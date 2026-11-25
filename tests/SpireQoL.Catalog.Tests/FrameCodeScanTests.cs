@@ -126,6 +126,26 @@ public class FrameCodeScanTests
     }
 
     [Fact]
+    public void TheWidgetsPlacementBoxesNothing()
+    {
+        // Every widget is placed every frame (MovableWidget.UpdateLayout), beside what its attach targets read off the screen: each method of
+        // the mod giving a screen rect. A value boxed there is garbage on every frame (a dev review: the HP bar's combat id, compared as an
+        // object, made 24 bytes on every frame of every fight).
+        var methods = new List<MethodBase> { Method(typeof(MovableWidget), nameof(MovableWidget.UpdateLayout)), Method(typeof(MovableWidget), "Placement") };
+        methods.AddRange(Mod.GetTypes().SelectMany(type => type.GetMethods(All))
+            .Where(method => method.ReturnType == typeof(Godot.Rect2) || method.ReturnType == typeof(Godot.Rect2?)));
+        var found = new List<string>();
+        foreach (var method in methods)
+            foreach (var instruction in Code(method) ?? new())
+                if (instruction.opcode == OpCodes.Box)
+                {
+                    found.Add($"{NameOf(method)} (boxes {(instruction.operand as Type)?.Name})");
+                    break;
+                }
+        Assert.True(found.Count == 0, "A value boxed while widgets are placed, every frame (compare it as its own type): " + string.Join(", ", found));
+    }
+
+    [Fact]
     public void NoGodotNameIsMadeFromAStringOnEveryCall()
     {
         var found = new List<string>();

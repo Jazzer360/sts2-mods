@@ -315,7 +315,7 @@ public static class Sts2State
 
         // One log line per combat, so placement can be checked against the game log.
         var combatId = MegaCrit.Sts2.Core.Combat.CombatManager.Instance.CurrentCombatId;
-        if (log && combatId != null && !Equals(combatId, _loggedHpBarFor))
+        if (log && combatId != null && combatId != _loggedHpBarFor)
         {
             _loggedHpBarFor = combatId;
             _log?.Info(
@@ -344,7 +344,8 @@ public static class Sts2State
     private static bool BarShown(Godot.Control creature, Godot.Control display)
         => display.IsVisibleInTree() || creature.IsVisibleInTree();
 
-    private static object? _loggedHpBarFor;
+    /// <summary>The fight whose HP bar was logged: compared as its own type (as an object it was boxed on every frame of every fight).</summary>
+    private static MegaCrit.Sts2.Core.Combat.CombatId? _loggedHpBarFor;
 
     /// <summary>
     /// Where floating widgets should draw so cards in hand cover them: directly before the
