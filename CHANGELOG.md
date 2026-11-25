@@ -65,6 +65,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Fixed
 - The session summary no longer counts a fight's winning turn as unchecked: the preview's check, skipped because the play ended the fight, now counts as the expected skip the other checks' are.
+- No garbage on every frame while the settings menu is open (about 14 KB a frame): a tiny card's fit waited for its drawn area to come back exactly the same, which the float math never quite did, so it walked the card's nodes on every frame. Tiny cards in fights and between them settle the same way.
 - A launch's first fight no longer stutters on its first frames (about 170 ms on the first board, then tens of milliseconds on the first card and play): the game's code a fight's first board reads (monsters' moves, powers' and monsters' hooks, cards' energy), how its state is keyed, and the mod's own code are made ready on a background thread as the mod loads. Dev mode logs how long it took.
 - Reward Tags: no garbage on every frame while cards are on offer (whether each was one of yours was looked up through all your piles every frame), and the cards of a grid (an event's choice) that come back into view as it scrolls get their tags at once instead of at the next click. Dev mode no longer takes a hovered card brought to the front for a missed change.
 - No garbage on every frame of a fight from the widgets beside the HP bar (Relic Counters): the fight it logged the bar's place for was compared as an object.

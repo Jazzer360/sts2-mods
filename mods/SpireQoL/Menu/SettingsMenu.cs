@@ -169,9 +169,15 @@ public sealed partial class SettingsMenu
     public void OnFrame()
     {
         if (IsOpen && _root != null) FitPanel();
-        _tinyIcons.RemoveAll(tinyCardIcon => !GodotObject.IsInstanceValid(tinyCardIcon.Root));
-        foreach (var tinyCardIcon in _tinyIcons) tinyCardIcon.Fit();
-        if (IsOpen && _page is Page.Guide or Page.Setup) foreach (var tick in _guideTicks) tick(OverlayHost.Time, Settings.FlashHz);
+        // Timed in parts (the dev dashboard's steady table names the one that makes garbage).
+        using (_host.Part("settings-menu:tiny-cards"))
+        {
+            _tinyIcons.RemoveAll(tinyCardIcon => !GodotObject.IsInstanceValid(tinyCardIcon.Root));
+            foreach (var tinyCardIcon in _tinyIcons) tinyCardIcon.Fit();
+        }
+        if (IsOpen && _page is Page.Guide or Page.Setup)
+            using (_host.Part("settings-menu:examples"))
+                foreach (var tick in _guideTicks) tick(OverlayHost.Time, Settings.FlashHz);
         if (++_frame % 10 != 0) return;
         FirstLaunch();
         _modsButton = KeepButton(_modsButton, ModsScreenAnchor());

@@ -75,11 +75,14 @@ internal sealed class TinyCardIcon
 
     /// <summary>
     /// Whether this fit's drawn area makes <see cref="FitsToSettle"/> in a row the same as the last (the layout has settled): counts the
-    /// run in <paramref name="sameFits"/>, restarting it when the area moves.
+    /// run in <paramref name="sameFits"/>, restarting it when the area moves. The same within <see cref="SameWithin"/> units: each fit rescales
+    /// the card, and the area worked out again through the new transforms comes back a float's last digits off, so an exact match never came
+    /// (a dev review: the settings menu's tiny cards walked their nodes on every frame, 14 KB a frame while it was open). The run is held to
+    /// its first area, so a drift can't creep along it.
     /// </summary>
     internal static bool Settles(ref Rect2? last, ref int sameFits, Rect2 box)
     {
-        if (last == box) sameFits++;
+        if (last is { } first && Same(first, box)) sameFits++;
         else
         {
             last = box;
@@ -87,6 +90,13 @@ internal sealed class TinyCardIcon
         }
         return sameFits >= FitsToSettle;
     }
+
+    /// <summary>How far apart, in the entry's units, two drawn areas can be and be the same (a thousandth of a pixel on the tiny card).</summary>
+    internal const float SameWithin = 0.001f;
+
+    private static bool Same(Rect2 first, Rect2 box) =>
+        Math.Abs(first.Position.X - box.Position.X) <= SameWithin && Math.Abs(first.Position.Y - box.Position.Y) <= SameWithin
+        && Math.Abs(first.Size.X - box.Size.X) <= SameWithin && Math.Abs(first.Size.Y - box.Size.Y) <= SameWithin;
 
     /// <summary>The area the visible textures under <paramref name="node"/> draw, in the entry's units.</summary>
     private static void Union(Node node, Transform2D toEntry, ref Rect2? drawn)

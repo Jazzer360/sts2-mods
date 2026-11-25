@@ -21,6 +21,22 @@ public class TinyCardFitTests
     }
 
     [Fact]
+    public void AnAreaThatOnlyWobblesInItsLastDigitsSettles()
+    {
+        // Each fit rescales the card, and the drawn area worked out again through the new transforms comes back a float's last digits off
+        // (a dev review: the settings menu's tiny cards never settled, 14 KB a frame while it was open).
+        Rect2? last = null;
+        var sameFits = 0;
+        var settled = false;
+        for (var i = 0; i < TinyCardIcon.FitsToSettle && !settled; i++)
+        {
+            var wobble = i % 2 == 0 ? 0f : 3e-5f;
+            settled = TinyCardIcon.Settles(ref last, ref sameFits, new Rect2(x: 1 + wobble, y: 2 - wobble, width: 30 + wobble, height: 40));
+        }
+        Assert.True(settled);
+    }
+
+    [Fact]
     public void AnAreaThatMovesStartsTheCountAgain()
     {
         Rect2? last = null;
