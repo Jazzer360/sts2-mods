@@ -762,8 +762,8 @@ public sealed record SummonStep(HookTarget Summoner, HookValue Amount) : HookSte
 }
 
 /// <summary>
-/// PowerCmd.Remove(this): the power itself goes from its owner. With <see cref="Powers"/>, those powers of its owner go instead (PowerCmd.Remove<T>(base.Owner),
-/// or every power of a class a loop over base.Owner.GetPowerInstances<T>() removes: Plow's Strength and Temporary Strength, decision #275).
+/// PowerCmd.Remove(this): the power itself goes from its owner. With <see cref="Powers"/>, those powers of its owner go instead (PowerCmd.Remove&lt;T&gt;(base.Owner),
+/// or every power of a class a loop over base.Owner.GetPowerInstances&lt;T&gt;() removes: Plow's Strength and Temporary Strength, decision #275).
 /// </summary>
 public sealed record RemovePowerStep : HookStep
 {
