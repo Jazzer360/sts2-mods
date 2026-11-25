@@ -166,7 +166,7 @@ internal static partial class CoverageLedger
         ["CorruptionPower"] = "covered: ModifyCardPlayResultLocation exhausts played Skills (in the simulator its model, decided once before a card play's plays: decision #192; SimAdapter.ExhaustsAfterPlay for the tags)",
         ["CoveredPower"] = "covered: ModifyDamageMultiplicative zeroes powered attacks on the covered player: the intent's damage to you is read through the game's damage hooks; AfterDeath/AfterSideTurnEnd remove it",
         ["CrabRagePower"] = "covered: read from its code (ReadModel, decision #195): AfterDeath of an ally gives Strength and block, then goes (a crossed tab on a play that kills another enemy, read from what its AfterDeath waits on)",
-        ["CurlUpPower"] = "covered: block after a card's attack hits it (simulator; crossed tab)",
+        ["CurlUpPower"] = "covered: read from its code (ReadModel, decision #274): AfterDamageReceived keeps the card of a powered hit on its owner (the card play it comes from), AfterCardPlayed of that card play gives its block and sets Louse Progenitor's Curled; crossed tab",
         ["DampenPower"] = "ignore: AfterDeath ends its card downgrade (cards read live)",
         ["DanseMacabrePower"] = "covered: read from its code (ReadModel, decision #195): BeforeCardPlayed block on costly cards (proc block)",
         ["DarkEmbracePower"] = "covered: read from its code (ReadModel, decision #195): AfterCardExhausted draws its amount for its owner's exhaust, an Ethereal one at the turn's end counted instead (etherealCount); AfterSideTurnEnd draws amount × that count",

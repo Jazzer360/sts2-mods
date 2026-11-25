@@ -47,6 +47,7 @@ public static partial class ReadModels
         nameof(MegaCrit.Sts2.Core.Models.Enchantments.Corrupted),
         PowerId.CoveringFire.Name,
         PowerId.CrabRage.Name,
+        PowerId.CurlUp.Name,
         PowerId.DanseMacabre.Name,
         PowerId.DarkEmbrace.Name,
         nameof(MegaCrit.Sts2.Core.Models.Orbs.DarkOrb),

@@ -1184,13 +1184,25 @@ public static class HookReader
         /// damage or block comes from (a Modify hook's or AfterModifyingBlockAmount's cardSource, its cardPlay's card): that card play's identity
         /// (HookFact.PlaySerial). A damage's or block's card outside a card play has none (0).
         /// </summary>
-        private bool IsCardOfThePlay(ProgramValue value) => IsPlayCard(Unstored(value)) && GivenAPlay.Contains(_hook!) || IsSourceCard(Unstored(value)) && GivenACardSource.Contains(_hook!);
+        private bool IsCardOfThePlay(ProgramValue value) => PlayOfTheCard(value) != null;
+
+        /// <summary>
+        /// The fact that is the identity of the card play the card comes from (IsCardOfThePlay): the hook's card play (HookFact.PlaySerial) where it's given
+        /// one, or, in a damage hook given the hit's card and no card play (AfterDamageReceived's cardSource: Curl Up's), the card play under way when
+        /// that card is the one played (HookFact.HitCardPlaySerial, decision #274); null for any other card.
+        /// </summary>
+        private HookFact? PlayOfTheCard(ProgramValue value) =>
+            IsPlayCard(Unstored(value)) && GivenAPlay.Contains(_hook!) || IsSourceCard(Unstored(value)) && GivenACardSource.Contains(_hook!) ? HookFact.PlaySerial
+            : IsSourceCard(Unstored(value)) && GivenAHitsCard.Contains(_hook!) ? HookFact.HitCardPlaySerial : null;
 
         /// <summary>The hooks given a damage's or block's card and its card play (cardSource, cardPlay).</summary>
         private static readonly HashSet<string> GivenACardSource = new(StringComparer.Ordinal)
         {
             "ModifyBlockAdditive", "ModifyBlockMultiplicative", "AfterModifyingBlockAmount", "ModifyDamageAdditive", "ModifyDamageMultiplicative", "ModifyDamageMultiplicativeLate",
         };
+
+        /// <summary>The hooks given a hit's card and no card play (CreatureCmd.Damage's AfterDamageGiven and AfterDamageReceived: cardSource).</summary>
+        private static readonly HashSet<string> GivenAHitsCard = new(StringComparer.Ordinal) { "AfterDamageGiven", "AfterDamageReceived" };
 
         /// <summary>
         /// A card play its code keeps (Stretch's data's cardPlay, Pael's Legion's AffectedCardPlay): the field's name ("Data.cardPlay", "AffectedCardPlay"),
@@ -1584,7 +1596,7 @@ public static class HookReader
                 // A card its code keeps (Music Box's CardBeingPlayed = cardPlay.Card, Vambrace's TriggeringCard = cardSource): the identity of the card play it
                 // comes from (decision #272); null lets it go. Any other card kept is a gap.
                 case StoreStep cardStore when KeepsACard(cardStore.Field):
-                    if (IsCardOfThePlay(cardStore.Value)) return new HookStep[] { new StoreFieldStep(cardStore.Field, new HookFactValue(HookFact.PlaySerial)) { When = Condition(step.Condition) } };
+                    if (PlayOfTheCard(cardStore.Value) is { } keptFrom) return new HookStep[] { new StoreFieldStep(cardStore.Field, new HookFactValue(keptFrom)) { When = Condition(step.Condition) } };
                     if (cardStore.Value is NullValue) return new HookStep[] { new StoreFieldStep(cardStore.Field, new HookConstant(0m)) { When = Condition(step.Condition) } };
                     throw new Gap(ReaderCapability.OwnData, $"gap: keeps {cardStore.Value} in {cardStore.Field}");
                 // An attack its data keeps (Vigor's commandToModify = command): the attack's id, its card and its attacker, each its state (KeptAttack);
@@ -2604,7 +2616,7 @@ public static class HookReader
                 {
                     HookValue same = otherCard is NullValue ? Not(new HookMath(HookOperation.NotEqual, new HookField(keptCard), new HookConstant(0m)))
                         : new HookMath(HookOperation.And, new HookMath(HookOperation.NotEqual, new HookField(keptCard), new HookConstant(0m)),
-                            new HookMath(HookOperation.Equal, new HookField(keptCard), new HookFactValue(HookFact.PlaySerial)));
+                            new HookMath(HookOperation.Equal, new HookField(keptCard), new HookFactValue(PlayOfTheCard(otherCard)!.Value)));
                     return compare.Op == Comparison.Equal ? same : Not(same);
                 }
                 // The orb a hook is given is its owner's (orb.Owner == base.Owner, base.Owner.Player).

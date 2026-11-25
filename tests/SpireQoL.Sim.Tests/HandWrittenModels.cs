@@ -2325,3 +2325,32 @@ public sealed class Vambrace : SimModel
         return One(state);
     }
 }
+
+// ---- round twenty-three: a card kept from a damage's card (Sim/Models/ReactionModels.cs), deleted 2026-11-25
+
+/// <summary>
+/// CurlUpPower: a powered hit from a card on its owner binds that card (Data 1: the play in progress); AfterCardPlayed of that
+/// play gives it its amount of block (unpowered) and the power goes.
+/// </summary>
+public sealed class CurlUpPower : SimModel
+{
+    /// <summary>Its Data: a card in play hit it (the one whose play gives it block).</summary>
+    private const int BoundToPlay = 1;
+    public override TabKind? Tab => TabKind.Trigger;
+    public override bool Harmful => true;
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Target != owner || !hit.Props.IsPoweredAttack() || hit.Card == null || state.CurrentPlay == null) return;
+        var powers = SimEngine.PowersOf(state, owner);
+        if (powers.Has(ThisPower)) SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], data: BoundToPlay));
+    }
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (state.Enemy(owner) is not { } enemy || enemy.Powers.DataOf(ThisPower) != BoundToPlay) return One(state);
+        enemy.Block += enemy.Powers[ThisPower];
+        enemy.Powers = enemy.Powers.Without(ThisPower);
+        enemy.ReactedWithBlock = true;
+        state.LogFired(Name, amount: 0, owner);
+        return One(state);
+    }
+}

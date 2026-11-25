@@ -34,6 +34,14 @@ public class MonsterStateTabParityTests
         [169] = "Imbalanced: the play kills the Asleep enemy whose attack would have spent your teammate's 11 block, so the block takes the Imbalanced enemy's 9 whole: stunned in every outcome (a teammate's full block sets it off, where the hand-written model judged only your first hit)",
     };
 
+    /// <summary>
+    /// The recording as reviewed: what the play check holds a play to (FiresBy) for a read model is its code's flashes (decision #199), and
+    /// CurlUpPower's hooks call no Flash(): none expected, where the hand-written model expected one wherever it acted (decision #274). Its tabs are
+    /// unchanged.
+    /// </summary>
+    private static string Reviewed(string line) => System.Text.RegularExpressions.Regex.Replace(line, @"(?<=\| checked [^|]*)(CurlUpPower) ([01]+)/([01]+)",
+        match => match.Groups[1].Value + " " + new string('0', match.Groups[2].Length) + "/" + new string('0', match.Groups[3].Length));
+
     [Fact]
     public void TheTabsAreWhatTheHandWrittenModelsShowed()
     {
@@ -46,7 +54,7 @@ public class MonsterStateTabParityTests
         // The tabs and what the play check holds the play to; what the simulations end with for each enemy (its column, as recorded) is shown, not
         // held: a class read from its code simulates what the hand-written model only judged (Imbalanced's stun now lands in the enemy turn).
         static string TabsOf(string line) => line.Split(" | enemies ")[0];
-        var expected = File.ReadAllLines(ParityPath).Select(TabsOf).ToList();
+        var expected = File.ReadAllLines(ParityPath).Select(TabsOf).Select(Reviewed).ToList();
         actual = actual.Select(TabsOf).ToList();
         Assert.Equal(expected.Count, actual.Count);
         var changed = actual.Zip(expected, (now, was) => (Now: now, Was: was)).Select((pair, scenario) => (pair.Now, pair.Was, Scenario: scenario))

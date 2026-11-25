@@ -1966,6 +1966,8 @@ public sealed class ReadModel : SimModel
             case HookFact.PlayIsLast: return (in HookArgs args) => args.Play is { } last && last.PlayIndex == last.PlayCount - 1 ? 1m : 0m;
             // The card play the hook names (a play hook's, a block's or damage's: HookArgs.Play, none for a gain from no play), by its identity (decision #269).
             case HookFact.PlaySerial: return (in HookArgs args) => args.Play?.Serial ?? 0;
+            case HookFact.HitCardPlaySerial:
+                return (in HookArgs args) => args.Hit?.Card is { } card && args.State.CurrentPlay is { } play && ReferenceEquals(play.Card, card) ? play.Serial : 0;
             case HookFact.BlockModified: return (in HookArgs args) => args.BlockModified;
             // A card's block, its enchantment and its enchantment's block: the card played's, or the damage's or block's card's (Of "Source").
             case HookFact.CardGainsBlock or HookFact.CardEnchanted or HookFact.EnchantmentGainsBlock:
@@ -2107,7 +2109,8 @@ public sealed class ReadModel : SimModel
             case HookFact.PoweredAttack: return (in HookArgs args) => (args.Damage?.Props ?? args.Hit?.Props ?? args.Attack?.Props)?.IsPoweredAttack() == true ? 1m : 0m;
             case HookFact.PoweredBlock: return (in HookArgs args) => args.Block?.Props.IsPoweredBlock() == true ? 1m : 0m;
             case HookFact.CardOrMonsterMove: return (in HookArgs args) => (args.Damage?.Props ?? args.Block?.Props ?? args.Hit?.Props)?.IsCardOrMonsterMove() == true ? 1m : 0m;
-            case HookFact.FromCard: return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card) != null ? 1m : 0m;
+            // A damage hook's hit has its card too (AfterDamageReceived's cardSource: Rupture's and Curl Up's test of it).
+            case HookFact.FromCard: return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card ?? args.Hit?.Card) != null ? 1m : 0m;
             // The damage's card where it is (decision #231): being played is having a card play (a card acting in your hand has none).
             case HookFact.SourceInPlay: return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card) != null && (args.Damage?.Play ?? args.Block?.Play) != null ? 1m : 0m;
             case HookFact.SourcePlayIndex: return (in HookArgs args) => (args.Damage?.Play ?? args.Block?.Play)?.PlayIndex ?? 0;

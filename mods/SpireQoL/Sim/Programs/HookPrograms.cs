@@ -361,6 +361,12 @@ public enum HookFact
     /// </summary>
     PlaySerial,
     /// <summary>
+    /// The identity of the card play a hit's card comes from, in a hook given its card and no card play (AfterDamageReceived's and AfterDamageGiven's
+    /// cardSource, as Curl Up keeps it): the card play under way when its card is the one played (SimCardPlay.Serial), 0 for none: no card, or a card
+    /// outside its play (decision #274).
+    /// </summary>
+    HitCardPlaySerial,
+    /// <summary>
     /// The card played gains block (CardModel.GainsBlock: SimCard.GainsBlock); with Of "Source", the card a damage or block comes from (cardSource).
     /// </summary>
     CardGainsBlock,

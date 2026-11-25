@@ -447,6 +447,20 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void RupturesStrengthFromTheCardBeingPlayedLandsAfterThePlay()
+    {
+        // RupturePower.AfterDamageReceived: HP lost from a card it keeps (cardSource != null && playedCards.ContainsKey(cardSource): BeforeCardPlayed
+        // kept the card played) adds to that card's amount, given as Strength at its AfterCardPlayed: the card's own attack after its HP cost doesn't
+        // have it (10, not 12).
+        var state = Power(State(hp: 100), PowerId.Rupture, amount: 2);
+        state.You.Hp = 50;
+        var after = One(state, Play(Card("Hemokinesis"), target: 0, plays: 1, new LoseHpAction(Amount: 2), Attack(baseDamage: 10)));
+        Assert.Equal(90, after.Enemy(id: 0)!.Hp);
+        Assert.Equal(48, after.You.Hp);
+        Assert.Equal(2, after.You.Powers[PowerId.Strength]);
+    }
+
+    [Fact]
     public void EveryThirdPoweredHitKnocksAnArrowOutAndADeathLetsThemAllGo()
     {
         var state = Relic(State(hp: 100), RelicId.Twine, vars: ("Block", 2));

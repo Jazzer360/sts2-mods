@@ -1,10 +1,9 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by the capability the reader names.
-# 49 hand-written models.
+# 48 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
 a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 6 classes, 3 alone: ImpaledPower, InsatiableDominionPower*, PlatingPower, ShadowmeldPower*, SkittishPower*, SmoggyPower
-its own data: a card or a play kept, a field used directly: 3 classes, 3 alone: CurlUpPower*, ImitationLearningPower*, WitheringPresencePower*
 the simulator's own model (no game class by its name): 3 classes, 3 alone: ImpaledPowerOther*, Regret*, Void*
 a monster's own state set (its flag, its next move): 6 classes, 2 alone: AsleepPower, InfestedPower, PlowPower*, SlumberPower*, SteamEruptionPower, StockPower
 the play's result location (ModifyCardPlayResultLocation): 4 classes, 2 alone: CorruptionPower, FeralPower, NostalgiaPower*, ReboundPower*
@@ -12,6 +11,7 @@ another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionMo
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
 hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount): 2 classes, 2 alone: BurrowedPower*, HandDrill*
 hooks: the power amount given: 2 classes, 2 alone: SneckoSkull*, UnsettlingLamp*
+its own data: a card or a play kept, a field used directly: 2 classes, 2 alone: ImitationLearningPower*, WitheringPresencePower*
 orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first): 2 classes, 2 alone: ConsumingShadowPower*, TrashToTreasurePower*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*
 card costs and keywords (cards' own hooks, Part B3): 3 classes, 1 alone: ChemicalX*, CorruptionPower, PhantomBladesPower
@@ -42,7 +42,6 @@ CompostPower: [a command on another creature (the players, a card's owner, a rol
 ConsumingShadowPower: [orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first)] AfterSideTurnEnd: gap: OrbCmd.EvokeLast isn't translated
 CorruptionPower: [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation | [card costs and keywords (cards' own hooks, Part B3)] TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
 CoveredPower: [another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount)] AfterApplied: gap: changes a game object outside a command (InterceptPower.AddCoveredCreature)
-CurlUpPower: [its own data: a card or a play kept, a field used directly] AfterDamageReceived: gap: keeps cardSource in Data.playedCard
 FeralPower: [a model's own method (its body read where it's called)] AfterApplied: gap: the value value | [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [a model's own method (its body read where it's called)] AfterSideTurnStart: gap: the value value | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
 HandDrill: [hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount)] AfterBlockBroken: gap: the simulator runs no read model's AfterBlockBroken
 HardenedShellPower: [another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount)] AfterDamageReceived: gap: sets Creature.HpDisplay where the reader reads no store
