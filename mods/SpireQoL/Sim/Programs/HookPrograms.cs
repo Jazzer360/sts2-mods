@@ -333,6 +333,11 @@ public enum HookFact
     PlayStars,
     /// <summary>The play is its card play's last (cardPlay.IsLastInSeries: PlayIndex == PlayCount - 1).</summary>
     PlayIsLast,
+    /// <summary>
+    /// The HP of the creature named in Creature (creature.CurrentHp: Shriek's target.CurrentHp &lt;= base.Amount), 0 for one dead or gone; a player
+    /// whose HP the simulation doesn't know makes it unknown.
+    /// </summary>
+    CreatureHp,
 }
 
 /// <summary>A creature a hook's code names: its model's owner, or one of what the hook was given (the dealer, the target, the dead...).</summary>
@@ -611,6 +616,13 @@ public sealed record ForEachStep(HookItems Over, IReadOnlyList<HookStep> Steps) 
 public sealed record DestroyArrowStep : HookStep;
 
 /// <summary>
+/// CreatureCmd.Stun of its owner (an enemy: Creature.StunInternal does nothing on a dead creature, and the game throws on a player): it's stunned
+/// (SimEngine.Stun), so its move this turn is the stunned move, which does nothing a simulation follows (its code is read: the Stun is given no
+/// delegate that calls a command). What its code then stores on its monster for later (its flag) waits for a turn past every simulation.
+/// </summary>
+public sealed record StunStep : HookStep;
+
+/// <summary>
 /// More on what the model bound to the play in progress (its own data's playedCards[cardSource] += Value, under the damage's card, the bound one:
 /// Rupture's Strength from a card's own HP cost, given as the card is played): taken back with it (HookFact.TakeBound, BoundTaken).
 /// </summary>
@@ -670,6 +682,11 @@ public enum HookOutcome
     /// on an enemy, a warning on a play that makes it act in some outcome where ending the turn now wouldn't (Slippery's 1 HP a hit): decision #239.
     /// </summary>
     ReactsToHpLoss,
+    /// <summary>
+    /// It stuns its owner (a StunStep in a hook other than AfterDeath, which tells the deaths above first): on an enemy, a bonus on a play that
+    /// leaves it stunned and alive for its turn in every outcome where ending the turn now wouldn't (OutcomeRules.Stuns: Shriek, Flutter).
+    /// </summary>
+    Stuns,
 }
 
 /// <summary>

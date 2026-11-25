@@ -48,6 +48,7 @@ public static class HookReader
         ["CreatureCmd.GainBlock"] = "GainBlockStep: block for the owner through the block pipeline (its amount and props, or its BlockVar's)",
         ["CreatureCmd.Damage"] = "DamageStep: damage to every hittable enemy, a random one (a branch each), the creature a power landed on or the owner, from the owner or no one",
         ["CreatureCmd.Heal"] = "HealStep: the owner heals, up to its max HP",
+        ["CreatureCmd.Stun"] = "StunStep: the owner (an enemy) stunned, when the stunned move it's given calls no command",
         ["CardPileCmd.Draw"] = "DrawStep: cards drawn by the owner, each a card event",
         ["PlayerCmd.GainEnergy"] = "GainEnergyStep: energy for the owner, each a card event",
         ["PlayerCmd.GainStars"] = "GainStarsStep: stars for the owner, one stars-gained event (as a card's)",
@@ -452,6 +453,9 @@ public static class HookReader
             if (Requires(step.When, DeadAndOwner, holds: true)) return HookOutcome.KillsAnother;
             if (Requires(step.When, DeadAndOwner, holds: false)) return HookOutcome.KillsOne;
         }
+        // A stun of its owner (an enemy's) in a hook a play sets off: the play that stuns it.
+        if (programs.Where(program => program.Hook != HookName.AfterDeath).Any(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps().Any(step => step is StunStep)))
+            return HookOutcome.Stuns;
         return ReactsToHpLoss(programs) ? HookOutcome.ReactsToHpLoss : null;
     }
 
@@ -850,6 +854,7 @@ public static class HookReader
             {
                 var program = ProgramReader.Read(_type, _read, method.Name);
                 _stores = program.All().OfType<StoreStep>().ToList();
+                _body = program;
                 if (program.Unknowns.Any() || OwnData(method, program) != null) return null;
                 var steps = program.Steps.SelectMany(Step).ToList();
                 return steps.Count == 0 ? null : steps;
@@ -943,6 +948,7 @@ public static class HookReader
         {
             var program = ProgramReader.Read(_type, _read, hook.Name);
             _stores = program.All().OfType<StoreStep>().ToList();
+            _body = program;
             if (program.Unknowns.FirstOrDefault() is { } unknown) return (null, new GapOf(ReaderCapability.ValueNotFollowed, "gap: the reader can't follow it: " + unknown));
             if (OwnData(hook, program) is { } data) return (null, data);
             var steps = new List<HookStep>();
@@ -1417,6 +1423,13 @@ public static class HookReader
                     if (_hook == "AfterArrowShot" && given.Field == ProgramReader.GivenPrefix + "arrow.DestroyAfterImpaled" && Value(given.Value) is HookConstant { Value: not 0m })
                         return new HookStep[] { new DestroyArrowStep { When = Condition(step.Condition) } };
                     throw new Gap(ReaderCapability.OtherModelValueSet, $"gap: sets {given.Field[ProgramReader.GivenPrefix.Length..]}");
+                // A property set on its owner's monster (((CorpseSlug)base.Owner.Monster).IsRavenous = true): its monster's own state, which its moves and
+                // its next move's choice read. Read where the hook stuns its owner on the same test (StoresWithAStun): the monster's move this turn is then
+                // the stunned move, so what reads it is a later turn, past every simulation (the simulator runs no monster hook: MonsterHookTests).
+                // Any other is a gap.
+                case StoreStep monsterStore when monsterStore.Field.StartsWith(ProgramReader.OwnersMonsterPrefix, StringComparison.Ordinal):
+                    if (!StoredWithAStun(monsterStore)) throw new Gap(ReaderCapability.MonsterStateSet, $"gap: sets {monsterStore.Field[ProgramReader.OwnersMonsterPrefix.Length..]} where the reader reads no store");
+                    return Array.Empty<HookStep>();
                 case StoreStep store:
                     // A store to its own state (a field or property of its class, a plain field of its data): simulator state its programs read (HookField).
                     // One of its own values set (DynamicVars["CardsLeft"].BaseValue = ...): its state too, under the value's key.
@@ -1480,6 +1493,16 @@ public static class HookReader
                     throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: {step}");
             }
         }
+
+        /// <summary>The hook body's program being read (BodySteps), for what a step asks of the steps around it.</summary>
+        private ModelProgram? _body;
+
+        /// <summary>
+        /// A store to its owner's monster's state made on the test a CreatureCmd.Stun of its owner in the same body is made on (Flutter's IsHovering =
+        /// false and Ravenous' IsRavenous = true, each beside the stun): the monster's move this turn is the stunned move.
+        /// </summary>
+        private bool StoredWithAStun(StoreStep store) => _body != null && _body.All().OfType<CommandStep>().Any(command => command.Command.FullName == "CreatureCmd.Stun"
+            && command.Values.Count > 0 && IsOwner(command.Values[0]) && string.Equals(command.Condition?.ToString(), store.Condition?.ToString(), StringComparison.Ordinal));
 
         /// <summary>
         /// A counter loop's bound: what its test compares the counter with (i &lt; n, (decimal)i &lt; n through Decimal's operator), and whether it
@@ -1585,6 +1608,13 @@ public static class HookReader
                 case "CreatureCmd.Heal":
                     if (!IsOwner(values[0])) throw new Gap(Other(values[0]), $"gap: a heal for {values[0]}");
                     return new HealStep(Value(values[1]));
+                // Its owner stunned (CreatureCmd.Stun(base.Owner, ...)): its stunned move does nothing a simulation follows when the delegate it's given
+                // calls no command (the reader reads a delegate's code: one that does is the command's Inner). The next move's id it's given is for
+                // the turn after, which no simulation reaches (never worked out: Flutter's is a roll's).
+                case "CreatureCmd.Stun":
+                    if (!IsOwner(values[0])) throw new Gap(Other(values[0]), $"gap: stuns {values[0]}");
+                    if (command.Inner.Count > 0) throw new Gap(ReaderCapability.StunOrKill, "gap: a stunned move that calls commands");
+                    return new StunStep();
                 case "PlayerCmd.GainEnergy":
                     if (!IsOwner(values[1])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, "gap: energy for someone else");
                     return new GainEnergyStep(Value(values[0]));
@@ -2025,6 +2055,9 @@ public static class HookReader
                     return new HookFactValue(HookFact.PoweredBlock);
                 case QueryValue { Name: "IsCardOrMonsterMove", Arguments: [var props] } when IsProps(props):
                     return new HookFactValue(HookFact.CardOrMonsterMove);
+                // The HP a hit took past block tested as true or false (result.UnblockedDamage != 0: Flutter's, Slumber's).
+                case QueryValue { Name: "UnblockedDamage", Of: ParameterValue { Name: "result" } or NamedValue { Name: "result" } } when _hook is "AfterDamageGiven" or "AfterDamageReceived":
+                    return new HookMath(HookOperation.NotEqual, new HookFactValue(HookFact.HitUnblocked), new HookConstant(0m));
                 // The play is its card play's last (cardPlay.IsLastInSeries: Black Hole's).
                 case QueryValue { Name: "IsLastInSeries", Of: NamedValue { Name: "cardPlay" } or ParameterValue { Name: "cardPlay" } } when IsPlayHook(_hook):
                     return new HookFactValue(HookFact.PlayIsLast);
@@ -2412,6 +2445,9 @@ public static class HookReader
                 // The HP a hit took past block (result.UnblockedDamage).
                 case QueryValue { Name: "UnblockedDamage", Of: ParameterValue { Name: "result" } or NamedValue { Name: "result" } } when _hook is "AfterDamageGiven" or "AfterDamageReceived":
                     return new HookFactValue(HookFact.HitUnblocked);
+                // A creature's HP (target.CurrentHp: Shriek's threshold), the creature one the hook's code names.
+                case QueryValue { Name: "CurrentHp", Of: { } hpOf } when CreatureOf(hpOf) is { } withHp:
+                    return CreatureFact(HookFact.CreatureHp, withHp);
                 // What a hit's block took (result.BlockedDamage: Reflect's damage back).
                 case QueryValue { Name: "BlockedDamage", Of: ParameterValue { Name: "result" } or NamedValue { Name: "result" } } when _hook is "AfterDamageGiven" or "AfterDamageReceived":
                     return new HookFactValue(HookFact.HitBlocked);

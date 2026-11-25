@@ -1956,3 +1956,70 @@ public sealed class BlackHolePower : ProcModel
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
         Mine(play, owner) && play.Card.Stars > 0 && play.PlayIndex == play.PlayCount - 1 ? DamageAll(state, owner, Amount(state, owner)) : One(state);
 }
+
+// ---- a stun of its owner (round seventeen: Sim/Models/ReactionModels.cs, TargetModels.cs and EnemyModels.cs, deleted 2026-11-24)
+
+/// <summary>The outcome rules the frozen stun models use (Sim/Models/OutcomeModels.cs' OutcomeRules.Stuns and KillsAnother, as they were).</summary>
+public static class FrozenStunRules
+{
+    public static OutcomeRule? Stuns(SimOutcome now, int enemy) =>
+        Who.IsEnemy(enemy) && !now.StunnedInAll(enemy) ? new(Harmful: false, outcome => outcome.StunnedInAll(enemy)) : null;
+    public static OutcomeRule KillsAnother(int enemy) => new(Harmful: true, outcome => outcome.KilledByPlayInAny.Any(killed => killed != enemy));
+}
+
+/// <summary>ShriekPower.AfterDamageReceived: HP through that leaves its owner at or below its amount stuns it; the power goes.</summary>
+public sealed class ShriekPower : SimModel
+{
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => FrozenStunRules.Stuns(now, owner);
+
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Target != owner || hit.Unblocked <= 0 || state.Enemy(owner) is not { Alive: true } enemy || enemy.Hp > enemy.Powers[ThisPower]) return;
+        state.LogFired(Name, amount: 0, owner);
+        enemy.Powers = enemy.Powers.Without(ThisPower);
+        SimEngine.Stun(enemy);
+    }
+}
+
+/// <summary>
+/// FlutterPower: powered attacks on its owner deal its DamageDecrease% (Data; 50 by default); each that gets HP through takes a
+/// stack (AfterDamageReceived), and the last stuns it.
+/// </summary>
+public sealed class FlutterPower : SimModel
+{
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => FrozenStunRules.Stuns(now, owner);
+
+    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage)
+    {
+        if (damage.Target != owner || !damage.Props.IsPoweredAttack()) return 1m;
+        var pct = SimEngine.PowersOf(state, owner).DataOf(ThisPower);
+        return (pct == 0 ? 50 : pct) / 100m;
+    }
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Target != owner || hit.Unblocked == 0 || !hit.Props.IsPoweredAttack() || owner < 0) return;
+        var powers = SimEngine.PowersOf(state, owner);
+        if (!powers.Has(ThisPower)) return;
+        var left = powers[ThisPower] - 1;
+        SimEngine.SetPowers(state, owner, left <= 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left));
+        if (left <= 0 && state.Enemy(owner) is { Alive: true } enemy)
+        {
+            enemy.Stunned = true;
+            enemy.StunnedThisTurn = true;
+            state.LogFired(Name, amount: 0, owner);
+        }
+    }
+}
+
+/// <summary>RavenousPower (AfterDeath of an ally): it's stunned.</summary>
+public sealed class RavenousPower : SimModel
+{
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => Who.IsEnemy(owner) ? FrozenStunRules.KillsAnother(owner) : null;
+
+    public override void AfterDeath(SimState state, int owner, int dead)
+    {
+        if (dead == owner || dead < 0 || state.Enemy(owner) is not { } enemy || enemy.Stunned) return;
+        state.LogFired(Name, amount: 0, owner);
+        SimEngine.Stun(enemy);
+    }
+}

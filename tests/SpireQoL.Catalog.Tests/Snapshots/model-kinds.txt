@@ -3,9 +3,9 @@
 
 ## Powers and relics
 
-beta powers: 304 classes, 273 with hooks; read from code 118, hand-written 53, neither 104 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 304 classes, 273 with hooks; read from code 121, hand-written 50, neither 104 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 58, hand-written 14, neither 238 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 100, hand-written 46, neither 91 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 103, hand-written 43, neither 91 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 50, hand-written 14, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 6, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 2
@@ -130,7 +130,6 @@ SimReaders.Read (powers): ImpaledPower: hand-written; reads the game's Applier, 
 SimReaders.Read (powers): ImpaledPower: hand-written; reads the game's Applier, the game's ArrowsIn: needs more than its own fields and values
 SimReaders.Read (powers): SkittishPower: hand-written; reads its own field HasGainedBlockThisTurn: a read model's own fields and values replace it
 SimReaders.Read (powers): HardenedShellPower: hand-written; reads the game's DisplayAmount: needs more than its own fields and values
-SimReaders.Read (powers): FlutterPower: hand-written; reads its own value DamageDecrease: a read model's own fields and values replace it
 SimReaders.Read (powers): SurroundedPower: hand-written; reads its own field Facing: a read model's own fields and values replace it
 SimReaders.Read (powers): CoveredPower: hand-written; reads the game's Applier, the game's Owner.Powers: needs more than its own fields and values
 SimReaders.Read (powers): FeralPower: hand-written; reads its own field _internalData, its own field zeroCostAttacksPlayed, the game's DisplayAmount: needs more than its own fields and values
@@ -193,9 +192,9 @@ commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn): 10 classes,
 a command on another creature (the players, a card's owner, a roll's list): 9 classes, 9 alone: CompostPower*, Clarity (potion)*, CureAll (potion)*, Duplicator (potion)*, EnergyPotion (potion)*, ExplosiveAmpoule (potion)*, FocusPotion (potion)*, RadiantTincture (potion)*, SwiftPotion (potion)*
 its own data: a card or a play kept, a field used directly: 9 classes, 7 alone: CalamityPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, PaelsLegion, SerpentFormPower*, StretchPower*, WitheringPresencePower*, Ashwater (potion)*
 commands: a card made (AddGeneratedCardToCombat, a made card): 6 classes, 6 alone: BiiigHug*, BurningSticks*, PersonalHivePower*, CrystallineEuphoria (potion)*, CunningPotion (potion)*, PotOfGhouls (potion)*
-a monster's own state set (its flag, its next move): 10 classes, 4 alone: AsleepPower, CurlUpPower, FlutterPower*, ImbalancedPower*, InfestedPower, PlowPower*, RavenousPower*, SlumberPower, SteamEruptionPower, StockPower
 a loop over items (creatures, cards): 7 classes, 4 alone: ImpaledPower, PaelsEye, SmoggyPower, BlessingOfTheForge (potion)*, CosmicConcoction (potion)*, EntropicBrew (potion)*, GlowwaterPotion (potion)*
 the engine runs no read enchantment (its bodies read whole but for that): 4 classes, 4 alone: Glam (enchantment)*, Imbued (enchantment)*, Slither (enchantment)*, Spiral (enchantment)*
+a monster's own state set (its flag, its next move): 8 classes, 3 alone: AsleepPower, CurlUpPower, ImbalancedPower*, InfestedPower, PlowPower*, SlumberPower*, SteamEruptionPower, StockPower
 another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 5 classes, 3 alone: CoveredPower, HardenedShellPower*, SurprisePower, Goopy (enchantment)*, FoulPotion (potion)*
 a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 4 classes, 3 alone: InsatiableDominionPower*, PlatingPower, ShadowmeldPower*, SkittishPower*
 a pick: 3 classes, 3 alone: StratagemPower*, DropletOfPrecognition (potion)*, GamblersBrew (potion)*
@@ -210,7 +209,7 @@ the play's result location (ModifyCardPlayResultLocation): 4 classes, 2 alone: C
 commands: AutoPlayFromDrawPile: 2 classes, 2 alone: LostLutePower*, DistilledChaos (potion)*
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
 hooks: the power amount given: 2 classes, 2 alone: SneckoSkull*, UnsettlingLamp*
-outcomes: a stun or a kill (outcome tabs): 2 classes, 2 alone: ShriekPower*, TheGambitPower*
+read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 2 classes, 2 alone: ConquerorPower*, MagicBombPower*
 the engine runs no read potion (its bodies read whole but for that): 2 classes, 2 alone: PotionOfBinding (potion)*, ShacklingPotion (potion)*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*
 card costs and keywords (cards' own hooks, Part B3): 3 classes, 1 alone: ChemicalX*, CorruptionPower, PhantomBladesPower
@@ -219,7 +218,7 @@ queries: a creature's side or presence: 3 classes, 1 alone: PlatingPower, Essenc
 commands: GainStars: 1 classes, 1 alone: StarPotion (potion)*
 hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*
 hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
-read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 1 classes, 1 alone: MagicBombPower*
+outcomes: a stun or a kill (outcome tabs): 1 classes, 1 alone: TheGambitPower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*
 a death the game holds back (ShouldStopCombatFromEnding, ShouldDie and the like): 4 classes, 0 alone: InfestedPower, SteamEruptionPower, StockPower, SurprisePower
 a model's own method (its body read where it's called): 3 classes, 0 alone: FeralPower, SurroundedPower, FairyInABottle (potion)
@@ -228,4 +227,3 @@ a command on another power (PowerCmd.Remove of another): 1 classes, 0 alone: Asl
 a turn's start (an extra turn): 1 classes, 0 alone: PaelsEye
 arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd): 1 classes, 0 alone: ImpaledPower
 multiplayer scaling (GetScaledAmountForMultiplayer, the players' count): 1 classes, 0 alone: PlatingPower
-queries: the hit's result: 1 classes, 0 alone: SlumberPower

@@ -2,35 +2,7 @@ namespace SpireQoL.Sim.Models;
 
 // Damage sources keyed on the target or on positions that change during your turn (decompile v0.113.1).
 
-/// <summary>
-/// FlutterPower: powered attacks on its owner deal its DamageDecrease% (Data; 50 by default); each that gets HP through takes a
-/// stack (AfterDamageReceived), and the last stuns it.
-/// </summary>
-public sealed class FlutterPower : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => OutcomeRules.Stuns(now, owner);
-
-    public override decimal ModifyDamageMultiplicative(SimState state, int owner, DamageCtx damage)
-    {
-        if (damage.Target != owner || !damage.Props.IsPoweredAttack()) return 1m;
-        var pct = SimEngine.PowersOf(state, owner).DataOf(ThisPower);
-        return (pct == 0 ? 50 : pct) / 100m;
-    }
-    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
-    {
-        if (hit.Target != owner || hit.Unblocked == 0 || !hit.Props.IsPoweredAttack() || owner < 0) return;
-        var powers = SimEngine.PowersOf(state, owner);
-        if (!powers.Has(ThisPower)) return;
-        var left = powers[ThisPower] - 1;
-        SimEngine.SetPowers(state, owner, left <= 0 ? powers.Without(ThisPower) : powers.With(ThisPower, left));
-        if (left <= 0 && state.Enemy(owner) is { Alive: true } enemy)
-        {
-            enemy.Stunned = true;
-            enemy.StunnedThisTurn = true;
-            state.LogFired(Name, amount: 0, owner);
-        }
-    }
-}
+// Flutter is read from its code (ReadModel, decision #245).
 
 // Hard to Kill and Intangible are read from their code (ReadModel, decision #229).
 

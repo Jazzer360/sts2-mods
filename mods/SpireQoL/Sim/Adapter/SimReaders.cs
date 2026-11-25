@@ -80,7 +80,6 @@ public static class SimReaders
                 break;
             case nameof(SkittishPower): data = Sts2State.Private(power, "HasGainedBlockThisTurn", fallback: false) ? Models.SkittishPower.UsedThisTurn : 0; break;
             case nameof(HardenedShellPower): data = Math.Max(0, power.DisplayAmount); break;
-            case nameof(FlutterPower): data = Sts2State.Var(power, "DamageDecrease", fallback: 50); break;
             case nameof(SurroundedPower): data = Sts2State.Private<object?>(power, "Facing", fallback: null)?.ToString() == "Left" ? Models.SurroundedPower.FacingLeft : Models.SurroundedPower.FacingRight; break;
             // The players covering it, over every copy (one per Intercept played on it): a bit each.
             case nameof(CoveredPower):

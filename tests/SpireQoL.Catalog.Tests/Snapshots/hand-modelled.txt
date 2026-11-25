@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 137 game methods; 3 adapter rules; 70 hand-written models.
+# 20 engine rules naming 137 game methods; 3 adapter rules; 67 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -105,8 +105,6 @@ DevourLifePower: DevourLifePower.AfterCardPlayed
   model: AfterCardPlayed
 FeralPower: FeralPower.AfterApplied, FeralPower.AfterModifyingCardPlayResultLocation, FeralPower.AfterSideTurnStart, FeralPower.InitInternalData, FeralPower.ModifyCardPlayResultLocation
   model: AfterApplied, AfterModifyingCardPlayResultLocation, ModifyCardPlayResultLocation
-FlutterPower: FlutterPower.AfterDamageReceived, FlutterPower.ModifyDamageMultiplicative
-  model: AfterDamageReceived, ModifyDamageMultiplicative, OutcomeTab
 HandDrill: HandDrill.AfterBlockBroken
   model: AfterBlockBroken, OutcomeTab
 HardenedShellPower: HardenedShellPower.AfterDamageReceived, HardenedShellPower.AfterModifyingHpLostBeforeOsty, HardenedShellPower.BeforeSideTurnStart, HardenedShellPower.InitInternalData, HardenedShellPower.ModifyHpLostBeforeOstyLate
@@ -155,8 +153,6 @@ PlowPower: PlowPower.AfterDamageReceived
   model: AfterDamageReceived, OutcomeTab
 Pocketwatch: Pocketwatch.AfterCardPlayed, Pocketwatch.AfterCombatEnd, Pocketwatch.AfterModifyingHandDraw, Pocketwatch.AfterSideTurnStart, Pocketwatch.BeforeSideTurnStart, Pocketwatch.ModifyHandDraw
   model: AfterCardPlayed
-RavenousPower: RavenousPower.AfterDeath
-  model: AfterDeath, OutcomeTab
 ReboundPower: ReboundPower.AfterModifyingCardPlayResultLocation, ReboundPower.AfterSideTurnEnd, ReboundPower.ModifyCardPlayResultLocation
   model: AfterModifyingCardPlayResultLocation, ModifyCardPlayResultLocation
 RedSkull: RedSkull.AfterCombatEnd, RedSkull.AfterCurrentHpChanged, RedSkull.AfterRoomEntered
@@ -169,8 +165,6 @@ SerpentFormPower: SerpentFormPower.AfterApplied, SerpentFormPower.AfterCardPlaye
   model: Act
 ShadowmeldPower: ShadowmeldPower.AfterSideTurnEnd, ShadowmeldPower.ModifyBlockMultiplicative
   model: ModifyBlockMultiplicative
-ShriekPower: ShriekPower.AfterDamageReceived
-  model: AfterDamageReceived, OutcomeTab
 SicEmPower: SicEmPower.AfterDamageGiven, SicEmPower.AfterSideTurnEnd
   model: AfterDamageGiven
 SkittishPower: SkittishPower.AfterAttack, SkittishPower.AfterSideTurnEnd, SkittishPower.GetScaledAmountForMultiplayer, SkittishPower.InitInternalData

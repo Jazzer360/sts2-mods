@@ -99,19 +99,7 @@ public sealed class PlowPower : SimModel
     }
 }
 
-/// <summary>ShriekPower.AfterDamageReceived: HP through that leaves its owner at or below its amount stuns it; the power goes.</summary>
-public sealed class ShriekPower : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => OutcomeRules.Stuns(now, owner);
-
-    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
-    {
-        if (hit.Target != owner || hit.Unblocked <= 0 || state.Enemy(owner) is not { Alive: true } enemy || enemy.Hp > enemy.Powers[ThisPower]) return;
-        state.LogFired(Name, amount: 0, owner);
-        enemy.Powers = enemy.Powers.Without(ThisPower);
-        SimEngine.Stun(enemy);
-    }
-}
+// Shriek is read from its code (ReadModel, decision #245).
 
 /// <summary>TheGambitPower.AfterDamageReceived: a powered attack that gets HP through kills its owner.</summary>
 public sealed class TheGambitPower : SimModel

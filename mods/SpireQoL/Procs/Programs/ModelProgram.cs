@@ -404,6 +404,12 @@ public static class ProgramReader
     public const string GivenPrefix = "Given.";
 
     /// <summary>
+    /// The prefix of a property set on its owner's monster as its class ("Monster.CorpseSlug.IsRavenous": ((CorpseSlug)base.Owner.Monster).IsRavenous =
+    /// true), the monster's own state, never the model's.
+    /// </summary>
+    public const string OwnersMonsterPrefix = "Monster.";
+
+    /// <summary>
     /// One of the model's own values a value names (base.DynamicVars.Damage, base.DynamicVars["CardsLeft"], kept in a local or not): the
     /// property, or the key as the code writes it ("\"CardsLeft\""); null for anything else.
     /// </summary>
@@ -649,6 +655,14 @@ public static class ProgramReader
                     && flow.ReceiverValue(i, arguments: 1) switch { ParameterValue givenParameter => givenParameter.Name, NamedValue givenNamed => givenNamed.Name, _ => null } is { } given && given != "this")
                 {
                     into.Add(new StoreStep(instruction.Offset, GivenPrefix + given + "." + member.Name[4..], flow.ArgumentValues(i, member)[0]) { Condition = condition });
+                    continue;
+                }
+                // A property set on its owner's monster ((CorpseSlug)base.Owner.Monster).IsRavenous = true): a store, "Monster.CorpseSlug.IsRavenous", which the
+                // hook reader translates or names as a gap.
+                if (member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1 } && member.Name.StartsWith("set_", StringComparison.Ordinal) && IsPowerOrRelic
+                    && flow.ReceiverValue(i, arguments: 1) is QueryValue { Name: "Monster", Of: QueryValue { Name: "Owner", Of: NamedValue { Name: "this" } } })
+                {
+                    into.Add(new StoreStep(instruction.Offset, OwnersMonsterPrefix + member.DeclaringType + "." + member.Name[4..], flow.ArgumentValues(i, member)[0]) { Condition = condition });
                     continue;
                 }
                 // One of the model's own values set (base.DynamicVars["CardsLeft"].BaseValue = 5m, base.DynamicVars.Damage.BaseValue--): a store to

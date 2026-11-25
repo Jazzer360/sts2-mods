@@ -118,7 +118,9 @@ public class HookWriteTests
         "store" => steps.OfType<StoreStep>().Any(step => step.Field == write.Name || step.Field == ProgramReader.OwnDataPrefix + write.Name
             || write.Name == "BaseValue" && step.Field.StartsWith(ProgramReader.OwnVarPrefix, StringComparison.Ordinal)
             // A property set on an object the hook is given (AfterArrowShot's arrow.DestroyAfterImpaled: "Given.arrow.DestroyAfterImpaled").
-            || step.Field.StartsWith(ProgramReader.GivenPrefix, StringComparison.Ordinal) && step.Field.EndsWith("." + write.Name, StringComparison.Ordinal)),
+            || step.Field.StartsWith(ProgramReader.GivenPrefix, StringComparison.Ordinal) && step.Field.EndsWith("." + write.Name, StringComparison.Ordinal)
+            // A property set on its owner's monster (((CorpseSlug)base.Owner.Monster).IsRavenous: "Monster.CorpseSlug.IsRavenous"), read beside a stun.
+            || step.Field.StartsWith(ProgramReader.OwnersMonsterPrefix, StringComparison.Ordinal) && step.Field.EndsWith("." + write.Name, StringComparison.Ordinal)),
         "data" => steps.OfType<DataStep>().Any(step => step.Operation == write.Name),
         _ => steps.OfType<CommandStep>().Any(step => step.Command.FullName == write.Name) || steps.OfType<ChoiceStep>().Any(step => step.Command.FullName == write.Name)
             || steps.OfType<CardActionStep>().Any(step => step.Action.FullName == write.Name),
