@@ -148,6 +148,22 @@ public sealed class ReadModel : SimModel
         if (wasOn && !PayoutOn(state, owner)) state.LogFired(Name, amount: 0, owner);
     }
 
+    /// <summary>
+    /// A payout that was off is on now: the play set the bonus up (Tune's free card on the turn's first Ki: its plain tab's firing, decision #250),
+    /// logged under its set-up name (SimKeys.SetUp), apart from its own firings.
+    /// </summary>
+    public void SetUp(SimState state, int owner, bool wasOn)
+    {
+        if (!wasOn && PayoutOn(state, owner)) state.LogFired(SimKeys.SetUp(Name), amount: 0, owner);
+    }
+
+    /// <summary>What the play did to its payouts it decides, from whether one was on before (<paramref name="wasOn"/>): gave them up, or set one up.</summary>
+    public void Decided(SimState state, int owner, bool wasOn)
+    {
+        if (wasOn) GaveUp(state, owner, wasOn);
+        else SetUp(state, owner, wasOn);
+    }
+
     /// <summary>The key its payouts are kept under in a branch (SimState.Payouts): its source's log key.</summary>
     private string PaidKey(int owner) => SimKeys.Logged(Name, Who.KindOf(owner) == CreatureKind.You ? null : owner);
 
@@ -1374,9 +1390,11 @@ public sealed class ReadModel : SimModel
                     if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
                     var stored = (int)value(in args);
                     if (args.Copy > 0) ListCopies(args.State, args.Owner);
-                    var wasOn = decides && args.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed && PayoutOn(args.State, args.Owner);
+                    var onAPlay = decides && args.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed;
+                    var wasOn = onAPlay && PayoutOn(args.State, args.Owner);
                     SimEngine.SetField(args.State, args.Owner, args.Copy > 0 ? CopyFieldKey(args.Copy, field) : key, stored);
-                    if (wasOn) GaveUp(args.State, args.Owner, wasOn);
+                    // The play gives the bonus up there, or sets it up (decision #250).
+                    if (onAPlay) Decided(args.State, args.Owner, wasOn);
                     return One(args.State);
                 };
             }

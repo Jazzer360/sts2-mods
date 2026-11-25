@@ -33,6 +33,14 @@ public static class SimKeys
     /// </summary>
     public static string UnknownFlash(string key) => UnknownFlashNames.GetOrAdd(key, plain => "?" + plain);
 
+    private static readonly ConcurrentDictionary<string, string> SetUpNames = new();
+
+    /// <summary>
+    /// The play log's name for a payout the play decides being set up by it (decision #250: Tune's free card on the turn's first Ki): "+" before
+    /// the source's name, logged as the source's own firings are (SimState.LogFired: "+Name", "+Name@id").
+    /// </summary>
+    public static string SetUp(string name) => SetUpNames.GetOrAdd(name, plain => "+" + plain);
+
     /// <summary>The play log's entry for a source: "Name" for yours, "Name@id" for anyone else's (an enemy's is also under "Name").</summary>
     public static string Logged(string name, int? owner) => owner is { } id && id != Who.You ? Owned(name, id) : name;
 

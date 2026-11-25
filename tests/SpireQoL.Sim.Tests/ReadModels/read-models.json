@@ -26121,7 +26121,45 @@
         ]
       }
     ],
-    "HelpsOwner": false
+    "Tab": "Trigger",
+    "HelpsOwner": false,
+    "Payouts": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Condition": {
+          "$kind": "HookTest",
+          "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:002F",
+          "Test": {
+            "$kind": "HookHistory",
+            "Query": {
+              "Kind": "CardPlayFinished",
+              "Scope": "ThisTurn",
+              "Whose": "Owner",
+              "Details": "None",
+              "CardType": "None",
+              "CardTag": "Ki"
+            },
+            "Any": true
+          }
+        },
+        "DuringTheTurn": {
+          "$kind": "HookTest",
+          "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:002F",
+          "Test": {
+            "$kind": "HookHistory",
+            "Query": {
+              "Kind": "CardPlayFinished",
+              "Scope": "ThisTurn",
+              "Whose": "Owner",
+              "Details": "None",
+              "CardType": "None",
+              "CardTag": "Ki"
+            },
+            "Any": true
+          }
+        }
+      }
+    ]
   },
   {
     "Name": "TungstenRod",

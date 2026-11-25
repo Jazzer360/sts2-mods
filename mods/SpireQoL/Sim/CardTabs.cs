@@ -83,7 +83,10 @@ public sealed class CardTabs
     public void Add(IReadOnlyList<TabSource> sources, SimState start, SimOutcome baseline, SimOutcome[] outcomes)
     {
         foreach (var source in sources)
+        {
             if (source.Logs) FromLog(source, outcomes);
+            SetUpFromLog(source, outcomes);
+        }
         foreach (var source in sources.OrderBy(source => source.OutcomePass))
         {
             // A source listed again for the engine's own logging (LogKind) has its rules from its own entry.
@@ -119,6 +122,8 @@ public sealed class CardTabs
                     if (outcomes[i].PlayFlashedAny.Has(SimKeys.UnknownFlash(key))) any[i] = true;
             Merge(source.Class, every, any);
         }
+        // A payout the play decides, given up (decision #239): a tab only where its row shows that direction (decision #250).
+        if (model is ReadModel { GivesUpDuringTheTurn: true } && (source.Shows & TabShows.GivesUp) == 0) return;
         Func<SimOutcome, bool> at = harmful ? outcome => Fired(outcome.PlayFiredAny) : outcome => Fired(outcome.PlayFiredEvery);
         if (!outcomes.Any(at)) return;
         // Which aims give the tab, across every source sharing it (several enemies with the same power).
@@ -144,6 +149,24 @@ public sealed class CardTabs
         if (harmful && Chances) chance = WarningChance(outcomes.Where(at).Select(outcome => outcome.LoggedChance(Fired)));
         if (chance != null) number = null;
         Tabs[tabKey] = new SourceTab(tabKey, harmful, number, kind == TabKind.Trigger ? null : kind, amount, min, max, chance, aimed);
+    }
+
+    /// <summary>
+    /// A payout the play decides, set up by the play (decision #250: Tune's free card on the turn's first Ki), as its row shows it: a plain trigger
+    /// where every branch of some aim turns it on (its set-up log, SimKeys.SetUp), with the aim marker where not every aim does. A warning the same
+    /// source already has (it gives the payout up in some outcome) stays.
+    /// </summary>
+    private void SetUpFromLog(TabSource source, SimOutcome[] outcomes)
+    {
+        if ((source.Shows & TabShows.SetsUp) == 0 || SimModels.Get(source.Model) is not ReadModel { GivesUpDuringTheTurn: true }) return;
+        var key = SimKeys.Logged(SimKeys.SetUp(source.Model), source.Owner);
+        bool Fired(NamedCounts log) => log.Has(key) && (Indirect || log[key] > log[SimKeys.Indirect(key)]);
+        var setsUp = outcomes.Select(outcome => Fired(outcome.PlayFiredEvery)).ToArray();
+        if (!setsUp.Any(fires => fires)) return;
+        var tabKey = "proc:" + source.Class;
+        if (Tabs.TryGetValue(tabKey, out var had) && had.Crossed) return;
+        var firesAt = FiresAt(tabKey, setsUp);
+        Tabs[tabKey] = new SourceTab(tabKey, Crossed: false, Aimed: firesAt.Length > 1 && !firesAt.All(fires => fires));
     }
 
     /// <summary>

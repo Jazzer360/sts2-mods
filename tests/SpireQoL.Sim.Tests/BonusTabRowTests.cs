@@ -184,6 +184,60 @@ public class BonusTabRowTests
         Assert.Null(Tab(TabsOf(empty, Channel(OrbKind.Random)), "HailstormPower"));
     }
 
+    // ---- Tune (AfterSideTurnEnd: a free card next turn, FreeCardPower, when its owner played a Ki this turn: MelodyCmd.PlayedKiThisTurn, the
+    // fight's log of the turn's finished plays): decided by the play, a plain tab on the play that sets it up.
+
+    private static SimPlay Ki(string name = "Ki Card") => new() { Name = name, Card = new SimCardPlay(new SimCard(name, SimCardType.Skill) { Tags = { SimCardTag.Ki } }, Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: false) };
+
+    private static SimState Tuned()
+    {
+        var state = Board();
+        state.You.Powers = state.You.Powers.With(PowerId.Tune, amount: 1);
+        return state;
+    }
+
+    [Fact]
+    public void TuneShowsThePlayThatSetsUpItsFreeCard()
+    {
+        Assert.Equal(new SourceTab("proc:TunePower", Crossed: false), Tab(TabsOf(Tuned(), Ki()), "TunePower"));
+        // A card that isn't a Ki: no tab.
+        Assert.Null(Tab(TabsOf(Tuned(), Skill), "TunePower"));
+    }
+
+    [Fact]
+    public void TuneShowsNoTabOnceAKiWasPlayedThisTurn()
+    {
+        var state = Tuned();
+        state.You.Turn = SimKeys.CountPlay(SimKeys.CountPlay(state.You.Turn, PlayStage.Started, SimCardType.Skill, new[] { SimCardTag.Ki }), PlayStage.Finished, SimCardType.Skill, new[] { SimCardTag.Ki });
+        Assert.Null(Tab(TabsOf(state, Ki()), "TunePower"));
+    }
+
+    [Fact]
+    public void OnGeneratedBoardsTunesTabIsWhatItsCodeDidAsTheTurnEnded()
+    {
+        // TunePower.AfterSideTurnEnd flashes and gives its free card where a Ki was played this turn: its tab is plain where ending the turn now
+        // wouldn't and after the play it does, in every outcome.
+        var seen = new HashSet<bool>();
+        for (var scenario = 0; scenario < 120; scenario++)
+        {
+            var random = new Random(9500 + scenario);
+            var state = Tuned();
+            state.You.HandCount = random.Next(1, 5);
+            var played = random.Next(3) == 0 ? new[] { SimCardTag.Ki } : random.Next(2) == 0 ? new[] { SimCardTag.Cho } : Array.Empty<SimCardTag>();
+            if (played.Length > 0 || random.Next(2) == 0)
+                state.You.Turn = SimKeys.CountPlay(SimKeys.CountPlay(state.You.Turn, PlayStage.Started, SimCardType.Skill, played), PlayStage.Finished, SimCardType.Skill, played);
+            var tag = random.Next(3) switch { 0 => SimCardTag.Ki, 1 => SimCardTag.Wah, _ => SimCardTag.Shiv };
+            var play = new SimPlay { Name = "Card", Card = new SimCardPlay(new SimCard("Card", SimCardType.Attack) { Tags = { tag } }, Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: false) };
+            bool Flashed(SimState branch) => branch.FlashedAny.Has(PowerId.Tune.Name);
+            var expected = !SimEngine.Run(state).InEvery(Flashed) && SimEngine.Run(state, play).InEvery(Flashed);
+            var tab = Tab(TabsOf(state, play), "TunePower");
+            Assert.True(expected == (tab != null), $"scenario {scenario}: expected {(expected ? "a plain tab" : "none")}, shown {tab}");
+            if (tab != null) Assert.False(tab.Crossed);
+            seen.Add(expected);
+        }
+        Assert.Equal(2, seen.Count);
+    }
+
     // ---- on generated boards: each end-of-turn payout's tab against what its code did as the turn ended
 
     /// <summary>The end-of-turn payouts given rows (decision #250), each with the value its code reads and that value.</summary>

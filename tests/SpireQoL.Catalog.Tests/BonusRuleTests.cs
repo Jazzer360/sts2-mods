@@ -26,7 +26,6 @@ public class BonusRuleTests
         ["RegenPower"] = "its heal as your turn ends, while its owner lives: a play would give it up only by your death",
         ["RitualPower"] = "its Strength as its owner's turn ends, an enemy's (not one it got on its own turn): the rule shows yours only",
         ["TheBombPower"] = "its damage as your turn ends once its countdown is over: decided by its count as your turn ends",
-        ["TunePower"] = "a card made free next turn, on its own count of the turn's plays: a play would set it up",
     };
 
     public static TheoryData<string> Branches() => new() { "beta", "main" };

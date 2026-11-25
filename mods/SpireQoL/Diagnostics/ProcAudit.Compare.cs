@@ -151,6 +151,13 @@ public sealed partial class ProcAudit
                 continue;
             }
             if (otherTab.Crossed) continue;
+            // A payout the play decides, set up by it (decision #250: Tune's free card next turn on the turn's first Ki): paid after the play, with
+            // nothing of it to see during the play. Counted, not passed.
+            if (SimModels.Get(name) is ReadModel { GivesUpDuringTheTurn: true })
+            {
+                modelLines.Skip("didn't fire", "a payout the play sets up, paid after the play", name);
+                continue;
+            }
             // The play ended the fight: the game stops at the killing hit, so a relic that acts after it (Bone Flute after
             // Osty's attack) never gets to.
             if (window.FightEnded) continue;
