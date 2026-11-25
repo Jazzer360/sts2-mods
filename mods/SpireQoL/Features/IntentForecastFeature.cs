@@ -91,7 +91,8 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         // Each forecast move's hits on you as they'll land (decision #304: the simulator's projection from the board, with no plays of yours); null
         // where it isn't known (a roll decides it, or the simulator can't follow what comes before), when the move is drawn as the game reads it now.
         // From Incoming Damage's own state of the board (what's shown: without teammates' hands unless Count teammates' hands is on).
-        var projection = Sts2State.Me is { } me && Sts2State.Combat is { } combat
+        // Not before the models are read (SimModels.Loaded: the frame never waits for them).
+        var projection = SimModels.Loaded && Sts2State.Me is { } me && Sts2State.Combat is { } combat
             ? SpireQoL.Combat.TurnEndModel.Compute() is { } forecastNow ? SimAdapter.Project(me, combat, forecastNow.State, forecastNow.Ids)
                 : SimAdapter.Project(me, combat, teammateHands: SpireQoL.Combat.TurnEndModel.CountTeammateHands)
             : null;
