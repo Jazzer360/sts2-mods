@@ -1416,6 +1416,31 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// CreatureCmd.LoseBlock: a living creature loses up to <paramref name="amount"/> of its block (Creature.LoseBlockInternal); one whose block that
+    /// takes from above 0 to 0 tells every listener's Hook.AfterBlockBroken, <paramref name="remover"/> the breaker (null: no one). Nothing for an
+    /// amount of 0 or less.
+    /// </summary>
+    internal static void LoseBlock(SimState state, int creature, int amount, int? remover)
+    {
+        if (amount <= 0) return;
+        if (state.Enemy(creature) is { } enemy)
+        {
+            if (!enemy.Alive || enemy.Block <= 0) return;
+            enemy.Block = Math.Max(0, enemy.Block - amount);
+            if (enemy.Block > 0) return;
+            enemy.BlockBroken = true;
+        }
+        else if (state.Player(creature) is { Died: false, Block: > 0 })
+        {
+            var player = state.MutablePlayer(creature);
+            player.Block = Math.Max(0, player.Block - amount);
+            if (player.Block > 0) return;
+        }
+        else return;
+        foreach (var (model, owner) in Listeners(state)) model.AfterBlockBroken(state, owner, creature, remover);
+    }
+
+    /// <summary>
     /// An enemy its own death's code brought back (SetHpStep on its dead owner), as CreatureCmd.Kill goes on after AfterDeath: its powers come off but
     /// the ones whose ShouldPowerBeRemovedAfterOwnerDeath is false (Creature.RemoveAllPowersAfterDeath, whatever its HP), and it's in the fight again.
     /// </summary>

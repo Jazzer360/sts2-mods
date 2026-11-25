@@ -134,6 +134,11 @@ public enum HookName
     /// Eruption's, whose deaths bring creatures in): 1 it stops it ending.
     /// </summary>
     ShouldStopCombatFromEnding,
+    /// <summary>
+    /// PowerModel.AfterRemoved(oldOwner): the power came off its owner (PowerCmd.Remove: RemoveInternal, then AfterRemoved; its amount as it was),
+    /// told to that power alone, never to every listener.
+    /// </summary>
+    AfterRemoved,
 }
 
 /// <summary>When an orb's passive goes off: the OrbModel trigger hook its class overrides with a call of TriggerPassive (OrbQueue calls them).</summary>
@@ -613,6 +618,21 @@ public sealed record DamageStep(HookTarget Target, HookValue Amount, HookValue P
     /// <summary>No dealer (the dealer argument is null).</summary>
     public bool NoDealer { get; init; }
 }
+
+/// <summary>
+/// CreatureCmd.LoseBlock of the owner: up to its amount of the owner's block, AfterBlockBroken told when it breaks (SimEngine.LoseBlock), its remover
+/// the owner (ByOwner) or no one.
+/// </summary>
+public sealed record LoseBlockStep(HookValue Amount) : HookStep
+{
+    public bool ByOwner { get; init; }
+}
+
+/// <summary>
+/// A hook body the reader doesn't read, run where its hook runs as an unknown (SimState.Unmodelled, with why: decision #92): a power's AfterRemoved,
+/// which runs only as it goes.
+/// </summary>
+public sealed record UnknownStep(string Why) : HookStep;
 
 /// <summary>CreatureCmd.Heal of the owner: its amount, up to its max HP (no modifiers: the game's heal has none).</summary>
 public sealed record HealStep(HookValue Amount) : HookStep;
@@ -1102,6 +1122,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             GainEnergyStep energy => Inside(energy.Amount),
             GainStarsStep stars => Inside(stars.Amount),
             HealStep heal => Inside(heal.Amount),
+            LoseBlockStep loss => Inside(loss.Amount),
             SummonStep summon => Inside(summon.Amount),
             SetHpStep setHp => Inside(setHp.Amount),
             ApplyPowerStep apply => Inside(apply.Amount),

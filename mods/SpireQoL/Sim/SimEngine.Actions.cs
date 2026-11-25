@@ -760,9 +760,13 @@ public static partial class SimEngine
         var after = powers.Add(power, amount);
         // More of one already there (PowerCmd.ModifyAmount; a power kept in copies changes a copy, never the whole): gone once
         // ShouldRemoveDueToAmount says so.
-        if (had && powerModel is not ReadModel { HasCopies: true } && powerModel?.Instanced != true && (SimModels.AllowsNegative(power) ? after[power] == 0 : after[power] <= 0))
-            after = after.Without(power);
+        var gone = had && powerModel is not ReadModel { HasCopies: true } && powerModel?.Instanced != true && (SimModels.AllowsNegative(power) ? after[power] == 0 : after[power] <= 0);
+        var left = after[power];
+        if (gone) after = after.Without(power);
         SetPowers(state, target, after);
+        // Gone, it's PowerCmd.Remove's: its AfterRemoved, told as it goes (the game tells Hook.AfterPowerAmountChanged's listeners first; no read
+        // power's AfterRemoved changes what one of them reads: TRACKER, the power removals' order).
+        if (gone) TellRemoved(state, target, power, left);
         // A power whose hooks a game update made unreadable lands where nothing follows what it does: unknown (decision #92).
         if (powerModel == null && SimModels.UnreadReason(power.Name) is { } unread) state.Unmodelled ??= unread;
         // A read power whose code asks who applied it (base.Applier) keeps its applier as its Data, as the adapter reads it (decision #195).

@@ -52,6 +52,9 @@ public class ReadModelParityTests
     private static readonly Dictionary<string, string> Reviewed = new(StringComparer.Ordinal)
     {
         ["DoubleDamagePower.AfterSideTurnEnd"] = "PowerCmd.Decrement(this) when its owner takes part: it goes down as your turn ends. After it no card of yours plays this turn (the auto-plays come before), so no damage it doubles is left: no prediction changes",
+        ["BurrowedPower.AfterRemoved"] = "CreatureCmd.LoseBlock(new BlockingPlayerChoiceContext(), oldOwner, 999999999m, null): its old owner's block goes as it goes (decision #288), where the hand-written model ran nothing (AfterRemoved was classed as outside fights). Its one removal is its AfterBlockBroken's, on a block already broken: no prediction changes",
+        ["InterceptPower.AfterRemoved"] = "a loop over its old owner's teammates' Covered whose Applier is it, each PowerCmd.Remove'd, which the reader doesn't read: unknown where it runs (decision #288), where the hand-written model ran nothing. Nothing a simulation does removes it (its own Remove is its AfterSideTurnEnd's on the enemies' side, which no simulation reaches; Covered, hand-written, never removes it; a read model's removal of a class with an AfterRemoved is a gap): no prediction changes",
+        ["VitalSparkPower.AfterRemoved"] = "a loop over its old owner's allies' cards, CardCmd.ClearAffliction of each Tainted one, which the reader doesn't read: unknown where it runs (decision #288), where the hand-written model ran nothing. Its code never removes it and nothing a simulation does takes it off (its death's removal isn't told: TRACKER): no prediction changes",
         ["ReboundPower.AfterSideTurnEnd"] = "participants.Contains(base.Owner): PowerCmd.Remove(this): it goes as its owner's side's turn ends, where the hand-written model kept it. No card of yours plays after it this turn (the auto-plays come before), so no card's result location reads it: no prediction changes",
         ["SneckoSkull.ModifyPowerAmountGivenAdditive"] = "Flash() in AfterModifyingPowerAmountGiven, told when its term changed the amount: the read model logs its flash (the play check's flash log, which now holds Snecko Skull to the game's flash), where the hand-written model logged an acting fire as it added. It has no tab (no Proc Tags row): nothing shown changes; its amount is the same",
         ["SneckoSkull.ModifyPowerAmountGiven"] = "Flash() in AfterModifyingPowerAmountGiven, told when its term changed the amount: the read model logs its flash (the play check's flash log, which now holds Snecko Skull to the game's flash), where the hand-written model logged an acting fire as it added. It has no tab (no Proc Tags row): nothing shown changes; its amount is the same",
@@ -311,6 +314,7 @@ public class ReadModelParityTests
         nameof(SimModel.ShouldCreatureBeRemovedFromCombatAfterDeath), nameof(SimModel.StaysOnDeadOwner), nameof(SimModel.ShouldStopCombatFromEnding),
         nameof(SimModel.AfterBlockBroken), nameof(SimModel.ShouldClearBlock), nameof(SimModel.ModifyCardPlayResultLocation), nameof(SimModel.AfterModifyingCardPlayResultLocation),
         nameof(SimModel.ModifyPowerAmountGivenAdditive), nameof(SimModel.ModifyPowerAmountGivenMultiplicative), nameof(SimModel.ModifyPowerAmountGiven), nameof(SimModel.AfterModifyingPowerAmountGiven),
+        nameof(SimModel.AfterRemoved),
     };
 
     [Fact]
@@ -405,8 +409,9 @@ public class ReadModelParityTests
         if (RelicCounterFields.TryGetValue(model.Name, out var counterField)) SimEngine.SetField(state, owner, model.FieldKey(counterField.Field), counterField.Data);
         if (model.Spec.Kind == ModelKind.Relic) SimEngine.SetRelics(state, owner, SimEngine.RelicsOf(state, owner).With(new RelicId(model.Name), amount, data));
         // A power whose every step waits on its owner's monster being a class (Burrowed's Tunneler: the one monster the game gives it, whose class its code
-        // casts to): its owner is that monster, as in the game.
-        if (Who.IsEnemy(owner) && state.Enemy(owner) is { } ownerEnemy && model.Spec.Steps().ToList() is { Count: > 0 } steps
+        // casts to): its owner is that monster, as in the game. Its AfterRemoved runs as it goes, which those steps make it (Burrowed's block loss).
+        if (Who.IsEnemy(owner) && state.Enemy(owner) is { } ownerEnemy
+            && (model.Spec with { Hooks = model.Spec.Hooks.Where(program => program.Hook != HookName.AfterRemoved).ToList() }).Steps().ToList() is { Count: > 0 } steps
             && steps.Select(step => MonsterClassNeeded(step.When)).Distinct().ToList() is [{ } monsterClass])
             ownerEnemy.Monster = monsterClass;
         return state;
@@ -715,6 +720,19 @@ public class ReadModelParityTests
                             if (fresh) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).Without(power));
                             Land(model, state, owner, applier, power, amount: 2, had: !fresh);
                             return Branches(new[] { state }) + " // " + Sequence(state, TurnEndHooks, (branch, turnEndHook) => turnEndHook(model, branch, owner));
+                        });
+                break;
+            case nameof(SimModel.AfterRemoved):
+                // It comes off its owner (PowerCmd.Remove: off first, then told with the amount it had), with its owner's block up and down.
+                foreach (var amount in new[] { 0, 2 })
+                    foreach (var block in new[] { 0, 5 })
+                        yield return ($"it goes with {amount} left, its owner on {block} block", (model, state) =>
+                        {
+                            if (state.Enemy(owner) is { } enemy) enemy.Block = block;
+                            else if (state.Player(owner) != null) state.MutablePlayer(owner).Block = block;
+                            SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).Without(new PowerId(model.Name)));
+                            model.AfterRemoved(state, owner, amount);
+                            return Branches(new[] { state });
                         });
                 break;
             case nameof(SimModel.ModifyCardPlayCount) or nameof(SimModel.AfterModifyingCardPlayCount):

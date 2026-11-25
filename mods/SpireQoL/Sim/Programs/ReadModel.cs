@@ -495,6 +495,7 @@ public sealed class ReadModel : SimModel
         HookName.ModifyBlockAdditive => nameof(ModifyBlockAdditive),
         HookName.ModifyBlockMultiplicative => nameof(ModifyBlockMultiplicative),
         HookName.AfterApplied => nameof(AfterApplied),
+        HookName.AfterRemoved => nameof(AfterRemoved),
         HookName.BeforeSideTurnStart => nameof(BeforeSideTurnStart),
         HookName.AfterSideTurnStart => nameof(AfterSideTurnStart),
         HookName.AfterSideTurnStartLate => nameof(AfterSideTurnStartLate),
@@ -650,6 +651,23 @@ public sealed class ReadModel : SimModel
         args = args with { Asked = _asksOnce[(int)HookName.AfterApplied] ? new int[_testSlots.Count] : null, Taken = _takes[(int)HookName.AfterApplied] ? new int[1] : null };
         foreach (var branch in RunSteps(steps, args))
             if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterApplied branched");
+    }
+
+    /// <summary>
+    /// It came off its owner (PowerModel.AfterRemoved, told by SimEngine.RemovePower where PowerCmd.Remove runs it): deterministic, on the state
+    /// given, its amount the one it had (base.Amount: RemoveInternal leaves it).
+    /// </summary>
+    public override void AfterRemoved(SimState state, int owner, int amount)
+    {
+        if (_steps[(int)HookName.AfterRemoved] is not { } steps) return;
+        var args = new HookArgs
+        {
+            State = state, Owner = owner, Hook = HookName.AfterRemoved, Play = state.CurrentPlay, PowerAmount = amount,
+            Asked = _asksOnce[(int)HookName.AfterRemoved] ? new int[_testSlots.Count] : null, Taken = _takes[(int)HookName.AfterRemoved] ? new int[1] : null,
+            Locals = _localSlots.Count > 0 ? new decimal[_localSlots.Count] : null,
+        };
+        foreach (var branch in RunSteps(steps, args))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterRemoved branched");
     }
 
     /// <summary>After it changed a card play's count (a stack used: PowerCmd.Decrement; Throwing Axe's UsedThisCombat): deterministic, on the state given.</summary>
@@ -1107,6 +1125,8 @@ public sealed class ReadModel : SimModel
         var powers = SimEngine.PowersOf(state, owner);
         var total = powers[ThisPower] - (amount - Math.Max(0, left));
         SimEngine.SetPowers(state, owner, total > 0 && ListedCopies(fields).Count > 0 ? powers.With(ThisPower, total, powers.DataOf(ThisPower)) : powers.Without(ThisPower));
+        // The copy gone is a power PowerCmd.Remove took off (each copy is an instance of its own): its AfterRemoved, with the amount it had.
+        if (left <= 0) SimEngine.TellRemoved(state, owner, ThisPower, delta == null ? amount : left);
     }
 
     private NamedCounts WithoutCopy(NamedCounts fields, int copy)
@@ -1385,7 +1405,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or SummonStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep or SpawnStep or SetHpStep or SetMoveStep
+            case FlashStep or GainStarsStep or HealStep or LoseBlockStep or UnknownStep or SummonStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep or SpawnStep or SetHpStep or SetMoveStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1504,6 +1524,25 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
+            case UnknownStep unknown:
+            {
+                var why = unknown.Why;
+                return args =>
+                {
+                    args.State.Unmodelled ??= why;
+                    return One(args.State);
+                };
+            }
+            case LoseBlockStep loss:
+            {
+                var amount = Compile(loss.Amount);
+                var byOwner = loss.ByOwner;
+                return args =>
+                {
+                    SimEngine.LoseBlock(args.State, args.Owner, (int)Math.Min(int.MaxValue, amount(in args)), byOwner ? args.Owner : null);
+                    return One(args.State);
+                };
+            }
             case DrawStep draw:
             {
                 var count = Compile(draw.Count);
@@ -1556,7 +1595,7 @@ public sealed class ReadModel : SimModel
                         {
                             case HookTarget.Owner:
                                 SimEngine.ApplyInHit(state, applier, args.Owner, power, given, debuff);
-                                if (goesAtZero && SimEngine.PowersOf(state, args.Owner) is var inHitLeft && inHitLeft.Has(power) && inHitLeft[power] <= 0) SimEngine.SetPowers(state, args.Owner, inHitLeft.Without(power));
+                                if (goesAtZero && SimEngine.PowersOf(state, args.Owner) is var inHitLeft && inHitLeft.Has(power) && inHitLeft[power] <= 0) SimEngine.RemovePower(state, args.Owner, power);
                                 break;
                             case HookTarget.PowerOwner or HookTarget.HitTarget: SimEngine.ApplyInHit(state, applier, args.Target, power, given, debuff); break;
                             case HookTarget.AllEnemies:
@@ -1576,7 +1615,7 @@ public sealed class ReadModel : SimModel
                             var owner = args.Owner;
                             var changed = SimEngine.ApplyAndTell(state, applier, owner, power, given, debuff).ToList();
                             foreach (var branch in changed)
-                                if (SimEngine.PowersOf(branch, owner) is var left && left.Has(power) && left[power] <= 0) SimEngine.SetPowers(branch, owner, left.Without(power));
+                                if (SimEngine.PowersOf(branch, owner) is var left && left.Has(power) && left[power] <= 0) SimEngine.RemovePower(branch, owner, power);
                             return changed;
                         }
                         case HookTarget.PowerOwner or HookTarget.HitTarget: return SimEngine.ApplyAndTell(state, applier, args.Target, power, given, debuff);
@@ -1616,16 +1655,15 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            // PowerCmd.Remove(this), PowerCmd.Decrement(this): the power, or the copy running the hook.
+            // PowerCmd.Remove(this), PowerCmd.Decrement(this): the power, or the copy running the hook; each goes as PowerCmd.Remove takes it off
+            // (its AfterRemoved told: SimEngine.RemovePower).
             case RemovePowerStep { Powers: { } removed }:
             {
                 var powers = removed.Select(PowerId.Of).ToArray();
                 return args =>
                 {
                     if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
-                    var left = SimEngine.PowersOf(args.State, args.Owner);
-                    foreach (var power in powers) left = left.Without(power);
-                    SimEngine.SetPowers(args.State, args.Owner, left);
+                    foreach (var power in powers) SimEngine.RemovePower(args.State, args.Owner, power);
                     return One(args.State);
                 };
             }
@@ -1634,7 +1672,7 @@ public sealed class ReadModel : SimModel
                 {
                     if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
                     if (args.Copy > 0) ChangeCopy(args.State, args.Owner, args.Copy, delta: null);
-                    else SimEngine.SetPowers(args.State, args.Owner, SimEngine.PowersOf(args.State, args.Owner).Without(ThisPower));
+                    else SimEngine.RemovePower(args.State, args.Owner, ThisPower);
                     return One(args.State);
                 };
             case DecrementPowerStep:
@@ -2105,8 +2143,10 @@ public sealed class ReadModel : SimModel
             case HookFact.PlayIsModelCard: return (in HookArgs args) => args.Card != null && ReferenceEquals(args.Play?.Card, args.Card) ? 1m : 0m;
             case HookFact.ModelCardTargets: return (in HookArgs args) => (int)(args.Card?.Targets ?? SimPlay.Target.None);
             case HookFact.Amount:
+                // As it comes off (AfterRemoved), the amount it had: it's off its owner by then.
                 return Spec.Kind == ModelKind.Power
-                    ? (in HookArgs args) => args.Copy > 0 ? CopyOf(args.State, args.Owner, args.Copy).Amount : SimEngine.PowerOn(args.State, args.Owner, ThisPower)
+                    ? (in HookArgs args) => args.Hook == HookName.AfterRemoved ? args.PowerAmount
+                        : args.Copy > 0 ? CopyOf(args.State, args.Owner, args.Copy).Amount : SimEngine.PowerOn(args.State, args.Owner, ThisPower)
                     : (in HookArgs args) => SimEngine.RelicsOf(args.State, args.Owner)[ThisRelic];
             case HookFact.PlayIsOwners: return (in HookArgs args) => args.Play?.Owner == args.Owner ? 1m : 0m;
             case HookFact.CardType: return (in HookArgs args) => (int)CardTypeOf(in args);

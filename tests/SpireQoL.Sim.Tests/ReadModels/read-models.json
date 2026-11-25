@@ -3090,6 +3090,19 @@
         ]
       },
       {
+        "Hook": "AfterRemoved",
+        "Steps": [
+          {
+            "$kind": "LoseBlockStep",
+            "Amount": {
+              "$kind": "HookConstant",
+              "Value": 999999999
+            },
+            "ByOwner": false
+          }
+        ]
+      },
+      {
         "Hook": "ShouldClearBlock",
         "Steps": [],
         "Returns": {
@@ -12797,6 +12810,15 @@
     "Name": "InterceptPower",
     "Kind": "Power",
     "Hooks": [
+      {
+        "Hook": "AfterRemoved",
+        "Steps": [
+          {
+            "$kind": "UnknownStep",
+            "Why": "InterceptPower\u0027s AfterRemoved isn\u0027t read (gap: a loop)"
+          }
+        ]
+      },
       {
         "Hook": "ModifyDamageMultiplicative",
         "Steps": [],
@@ -38326,6 +38348,15 @@
                 "Of": "Tainted"
               }
             }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterRemoved",
+        "Steps": [
+          {
+            "$kind": "UnknownStep",
+            "Why": "VitalSparkPower\u0027s AfterRemoved isn\u0027t read (gap: a loop)"
           }
         ]
       }

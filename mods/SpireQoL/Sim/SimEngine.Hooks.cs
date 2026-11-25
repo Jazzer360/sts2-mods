@@ -332,12 +332,33 @@ public static partial class SimEngine
         if (state.Enemy(creature) is { Alive: true }) state.Unmodelled ??= "an enemy's heal (its max HP isn't read)";
     }
 
-    /// <summary>A power's amount down by one, gone at 0 (PowerCmd.Decrement).</summary>
+    /// <summary>A power's amount down by one, gone at 0 (PowerCmd.Decrement: PowerCmd.ModifyAmount, then PowerCmd.Remove once ShouldRemoveDueToAmount).</summary>
     public static void DecrementPower(SimState state, int id, PowerId power)
     {
         var powers = PowersOf(state, id);
         if (!powers.Has(power)) return;
-        SetPowers(state, id, powers[power] > 1 ? powers.With(power, powers[power] - 1, powers.DataOf(power)) : powers.Without(power));
+        if (powers[power] > 1) SetPowers(state, id, powers.With(power, powers[power] - 1, powers.DataOf(power)));
+        else RemovePower(state, id, power, amount: powers[power] - 1);
+    }
+
+    /// <summary>
+    /// PowerCmd.Remove: the power off the creature (RemoveInternal), then its AfterRemoved told to it alone, its old owner the creature and
+    /// <paramref name="amount"/> the amount it had as it went (its entry's, unless given: one PowerCmd.ModifyAmount left at 0 or below). Nothing for
+    /// one it doesn't have.
+    /// </summary>
+    public static void RemovePower(SimState state, int id, PowerId power, int? amount = null)
+    {
+        var powers = PowersOf(state, id);
+        if (!powers.Has(power)) return;
+        var had = amount ?? powers[power];
+        SetPowers(state, id, powers.Without(power));
+        TellRemoved(state, id, power, had);
+    }
+
+    /// <summary>PowerModel.AfterRemoved of a power already off <paramref name="id"/> (a copy of one kept in copies, the copy's amount).</summary>
+    public static void TellRemoved(SimState state, int id, PowerId power, int amount)
+    {
+        if (SimModels.Get(power.Name) is { } model && model.Overrides(nameof(SimModel.AfterRemoved))) model.AfterRemoved(state, id, amount);
     }
 }
 

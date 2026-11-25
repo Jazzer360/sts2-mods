@@ -502,6 +502,11 @@ public abstract class SimModel
     /// lands on a creature without it; for an instanced power (<see cref="Instanced"/>) on every copy.
     /// </summary>
     public virtual void AfterApplied(SimState state, int owner, int applier, int amount) { }
+    /// <summary>
+    /// This power came off <paramref name="owner"/> (PowerCmd.Remove: RemoveInternal, then PowerModel.AfterRemoved(oldOwner), told to it alone),
+    /// with <paramref name="amount"/> the amount it had (RemoveInternal leaves it). Deterministic, on the state given (SimEngine.RemovePower).
+    /// </summary>
+    public virtual void AfterRemoved(SimState state, int owner, int amount) { }
     /// <summary>After a block amount it changed was gained (the game's AfterModifyingBlockAmount): Pael's Legion, Vambrace, Stretch.</summary>
     public virtual void AfterModifyingBlockAmount(SimState state, int owner, int amount, SimCardPlay? play) { }
     /// <summary>After a damage amount it changed (the game's AfterModifyingDamageAmount): most only flash (FlashesOnDamageModified).</summary>

@@ -13,13 +13,19 @@ public sealed record HookReading(string Hook, string? Gap)
     /// <summary>A reason the simulator never runs this hook body (outside fights, past the simulated turns): nothing of it to translate.</summary>
     public string? NotRun { get; init; }
 
-    /// <summary>Read: translated, or never run in a simulation for a reason given.</summary>
+    /// <summary>
+    /// The gap of a body read as unknown where it runs (a power's AfterRemoved that doesn't read: UnknownStep), so the class's other hooks stay
+    /// read; null for any other.
+    /// </summary>
+    public string? Unknown { get; init; }
+
+    /// <summary>Read: translated, never run in a simulation for a reason given, or unknown where it runs.</summary>
     public bool Read => Gap == null;
 
-    /// <summary>Translated into the simulator's program (not only never run).</summary>
-    public bool Translated => Gap == null && NotRun == null;
+    /// <summary>Translated into the simulator's program (not only never run, nor unknown).</summary>
+    public bool Translated => Gap == null && NotRun == null && Unknown == null;
 
-    public override string ToString() => Hook + (Gap != null ? ": " + Gap : NotRun != null ? ": not run: " + NotRun : ": read");
+    public override string ToString() => Hook + (Gap != null ? ": " + Gap : NotRun != null ? ": not run: " + NotRun : Unknown != null ? ": unknown where it runs: " + Unknown : ": read");
 }
 
 /// <summary>A power's or a relic's hooks as read from its code: its program (ModelSpec), and each hook body read or a named gap.</summary>
@@ -48,6 +54,7 @@ public static class HookReader
         ["CreatureCmd.GainBlock"] = "GainBlockStep: block for the owner through the block pipeline (its amount and props, or its BlockVar's)",
         ["CreatureCmd.Damage"] = "DamageStep: damage to every hittable enemy, a random one (a branch each), the creature a power landed on or the owner, from the owner or no one",
         ["CreatureCmd.Heal"] = "HealStep: the owner heals, up to its max HP",
+        ["CreatureCmd.LoseBlock"] = "LoseBlockStep: the owner loses up to that much block, AfterBlockBroken told when it breaks, its remover the owner or no one",
         ["OstyCmd.Summon"] = "SummonStep: a summon for its owner, the player who played the card or the hit's dealer's player, as OstyCmd.Summon runs (SimEngine.Summon)",
         ["CreatureCmd.Stun"] = "StunStep: the owner (an enemy) stunned, when the stunned move it's given calls no command",
         ["CreatureCmd.Kill"] = "KillStep: the owner killed: an enemy marked killed by its power, a player losing all their HP unless a death prevention holds it back",
@@ -146,6 +153,14 @@ public static class HookReader
         foreach (var hook in Hooks(type).OrderBy(method => method.Name, StringComparer.Ordinal))
         {
             var (program, gap, notRun) = reader.Hook(hook);
+            // A power's AfterRemoved runs only as it goes (PowerCmd.Remove): one that doesn't read is unknown there (UnknownStep: the simulation
+            // carries why, decision #288), and its class's other hooks stay read, since what a simulation does may never remove it.
+            if (gap != null && kind == ModelKind.Power && hook.Name == nameof(HookName.AfterRemoved))
+            {
+                readings.Add(new HookReading(hook.Name, null) { Unknown = gap.Value.Text });
+                programs.Add(new HookProgram(HookName.AfterRemoved, new HookStep[] { new UnknownStep($"{type.Name}'s AfterRemoved isn't read ({gap.Value.Text})") }));
+                continue;
+            }
             readings.Add(new HookReading(hook.Name, gap?.Text) { NotRun = notRun, Capability = gap?.Capability });
             if (program != null) programs.Add(program);
         }
@@ -442,6 +457,7 @@ public static class HookReader
             GainEnergyStep energy => energy with { Amount = Map(energy.Amount)! },
             GainStarsStep stars => stars with { Amount = Map(stars.Amount)! },
             HealStep heal => heal with { Amount = Map(heal.Amount)! },
+            LoseBlockStep loss => loss with { Amount = Map(loss.Amount)! },
             SummonStep summon => summon with { Amount = Map(summon.Amount)! },
             SetHpStep setHp => setHp with { Amount = Map(setHp.Amount)! },
             ApplyPowerStep apply => apply with { Amount = Map(apply.Amount)! },
@@ -945,12 +961,20 @@ public static class HookReader
             return steps;
         }
 
+        /// <summary>
+        /// A hook that acts only outside fights (Diagnostics/OutOfCombatHooks.txt), for this model's kind: a power's AfterRemoved isn't one, since
+        /// PowerCmd.Remove runs it in the fight (RemoveInternal, then AfterRemoved(power.Owner)), as CreatureCmd.Kill does for the powers a death takes
+        /// off; a relic's (RelicCmd.Remove: events, the console) is.
+        /// </summary>
+        private bool OutsideFights(string hook) =>
+            Diagnostics.CoverageLedger.OutOfCombatHooks.Contains(hook) && !(hook == nameof(HookName.AfterRemoved) && _kind == ModelKind.Power);
+
         /// <summary>One hook body of a kind the engine runs no read program for, read to its first gap (ReadEffects).</summary>
         public HookReading Effect(MethodInfo hook)
         {
             _hook = hook.Name;
             if (NotRun.TryGetValue(hook.Name, out var why)) return new HookReading(hook.Name, null) { NotRun = why };
-            if (Diagnostics.CoverageLedger.OutOfCombatHooks.Contains(hook.Name)) return new HookReading(hook.Name, null) { NotRun = "it acts outside fights (Diagnostics/OutOfCombatHooks.txt)" };
+            if (OutsideFights(hook.Name)) return new HookReading(hook.Name, null) { NotRun = "it acts outside fights (Diagnostics/OutOfCombatHooks.txt)" };
             static HookReading Gapped(string hook, GapOf gap) => new(hook, gap.Text) { Capability = gap.Capability };
             try
             {
@@ -979,7 +1003,7 @@ public static class HookReader
         {
             _hook = hook.Name;
             if (NotRun.TryGetValue(hook.Name, out var why)) return (null, null, why);
-            if (Diagnostics.CoverageLedger.OutOfCombatHooks.Contains(hook.Name)) return (null, null, "it acts outside fights (Diagnostics/OutOfCombatHooks.txt)");
+            if (OutsideFights(hook.Name)) return (null, null, "it acts outside fights (Diagnostics/OutOfCombatHooks.txt)");
             try
             {
                 if (PlayersTurnStartHooks.Contains(hook.Name)) return (null, null, "it runs as the players' next turn starts, past the turns a simulation covers");
@@ -1910,6 +1934,18 @@ public static class HookReader
                         return new GainBlockStep(Var(key), Var(key + ".Props"));
                     }
                     return new GainBlockStep(Value(values[1]), Value(values[2]));
+                }
+                // CreatureCmd.LoseBlock(choiceContext, target, amount, remover) of its owner (Burrowed's as it goes), by its owner or no one.
+                case "CreatureCmd.LoseBlock":
+                {
+                    var targetAt = IndexOf(types, "Creature");
+                    var amountAt = IndexOf(types, "Decimal");
+                    var removerAt = IndexOf(types, from: amountAt + 1, "Creature");
+                    if (targetAt < 0 || amountAt < 0 || removerAt < 0) throw new Gap(ReaderCapability.CommandNotTranslated, $"gap: block loss overload {string.Join(",", types)}");
+                    if (!IsOwner(values[targetAt])) throw new Gap(Other(values[targetAt]), $"gap: a block loss for {values[targetAt]}");
+                    var byOwner = IsOwner(values[removerAt]);
+                    if (!byOwner && values[removerAt] is not NullValue) throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: a block loss by {values[removerAt]}");
+                    return new LoseBlockStep(Value(values[amountAt])) { ByOwner = byOwner };
                 }
                 case "CreatureCmd.Damage":
                 {
@@ -3544,6 +3580,8 @@ public static class HookReader
         {
             QueryValue { Name: "Owner", Of: NamedValue { Name: "this" }, Type: "PowerModel" or "RelicModel" or "AbstractModel" or "PotionModel" or "OrbModel" } => true,
             QueryValue { Name: "Owner", Of: QueryValue { Name: "Card", Of: NamedValue { Name: "this" }, Type: "EnchantmentModel" or "AfflictionModel" } } => true,
+            // AfterRemoved's oldOwner: the creature it came off (PowerCmd.Remove passes power.Owner; the one parameter of the game's by that name).
+            ParameterValue { Name: "oldOwner" } or NamedValue { Name: "oldOwner" } => true,
             // Its owner's monster's creature (base.Creature in a method of that monster's class its power calls on it: decision #275).
             QueryValue { Name: "Creature", Of: QueryValue { Name: "Monster", Of: { } monsterOf } } => IsOwner(monsterOf),
             QueryValue { Name: "Player" or "Creature", Of: { } of } => IsOwner(of),
