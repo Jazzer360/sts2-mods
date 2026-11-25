@@ -1,6 +1,7 @@
 using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Entities.Creatures;
+using MegaCrit.Sts2.Core.MonsterMoves.Intents;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using SpireQoL.Sim;
@@ -71,7 +72,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     }
 
     /// <summary>The hovered enemy's forecast as last read, what it was read for, and dev mode's check of it.</summary>
-    private (List<ForecastTurn> Turns, MoveStateMachineView View, string Key)? _read;
+    private (List<ForecastTurn> Turns, MoveStateMachineView View, string Key, Func<int, string, IReadOnlyList<int>?> Projected)? _read;
     private Creature? _readFor;
     private int _readProbe, _readRevision;
     private bool _haveRead;
@@ -81,14 +82,24 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     /// The enemy's next turns, as shown (the certain ones only with chances off: decision #122), with the key Build is keyed by; null
     /// when there are none to show.
     /// </summary>
-    private (List<ForecastTurn> Turns, MoveStateMachineView View, string Key)? Read(Creature enemy)
+    private (List<ForecastTurn> Turns, MoveStateMachineView View, string Key, Func<int, string, IReadOnlyList<int>?> Projected)? Read(Creature enemy)
     {
         if (IntentReader.Forecast(enemy) is not { } forecast) return null;
         var (turns, view) = forecast;
         if (!_ctx.Settings.ShowIntentOdds) turns = turns.TakeWhile(forecastTurn => forecastTurn.Certain).ToList();
         if (turns.Count == 0) return null;
-        var key = enemy.GetHashCode() + "|" + string.Join("/", turns.Select(forecastTurn => string.Join(",", forecastTurn.Moves.Select(move => $"{move.Move}:{move.Chance:0.###}"))));
-        return (turns, view, key);
+        // Each forecast move's hits on you as they'll land (decision #304: the simulator's projection from the board, with no plays of yours); null
+        // where it isn't known (a roll decides it, or the simulator can't follow what comes before), when the move is drawn as the game reads it now.
+        // From Incoming Damage's own state of the board (what's shown: without teammates' hands unless Count teammates' hands is on).
+        var projection = Sts2State.Me is { } me && Sts2State.Combat is { } combat
+            ? SpireQoL.Combat.TurnEndModel.Compute() is { } forecastNow ? SimAdapter.Project(me, combat, forecastNow.State, forecastNow.Ids)
+                : SimAdapter.Project(me, combat, teammateHands: SpireQoL.Combat.TurnEndModel.CountTeammateHands)
+            : null;
+        var enemyId = projection is { } read && read.Ids.TryGetValue(enemy, out var id) ? id : -1;
+        IReadOnlyList<int>? Projected(int turn, string move) => projection?.Projection.Of(turn, enemyId, move)?.Lands;
+        var key = enemy.GetHashCode() + "|" + string.Join("/", turns.Select((forecastTurn, turn) => string.Join(",", forecastTurn.Moves.Select(move =>
+            $"{move.Move}:{move.Chance:0.###}:{(Projected(turn, move.Move) is { } lands ? string.Join(".", lands) : "-")}"))));
+        return (turns, view, key, Projected);
     }
 
     /// <summary>The width a row's side takes (each shown child and a gap), by index: every frame while shown.</summary>
@@ -127,7 +138,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         if (now.Key != _key)
         {
             _key = now.Key;
-            Build(enemy, now.Turns, now.View);
+            Build(enemy, now.Turns, now.View, now.Projected);
         }
         _widget!.HasContent = true;
         foreach (var (node, powers) in _corners)
@@ -190,7 +201,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         return label;
     }
 
-    private void Build(Creature enemy, List<ForecastTurn> turns, MoveStateMachineView view)
+    private void Build(Creature enemy, List<ForecastTurn> turns, MoveStateMachineView view, Func<int, string, IReadOnlyList<int>?> projected)
     {
         UiKit.Clear(_rows!);
         _bobbing.Clear();
@@ -217,7 +228,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                 var rightSpacer = new Control { MouseFilter = Control.MouseFilterEnum.Ignore };
                 row.AddChild(leftSpacer);
                 var right = new List<Control>();
-                AddMove(row, enemy, targets, bob, view, turn.Moves[0].Move, right);
+                AddMove(row, enemy, targets, bob, view, turn.Moves[0].Move, right, projected(turnIndex, turn.Moves[0].Move));
                 row.AddChild(rightSpacer);
                 _balance.Add((leftSpacer, new List<Control>(), right, rightSpacer));
                 continue;
@@ -237,21 +248,34 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                 line.Alignment = BoxContainer.AlignmentMode.Center;
                 line.MouseFilter = Control.MouseFilterEnum.Ignore;
                 column.AddChild(line);
-                AddMove(line, enemy, targets, bob, view, moveId, new List<Control>());
+                AddMove(line, enemy, targets, bob, view, moveId, new List<Control>(), projected(turnIndex, moveId));
             }
         }
     }
 
-    /// <summary>A move's intents (the game's own nodes, bobbing in step with the intent on screen) and the powers it applies.</summary>
-    private void AddMove(HBoxContainer line, Creature enemy, List<Creature> targets, float bob, MoveStateMachineView view, string moveId, List<Control> right)
+    /// <summary>
+    /// A move's intents (the game's own nodes, bobbing in step with the intent on screen) and the powers it applies. Each attack intent with its hits
+    /// projected (<paramref name="projected"/>: each hit on you as it'll land, in order, decision #304) is drawn with that hit, when all of its hits
+    /// agree (ProjectedAttackIntent); else as the game reads it now.
+    /// </summary>
+    private void AddMove(HBoxContainer line, Creature enemy, List<Creature> targets, float bob, MoveStateMachineView view, string moveId, List<Control> right,
+        IReadOnlyList<int>? projected)
     {
         if (view.Move(moveId) is not { } move) return;
         // The powers the move applies (Frail 2), from its code, each in the corner of the buff or debuff intent it belongs to
         // (IntentCorner, as on the intent on screen: decision #99).
         var corners = enemy.Monster is { } monster ? IntentCorner.Assign(move.Intents, MovePowers.Of(monster, move, now: false)) : new();
+        var firstHit = 0;
         for (var intentIndex = 0; intentIndex < move.Intents.Count; intentIndex++)
         {
             var intent = move.Intents[intentIndex];
+            if (intent is AttackIntent attack)
+            {
+                var hits = Math.Max(1, attack.Repeats);
+                if (projected != null && firstHit + hits <= projected.Count && Enumerable.Range(firstHit, hits).All(hit => projected[hit] == projected[firstHit]))
+                    intent = new ProjectedAttackIntent(attack, projected[firstHit]);
+                firstHit += hits;
+            }
             var powers = corners.TryGetValue(intentIndex, out var mine) ? mine : null;
             var node = NIntent.Create(bob);
             node.MouseFilter = Control.MouseFilterEnum.Ignore;

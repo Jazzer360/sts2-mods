@@ -421,7 +421,8 @@ public sealed partial class SettingsMenu
             + "with its icon and amount (Strength 3, Weak 2), small in the corner of its buff or debuff intent. Read from the move's own code; when the move only sometimes applies a power and what decides it can't be seen yet, a ? in place of the amount. Nothing while the intent is hidden.");
         GuideRow(example: null, "Intent Forecast",
             "Hover an enemy's intent: above it, its next moves after the one on screen (next turn just above it, later turns higher), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, "
-            + "then the moves a random pick can make, side by side with their chances above. Worked out from its move rules and the moves it has made, never a roll.");
+            + "then the moves a random pick can make, side by side with their chances above. Worked out from its move rules and the moves it has made, never a roll. "
+            + "Each later attack shows what it will hit you for then if you play nothing: Strength an enemy gains every turn, Weak and Vulnerable wearing off and a move's own buff count; where a roll decides it, its damage as things stand now.");
         var skull = UiKit.Icon(GameIcons.Skull(), IconSize * 0.7f);
         var example = UiKit.Row(separation: 4);
         example.AddChild(skull);

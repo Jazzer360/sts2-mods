@@ -97,6 +97,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         }
         _frozen = null;
         _frozenPending = null;
+        _projected = null;
     }
 
     /// <summary>Checks the frozen turn, or counts it as not checked when its forecast never had a result.</summary>
@@ -108,7 +109,57 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             Skip("the forecast had no result by the enemy turn");
             _frozenPending?.Job.Cancel();
         }
+        if (!youDied) CheckProjection(history);
         Unfreeze(cancel: false);
+    }
+
+    /// <summary>The Intent Forecast's projection of the enemies' next moves (decision #304), made from the board as your turn ended.</summary>
+    private (Projection Projection, IReadOnlyDictionary<MegaCrit.Sts2.Core.Entities.Creatures.Creature, int> Ids)? _projected;
+
+    /// <summary>
+    /// The Intent Forecast's projection (decision #304), frozen as your turn ended, against each enemy's intent as your next turn starts: the move
+    /// the game rolled, when the forecast gave it, must read what the projection said its intent would read then (each hit's GetSingleDamage, the
+    /// game's own damage math on the board now). What it couldn't hold is counted by reason, never a pass: a roll between that decides it, what the
+    /// simulator can't follow, a card played after your turn ended (a teammate's), a move the forecast didn't give.
+    /// </summary>
+    private void CheckProjection(CombatHistory history)
+    {
+        if (_projected is not { } projected || Sts2State.Combat is not { } combat) return;
+        if (history.Entries.Skip(_frozenAt).Any(entry => entry is CardPlayStartedEntry))
+        {
+            Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "projection: a card was played after your turn ended");
+            return;
+        }
+        var targets = combat.PlayerCreatures.ToList();
+        foreach (var (creature, id) in projected.Ids)
+        {
+            if (!creature.IsAlive || creature.Monster?.NextMove is not { } move || projected.Projection.Turns.Count == 0 || !projected.Projection.Turns[0].ContainsKey(id)) continue;
+            var name = creature.Monster.GetType().Name;
+            if (move.Intents.Any(intent => intent is MegaCrit.Sts2.Core.MonsterMoves.Intents.HiddenIntent or MegaCrit.Sts2.Core.MonsterMoves.Intents.UnknownIntent)) continue; // nothing shown
+            if (projected.Projection.Of(turn: 0, id, move.Id) is not { } hits)
+            {
+                Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "projection: the move rolled isn't one the forecast gave (a stun, a move set)", name);
+                continue;
+            }
+            if (hits.AtYourTurnStart is not { } predicted)
+            {
+                Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "projection: " + (hits.Unknown ?? "not projected"), name);
+                continue;
+            }
+            var shown = new List<int>();
+            foreach (var attack in move.Intents.OfType<MegaCrit.Sts2.Core.MonsterMoves.Intents.AttackIntent>())
+            {
+                var single = attack.GetSingleDamage(targets, creature);
+                for (var hit = 0; hit < Math.Max(1, attack.Repeats); hit++) shown.Add(single);
+            }
+            var matched = shown.SequenceEqual(predicted);
+            var details = $"{name} {move.Id}: projected [{string.Join(", ", predicted)}] as your turn started, the game's intent [{string.Join(", ", shown)}] (turn {_frozenTurn + 1})";
+            ModEntry.Log.Detail($"[audit] [intent] projection: {details}{(matched ? ", matched" : "")}");
+            Telemetry.Audits.Done(Telemetry.Audits.Intent, matched, name);
+            if (matched) continue;
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("intent", $"Intent forecast's projected damage differs from the intent the game showed: {name}",
+                new[] { "intent-projection", name, move.Id }, details);
+        }
     }
     private int _frozenAt;
     private int _frozenTurn;
@@ -258,6 +309,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             if (_frozen?.Job is { } frozenJob) frozenJob.Pinned = true;
             _frozenAt = _lastHistoryCount;
             _frozenTurn = _lastTurn;
+            // The Intent Forecast's projection from the same board (decision #304), checked as your next turn starts.
+            _projected = Sts2State.Combat is { } combat ? SimAdapter.Project(me, combat, _last.FullState, _last.Ids) : null;
         }
         _wasPlayerTurn = playerTurn;
     }
