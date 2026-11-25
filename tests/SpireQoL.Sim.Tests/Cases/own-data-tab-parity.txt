@@ -1,0 +1,300 @@
+0 proc:PaelsLegion plain amount 0 0-0; | checked CalamityPower 0/0; PaelsLegion 1/1; | seen CalamityPower Flash plain; PaelsLegion Flash plain; | hp 14 block 6 hand 0
+1 proc:StretchPower plain amount 0 0-0; | checked JugglingPower 0/0; StretchPower 1/1; | seen JugglingPower Flash plain; StretchPower Flash plain; | hp 25/32/25 block 0 hand 2
+2 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; | seen CalamityPower Flash plain; | hp 34 block 0 hand 0
+3 proc:SerpentFormPower plain Damage 4 amount 4 4-4; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 5/23/38,9/19/38,9/23/34 block 0 hand 1
+4 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; | hp 17 block 2 hand 0
+5 proc:SerpentFormPower plain Damage 3 amount 3 3-3; | checked CalamityPower 0/0; PaelsLegion 0/0; SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 32/12/6,32/9/6,32/12/3 block 0 hand 2
+6 proc:StretchPower plain amount 0 0-0; | checked StretchPower 1/1; | seen StretchPower Flash plain; | hp -1/36 block 3 hand 0
+7 proc:StretchPower plain amount 0 0-0; | checked JugglingPower 0/0; StretchPower 1/1; | seen JugglingPower Flash plain; StretchPower Flash plain; | hp 10/13/13 block 0 hand 3
+8 | checked CalamityPower 0/0; StretchPower 0/0; | seen CalamityPower Flash plain; StretchPower Flash plain; | hp 28/36 block 0 hand 2
+9 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; StretchPower 0/0; | seen CalamityPower Flash plain; StretchPower Flash plain; | hp 33/5/32 block 0 hand 6
+10 | checked | seen | hp 3/21 block 0 hand 1
+11 proc:StretchPower plain amount 0 0-0; | checked StretchPower 1/1; | seen StretchPower Flash plain; | hp 18/19/16 block 0 hand 1
+12 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; | hp 21/25,22/24 block 0 hand 2
+13 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked JugglingPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; | hp 6 block 0 hand 0
+14 proc:PaelsLegion plain amount 0 0-0; | checked PaelsLegion 1/1; | seen PaelsLegion Flash plain; | hp 14/7 block 0 hand 0
+15 | checked StretchPower 0/0; | seen StretchPower Flash plain; | hp 30 block 0 hand 0
+16 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 2/17 block 0 hand 1
+17 | checked | seen | hp 14 block 0 hand 4
+18 proc:SerpentFormPower plain Damage 3 amount 3 3-3; | checked JugglingPower 0/0; PaelsLegion 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; PaelsLegion Flash plain; | hp 21/26,24/23 block 0 hand 3
+19 | checked | seen | hp 30 block 0 hand 3
+20 proc:SerpentFormPower plain Damage 3 amount 3 3-3; | checked SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; StretchPower Flash plain; | hp 6/10/20,9/7/20,9/10/17 block 0 hand 0
+21 | checked JugglingPower 0/0; StretchPower 0/0; | seen JugglingPower Flash plain; StretchPower Flash plain; | hp 20 block 0 hand 0
+22 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked CalamityPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; | hp 30/6/10,32/6/10,32/6/8 block 0 hand 4
+23 proc:SerpentFormPower plain Damage 3 amount 3 3-3; proc:StretchPower plain amount 0 0-0; | checked SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; StretchPower Flash plain; | hp 1 block 2 hand 2
+24 | checked | seen | hp 16/36/20 block 0 hand 1
+25 | checked | seen | hp 25 block 1 hand 3
+26 | checked | seen | hp 36/36/18 block 0 hand 1
+27 | checked JugglingPower 0/0; StretchPower 0/0; | seen JugglingPower Flash plain; StretchPower Flash plain; | hp -5 block 0 hand 1
+28 proc:SerpentFormPower plain Damage 3 amount 3 3-3; | checked CalamityPower 0/0; JugglingPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; | hp 22/16/39,22/13/39,22/16/36 block 0 hand 2
+29 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 34/12 block 0 hand 0
+30 | checked PaelsLegion 0/0; | seen PaelsLegion Flash plain; | hp 6/30/9 block 0 hand 0
+31 proc:SerpentFormPower plain Damage 4 amount 4 4-4; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; PaelsLegion 0/0; SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 11/-4 block 0 hand 0
+32 | checked StretchPower 0/0; | seen StretchPower Flash plain; | hp 29/26/20 block 0 hand 4
+33 | checked | seen | hp -7/-4 block 0 hand 0
+34 | checked PaelsLegion 0/0; | seen PaelsLegion Flash plain; | hp 13/25/22 block 0 hand 0
+35 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; StretchPower 0/0; | seen CalamityPower Flash plain; StretchPower Flash plain; | hp 24/13 block 0 hand 5
+36 | checked | seen | hp 36 block 0 hand 1
+37 proc:SerpentFormPower plain Damage 3 amount 3 3-3; proc:PaelsLegion plain amount 0 0-0; | checked JugglingPower 0/0; PaelsLegion 1/1; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; PaelsLegion Flash plain; | hp 1/36,4/36 block 6 hand 0
+38 proc:SerpentFormPower plain Damage 3 amount 3 3-3; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; PaelsLegion 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; PaelsLegion Flash plain; | hp 20 block 0 hand 1
+39 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:CalamityPower plain amount 0 0-0; proc:PaelsLegion plain amount 0 0-0; | checked CalamityPower 1/1; PaelsLegion 1/1; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; PaelsLegion Flash plain; | hp 25/32,26/32 block 1 hand 3
+40 | checked CalamityPower 0/0; | seen CalamityPower Flash plain; | hp 4 block 0 hand 0
+41 | checked StretchPower 0/0; | seen StretchPower Flash plain; | hp 15/24 block 0 hand 2
+42 | checked CalamityPower 0/0; StretchPower 0/0; | seen CalamityPower Flash plain; StretchPower Flash plain; | hp 27 block 0 hand 0
+43 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 36/25/2,38/23/2,38/25/0 block 0 hand 4
+44 | checked | seen | hp 8 block 3 hand 1
+45 | checked CalamityPower 0/0; PaelsLegion 0/0; | seen CalamityPower Flash plain; PaelsLegion Flash plain; | hp 22/10/4 block 0 hand 3
+46 proc:SerpentFormPower plain Damage 4 amount 4 4-4; | checked JugglingPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; | hp 29 block 0 hand 4
+47 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked JugglingPower 0/0; PaelsLegion 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; PaelsLegion Flash plain; | hp 4/17/2,6/15/2,6/17/2 block 0 hand 1
+48 | checked | seen | hp 11 block 0 hand 4
+49 | checked PaelsLegion 0/0; | seen PaelsLegion Flash plain; | hp 24/9/-3 block 0 hand 1
+50 | checked CalamityPower 0/0; StretchPower 0/0; | seen CalamityPower Flash plain; StretchPower Flash plain; | hp 1/31 block 0 hand 2
+51 | checked | seen | hp 13/15/19 block 0 hand 4
+52 proc:StretchPower plain amount 0 0-0; | checked PaelsLegion 0/0; StretchPower 1/1; | seen StretchPower Flash plain; PaelsLegion Flash plain; | hp 24/17 block 0 hand 2
+53 | checked | seen | hp 35/6/3 block 0 hand 0
+54 | checked CalamityPower 0/0; JugglingPower 0/0; PaelsLegion 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; PaelsLegion Flash plain; | hp 8/5 block 0 hand 0
+55 proc:StretchPower plain amount 0 0-0; | checked JugglingPower 0/0; StretchPower 1/1; | seen JugglingPower Flash plain; StretchPower Flash plain; | hp 19/2/2 block 0 hand 2
+56 proc:PaelsLegion plain amount 0 0-0; | checked CalamityPower 0/0; PaelsLegion 1/1; | seen CalamityPower Flash plain; PaelsLegion Flash plain; | hp 31/20 block 5 hand 2
+57 proc:StretchPower plain amount 0 0-0; proc:PaelsLegion plain amount 0 0-0; | checked JugglingPower 0/0; PaelsLegion 1/1; StretchPower 1/1; | seen JugglingPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 3 block 8 hand 4
+58 proc:SerpentFormPower plain Damage 4 amount 4 4-4; | checked JugglingPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; | hp 15/24 block 0 hand 0
+59 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 14 block 0 hand 4
+60 | checked PaelsLegion 0/0; | seen PaelsLegion Flash plain; | hp 30/4 block 0 hand 2
+61 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; | hp 0 block 0 hand 1
+62 proc:JugglingPower plain amount 0 0-0; | checked JugglingPower 1/1; StretchPower 0/0; | seen JugglingPower Flash plain; StretchPower Flash plain; | hp 21/5 block 0 hand 1
+63 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 31 block 0 hand 2
+64 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 5/34,5/32 block 0 hand 1
+65 proc:StretchPower plain amount 0 0-0; | checked JugglingPower 0/0; StretchPower 1/1; | seen JugglingPower Flash plain; StretchPower Flash plain; | hp 17 block 4 hand 2
+66 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked PaelsLegion 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; PaelsLegion Flash plain; | hp 26/1/23,28/-1/23,28/1/21 block 0 hand 4
+67 | checked CalamityPower 0/0; | seen CalamityPower Flash plain; | hp 1 block 0 hand 1
+68 proc:StretchPower plain amount 0 0-0; | checked JugglingPower 0/0; StretchPower 1/1; | seen JugglingPower Flash plain; StretchPower Flash plain; | hp 12/14/37 block 0 hand 3
+69 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:StretchPower plain amount 0 0-0; | checked CalamityPower 0/0; JugglingPower 0/0; SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; | hp 23 block 11 hand 1
+70 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 33/32/7,35/32/7,35/32/5 block 0 hand 0
+71 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:CalamityPower plain amount 0 0-0; proc:StretchPower plain amount 0 0-0; | checked CalamityPower 1/1; SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; StretchPower Flash plain; | hp 5 block 5 hand 6
+72 proc:StretchPower plain amount 0 0-0; | checked StretchPower 1/1; | seen StretchPower Flash plain; | hp 19/29/23 block 0 hand 0
+73 proc:JugglingPower plain amount 0 0-0; proc:StretchPower plain amount 0 0-0; | checked JugglingPower 1/1; PaelsLegion 0/0; StretchPower 1/1; | seen JugglingPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 12/-2 block 0 hand 0
+74 | checked | seen | hp 3/24/27 block 0 hand 1
+75 proc:CalamityPower plain amount 0 0-0; proc:StretchPower plain amount 0 0-0; proc:PaelsLegion plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; PaelsLegion 1/1; StretchPower 1/1; | seen CalamityPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 14/-3 block 8 hand 1
+76 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:StretchPower plain amount 0 0-0; | checked PaelsLegion 0/0; SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 25/21/23,26/20/23,26/21/22 block 0 hand 0
+77 proc:SerpentFormPower plain Damage 4 amount 4 4-4; | checked SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; StretchPower Flash plain; | hp 33/39,37/39 block 0 hand 0
+78 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; StretchPower 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; | hp 10/4/17 block 0 hand 3
+79 proc:SerpentFormPower plain Damage 4 amount 4 4-4; | checked SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; StretchPower Flash plain; | hp 14/35,18/31 block 0 hand 0
+80 | checked CalamityPower 0/0; PaelsLegion 0/0; StretchPower 0/0; | seen CalamityPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 32 block 0 hand 0
+81 | checked PaelsLegion 0/0; | seen PaelsLegion Flash plain; | hp -1/16 block 0 hand 2
+82 | checked CalamityPower 0/0; | seen CalamityPower Flash plain; | hp 16 block 0 hand 0
+83 proc:PaelsLegion plain amount 0 0-0; | checked CalamityPower 0/0; PaelsLegion 1/1; | seen CalamityPower Flash plain; PaelsLegion Flash plain; | hp 28/27 block 1 hand 0
+84 | checked PaelsLegion 0/0; | seen PaelsLegion Flash plain; | hp 39 block 1 hand 1
+85 proc:SerpentFormPower plain Damage 4 amount 4 4-4; proc:StretchPower plain amount 0 0-0; | checked CalamityPower 0/0; JugglingPower 0/0; SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; | hp 8/23,12/23 block 0 hand 0
+86 proc:SerpentFormPower plain Damage 4 amount 4 4-4; proc:PaelsLegion plain amount 0 0-0; | checked JugglingPower 0/0; PaelsLegion 1/1; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; PaelsLegion Flash plain; | hp 19 block 2 hand 0
+87 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; | hp 29/14/4 block 0 hand 4
+88 | checked StretchPower 0/0; | seen StretchPower Flash plain; | hp 4 block 0 hand 3
+89 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked PaelsLegion 0/0; SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 17/16/5,18/15/5,18/16/4 block 0 hand 4
+90 | checked | seen | hp 30 block 0 hand 4
+91 | checked | seen | hp 2/14/9 block 0 hand 1
+92 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked PaelsLegion 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; PaelsLegion Flash plain; | hp 10 block 0 hand 3
+93 | checked | seen | hp 25/8/1 block 0 hand 0
+94 proc:StretchPower plain amount 0 0-0; | checked JugglingPower 0/0; StretchPower 1/1; | seen JugglingPower Flash plain; StretchPower Flash plain; | hp 36 block 2 hand 0
+95 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked CalamityPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; | hp 7/5/5,9/3/5,9/5/5 block 0 hand 4
+96 | checked CalamityPower 0/0; | seen CalamityPower Flash plain; | hp 21/22 block 0 hand 2
+97 | checked PaelsLegion 0/0; | seen PaelsLegion Flash plain; | hp 32/1/5 block 0 hand 3
+98 | checked CalamityPower 0/0; JugglingPower 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; | hp 4/23 block 0 hand 3
+99 | checked | seen | hp 14/36/5 block 0 hand 0
+100 | checked PaelsLegion 0/0; | seen PaelsLegion Flash plain; | hp 27/15 block 0 hand 4
+101 proc:SerpentFormPower plain Damage 3 amount 3 3-3; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 39/8/1,39/5/1,39/8/-2 block 0 hand 2
+102 proc:SerpentFormPower plain Damage 2 amount 2 2-2; proc:PaelsLegion plain amount 0 0-0; | checked CalamityPower 0/0; JugglingPower 0/0; PaelsLegion 1/1; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; PaelsLegion Flash plain; | hp 9/11,11/11 block 0 hand 0
+103 | checked JugglingPower 0/0; StretchPower 0/0; | seen JugglingPower Flash plain; StretchPower Flash plain; | hp 23 block 0 hand 3
+104 proc:SerpentFormPower plain Damage 4 amount 4 4-4; proc:StretchPower plain amount 0 0-0; | checked SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; StretchPower Flash plain; | hp 34/26,34/22 block 1 hand 1
+105 | checked CalamityPower 0/0; | seen CalamityPower Flash plain; | hp 7 block 0 hand 2
+106 | checked | seen | hp 18/-6 block 0 hand 2
+107 | checked CalamityPower 0/0; PaelsLegion 0/0; StretchPower 0/0; | seen CalamityPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 29 block 0 hand 2
+108 proc:StretchPower plain amount 0 0-0; | checked JugglingPower 0/0; StretchPower 1/1; | seen JugglingPower Flash plain; StretchPower Flash plain; | hp 2/13 block 0 hand 4
+109 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked CalamityPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; | hp 12 block 0 hand 1
+110 proc:SerpentFormPower plain Damage 3 amount 3 3-3; | checked SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; StretchPower Flash plain; | hp 18/35/4,21/34/4,21/35/1 block 0 hand 2
+111 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; | hp 24 block 3 hand 6
+112 proc:SerpentFormPower plain Damage 4 amount 4 4-4; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; | hp 5/31/16,9/27/16,9/31/12 block 0 hand 4
+113 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 20 block 0 hand 0
+114 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 30/16/19,32/14/19,32/16/17 block 0 hand 3
+115 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 4 block 0 hand 0
+116 | checked StretchPower 0/0; | seen StretchPower Flash plain; | hp -3/23/34 block 0 hand 0
+117 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 27/7 block 0 hand 4
+118 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked CalamityPower 0/0; JugglingPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; | hp 38/2/7 block 0 hand 1
+119 proc:SerpentFormPower plain Damage 3 amount 3 3-3; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 8/37,11/34 block 0 hand 0
+120 | checked | seen | hp 22/16/26 block 0 hand 3
+121 proc:SerpentFormPower plain Damage 2 amount 2 2-2; proc:CalamityPower plain amount 0 0-0; proc:PaelsLegion plain amount 0 0-0; | checked CalamityPower 1/1; PaelsLegion 1/1; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; PaelsLegion Flash plain; | hp 26/19,28/17 block 0 hand 2
+122 proc:StretchPower plain amount 0 0-0; | checked StretchPower 1/1; | seen StretchPower Flash plain; | hp 6/12/26 block 0 hand 0
+123 proc:PaelsLegion plain amount 0 0-0; | checked CalamityPower 0/0; PaelsLegion 1/1; | seen CalamityPower Flash plain; PaelsLegion Flash plain; | hp 17/30 block 2 hand 0
+124 | checked | seen | hp 25 block 2 hand 0
+125 proc:StretchPower plain amount 0 0-0; proc:PaelsLegion plain amount 0 0-0; | checked JugglingPower 0/0; PaelsLegion 1/1; StretchPower 1/1; | seen JugglingPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 0/26 block 12 hand 4
+126 proc:SerpentFormPower plain Damage 3 amount 3 3-3; proc:StretchPower plain amount 0 0-0; | checked JugglingPower 0/0; SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; | hp 10 block 5 hand 0
+127 proc:StretchPower plain amount 0 0-0; | checked JugglingPower 0/0; StretchPower 1/1; | seen JugglingPower Flash plain; StretchPower Flash plain; | hp 24/36 block 0 hand 1
+128 | checked | seen | hp 36 block 0 hand 3
+129 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; PaelsLegion 0/0; | seen CalamityPower Flash plain; PaelsLegion Flash plain; | hp -1/9 block 0 hand 1
+130 | checked | seen | hp 12 block 5 hand 4
+131 | checked PaelsLegion 0/0; | seen PaelsLegion Flash plain; | hp 31/16 block 0 hand 3
+132 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 1 block 0 hand 3
+133 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 14/11/38,15/11/38,15/11/37 block 0 hand 2
+134 proc:SerpentFormPower plain Damage 3 amount 3 3-3; proc:CalamityPower plain amount 0 0-0; proc:StretchPower plain amount 0 0-0; | checked CalamityPower 1/1; SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; StretchPower Flash plain; | hp 14 block 0 hand 0
+135 | checked CalamityPower 0/0; JugglingPower 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; | hp 38/7/8 block 0 hand 0
+136 | checked CalamityPower 0/0; | seen CalamityPower Flash plain; | hp 10 block 2 hand 2
+137 proc:SerpentFormPower plain Damage 3 amount 3 3-3; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; PaelsLegion 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; PaelsLegion Flash plain; | hp 19/20/15,22/17/15,22/20/12 block 0 hand 0
+138 proc:SerpentFormPower plain Damage 3 amount 3 3-3; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 33 block 0 hand 2
+139 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp -2/36/8,-2/38/6 block 0 hand 3
+140 proc:SerpentFormPower plain Damage 2 amount 2 2-2; proc:StretchPower plain amount 0 0-0; | checked JugglingPower 0/0; SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; | hp 15/17,17/16 block 0 hand 4
+141 | checked | seen | hp 18/-1/24 block 0 hand 3
+142 proc:SerpentFormPower plain Damage 4 amount 4 4-4; proc:PaelsLegion plain amount 0 0-0; | checked PaelsLegion 1/1; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; PaelsLegion Flash plain; | hp -5/13 block 2 hand 0
+143 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 10/31/8,12/29/8,12/31/8 block 0 hand 0
+144 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 24/29 block 0 hand 0
+145 proc:StretchPower plain amount 0 0-0; | checked StretchPower 1/1; | seen StretchPower Flash plain; | hp 35/27/8 block 0 hand 0
+146 | checked PaelsLegion 0/0; | seen PaelsLegion Flash plain; | hp 8/6 block 0 hand 3
+147 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 19 block 0 hand 1
+148 proc:SerpentFormPower plain Damage 2 amount 2 2-2; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; | hp 29/2,31/2 block 0 hand 5
+149 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked CalamityPower 0/0; PaelsLegion 0/0; SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 2 block 0 hand 1
+150 | checked StretchPower 0/0; | seen StretchPower Flash plain; | hp 0/28 block 0 hand 0
+151 | checked CalamityPower 0/0; | seen CalamityPower Flash plain; | hp 26 block 0 hand 4
+152 proc:SerpentFormPower plain Damage 3 amount 3 3-3; proc:CalamityPower plain amount 0 0-0; proc:StretchPower plain amount 0 0-0; | checked CalamityPower 1/1; SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; StretchPower Flash plain; | hp 32/31,35/28 block 0 hand 4
+153 | checked JugglingPower 0/0; PaelsLegion 0/0; | seen JugglingPower Flash plain; PaelsLegion Flash plain; | hp 10 block 0 hand 0
+154 proc:SerpentFormPower plain Damage 2 amount 2 2-2; proc:PaelsLegion plain amount 0 0-0; | checked JugglingPower 0/0; PaelsLegion 1/1; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; PaelsLegion Flash plain; | hp 21/20/18,21/20/16 block 0 hand 3
+155 proc:JugglingPower plain amount 0 0-0; | checked JugglingPower 1/1; | seen JugglingPower Flash plain; | hp 32 block 0 hand 2
+156 proc:SerpentFormPower plain Damage 4 amount 4 4-4; proc:CalamityPower plain amount 0 0-0; proc:StretchPower plain amount 0 0-0; | checked CalamityPower 1/1; SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; StretchPower Flash plain; | hp -2/17/27,-2/21/23 block 0 hand 0
+157 | checked CalamityPower 0/0; PaelsLegion 0/0; | seen CalamityPower Flash plain; PaelsLegion Flash plain; | hp 17 block 0 hand 0
+158 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; | seen CalamityPower Flash plain; | hp 22/22/3 block 0 hand 0
+159 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 33 block 0 hand 4
+160 proc:CalamityPower plain amount 0 0-0; proc:PaelsLegion plain amount 0 0-0; | checked CalamityPower 1/1; PaelsLegion 1/1; | seen CalamityPower Flash plain; PaelsLegion Flash plain; | hp 6/12/29 block 0 hand 4
+161 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; | hp 23 block 0 hand 3
+162 proc:SerpentFormPower plain Damage 2 amount 2 2-2; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; | hp 32/13/28,34/11/28,34/13/26 block 0 hand 3
+163 | checked | seen | hp 7/32 block 0 hand 0
+164 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 19/10/32 block 0 hand 2
+165 proc:StretchPower plain amount 0 0-0; proc:PaelsLegion plain amount 0 0-0; | checked PaelsLegion 1/1; StretchPower 1/1; | seen StretchPower Flash plain; PaelsLegion Flash plain; | hp 30/28 block 14 hand 4
+166 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; StretchPower Flash plain; | hp -5/-1/27 block 0 hand 0
+167 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 14/34 block 0 hand 0
+168 proc:JugglingPower plain amount 0 0-0; proc:StretchPower plain amount 0 0-0; | checked JugglingPower 1/1; PaelsLegion 0/0; StretchPower 1/1; | seen JugglingPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 9/-5/19 block 6 hand 5
+169 proc:PaelsLegion plain amount 0 0-0; | checked PaelsLegion 1/1; | seen PaelsLegion Flash plain; | hp 37/21 block 6 hand 0
+170 | checked | seen | hp 9 block 0 hand 4
+171 proc:CalamityPower plain amount 0 0-0; proc:StretchPower plain amount 0 0-0; | checked CalamityPower 1/1; StretchPower 1/1; | seen CalamityPower Flash plain; StretchPower Flash plain; | hp 15/15 block 0 hand 4
+172 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; StretchPower Flash plain; | hp 18 block 0 hand 4
+173 proc:PaelsLegion plain amount 0 0-0; | checked PaelsLegion 1/1; | seen PaelsLegion Flash plain; | hp 5/13 block 0 hand 4
+174 proc:SerpentFormPower plain Damage 3 amount 3 3-3; | checked CalamityPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; | hp 16 block 0 hand 4
+175 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked CalamityPower 0/0; JugglingPower 0/0; PaelsLegion 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; PaelsLegion Flash plain; | hp 27/9,28/8 block 0 hand 0
+176 | checked CalamityPower 0/0; JugglingPower 0/0; StretchPower 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; | hp 39 block 0 hand 3
+177 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; | hp 11/14/17 block 0 hand 6
+178 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; StretchPower 0/0; | seen CalamityPower Flash plain; StretchPower Flash plain; | hp 15 block 0 hand 4
+179 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 34/2/10 block 0 hand 0
+180 proc:SerpentFormPower plain Damage 4 amount 4 4-4; | checked PaelsLegion 0/0; SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 3 block 0 hand 1
+181 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked PaelsLegion 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; PaelsLegion Flash plain; | hp 18/4/36,18/3/36,18/4/35 block 0 hand 4
+182 proc:StretchPower plain amount 0 0-0; | checked StretchPower 1/1; | seen StretchPower Flash plain; | hp 30 block 7 hand 1
+183 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; | seen CalamityPower Flash plain; | hp 2/29/11 block 0 hand 4
+184 | checked | seen | hp 14/26 block 0 hand 0
+185 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:CalamityPower plain amount 0 0-0; proc:StretchPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; | hp 24/23/11,25/22/11,25/23/10 block 0 hand 3
+186 | checked CalamityPower 0/0; | seen CalamityPower Flash plain; | hp 36/8 block 0 hand 3
+187 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 9/14/25 block 0 hand 1
+188 proc:StretchPower plain amount 0 0-0; | checked PaelsLegion 0/0; StretchPower 1/1; | seen StretchPower Flash plain; PaelsLegion Flash plain; | hp 20/4 block 0 hand 3
+189 | checked | seen | hp 24/22/28 block 0 hand 0
+190 proc:SerpentFormPower plain Damage 3 amount 3 3-3; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; | hp 0/39,3/36 block 2,0 hand 4
+191 | checked CalamityPower 0/0; JugglingPower 0/0; StretchPower 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; | hp 16 block 0 hand 4
+192 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 21/31,23/29 block 0 hand 3
+193 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 39 block 0 hand 1
+194 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; PaelsLegion 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; PaelsLegion Flash plain; | hp 11/19 block 0 hand 2
+195 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 22 block 0 hand 0
+196 | checked PaelsLegion 0/0; | seen PaelsLegion Flash plain; | hp 18/28 block 0 hand 3
+197 proc:StretchPower plain amount 0 0-0; | checked CalamityPower 0/0; JugglingPower 0/0; StretchPower 1/1; | seen CalamityPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; | hp 6 block 6 hand 0
+198 proc:SerpentFormPower plain Damage 3 amount 3 3-3; | checked CalamityPower 0/0; JugglingPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; | hp 15/24,18/21 block 0 hand 3
+199 | checked JugglingPower 0/0; PaelsLegion 0/0; | seen JugglingPower Flash plain; PaelsLegion Flash plain; | hp 29 block 0 hand 0
+200 | checked CalamityPower 0/0; | seen CalamityPower Flash plain; | hp 2/20/31 block 0 hand 3
+201 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; | seen CalamityPower Flash plain; | hp 4 block 0 hand 3
+202 | checked JugglingPower 0/0; PaelsLegion 0/0; | seen JugglingPower Flash plain; PaelsLegion Flash plain; | hp 17/17/32 block 0 hand 0
+203 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked CalamityPower 0/0; PaelsLegion 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; PaelsLegion Flash plain; | hp 35 block 0 hand 4
+204 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:PaelsLegion plain amount 0 0-0; | checked JugglingPower 0/0; PaelsLegion 1/1; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; PaelsLegion Flash plain; | hp 8/8/30,8/7/30,8/8/29 block 0 hand 4
+205 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; | hp 14 block 0 hand 5
+206 proc:StretchPower plain amount 0 0-0; | checked CalamityPower 0/0; StretchPower 1/1; | seen CalamityPower Flash plain; StretchPower Flash plain; | hp 31/9/32 block 0 hand 2
+207 | checked CalamityPower 0/0; | seen CalamityPower Flash plain; | hp 4/33 block 0 hand 4
+208 | checked CalamityPower 0/0; | seen CalamityPower Flash plain; | hp 15/5/32 block 0 hand 0
+209 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 21/17 block 0 hand 0
+210 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; | seen CalamityPower Flash plain; | hp 30/-3/24 block 0 hand 5
+211 | checked | seen | hp 11/-3 block 0 hand 2
+212 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 18/36/26 block 0 hand 0
+213 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked JugglingPower 0/0; PaelsLegion 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; PaelsLegion Flash plain; | hp 32/15,33/15 block 0 hand 4
+214 | checked SerpentFormPower 0/0; | seen SerpentFormPower Flash plain; | hp 0 block 8 hand 4
+215 proc:SerpentFormPower plain Damage 4 amount 4 4-4; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 10/11,14/7 block 0 hand 0
+216 | checked CalamityPower 0/0; JugglingPower 0/0; StretchPower 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; | hp 29 block 0 hand 3
+217 proc:StretchPower plain amount 0 0-0; | checked CalamityPower 0/0; JugglingPower 0/0; StretchPower 1/1; | seen CalamityPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; | hp 1/22 block 3 hand 1
+218 | checked PaelsLegion 0/0; | seen PaelsLegion Flash plain; | hp 13 block 0 hand 2
+219 | checked | seen | hp 24/4 block 0 hand 2
+220 | checked | seen | hp 30 block 0 hand 0
+221 | checked StretchPower 0/0; | seen StretchPower Flash plain; | hp -3/-2/0 block 0 hand 0
+222 | checked | seen | hp 19 block 0 hand 1
+223 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:StretchPower plain amount 0 0-0; proc:PaelsLegion plain amount 0 0-0; | checked PaelsLegion 1/1; SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 29/34/13,30/33/13,30/34/13 block 0 hand 3
+224 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 3 block 4 hand 3
+225 | checked JugglingPower 0/0; PaelsLegion 0/0; StretchPower 0/0; | seen JugglingPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 15/32/14 block 0 hand 0
+226 | checked | seen | hp 26 block 1 hand 0
+227 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; | seen CalamityPower Flash plain; | hp 32/-2/10 block 0 hand 6
+228 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; PaelsLegion 0/0; | seen CalamityPower Flash plain; PaelsLegion Flash plain; | hp 10/5 block 0 hand 5
+229 proc:SerpentFormPower plain Damage 4 amount 4 4-4; | checked PaelsLegion 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; PaelsLegion Flash plain; | hp 8/23/34,12/19/34,12/23/30 block 0 hand 0
+230 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; PaelsLegion 0/0; | seen CalamityPower Flash plain; PaelsLegion Flash plain; | hp 33/37 block 0 hand 2
+231 | checked CalamityPower 0/0; PaelsLegion 0/0; | seen CalamityPower Flash plain; PaelsLegion Flash plain; | hp 5/32/4 block 0 hand 0
+232 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; PaelsLegion 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; PaelsLegion Flash plain; | hp 9/38,10/37 block 0 hand 6
+233 proc:CalamityPower plain amount 0 0-0; proc:StretchPower plain amount 0 0-0; | checked CalamityPower 1/1; StretchPower 1/1; | seen CalamityPower Flash plain; StretchPower Flash plain; | hp 20/8/6 block 0 hand 5
+234 | checked | seen | hp 1/17 block 0 hand 4
+235 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked JugglingPower 0/0; SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; | hp 11/13/23,12/13/23 block 0 hand 1
+236 proc:CalamityPower plain amount 0 0-0; proc:StretchPower plain amount 0 0-0; proc:PaelsLegion plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; PaelsLegion 1/1; StretchPower 1/1; | seen CalamityPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 17/30 block 6 hand 5
+237 proc:StretchPower plain amount 0 0-0; | checked StretchPower 1/1; | seen StretchPower Flash plain; | hp 35 block 5 hand 0
+238 | checked | seen | hp 7/26 block 0 hand 4
+239 proc:StretchPower plain amount 0 0-0; | checked StretchPower 1/1; | seen StretchPower Flash plain; | hp 10 block 6 hand 0
+240 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; | hp 23/26,24/25 block 0 hand 2
+241 proc:SerpentFormPower plain Damage 2 amount 2 2-2; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; | hp 2 block 6 hand 4
+242 | checked PaelsLegion 0/0; | seen PaelsLegion Flash plain; | hp -2/19 block 0 hand 4
+243 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:StretchPower plain amount 0 0-0; | checked SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; StretchPower Flash plain; | hp 25 block 5 hand 4
+244 proc:StretchPower plain amount 0 0-0; proc:PaelsLegion plain amount 0 0-0; | checked PaelsLegion 1/1; StretchPower 1/1; | seen StretchPower Flash plain; PaelsLegion Flash plain; | hp 37/7/28 block 0 hand 0
+245 | checked SerpentFormPower 0/0; StretchPower 0/0; | seen SerpentFormPower Flash plain; StretchPower Flash plain; | hp -6 block 0 hand 3
+246 proc:StretchPower plain amount 0 0-0; | checked CalamityPower 0/0; StretchPower 1/1; | seen CalamityPower Flash plain; StretchPower Flash plain; | hp 21/11/34 block 0 hand 2
+247 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 32 block 0 hand 3
+248 | checked CalamityPower 0/0; | seen CalamityPower Flash plain; | hp 5/8/35 block 0 hand 0
+249 proc:StretchPower plain amount 0 0-0; | checked StretchPower 1/1; | seen StretchPower Flash plain; | hp 14 block 4 hand 2
+250 proc:SerpentFormPower plain Damage 3 amount 3 3-3; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 28/16/34,28/16/31 block 0 hand 3
+251 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 36/21,37/21 block 0 hand 2
+252 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; StretchPower Flash plain; | hp 4/34/21,5/33/21,5/34/20 block 0 hand 2
+253 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 23/18 block 0 hand 3
+254 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked CalamityPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; | hp 35/35/13,35/35/11 block 0 hand 2
+255 proc:SerpentFormPower plain Damage 3 amount 3 3-3; proc:CalamityPower plain amount 0 0-0; proc:JugglingPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 1/1; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; | hp 2/12,5/9 block 0 hand 4
+256 proc:StretchPower plain amount 0 0-0; | checked CalamityPower 0/0; PaelsLegion 0/0; StretchPower 1/1; | seen CalamityPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 18/31/35 block 0 hand 2
+257 proc:JugglingPower plain amount 0 0-0; proc:PaelsLegion plain amount 0 0-0; | checked JugglingPower 1/1; PaelsLegion 1/1; | seen JugglingPower Flash plain; PaelsLegion Flash plain; | hp 30/17 block 8 hand 2
+258 | checked | seen | hp -6 block 8 hand 3
+259 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 10/6,11/5 block 0 hand 2
+260 | checked | seen | hp 25 block 0 hand 0
+261 proc:StretchPower plain amount 0 0-0; | checked StretchPower 1/1; | seen StretchPower Flash plain; | hp 37/2 block 2 hand 3
+262 | checked PaelsLegion 0/0; | seen PaelsLegion Flash plain; | hp 5 block 3 hand 2
+263 proc:SerpentFormPower plain Damage 3 amount 3 3-3; | checked CalamityPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; | hp 18/38,21/35 block 0 hand 1
+264 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 32 block 1 hand 2
+265 proc:SerpentFormPower plain Damage 2 amount 2 2-2; proc:StretchPower plain amount 0 0-0; | checked PaelsLegion 0/0; SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 2/27,4/25 block 0 hand 1
+266 | checked | seen | hp 8 block 2 hand 0
+267 | checked | seen | hp 16/-3/17 block 0 hand 1
+268 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 37 block 0 hand 0
+269 | checked | seen | hp 11/26/32 block 0 hand 3
+270 proc:SerpentFormPower plain Damage 4 amount 4 4-4; | checked JugglingPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; | hp 23 block 3 hand 4
+271 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked PaelsLegion 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; PaelsLegion Flash plain; | hp 29/19/17,30/18/17,30/19/17 block 0 hand 0
+272 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; StretchPower 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; | hp -1 block 0 hand 1
+273 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; | hp 15/16/17 block 0 hand 5
+274 proc:SerpentFormPower plain Damage 3 amount 3 3-3; | checked CalamityPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; | hp 29/15 block 0 hand 3
+275 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked JugglingPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; | hp -7/15/21 block 0 hand 4
+276 proc:JugglingPower plain amount 0 0-0; | checked JugglingPower 1/1; PaelsLegion 0/0; | seen JugglingPower Flash plain; PaelsLegion Flash plain; | hp 1/30 block 0 hand 4
+277 proc:SerpentFormPower plain Damage 1 amount 1 1-1; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 25/39/31,25/38/31,25/39/30 block 0 hand 4
+278 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; | seen CalamityPower Flash plain; | hp 36/15 block 0 hand 5
+279 | checked CalamityPower 0/0; | seen CalamityPower Flash plain; | hp 9/7/17 block 0 hand 2
+280 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 17/21 block 0 hand 0
+281 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; JugglingPower 0/0; PaelsLegion 0/0; StretchPower 0/0; | seen CalamityPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 28 block 0 hand 0
+282 | checked JugglingPower 0/0; PaelsLegion 0/0; | seen JugglingPower Flash plain; PaelsLegion Flash plain; | hp -5/3 block 0 hand 4
+283 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:StretchPower plain amount 0 0-0; | checked SerpentFormPower 1/1; StretchPower 1/1; | seen SerpentFormPower Flash plain; StretchPower Flash plain; | hp 4 block 1 hand 4
+284 | checked StretchPower 0/0; | seen StretchPower Flash plain; | hp 27/0 block 0 hand 2
+285 | checked | seen | hp 31 block 5 hand 4
+286 | checked CalamityPower 0/0; | seen CalamityPower Flash plain; | hp 11/14 block 0 hand 4
+287 | checked JugglingPower 0/0; PaelsLegion 0/0; | seen JugglingPower Flash plain; PaelsLegion Flash plain; | hp 22 block 0 hand 3
+288 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 34/10/37 block 0 hand 2
+289 | checked PaelsLegion 0/0; StretchPower 0/0; | seen StretchPower Flash plain; PaelsLegion Flash plain; | hp -3 block 0 hand 3
+290 | checked | seen | hp 18/14/24 block 0 hand 0
+291 proc:SerpentFormPower plain Damage 3 amount 3 3-3; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 26 block 0 hand 2
+292 proc:StretchPower plain amount 0 0-0; proc:PaelsLegion plain amount 0 0-0; | checked JugglingPower 0/0; PaelsLegion 1/1; StretchPower 1/1; | seen JugglingPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp -5/-2/14 block 21 hand 2
+293 | checked | seen | hp -1 block 3 hand 1
+294 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked CalamityPower 0/0; JugglingPower 0/0; SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; CalamityPower Flash plain; JugglingPower Flash plain; | hp 23/34/3,24/34/3,24/34/1 block 0 hand 4
+295 proc:SerpentFormPower plain Damage 2 amount 2 2-2; | checked SerpentFormPower 1/1; | seen SerpentFormPower Flash plain; | hp 31/13,33/11 block 0 hand 1
+296 proc:CalamityPower plain amount 0 0-0; | checked CalamityPower 1/1; | seen CalamityPower Flash plain; | hp 0/34/38 block 0 hand 5
+297 proc:SerpentFormPower plain Damage 1 amount 1 1-1; proc:JugglingPower plain amount 0 0-0; | checked JugglingPower 1/1; PaelsLegion 0/0; SerpentFormPower 1/1; StretchPower 0/0; | seen SerpentFormPower Flash plain; JugglingPower Flash plain; StretchPower Flash plain; PaelsLegion Flash plain; | hp 20/5,20/4 block 0 hand 2
+298 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 21/20/28 block 0 hand 3
+299 | checked JugglingPower 0/0; | seen JugglingPower Flash plain; | hp 4/9 block 0 hand 2
