@@ -82,28 +82,41 @@ public static class IntentForecast
     /// and side), as the game picks when that move ends (MonsterMoveStateMachine.FindNextMoveState). Null when the rules can't say (a branch
     /// with no condition read). <paramref name="log"/>: the moves it was given this fight, that one last.
     /// </summary>
-    public static IReadOnlyList<(string Move, double Chance)>? NextOn(MoveGraph graph, string moveId, IReadOnlyList<string> log, SimState state, int enemyId)
-    {
-        if (graph.Nodes.GetValueOrDefault(moveId) is not MoveNodeMove move) return null;
-        var dist = new Dictionary<string, double>();
-        bool? Simulated(MoveNodeConditional node, int branch) => node.Conditions is { } conditions && branch < conditions.Count && conditions[branch] is { } condition
-            ? SimEngine.Holds(state, condition, enemyId) : null;
-        if (!Walk(graph, move.FollowUp ?? graph.InitialId, chance: 1.0, log.ToList(), dist, depth: 0, Simulated)) return null;
-        return dist.Where(entry => entry.Value > 0).OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key).Select(entry => (entry.Key, entry.Value)).ToList();
-    }
+    public static IReadOnlyList<(string Move, double Chance)>? NextOn(MoveGraph graph, string moveId, IReadOnlyList<string> log, SimState state, int enemyId) =>
+        graph.Nodes.GetValueOrDefault(moveId) is not MoveNodeMove move ? null : Next(graph, move.FollowUp ?? graph.InitialId, log, AskedOf(state, enemyId, readNowWhereNot: false));
 
     /// <summary>
     /// The moves an enemy can make from the state <paramref name="stateId"/> (a stun's follow-up: CreatureCmd.Stun's nextMoveId, a move or a branch),
     /// each with its chance, its conditional branches asked of the simulated <paramref name="state"/> as NextOn does. Null when the rules can't say.
     /// </summary>
-    public static IReadOnlyList<(string Move, double Chance)>? NextFrom(MoveGraph graph, string stateId, IReadOnlyList<string> log, SimState state, int enemyId)
+    public static IReadOnlyList<(string Move, double Chance)>? NextFrom(MoveGraph graph, string stateId, IReadOnlyList<string> log, SimState state, int enemyId) =>
+        Next(graph, stateId, log, AskedOf(state, enemyId, readNowWhereNot: false));
+
+    /// <summary>
+    /// The moves an enemy can make from the state <paramref name="stateId"/> in a projected turn (decision #309), each with its chance: a conditional
+    /// branch asked of the projected <paramref name="state"/> where its condition is read (a power the projection follows: Asleep's or Slumber's
+    /// stack gone; HP, which a projection doesn't change, reads as it stands now), and as the game's lambda answers it now where it isn't, or
+    /// with no state (past what the projection follows). Null when the rules can't say.
+    /// </summary>
+    public static IReadOnlyList<(string Move, double Chance)>? NextInProjection(MoveGraph graph, string stateId, IReadOnlyList<string> log, SimState? state, int enemyId) =>
+        Next(graph, stateId, log, state == null ? AsReadNow : AskedOf(state, enemyId, readNowWhereNot: true));
+
+    /// <summary>The moves reached from <paramref name="stateId"/>, each with its chance, its conditions asked by <paramref name="holdsOf"/>; null when the rules can't say.</summary>
+    private static IReadOnlyList<(string Move, double Chance)>? Next(MoveGraph graph, string stateId, IReadOnlyList<string> log, Func<MoveNodeConditional, int, bool?> holdsOf)
     {
         var dist = new Dictionary<string, double>();
-        bool? Simulated(MoveNodeConditional node, int branch) => node.Conditions is { } conditions && branch < conditions.Count && conditions[branch] is { } condition
-            ? SimEngine.Holds(state, condition, enemyId) : null;
-        if (!Walk(graph, stateId, chance: 1.0, log.ToList(), dist, depth: 0, Simulated)) return null;
+        if (!Walk(graph, stateId, chance: 1.0, log.ToList(), dist, depth: 0, holdsOf)) return null;
         return dist.Where(entry => entry.Value > 0).OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key).Select(entry => (entry.Key, entry.Value)).ToList();
     }
+
+    /// <summary>
+    /// A conditional branch's condition asked of a simulated state as the enemy <paramref name="enemyId"/> (decision #195: SimCondition); where it
+    /// isn't read, or the simulator can't tell, as the game's lambda answered it when the rules were read (<paramref name="readNowWhereNot"/>), else
+    /// not known.
+    /// </summary>
+    private static Func<MoveNodeConditional, int, bool?> AskedOf(SimState state, int enemyId, bool readNowWhereNot) => (node, branch) =>
+        node.Conditions is { } conditions && branch < conditions.Count && conditions[branch] is { } condition && SimEngine.Holds(state, condition, enemyId) is { } holds ? holds
+            : readNowWhereNot ? AsReadNow(node, branch) : null;
 
     /// <summary>Spreads <paramref name="chance"/> over the moves reached from a state; false when the rules can't say.</summary>
     private static bool Walk(MoveGraph graph, string id, double chance, List<string> log, Dictionary<string, double> into, int depth,

@@ -161,6 +161,16 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             if (!creature.IsAlive || creature.Monster?.NextMove is not { } move || projected.Projection.Turns.Count == 0 || !projected.Projection.Turns[0].ContainsKey(id)) continue;
             var name = creature.Monster.GetType().Name;
             if (move.Intents.Any(intent => intent is MegaCrit.Sts2.Core.MonsterMoves.Intents.HiddenIntent or MegaCrit.Sts2.Core.MonsterMoves.Intents.UnknownIntent)) continue; // nothing shown
+            // The moves it rolled from the enemy's rules on the projected state (decision #309): the game's roll must be one of them.
+            if (projected.Projection.ForecastOf(id) is { Count: > 0 } rolled && !rolled[0].Moves.Any(option => option.Move == move.Id))
+            {
+                var rolledDetails = $"{name}: projected {string.Join(" or ", rolled[0].Moves.Select(option => option.Move))}, the game rolled {move.Id} (turn {_frozenTurn + 1})";
+                ModEntry.Log.Detail($"[audit] [intent] projection: {rolledDetails}");
+                Telemetry.Audits.Done(Telemetry.Audits.Intent, false, name);
+                Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("intent", $"Intent forecast's projected move differs from the move the game rolled: {name}",
+                    new[] { "intent-projection-move", name, move.Id }, rolledDetails);
+                continue;
+            }
             if (projected.Projection.Of(turn: 0, id, move.Id) is not { } hits)
             {
                 Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "projection: the move rolled isn't one the forecast gave (a stun, a move set)", name);

@@ -227,4 +227,76 @@ public class ProjectionTests
         Assert.Equal(new[] { 50 }, projection.Of(turn: 0, enemyId: 0, move: "JAB")!.Lands);
         Assert.Equal(new[] { 50 }, projection.Of(turn: 1, enemyId: 0, move: "JAB")!.Lands);
     }
+
+    // ------------------------------------------------------------------ the moves, rolled on the projected state (decision #309)
+
+    /// <summary>
+    /// A sleeper (decision #309): its move rules as the game builds them (WakeTabParityTests.SleeperRules: its sleeping move, then a branch on its
+    /// power), its sleeping move on screen, and its moves read: sleeping does nothing, its first attack hits for 10.
+    /// </summary>
+    private static (SimState State, Dictionary<int, ProjectedRules> Rules) Sleeper(PowerId power, int stacks)
+    {
+        var rules = power == PowerId.Asleep
+            ? WakeTabParityTests.SleeperRules("SLEEP_MOVE", "SLEEP_BRANCH", power, "SLASH_MOVE", new[] { ("SLASH_MOVE", "DISEMBOWEL_MOVE"), ("DISEMBOWEL_MOVE", "SLASH_MOVE") }, new HashSet<string> { "SLASH_MOVE" })
+            : WakeTabParityTests.SleeperRules("SNORE_MOVE", "SNORE_NEXT", power, "ROLL_OUT_MOVE", new[] { ("ROLL_OUT_MOVE", "ROLL_OUT_MOVE") }, new HashSet<string> { "ROLL_OUT_MOVE" });
+        var sleep = rules.Current;
+        var moves = new Dictionary<string, ProjectedMove>
+        {
+            [sleep] = new(sleep) { Actions = Array.Empty<SimAction>() },
+            ["SLASH_MOVE"] = Attack("SLASH_MOVE", damage: 10), ["DISEMBOWEL_MOVE"] = Attack("DISEMBOWEL_MOVE", damage: 4, hits: 2), ["ROLL_OUT_MOVE"] = Attack("ROLL_OUT_MOVE", damage: 10),
+        };
+        var state = Fight(new SimEnemy { Id = 0, Name = "E0", Hp = 60, Powers = PowerSet.Empty.With(power, stacks) });
+        state.TurnNumber = state.RoundNumber = 2;
+        var followUp = ((MoveNodeMove)rules.Graph.Nodes[sleep]).FollowUp;
+        return (state, new Dictionary<int, ProjectedRules> { [0] = new(rules.Graph, sleep, followUp, rules.Log, moves) });
+    }
+
+    private static string Moves(Projection projection) =>
+        string.Join(" | ", projection.ForecastOf(enemyId: 0)!.Select(turn => string.Join(", ", turn.Moves.Select(move => move.Chance < 1 ? $"{move.Move} {move.Chance:0.##}" : move.Move))));
+
+    [Fact]
+    public void ASleeperWakesAfterItsLastStack()
+    {
+        // SlumberPower.AfterSideTurnEnd: its stack down by one as the enemies' turn ends, gone at 0 (and WakeUpMove). Its move rules ask
+        // HasPower<SlumberPower> as your next turn starts: on the projected state its last stack is gone, so it rolls ROLL_OUT_MOVE, where the game's
+        // lambda as it answers now (it has Slumber) would keep it snoring.
+        var (state, rules) = Sleeper(PowerId.Slumber, stacks: 1);
+        var projection = SimEngine.Project(state, Array.Empty<IReadOnlyList<ProjectedChoice>>(), rules);
+        Assert.Equal("ROLL_OUT_MOVE | ROLL_OUT_MOVE | ROLL_OUT_MOVE", Moves(projection));
+        Assert.Equal(new[] { 10 }, projection.Of(turn: 0, enemyId: 0, move: "ROLL_OUT_MOVE")!.Lands);
+        // Three stacks: two more turns asleep, then it wakes.
+        (state, rules) = Sleeper(PowerId.Slumber, stacks: 3);
+        Assert.Equal("SNORE_MOVE | SNORE_MOVE | ROLL_OUT_MOVE", Moves(SimEngine.Project(state, Array.Empty<IReadOnlyList<ProjectedChoice>>(), rules)));
+    }
+
+    [Fact]
+    public void LagavulinWakesAfterItsLastStack()
+    {
+        // AsleepPower.AfterSideTurnEnd: the same for Lagavulin Matriarch, whose SLEEP_BRANCH asks HasPower<AsleepPower>: two stacks sleep one more
+        // turn, then it slashes and goes on through its cycle.
+        var (state, rules) = Sleeper(PowerId.Asleep, stacks: 2);
+        var projection = SimEngine.Project(state, Array.Empty<IReadOnlyList<ProjectedChoice>>(), rules);
+        Assert.Equal("SLEEP_MOVE | SLASH_MOVE | DISEMBOWEL_MOVE", Moves(projection));
+        Assert.Equal(new[] { 4, 4 }, projection.Of(turn: 2, enemyId: 0, move: "DISEMBOWEL_MOVE")!.Lands);
+    }
+
+    [Fact]
+    public void ARolledRandomPickEndsTheForecast()
+    {
+        // After its move, a random pick between two attacks: that turn shows both with their chances and its hits on each, and nothing after it.
+        var graph = new MoveGraph(new Dictionary<string, MoveNode>
+        {
+            ["A"] = new MoveNodeMove("A", FollowUp: "PICK"),
+            ["PICK"] = new MoveNodeRandom("PICK", new[] { new RandomBranch("B", MoveRepeat.CanRepeatForever, MaxTimes: 0, Cooldown: 0, Weight: 1), new RandomBranch("C", MoveRepeat.CanRepeatForever, MaxTimes: 0, Cooldown: 0, Weight: 1) }),
+            ["B"] = new MoveNodeMove("B", FollowUp: "A"),
+            ["C"] = new MoveNodeMove("C", FollowUp: "A"),
+        }, InitialId: "A");
+        var moves = new Dictionary<string, ProjectedMove> { ["A"] = Attack("A", damage: 3), ["B"] = Attack("B", damage: 5), ["C"] = Attack("C", damage: 8) };
+        var state = Fight(Attacker(id: 0, hp: 60, hit: 3));
+        var projection = SimEngine.Project(state, Array.Empty<IReadOnlyList<ProjectedChoice>>(), new Dictionary<int, ProjectedRules> { [0] = new(graph, "A", "PICK", new[] { "A" }, moves) });
+        Assert.Equal("B 0.5, C 0.5", Moves(projection));
+        Assert.Single(projection.Turns);
+        Assert.Equal(new[] { 5 }, projection.Of(turn: 0, enemyId: 0, move: "B")!.Lands);
+        Assert.Equal(new[] { 8 }, projection.Of(turn: 0, enemyId: 0, move: "C")!.Lands);
+    }
 }

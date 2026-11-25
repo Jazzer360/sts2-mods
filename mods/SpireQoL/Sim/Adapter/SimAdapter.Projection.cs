@@ -15,10 +15,12 @@ public static partial class SimAdapter
 {
     /// <summary>
     /// What a projection starts from (decision #304), read from the game on its thread: the adapter's state of the board (Incoming Damage's own:
-    /// TurnEndModel's), each enemy's simulator id, and every living enemy's forecast turns, each move read now. The projection itself is pure and runs
-    /// on a worker (<see cref="StartProjection"/>).
+    /// TurnEndModel's), each enemy's simulator id, every living enemy's forecast turns, each move read now, and each one's move rules with every move
+    /// read (decision #309: the projection rolls its moves from the projected state). The projection itself is pure and runs on a worker
+    /// (<see cref="StartProjection"/>).
     /// </summary>
-    internal sealed record ProjectionInput(SimState State, IReadOnlyDictionary<Creature, int> Ids, IReadOnlyList<IReadOnlyList<ProjectedChoice>> Turns);
+    internal sealed record ProjectionInput(SimState State, IReadOnlyDictionary<Creature, int> Ids, IReadOnlyList<IReadOnlyList<ProjectedChoice>> Turns,
+        IReadOnlyDictionary<int, ProjectedRules> Rules);
 
     /// <summary>
     /// A projection's start from <paramref name="state"/> and its enemies' <paramref name="ids"/> (or the board built now, without teammates' hands
@@ -57,7 +59,10 @@ public static partial class SimAdapter
                 }
                 turns.Add(choices);
             }
-            return new ProjectionInput(state, ids, turns);
+            var rules = new Dictionary<int, ProjectedRules>();
+            foreach (var (id, creature, _, _) in forecasts)
+                if (RulesOf(me, combat, mates, creature, idOf) is { } read) rules[id] = read;
+            return new ProjectionInput(state, ids, turns, rules);
         }
         catch (Exception exception)
         {
@@ -67,7 +72,22 @@ public static partial class SimAdapter
     }
 
     /// <summary>The projection of <paramref name="input"/> on a worker (SimJob, decision #107): the frame waits for it as for any search (SimWait).</summary>
-    internal static SimJob StartProjection(ProjectionInput input, string label) => SimJob.StartProjection(input.State, input.Turns, label);
+    internal static SimJob StartProjection(ProjectionInput input, string label) => SimJob.StartProjection(input.State, input.Turns, label, rules: input.Rules);
+
+    /// <summary>
+    /// An enemy's move rules for a projection (decision #309): its graph with each condition as the simulator's (IntentReader.Rules), the move on
+    /// screen and the state after it, its moves so far, and each of its moves read as the intent on screen is (ProjectedMoveOf; one that can't be
+    /// read, or is behind a hidden intent, left out). Null where its rules can't be read.
+    /// </summary>
+    private static ProjectedRules? RulesOf(Player me, ICombatState combat, List<Player> mates, Creature creature, Func<Creature, int?> idOf)
+    {
+        if (IntentReader.Rules(creature) is not { } rules || creature.Monster is not { MoveStateMachine: { } machine } monster) return null;
+        var moves = new Dictionary<string, ProjectedMove>(StringComparer.Ordinal);
+        foreach (var move in machine.States.Values.OfType<MoveState>())
+            if (ProjectedMoveOf(me, combat, mates, creature, move, idOf) is { } projected) moves[move.Id] = projected;
+        var current = monster.NextMove;
+        return new ProjectedRules(rules.Graph, rules.Current, current.FollowUpState?.Id ?? current.FollowUpStateId, rules.Log, moves);
+    }
 
     /// <summary>
     /// A forecast move as the simulator's (ProjectedMove): each attack intent's hits (its DamageCalc's base, with the captured terms on each player, as

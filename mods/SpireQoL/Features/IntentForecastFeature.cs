@@ -90,15 +90,26 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         /// <summary>The key was made while the search was on its way: made again once it's over.</summary>
         public bool Pending { get; set; }
 
+        /// <summary>Only the certain turns are shown (Show chances off: decision #122).</summary>
+        public bool CertainOnly { get; init; }
+
+        /// <summary>
+        /// The turns shown: the projection's, once its search is over and it rolled this enemy's moves from its rules on the projected state (decision
+        /// #309: a sleeper waking after its last stack), else as the game's lambdas answer now.
+        /// </summary>
+        public List<ForecastTurn> Shown { get; private set; } = new();
+
         /// <summary>A forecast move's hits on you as they'll land, or null: not known, or the search isn't over.</summary>
         public IReadOnlyList<int>? Projected(int turn, string move) => Job?.Projected?.Of(turn, EnemyId, move)?.Lands;
 
-        /// <summary>The key from the moves and what's projected now, and whether the search is still on its way.</summary>
+        /// <summary>The key from the moves shown and what's projected now, and whether the search is still on its way.</summary>
         public void MakeKey()
         {
             Pending = Job is { Ready.IsCompleted: false };
-            Key = MovesKey + "|" + string.Join("/", Turns.Select((forecastTurn, turn) => string.Join(",", forecastTurn.Moves.Select(move =>
-                Projected(turn, move.Move) is { } lands ? string.Join(".", lands) : "-"))));
+            var rolled = Job is { Ready.IsCompletedSuccessfully: true } ? Job.Projected?.ForecastOf(EnemyId) : null;
+            Shown = rolled is { Count: > 0 } ? (CertainOnly ? rolled.TakeWhile(forecastTurn => forecastTurn.Certain).ToList() : rolled) : Turns;
+            Key = MovesKey + "|" + string.Join("/", Shown.Select((forecastTurn, turn) => string.Join(",", forecastTurn.Moves.Select(move =>
+                move.Move + ":" + (Projected(turn, move.Move) is { } lands ? string.Join(".", lands) : "-")))));
         }
 
         /// <summary>
@@ -137,7 +148,7 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         var job = input != null && input.Ids.TryGetValue(enemy, out _) ? SimAdapter.StartProjection(input, "the Intent Forecast's later turns") : null;
         if (job != null) SpireQoL.Combat.SimWait.Ready(job);
         var movesKey = enemy.GetHashCode() + "|" + string.Join("/", turns.Select(forecastTurn => string.Join(",", forecastTurn.Moves.Select(move => $"{move.Move}:{move.Chance:0.###}"))));
-        var read = new ForecastRead { Turns = turns, View = view, MovesKey = movesKey, Job = job, EnemyId = job != null ? input!.Ids[enemy] : -1 };
+        var read = new ForecastRead { Turns = turns, View = view, MovesKey = movesKey, Job = job, EnemyId = job != null ? input!.Ids[enemy] : -1, CertainOnly = !_ctx.Settings.ShowIntentOdds };
         read.MakeKey();
         return read;
     }
@@ -185,9 +196,11 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         if (now.Key != _key)
         {
             _key = now.Key;
-            Build(enemy, now.Turns, now.View, now.Projected);
+            if (now.Shown.Count > 0) Build(enemy, now.Shown, now.View, now.Projected);
         }
-        _widget!.HasContent = true;
+        // The projection's rolls can leave nothing certain to show (Show chances off, a sleeper waking into a random pick).
+        _widget!.HasContent = now.Shown.Count > 0;
+        if (now.Shown.Count == 0) return;
         foreach (var (node, powers) in _corners)
             if (GodotObject.IsInstanceValid(node) && node.IsNodeReady()) IntentCorner.Place(node, powers);
         // NIntent._Process's bob, for rows with no intent icon to follow.

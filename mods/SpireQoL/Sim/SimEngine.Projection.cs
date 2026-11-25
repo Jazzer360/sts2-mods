@@ -21,6 +21,13 @@ public sealed record ProjectedMove(string Id)
 public sealed record ProjectedChoice(int EnemyId, IReadOnlyList<(ProjectedMove Move, double Chance)> Options);
 
 /// <summary>
+/// An enemy's move rules for a projection (decision #309): its graph with each condition as the simulator's (IntentReader.Graph, decision #195), the
+/// move on screen and the state after it (a stun's named move for a stunned one), its moves so far (that one last), and each of its moves read as
+/// the intent on screen is (one behind a hidden intent, or whose attack can't be read, is left out: its turn is unknown). Pure data, shared.
+/// </summary>
+public sealed record ProjectedRules(MoveGraph Graph, string Current, string? CurrentFollowUp, IReadOnlyList<string> Log, IReadOnlyDictionary<string, ProjectedMove> Moves);
+
+/// <summary>
 /// What a projected move hits you for, each hit in order (decision #304): as it lands (the damage math at that hit, with no plays of yours in between),
 /// and as its intent reads when your turn before it starts (what the game shows then: the forecast audit's). Null where it isn't known, with why.
 /// </summary>
@@ -50,6 +57,15 @@ public sealed class Projection
     /// <summary>A move's hits in a projected turn, or null: not projected (past where it was known).</summary>
     public ProjectedHits? Of(int turn, int enemyId, string move) =>
         turn < Turns.Count && Turns[turn].TryGetValue(enemyId, out var moves) && moves.TryGetValue(move, out var hits) ? hits : null;
+
+    /// <summary>
+    /// Each enemy whose moves the projection worked out from its rules on the projected state (decision #309): its forecast turns, the first random
+    /// pick ending them, as IntentForecast.Forecast gives them from the game's lambdas as they answer now.
+    /// </summary>
+    public Dictionary<int, List<ForecastTurn>> Moves { get; } = new();
+
+    /// <summary>An enemy's forecast turns as the projection worked them out, or null: it had no rules read (the forecast as read now stands).</summary>
+    public List<ForecastTurn>? ForecastOf(int enemyId) => Moves.TryGetValue(enemyId, out var turns) ? turns : null;
 }
 
 public static partial class SimEngine
@@ -66,15 +82,22 @@ public static partial class SimEngine
     /// what's certain (ProjectedHits.Uncertain). What the simulator can't follow there (SimState.Unmodelled, UnmodelledAtTheirTurnEnd, a move whose
     /// code isn't read) leaves the turn unknown.
     /// </summary>
-    /// <param name="turns">Each forecast turn's moves, by enemy (IntentForecast's turns after the intent on screen); a living enemy with none that
-    /// turn (past its first random pick) makes no move the projection counts.</param>
-    public static Projection Project(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns) => Project(start, turns, new SimWork());
+    /// <param name="turns">Each forecast turn's moves, by enemy (IntentForecast's turns after the intent on screen, its rules as the game's lambdas
+    /// answer now); a living enemy with none that turn (past its first random pick) makes no move the projection counts.</param>
+    /// <param name="rules">The enemies whose moves the projection works out itself (decision #309), by id: each turn's move rolled as your turn
+    /// starts (after Hook.BeforeSideTurnStart, as CombatManager.StartTurn's PrepareForNextTurn), from its rules asked of the projected state
+    /// (IntentForecast.NextInProjection), in place of its moves in <paramref name="turns"/>.</param>
+    public static Projection Project(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns, IReadOnlyDictionary<int, ProjectedRules>? rules = null) =>
+        Project(start, turns, rules, new SimWork());
 
     /// <summary>The projection with <paramref name="work"/>: SimJob's on a worker (its cancellation and background gate, decision #107).</summary>
-    internal static Projection Project(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns, SimWork work)
+    internal static Projection Project(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns, IReadOnlyDictionary<int, ProjectedRules>? rules, SimWork work)
     {
         var projection = new Projection();
-        if (turns.Count == 0) return projection;
+        var rolling = rules?.ToDictionary(entry => entry.Key, entry => new MoveRoll(entry.Value)) ?? new Dictionary<int, MoveRoll>();
+        var turnCount = rolling.Count > 0 ? Math.Max(turns.Count, IntentForecast.MaxTurns) : turns.Count;
+        if (turnCount == 0) return projection;
+        foreach (var id in rolling.Keys) projection.Moves[id] = new List<ForecastTurn>();
         var first = start.Clone();
         first.Work = work;
         first.Log = false; // no breakdown: only the hits are read
@@ -89,10 +112,14 @@ public static partial class SimEngine
             Certainly(branches, uncertain, () => EndOfTurn(branches));
             Certainly(branches, uncertain, () => Fighting(branches, () => EnemyTurnStart(branches)));
             Certainly(branches, uncertain, () => TheirTurn(branches, choices: null, row: null));
-            foreach (var choices in turns)
+            for (var turn = 0; turn < turnCount; turn++)
             {
                 // Your next turn starts (CombatManager.StartTurn for the players, its listeners' code: decision #306): what its intents read then.
-                Certainly(branches, uncertain, () => YourTurnStart(branches));
+                // The enemies whose rules are read roll their moves there, after its BeforeSideTurnStart (decision #309).
+                var given = turn < turns.Count ? turns[turn] : Array.Empty<ProjectedChoice>();
+                IReadOnlyList<ProjectedChoice> choices = given;
+                Certainly(branches, uncertain, () => YourTurnStart(branches, rolled: () => choices = Rolled(branches.States, given, rolling, projection, turn)));
+                if (choices.Count == 0) break;
                 var state = branches.States[0];
                 var row = new Dictionary<int, Dictionary<string, ProjectedHits>>();
                 projection.Turns.Add(row);
@@ -102,7 +129,12 @@ public static partial class SimEngine
                         option => unknown != null ? new ProjectedHits(Lands: null, AtYourTurnStart: null) { Unknown = unknown }
                             : new ProjectedHits(Lands: null, HitsOnYou(state, choice.EnemyId, option.Move)) { Uncertain = uncertain.GetValueOrDefault(choice.EnemyId) },
                         StringComparer.Ordinal);
-                if (unknown != null) break;
+                if (unknown != null)
+                {
+                    // Past what the simulator follows, the later moves are rolled from the rules as the game's lambdas answer now, as before.
+                    for (var later = turn + 1; later < turnCount; later++) Rolled(states: null, Array.Empty<ProjectedChoice>(), rolling, projection, later);
+                    break;
+                }
                 // Its end with no plays, the enemies' turn start, their moves, their turn's end.
                 Certainly(branches, uncertain, () => EndOfTurn(branches));
                 Certainly(branches, uncertain, () => Fighting(branches, () => EnemyTurnStart(branches)));
@@ -128,13 +160,80 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// Where an enemy's moves stand in a projection whose rules it reads (decision #309): the move it made last (the one on screen at first), the
+    /// moves so far, and whether its forecast is over (its first random pick made, a stun taking its next move, rules that can't say).
+    /// </summary>
+    private sealed class MoveRoll
+    {
+        public MoveRoll(ProjectedRules rules) => (Rules, Last, Log) = (rules, rules.Current, rules.Log.ToList());
+
+        public ProjectedRules Rules { get; }
+        public string Last { get; set; }
+        public List<string> Log { get; }
+        public bool Over { get; set; }
+
+        /// <summary>The state its next move is rolled from: the move after the last one (the initial state when it names none).</summary>
+        public string From => Last == Rules.Current && Rules.CurrentFollowUp is { } followUp ? followUp
+            : Rules.Graph.Nodes.GetValueOrDefault(Last) is MoveNodeMove { FollowUp: { } next } ? next : Rules.Graph.InitialId;
+    }
+
+    /// <summary>
+    /// Each enemy's moves this projected turn (decision #309): an enemy whose rules are read rolls them as the game does as your turn starts, from the
+    /// state after its last move (a stun's named move after its stunned one), its conditions asked of the projected <paramref name="states"/> (as the
+    /// game's lambdas answer now where one isn't read, or the states are unknown or null), each move read as its intent is; the others take theirs
+    /// from <paramref name="given"/>. A random pick is the last turn of its forecast; so is a stun that takes its next move (the forecast can't show
+    /// it) and a roll the branches don't agree on. Each enemy's rolled turn is kept in <paramref name="projection"/>.Moves.
+    /// </summary>
+    private static IReadOnlyList<ProjectedChoice> Rolled(List<SimState>? states, IReadOnlyList<ProjectedChoice> given, Dictionary<int, MoveRoll> rolling,
+        Projection projection, int turn)
+    {
+        var choices = given.Where(choice => !rolling.ContainsKey(choice.EnemyId)).ToList();
+        foreach (var (enemyId, roll) in rolling)
+        {
+            if (roll.Over) continue;
+            var known = states is { Count: > 0 } && states.All(state => state.Unmodelled == null && state.UnmodelledAtTheirTurnEnd == null);
+            IReadOnlyList<(string Move, double Chance)>? next = null;
+            if (known)
+            {
+                foreach (var state in states!)
+                {
+                    if (state.Enemy(enemyId) is not { Alive: true } enemy || enemy.Stunned) { next = null; break; }
+                    var from = enemy.NextAfterStun ?? roll.From;
+                    var these = IntentForecast.NextInProjection(roll.Rules.Graph, from, roll.Log, state, enemyId);
+                    if (these == null || next != null && !these.SequenceEqual(next)) { next = null; break; }
+                    next = these;
+                }
+            }
+            else next = IntentForecast.NextInProjection(roll.Rules.Graph, roll.From, roll.Log, state: null, enemyId);
+            if (next is not { Count: > 0 })
+            {
+                roll.Over = true;
+                continue;
+            }
+            projection.Moves[enemyId].Add(new ForecastTurn(next));
+            if (next.Count > 1) roll.Over = true; // the first random pick ends it
+            else
+            {
+                roll.Last = next[0].Move;
+                roll.Log.Add(next[0].Move);
+                if (states != null) foreach (var state in states) if (state.Enemy(enemyId) is { } enemy) enemy.NextAfterStun = null; // its stun's named move is rolled
+            }
+            choices.Add(new ProjectedChoice(enemyId, next.Select(option =>
+                (roll.Rules.Moves.GetValueOrDefault(option.Move) ?? new ProjectedMove(option.Move), option.Chance)).ToList()));
+        }
+        return choices;
+    }
+
+    /// <summary>
     /// The enemies' turn in a projection: each living enemy's forecast move (<paramref name="choices"/>; null: the intents on screen), their moves,
-    /// each move's hits as they landed (<paramref name="row"/>), their turn's end, and what their turn leaves for yours (TheirTurnIsOver).
+    /// each move's hits as they landed (<paramref name="row"/>), each stun made spent (its named move rolled next: SimEnemy.NextAfterStun), their
+    /// turn's end, and what their turn leaves for yours (TheirTurnIsOver).
     /// </summary>
     private static void TheirTurn(BranchSet branches, IReadOnlyList<ProjectedChoice>? choices, Dictionary<int, Dictionary<string, ProjectedHits>>? row)
     {
         if (choices != null) GiveMoves(branches, choices);
         branches.Do(EnemyTurn);
+        branches.Do(StunsSpent);
         if (choices != null && row != null) Landed(branches.States, choices, row);
         Fighting(branches, () => EnemyTurnEnd(branches));
         branches.Do(TheirTurnIsOver);
@@ -236,6 +335,16 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// The enemies' moves are made in a projected run: a stunned enemy made its stunned move (CreatureCmd.Stun's, MustPerformOnceBeforeTransitioning),
+    /// so its stun is spent; its named move (SimEnemy.NextAfterStun) is where its next roll starts.
+    /// </summary>
+    private static void StunsSpent(SimState state)
+    {
+        foreach (var enemy in state.Enemies)
+            if (enemy.Stunned) (enemy.Stunned, enemy.StunnedMove) = (false, null);
+    }
+
+    /// <summary>
     /// The enemies' turn is over in a projected run: the block they have now stays on them through your turn (the game clears it as their next turn
     /// starts, which EnemyTurn does), so nothing of your turn's is put back (Run's TurnEndBlockBack is for the outcome); each move's projection is cleared.
     /// </summary>
@@ -266,7 +375,7 @@ public static partial class SimEngine
         {
             foreach (var enemy in state.Enemies)
             {
-                if (!enemy.Alive) continue;
+                if (!enemy.Alive || enemy.Stunned) continue; // a stun since the roll takes its move: it makes its stunned move
                 var choice = choices.FirstOrDefault(each => each.EnemyId == enemy.Id);
                 if (choice is { Options.Count: 1 }) Give(enemy, choice.Options[0].Move);
                 else if (choice == null) enemy.MoveNotForecast = true;
@@ -277,7 +386,7 @@ public static partial class SimEngine
             if (choice.Options.Count < 2) continue;
             branches.Each(state =>
             {
-                if (state.Enemy(choice.EnemyId) is not { Alive: true }) return new[] { state };
+                if (state.Enemy(choice.EnemyId) is not { Alive: true, Stunned: false }) return new[] { state };
                 return choice.Options.Select(option =>
                 {
                     var branch = state.Clone();

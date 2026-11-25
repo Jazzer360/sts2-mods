@@ -64,8 +64,8 @@ public sealed class SimJob
     private static readonly ConcurrentQueue<(string Line, Exception? Error)> Pending = new();
 
     private readonly SimSearch? _ex;
-    /// <summary>A projection's start and turns (decision #304: the Intent Forecast's later turns) in place of a search.</summary>
-    private readonly (SimState Start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> Turns)? _projection;
+    /// <summary>A projection's start, turns and move rules (decisions #304, #309: the Intent Forecast's later turns) in place of a search.</summary>
+    private readonly (SimState Start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> Turns, IReadOnlyDictionary<int, ProjectedRules>? Rules)? _projection;
     private readonly CancellationTokenSource _cts = new();
     private readonly TaskCompletionSource<bool> _ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly string _label;
@@ -80,7 +80,7 @@ public sealed class SimJob
     /// </summary>
     internal static long Context;
 
-    private SimJob(SimSearch? ex, (SimState, IReadOnlyList<IReadOnlyList<ProjectedChoice>>)? projection, string label, long firstBudget)
+    private SimJob(SimSearch? ex, (SimState, IReadOnlyList<IReadOnlyList<ProjectedChoice>>, IReadOnlyDictionary<int, ProjectedRules>?)? projection, string label, long firstBudget)
     {
         _ex = ex;
         _projection = projection;
@@ -99,8 +99,9 @@ public sealed class SimJob
     /// search does: the frame waits for it as for any job (SimWait), it waits for a background turn past FirstBudget copies, and its result is
     /// <see cref="Projected"/> once it's over.
     /// </summary>
-    public static SimJob StartProjection(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns, string label, long firstBudget = FirstBudget) =>
-        Begin(new SimJob(ex: null, (start, turns), label, firstBudget));
+    public static SimJob StartProjection(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns, string label, long firstBudget = FirstBudget,
+        IReadOnlyDictionary<int, ProjectedRules>? rules = null) =>
+        Begin(new SimJob(ex: null, (start, turns, rules), label, firstBudget));
 
     private static SimJob Begin(SimJob job)
     {
@@ -152,7 +153,7 @@ public sealed class SimJob
             }
             else
             {
-                var projected = SimEngine.Project(_projection!.Value.Start, _projection.Value.Turns, work);
+                var projected = SimEngine.Project(_projection!.Value.Start, _projection.Value.Turns, _projection.Value.Rules, work);
                 _projected = projected;
                 (steps, copies, peakHeld, capHit, results) = (projected.Steps, projected.Copies, projected.PeakHeld, projected.CapHit, $"{projected.Turns.Count} turns");
             }

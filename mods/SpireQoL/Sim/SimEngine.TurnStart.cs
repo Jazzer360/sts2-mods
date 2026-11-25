@@ -29,9 +29,10 @@ public static partial class SimEngine
     ///     Hook.AfterPlayerTurnStart (Early, its own, Late), the hook's player that player.
     ///  5. Hook.AfterSideTurnStart, then Late.
     ///  6. Each player's orbs' turn-start passives (OrbQueue.AfterTurnStart: Plasma's energy).
-    /// The deaths these cause are handled after each hook, as the turn's end's are.
+    /// The deaths these cause are handled after each hook, as the turn's end's are. The enemies' next moves are rolled after
+    /// Hook.BeforeSideTurnStart (PrepareForNextTurn: <paramref name="rolled"/>, decision #309).
     /// </summary>
-    private static void YourTurnStart(BranchSet branches)
+    private static void YourTurnStart(BranchSet branches, Action? rolled = null)
     {
         branches.Do(YourNextTurnStarts);
         Fighting(branches, () =>
@@ -39,6 +40,7 @@ public static partial class SimEngine
             HookStep(branches, nameof(SimModel.BeforeSideTurnStart), (model, owner, branch) => model.BeforeSideTurnStart(branch, owner));
             DeathCheck(branches);
         });
+        rolled?.Invoke();
         branches.Do(ClearPlayersBlock);
         var players = branches.States.Count > 0 ? branches.States[0].PlayerIds : Array.Empty<int>();
         foreach (var player in players)
