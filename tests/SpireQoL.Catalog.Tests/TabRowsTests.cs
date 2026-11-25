@@ -42,7 +42,7 @@ public class TabRowsTests
     [Fact]
     public void TheBonusRowsShowWhatTheOwnerDecided()
     {
-        // Decisions #244, #245: each row's directions and default.
+        // Decisions #244, #245, #249: each row's directions and default.
         var expected = new Dictionary<string, (TabShows Shows, bool On)>(StringComparer.Ordinal)
         {
             ["ParryingShield"] = (TabShows.SetsUp, true),
@@ -51,7 +51,7 @@ public class TabRowsTests
             ["CloakClasp"] = (TabShows.GivesUp | TabShows.Reduces, false),
             ["ObsidianVice"] = (TabShows.GivesUp | TabShows.Reduces, false),
             ["ScreamingFlagon"] = (TabShows.SetsUp, true),
-            ["HailstormPower"] = (TabShows.Default, true),
+            ["HailstormPower"] = (TabShows.Default | TabShows.SetsUpByChance, true),
         };
         foreach (var (type, (shows, on)) in expected)
         {

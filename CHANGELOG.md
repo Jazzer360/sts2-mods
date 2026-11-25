@@ -15,6 +15,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Play Preview: while you hold a card where letting go would play it (aimed at its target, for one that needs one; above the hand's play line, or once selected with a controller or the keyboard, for one that doesn't), Incoming Damage, Teammate Incoming Damage and the Death Skull show the turn as it would go after you play it, tinted lavender, and an enemy intent the play changes gets a line through its damage and the new number above it in the same font (Weak lowering it, Strength raising it; the line alone for an enemy the play kills in every outcome). Every outcome of the play was already worked out for each card and target, so it shows at once; the card tabs don't change. A new check holds it to the board the play leaves.
 
 #### Changed
+- Hailstorm's tag shows on a card that might channel your first Frost orb too, with its chance (Chaos with no Frost: 20%), with Show chances on.
 - Dev mode checks a reused result every 5 seconds in a fight instead of every second, so an idle fight makes a fifth of the dev checks' garbage.
 - Thorns, Flame Barrier and Reflect are worked out from their own code, and every damage to a player (an enemy's attack, a card's HP cost, a power's) lands the same way. What's shown is unchanged but for the fixes below.
 - Explosive Arrows, Covering Fire and Quietus are worked out from their own code. What's shown is unchanged but for the fix below.

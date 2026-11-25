@@ -13,7 +13,7 @@ public class BonusTabRowTests
     /// A card's tabs as CardPredictions reads them: one simulation per aim (each enemy for a card aimed at one, else one), against ending the
     /// turn now, every source on the board with what its row shows.
     /// </summary>
-    internal static CardTabs TabsOf(SimState state, SimPlay play, bool aimed = false)
+    internal static CardTabs TabsOf(SimState state, SimPlay play, bool aimed = false, bool chances = true)
     {
         var aims = aimed ? state.Enemies.Select(enemy => enemy.Id).ToList() : new List<int> { play.TargetId };
         var outcomes = aims.Select(aim =>
@@ -27,7 +27,7 @@ public class BonusTabRowTests
         foreach (var relic in state.You.Relics.Items) sources.Add(Source(relic.Name.Name, owner: null, pass: 1));
         foreach (var enemy in state.Enemies)
             foreach (var power in enemy.Powers.Items) sources.Add(Source(power.Name.Name, enemy.Id, pass: 0));
-        var tabs = new CardTabs { Chances = true, ProcNumbers = true };
+        var tabs = new CardTabs { Chances = chances, ProcNumbers = true };
         tabs.Add(sources, state, baseline, outcomes);
         return tabs;
     }
@@ -178,10 +178,12 @@ public class BonusTabRowTests
         // aren't Frost you end with none, 80%.
         var tab = Tab(TabsOf(Defect(OrbKind.Frost), Channel(OrbKind.Random)), "HailstormPower");
         Assert.Equal(new SourceTab("proc:HailstormPower", Crossed: true, Chance: "80%"), tab);
-        // With no Frost, Chaos channels one in one branch of five: not in every outcome, so no plain tab (a good tab is a certainty).
+        // With no Frost, Chaos channels one in one branch of five: Hailstorm's row shows a bonus some outcomes set up with their chance (its
+        // SetsUpByChance, the owner's decision #249), 20%; with Show chances off, set up in every outcome only, so no tab.
         var empty = Defect();
         empty.You.OrbCapacity = 3;
-        Assert.Null(Tab(TabsOf(empty, Channel(OrbKind.Random)), "HailstormPower"));
+        Assert.Equal(new SourceTab("proc:HailstormPower", Crossed: false, Chance: "20%"), Tab(TabsOf(empty, Channel(OrbKind.Random)), "HailstormPower"));
+        Assert.Null(Tab(TabsOf(empty, Channel(OrbKind.Random), chances: false), "HailstormPower"));
     }
 
     // ---- Tune (AfterSideTurnEnd: a free card next turn, FreeCardPower, when its owner played a Ki this turn: MelodyCmd.PlayedKiThisTurn, the
@@ -307,6 +309,8 @@ public class BonusTabRowTests
             var crossed = ((shows & TabShows.GivesUp) != 0 && !after.InEvery(Paid)) || ((shows & TabShows.Reduces) != 0 && !after.InEvery(branch => Paid(branch) && Amount(branch) >= least));
             return crossed ? true : null;
         }
-        return (shows & TabShows.SetsUp) != 0 && after.InEvery(Paid) ? false : null;
+        // Plain where every outcome pays; where only some do, plain too for a row that shows a bonus by chance (decision #249: chances on here).
+        var setsUp = (shows & TabShows.SetsUpByChance) != 0 ? after.Branches.Any(Paid) : after.InEvery(Paid);
+        return (shows & TabShows.SetsUp) != 0 && setsUp ? false : null;
     }
 }

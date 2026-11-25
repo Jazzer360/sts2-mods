@@ -23,6 +23,11 @@ public enum TabShows
     GivesUp = 2,
     /// <summary>A crossed tab where the play makes a payout smaller than ending the turn now pays, or stops it (Cloak Clasp's block per card in hand).</summary>
     Reduces = 4,
+    /// <summary>
+    /// With <see cref="SetsUp"/>: a plain tab too where only some outcomes of the play set the payout up, carrying their chance (decision #249,
+    /// the owner's: Hailstorm when Chaos might channel your first Frost). With Show chances off, set up in every outcome only, as without it.
+    /// </summary>
+    SetsUpByChance = 8,
     /// <summary>Every row's unless it says otherwise: both directions of a payout, as decision #239 showed them.</summary>
     Default = SetsUp | GivesUp,
 }
@@ -177,20 +182,25 @@ public sealed class CardTabs
     /// </summary>
     private void FromRule(string sourceClass, OutcomeRule rule, SimOutcome[] outcomes, TabShows shows)
     {
-        if (rule.Change is { } change) rule = Shown(rule, change, shows);
+        // A bonus some outcomes set up, shown with their chance (its row's SetsUpByChance with chances on: decision #249).
+        var byChance = !rule.Harmful && rule.Change != null && Chances && (shows & TabShows.SetsUpByChance) != TabShows.None;
+        if (rule.Change is { } change) rule = Shown(rule, change, shows, Chances);
         var key = "proc:" + sourceClass;
         var firesAt = outcomes.Select(rule.SetOff).ToArray();
         // For the audits, per aim, as the play-log tabs are: a bonus in every outcome where it's set off, in some where some outcome sets it
         // off; a warning (set off in some outcome) in some only. Set off after the play (OutcomeRule.InPlay false): nothing for the play check
-        // to see flash.
-        var every = rule.Harmful ? new bool[firesAt.Length] : firesAt.ToArray();
+        // to see flash. A bonus by chance is held to every outcome only where every one sets it up.
+        var every = rule.Harmful ? new bool[firesAt.Length]
+            : byChance && rule.InBranch is { } setUp ? outcomes.Select(outcome => outcome.InEvery(setUp)).ToArray()
+            : firesAt.ToArray();
         var any = outcomes.Select((outcome, index) => firesAt[index] || rule.InSome?.Invoke(outcome) == true).ToArray();
         if (rule.InPlay) Merge(sourceClass, every, any);
         if (!firesAt.Any(fires => fires)) return;
         firesAt = FiresAt(key, firesAt);
-        // A warning only some outcomes set off: its chance (decision #159), the likeliest aim's.
+        // A warning only some outcomes set off: its chance (decision #159), the likeliest aim's; a bonus some outcomes set up, where its row
+        // asks (SetsUpByChance, decision #249), the same way.
         string? chance = null;
-        if (rule.Harmful && rule.InBranch != null && Chances) chance = WarningChance(outcomes.Where(rule.SetOff).Select(outcome => outcome.Chance(rule.InBranch)));
+        if ((rule.Harmful || byChance) && rule.InBranch != null && Chances) chance = WarningChance(outcomes.Where(rule.SetOff).Select(outcome => outcome.Chance(rule.InBranch)));
         Tabs[key] = new SourceTab(key, rule.Harmful, Chance: chance, Aimed: firesAt.Length > 1 && !firesAt.All(fires => fires));
     }
 
@@ -199,12 +209,14 @@ public sealed class CardTabs
     /// change the row shows, with the chance of those; a bonus where every outcome does), the changes the row leaves out as if none. A side the
     /// row shows nothing of sets nothing off.
     /// </summary>
-    private static OutcomeRule Shown(OutcomeRule rule, Func<SimState, TabShows> change, TabShows shows)
+    private static OutcomeRule Shown(OutcomeRule rule, Func<SimState, TabShows> change, TabShows shows, bool chances)
     {
         var side = shows & (rule.Harmful ? TabShows.GivesUp | TabShows.Reduces : TabShows.SetsUp);
         if (side == TabShows.None) return rule with { SetOff = _ => false, InBranch = null, InSome = null, Change = null };
         bool Made(SimState branch) => (change(branch) & side) != TabShows.None;
-        return rule.Harmful
+        // A bonus some outcomes set up shows with their chance where the row asks and chances are shown (decision #249); else every outcome.
+        var byChance = !rule.Harmful && chances && (shows & TabShows.SetsUpByChance) != TabShows.None;
+        return rule.Harmful || byChance
             ? rule with { SetOff = outcome => !outcome.InEvery(branch => !Made(branch)), InBranch = Made, Change = null }
             : rule with { SetOff = outcome => outcome.InEvery(Made), Change = null };
     }

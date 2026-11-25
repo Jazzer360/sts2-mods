@@ -85,7 +85,8 @@ public sealed partial class SettingsMenu
             Tab("proc:ThornsPower", Power<ThornsPower>(), crossed: true, number: 3));
         GuideCardCell(flow, Card<BallLightning>(), "A chance on a warning",
             "When only some outcomes set the warning off (here, the Lightning orb waking the sleeping enemy if it hits that one), the tag "
-            + "carries the chance. No number: it's certain. Shown with Show chances on.",
+            + "carries the chance. No number: it's certain. Shown with Show chances on. A few plain tags carry a chance too, where only some outcomes "
+            + "set the bonus up (Hailstorm when Chaos might channel your first Frost orb).",
             Tab("proc:AsleepPower", Power<AsleepPower>(), crossed: true, numberText: "50%"));
         GuideCardCell(flow, Card<BallLightning>(), "A chance on the skull",
             "When a roll decides the kill (here, which enemy the Lightning orb hits), the lethal tag carries the chance. "
