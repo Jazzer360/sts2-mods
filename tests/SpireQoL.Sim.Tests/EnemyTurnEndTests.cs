@@ -136,19 +136,24 @@ public class EnemyTurnEndTests
     }
 
     [Fact]
-    public void AsleepsLastStackGoingIsUnknownOnlyPastTheEnemyTurn()
+    public void AsleepsLastStackGoingIsFollowed()
     {
-        // AsleepPower.AfterSideTurnEnd: a stack less as its owner's turn ends; the last one going wakes it (LagavulinMatriarch.WakeUpMove), which
-        // isn't followed: the state after the enemies' turn end is unknown (SimState.UnmodelledAtTheirTurnEnd), what's read through the enemy turn isn't.
+        // AsleepPower.AfterSideTurnEnd (decision #307, read from its code): a stack less as its owner's turn ends; the last one going calls
+        // LagavulinMatriarch.WakeUpMove, which only sets what the game shows (IsAwake), so the state after the enemies' turn end is known: the power
+        // gone, its Plating taken on its last stack (BeforeSideTurnEndVeryEarly), and its next move, from its rules, an attack.
         var state = Fight(new SimEnemy { Id = 0, Name = "E0", Hp = 40 });
-        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Asleep, amount: 2);
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Asleep, amount: 2).With(PowerId.Plating, amount: 8);
+        WakeTabParityTests.WithSleeperRules(state.Enemies[0]);
         var after = AfterTheTurn(state);
         Assert.Equal(1, after.Enemy(id: 0)!.Powers[PowerId.Asleep]);
-        Assert.Null(after.UnmodelledAtTheirTurnEnd);
-        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Asleep, amount: 1);
+        Assert.Equal(false, SimEngine.NextMoveAttacks(after, enemyId: 0));
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Asleep, amount: 1).With(PowerId.Plating, amount: 8);
         var woken = AfterTheTurn(state);
         Assert.Null(woken.Unmodelled);
-        Assert.NotNull(woken.UnmodelledAtTheirTurnEnd);
+        Assert.Null(woken.UnmodelledAtTheirTurnEnd);
+        Assert.False(woken.Enemy(id: 0)!.Powers.Has(PowerId.Asleep));
+        Assert.False(woken.Enemy(id: 0)!.Powers.Has(PowerId.Plating));
+        Assert.Equal(true, SimEngine.NextMoveAttacks(woken, enemyId: 0));
     }
 
     [Fact]

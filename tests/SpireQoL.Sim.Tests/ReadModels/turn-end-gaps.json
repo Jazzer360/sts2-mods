@@ -36,12 +36,6 @@
     "Why": "HellraiserPower isn\u0027t modelled, and its turn\u0027s-end hooks never act as the enemies\u0027 turn ends"
   },
   {
-    "Name": "NemesisPower",
-    "Why": "NemesisPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd (gap: PowerCmd.Remove of another power)",
-    "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
-  },
-  {
     "Name": "NoDrawPower",
     "Why": "NoDrawPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (ShouldDraw: gap: the simulator runs no read model\u0027s ShouldDraw)",
     "ActsForAnEnemy": true

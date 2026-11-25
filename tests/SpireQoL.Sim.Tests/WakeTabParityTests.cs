@@ -8,7 +8,8 @@ namespace SpireQoL.Sim.Tests;
 /// enemies with their stacks, Plating and block, beside an attacker, you and sometimes a teammate, an Attack aimed at each enemy, at all of them or at
 /// a random one, with one to four hits, each simulated against ending the turn now and read into its tabs by the rules the game shows them by
 /// (CardTabs: every tab's key, crossing, number, chance and aim marker, in order, and what the play check holds the play to). Recorded with the
-/// hand-written models (Cases/wake-tab-parity.txt, SPIREQOL_RECORD_WAKE_TABS=path writes it), the record a model read from the game's code is held to.
+/// hand-written models first, then with the models read from their code (decision #307: the next move compared with and without the play; the
+/// change traced in its commit): Cases/wake-tab-parity.txt, SPIREQOL_RECORD_WAKE_TABS=path writes it.
 /// </summary>
 public class WakeTabParityTests
 {
@@ -42,6 +43,40 @@ public class WakeTabParityTests
     /// <summary>The kinds of enemy a scenario has: a sleeping Lagavulin Matriarch, a sleeping Slumbering Beetle, an attacker.</summary>
     internal enum Sleeper { Asleep, Slumber, Attacker }
 
+    /// <summary>
+    /// A sleeper's move rules as the game's code builds them (LagavulinMatriarch.GenerateMoveStateMachine, SlumberingBeetle's): its sleeping move,
+    /// then a branch on its power (HasPower: asleep again, else its first attack). On screen: its sleeping move. The read models compare its next
+    /// move with and without the play (decision #307); the hand-written ones the record was made with didn't read them.
+    /// </summary>
+    internal static SimMoveRules SleeperRules(string sleep, string branch, PowerId power, string wake, IReadOnlyList<(string Move, string Next)> after, IReadOnlySet<string> attacks)
+    {
+        var holds = new CountCondition(SimCounted.MonsterPower, SimCompare.Greater, Than: 0) { Power = power };
+        var nodes = new Dictionary<string, MoveNode>
+        {
+            [sleep] = new MoveNodeMove(sleep, branch),
+            [branch] = new MoveNodeConditional(branch, new List<(string, bool?)> { (sleep, null), (wake, null) }) { Conditions = new SimCondition?[] { holds, new NotCondition(holds) } },
+        };
+        foreach (var (move, next) in after) nodes[move] = new MoveNodeMove(move, next);
+        return new SimMoveRules(new MoveGraph(nodes, sleep), sleep, new[] { sleep }, attacks);
+    }
+
+    private static readonly SimMoveRules LagavulinRules = SleeperRules("SLEEP_MOVE", "SLEEP_BRANCH", PowerId.Asleep, "SLASH_MOVE",
+        new[] { ("SLASH_MOVE", "DISEMBOWEL_MOVE"), ("DISEMBOWEL_MOVE", "SLASH2_MOVE"), ("SLASH2_MOVE", "SOUL_SIPHON_MOVE"), ("SOUL_SIPHON_MOVE", "SLASH_MOVE") },
+        new HashSet<string> { "SLASH_MOVE", "DISEMBOWEL_MOVE", "SLASH2_MOVE" });
+
+    private static readonly SimMoveRules BeetleRules = SleeperRules("SNORE_MOVE", "SNORE_NEXT", PowerId.Slumber, "ROLL_OUT_MOVE",
+        new[] { ("ROLL_OUT_MOVE", "ROLL_OUT_MOVE") }, new HashSet<string> { "ROLL_OUT_MOVE" });
+
+    /// <summary>
+    /// A sleeper's move rules as the adapter reads them in the game (SimEnemy.Rules, decision #307) for a generated enemy with Asleep or Slumber (the
+    /// other parity tests' sleepers too: their tabs compare its next move). Adds nothing random: the recordings' fights stay as they were.
+    /// </summary>
+    internal static void WithSleeperRules(SimEnemy enemy)
+    {
+        if (enemy.Powers.Has(PowerId.Asleep)) enemy.Rules = LagavulinRules;
+        else if (enemy.Powers.Has(PowerId.Slumber)) enemy.Rules = BeetleRules;
+    }
+
     /// <summary>One generated fight: each enemy's kind, and the play.</summary>
     internal static (SimState State, SimPlay Play, Sleeper[] Kinds) Fight(int index)
     {
@@ -58,10 +93,12 @@ public class WakeTabParityTests
             switch (kinds[i])
             {
                 case Sleeper.Asleep:
+                    enemy.Rules = LagavulinRules;
                     enemy.Powers = enemy.Powers.With(PowerId.Asleep, amount: stacks);
                     if (plating > 0) enemy.Powers = enemy.Powers.With(PowerId.Plating, amount: plating);
                     break;
                 case Sleeper.Slumber:
+                    enemy.Rules = BeetleRules;
                     enemy.Powers = enemy.Powers.With(PowerId.Slumber, amount: stacks);
                     if (plating > 0) enemy.Powers = enemy.Powers.With(PowerId.Plating, amount: plating);
                     break;

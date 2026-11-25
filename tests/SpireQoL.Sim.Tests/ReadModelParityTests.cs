@@ -46,6 +46,8 @@ public class ReadModelParityTests
     /// </summary>
     private static readonly Dictionary<string, string> NewTabs = new(StringComparer.Ordinal)
     {
+        ["AsleepPower"] = "decision #307: crossed where the play makes its next move an attack and ending the turn now doesn't (WakeTabParityTests holds the change), where the hand-written model crossed any HP through its block",
+        ["SlumberPower"] = "decision #307: as Asleep's, where the hand-written model crossed a play whose own hits took its last stack",
         ["Orichalcum"] = "its block as your turn ends with none: a crossed tab on a play that gives you block",
         ["FakeOrichalcum"] = "as Orichalcum's",
         ["CloakClasp"] = "its block per card in hand as your turn ends: a crossed tab on a play that leaves fewer (off by default)",

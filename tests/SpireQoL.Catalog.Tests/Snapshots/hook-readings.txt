@@ -4,7 +4,7 @@ power AimPower: AfterAttack: read | BeforeAttack: read | InitInternalData: not r
 power AllIsWellPower: AfterCardGeneratedForCombat: read
 power AmnesiaPower: AfterPlayerTurnStart: unknown where it runs: gap: PlayerCmd.LoseEnergy isn't translated | AfterSideTurnEnd: read | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 power ArsenalPower: AfterCardGeneratedForCombat: read
-power AsleepPower: AfterDamageReceived: gap: PowerCmd.Remove of another power | AfterSideTurnEnd: gap: tests this.Owner.Monster._isAwake() | BeforeSideTurnEndVeryEarly: gap: PowerCmd.Remove of another power
+power AsleepPower: AfterDamageReceived: read | AfterSideTurnEnd: read | BeforeSideTurnEndVeryEarly: read
 power AutomationPower: AfterCardDrawn: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power BarricadePower: AfterApplied: read | ShouldClearBlock: read
 power BattlewornDummyTimeLimitPower: AfterSideTurnEnd: gap: sets BattlewornDummyEventEncounter.RanOutOfTime where the reader reads no store
@@ -101,7 +101,7 @@ power MonarchsGazePower: AfterDamageGiven: read
 power MonologuePower: AfterCardPlayed: read | AfterSideTurnEnd: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power MotifPower: AfterCardPlayed: read
 power NecroMasteryPower: AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged
-power NemesisPower: AfterSideTurnEnd: gap: PowerCmd.Remove of another power
+power NemesisPower: AfterSideTurnEnd: read
 power NoBlockPower: AfterSideTurnEnd: read | ModifyBlockMultiplicative: read
 power NoDrawPower: AfterSideTurnEnd: read | ShouldDraw: gap: the simulator runs no read model's ShouldDraw
 power NoEnergyGainPower: AfterModifyingEnergyGain: gap: the simulator runs no read model's AfterModifyingEnergyGain | AfterSideTurnEnd: read | ModifyEnergyGain: gap: the simulator runs no read model's ModifyEnergyGain
@@ -147,7 +147,7 @@ power SleightOfFleshPower: AfterPowerAmountChanged: read
 power SlipperyPower: AfterDamageReceived: read | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply's scaling for the players: read into the class's PowerRule and run by the engine as it lands one (decision #234) | ModifyHpLostAfterOsty: read
 power SlothPower: BeforeCardPlayed: read | BeforeSideTurnStart: read | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
 power SlowPower: AfterCardPlayed: read | AfterModifyingDamageAmount: read | AfterSideTurnStart: read | ModifyDamageMultiplicative: read
-power SlumberPower: AfterDamageReceived: gap: a stunned move that calls commands | AfterRemoved: read | AfterSideTurnEnd: gap: PowerCmd.Remove of another power
+power SlumberPower: AfterDamageReceived: read | AfterRemoved: read | AfterSideTurnEnd: read
 power SmoggyPower: AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterCardPlayed: gap: a loop | AfterSideTurnEnd: gap: tests this.Owner.Player.PlayerCombatState.AllCards | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
 power SmokestackPower: AfterCardGeneratedForCombat: read
 power SneakyPower: AfterCardPlayed: read

@@ -801,7 +801,7 @@ public sealed class ReadModel : SimModel
         // Yours; or any player's whose death code gives each player on its side (Compost's energy for each living player): yours too.
         HookOutcome.KillsOne => owner == Who.You || Who.IsPlayer(owner) && RewardsItsSide ? Models.OutcomeRules.KillsOne : null,
         HookOutcome.ReactsToHpLoss => ReactsToHpLoss(now, owner),
-        HookOutcome.Stuns => Models.OutcomeRules.Stuns(now, owner),
+        HookOutcome.Stuns => NextMoveRule(start, now, owner) ?? Models.OutcomeRules.Stuns(now, owner),
         // Its own hit's: stunned when the turn's over, set off after the play (in its turn), so the play check isn't held to it.
         HookOutcome.StunsOnItsOwnHit => Models.OutcomeRules.Stuns(now, owner) is { } stuns ? stuns with { InPlay = false } : null,
         HookOutcome.KillsItself => Who.IsEnemy(owner) && !now.KilledByItsPowerInAll(owner) ? new(Harmful: false, outcome => outcome.KilledByItsPowerInAll(owner)) : null,
@@ -809,6 +809,44 @@ public sealed class ReadModel : SimModel
         HookOutcome.BreaksBlock => owner == Who.You ? new(Harmful: false, outcome => outcome.PlayBreaksBlockInAll) : null,
         _ => _paidWhere.Count > 0 ? PaidWhere(now, owner) : null,
     };
+
+    /// <summary>Its stun names the move after it (StunStep.NextMove: Asleep's "SLASH_MOVE", Slumber's "ROLL_OUT_MOVE"): read from its code.</summary>
+    private bool StunNamesNextMove => _stunNamesNextMove ??= Spec.Steps().OfType<StunStep>().Any(stun => stun.NextMove != null);
+
+    /// <summary>Its owner's move rules branch on this power (a conditional branch's condition counting it: its HasPower), read from the game's lambdas.</summary>
+    private bool BranchesOnIt(SimMoveRules rules)
+    {
+        static bool Counts(SimCondition? condition, string power) => condition switch
+        {
+            CountCondition { Counted: SimCounted.MonsterPower, Power: { } counted } => counted.Name == power,
+            NotCondition not => Counts(not.Inner, power),
+            AllCondition all => all.Parts.Any(part => Counts(part, power)),
+            AnyCondition any => any.Parts.Any(part => Counts(part, power)),
+            _ => false,
+        };
+        return rules.Graph.Nodes.Values.OfType<MoveNodeConditional>().Any(node => node.Conditions?.Any(condition => Counts(condition, Name)) == true);
+    }
+
+    /// <summary>Its tab compares its owner's next move (NextMoveRule): the adapter reads that enemy's move rules (SimEnemy.Rules).</summary>
+    public bool ComparesNextMove => StunNamesNextMove;
+
+    private bool? _stunNamesNextMove;
+
+    /// <summary>
+    /// A stun that names the move after it, on an enemy whose move rules branch on this power (decision #307, the owner's rule of 2026-11-25:
+    /// Lagavulin Matriarch's SLEEP_BRANCH on HasPower&lt;AsleepPower&gt;, Slumbering Beetle's on Slumber; a sleeping move takes nothing from you
+    /// this turn): what the play changes is its next move, rolled as your next turn starts, compared with and without the
+    /// play from its move rules on the simulated states (SimEngine.NextMoveAttacks; internal only, the game's intents untouched). Crossed where with
+    /// the play it attacks next and ending the turn now it doesn't (asleep and harmless against woken and attacking); none where it attacks next
+    /// either way (its last stack: it wakes anyway). Null for any other stun, or with no move rules read (the adapter reads them for every enemy
+    /// whose power compares: SimEnemy.Rules): the stun's own rule then.
+    /// </summary>
+    private OutcomeRule? NextMoveRule(SimState start, SimOutcome now, int owner)
+    {
+        if (!StunNamesNextMove || !Who.IsEnemy(owner) || start.Enemy(owner) is not { Rules: { } rules } || !BranchesOnIt(rules)) return null;
+        if (now.NextAttacksInAll(owner)) return new OutcomeRule(Harmful: true, _ => false);
+        return new OutcomeRule(Harmful: true, outcome => outcome.NextAttacksInSome(owner), branch => SimEngine.NextMoveAttacks(branch, owner) == true);
+    }
 
     /// <summary>
     /// Its payout decided where it's paid (decision #239), yours: ending the turn now, does it pay in every outcome? If not, a bonus where the play
@@ -1832,7 +1870,16 @@ public sealed class ReadModel : SimModel
                     return states;
                 };
             }
-            case StunStep:
+            case StunStep stun:
+            {
+                // Its stunned move's code (decision #307), compiled once and run on its owner as it acts in the enemy turn.
+                SimStunnedMove? stunnedMove = null;
+                if (stun.Move is { Count: > 0 } moveSteps)
+                {
+                    var compiledMove = CompileSteps(moveSteps, new List<HookStep>(), firstRound: false);
+                    stunnedMove = new SimStunnedMove(Name, (state, owner) => RunSteps(compiledMove, new HookArgs { State = state, Owner = owner }));
+                }
+                var next = stun.NextMove;
                 return args =>
                 {
                     // Creature.StunInternal: nothing on a dead creature; the game throws on a player (no player is ever given one: an enemy's power).
@@ -1842,9 +1889,10 @@ public sealed class ReadModel : SimModel
                         return One(args.State);
                     }
                     if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
-                    SimEngine.Stun(enemy);
+                    SimEngine.Stun(enemy, next, stunnedMove);
                     return One(args.State);
                 };
+            }
             case MonsterStateStep monsterState:
             {
                 // Its owner's monster's own state (its field in the enemy's fields), where that monster's moves read it; a player or a pet has no monster.

@@ -762,10 +762,20 @@ public sealed record ForEachStep(HookItems Over, IReadOnlyList<HookStep> Steps) 
 
 /// <summary>
 /// CreatureCmd.Stun of its owner (an enemy: Creature.StunInternal does nothing on a dead creature, and the game throws on a player): it's stunned
-/// (SimEngine.Stun), so its move this turn is the stunned move, which does nothing a simulation follows (its code is read: the Stun is given no
-/// delegate that calls a command). What its code then stores on its monster for later (its flag) waits for a turn past every simulation.
+/// (SimEngine.Stun), so its move this turn is the stunned move (MoveState "STUNNED"): <see cref="Move"/>, its code's commands on its owner, run as it
+/// acts (Slumbering Beetle's WakeUpMove taking its Plating), or nothing. Its follow-up is <see cref="NextMove"/>, the move it rolls next (decision #307:
+/// what its next move is compared on). What its code then stores on its monster for later (its flag) waits for a turn past every simulation.
 /// </summary>
-public sealed record StunStep : HookStep;
+public sealed record StunStep : HookStep
+{
+    /// <summary>The move it rolls after the stunned one (CreatureCmd.Stun's nextMoveId, a constant of its code: "SLASH_MOVE"); null: its last move's.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? NextMove { get; init; }
+
+    /// <summary>The stunned move's commands on its owner, run as it acts in the enemy turn; null: none.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<HookStep>? Move { get; init; }
+}
 
 /// <summary>
 /// A property set on its owner's monster (((BowlbugRock)base.Owner.Monster).IsOffBalance = true: Imbalanced's), its monster's own state: kept in its
@@ -1193,6 +1203,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
         {
             RepeatStep repeat => new[] { step }.Concat(repeat.Steps.SelectMany(All)),
             ForEachStep each => new[] { step }.Concat(each.Steps.SelectMany(All)),
+            StunStep { Move: { } stunnedMove } => new[] { step }.Concat(stunnedMove.SelectMany(All)), // its stunned move's code (decision #307)
             _ => new[] { step },
         };
         return Hooks.SelectMany(program => program.Steps).Concat((Commands ?? Array.Empty<CommandProgram>()).SelectMany(command => command.Steps)).SelectMany(All);

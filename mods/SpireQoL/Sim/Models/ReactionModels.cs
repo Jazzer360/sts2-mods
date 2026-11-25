@@ -8,72 +8,7 @@ namespace SpireQoL.Sim.Models;
 
 // Burrowed is read from its code (ReadModel: AfterBlockBroken and ShouldClearBlock, decision #285).
 
-/// <summary>AsleepPower.AfterDamageReceived: HP through its owner's block (any source) wakes it: Plating goes, it's stunned, the power goes.</summary>
-public sealed class AsleepPower : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        Who.IsEnemy(owner) && now.UnblockedMax(owner) < 1 ? new(Harmful: true, outcome => outcome.UnblockedMax(owner) >= 1, branch => (branch.Enemy(owner)?.UnblockedInstances ?? 0) >= 1) : null;
-
-    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
-    {
-        if (hit.Target != owner || hit.Unblocked == 0 || state.Enemy(owner) is not { } enemy) return;
-        enemy.Powers = enemy.Powers.Without(PowerId.Plating).Without(ThisPower);
-        SimEngine.Stun(enemy);
-        state.LogFired(Name, amount: 0, owner);
-    }
-
-    /// <summary>BeforeSideTurnEndVeryEarly: as its owner's side's turn ends on its last stack, its Plating goes (PowerCmd.Remove).</summary>
-    public override IEnumerable<SimState> BeforeSideTurnEndVeryEarly(SimState state, int owner)
-    {
-        if (state.EndsTheirTurn(owner) && SimEngine.PowersOf(state, owner) is var powers && powers[ThisPower] <= 1 && powers.Has(PowerId.Plating))
-            SimEngine.RemovePower(state, owner, PowerId.Plating);
-        return One(state);
-    }
-
-    /// <summary>
-    /// AfterSideTurnEnd: as its owner's side's turn ends, it goes down by one (PowerCmd.Decrement); the last stack going wakes it
-    /// (LagavulinMatriarch.WakeUpMove), which isn't followed.
-    /// </summary>
-    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) => SlumberPower.TickDown(state, owner, ThisPower, Name);
-}
-
-/// <summary>SlumberPower.AfterDamageReceived: each damage that gets HP through takes a stack; the last stuns it.</summary>
-public sealed class SlumberPower : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        Who.IsEnemy(owner) && SimEngine.PowerOn(start, owner, ThisPower) is var stacks && now.UnblockedMax(owner) < stacks
-            ? new(Harmful: true, outcome => outcome.UnblockedMax(owner) >= stacks, branch => (branch.Enemy(owner)?.UnblockedInstances ?? 0) >= stacks) : null;
-
-    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
-    {
-        if (hit.Target != owner || hit.Unblocked == 0 || state.Enemy(owner) is not { } enemy) return;
-        var left = enemy.Powers[ThisPower] - 1;
-        enemy.Powers = left <= 0 ? enemy.Powers.Without(ThisPower) : enemy.Powers.With(ThisPower, left);
-        if (left <= 0)
-        {
-            SimEngine.Stun(enemy);
-            state.LogFired(Name, amount: 0, owner);
-        }
-    }
-
-    /// <summary>
-    /// AfterSideTurnEnd: as its owner's side's turn ends, it goes down by one (PowerCmd.Decrement); the last stack going wakes it
-    /// (SlumberingBeetle.WakeUpMove), which isn't followed.
-    /// </summary>
-    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) => TickDown(state, owner, ThisPower, Name);
-
-    /// <summary>
-    /// Asleep's and Slumber's turn's end (their AfterSideTurnEnd, participants.Contains(base.Owner)): a stack less; at none, the wake move their
-    /// code sets on its monster is unknown there (SimState.UnmodelledAtTheirTurnEnd).
-    /// </summary>
-    internal static IEnumerable<SimState> TickDown(SimState state, int owner, PowerId power, string name)
-    {
-        if (!state.EndsTheirTurn(owner) || !SimEngine.PowersOf(state, owner).Has(power)) return One(state);
-        SimEngine.DecrementPower(state, owner, power);
-        if (!SimEngine.PowersOf(state, owner).Has(power)) state.Unmodelled ??= $"{name}'s last stack goes as its side's turn ends: the wake move its code sets isn't followed";
-        return One(state);
-    }
-}
+// Asleep and Slumber are read from their code (ReadModel, decision #307): their wake tab compares the enemy's next move with and without the play.
 
 // Plow is read from its code (ReadModel, decision #275).
 

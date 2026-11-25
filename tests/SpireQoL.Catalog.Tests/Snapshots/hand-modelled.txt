@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 24 engine rules naming 168 game methods; 3 adapter rules; 32 hand-written models.
+# 25 engine rules naming 173 game methods; 3 adapter rules; 30 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -67,6 +67,9 @@ The Intent Forecast's later turns (decision #304): your next turn's start (block
 Your next turn's start in a projection (decision #306): its listeners' own code in the game's order (Hook.BeforeSideTurnStart, the block cleared, each player's SetupPlayerTurn hooks, Hook.AfterSideTurnStart, the orbs' turn-start passives), its participants the players and their pets; your hand and draws left out; a listener it doesn't follow there unknown
   game: CombatManager.StartTurn, CombatManager.SetupPlayerTurn, Creature.AfterTurnStart, Hook.BeforeSideTurnStart, Hook.AfterEnergyReset, Hook.BeforeHandDraw, Hook.AfterPlayerTurnStart, Hook.AfterSideTurnStart, OrbQueue.AfterTurnStart
   simulator: SimEngine.YourTurnStart, SimEngine.ClearPlayersBlock, SimEngine.YourTurnStartGaps
+An enemy's next move, rolled as your next turn starts, from its move rules on a simulated state (decision #307): after a stun, the move it named; else what follows the move on screen
+  game: Creature.PrepareForNextTurn, MonsterModel.RollMove, MonsterMoveStateMachine.RollMove, Creature.StunInternal, MonsterModel.IntendsToAttack
+  simulator: SimEngine.NextMoveAttacks
 A heal: up to max HP
   game: CreatureCmd.Heal, Creature.HealInternal
   simulator: SimEngine.Heal
@@ -91,8 +94,6 @@ Fairy in a Bottle and Lizard Tail: a death held back, healed from 0
 
 ## The hand-written models (Sim/Models): each game class's hooks, and what its model answers
 
-AsleepPower: AsleepPower.AfterDamageReceived, AsleepPower.AfterSideTurnEnd, AsleepPower.BeforeSideTurnEndVeryEarly
-  model: AfterDamageReceived, AfterSideTurnEnd, BeforeSideTurnEndVeryEarly, OutcomeTab
 ChemicalX: ChemicalX.BeforeCardPlayed, ChemicalX.ModifyXValue
   model: BeforeCardPlayed
 CorruptionPower: CorruptionPower.AfterModifyingCardPlayResultLocation, CorruptionPower.ModifyCardPlayResultLocation, CorruptionPower.TryModifyEnergyCostInCombatLate
@@ -129,8 +130,6 @@ SeekingEdgePower: no hooks of its own
   model: nothing it overrides
 SkittishPower: SkittishPower.AfterAttack, SkittishPower.AfterSideTurnEnd, SkittishPower.GetScaledAmountForMultiplayer, SkittishPower.InitInternalData
   model: AfterAttack, AfterDamageReceived, AfterSideTurnEnd, BeforeAttack, MayActOnTheEnemiesSide
-SlumberPower: SlumberPower.AfterDamageReceived, SlumberPower.AfterRemoved, SlumberPower.AfterSideTurnEnd
-  model: AfterDamageReceived, AfterSideTurnEnd, OutcomeTab
 SmoggyPower: SmoggyPower.AfterCardEnteredCombat, SmoggyPower.AfterCardPlayed, SmoggyPower.AfterSideTurnEnd, SmoggyPower.ShouldPlay
   model: AfterCardPlayed
 StratagemPower: StratagemPower.AfterShuffle

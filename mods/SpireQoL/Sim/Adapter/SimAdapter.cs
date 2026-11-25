@@ -122,6 +122,8 @@ public static partial class SimAdapter
             enemy.StartedAlive = creature.IsAlive;
             // The creatures its death adds (Surprise's gremlins), read from its powers' AfterDeath code, with every HP each can start with.
             if (creature.IsAlive) enemy.Spawns = SpawnsOf(creature, combat);
+            // Its move rules, where one of its powers' code compares its next move (decision #307: a stun naming the move after it).
+            if (creature.IsAlive && creature.Powers.Any(power => SimModels.Get(power.GetType().Name) is ReadModel { ComparesNextMove: true })) enemy.Rules = MoveRulesOf(creature);
             if (!creature.IsAlive) enemy.Hp = 0;
             if (creature.IsAlive && creature.Monster != null)
             {
@@ -834,6 +836,24 @@ public static partial class SimAdapter
     private static int SafeInt(Func<int> read, int fallback)
     {
         try { return read(); } catch { return fallback; }
+    }
+
+    /// <summary>Each monster's move rules as last read, by the move on screen and its moves so far (read again only when either changes).</summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<MegaCrit.Sts2.Core.Models.MonsterModel, Tuple<string, int, SimMoveRules?>> MoveRulesRead = new();
+
+    /// <summary>An enemy's move rules (decision #307: IntentReader.Rules), or null where they can't be read.</summary>
+    private static SimMoveRules? MoveRulesOf(Creature creature)
+    {
+        try
+        {
+            if (creature.Monster is not { MoveStateMachine: { } machine } monster) return null;
+            var (current, moves) = (monster.NextMove.Id, machine.StateLog.Count);
+            if (MoveRulesRead.TryGetValue(monster, out var kept) && kept.Item1 == current && kept.Item2 == moves) return kept.Item3;
+            var rules = IntentReader.Rules(creature);
+            MoveRulesRead.AddOrUpdate(monster, Tuple.Create(current, moves, rules));
+            return rules;
+        }
+        catch { return null; }
     }
 
     private static bool SafeBool(Func<bool> read)

@@ -157,9 +157,10 @@ public class SimModelEffectTests
     public void AWarningOnlySomeOutcomesSetOffHasItsChance()
     {
         // Decision #159: a random hit (one of two enemies) wakes the sleeping one half the time: the Asleep warning's chance is 50%,
-        // from its rule's per-branch test.
+        // from its rule's per-branch test (decision #307: its next move an attack where it woke, still asleep on its 2 stacks where it didn't).
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 40), Enemy(id: 1, hp: 40) } };
-        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Asleep, amount: 1);
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Asleep, amount: 2);
+        WakeTabParityTests.WithSleeperRules(state.Enemies[0]);
         var proc = new SimPlay { Name = "Defend" };
         proc.Procs.Add(new ProcHit { Spread = SimPlay.Target.Random, Damage = { [0] = 5, [1] = 5 }, Times = 1 });
         var rule = SimModels.Get("AsleepPower")!.OutcomeTab(state, SimEngine.Run(state), owner: 0)!;

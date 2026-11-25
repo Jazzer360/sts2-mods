@@ -25,6 +25,18 @@ public class ShownOnlyValueTests
         ["AfflictionModel.set_Amount"] = "the setter itself",
         ["NHealthBar.RefreshForeground"] = "the HP bar drawn: shown",
         ["NHealthBar.RefreshText"] = "the HP bar's number: shown",
+        ["Creature.get_HpDisplay"] = "the getter itself (its field)",
+        ["LagavulinMatriarch.get_IsAwake"] = "the getter itself (its field)",
+        ["LagavulinMatriarch.get_SleepingVfx"] = "the getter itself (its field)",
+        ["LagavulinMatriarch.GenerateAnimator"] = "its animator's states (awake or asleep): how it's drawn",
+        ["LagavulinMatriarch.WakeUpMove"] = "if (!_isAwake) { its sleeping effect stopped; IsAwake = true }: read only to set it",
+        ["LagavulinMatriarch.AfterDamageReceived"] = "SleepingVfx?.Stop(), then null: its sleeping effect stopped (and IsShellAwake, a flag of how it's drawn, not listed)",
+        ["LagavulinMatriarch.AfterDeath"] = "SleepingVfx?.Stop(), then null: its sleeping effect stopped",
+        ["LagavulinMatriarch.SlashMove"] = "SleepingVfx?.Stop(), then null, before its attack: its sleeping effect stopped",
+        ["LagavulinMatriarch.Slash2Move"] = "SleepingVfx?.Stop(), then null, before its attack: its sleeping effect stopped",
+        ["LagavulinMatriarch.DisembowelMove"] = "SleepingVfx?.Stop(), then null, before its attack: its sleeping effect stopped",
+        ["LagavulinMatriarch.SoulSiphonMove"] = "SleepingVfx?.Stop(), then null, before its debuffs: its sleeping effect stopped",
+        ["LagavulinMatriarch.Sleep"] = "its sleeping effect made and placed on its node: how it's drawn",
         ["HellraiserPower.<AfterCardDrawnEarly>b__7_0"] = "its cap on endless auto-plays (9 a turn once every enemy you could hit shows infinite HP): the adapter reads it from the board for each Strike it may play (SimAdapter's hellraised), and no simulation plays 9 Strikes from Hellraiser after an enemy's HP turns infinite in it (Steam Eruption's revive)",
     };
 
@@ -39,6 +51,15 @@ public class ShownOnlyValueTests
         var code = BranchCode.Of(path);
         var getters = HookReader.ShownOnly.Select(setter => setter.Replace(".set_", ".get_", StringComparison.Ordinal)).ToHashSet(StringComparer.Ordinal);
         const BindingFlags all = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+        // Each getter's field (what it loads: LagavulinMatriarch._isAwake), read directly by its class's own code (WakeUpMove's if (!_isAwake)).
+        var fields = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var getter in getters)
+        {
+            var (className, getterName) = (getter[..getter.LastIndexOf('.')], getter[(getter.LastIndexOf('.') + 1)..]);
+            if (code.Assembly.GetTypes().FirstOrDefault(type => type.Name == className)?.GetMethod(getterName, all) is not { } method) continue;
+            foreach (var instruction in code.Read(method))
+                if (instruction.OpCode == System.Reflection.Emit.OpCodes.Ldfld && instruction.Member is { } field && field.DeclaringType == className) fields.Add(className + "." + field.Name);
+        }
         var readers = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var type in code.Assembly.GetTypes())
         {
@@ -53,8 +74,9 @@ public class ShownOnlyValueTests
                 List<Procs.Programs.CodeOp> ops;
                 try { ops = code.Read(method); }
                 catch { continue; }
-                if (!ops.Any(instruction => instruction.IsCall && instruction.Member is { } member && getters.Contains(member.DeclaringType + "." + member.Name))) continue;
-                var name = type == outer ? method.Name : NameIn(type.Name, method.Name);
+                if (!ops.Any(instruction => instruction.Member is { } member && (instruction.IsCall && getters.Contains(member.DeclaringType + "." + member.Name)
+                    || instruction.OpCode == System.Reflection.Emit.OpCodes.Ldfld && fields.Contains(member.DeclaringType + "." + member.Name)))) continue;
+                var name = type != outer ? NameIn(type.Name, method.Name) : method.Name.StartsWith('<') ? NameIn(method.Name, method.Name) : method.Name;
                 readers.Add(outer.Name + "." + name);
             }
         }

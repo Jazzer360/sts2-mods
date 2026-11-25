@@ -55,6 +55,7 @@ public class SimKeyCoverageTests
         ["SimEnemy.UnblockedAtTurnEnd"] = "a copy of UnblockedInstances taken once your end of turn is over (that is in the key)",
         ["SimEnemy.DeathHandled"] = "follows Hp: a dead enemy's death is handled in the same step",
         ["SimEnemy.StunnedThisTurn"] = "follows Stunned, which is in the key",
+        ["SimEnemy.Rules"] = "fixed during a run, shared by every branch: the adapter's read of its move rules (decision #307)",
     };
 
     private static SimState Board()
@@ -94,6 +95,7 @@ public class SimKeyCoverageTests
         if (type == typeof(List<SimOrb>)) return new List<SimOrb> { new() { Kind = OrbKind.Dark, Passive = 6, Evoke = 6 } };
         if (type == typeof(SimDrawPile)) return new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("probe"), Count: 2) } };
         if (type == typeof(SimDrawCard)) return new SimDrawCard("probe");
+        if (type == typeof(SimStunnedMove)) return new SimStunnedMove(((SimStunnedMove?)v)?.Name + "x", (state, _) => new[] { state });
         if (type == typeof(List<SimEnemy>) || type == typeof(List<SimPlayer>) || type == typeof(SimPlayer)) return null; // their fields are checked one by one
         return null;
     }

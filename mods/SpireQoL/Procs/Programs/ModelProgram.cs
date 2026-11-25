@@ -514,6 +514,9 @@ public static class ProgramReader
     /// <summary>Whether a static game helper asks the fight's log or calls another helper of its type (ProgramReader.Reader.AsksTheLog).</summary>
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type Owner, string Name, int Parameters), bool> HelperAsks = new();
 
+    /// <summary>A step with the values in its conditions, its values and its inner steps mapped (a delegate's this by its target: decision #307).</summary>
+    public static ProgramStep BoundStep(ProgramStep step, Func<ProgramValue, ProgramValue?> replace) => Reader.Bound(step, replace);
+
     private sealed class Reader
     {
         private readonly Type _card;
@@ -923,7 +926,7 @@ public static class ProgramReader
         }
 
         /// <summary>A step with the values in its conditions mapped (a helper's parameters by what its caller passed), its inner steps too.</summary>
-        private static ProgramStep Bound(ProgramStep step, Func<ProgramValue, ProgramValue?> replace)
+        internal static ProgramStep Bound(ProgramStep step, Func<ProgramValue, ProgramValue?> replace)
         {
             var bound = step with { Condition = step.Condition?.Map(replace) };
             return bound switch

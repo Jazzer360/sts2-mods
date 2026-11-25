@@ -3,9 +3,9 @@
 
 ## Powers and relics
 
-beta powers: 303 classes, 272 with hooks; read from code 177, hand-written 22, neither 75 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 303 classes, 272 with hooks; read from code 180, hand-written 20, neither 74 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 115, hand-written 7, neither 188 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 148, hand-written 20, neither 69 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 151, hand-written 18, neither 68 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 102, hand-written 7, neither 184 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 7, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 1
@@ -153,7 +153,7 @@ name gate: ImpaledPower in Procs/Fool.cs: hand-written: goes with its model
 name gate: JuggernautPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a gate to replace by a rule
 name gate: LostLutePower in Sim/Adapter/SimAdapter.cs: hand-written: goes with its model
 name gate: MinionPower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule
-name gate: NemesisPower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule
+name gate: NemesisPower in Sim/Adapter/MoveBranches.cs: read from code: a gate its reading could replace
 name gate: PaelsEye in Sim/Adapter/SimAdapter.cs: hand-written: goes with its model
 name gate: PainfulStabsPower in Sim/Adapter/MoveBranches.cs: not modelled from code: a gate to replace by a rule
 name gate: PersonalHivePower in Sim/Adapter/MoveBranches.cs: read from code: a gate its reading could replace
@@ -179,7 +179,7 @@ a pick: 3 classes, 3 alone: StratagemPower*, DropletOfPrecognition (potion)*, Ga
 commands: a card made (AddGeneratedCardToCombat, a made card): 3 classes, 3 alone: CrystallineEuphoria (potion)*, CunningPotion (potion)*, PotOfGhouls (potion)*
 commands: another command (no translation): 3 classes, 3 alone: BottledPotential (potion)*, FruitJuice (potion)*, KingsCourage (potion)*
 the simulator's own model (no game class by its name): 3 classes, 3 alone: ImpaledPowerOther*, Regret*, Void*
-a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 6 classes, 2 alone: AsleepPower, FeralPower*, ImpaledPower, SkittishPower*, SmoggyPower, SurroundedPower
+a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 5 classes, 2 alone: FeralPower*, ImpaledPower, SkittishPower*, SmoggyPower, SurroundedPower
 card costs and keywords (cards' own hooks, Part B3): 3 classes, 2 alone: ChemicalX*, CorruptionPower*, PhantomBladesPower
 commands: AutoPlayFromDrawPile: 2 classes, 2 alone: LostLutePower*, DistilledChaos (potion)*
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
@@ -195,8 +195,6 @@ hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*
 hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
 the fight's log (the history ledger, decision #191): 1 classes, 1 alone: UnmovablePower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*
-a command on another power (PowerCmd.Remove of another): 2 classes, 0 alone: AsleepPower, SlumberPower
 a model's own method (its body read where it's called): 1 classes, 0 alone: FairyInABottle (potion)
 a turn's start (an extra turn): 1 classes, 0 alone: PaelsEye
 hooks: the power amount given: 1 classes, 0 alone: UnsettlingLamp
-outcomes: a stun or a kill (outcome tabs): 1 classes, 0 alone: SlumberPower

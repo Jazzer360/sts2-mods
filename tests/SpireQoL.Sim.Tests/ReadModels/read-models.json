@@ -1986,6 +1986,208 @@
     "DarkensOnPlay": true
   },
   {
+    "Name": "AsleepPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageReceived",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "Powers": [
+              "PlatingPower"
+            ],
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__4.MoveNext:0030",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__4.MoveNext:0042",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HitUnblocked"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__4.MoveNext:0054",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreatureHasPower",
+                  "Of": "PlatingPower",
+                  "Creature": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StunStep",
+            "NextMove": "SLASH_MOVE",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__4.MoveNext:0030",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TargetIsOwner"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__4.MoveNext:0042",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HitUnblocked"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__4.MoveNext:0030",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TargetIsOwner"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__4.MoveNext:0042",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HitUnblocked"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeSideTurnEndVeryEarly",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "Powers": [
+              "PlatingPower"
+            ],
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeSideTurnEndVeryEarly\u003Ed__5.MoveNext:0022",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TakesPart"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CBeforeSideTurnEndVeryEarly\u003Ed__5.MoveNext:0030",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Greater",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "Amount"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnEndVeryEarly\u003Ed__5.MoveNext:003D",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreatureHasPower",
+                  "Of": "PlatingPower",
+                  "Creature": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "Stuns"
+  },
+  {
     "Name": "AutomationPower",
     "Kind": "Power",
     "Hooks": [
@@ -3676,6 +3878,7 @@
         "Steps": [
           {
             "$kind": "StunStep",
+            "NextMove": "BITE_MOVE",
             "When": {
               "$kind": "HookMath",
               "Operation": "And",
@@ -22986,6 +23189,166 @@
     "HelpsOwner": false
   },
   {
+    "Name": "NemesisPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "_shouldApplyIntangible",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Equal",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "_shouldApplyIntangible"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__5.MoveNext:002C",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__5.MoveNext:002C",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__5.MoveNext:0048",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "_shouldApplyIntangible"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "IntangiblePower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__5.MoveNext:002C",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__5.MoveNext:0048",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "_shouldApplyIntangible"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "Powers": [
+              "IntangiblePower"
+            ],
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__5.MoveNext:002C",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TakesPart"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterSideTurnEnd\u003Ed__5.MoveNext:0048",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "_shouldApplyIntangible"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__5.MoveNext:00D1",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreatureHasPower",
+                  "Of": "IntangiblePower",
+                  "Creature": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "NeurosurgePower",
     "Kind": "Power",
     "Hooks": [
@@ -34925,6 +35288,274 @@
     ],
     "Tab": "Trigger",
     "HelpsOwner": false
+  },
+  {
+    "Name": "SlumberPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageReceived",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__4.MoveNext:0024",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TargetIsOwner"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__4.MoveNext:0036",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HitUnblocked"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "StunStep",
+            "NextMove": "ROLL_OUT_MOVE",
+            "Move": [
+              {
+                "$kind": "RemovePowerStep",
+                "Powers": [
+                  "PlatingPower"
+                ],
+                "When": {
+                  "$kind": "HookTest",
+                  "At": "\u003CWakeUpMove\u003Ed__24.MoveNext:00CE",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CreatureHasPower",
+                    "Of": "PlatingPower",
+                    "Creature": {
+                      "Who": "Owner",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              }
+            ],
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__4.MoveNext:0024",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__4.MoveNext:0036",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HitUnblocked"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__4.MoveNext:009F",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Greater",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "Amount"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "MonsterStateStep",
+            "Field": "Monster.SlumberingBeetle.SleepingVfx",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0029",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0092",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Greater",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "Amount"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "MonsterStateStep",
+            "Field": "Monster.SlumberingBeetle.IsAwake",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0029",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0092",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Greater",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "Amount"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "Powers": [
+              "PlatingPower"
+            ],
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0029",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TakesPart"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0092",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Greater",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "Amount"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CWakeUpMove\u003Ed__24.MoveNext:00CE",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CreatureHasPower",
+                  "Of": "PlatingPower",
+                  "Creature": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "Stuns"
   },
   {
     "Name": "Smog",

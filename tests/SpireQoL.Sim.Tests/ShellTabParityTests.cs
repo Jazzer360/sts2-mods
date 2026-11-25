@@ -34,7 +34,8 @@ public class ShellTabParityTests
             File.WriteAllLines(recordTo, actual);
             return;
         }
-        var expected = File.ReadAllLines(ParityPath).ToList();
+        var expected = File.ReadAllLines(ParityPath).Select(MonsterStateTabParityTests.WithoutWakeTabs).ToList();
+        actual = actual.Select(MonsterStateTabParityTests.WithoutWakeTabs).ToList();
         Assert.Equal(expected.Count, actual.Count);
         var changed = actual.Zip(expected, (now, was) => (Now: now, Was: was)).Select((pair, scenario) => (pair.Now, pair.Was, Scenario: scenario))
             .Where(entry => entry.Now != entry.Was && !ReviewedTabs.ContainsKey(entry.Scenario)).Select(entry => $"{entry.Was}\n  now: {entry.Now}").ToList();
@@ -84,6 +85,7 @@ public class ShellTabParityTests
             if (random.Next(3) == 0) enemy.Powers = enemy.Powers.With(PowerId.Poison, random.Next(1, 12));
             if (random.Next(3) == 0 && Beside[random.Next(Beside.Length)] is var beside)
                 enemy.Powers = enemy.Powers.With(beside, beside == PowerId.CurlUp ? random.Next(3, 9) : random.Next(1, 4));
+            WakeTabParityTests.WithSleeperRules(enemy); // its move rules, as the adapter reads them for Asleep and Slumber (decision #307)
             state.Enemies.Add(enemy);
         }
         state.You.Hp = 50;

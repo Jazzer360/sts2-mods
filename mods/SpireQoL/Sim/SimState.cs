@@ -205,6 +205,17 @@ public sealed class SimEnemy
     public bool BlockBroken;
     /// <summary>Stunned by something during your turn (not at the start).</summary>
     public bool StunnedThisTurn;
+    /// <summary>
+    /// Its move rules (decision #307: MonsterMoveStateMachine as IntentForecast reads it, the move on screen, its moves so far, which moves attack),
+    /// read by the adapter for an enemy whose power's code compares its next move (a stun that names the move after it: Asleep, Slumber). Null: not
+    /// read. Fixed during a run, shared by every branch.
+    /// </summary>
+    [JsonIgnore] public SimMoveRules? Rules;
+    /// <summary>The move a stun this simulation gave it as the one after the stunned move (CreatureCmd.Stun's nextMoveId: StunStep.NextMove); null: none.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? NextAfterStun;
+    /// <summary>The stunned move's code (StunStep.Move: Slumbering Beetle's WakeUpMove taking its Plating), run as it acts in the enemy turn; null: none.</summary>
+    [JsonIgnore] public SimStunnedMove? StunnedMove;
 
     /// <summary>
     /// Adds poison stacks and raises the tick damage by what they add: each tick deals the stacks left,
@@ -291,11 +302,21 @@ public sealed class SimEnemy
             key.Add(-91); key.Add(ProjectedMove?.GetHashCode() ?? 0); key.Add(MoveUnknown?.GetHashCode() ?? 0); key.Add(LandedUnknown ? 1 : 0);
             if (LandedOnYou != null) { key.Add(LandedOnYou.Length); foreach (var hit in LandedOnYou) key.Add(hit); }
         }
+        if (NextAfterStun != null || StunnedMove != null) { key.Add(-92); key.Add(NextAfterStun?.GetHashCode() ?? 0); key.Add(StunnedMove?.Name.GetHashCode() ?? 0); }
         Powers.Hash(ref key); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         Fields.Hash(ref key);
         key.Add(Hits.Count); foreach (var hit in Hits) key.Add(hit);
     }
 }
+
+/// <summary>
+/// An enemy's move rules, for comparing its next move (decision #307): its MoveGraph, the move on screen, the moves it was given this fight (that one
+/// last) and which moves show an attack (an Attack or Death Blow intent: MonsterModel.IntendsToAttack). Pure data, shared.
+/// </summary>
+public sealed record SimMoveRules(MoveGraph Graph, string Current, IReadOnlyList<string> Log, IReadOnlySet<string> Attacks);
+
+/// <summary>A stunned move's code, compiled from its stun's read model (StunStep.Move): run on its owner as it acts. Shared, never changed.</summary>
+public sealed record SimStunnedMove(string Name, Func<SimState, int, IEnumerable<SimState>> Run);
 
 /// <summary>A card in hand that acts when its owner's turn ends: its class name, its title, and its Damage or HpLoss value.</summary>
 public sealed record TurnEndCard(string Card, string Title, int Amount)

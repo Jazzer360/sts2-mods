@@ -64,6 +64,22 @@ internal static class IntentReader
         }
     }
 
+    /// <summary>
+    /// An enemy's move rules for comparing its next move (decision #307: SimEnemy.Rules): its graph with each condition as the simulator's, the move on
+    /// screen, its moves so far and which moves show an attack (MonsterModel.IntendsToAttack's Attack or Death Blow intent). Null where they can't be
+    /// read, or the move on screen is hidden (its rules would give it away). Never a roll: the next move is worked out in the simulation.
+    /// </summary>
+    public static SimMoveRules? Rules(Creature enemy)
+    {
+        if (!enemy.IsAlive || enemy.Monster is not { } monster || monster.MoveStateMachine is not { } machine) return null;
+        var current = monster.NextMove;
+        if (current.Intents.Any(abstractIntent => abstractIntent is HiddenIntent or UnknownIntent)) return null;
+        if (Graph(machine, monster) is not { } graph) return null;
+        var attacks = machine.States.Values.OfType<MoveState>()
+            .Where(move => move.Intents.Any(intent => intent.IntentType is IntentType.Attack or IntentType.DeathBlow)).Select(move => move.Id).ToHashSet(StringComparer.Ordinal);
+        return new SimMoveRules(graph, current.Id, machine.StateLog.Select(monsterState => monsterState.Id).ToList(), attacks);
+    }
+
     private static MoveNodeMove Node(MoveState moveState) => new(moveState.Id, moveState.FollowUpState?.Id ?? moveState.FollowUpStateId);
 
     private static RandomBranch Branch(RandomBranchState.StateWeight stateWeight)

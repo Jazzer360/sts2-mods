@@ -92,6 +92,19 @@ public static class IntentForecast
         return dist.Where(entry => entry.Value > 0).OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key).Select(entry => (entry.Key, entry.Value)).ToList();
     }
 
+    /// <summary>
+    /// The moves an enemy can make from the state <paramref name="stateId"/> (a stun's follow-up: CreatureCmd.Stun's nextMoveId, a move or a branch),
+    /// each with its chance, its conditional branches asked of the simulated <paramref name="state"/> as NextOn does. Null when the rules can't say.
+    /// </summary>
+    public static IReadOnlyList<(string Move, double Chance)>? NextFrom(MoveGraph graph, string stateId, IReadOnlyList<string> log, SimState state, int enemyId)
+    {
+        var dist = new Dictionary<string, double>();
+        bool? Simulated(MoveNodeConditional node, int branch) => node.Conditions is { } conditions && branch < conditions.Count && conditions[branch] is { } condition
+            ? SimEngine.Holds(state, condition, enemyId) : null;
+        if (!Walk(graph, stateId, chance: 1.0, log.ToList(), dist, depth: 0, Simulated)) return null;
+        return dist.Where(entry => entry.Value > 0).OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key).Select(entry => (entry.Key, entry.Value)).ToList();
+    }
+
     /// <summary>Spreads <paramref name="chance"/> over the moves reached from a state; false when the rules can't say.</summary>
     private static bool Walk(MoveGraph graph, string id, double chance, List<string> log, Dictionary<string, double> into, int depth,
         Func<MoveNodeConditional, int, bool?> holdsOf)

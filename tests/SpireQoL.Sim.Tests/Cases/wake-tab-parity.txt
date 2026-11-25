@@ -1,137 +1,137 @@
-0 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
+0 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
 1 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@1 Flash plain; 
 2 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-3 proc:SlumberPower crossed chance 50% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+3 proc:SlumberPower crossed chance 88% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 4 | checked | seen 
-5 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/10; SlumberPower 00/00; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+5 proc:SlumberPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/00; SlumberPower 00/01; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 6 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 7 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; 
 8 | checked | seen 
-9 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-10 proc:SlumberPower crossed amount 0 0-0 aimed; proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; SlumberPower 00/10; | seen SlumberPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
+9 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
+10 proc:SlumberPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/00; SlumberPower 00/10; | seen SlumberPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
 11 | checked | seen 
 12 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
-13 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+13 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 14 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; | seen AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
 15 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
 16 proc:AsleepPower crossed chance 50% amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; AsleepPower@1 Flash plain; 
-17 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
-18 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; | seen AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
+17 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+18 | checked AsleepPower 00/00; | seen AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
 19 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-20 proc:SlumberPower crossed chance 88% amount 0 0-0; proc:AsleepPower crossed chance 50% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
+20 proc:AsleepPower crossed chance 50% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
 21 | checked | seen 
-22 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 00/11; | seen AsleepPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
+22 | checked AsleepPower 00/00; | seen AsleepPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
 23 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
 24 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; 
 25 | checked | seen 
 26 | checked AsleepPower 00/00; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-27 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+27 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 28 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
-29 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-30 proc:SlumberPower crossed amount 0 0-0; proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
+29 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+30 | checked AsleepPower 0/0; SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
 31 | checked | seen 
 32 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; | seen AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
-33 proc:AsleepPower crossed amount 0 0-0 aimed; proc:SlumberPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/10; SlumberPower 00/01; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+33 proc:SlumberPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/00; SlumberPower 00/01; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 34 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
 35 | checked | seen 
-36 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-37 proc:SlumberPower crossed chance 31% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+36 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
+37 proc:SlumberPower crossed chance 62% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 38 | checked | seen 
 39 proc:AsleepPower crossed chance 50% amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; AsleepPower@1 Flash plain; 
-40 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
+40 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
 41 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 42 | checked | seen 
 43 proc:AsleepPower crossed chance 94% amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-44 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
-45 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; | seen AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
+44 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+45 | checked AsleepPower 00/00; | seen AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
 46 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-47 proc:SlumberPower crossed amount 0 0-0 aimed; | checked SlumberPower 00/10; | seen SlumberPower@0 Flash plain; 
+47 | checked SlumberPower 00/00; | seen SlumberPower@0 Flash plain; 
 48 | checked | seen 
 49 proc:SlumberPower crossed amount 0 0-0 aimed; | checked SlumberPower 00/01; | seen SlumberPower@1 Flash plain; 
 50 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-51 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+51 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 52 | checked | seen 
-53 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+53 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
 54 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 55 | checked | seen 
-56 proc:AsleepPower crossed chance 50% amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-57 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
-58 proc:SlumberPower crossed amount 0 0-0 aimed; proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; SlumberPower 00/10; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
+56 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
+57 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
+58 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; SlumberPower 00/00; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
 59 | checked | seen 
-60 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 00/11; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
-61 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+60 | checked AsleepPower 00/00; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
+61 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 62 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; | seen AsleepPower@1 Flash plain; 
 63 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-64 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/0; | seen SlumberPower@0 Flash plain; AsleepPower@1 Flash plain; 
+64 | checked AsleepPower 0/0; SlumberPower 0/0; | seen SlumberPower@0 Flash plain; AsleepPower@1 Flash plain; 
 65 | checked | seen 
 66 | checked | seen 
-67 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-68 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+67 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+68 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 69 | checked | seen 
-70 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 00/11; | seen AsleepPower@0 Flash plain; AsleepPower@1 Flash plain; 
-71 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
-72 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; | seen AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
+70 | checked AsleepPower 00/00; | seen AsleepPower@0 Flash plain; AsleepPower@1 Flash plain; 
+71 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
+72 | checked AsleepPower 00/00; | seen AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
 73 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
 74 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
-75 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+75 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 76 | checked | seen 
-77 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
-78 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
+77 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
+78 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
 79 | checked | seen 
-80 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
+80 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
 81 proc:SlumberPower crossed amount 0 0-0; proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen SlumberPower@0 Flash plain; AsleepPower@1 Flash plain; 
 82 | checked | seen 
 83 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; | seen AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
-84 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-85 proc:SlumberPower crossed chance 50% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+84 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+85 proc:SlumberPower crossed chance 88% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 86 | checked | seen 
-87 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-88 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
+87 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
+88 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
 89 | checked | seen 
 90 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-91 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-92 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+91 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
+92 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 93 proc:AsleepPower crossed chance 50% amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@1 Flash plain; 
 94 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-95 | checked SlumberPower 00/00; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+95 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 00/11; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 96 | checked | seen 
-97 proc:AsleepPower crossed amount 0 0-0; proc:SlumberPower crossed amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; 
-98 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+97 proc:SlumberPower crossed amount 0 0-0; | checked AsleepPower 0/0; SlumberPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; 
+98 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 99 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 100 | checked | seen 
-101 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-102 proc:SlumberPower crossed chance 50% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; 
+101 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+102 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; 
 103 | checked | seen 
-104 proc:AsleepPower crossed amount 0 0-0; proc:SlumberPower crossed amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; 
+104 | checked AsleepPower 0/0; SlumberPower 0/0; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; 
 105 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
 106 | checked | seen 
-107 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+107 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
 108 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 00/11; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
-109 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+109 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 110 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
 111 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-112 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; SlumberPower 00/00; | seen SlumberPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
+112 proc:SlumberPower crossed amount 0 0-0 aimed; proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; SlumberPower 00/10; | seen SlumberPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
 113 | checked | seen 
 114 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
-115 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
-116 proc:SlumberPower crossed amount 0 0-0 aimed; proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; SlumberPower 00/10; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
+115 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+116 proc:SlumberPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/00; SlumberPower 00/10; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
 117 | checked | seen 
-118 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-119 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
+118 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
+119 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
 120 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 121 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-122 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+122 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 123 | checked | seen 
 124 | checked | seen 
-125 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/10; | seen AsleepPower@0 Flash plain; 
+125 | checked AsleepPower 00/00; | seen AsleepPower@0 Flash plain; 
 126 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
 127 | checked | seen 
 128 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
 129 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
 130 | checked | seen 
-131 proc:AsleepPower crossed chance 75% amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+131 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
 132 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
-133 proc:SlumberPower crossed chance 50% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+133 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 134 | checked | seen 
 135 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 00/11; | seen AsleepPower@0 Flash plain; AsleepPower@1 Flash plain; 
 136 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
@@ -140,20 +140,20 @@
 139 | checked SlumberPower 00/00; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 140 | checked | seen 
 141 | checked | seen 
-142 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
+142 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
 143 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
 144 | checked | seen 
 145 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-146 proc:SlumberPower crossed chance 25% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+146 proc:SlumberPower crossed chance 75% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 147 | checked | seen 
-148 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-149 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-150 proc:SlumberPower crossed chance 31% amount 0 0-0; proc:AsleepPower crossed chance 94% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen SlumberPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
+148 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+149 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+150 proc:SlumberPower crossed chance 69% amount 0 0-0; proc:AsleepPower crossed chance 62% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen SlumberPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
 151 | checked | seen 
 152 | checked AsleepPower 0/0; SlumberPower 0/0; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; 
 153 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 154 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@1 Flash plain; 
-155 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+155 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
 156 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 157 | checked | seen 
 158 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
@@ -161,140 +161,140 @@
 160 proc:SlumberPower crossed chance 50% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; 
 161 | checked | seen 
 162 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/10; SlumberPower 00/00; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
-163 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+163 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 164 | checked | seen 
 165 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
 166 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-167 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
+167 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
 168 | checked | seen 
-169 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-170 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+169 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+170 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 171 | checked | seen 
-172 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-173 proc:SlumberPower crossed chance 69% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
-174 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
+172 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
+173 proc:SlumberPower crossed chance 88% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+174 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
 175 | checked | seen 
 176 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
 177 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 178 | checked | seen 
 179 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/10; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-180 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+180 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 181 | checked | seen 
-182 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
+182 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
 183 proc:AsleepPower crossed chance 75% amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-184 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
-185 proc:SlumberPower crossed chance 88% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+184 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
+185 | checked SlumberPower 0/0; | seen SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 186 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-187 proc:SlumberPower crossed chance 69% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+187 proc:SlumberPower crossed chance 25% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 188 | checked | seen 
 189 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
 190 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
-191 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
+191 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
 192 proc:SlumberPower crossed amount 0 0-0 aimed; | checked SlumberPower 00/01; | seen SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
-193 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+193 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
 194 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 00/11; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 195 | checked | seen 
-196 proc:AsleepPower crossed chance 75% amount 0 0-0; proc:SlumberPower crossed chance 75% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
-197 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
-198 | checked SlumberPower 0/0; | seen SlumberPower@1 Flash plain; 
+196 proc:AsleepPower crossed chance 75% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+197 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
+198 proc:SlumberPower crossed chance 25% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@1 Flash plain; 
 199 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
 200 proc:AsleepPower crossed chance 75% amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
-201 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+201 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 202 | checked SlumberPower 00/00; | seen SlumberPower@1 Flash plain; 
 203 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-204 proc:SlumberPower crossed chance 75% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+204 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 205 | checked | seen 
-206 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 00/11; | seen AsleepPower@0 Flash plain; AsleepPower@1 Flash plain; 
-207 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
-208 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; SlumberPower 00/00; | seen SlumberPower@0 Flash plain; AsleepPower@1 Flash plain; 
+206 | checked AsleepPower 00/00; | seen AsleepPower@0 Flash plain; AsleepPower@1 Flash plain; 
+207 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
+208 proc:SlumberPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/00; SlumberPower 00/10; | seen SlumberPower@0 Flash plain; AsleepPower@1 Flash plain; 
 209 | checked | seen 
 210 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/10; SlumberPower 00/00; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
-211 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+211 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 212 | checked | seen 
 213 proc:AsleepPower crossed chance 50% amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
 214 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
 215 | checked | seen 
 216 | checked | seen 
-217 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-218 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
-219 proc:SlumberPower crossed chance 25% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@1 Flash plain; 
-220 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-221 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
+217 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+218 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
+219 proc:SlumberPower crossed chance 75% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@1 Flash plain; 
+220 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+221 proc:SlumberPower crossed chance 25% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
 222 | checked | seen 
 223 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-224 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
+224 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
 225 proc:SlumberPower crossed amount 0 0-0 aimed; | checked SlumberPower 00/10; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 226 | checked | seen 
-227 proc:AsleepPower crossed chance 88% amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-228 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
+227 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
+228 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
 229 | checked | seen 
-230 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-231 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+230 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
+231 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 232 | checked | seen 
 233 | checked | seen 
-234 proc:AsleepPower crossed amount 0 0-0; proc:SlumberPower crossed amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; 
-235 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+234 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; 
+235 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 236 | checked | seen 
 237 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
 238 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 239 | checked | seen 
-240 proc:AsleepPower crossed chance 94% amount 0 0-0; proc:SlumberPower crossed chance 31% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+240 proc:AsleepPower crossed chance 94% amount 0 0-0; proc:SlumberPower crossed chance 62% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 241 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-242 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 00/11; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; 
+242 | checked SlumberPower 00/00; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; 
 243 | checked | seen 
-244 proc:AsleepPower crossed chance 88% amount 0 0-0; proc:SlumberPower crossed chance 50% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; 
+244 proc:SlumberPower crossed chance 88% amount 0 0-0; | checked AsleepPower 0/0; SlumberPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; 
 245 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
-246 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@1 Flash plain; 
-247 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
+246 | checked SlumberPower 0/0; | seen SlumberPower@1 Flash plain; 
+247 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
 248 proc:SlumberPower crossed amount 0 0-0 aimed; | checked SlumberPower 00/10; | seen SlumberPower@0 Flash plain; 
 249 | checked | seen 
 250 | checked SlumberPower 00/00; | seen SlumberPower@1 Flash plain; 
-251 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-252 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; 
+251 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+252 proc:SlumberPower crossed chance 50% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; 
 253 | checked | seen 
-254 proc:AsleepPower crossed chance 88% amount 0 0-0; proc:SlumberPower crossed chance 88% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
-255 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; SlumberPower 00/00; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
+254 proc:AsleepPower crossed chance 88% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/0; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+255 proc:SlumberPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/00; SlumberPower 00/10; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
 256 | checked | seen 
-257 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
-258 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-259 proc:SlumberPower crossed amount 0 0-0 aimed; proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; SlumberPower 00/10; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
+257 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
+258 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+259 proc:SlumberPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/00; SlumberPower 00/10; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; AsleepPower@1 Flash plain; 
 260 | checked | seen 
-261 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; AsleepPower@1 Flash plain; 
-262 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
+261 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; AsleepPower@1 Flash plain; 
+262 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
 263 proc:AsleepPower crossed chance 75% amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
-264 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-265 proc:SlumberPower crossed amount 0 0-0 aimed; proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/01; SlumberPower 00/10; | seen SlumberPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
-266 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
-267 proc:SlumberPower crossed chance 25% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
-268 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-269 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+264 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
+265 proc:SlumberPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/00; SlumberPower 00/10; | seen SlumberPower@0 Flash plain; AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
+266 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+267 proc:SlumberPower crossed chance 50% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+268 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
+269 proc:SlumberPower crossed chance 50% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 270 | checked | seen 
 271 proc:AsleepPower crossed chance 75% amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; AsleepPower@1 Flash plain; 
 272 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
-273 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@1 Flash plain; 
-274 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-275 proc:AsleepPower crossed amount 0 0-0 aimed; proc:SlumberPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/10; SlumberPower 00/01; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; 
+273 | checked AsleepPower 0/0; | seen AsleepPower@1 Flash plain; 
+274 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
+275 | checked AsleepPower 00/00; SlumberPower 00/00; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; 
 276 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 277 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@1 Flash plain; PlatingPower@1 Flash plain; 
-278 proc:AsleepPower crossed amount 0 0-0 aimed; proc:SlumberPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/10; SlumberPower 00/01; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; 
+278 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/10; SlumberPower 00/00; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; 
 279 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
 280 | checked AsleepPower 0/0; | seen AsleepPower@1 Flash plain; 
 281 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; 
-282 | checked SlumberPower 00/00; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+282 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 00/11; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 283 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
-284 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@1 Flash plain; 
-285 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-286 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; 
+284 | checked SlumberPower 0/0; | seen SlumberPower@1 Flash plain; 
+285 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
+286 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; 
 287 | checked | seen 
-288 proc:AsleepPower crossed chance 75% amount 0 0-0; proc:SlumberPower crossed chance 75% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; 
-289 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
-290 | checked SlumberPower 00/00; | seen SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+288 proc:AsleepPower crossed chance 75% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/0; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; 
+289 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+290 proc:SlumberPower crossed amount 0 0-0 aimed; | checked SlumberPower 00/01; | seen SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 291 | checked | seen 
-292 proc:AsleepPower crossed chance 50% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/0; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+292 proc:AsleepPower crossed chance 50% amount 0 0-0; proc:SlumberPower crossed chance 50% amount 0 0-0; | checked AsleepPower 0/1; SlumberPower 0/1; | seen AsleepPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 293 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
 294 | checked | seen 
-295 proc:AsleepPower crossed amount 0 0-0; | checked AsleepPower 0/1; | seen AsleepPower@0 Flash plain; 
-296 proc:SlumberPower crossed chance 31% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
+295 | checked AsleepPower 0/0; | seen AsleepPower@0 Flash plain; 
+296 proc:SlumberPower crossed chance 38% amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; PlatingPower@1 Flash plain; 
 297 | checked | seen 
-298 proc:AsleepPower crossed amount 0 0-0 aimed; | checked AsleepPower 00/10; SlumberPower 00/00; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; 
-299 proc:SlumberPower crossed amount 0 0-0; | checked SlumberPower 0/1; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 
+298 | checked AsleepPower 00/00; SlumberPower 00/00; | seen AsleepPower@0 Flash plain; PlatingPower@0 Flash plain; SlumberPower@1 Flash plain; 
+299 | checked SlumberPower 0/0; | seen SlumberPower@0 Flash plain; PlatingPower@0 Flash plain; 

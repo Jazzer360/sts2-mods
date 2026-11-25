@@ -199,6 +199,7 @@ public static partial class SimEngine
         enemy.Move = move.Actions;
         enemy.IntendsToAttack = move.Intent is { Count: > 0 };
         enemy.Stunned = false; // a stun takes one move: the forecast's moves come after it
+        (enemy.StunnedMove, enemy.NextAfterStun) = (null, null);
         enemy.MoveBlock = 0;
         (enemy.LandedOnYou, enemy.LandedUnknown) = (null, false);
     }

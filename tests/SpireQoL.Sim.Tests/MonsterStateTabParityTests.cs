@@ -34,7 +34,6 @@ public class MonsterStateTabParityTests
         [169] = "Imbalanced: the play kills the Asleep enemy whose attack would have spent your teammate's 11 block, so the block takes the Imbalanced enemy's 9 whole: stunned in every outcome (a teammate's full block sets it off, where the hand-written model judged only your first hit)",
         // SteamEruptionPower.AfterDeath: TriggerAboutToBlowState's CreatureCmd.SetMaxAndCurrentHp(base.Creature, 999999999m): the enemy it kills is in the
         // fight again (ShouldCreatureBeRemovedFromCombatAfterDeath false for it), so the random attack's later hits can land on it (decision #276).
-        [14] = "Steam Eruption: a random hit that kills enemy 2 brings it back at 999999999 HP, a target for the 3-hit attack's later hits: fewer reach the Asleep enemy (81% to 79%)",
         [35] = "Steam Eruption: a random hit that kills enemy 0 brings it back, a target for the later hits: fewer kill the Infested enemy or reach the Slumber one (32% to 26%)",
         [163] = "Steam Eruption: a random hit that kills enemy 2 brings it back, a target for the later hits: fewer reach the Asleep and Curl Up enemy (72% to 70%)",
         [209] = "Steam Eruption: a random hit that kills enemy 0 brings it back, a target for the 4-hit attack's later hits: fewer reach the Curl Up enemy (73% to 69%)",
@@ -48,6 +47,13 @@ public class MonsterStateTabParityTests
     private static string Reviewed(string line) => System.Text.RegularExpressions.Regex.Replace(line, @"(?<=\| checked [^|]*)(CurlUpPower) ([01]+)/([01]+)",
         match => match.Groups[1].Value + " " + new string('0', match.Groups[2].Length) + "/" + new string('0', match.Groups[3].Length));
 
+
+    /// <summary>
+    /// A line without Asleep's and Slumber's tabs and play checks (decision #307: their tab compares the enemy's next move with and without the
+    /// play, held by WakeTabParityTests): every other tab is held as recorded with the hand-written models.
+    /// </summary>
+    internal static string WithoutWakeTabs(string line) => System.Text.RegularExpressions.Regex.Replace(line, @"(proc:(AsleepPower|SlumberPower) [^;]*; )|((?<=| checked [^|]*)(AsleepPower|SlumberPower) [01]+/[01]+; )", "");
+
     [Fact]
     public void TheTabsAreWhatTheHandWrittenModelsShowed()
     {
@@ -60,8 +66,8 @@ public class MonsterStateTabParityTests
         // The tabs and what the play check holds the play to; what the simulations end with for each enemy (its column, as recorded) is shown, not
         // held: a class read from its code simulates what the hand-written model only judged (Imbalanced's stun now lands in the enemy turn).
         static string TabsOf(string line) => line.Split(" | enemies ")[0];
-        var expected = File.ReadAllLines(ParityPath).Select(TabsOf).Select(Reviewed).ToList();
-        actual = actual.Select(TabsOf).ToList();
+        var expected = File.ReadAllLines(ParityPath).Select(TabsOf).Select(Reviewed).Select(WithoutWakeTabs).ToList();
+        actual = actual.Select(TabsOf).Select(WithoutWakeTabs).ToList();
         Assert.Equal(expected.Count, actual.Count);
         var changed = actual.Zip(expected, (now, was) => (Now: now, Was: was)).Select((pair, scenario) => (pair.Now, pair.Was, Scenario: scenario))
             .Where(entry => entry.Now != entry.Was && !ReviewedTabs.ContainsKey(entry.Scenario)).Select(entry => $"{entry.Was}\n  now: {entry.Now}").ToList();
@@ -101,6 +107,7 @@ public class MonsterStateTabParityTests
             // The move Steam Eruption's death sets, as the adapter reads it from the Waterfall Giant (SimEnemy.SetMoves: About to Blow, no attack and
             // nothing a simulation follows), so a revived enemy makes it (decision #276).
             if (enemy.Powers.Has(PowerId.SteamEruption)) enemy.SetMoves = new Dictionary<string, SimMove?> { ["AboutToBlowState"] = new SimMove(Array.Empty<int>(), Array.Empty<SimAction>()) };
+            WakeTabParityTests.WithSleeperRules(enemy); // its move rules, as the adapter reads them for Asleep and Slumber (decision #307)
             state.Enemies.Add(enemy);
         }
         state.You.Hp = 50;

@@ -133,6 +133,9 @@ public sealed class SimOutcome
 
     /// <summary>Stunned during your turn (Burrowed, Flutter, Plow, Shriek) and alive when its turn comes, in every branch.</summary>
     public bool StunnedInAll(int enemyId) => InEvery(branch => branch.Enemy(enemyId) is { StunnedThisTurn: true, DiedBeforeActing: false });
+    /// <summary>Its next move, rolled as your next turn starts, attacks in every branch / in some (SimEngine.NextMoveAttacks, decision #307).</summary>
+    public bool NextAttacksInAll(int enemyId) => InEvery(branch => SimEngine.NextMoveAttacks(branch, enemyId) == true);
+    public bool NextAttacksInSome(int enemyId) => InSome(branch => SimEngine.NextMoveAttacks(branch, enemyId) == true);
     /// <summary>A power on it killed it during your turn (KillStep: The Gambit) in every branch.</summary>
     public bool KilledByItsPowerInAll(int enemyId) => InEvery(branch => branch.Enemy(enemyId) is { KilledByItsPower: true });
     /// <summary>A model acted (its acting log or its code's flash: SimState.FiredAny, FlashedAny) in some branch, over the whole turn (its owner: SimKeys.Logged).</summary>
@@ -632,6 +635,34 @@ public static partial class SimEngine
     {
         enemy.Stunned = true;
         enemy.StunnedThisTurn = true;
+    }
+
+    /// <summary>
+    /// CreatureCmd.Stun with its stunned move and the move after it (Creature.StunInternal: a STUNNED move whose code is <paramref name="move"/>, its
+    /// follow-up <paramref name="next"/>, or the move it was to make when none is named: decision #307).
+    /// </summary>
+    internal static void Stun(SimEnemy enemy, string? next, SimStunnedMove? move)
+    {
+        Stun(enemy);
+        enemy.StunnedMove = move;
+        // Kept only for an enemy whose move rules were read (SimEnemy.Rules): nothing else asks it.
+        if (enemy.Rules != null) enemy.NextAfterStun = next ?? enemy.Rules.Current;
+    }
+
+    /// <summary>
+    /// Whether the enemy's next move, rolled as your next turn starts (CombatManager.StartTurn's PrepareForNextTurn), attacks, from its move rules on
+    /// this state (decision #307: IntentForecast's walk, its conditional branches asked of the simulated state): after a stun, the move the stun named;
+    /// else what follows the move on screen. Null when it can't be told: no rules read, it's dead, a branch not read, or a roll between moves that
+    /// attack and moves that don't. The game's intents are untouched: only the simulation asks it.
+    /// </summary>
+    internal static bool? NextMoveAttacks(SimState state, int enemyId)
+    {
+        if (state.Enemy(enemyId) is not { Alive: true, Rules: { } rules } enemy) return null;
+        var next = enemy.NextAfterStun is { } after ? IntentForecast.NextFrom(rules.Graph, after, rules.Log, state, enemyId) : IntentForecast.NextOn(rules.Graph, rules.Current, rules.Log, state, enemyId);
+        if (next is not { Count: > 0 }) return null;
+        var attacking = 0;
+        foreach (var (move, _) in next) if (rules.Attacks.Contains(move)) attacking++;
+        return attacking == next.Count ? true : attacking == 0 ? false : null;
     }
 
     /// <summary>
@@ -1647,7 +1678,17 @@ public static partial class SimEngine
                 state.Unmodelled ??= unknownMove;
                 continue;
             }
-            if (enemy.Stunned || HitCount(enemy) == 0 && enemy.Move == null) continue; // a stunned enemy skips its move
+            // A stunned enemy makes the stunned move: its code when its stun gave one (Slumbering Beetle's WakeUpMove taking its Plating), else nothing.
+            if (enemy.Stunned)
+            {
+                if (enemy.StunnedMove is { } stunnedMove && !FightEnding(state, enemy.Id))
+                {
+                    var after = stunnedMove.Run(state, enemy.Id).ToList();
+                    if (after.Count != 1 || !ReferenceEquals(after[0], state)) state.Unmodelled ??= $"{enemy.Name}'s stunned move branches, which the enemy turn doesn't follow";
+                }
+                continue;
+            }
+            if (HitCount(enemy) == 0 && enemy.Move == null) continue;
 
             var landed = 0;
             var hitsLanded = 0;

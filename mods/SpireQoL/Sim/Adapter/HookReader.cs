@@ -99,6 +99,10 @@ public static class HookReader
         // How a creature's HP bar shows it (Steam Eruption's infinite HP as its Waterfall Giant is about to blow). Hellraiser's cap on endless auto-plays
         // reads it too (9 a turn once every enemy you could hit shows infinite HP), as the adapter reads the board, a cap no simulation reaches.
         "Creature.set_HpDisplay",
+        // Whether Lagavulin Matriarch is awake, and its sleeping effect: its animator's states and its effect's Stop read them (decision #307); its
+        // WakeUpMove reads IsAwake only to set it (if (!_isAwake) IsAwake = true). What it does in a fight is its Asleep power's and its move rules'.
+        "LagavulinMatriarch.set_IsAwake",
+        "LagavulinMatriarch.set_SleepingVfx",
     };
 
     /// <summary>
@@ -1487,6 +1491,13 @@ public static class HookReader
         /// <summary>A monster class of this branch, by name (MegaCrit.Sts2.Core.Models.Monsters: BowlbugRock), not abstract.</summary>
         private bool IsMonsterClass(string name) => _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Monsters." + name) is { IsAbstract: false };
 
+        /// <summary>
+        /// A monster's state its owner's power sets ("Monster.LagavulinMatriarch.IsAwake") whose setter is one of the values only shown (ShownOnly,
+        /// decision #307: its sleeping effect, its awake animation): nothing a simulation follows.
+        /// </summary>
+        private static bool MonsterStateShownOnly(string field) =>
+            field[ProgramReader.OwnersMonsterPrefix.Length..].Split('.') is [var monsterClass, var property] && ShownOnly.Contains(monsterClass + ".set_" + property);
+
         /// <summary>A field of its own data that holds an attack ("Data.commandToModify", its Data class's AttackCommand field).</summary>
         private bool HoldsAnAttack(string field) => field.StartsWith(ProgramReader.OwnDataPrefix, StringComparison.Ordinal)
             && Procs.CardCode.NestedTypes(_type).Any(nested => nested.GetField(field[ProgramReader.OwnDataPrefix.Length..], Declared)?.FieldType.Name == "AttackCommand");
@@ -1799,6 +1810,8 @@ public static class HookReader
                 // Any other is its monster's state set (MonsterStateStep: Imbalanced's IsOffBalance), kept on its owner where its moves' code reads it.
                 case StoreStep monsterStore when monsterStore.Field.StartsWith(ProgramReader.OwnersMonsterPrefix, StringComparison.Ordinal):
                     if (StoredWithAStun(monsterStore)) return Array.Empty<HookStep>();
+                    // One no fight's code reads but to set it again (Lagavulin Matriarch's IsAwake, its sleeping effect): what the game shows.
+                    if (MonsterStateShownOnly(monsterStore.Field)) return Array.Empty<HookStep>();
                     return new HookStep[] { new MonsterStateStep(monsterStore.Field, Value(monsterStore.Value)) { When = Condition(step.Condition) } };
                 // A property set on a monster its death adds, before it joins (Infested's wriggler.StartStunned, Stock's axebot.StockAmount): how that
                 // monster starts, which the adapter reads with the creature (SimAdapter.SpawnsOf: its HP, its starting powers), so no step here. One set
@@ -2121,17 +2134,30 @@ public static class HookReader
                     if (summoner is QueryValue { Name: "PetOwner", Of: { } pet } && IsDealer(pet) && DamageHooks.Contains(_hook)) return new SummonStep(HookTarget.Dealer, amount) { PetOwner = true };
                     throw new Gap(ReaderCapability.Osty, $"gap: a summon for {summoner}");
                 }
-                // Its owner stunned (CreatureCmd.Stun(base.Owner, ...)): its stunned move does nothing a simulation follows when the delegate it's given
-                // calls no command (the reader reads a delegate's code: one that does is the command's Inner). The next move's id it's given is for
-                // the turn after, which no simulation reaches (never worked out: Flutter's is a roll's).
+                // Its owner stunned (CreatureCmd.Stun(base.Owner, stunMove, nextMoveId)): the stunned move's code is the delegate it's given (the reader
+                // reads a delegate's code: its commands are the command's Inner), run as its owner acts in the enemy turn: its own monster's method
+                // (Slumbering Beetle's WakeUpMove: its base.Creature its owner) translated on its owner (StunStep.Move). The next move's id it's given (a
+                // constant: Asleep's "SLASH_MOVE") is the move it rolls after the stunned one (decision #307); one the code works out (Flutter's, Plow's)
+                // is left out (null: its last move's, which the comparison doesn't ask).
                 case "CreatureCmd.Stun":
+                {
                     if (!IsOwner(values[0])) throw new Gap(Other(values[0]), $"gap: stuns {values[0]}");
-                    if (command.Inner.Count > 0) throw new Gap(ReaderCapability.StunOrKill, "gap: a stunned move that calls commands");
-                    // The stunned move it's given is code the reader read (a lambda or a method of its own class: one that called a command would be
-                    // the command's Inner); another class's method (its monster's WakeUpMove) isn't read here: a gap.
+                    // The stunned move it's given is code the reader read (a lambda or a method: one that calls a command is the command's Inner).
                     if (IndexOf(types, "Func`2") is var moveAt and >= 0 && (moveAt >= values.Count || values[moveAt] is not LambdaValue))
                         throw new Gap(ReaderCapability.MonsterStateSet, $"gap: a stunned move the reader doesn't read ({(moveAt < values.Count ? values[moveAt] : "none")})");
-                    return new StunStep();
+                    var nextAt = IndexOf(types, "String");
+                    var next = nextAt >= 0 && nextAt < values.Count && Unstored(values[nextAt]) is NamedValue { Name: ['"', .., '"'] named } ? named.Trim('"') : null;
+                    List<HookStep>? move = null;
+                    if (command.Inner.Count > 0)
+                    {
+                        // Its code's this, a method of its owner's monster: that monster (base.Creature is its owner).
+                        var monster = new QueryValue("Creature", "Monster", Unstored(values[0]), Array.Empty<ProgramValue>(), "MonsterModel") { IsProperty = true };
+                        move = command.Inner.Select(inner => ProgramReader.BoundStep(inner, part => part is NamedValue { Name: "this" } ? monster : null)).SelectMany(Step).ToList();
+                        if (move.Any(step => step is not (RemovePowerStep or ApplyPowerStep or GainBlockStep or MonsterStateStep)))
+                            throw new Gap(ReaderCapability.StunOrKill, "gap: a stunned move that does more than change its own powers, block or state");
+                    }
+                    return new StunStep { NextMove = next, Move = move is { Count: > 0 } ? move : null };
+                }
                 // Its owner killed (CreatureCmd.Kill(base.Owner, force): The Gambit's). Force a constant (false: a death prevention may hold it back).
                 case "CreatureCmd.Kill":
                 {
@@ -2216,6 +2242,11 @@ public static class HookReader
                 // nothing of its own runs as it goes (no AfterRemoved of its class's).
                 case "PowerCmd.Remove" when member.GenericArguments is [var removedClass] && values.Count == 1 && IsOwner(Unstored(values[0])):
                     return new RemovePowerStep { Powers = Removable(new[] { removedClass }) };
+                // Its owner's instance of another power removed (PowerCmd.Remove(base.Owner.GetPower<PlatingPower>()): Asleep's, Slumbering Beetle's
+                // WakeUpMove): that power off its owner (GetPower gives the one instance, or null, which PowerCmd.Remove does nothing with).
+                case "PowerCmd.Remove" when values.Count >= 1 && Unstored(values[0]) is QueryValue { Name: "GetPower", GenericArguments: [var instanceClass], Of: { } instanceOf }
+                    && IsOwner(Unstored(instanceOf)):
+                    return new RemovePowerStep { Powers = Removable(new[] { instanceClass }) };
                 case "PowerCmd.Remove" or "PowerCmd.Decrement" or "PowerCmd.TickDownDuration":
                     if (values[0] is not NamedValue { Name: "this" }) throw new Gap(ReaderCapability.CommandOnAnotherPower, $"gap: {member.FullName} of another power");
                     return member.Name == "Remove" ? new RemovePowerStep() : new DecrementPowerStep { TicksDuration = member.Name == "TickDownDuration" };
