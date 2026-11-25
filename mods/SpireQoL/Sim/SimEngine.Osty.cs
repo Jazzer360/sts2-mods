@@ -24,7 +24,7 @@ public static partial class SimEngine
         if (simPlayer == null || amount <= 0 || simPlayer.OstyHp <= 0) return 0;
         if (player != Who.You) simPlayer = state.MutableTeammate(Who.TeammateIndex(player));
         var lost = Math.Min(amount, simPlayer.OstyHp);
-        simPlayer.OstyHp -= lost;
+        if (!state.Forecasting) simPlayer.OstyHp -= lost; // a projection follows no one's HP (decision #308)
         return lost;
     }
 

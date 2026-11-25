@@ -35,16 +35,36 @@ public class YourTurnStartTests
     {
         // NoxiousFumesPower.AfterSideTurnStart: participants.Contains(base.Owner), PowerCmd.Apply<PoisonPower> on every enemy. It doesn't act as the
         // enemies' turn starts (you aren't among them); as your next turn starts it gives the enemy 5 Poison, which ticks as their turn starts and
-        // kills it (4 HP) before it moves: no hit to show that turn. Without it, the jab lands.
+        // would kill it (4 HP) before it moves. A projection works out no one's death (decision #308): its jab still shows, followed.
         var state = Fight(Attacker(id: 0, hp: 4, hit: 5));
-        var without = SimEngine.Project(state, new[] { JabTurn(damage: 5) });
-        Assert.Equal(new[] { 5 }, without.Of(turn: 0, enemyId: 0, move: "JAB")!.Lands);
         state.You.Powers = PowerSet.Empty.With(PowerId.NoxiousFumes, amount: 5);
-        var with = SimEngine.Project(state, new[] { JabTurn(damage: 5) });
-        var hits = with.Of(turn: 0, enemyId: 0, move: "JAB")!;
+        var hits = SimEngine.Project(state, new[] { JabTurn(damage: 5) }).Of(turn: 0, enemyId: 0, move: "JAB")!;
+        Assert.True(hits.Unknown == null, hits.Unknown);
+        Assert.Equal(new[] { 5 }, hits.Lands);
+    }
+
+    [Fact]
+    public void ARelicWhoseTurnStartIsntReadLeavesTheTurnUnknown()
+    {
+        // Brimstone.AfterSideTurnStart gives every enemy 1 Strength as your turn starts, which the forecast's numbers carry, but its targets (the
+        // living opponents, a Where) aren't read: that turn is unknown, with why (decision #92), never 5 as if it weren't there.
+        var state = Fight(Attacker(id: 0, hp: 40, hit: 5));
+        state.You.Relics = state.You.Relics.With(RelicId.Brimstone, 0);
+        var hits = SimEngine.Project(state, new[] { JabTurn(damage: 5) }).Of(turn: 0, enemyId: 0, move: "JAB")!;
         Assert.Null(hits.Lands);
-        Assert.Equal("it dies before it attacks", hits.Unknown);
-        Assert.Equal(new[] { 5 }, hits.AtYourTurnStart); // its intent read as your turn started, before the poison ticked
+        Assert.Contains(RelicId.Brimstone.Name, hits.Unknown, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AListenerThatTouchesOnlyWhatTheProjectionLeavesOutDoesntStopIt()
+    {
+        // Bread's AfterSideTurnStart (PlayerCmd.LoseEnergy on the fight's first turn) isn't simulated there, but all it calls changes your energy,
+        // which a projection doesn't follow (TurnStartGap.ForecastIgnores, read from the commands it calls: decision #308): the turn is projected.
+        var state = Fight(Attacker(id: 0, hp: 50, hit: 6));
+        state.You.Relics = state.You.Relics.With(RelicId.Bread, 0);
+        var hits = SimEngine.Project(state, new[] { JabTurn(damage: 6) }).Of(turn: 0, enemyId: 0, move: "JAB")!;
+        Assert.Null(hits.Unknown);
+        Assert.Equal(new[] { 6 }, hits.Lands);
     }
 
     [Fact]
@@ -61,31 +81,28 @@ public class YourTurnStartTests
     }
 
     [Fact]
-    public void YourPoisonTicksAsYourTurnStartsAndCanEndTheFight()
+    public void YourPoisonTicksAsYourTurnStartsButYourHpIsntFollowed()
     {
         // PoisonPower on you: participants.Contains(base.Owner) as your side's turn starts, CreatureCmd.Damage of you (Unblockable). 5 Poison on 3 HP
-        // kills you as your next turn starts: the fight is over, so no later turn is projected.
+        // would kill you as your next turn starts; a projection works out no one's HP or death (decision #308), so both turns are projected.
         var state = Fight(Attacker(id: 0, hp: 50, hit: 1));
         state.You.Hp = 3;
         state.You.Powers = PowerSet.Empty.With(PowerId.Poison, amount: 5);
         var projection = SimEngine.Project(state, new[] { JabTurn(damage: 1), JabTurn(damage: 1) });
-        Assert.Empty(projection.Turns);
-        // With 30 HP you live through it, and the next turn is projected.
-        state.You.Hp = 30;
-        Assert.Equal(new[] { 1 }, SimEngine.Project(state, new[] { JabTurn(damage: 1) }).Of(turn: 0, enemyId: 0, move: "JAB")!.Lands);
+        Assert.Equal(new[] { 1 }, projection.Of(turn: 1, enemyId: 0, move: "JAB")!.Lands);
     }
 
     [Fact]
     public void AListenerTheProjectionDoesntFollowThereLeavesTheTurnUnknown()
     {
-        // Horn Cleat's AfterBlockCleared (its owner's block on the fight's second round) is a hook no read model runs: on the board as your next turn
-        // starts, what follows isn't followed (ReadModels/turn-start-gaps.json), so that turn's numbers are unknown, with why.
+        // Countdown's AfterSideTurnStart (Doom on a random enemy) isn't simulated there, and it applies a power, which a projection follows: on the
+        // board as your next turn starts, what follows isn't followed (ReadModels/turn-start-gaps.json), so that turn's numbers are unknown, with why.
         var state = Fight(Attacker(id: 0, hp: 50, hit: 6));
-        state.You.Relics = state.You.Relics.With(RelicId.HornCleat, 0);
+        state.You.Powers = state.You.Powers.With(PowerId.Countdown, amount: 3);
         var hits = SimEngine.Project(state, new[] { JabTurn(damage: 6) }).Of(turn: 0, enemyId: 0, move: "JAB")!;
         Assert.Null(hits.Lands);
         Assert.Null(hits.AtYourTurnStart);
-        Assert.Contains(RelicId.HornCleat.Name, hits.Unknown, StringComparison.Ordinal);
+        Assert.Contains(PowerId.Countdown.Name, hits.Unknown, StringComparison.Ordinal);
         Assert.Contains("as your turn starts", hits.Unknown, StringComparison.Ordinal);
     }
 

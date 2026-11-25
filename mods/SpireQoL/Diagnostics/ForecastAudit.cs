@@ -124,8 +124,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
     /// <summary>
     /// The Intent Forecast's projection (decision #304), frozen as your turn ended, against each enemy's intent as your next turn starts: the move
     /// the game rolled, when the forecast gave it, must read what the projection said its intent would read then (each hit's GetSingleDamage, the
-    /// game's own damage math on the board now). What it couldn't hold is counted by reason, never a pass: a roll between that decides it, what the
-    /// simulator can't follow, a card played after your turn ended (a teammate's), a move the forecast didn't give.
+    /// game's own damage math on the board now). What it couldn't hold is counted by reason, never a pass: what the simulator can't follow, a card
+    /// played after your turn ended (a teammate's), an enemy's death (a projection works out none: decision #308), a move the forecast didn't give.
+    /// Where a roll before it changed what it counts, the projection counted only what's certain, and a mismatch says so (intent-projection-roll).
     /// </summary>
     private void CheckProjection(CombatHistory history)
     {
@@ -146,6 +147,12 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         if (history.Entries.Skip(_frozenAt).Any(entry => entry is CardPlayStartedEntry))
         {
             Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "projection: a card was played after your turn ended");
+            return;
+        }
+        // An enemy died since (your Thorns, its poison): a projection works out no one's death (decision #308), so what a death sets off isn't in it.
+        if (projected.Ids.Keys.Count(creature => creature.IsAlive) < _aliveAtFreeze)
+        {
+            Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "projection: an enemy died, which a projection doesn't work out");
             return;
         }
         var targets = combat.PlayerCreatures.ToList();
@@ -171,16 +178,23 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 for (var hit = 0; hit < Math.Max(1, attack.Repeats); hit++) shown.Add(single);
             }
             var matched = shown.SequenceEqual(predicted);
-            var details = $"{name} {move.Id}: projected [{string.Join(", ", predicted)}] as your turn started, the game's intent [{string.Join(", ", shown)}] (turn {_frozenTurn + 1})";
+            // A roll before it changed what it counts (decision #308: another enemy's random pick, a random target): the projection counted only
+            // what's certain, so the game's intent can differ in the outcome that changed it. Named, so a report says which it was.
+            var certainOnly = hits.Uncertain is { } why ? $"; only what's certain counted: {why}" : "";
+            var details = $"{name} {move.Id}: projected [{string.Join(", ", predicted)}] as your turn started, the game's intent [{string.Join(", ", shown)}] (turn {_frozenTurn + 1}){certainOnly}";
             ModEntry.Log.Detail($"[audit] [intent] projection: {details}{(matched ? ", matched" : "")}");
             Telemetry.Audits.Done(Telemetry.Audits.Intent, matched, name);
             if (matched) continue;
-            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("intent", $"Intent forecast's projected damage differs from the intent the game showed: {name}",
-                new[] { "intent-projection", name, move.Id }, details);
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Mismatch("intent", hits.Uncertain != null
+                    ? $"Intent forecast counted only what's certain and the game's intent differs: {name}"
+                    : $"Intent forecast's projected damage differs from the intent the game showed: {name}",
+                new[] { hits.Uncertain != null ? "intent-projection-roll" : "intent-projection", name, move.Id }, details);
         }
     }
     private int _frozenAt;
     private int _frozenTurn;
+    /// <summary>How many of the projection's enemies were alive as it was frozen.</summary>
+    private int _aliveAtFreeze;
 
     private CombatHistory? _history;
     private int _checked;
@@ -336,6 +350,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 _projectedJob = SimAdapter.StartProjection(input, "the forecast audit's projection");
                 _projectedJob.Pinned = true;
                 _projectedIds = input.Ids;
+                _aliveAtFreeze = input.Ids.Keys.Count(creature => creature.IsAlive);
             }
         }
         _wasPlayerTurn = playerTurn;

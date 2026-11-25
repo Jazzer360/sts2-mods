@@ -138,6 +138,102 @@ public static partial class ReadModels
         return rules;
     }
 
+    /// <summary>
+    /// The game's commands that change only what a projection doesn't follow (decision #308): a player's energy, stars, gold and pets (PlayerCmd), cards
+    /// and piles (CardPileCmd, CardSelectCmd, CardCmd, ForgeCmd), potions, relics, rewards and the map, and a creature's block, HP or death; never one
+    /// that plays a card (its name says Play: CardPileCmd.AutoPlayFromDrawPile). Every other command (a power's, an orb's, a damage's hooks, a stun)
+    /// may change what it follows, but a power's command on itself (PowerCmd.Decrement(this)) when its class changes none of the math the forecast
+    /// shows (ForecastMath).
+    /// </summary>
+    private static readonly HashSet<string> CommandClassesForecastIgnores = new(StringComparer.Ordinal)
+    {
+        "PlayerCmd", "CardPileCmd", "CardSelectCmd", "CardCmd", "ForgeCmd", "PotionCmd", "RelicCmd", "RelicSelectCmd", "RewardsCmd", "MapCmd",
+    };
+
+    /// <summary>The game's hooks that change the numbers the forecast shows: an attack's damage and hits, a block, a power's amount given.</summary>
+    private static readonly HashSet<string> ForecastMath = new(StringComparer.Ordinal)
+    {
+        "ModifyDamageAdditive", "ModifyDamageMultiplicative", "ModifyDamageMultiplicativeLate", "ModifyDamageCap", "ModifyAttackHitCount",
+        "ModifyBlockAdditive", "ModifyBlockMultiplicative", "ModifyPowerAmountGivenAdditive", "ModifyPowerAmountGivenMultiplicative",
+    };
+
+    private static readonly HashSet<string> CreatureCommandsForecastIgnores = new(StringComparer.Ordinal)
+    {
+        "GainBlock", "LoseBlock", "Heal", "LoseHp", "SetCurrentHp", "SetMaxHp", "GainMaxHp", "LoseMaxHp", "SetMaxAndCurrentHp", "Kill",
+    };
+
+    private const BindingFlags AllMembers = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+
+    /// <summary>
+    /// What <paramref name="type"/>'s code does in <paramref name="hooks"/> changes nothing a projection follows (decision #308: TurnStartGap and
+    /// TurnEndGap.ForecastIgnores): every command its bodies call (their async state machines, lambdas and its own methods they call, read with
+    /// <paramref name="read"/>) is one of the commands it ignores (CommandClassesForecastIgnores, CreatureCommandsForecastIgnores, CardCmd's but a
+    /// play), and none is a power's or a monster's own action. A body that can't be read changes what it follows.
+    /// </summary>
+    internal static bool ForecastIgnores(Type type, IEnumerable<string> hooks, Func<MethodBase, List<CodeOp>> read)
+    {
+        var seen = new HashSet<MethodBase>();
+        var showsNoMath = !OwnHooks(type).Any(ForecastMath.Contains);
+        bool Ignores(MethodBase method, int depth)
+        {
+            if (!seen.Add(method)) return true;
+            if (depth > 3) return false;
+            List<CodeOp> code;
+            try { code = read(ProgramReader.BodyOf(method)); }
+            catch { return false; }
+            var thisLocals = new HashSet<int>(); // an async body's locals holding its model (<>4__this)
+            for (var index = 0; index < code.Count; index++)
+            {
+                var instruction = code[index];
+                if (IsThis(instruction, thisLocals) && instruction.OpCode == System.Reflection.Emit.OpCodes.Ldfld && index + 1 < code.Count && code[index + 1].Slot is { } local
+                    && code[index + 1].OpCode.Name!.StartsWith("stloc", StringComparison.Ordinal)) thisLocals.Add(local);
+                if (instruction.Member is not { Kind: CodeMemberKind.Method } member) continue;
+                if (ProgramReader.IsPowerAction(member) || ProgramReader.IsModelAction(member)) return false;
+                if (ProgramReader.IsCommand(member))
+                {
+                    var onItself = member.DeclaringType == "PowerCmd" && member.ParameterCount == 1 && index > 0 && IsThis(code[index - 1], thisLocals);
+                    var ignored = !member.Name.Contains("Play", StringComparison.Ordinal)
+                        && (CommandClassesForecastIgnores.Contains(member.DeclaringType)
+                            || member.DeclaringType == "CreatureCmd" && CreatureCommandsForecastIgnores.Contains(member.Name)
+                            || onItself && showsNoMath);
+                    if (!ignored) return false;
+                    continue;
+                }
+                // Its own code a hook runs: a lambda, a local function, a method of its own class.
+                if (OwnMethods(type, member).ToList() is not { Count: > 0 } own) continue;
+                foreach (var called in own) if (!Ignores(called, depth + 1)) return false;
+            }
+            return true;
+        }
+        foreach (var hook in hooks)
+            foreach (var method in HookReader.Hooks(type).Where(method => method.Name == hook))
+                if (!Ignores(method, depth: 0)) return false;
+        return true;
+    }
+
+    /// <summary>An instruction that loads the model itself: this (ldarg.0), an async body's &lt;&gt;4__this, or a local holding it.</summary>
+    private static bool IsThis(CodeOp instruction, HashSet<int> thisLocals) =>
+        instruction.OpCode == System.Reflection.Emit.OpCodes.Ldarg_0 && instruction.Member == null
+        || instruction.Member is { Kind: CodeMemberKind.Field, Name: "<>4__this" }
+        || instruction.OpCode.Name!.StartsWith("ldloc", StringComparison.Ordinal) && instruction.Slot is { } slot && thisLocals.Contains(slot);
+
+    /// <summary>The game's hooks <paramref name="type"/> and the model classes it builds on override (up to PowerModel or RelicModel).</summary>
+    private static IEnumerable<string> OwnHooks(Type type)
+    {
+        for (var current = type; current != null && current.Name is not ("PowerModel" or "RelicModel" or "AbstractModel" or "Object"); current = current.BaseType)
+            foreach (var hook in HookReader.Hooks(current)) yield return hook.Name;
+    }
+
+    /// <summary>The methods of <paramref name="type"/> or a type nested in it that <paramref name="member"/> names (a lambda's, a local function's).</summary>
+    private static IEnumerable<MethodBase> OwnMethods(Type type, CodeMember member)
+    {
+        if (member.DeclaringType == type.Name) return type.GetMethods(AllMembers).Where(method => method.Name == member.Name && !method.IsSpecialName);
+        if (!member.DeclaringType.StartsWith('<')) return Enumerable.Empty<MethodBase>();
+        return Nested(type).Where(nested => nested.Name == member.DeclaringType).SelectMany(nested => nested.GetMethods(AllMembers)).Where(method => method.Name == member.Name);
+    }
+
+    private static IEnumerable<Type> Nested(Type type) => type.GetNestedTypes(AllMembers).SelectMany(nested => Nested(nested).Prepend(nested));
+
     /// <summary>The turn's-end hooks in the order a side's turn end runs them (Hook.BeforeSideTurnEnd: VeryEarly, Early, its own; Hook.AfterSideTurnEnd, then Late).</summary>
     private static readonly string[] TurnEndRunOrder = { "BeforeSideTurnEndVeryEarly", "BeforeSideTurnEndEarly", "BeforeSideTurnEnd", "AfterSideTurnEnd", "AfterSideTurnEndLate" };
 
@@ -170,6 +266,7 @@ public static partial class ReadModels
             if (compiled) continue; // modelled from its code: it runs there itself
             var (forEnemy, forPlayer) = (false, false);
             string? first = null;
+            var acting = new List<string>();
             foreach (var hook in TurnEndRunOrder.Where(turnEnds.Contains)) // in the order a turn's end runs them
             {
                 var hookReading = reading.Hooks.FirstOrDefault(each => each.Hook == hook);
@@ -179,12 +276,13 @@ public static partial class ReadModels
                 else if (reading.Spec.Of(name) is not { } program) (enemy, player) = (false, false); // read: nothing it runs there
                 else (enemy, player) = (ActsAtTheirTurnEnd(program, enemyOwner: true), ActsAtTheirTurnEnd(program, enemyOwner: false));
                 if ((enemy || player) && first == null) first = hookReading is { Read: false } ? $"{hook} ({hookReading.Gap})" : $"{hook}, its other hooks not read ({string.Join("; ", reading.Gaps.Take(1))})";
+                if (enemy || player) acting.Add(hook);
                 forEnemy |= enemy;
                 forPlayer |= player;
             }
             var why = first != null ? $"{type.Name} acts as the enemies' turn ends and isn't simulated there: {first}"
                 : $"{type.Name} isn't modelled, and its turn's-end hooks never act as the enemies' turn ends";
-            gaps.Add(new TurnEndGap(type.Name, why) { ActsForAnEnemy = forEnemy, ActsForAPlayer = forPlayer });
+            gaps.Add(new TurnEndGap(type.Name, why) { ActsForAnEnemy = forEnemy, ActsForAPlayer = forPlayer, ForecastIgnores = acting.Count > 0 && ForecastIgnores(type, acting, read) });
         }
         return gaps;
     }
@@ -234,6 +332,7 @@ public static partial class ReadModels
             if (handWritten == null && reading.Whole && Compiles(reading.Spec) == null) continue; // modelled from its code: it runs there itself
             var (forEnemy, forPlayer) = (false, false);
             string? first = null;
+            var acting = new List<string>();
             foreach (var hook in TurnStartRunOrder.Where(starts.Contains))
             {
                 if (handWritten != null && handWritten.Overrides(hook)) continue; // its hand-written model answers it
@@ -246,13 +345,14 @@ public static partial class ReadModels
                 if ((enemy || player) && first == null)
                     first = hookReading is { Read: false } ? $"{hook} ({hookReading.Gap})" : hookReading is { Unknown: { } unknown } ? $"{hook} ({unknown})"
                         : handWritten != null ? $"{hook}, which its hand-written model doesn't answer" : $"{hook}, its other hooks not read ({string.Join("; ", reading.Gaps.Take(1))})";
+                if (enemy || player) acting.Add(hook);
                 forEnemy |= enemy;
                 forPlayer |= player;
             }
             if (handWritten != null && !forEnemy && !forPlayer) continue; // answered, or never acting there
             var why = first != null ? $"{type.Name} acts as your turn starts and isn't simulated there: {first}"
                 : $"{type.Name} isn't modelled, and its turn's-start hooks never act as your turn starts";
-            gaps.Add(new TurnStartGap(type.Name, why) { ActsForAnEnemy = forEnemy, ActsForAPlayer = forPlayer });
+            gaps.Add(new TurnStartGap(type.Name, why) { ActsForAnEnemy = forEnemy, ActsForAPlayer = forPlayer, ForecastIgnores = acting.Count > 0 && ForecastIgnores(type, acting, read) });
         }
         return gaps;
     }

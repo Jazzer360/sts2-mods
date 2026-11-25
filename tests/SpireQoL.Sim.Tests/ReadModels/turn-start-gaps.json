@@ -3,42 +3,49 @@
     "Name": "AggressionPower",
     "Why": "AggressionPower acts as your turn starts and isn\u0027t simulated there: BeforeSideTurnStart (gap: a loop)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "AmnesiaPower",
     "Why": "AmnesiaPower acts as your turn starts and isn\u0027t simulated there: AfterPlayerTurnStart (gap: PlayerCmd.LoseEnergy isn\u0027t translated)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "BlessedAntler",
     "Why": "BlessedAntler acts as your turn starts and isn\u0027t simulated there: BeforeHandDraw (gap: makes a Dazed)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "BlockNextTurnPower",
     "Why": "BlockNextTurnPower acts as your turn starts and isn\u0027t simulated there: AfterBlockCleared (gap: the simulator runs no read model\u0027s AfterBlockCleared)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "BlurPower",
     "Why": "BlurPower acts as your turn starts and isn\u0027t simulated there: AfterSideTurnStart, its other hooks not read (AfterPreventingBlockClear: gap: the simulator runs no read model\u0027s AfterPreventingBlockClear)",
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "BoomingConch",
     "Why": "BoomingConch acts as your turn starts and isn\u0027t simulated there: AfterSideTurnStart (gap: tests combatState.RunState.CurrentRoom)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "Bread",
     "Why": "Bread acts as your turn starts and isn\u0027t simulated there: AfterSideTurnStart (gap: PlayerCmd.LoseEnergy isn\u0027t translated)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "BrilliantScarf",
@@ -48,18 +55,21 @@
     "Name": "CaptainsWheel",
     "Why": "CaptainsWheel acts as your turn starts and isn\u0027t simulated there: AfterBlockCleared (gap: the simulator runs no read model\u0027s AfterBlockCleared)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "ClarityPower",
     "Why": "ClarityPower acts as your turn starts and isn\u0027t simulated there: AfterSideTurnStart, its other hooks not read (ModifyHandDraw: gap: the simulator runs no read model\u0027s ModifyHandDraw)",
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "CoolantPower",
     "Why": "CoolantPower acts as your turn starts and isn\u0027t simulated there: AfterSideTurnStart (gap: the value Count(GroupBy(this.Owner.Player.PlayerCombatState.OrbQueue.Orbs, orb =\u003E orb.Id)))",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "CountdownPower",
@@ -71,18 +81,21 @@
     "Name": "EnnuiPower",
     "Why": "EnnuiPower acts as your turn starts and isn\u0027t simulated there: BeforeHandDraw (gap: makes a Sadness)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "FeralPower",
     "Why": "FeralPower acts as your turn starts and isn\u0027t simulated there: AfterSideTurnStart, which its hand-written model doesn\u0027t answer",
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "FurnacePower",
     "Why": "FurnacePower acts as your turn starts and isn\u0027t simulated there: AfterSideTurnStart (gap: ForgeCmd.Forge isn\u0027t translated)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "HistoryCourse",
@@ -94,7 +107,8 @@
     "Name": "HornCleat",
     "Why": "HornCleat acts as your turn starts and isn\u0027t simulated there: AfterBlockCleared (gap: the simulator runs no read model\u0027s AfterBlockCleared)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "MayhemPower",
@@ -106,34 +120,40 @@
     "Name": "PaelsFlesh",
     "Why": "PaelsFlesh acts as your turn starts and isn\u0027t simulated there: AfterSideTurnStart (gap: the value this.Status)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "PaelsTears",
     "Why": "PaelsTears acts as your turn starts and isn\u0027t simulated there: AfterSideTurnStart, which its hand-written model doesn\u0027t answer",
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "Pendulum",
     "Why": "Pendulum acts as your turn starts and isn\u0027t simulated there: BeforeHandDraw (gap: sets RelicModel.Status where the reader reads no store)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "Pocketwatch",
     "Why": "Pocketwatch acts as your turn starts and isn\u0027t simulated there: BeforeSideTurnStart, which its hand-written model doesn\u0027t answer",
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "PollinousCore",
     "Why": "PollinousCore acts as your turn starts and isn\u0027t simulated there: BeforeHandDraw, its other hooks not read (AfterModifyingHandDraw: gap: the simulator runs no read model\u0027s AfterModifyingHandDraw)",
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "RampartPower",
     "Why": "RampartPower acts as your turn starts and isn\u0027t simulated there: AfterSideTurnStart (gap: a loop)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "SandpitPower",
@@ -143,12 +163,14 @@
     "Name": "SelfFormingClayPower",
     "Why": "SelfFormingClayPower acts as your turn starts and isn\u0027t simulated there: AfterBlockCleared (gap: the simulator runs no read model\u0027s AfterBlockCleared)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "SlothPower",
     "Why": "SlothPower acts as your turn starts and isn\u0027t simulated there: BeforeSideTurnStart, its other hooks not read (ShouldPlay: gap: the simulator runs no read model\u0027s ShouldPlay)",
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "SparklingRouge",
@@ -160,19 +182,22 @@
     "Name": "ToolsOfTheTradePower",
     "Why": "ToolsOfTheTradePower acts as your turn starts and isn\u0027t simulated there: AfterPlayerTurnStart (gap: a pick)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "ToricToughnessPower",
     "Why": "ToricToughnessPower acts as your turn starts and isn\u0027t simulated there: AfterBlockCleared (gap: the simulator runs no read model\u0027s AfterBlockCleared)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "TyrannyPower",
     "Why": "TyrannyPower acts as your turn starts and isn\u0027t simulated there: AfterPlayerTurnStart (gap: a pick)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "VelvetChoker",

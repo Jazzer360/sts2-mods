@@ -321,7 +321,7 @@ public static partial class SimEngine
     /// </summary>
     public static void Heal(SimState state, int creature, int amount)
     {
-        if (amount <= 0) return;
+        if (amount <= 0 || state.Forecasting) return; // a projection follows no one's HP (decision #308)
         if (state.Player(creature) is { } player)
         {
             if (player.Died || player.Hp == int.MaxValue) return;

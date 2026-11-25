@@ -12,13 +12,15 @@
   {
     "Name": "BorrowedTimePower",
     "Why": "BorrowedTimePower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (TryModifyEnergyCostInCombat: gap: the simulator runs no read model\u0027s TryModifyEnergyCostInCombat)",
-    "ActsForAnEnemy": true
+    "ActsForAnEnemy": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "ChainsOfBindingPower",
     "Why": "ChainsOfBindingPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: BeforeSideTurnEnd (gap: changes a collection (IEnumerator\u00601.get_Current) where the reader reads no step)",
     "ActsForAnEnemy": true,
-    "ActsForAPlayer": true
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "DoomPower",
@@ -29,7 +31,8 @@
   {
     "Name": "EncorePower",
     "Why": "EncorePower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterApplied: gap: the value Max(0, (this.Amount sub this.GetInternalData\u003CData\u003E().numberOfCardsPlayedSinceApplied())))",
-    "ActsForAnEnemy": true
+    "ActsForAnEnemy": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "HellraiserPower",
@@ -38,22 +41,26 @@
   {
     "Name": "NoDrawPower",
     "Why": "NoDrawPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (ShouldDraw: gap: the simulator runs no read model\u0027s ShouldDraw)",
-    "ActsForAnEnemy": true
+    "ActsForAnEnemy": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "NoEnergyGainPower",
     "Why": "NoEnergyGainPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterModifyingEnergyGain: gap: the simulator runs no read model\u0027s AfterModifyingEnergyGain)",
-    "ActsForAnEnemy": true
+    "ActsForAnEnemy": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "RetainHandPower",
     "Why": "RetainHandPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (ShouldFlush: gap: the simulator runs no read model\u0027s ShouldFlush)",
-    "ActsForAnEnemy": true
+    "ActsForAnEnemy": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "RingingPower",
     "Why": "RingingPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterApplied: gap: a loop)",
-    "ActsForAnEnemy": true
+    "ActsForAnEnemy": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "SandpitPower",
@@ -62,7 +69,8 @@
   {
     "Name": "ShowOffPower",
     "Why": "ShowOffPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterDeath: gap: changes a game object outside a command (ShowOff.IncreaseAim))",
-    "ActsForAnEnemy": true
+    "ActsForAnEnemy": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "ShrinkPower",
@@ -72,6 +80,7 @@
   {
     "Name": "TangledPower",
     "Why": "TangledPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterApplied: gap: a loop)",
-    "ActsForAnEnemy": true
+    "ActsForAnEnemy": true,
+    "ForecastIgnores": true
   }
 ]

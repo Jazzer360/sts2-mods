@@ -205,15 +205,17 @@ public class SimPerformanceTests
     }
 
     /// <summary>
-    /// The projection scenario's limits: measured plus about 25% (bytes 50%, time about five times), as the scenarios above. Measured 2026-11-25
-    /// (decision #305): 24,225 copies, 41,427 stepped, 68 steps, 11,628 states held at most, 161.5 MB, about 680 ms in a debug test run. The orbs'
-    /// random targets at each of your three turns' ends keep the enemies' HP apart in most branches, which is most of it.
+    /// The projection scenario's limits: measured plus about 25% (bytes 50%, time with a floor of 15 ms, as the typical fight's 10), as the scenarios
+    /// above. Measured 2026-11-25 (decision #308: it follows only what the forecast shows, so the orbs' and Juggernaut's random targets, which change
+    /// only HP and block, are one branch, and each phase ends on what every outcome shares): 89 copies, 101 stepped, 84 steps, 12 states held at most
+    /// (the last turn's six pick branches and the step making them), 0.44 MB, about 1.3 ms in a debug test run. Before (decision #305): 24,225 copies,
+    /// 41,427 stepped, 68 steps, 11,628 held, 161.5 MB, about 680 ms.
     /// </summary>
     private static class ProjectionLimits
     {
-        public const int Copies = 30_000, Stepped = 52_000, Steps = 85, Held = 14_500;
-        public const long Bytes = 245_000_000L;
-        public const int Ms = 3_500;
+        public const int Copies = 115, Stepped = 130, Steps = 105, Held = 15;
+        public const long Bytes = 670_000L;
+        public const int Ms = 15;
     }
 
     // ------------------------------------------------------------------ the bound

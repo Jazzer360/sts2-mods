@@ -1971,6 +1971,7 @@ public sealed class ReadModel : SimModel
                         return One(args.State);
                     }
                     var hp = (int)Math.Clamp(amount(in args), 0m, int.MaxValue);
+                    if (args.State.Forecasting) return One(args.State); // a projection follows no one's HP (decision #308)
                     if (!enemy.Alive && hp > 0) enemy.Revived = true;
                     enemy.Hp = hp;
                     return One(args.State);
@@ -2007,6 +2008,7 @@ public sealed class ReadModel : SimModel
                     // the hit that already killed it, as the hand-written model had it (its tab).
                     if (args.State.Enemy(args.Owner) is not { } enemy) return One(args.State);
                     if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                    if (args.State.Forecasting) return One(args.State); // a projection follows no one's death (decision #308)
                     enemy.KilledByItsPower = true;
                     enemy.Hp = 0;
                     return One(args.State);

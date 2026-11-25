@@ -1277,6 +1277,13 @@ public sealed record TurnEndGap(string Name, string Why)
     /// <summary>It may act as the enemies' side's turn ends when a player (or a player's pet) owns it.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool ActsForAPlayer { get; init; }
+
+    /// <summary>
+    /// What its code does there changes nothing a projection follows (decision #308: read from the commands its acting hooks call, ForecastCalls):
+    /// only hands, cards, energy, HP, block or a death. A projection goes on past it; the outcome is unknown as before.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ForecastIgnores { get; init; }
 }
 
 /// <summary>
@@ -1295,6 +1302,13 @@ public sealed record TurnStartGap(string Name, string Why)
     /// <summary>It may act as the players' next turn starts when a player (or a player's pet) owns it.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public bool ActsForAPlayer { get; init; }
+
+    /// <summary>
+    /// What its code does there changes nothing a projection follows (decision #308: read from the commands its acting hooks call, ForecastCalls):
+    /// only hands, cards, energy, HP, block or a death. A projection goes on past it; the outcome is unknown as before.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ForecastIgnores { get; init; }
 }
 
 /// <summary>How hook programs are written as JSON (the simulator tests' read models: Cases/read-models.json).</summary>

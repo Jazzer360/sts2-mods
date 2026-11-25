@@ -265,6 +265,12 @@ public sealed class SimEnemy
     [JsonIgnore] internal string? MoveUnknown;
 
     /// <summary>
+    /// A projected turn's move the forecast doesn't give it (past its rules' first random pick, decision #308): it isn't certain, so what it would do
+    /// isn't counted; its powers act as ever.
+    /// </summary>
+    [JsonIgnore] internal bool MoveNotForecast;
+
+    /// <summary>
     /// Each hit of its move on you in a projected turn as it lands (the damage math, before your block), in order; null for none yet. Never changed in
     /// place (shared between clones).
     /// </summary>
@@ -296,14 +302,29 @@ public sealed class SimEnemy
         key.Add(Stunned ? 1 : 0); key.Add(IntendsToAttack ? 1 : 0); key.Add(BlockBroken ? 1 : 0); key.Add(KilledByItsPower ? 1 : 0);
         key.Add(MoveBlock); key.Add(Revived ? 1 : 0); key.Add(RevivedBeforeActing ? 1 : 0);
         key.Add(TurnEndBlock); key.Add(TurnEndBlockBroken ? 1 : 0);
-        if (ProjectedMove != null || MoveUnknown != null || LandedOnYou != null || LandedUnknown)
+        if (ProjectedMove != null || MoveUnknown != null || LandedOnYou != null || LandedUnknown || MoveNotForecast)
         {
             // A projected turn (decision #304): branches that gave it another move, or where its hits landed otherwise, stay apart.
-            key.Add(-91); key.Add(ProjectedMove?.GetHashCode() ?? 0); key.Add(MoveUnknown?.GetHashCode() ?? 0); key.Add(LandedUnknown ? 1 : 0);
+            key.Add(-91); key.Add(ProjectedMove?.GetHashCode() ?? 0); key.Add(MoveUnknown?.GetHashCode() ?? 0); key.Add(LandedUnknown ? 1 : 0); key.Add(MoveNotForecast ? 1 : 0);
             if (LandedOnYou != null) { key.Add(LandedOnYou.Length); foreach (var hit in LandedOnYou) key.Add(hit); }
         }
         if (NextAfterStun != null || StunnedMove != null) { key.Add(-92); key.Add(NextAfterStun?.GetHashCode() ?? 0); key.Add(StunnedMove?.Name.GetHashCode() ?? 0); }
         Powers.Hash(ref key); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
+        Fields.Hash(ref key);
+        key.Add(Hits.Count); foreach (var hit in Hits) key.Add(hit);
+    }
+
+    /// <summary>
+    /// A projection's key (decision #308): what it follows of an enemy (its powers and what they keep, its move, its stun, what its move gave and
+    /// landed), not its HP, block or what hit it.
+    /// </summary>
+    internal void ForecastHash(ref BranchKey key)
+    {
+        key.Add(Id); key.Add(Stunned ? 1 : 0); key.Add(IntendsToAttack ? 1 : 0); key.Add(MoveBlock);
+        key.Add(-91); key.Add(ProjectedMove?.GetHashCode() ?? 0); key.Add(MoveUnknown?.GetHashCode() ?? 0); key.Add(LandedUnknown ? 1 : 0); key.Add(MoveNotForecast ? 1 : 0);
+        if (LandedOnYou != null) { key.Add(LandedOnYou.Length); foreach (var hit in LandedOnYou) key.Add(hit); }
+        key.Add(-92); key.Add(NextAfterStun?.GetHashCode() ?? 0); key.Add(StunnedMove?.Name.GetHashCode() ?? 0);
+        Powers.Hash(ref key);
         Fields.Hash(ref key);
         key.Add(Hits.Count); foreach (var hit in Hits) key.Add(hit);
     }
@@ -654,6 +675,13 @@ public sealed class SimPlayer
         foreach (var orb in Orbs) orb.Hash(ref key);
     }
 
+    /// <summary>A projection's key (decision #308): what it follows of a player (their powers and relics and what they keep), not their HP, block, hand or orbs.</summary>
+    internal void ForecastHash(ref BranchKey key)
+    {
+        key.Add(Died ? 1 : 0);
+        Powers.Hash(ref key); Relics.Hash(ref key); Fields.Hash(ref key);
+    }
+
     public SimPlayer Clone()
     {
         // The hand and debuff lists never change, so they're shared; the orbs until one branch changes them.
@@ -977,6 +1005,13 @@ public sealed class SimState
     /// follows, as the turn's own hand draw (SimEngine.ProcCardEvent).
     /// </summary>
     internal bool HandLeftOut;
+    /// <summary>
+    /// A projection's run (decision #308): it follows only what the forecast shows (each creature's powers and what they keep, the enemies' moves and
+    /// stuns), never anyone's HP or death: no damage or HP loss takes any, no kill or heal changes it (its hits still run their hooks), so every
+    /// condition on HP reads as it stands now, and branches that differ only in what isn't followed (HP, block, hands, draws, energy, orbs) are one
+    /// (SimState.Key).
+    /// </summary>
+    internal bool Forecasting;
 
     /// <summary>
     /// The side the game's CombatState.CurrentSide is on is the enemies': the side ending while a turn's end runs (SideEnding), the side starting
@@ -1250,6 +1285,7 @@ public sealed class SimState
         // Every number that can differ between branches of one run, mixed into one key (BranchKey).
         // Passed by reference to each part's Hash: no delegate or closure for the key, which is made for every copy of the state.
         var key = new BranchKey();
+        if (Forecasting) return ForecastKey(ref key);
 
         if (Payouts.Count > 0) Payouts.Hash(ref key);
         if (TickSkips.Count > 0) { key.Add(-77); TickSkips.Hash(ref key); }
@@ -1279,6 +1315,22 @@ public sealed class SimState
         You.Hash(ref key);
         // Teammates (shared between branches until one changes them): a branch that differs only in a teammate stays apart.
         foreach (var player in Teammates) player.Hash(ref key);
+        return key.Value;
+    }
+
+    /// <summary>
+    /// A projection's branch key (decision #308): only what it follows, so copies that differ in nothing else are one. What's mid-way through a step
+    /// (an evoke's targets, a card being drawn) and what's unknown stay apart; HP, block, hands, draws, energy, orbs and the play's counts don't.
+    /// </summary>
+    private long ForecastKey(ref BranchKey key)
+    {
+        if (DrawnCard != null) key.Add(DrawnCard.Key.GetHashCode());
+        if (OrbTargets != null) { key.Add(-OrbTargets.Length - 1); foreach (var target in OrbTargets) key.Add(target); }
+        key.Add(Unmodelled == null ? 0 : Unmodelled.GetHashCode());
+        if (UnmodelledAtTheirTurnEnd != null || TheirTurnEndKeptApart) { key.Add(UnmodelledAtTheirTurnEnd == null ? -3 : UnmodelledAtTheirTurnEnd.GetHashCode()); key.Add(TheirTurnEndKeptApart ? 1 : 0); }
+        foreach (var enemy in Enemies) enemy.ForecastHash(ref key);
+        You.ForecastHash(ref key);
+        foreach (var player in Teammates) player.ForecastHash(ref key);
         return key.Value;
     }
 }

@@ -3,10 +3,12 @@ using Xunit;
 namespace SpireQoL.Sim.Tests;
 
 /// <summary>
-/// The Intent Forecast's later turns, projected (decision #304: SimEngine.Project): the board through this turn's end with no plays, the enemy turn and
-/// the enemies' turn end, then each forecast turn (your next turn's start and end with no plays, the enemies' turn start, each enemy's forecast move,
-/// their turn's end), each move's hits on you as they land and as its intent reads when your turn starts. What's predictable counts (Ritual's
-/// Strength, Weak wearing off, a move's own buff before its hits); a roll or what the simulator can't follow leaves the number unknown.
+/// The Intent Forecast's later turns, projected (decisions #304, #308: SimEngine.Project): the board through this turn's end with no plays, the enemy
+/// turn and the enemies' turn end, then each forecast turn (your next turn's start and end with no plays, the enemies' turn start, each enemy's
+/// forecast move, their turn's end), each move's hits on you as they land and as its intent reads when your turn starts. What's predictable counts
+/// (Ritual's Strength, Weak wearing off, a move's own buff before its hits); it follows only what the forecast shows, never anyone's HP or death, so a
+/// random hit on an enemy doesn't split it; where a roll changes what it follows only what's certain counts, and what the simulator can't follow
+/// leaves the number unknown.
 /// </summary>
 public class ProjectionTests
 {
@@ -67,15 +69,30 @@ public class ProjectionTests
     [Fact]
     public void ABigBoardProjectsEveryTurn()
     {
-        // Every turn is projected; on the last, the third enemy's random pick (after the second's) leaves the fourth's hit unknown only where a
-        // pick changes it: the second's Shout gives it 2 Strength on one branch.
+        // Every turn is projected; on the last, the second enemy's random pick (its Shout gives every enemy 2 Strength on one branch) changes the
+        // fourth's hit, which acts after it: only what's certain counts, its intent as your turn starts (7), and it says so.
         var (state, turns) = BigBoard();
         var projection = SimEngine.Project(state, turns);
         Assert.True(projection.Turns.Count == 3, string.Join("; ", projection.Turns.SelectMany(row => row.Values.SelectMany(moves => moves.Values)).Select(hits => hits.Unknown).Where(why => why != null).Distinct()));
         Assert.Null(projection.CapHit);
-        Assert.NotNull(projection.Of(turn: 1, enemyId: 0, move: "CLAW")!.Lands);
-        Assert.Null(projection.Of(turn: 2, enemyId: 3, move: "BITE")!.Lands);
+        Assert.Equal(new[] { 7 }, projection.Of(turn: 2, enemyId: 3, move: "BITE")!.Lands);
+        Assert.NotNull(projection.Of(turn: 2, enemyId: 3, move: "BITE")!.Uncertain);
         Assert.Equal(new[] { 8, 8 }, projection.Of(turn: 0, enemyId: 0, move: "CLAW")!.Lands); // Ritual's 2 Strength from this turn's end
+        Assert.Equal(new[] { 10, 10 }, projection.Of(turn: 1, enemyId: 0, move: "CLAW")!.Lands);
+        Assert.Equal(new[] { 3, 3, 3 }, projection.Of(turn: 0, enemyId: 2, move: "JAB")!.Lands); // Weak 2: this turn's attack and the next
+        Assert.Equal(new[] { 5, 5, 5 }, projection.Of(turn: 1, enemyId: 2, move: "JAB")!.Lands);
+    }
+
+    [Fact]
+    public void RandomHitsOnTheEnemiesDontSplitTheProjection()
+    {
+        // The orbs' Lightning and Juggernaut hit a random enemy at each of your turns' ends: which one changes only HP and block, which a projection
+        // doesn't follow, so every target is one branch. The last turn's picks (three moves, then two: six branches, and the step making them) are
+        // all it holds at once.
+        var (state, turns) = BigBoard();
+        var projection = SimEngine.Project(state, turns);
+        Assert.True(projection.PeakHeld <= 12, $"{projection.PeakHeld} states held at once");
+        Assert.True(projection.Copies < 200, $"{projection.Copies} state copies");
     }
 
     [Fact]
@@ -152,31 +169,37 @@ public class ProjectionTests
     }
 
     [Fact]
-    public void ARandomPickBeforeItDecidesItsHitsOnlyWhenItMatters()
+    public void AnotherEnemysRandomPickCountsOnlyWhatsCertain()
     {
         // The first enemy picks at random between giving the second 3 Strength and attacking; the second, acting after it, hits for 7 or 10: a roll
-        // decides it, so it's unknown, though its intent as your turn starts (before either moves) reads 7.
+        // decides it, so only what's certain counts (its intent as your turn starts, 7), and it says why. The turn after, the Strength only one
+        // outcome gave isn't counted either.
         var state = Fight(Attacker(id: 0, hp: 60, hit: 4), Attacker(id: 1, hp: 60, hit: 7));
         var shout = new ProjectedMove("SHOUT") { Actions = new SimAction[] { new MovePowerAction(PowerId.Strength, Amount: 3, To: new[] { 1 }, Debuff: false) } };
         var pick = new ProjectedChoice(EnemyId: 0, new[] { (shout, 0.5), (Attack("JAB", damage: 4), 0.5) });
-        var projection = SimEngine.Project(state, Turns(new[] { pick, Certain(enemyId: 1, Attack("CLUB", damage: 7)) }));
-        Assert.Null(projection.Of(turn: 0, enemyId: 1, move: "CLUB")!.Lands);
-        Assert.NotNull(projection.Of(turn: 0, enemyId: 1, move: "CLUB")!.Unknown);
-        Assert.Equal(new[] { 7 }, projection.Of(turn: 0, enemyId: 1, move: "CLUB")!.AtYourTurnStart);
+        var projection = SimEngine.Project(state, Turns(new[] { pick, Certain(enemyId: 1, Attack("CLUB", damage: 7)) }, new[] { Certain(enemyId: 1, Attack("CLUB", damage: 7)) }));
+        var club = projection.Of(turn: 0, enemyId: 1, move: "CLUB")!;
+        Assert.Equal(new[] { 7 }, club.Lands);
+        Assert.Equal(new[] { 7 }, club.AtYourTurnStart);
+        Assert.NotNull(club.Uncertain);
+        Assert.Null(club.Unknown);
+        Assert.Equal(new[] { 7 }, projection.Of(turn: 1, enemyId: 1, move: "CLUB")!.Lands);
         // Each of the first enemy's own moves is known on its own branch.
         Assert.Equal(new[] { 4 }, projection.Of(turn: 0, enemyId: 0, move: "JAB")!.Lands);
         Assert.Empty(projection.Of(turn: 0, enemyId: 0, move: "SHOUT")!.Lands!);
+        Assert.Null(projection.Of(turn: 0, enemyId: 0, move: "JAB")!.Uncertain);
     }
 
     [Fact]
-    public void AMoveNotKnownLeavesOnlyWhatComesAfterItUnknown()
+    public void AnEnemyPastItsForecastMakesNoMoveTheProjectionCounts()
     {
-        // The second enemy has no move known that turn (past its first random pick): the first, acting before it, is known; the turn after isn't.
+        // The second enemy has no move given that turn (past its first random pick): what it would do isn't certain, so it isn't counted, and the
+        // first enemy's later turn is known.
         var state = Fight(Attacker(id: 0, hp: 60, hit: 5), Attacker(id: 1, hp: 60, hit: 3));
         var projection = SimEngine.Project(state, Turns(new[] { Certain(enemyId: 0, Attack("JAB", damage: 5)) }, new[] { Certain(enemyId: 0, Attack("JAB", damage: 5)) }));
         Assert.Equal(new[] { 5 }, projection.Of(turn: 0, enemyId: 0, move: "JAB")!.Lands);
-        Assert.Contains("E1", projection.Of(turn: 1, enemyId: 0, move: "JAB")!.Unknown, StringComparison.Ordinal);
-        Assert.Null(projection.Of(turn: 1, enemyId: 0, move: "JAB")!.Lands);
+        Assert.Equal(new[] { 5 }, projection.Of(turn: 1, enemyId: 0, move: "JAB")!.Lands);
+        Assert.Null(projection.Of(turn: 1, enemyId: 0, move: "JAB")!.Unknown);
     }
 
     [Fact]
@@ -193,12 +216,15 @@ public class ProjectionTests
     }
 
     [Fact]
-    public void AnEnemyTheTurnKillsHasNoLaterHits()
+    public void NoOnesHpOrDeathIsWorkedOut()
     {
-        // Poison 20 on it with 10 HP: it dies as the enemies' turn starts, before it moves; its later turn has no number to show.
-        var state = Fight(Attacker(id: 0, hp: 10, hit: 5));
+        // Poison 20 on it with 10 HP would kill it as the enemies' turn starts; a projection doesn't work out whether an enemy lives (decision #308),
+        // so its later moves show their hits. Nor yours: with 3 HP under its 50 a turn, every turn is still projected.
+        var state = Fight(Attacker(id: 0, hp: 10, hit: 50));
+        state.You.Hp = 3;
         state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Poison, amount: 20);
-        var projection = SimEngine.Project(state, Turns(new[] { Certain(enemyId: 0, Attack("JAB", damage: 5)) }));
-        Assert.Null(projection.Of(turn: 0, enemyId: 0, move: "JAB"));
+        var projection = SimEngine.Project(state, Turns(new[] { Certain(enemyId: 0, Attack("JAB", damage: 50)) }, new[] { Certain(enemyId: 0, Attack("JAB", damage: 50)) }));
+        Assert.Equal(new[] { 50 }, projection.Of(turn: 0, enemyId: 0, move: "JAB")!.Lands);
+        Assert.Equal(new[] { 50 }, projection.Of(turn: 1, enemyId: 0, move: "JAB")!.Lands);
     }
 }

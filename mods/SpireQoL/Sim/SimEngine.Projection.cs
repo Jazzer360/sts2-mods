@@ -27,6 +27,12 @@ public sealed record ProjectedChoice(int EnemyId, IReadOnlyList<(ProjectedMove M
 public sealed record ProjectedHits(IReadOnlyList<int>? Lands, IReadOnlyList<int>? AtYourTurnStart)
 {
     public string? Unknown { get; init; }
+
+    /// <summary>
+    /// A roll before it changed what it counts (decision #308): another enemy's random pick, a random target. Its numbers count only what's certain
+    /// (as its intent reads when your turn starts, on what every outcome shares); the forecast audit names it when the game's intent differs.
+    /// </summary>
+    public string? Uncertain { get; init; }
 }
 
 /// <summary>Each projected turn's moves' hits (decision #304): by turn (0: the one after the intent on screen), enemy id and move id.</summary>
@@ -49,15 +55,19 @@ public sealed class Projection
 public static partial class SimEngine
 {
     /// <summary>
-    /// The Intent Forecast's later turns, projected from the board (decision #304): this turn's end with no more plays and the enemy turn (as Run),
-    /// the enemies' turn end; then for each forecast turn your next turn (its start: every listener's turn-start code, your block cleared, your hand left
-    /// out, since what you'd draw isn't known: YourTurnStart, decision #306; its end with no plays: your powers, relics and orbs as their code says), the enemies' turn start, each enemy's forecast move (a
-    /// branch for each move of a random pick, with its chance; its code's steps before its hits) and their turn's end. Each move's hits on you are
-    /// read as they land and as its intent reads when your turn starts; a number some branches don't share is unknown (a roll decides it), and so
-    /// is everything past what the simulator can't follow (SimState.Unmodelled, UnmodelledAtTheirTurnEnd, a move it doesn't know).
+    /// The Intent Forecast's later turns, projected from the board (decisions #304, #308): this turn's end with no more plays and the enemy turn (as
+    /// Run), the enemies' turn end; then for each forecast turn your next turn (its start: every listener's turn-start code, your block cleared, your
+    /// hand left out, since what you'd draw isn't known: YourTurnStart, decision #306; its end with no plays: your powers, relics and orbs as their
+    /// code says), the enemies' turn start, each enemy's forecast move (a branch for each move of a random pick, with its chance; its code's steps
+    /// before its hits) and their turn's end. It follows only what the forecast shows (SimState.Forecasting): every creature's powers and what they
+    /// keep, the enemies' moves and stuns; no one's HP, block or death, no hand, draw, energy or orb, so branches that differ only there are one.
+    /// Where a roll leaves what it follows apart, each phase ends on what every outcome shares (Certain): a number changed in only some counts as it
+    /// was. Each move's hits on you are read as they land and as its intent reads when your turn starts; where a roll changed them they count only
+    /// what's certain (ProjectedHits.Uncertain). What the simulator can't follow there (SimState.Unmodelled, UnmodelledAtTheirTurnEnd, a move whose
+    /// code isn't read) leaves the turn unknown.
     /// </summary>
     /// <param name="turns">Each forecast turn's moves, by enemy (IntentForecast's turns after the intent on screen); a living enemy with none that
-    /// turn makes the branch unknown from its move on.</param>
+    /// turn (past its first random pick) makes no move the projection counts.</param>
     public static Projection Project(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns) => Project(start, turns, new SimWork());
 
     /// <summary>The projection with <paramref name="work"/>: SimJob's on a worker (its cancellation and background gate, decision #107).</summary>
@@ -68,42 +78,35 @@ public static partial class SimEngine
         var first = start.Clone();
         first.Work = work;
         first.Log = false; // no breakdown: only the hits are read
+        first.Forecasting = true;
         MarkUnread(first);
         var branches = new BranchSet(first);
+        var uncertain = new Dictionary<int, string>();
         try
         {
             // This turn, with no more plays: as Run without a play.
-            Fighting(branches, () => AutoPostPlay(branches));
-            EndOfTurn(branches);
-            Fighting(branches, () => EnemyTurnStart(branches));
-            branches.Do(EnemyTurn);
-            Fighting(branches, () => EnemyTurnEnd(branches));
-            branches.Do(TheirTurnIsOver);
+            Certainly(branches, uncertain, () => Fighting(branches, () => AutoPostPlay(branches)));
+            Certainly(branches, uncertain, () => EndOfTurn(branches));
+            Certainly(branches, uncertain, () => Fighting(branches, () => EnemyTurnStart(branches)));
+            Certainly(branches, uncertain, () => TheirTurn(branches, choices: null, row: null));
             foreach (var choices in turns)
             {
-                // The branches whose fight goes on with you in it: the others have no next turn.
-                branches.States = branches.States.Where(branch => !FightOver(branch) && !branch.You.Died).ToList();
-                if (branches.States.Count == 0) break;
                 // Your next turn starts (CombatManager.StartTurn for the players, its listeners' code: decision #306): what its intents read then.
-                // One it ends (your poison killing you, its own Noxious Fumes' kill ending the fight) has no turn after it.
-                YourTurnStart(branches);
-                branches.States = branches.States.Where(branch => !FightOver(branch) && !branch.You.Died).ToList();
-                if (branches.States.Count == 0) break;
+                Certainly(branches, uncertain, () => YourTurnStart(branches));
+                var state = branches.States[0];
                 var row = new Dictionary<int, Dictionary<string, ProjectedHits>>();
                 projection.Turns.Add(row);
-                var unknown = branches.States.Select(branch => branch.Unmodelled ?? branch.UnmodelledAtTheirTurnEnd).FirstOrDefault(why => why != null);
+                var unknown = state.Unmodelled ?? state.UnmodelledAtTheirTurnEnd;
                 foreach (var choice in choices)
                     row[choice.EnemyId] = choice.Options.ToDictionary(option => option.Move.Id,
-                        option => unknown != null ? new ProjectedHits(Lands: null, AtYourTurnStart: null) { Unknown = unknown } : AtYourTurnStart(branches.States, choice.EnemyId, option.Move), StringComparer.Ordinal);
+                        option => unknown != null ? new ProjectedHits(Lands: null, AtYourTurnStart: null) { Unknown = unknown }
+                            : new ProjectedHits(Lands: null, HitsOnYou(state, choice.EnemyId, option.Move)) { Uncertain = uncertain.GetValueOrDefault(choice.EnemyId) },
+                        StringComparer.Ordinal);
                 if (unknown != null) break;
                 // Its end with no plays, the enemies' turn start, their moves, their turn's end.
-                EndOfTurn(branches);
-                Fighting(branches, () => EnemyTurnStart(branches));
-                GiveMoves(branches, choices);
-                branches.Do(EnemyTurn);
-                Landed(branches.States, choices, row);
-                Fighting(branches, () => EnemyTurnEnd(branches));
-                branches.Do(TheirTurnIsOver);
+                Certainly(branches, uncertain, () => EndOfTurn(branches));
+                Certainly(branches, uncertain, () => Fighting(branches, () => EnemyTurnStart(branches)));
+                Certainly(branches, uncertain, () => TheirTurn(branches, choices, row));
             }
         }
         catch (SimCapped)
@@ -125,6 +128,114 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// The enemies' turn in a projection: each living enemy's forecast move (<paramref name="choices"/>; null: the intents on screen), their moves,
+    /// each move's hits as they landed (<paramref name="row"/>), their turn's end, and what their turn leaves for yours (TheirTurnIsOver).
+    /// </summary>
+    private static void TheirTurn(BranchSet branches, IReadOnlyList<ProjectedChoice>? choices, Dictionary<int, Dictionary<string, ProjectedHits>>? row)
+    {
+        if (choices != null) GiveMoves(branches, choices);
+        branches.Do(EnemyTurn);
+        if (choices != null && row != null) Landed(branches.States, choices, row);
+        Fighting(branches, () => EnemyTurnEnd(branches));
+        branches.Do(TheirTurnIsOver);
+    }
+
+    /// <summary>
+    /// One phase of a projection, ending on what every outcome shares (decision #308): branches left apart by a roll in what the projection follows
+    /// become one (Certain), each followed number as every branch has it, or as it was before the phase where they differ. An enemy whose hits on
+    /// you a roll changed there (its damage math or its stun differing between the branches) counts only what's certain from here, with why.
+    /// </summary>
+    private static void Certainly(BranchSet branches, Dictionary<int, string> uncertain, Action phase)
+    {
+        if (branches.States.Count != 1) { phase(); return; }
+        var before = branches.States[0].Clone();
+        phase();
+        if (branches.States.Count <= 1) return;
+        foreach (var enemy in branches.States[0].Enemies)
+        {
+            if (uncertain.ContainsKey(enemy.Id)) continue;
+            if (RollChangesItsHits(branches.States, enemy.Id)) uncertain[enemy.Id] = $"a roll changes what {enemy.Name}'s hits count: only what's certain counts";
+        }
+        branches.States = new List<SimState> { Certain(before, branches.States) };
+    }
+
+    /// <summary>The branches don't agree on an enemy's damage math on you (a probe of its hits) or its stun: a roll changed its hits.</summary>
+    private static bool RollChangesItsHits(List<SimState> states, int enemyId)
+    {
+        int[]? agreed = null;
+        foreach (var state in states)
+        {
+            if (state.Enemy(enemyId) is not { } enemy) return true;
+            var probe = new[] { HitOnYou(state, enemyId, ProbeHit), HitOnYou(state, enemyId, ProbeHitTwo), enemy.Stunned ? 1 : 0, enemy.NextAfterStun?.GetHashCode() ?? 0 };
+            if (agreed == null) agreed = probe;
+            else if (!agreed.SequenceEqual(probe)) return true;
+        }
+        return false;
+    }
+
+    /// <summary>Two hits that tell an added term from a multiplied one apart in a probe of the damage math.</summary>
+    private static readonly IntentHit ProbeHit = new(Base: 10), ProbeHitTwo = new(Base: 17);
+
+    /// <summary>
+    /// What every branch shares (decision #308: the projection counts only what's certain): one state, its weight theirs together, each creature's
+    /// powers, relics and what they keep, and each enemy's stun, entry by entry as every branch has it, or as it was before (<paramref name="before"/>)
+    /// where they differ. What isn't followed is the first branch's. An unknown in any branch stays.
+    /// </summary>
+    private static SimState Certain(SimState before, List<SimState> states)
+    {
+        var result = states[0];
+        result.Weight = states.Sum(state => state.Weight);
+        result.Unmodelled ??= states.Select(state => state.Unmodelled).FirstOrDefault(why => why != null);
+        result.UnmodelledAtTheirTurnEnd ??= states.Select(state => state.UnmodelledAtTheirTurnEnd).FirstOrDefault(why => why != null);
+        foreach (var enemy in result.Enemies)
+        {
+            var others = states.Select(state => state.Enemy(enemy.Id)).ToList();
+            if (others.Any(other => other == null))
+            {
+                result.Unmodelled ??= "a roll decides which enemies are in the fight";
+                continue;
+            }
+            var was = before.Enemy(enemy.Id);
+            enemy.Powers = CertainSet(was?.Powers ?? PowerSet.Empty, others.Select(other => other!.Powers));
+            enemy.Fields = CertainSet(was?.Fields ?? NamedCounts.Empty, others.Select(other => other!.Fields));
+            if (others.Any(other => other!.Stunned != enemy.Stunned || other.NextAfterStun != enemy.NextAfterStun || other.StunnedMove != enemy.StunnedMove))
+                (enemy.Stunned, enemy.NextAfterStun, enemy.StunnedMove) = (was?.Stunned ?? false, was?.NextAfterStun, was?.StunnedMove);
+        }
+        foreach (var id in result.PlayerIds)
+        {
+            var was = before.Player(id);
+            var others = states.Select(state => state.Player(id)!).ToList();
+            var powers = CertainSet(was?.Powers ?? PowerSet.Empty, others.Select(other => other.Powers));
+            var relics = CertainSet(was?.Relics ?? RelicSet.Empty, others.Select(other => other.Relics));
+            var fields = CertainSet(was?.Fields ?? NamedCounts.Empty, others.Select(other => other.Fields));
+            var player = result.Player(id)!;
+            if (ReferenceEquals(powers, player.Powers) && ReferenceEquals(relics, player.Relics) && ReferenceEquals(fields, player.Fields)) continue;
+            var mutable = result.MutablePlayer(id);
+            (mutable.Powers, mutable.Relics, mutable.Fields) = (powers, relics, fields);
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// The entries every set has alike, in the order they first come; where they differ (in amount, data or being there at all), the entry as it
+    /// was before (<paramref name="was"/>), or none when it wasn't there. The first set itself when they're all alike.
+    /// </summary>
+    private static NamedSet<TName> CertainSet<TName>(NamedSet<TName> was, IEnumerable<NamedSet<TName>> sets) where TName : IEquatable<TName>
+    {
+        var all = sets.ToList();
+        var first = all[0];
+        if (all.All(set => ReferenceEquals(set, first) || set.Items.SequenceEqual(first.Items))) return first;
+        var result = NamedSet<TName>.Empty;
+        foreach (var name in all.SelectMany(set => set.Items.Select(entry => entry.Name)).Distinct())
+        {
+            var alike = all.All(set => set.Has(name) == first.Has(name) && set[name] == first[name] && set.DataOf(name) == first.DataOf(name));
+            var source = alike ? first : was;
+            if (source.Has(name)) result = result.With(name, source[name], source.DataOf(name));
+        }
+        return result;
+    }
+
+    /// <summary>
     /// The enemies' turn is over in a projected run: the block they have now stays on them through your turn (the game clears it as their next turn
     /// starts, which EnemyTurn does), so nothing of your turn's is put back (Run's TurnEndBlockBack is for the outcome); each move's projection is cleared.
     /// </summary>
@@ -133,23 +244,13 @@ public static partial class SimEngine
         foreach (var enemy in state.Enemies)
         {
             (enemy.TurnEndBlock, enemy.TurnEndBlockBroken) = (-1, false);
-            (enemy.ProjectedMove, enemy.MoveUnknown, enemy.LandedOnYou, enemy.LandedUnknown) = (null, null, null, false);
+            (enemy.ProjectedMove, enemy.MoveUnknown, enemy.MoveNotForecast, enemy.LandedOnYou, enemy.LandedUnknown) = (null, null, false, null, false);
         }
     }
 
-    /// <summary>Each option's hits on you as its intent reads when your turn starts, the same in every branch where its enemy lives; else unknown, with why.</summary>
-    private static ProjectedHits AtYourTurnStart(List<SimState> states, int enemyId, ProjectedMove move)
-    {
-        List<int>? agreed = null;
-        foreach (var branch in states)
-        {
-            if (branch.Enemy(enemyId) is not { Alive: true }) continue;
-            var hits = (move.Intent ?? Array.Empty<IntentHit>()).Select(hit => HitOnYou(branch, enemyId, hit)).ToList();
-            if (agreed == null) agreed = hits;
-            else if (!agreed.SequenceEqual(hits)) return new ProjectedHits(Lands: null, AtYourTurnStart: null) { Unknown = "a roll before it decides its hits" };
-        }
-        return agreed == null ? new ProjectedHits(Lands: null, AtYourTurnStart: null) { Unknown = "it dies before then" } : new ProjectedHits(Lands: null, agreed);
-    }
+    /// <summary>Each hit of a move on you as its intent reads on <paramref name="state"/> (what the game shows as your turn starts).</summary>
+    private static IReadOnlyList<int> HitsOnYou(SimState state, int enemyId, ProjectedMove move) =>
+        (move.Intent ?? Array.Empty<IntentHit>()).Select(hit => HitOnYou(state, enemyId, hit)).ToList();
 
     /// <summary>One hit of a move on you through the damage math now (a Move from the enemy: its Strength and Weak, your Vulnerable...), as IntentDamage.</summary>
     private static int HitOnYou(SimState state, int enemyId, IntentHit hit) =>
@@ -157,7 +258,7 @@ public static partial class SimEngine
 
     /// <summary>
     /// Each living enemy's move this projected turn: its one move, or a branch for each move of a random pick with its chance as the branch's share;
-    /// one with no move known is unknown from its move on (EnemyTurn: SimEnemy.MoveUnknown).
+    /// one with no move given makes none the projection counts (SimEnemy.MoveNotForecast: what it would do isn't certain).
     /// </summary>
     private static void GiveMoves(BranchSet branches, IReadOnlyList<ProjectedChoice> choices)
     {
@@ -168,7 +269,7 @@ public static partial class SimEngine
                 if (!enemy.Alive) continue;
                 var choice = choices.FirstOrDefault(each => each.EnemyId == enemy.Id);
                 if (choice is { Options.Count: 1 }) Give(enemy, choice.Options[0].Move);
-                else if (choice == null) enemy.MoveUnknown = $"{enemy.Name}'s move that turn isn't known (past its rules' first random pick)";
+                else if (choice == null) enemy.MoveNotForecast = true;
             }
         });
         foreach (var choice in choices)
@@ -193,6 +294,7 @@ public static partial class SimEngine
     {
         enemy.ProjectedMove = move.Id;
         enemy.MoveUnknown = move.Actions == null && !move.OnlyAttacks ? $"{enemy.Name}'s {move.Id} isn't read from its code" : null;
+        enemy.MoveNotForecast = false;
         enemy.Intent = move.Intent?.ToList();
         enemy.Hits = new List<int>(new int[move.Intent?.Count ?? 0]);
         enemy.TeammateHits = new();
@@ -216,8 +318,9 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// Each projected move's hits on you as they landed, where every branch that gave its enemy that move agrees (and it made all its hits); unknown
-    /// otherwise, with why.
+    /// Each projected move's hits on you as they landed, where every branch that gave its enemy that move agrees; where a roll before them (another
+    /// enemy's random pick) left them apart, only what's certain counts: its hits as its intent read when your turn started (ProjectedHits.Uncertain,
+    /// decision #308). Unknown where what came before them isn't followed, or it made no move.
     /// </summary>
     private static void Landed(List<SimState> states, IReadOnlyList<ProjectedChoice> choices, Dictionary<int, Dictionary<string, ProjectedHits>> row)
     {
@@ -229,21 +332,22 @@ public static partial class SimEngine
                 if (!moves.TryGetValue(move.Id, out var hits) || hits.Unknown != null) continue;
                 var count = move.Intent?.Count ?? 0;
                 int[]? agreed = null;
-                string? unknown = null;
+                string? unknown = null, uncertain = null;
                 var made = false;
                 foreach (var branch in states)
                 {
                     if (branch.Enemy(choice.EnemyId) is not { } enemy || enemy.ProjectedMove != move.Id) continue;
-                    var landed = enemy.LandedOnYou ?? Array.Empty<int>();
-                    if (landed.Length == 0 && !enemy.Alive && count > 0) continue; // dead before it attacked: no hit to show there
                     made = true;
                     if (enemy.LandedUnknown) { unknown = "what comes before its hits isn't followed"; break; }
-                    if (landed.Length != count) { unknown = "not every hit lands in every outcome"; break; }
+                    var landed = enemy.LandedOnYou ?? Array.Empty<int>();
                     if (agreed == null) agreed = landed;
-                    else if (!agreed.SequenceEqual(landed)) { unknown = "a roll decides its hits"; break; }
+                    else if (!agreed.SequenceEqual(landed)) uncertain = "a roll before its hits changes them: only what's certain counts";
                 }
-                if (!made && count > 0) unknown ??= "it dies before it attacks";
-                moves[move.Id] = unknown != null ? hits with { Unknown = unknown } : hits with { Lands = agreed ?? Array.Empty<int>() };
+                if (!made && count > 0) unknown ??= "it doesn't make its move";
+                if (agreed != null && agreed.Length != count) uncertain ??= "not every hit lands in every outcome: only what's certain counts";
+                moves[move.Id] = unknown != null ? hits with { Unknown = unknown }
+                    : uncertain != null ? hits with { Lands = hits.AtYourTurnStart, Uncertain = hits.Uncertain ?? uncertain }
+                    : hits with { Lands = agreed ?? Array.Empty<int>() };
             }
         }
     }

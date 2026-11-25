@@ -511,7 +511,7 @@ public static partial class SimEngine
         var hpBefore = enemy.Hp;
         if (toHp > 0)
         {
-            enemy.Hp -= toHp;
+            if (!state.Forecasting) enemy.Hp -= toHp; // a projection follows no one's HP (decision #308)
             enemy.UnblockedInstances++; // UnblockedDamage is 0 when Hardened Shell stops it
         }
         state.AttackDealt += absorbed + toHp;
@@ -544,7 +544,7 @@ public static partial class SimEngine
         var toHp = amount - absorbed;
         if (toHp > 0)
         {
-            enemy.Hp -= toHp;
+            if (!state.Forecasting) enemy.Hp -= toHp;
             enemy.UnblockedInstances++;
         }
         else toHp = 0;
@@ -896,7 +896,7 @@ public static partial class SimEngine
         var simPlayer = state.MutablePlayer(player);
         if (toPreBlock > 0)
         {
-            simPlayer.WuppyHp = Math.Max(0, simPlayer.WuppyHp - toPreBlock);
+            if (!state.Forecasting) simPlayer.WuppyHp = Math.Max(0, simPlayer.WuppyHp - toPreBlock);
             simPlayer.WuppyTaken += toPreBlock; // not their Incoming Damage: it never reaches them
         }
         if (unblockable)
@@ -1008,7 +1008,7 @@ public static partial class SimEngine
     {
         var simPlayer = state.MutablePlayer(player);
         simPlayer.Taken += lost;
-        if (lost <= 0 || simPlayer.Hp == int.MaxValue || simPlayer.Died) return;
+        if (lost <= 0 || simPlayer.Hp == int.MaxValue || simPlayer.Died || state.Forecasting) return;
         simPlayer.Hp -= lost;
         if (simPlayer.Hp > 0) return;
         AtZero(simPlayer, forced: false);
@@ -1021,6 +1021,7 @@ public static partial class SimEngine
     /// </summary>
     internal static void KillPlayer(SimState state, int player, bool forced)
     {
+        if (state.Forecasting) return; // a projection follows no one's death (decision #308)
         var simPlayer = state.MutablePlayer(player);
         if (simPlayer.Died) return;
         if (simPlayer.Hp != int.MaxValue) simPlayer.Taken += Math.Max(0, simPlayer.Hp);
@@ -1672,12 +1673,14 @@ public static partial class SimEngine
                 if (HitCount(enemy) > 0) state.SkippedEndOfTurn++;
                 continue;
             }
-            // A projected turn's move the forecast doesn't know (decision #304): what it does isn't followed, so the branch is unknown from here.
+            // A projected turn's move that isn't read from its code (decision #304): what it does isn't followed, so the branch is unknown from here.
             if (enemy.MoveUnknown is { } unknownMove && !enemy.Stunned)
             {
                 state.Unmodelled ??= unknownMove;
                 continue;
             }
+            // One the forecast doesn't give it (past its first random pick): it isn't certain, so it isn't counted (decision #308).
+            if (enemy.MoveNotForecast && !enemy.Stunned) continue;
             // A stunned enemy makes the stunned move: its code when its stun gave one (Slumbering Beetle's WakeUpMove taking its Plating), else nothing.
             if (enemy.Stunned)
             {
@@ -1839,15 +1842,15 @@ public static partial class SimEngine
         foreach (var id in state.PlayerIds)
         {
             var player = state.Player(id)!;
-            foreach (var entry in player.Powers.Items) if (SimModels.TheirTurnEndGap(entry.Name.Name, enemyOwner: false) is { } why) { state.Unmodelled = why; return; }
-            foreach (var entry in player.Relics.Items) if (SimModels.TheirTurnEndGap(entry.Name.Name, enemyOwner: false) is { } why) { state.Unmodelled = why; return; }
+            foreach (var entry in player.Powers.Items) if (SimModels.TheirTurnEndGap(entry.Name.Name, enemyOwner: false, state.Forecasting) is { } why) { state.Unmodelled = why; return; }
+            foreach (var entry in player.Relics.Items) if (SimModels.TheirTurnEndGap(entry.Name.Name, enemyOwner: false, state.Forecasting) is { } why) { state.Unmodelled = why; return; }
             foreach (var kind in PetKinds)
-                foreach (var entry in player.PetPowers(kind).Items) if (SimModels.TheirTurnEndGap(entry.Name.Name, enemyOwner: false) is { } why) { state.Unmodelled = why; return; }
+                foreach (var entry in player.PetPowers(kind).Items) if (SimModels.TheirTurnEndGap(entry.Name.Name, enemyOwner: false, state.Forecasting) is { } why) { state.Unmodelled = why; return; }
         }
         foreach (var enemy in state.Enemies)
         {
             if (!enemy.Alive) continue;
-            foreach (var entry in enemy.Powers.Items) if (SimModels.TheirTurnEndGap(entry.Name.Name, enemyOwner: true) is { } why) { state.Unmodelled = why; return; }
+            foreach (var entry in enemy.Powers.Items) if (SimModels.TheirTurnEndGap(entry.Name.Name, enemyOwner: true, state.Forecasting) is { } why) { state.Unmodelled = why; return; }
         }
     }
 

@@ -761,17 +761,19 @@ public static class SimModels
 
     /// <summary>
     /// Why the class, owned by an enemy (<paramref name="enemyOwner"/>) or a player, acts as the enemies' side's turn ends where the simulator doesn't
-    /// follow it (TurnEndGap, decision #303): the state after that turn's end is unknown. Null: modelled, or it never acts there.
+    /// follow it (TurnEndGap, decision #303): the state after that turn's end is unknown. Null: modelled, or it never acts there, or, in a
+    /// projection (<paramref name="forecasting"/>), what it does there changes nothing a projection follows (TurnEndGap.ForecastIgnores, decision #308).
     /// </summary>
-    public static string? TheirTurnEndGap(string name, bool enemyOwner) =>
-        Models.Value.TurnEndGaps.GetValueOrDefault(name) is { } gap && (enemyOwner ? gap.ActsForAnEnemy : gap.ActsForAPlayer) ? gap.Why : null;
+    public static string? TheirTurnEndGap(string name, bool enemyOwner, bool forecasting = false) =>
+        Models.Value.TurnEndGaps.GetValueOrDefault(name) is { } gap && (enemyOwner ? gap.ActsForAnEnemy : gap.ActsForAPlayer) && !(forecasting && gap.ForecastIgnores) ? gap.Why : null;
 
     /// <summary>
     /// Why the class, owned by an enemy (<paramref name="enemyOwner"/>) or a player, acts as the players' next turn starts where a projection doesn't
-    /// follow it (TurnStartGap, decision #306): the state after that turn's start is unknown. Null: modelled there, or it never acts there.
+    /// follow it (TurnStartGap, decision #306): the state after that turn's start is unknown. Null: modelled there, or it never acts there, or what it
+    /// does there changes nothing a projection follows (TurnStartGap.ForecastIgnores, decision #308: only a projection runs a turn's start).
     /// </summary>
     public static string? YourTurnStartGap(string name, bool enemyOwner) =>
-        Models.Value.TurnStartGaps.GetValueOrDefault(name) is { } gap && (enemyOwner ? gap.ActsForAnEnemy : gap.ActsForAPlayer) ? gap.Why : null;
+        Models.Value.TurnStartGaps.GetValueOrDefault(name) is { } gap && (enemyOwner ? gap.ActsForAnEnemy : gap.ActsForAPlayer) && !gap.ForecastIgnores ? gap.Why : null;
 
     public static SimModel? Get(string name) => ByName.GetValueOrDefault(name);
 
