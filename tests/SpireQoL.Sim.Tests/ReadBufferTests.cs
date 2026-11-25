@@ -32,10 +32,11 @@ public class ReadBufferTests
     [Fact]
     public void AReportWithTheRemovedMainFlagStillReads()
     {
-        // Main's Buffer flag went with its rule (each branch's code is read): a state written with it reads its other flags, by name or number.
-        var named = SimState.FromJson("""{"MainRules":"BufferStopsBrightestFlame, SplashIsUnpowered"}""");
+        // Main's Buffer and Juggling flags went with their rules (each branch's code is read): a state written with them reads its other flags, by
+        // name or number.
+        var named = SimState.FromJson("""{"MainRules":"BufferStopsBrightestFlame, JugglingCopiesBeforeThePlay, SplashIsUnpowered"}""");
         Assert.Equal(MainRule.SplashIsUnpowered, named.MainRules);
-        Assert.Equal(MainRule.JugglingCopiesBeforeThePlay, SimState.FromJson("""{"MainRules":5}""").MainRules);
+        Assert.Equal(MainRule.SplashIsUnpowered, SimState.FromJson("""{"MainRules":7}""").MainRules);
         Assert.Equal(MainRule.SplashIsUnpowered, SimState.FromJson(named.ToJson()).MainRules);
     }
 }

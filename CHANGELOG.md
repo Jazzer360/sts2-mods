@@ -47,6 +47,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Hard to Kill, Intangible and Slow are worked out from their own code (their caps on a damage, Slow's count of the cards played). What's shown is unchanged.
 - No Block, Dislike You and Honing are worked out from their own code (No Block stops the block you gain from cards; Dislike You on an enemy and your Honing raise an arrow's attack). What's shown is unchanged.
 - Music Box is worked out from its own code (the Ethereal copy of the first Attack you play each turn). What's shown is unchanged.
+- Serpent Form, Calamity and Juggling are worked out from their own code (on the game's main branch, Juggling's copies come as its code makes them there, as the third Attack is played). Calamity's random cards are Attacks to whatever reacts to a card made. Their tabs are unchanged.
 - Afflictions (Bound, Entangled, Galvanized, Hexed, Ringing, Smog, Tainted) are worked out from their own code: each is a fact of its card the powers' code tests, with nothing of its own to run; one a game update changes shows the plays of its cards as uncertain. What's shown is unchanged.
 - Perfect Fit (the card on top after a shuffle) and Swift (its draws, for the Return tags) are worked out from their own code. What's shown is unchanged.
 - An enemy's Vital Spark and Mummified Hand are worked out from their own code (the Tainted a Tainted card puts on whoever plays it; the card in your hand a Power makes free). What's shown is unchanged but for the fixes below.

@@ -14,8 +14,6 @@ public enum MainRule
     None = 0,
     /// <summary>Omnislice's splash is unpowered (Unpowered | Move) through every damage modifier, and Thorns answers it (beta: a powered hit, caps only).</summary>
     SplashIsUnpowered = 2,
-    /// <summary>Juggling copies the third Attack into your hand as it's played (beta: once it's played).</summary>
-    JugglingCopiesBeforeThePlay = 4,
     /// <summary>
     /// CreatureCmd.Damage tells Hook.BeforeDamageReceived (Thorns hits the dealer back) before it works out what the damage does, and each HP-loss
     /// change is told as it's made (beta, v0.114.0: the results are worked out first, CreatureCmd.GetDamageResults, then BeforeDamageReceived, then

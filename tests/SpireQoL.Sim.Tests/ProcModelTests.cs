@@ -243,10 +243,19 @@ public class ProcModelTests
     [Fact]
     public void JugglingCopiesTheThirdAttackOfTheTurn()
     {
-        var state = Power(State(), PowerId.Juggling, amount: 1, data: 2);
-        var after = One(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1)));
+        // Read from its code (decision #268): its data's attacksPlayedThisTurn counts the Attacks, the third kept and copied once it's played.
+        SimState Juggling(int attacks)
+        {
+            var state = Power(State(), PowerId.Juggling, amount: 1);
+            SimEngine.SetField(state, Who.You, PowerId.Juggling.Name + ".Data.attacksPlayedThisTurn", attacks);
+            return state;
+        }
+        var after = One(Juggling(attacks: 2), Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1)));
         Assert.True(after.Fired.Has("JugglingPower"));
-        Assert.False(One(Power(State(), PowerId.Juggling, amount: 1, data: 0), Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1))).Fired.Has("JugglingPower"));
+        Assert.Equal(1, after.You.HandCount - State().You.HandCount);
+        Assert.False(One(Juggling(attacks: 0), Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1))).Fired.Has("JugglingPower"));
+        // The fourth Attack isn't the third.
+        Assert.False(One(Juggling(attacks: 3), Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 1))).Fired.Has("JugglingPower"));
     }
 
     [Fact]

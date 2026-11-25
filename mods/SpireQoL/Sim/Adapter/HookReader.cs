@@ -632,7 +632,7 @@ public static class HookReader
             }
         // A pass of the HP-loss pipeline changes the HP a hit takes: it acts (the hand-written models' trigger: Tungsten Rod, The Boot). A power an
         // attack spends (its AfterAttack takes its own stacks: Gigantification's Decrement) acts on that play (decision #228).
-        return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep)
+        return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep)
             || programs.Any(program => program.Returns != null && program.Hook is HookName.ModifyHpLostBeforeOsty or HookName.ModifyHpLostBeforeOstyLate or HookName.ModifyHpLostAfterOsty or HookName.ModifyHpLostAfterOstyLate)
             || programs.Any(SpentByAnAttack)
             // A term that changed a damage, told so (Hook.AfterModifyingDamageAmount: Slow's, Hard to Kill's flash): it acts there (decision #229).
@@ -1036,6 +1036,8 @@ public static class HookReader
                     return new GapOf(ReaderCapability.OwnData, $"gap: changes its own data ({stored.Name}) where the reader reads no store");
                 if (instruction.IsCall && instruction.Member is { Kind: CodeMemberKind.Method, HasThis: true } call && usesData && call.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)
                     && !CollectionQueries.Contains(call.Name) && !stepsAt.Contains(instruction.Offset)
+                    // Going over a list (a foreach's enumerator: Calamity's made cards) changes nothing.
+                    && call.DeclaringType != "Enumerator"
                     && !(call.Name == "Remove" && call.ParameterCount == 2 && index + 1 < ops.Count && ops[index + 1].OpCode != System.Reflection.Emit.OpCodes.Pop))
                     return new GapOf(ReaderCapability.OwnData, $"gap: changes a collection ({call.FullName}) where the reader reads no step");
                 if (instruction.IsCall && !stepsAt.Contains(instruction.Offset) && ChangesAGameObject(instruction.Member)) return new GapOf(SetOn(instruction.Member!.DeclaringType, call: true), $"gap: changes a game object outside a command ({instruction.Member!.FullName})");
@@ -1132,10 +1134,17 @@ public static class HookReader
 
         /// <summary>A card its code keeps in a field of its own (MusicBox's CardBeingPlayed): what's bound to the play in progress (HookFact.BoundHeld).</summary>
         private bool IsKeptCard(ProgramValue value) => Unstored(value) is QueryValue { Of: NamedValue { Name: "this" }, Name: var member } && KeepsACard(member)
-            || Unstored(value) is NamedValue { Name: var named } && KeepsACard(named);
+            || Unstored(value) is NamedValue { Name: var named } && KeepsACard(named)
+            // A card field of its own data (Juggling's GetInternalData<Data>().cardToClone).
+            || Unstored(value) is QueryValue { Name: var dataField, Of: { } dataOf, Arguments.Count: 0 } && ProgramReader.IsOwnData(dataOf) && KeepsACard(ProgramReader.OwnDataPrefix + dataField);
 
-        /// <summary>A field or property of its own class (not a base class's: an enchantment's base.Card is its card) that holds a card.</summary>
-        private bool KeepsACard(string member) => (_type.GetProperty(member, Declared)?.PropertyType ?? _type.GetField(member, Declared)?.FieldType) is { Name: "CardModel" };
+        /// <summary>
+        /// A field or property of its own class (not a base class's: an enchantment's base.Card is its card), or a field of its own data ("Data.cardToClone"),
+        /// that holds a card.
+        /// </summary>
+        private bool KeepsACard(string member) => member.StartsWith(ProgramReader.OwnDataPrefix, StringComparison.Ordinal)
+            ? Procs.CardCode.NestedTypes(_type).Any(nested => nested.GetField(member[ProgramReader.OwnDataPrefix.Length..], Declared)?.FieldType.Name == "CardModel")
+            : (_type.GetProperty(member, Declared)?.PropertyType ?? _type.GetField(member, Declared)?.FieldType) is { Name: "CardModel" };
 
         /// <summary>The hooks given an attack (Hook.BeforeAttack, AfterAttack: its AttackCommand): its attacker, props and card are the hook's.</summary>
         private static readonly HashSet<string> AttackHooks = new(StringComparer.Ordinal) { "BeforeAttack", "AfterAttack" };
@@ -1482,6 +1491,10 @@ public static class HookReader
                     // v0.114.0): UpgradeRandomInHandStep, n its count. Which cards is a roll, never read.
                     if (loop.Items is { } rolled && UpgradesRandomHandCards(rolled, loop.Body) is { } upgradeCount)
                         return new HookStep[] { new UpgradeRandomInHandStep(Value(upgradeCount)) { When = Condition(step.Condition) } };
+                    // A loop making each of a few random cards of a type into its owner's hand (foreach over CardFactory.GetForCombat(owner, the
+                    // character's pool of that type, n, rng): Calamity's): MakeRandomInHandStep, n its count. Which cards is a roll, never read.
+                    if (loop.Items is { } made && RandomCardsMadeInHand(made, loop.Body) is { } madeRandom)
+                        return new HookStep[] { new MakeRandomInHandStep(Value(madeRandom.Count), madeRandom.Type) { When = Condition(step.Condition) } };
                     // A counter loop (for i < n): its body n times, n worked out as the loop starts (the card programs read it the same way:
                     // ProgramEvaluator.Rounds). Any other loop is a gap.
                     // Its bound compared as an int (i < n) or as a decimal ((decimal)i < DynamicVars.Cards.BaseValue: Centennial Puzzle's).
@@ -2114,7 +2127,9 @@ public static class HookReader
                 case NamedValue { Name: "creator" }:
                     return new HookConstant(1m);
                 // A roll over the hittable enemies found one: the simulator's random damage hits none when there's none to hit (ProcDamageRandom).
-                case StoredValue { Value: QueryValue { Name: "NextItem", Arguments: [QueryValue { Name: "HittableEnemies" }] } }:
+                case StoredValue { Value: QueryValue { Name: "NextItem", Arguments: [var rolledAmong] } } when IsHittableEnemies(rolledAmong):
+                    return new HookConstant(1m);
+                case QueryValue { Name: "NextItem", Arguments: [var rolledAmongThem] } when IsHittableEnemies(rolledAmongThem):
                     return new HookConstant(1m);
                 // A value the code kept in a local and tests (int count = ...; if (count != 0)): the value it kept.
                 case StoredValue storedTest:
@@ -2171,6 +2186,9 @@ public static class HookReader
                     return new HookConstant(1m);
                 // Its owner's or its own fight is there (base.Owner.Creature.CombatState != null): in a simulation, always.
                 case QueryValue { Name: "CombatState", Of: var stateOf } when stateOf is NamedValue { Name: "this" } || stateOf != null && IsOwner(stateOf):
+                    return new HookConstant(1m);
+                // The hittable enemies tested as there (a ?? on CombatState?.HittableEnemies: Serpent Form's): a list, in a fight always.
+                case QueryValue { Name: "HittableEnemies" }:
                     return new HookConstant(1m);
                 case QueryValue { Type: "Creature", Name: "IsEnemy", Of: QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } } }:
                     return new HookFactValue(HookFact.PowerOnEnemy);
@@ -3119,6 +3137,14 @@ public static class HookReader
         private bool IsHittableEnemies(ProgramValue value)
         {
             value = Unstored(value);
+            // A value of several ways (base.Owner.CombatState?.HittableEnemies ?? Array.Empty<Creature>(): Serpent Form's): the ways that can hold, each
+            // the hittable enemies, but for a fallback of no creatures (Array.Empty), reached only where the fight isn't there, never in a simulation.
+            if (value is WaysValue ways)
+            {
+                var holding = ways.Ways.Where(way => Simplified(Condition(way.When) ?? new HookConstant(1m)) is not HookConstant { Value: 0m })
+                    .Where(way => Unstored(way.Value) is not QueryValue { Type: "Array" or "Enumerable", Name: "Empty", Arguments.Count: 0 }).ToList();
+                return holding.Count > 0 && holding.All(way => IsHittableEnemies(way.Value));
+            }
             if (value is QueryValue { Name: "ToList", Arguments: [var listed] }) value = Unstored(listed);
             if (value is QueryValue { Type: "Enumerable", Name: "Where", Arguments: [var filtered, LambdaValue hittable] } && LambdaReads(hittable, "IsHittable")) value = Unstored(filtered);
             return value is QueryValue { Name: "HittableEnemies" }
@@ -3158,6 +3184,28 @@ public static class HookReader
                             && cards.Parts().Any(part => part is QueryValue { Name: "Owner" });
             var upgradable = filter.Body.Literals.Any(literal => literal.Holds && literal.Test.Parts().Any(part => part is QueryValue { Name: "IsUpgradable" }));
             return ofTheHand && upgradable ? count : null;
+        }
+
+        /// <summary>
+        /// The count and type of a loop that makes each of a few random cards into its owner's hand and does nothing else: its items a
+        /// CardFactory.GetForCombat(base.Owner.Player, Where(the owner's character's card pool, c => c.Type == T), count, rng), listed or not; its body
+        /// one CardPileCmd.AddGeneratedCardToCombat of the item into the owner's hand, for the owner. Null otherwise.
+        /// </summary>
+        private (ProgramValue Count, SimCardType Type)? RandomCardsMadeInHand(ProgramValue items, IReadOnlyList<ProgramStep> body)
+        {
+            var source = Unstored(items);
+            if (source is QueryValue { Name: "ToList", Arguments: [var listed] }) source = Unstored(listed);
+            if (source is not QueryValue { Type: "CardFactory", Name: "GetForCombat", Arguments: [var player, var options, var count, _] } || !IsOwner(Unstored(player))) return null;
+            if (body is not [CommandStep { Command.FullName: "CardPileCmd.AddGeneratedCardToCombat" } add] || add.Values.Count < 3 || Unstored(add.Values[0]) is not NamedValue { Name: "each" }) return null;
+            var types = add.Command.ParameterTypes;
+            var pileAt = IndexOf(types, "PileType");
+            var creatorAt = IndexOf(types, "Player");
+            if (pileAt < 0 || add.Values[pileAt] is not ConstantValue pile || EnumName(_type.Assembly, "PileType", pile.Value) != "Hand" || creatorAt < 0 || !IsOwner(add.Values[creatorAt])) return null;
+            if (Unstored(options) is not QueryValue { Type: "Enumerable", Name: "Where", Arguments: [var pool, LambdaValue ofType] }) return null;
+            if (!pool.Parts().Any(part => part is QueryValue { Name: "CardPool" }) || !pool.Parts().Any(IsOwner)) return null;
+            if (ofType.Body.Terms is not [[{ Holds: true, Test: CompareValue { Op: Comparison.Equal, Left: QueryValue { Name: "Type", Of: ParameterValue { Name: var tested } }, Right: ConstantValue type } }]]
+                || tested != ofType.Parameter) return null;
+            return EnumName(_type.Assembly, "CardType", type.Value) is { } typeName && Enum.TryParse<SimCardType>(typeName, out var simType) ? (count, simType) : null;
         }
 
         /// <summary>What a foreach of the code goes over: the fight's players (CombatState.Players), its hittable enemies; null for anything else.</summary>

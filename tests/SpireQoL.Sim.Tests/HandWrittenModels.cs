@@ -2123,3 +2123,39 @@ public sealed class SicEmPower : ProcModel
         if (hit.Dealer == Who.YourOsty && hit.Target == owner && hit.Total > 0 && Amount(state, owner) > 0) state.LogFired(Name, Amount(state, owner), owner);
     }
 }
+
+// ---- round twenty-one: what a model keeps in its own data, a card or a play (Sim/Models/ProcPowerModels.cs, BlockModels.cs), deleted 2026-11-25
+
+/// <summary>SerpentFormPower: damage (unpowered) to a random hittable enemy for each card its owner plays.</summary>
+public sealed class SerpentFormPower : BoundPower
+{
+    public override TabKind? Tab => TabKind.Damage;
+    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => amount > 0 ? DamageRandom(state, owner, amount) : One(state);
+}
+
+/// <summary>CalamityPower: each Attack its owner plays adds its amount of random Attacks to their hand (cards created).</summary>
+public sealed class CalamityPower : BoundPower
+{
+    protected override bool Binds(SimCardPlay play) => play.Card.Type == SimCardType.Attack;
+    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => MakeInHand(Fire(state, owner), card: null, amount, owner); // random Attacks: no class to tell
+}
+
+/// <summary>
+/// JugglingPower: the third Attack its owner plays each turn (its own count, Data) is copied into their hand, its amount of times
+/// (BeforeCardPlayed counts and binds the third; AfterCardPlayed adds the copies). (Main's way, MainRule.JugglingCopiesBeforeThePlay, went with
+/// it: each branch's own code is read now; the parity board plays beta's, as the installed game is.)
+/// </summary>
+public sealed class JugglingPower : ProcModel
+{
+    public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
+    {
+        if (!Mine(play, owner) || play.Card.Type != SimCardType.Attack) return One(state);
+        var count = Data(state, owner) + 1;
+        Set(state, owner, Amount(state, owner), count);
+        if (count != 3) return One(state);
+        Bind(state, owner, Amount(state, owner));
+        return One(state);
+    }
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
+        Mine(play, owner) && TakeBound(state, owner) is { } bound ? MakeInHand(Fire(state, owner), play.Card, bound, owner) : One(state);
+}

@@ -82,6 +82,11 @@ public sealed record SimCard(string Name, SimCardType Type)
     public bool OthersInHandCost { get; init; }
     /// <summary>Which card in hand it is (SimHandCard.Id), 0 = none.</summary>
     public int HandId { get; init; }
+    /// <summary>
+    /// Its class is a roll's (a card made at random of a type: Calamity's CardFactory.GetForCombat): only its type is known, so a test of its class
+    /// makes a simulation unknown.
+    /// </summary>
+    public bool RandomClass { get; init; }
 
     /// <summary>Its dynamic values a model reads (Heavy Shot's AimMultiplier...), by the game's var name.</summary>
     public IReadOnlyDictionary<string, decimal> Vars { get; init; } = new Dictionary<string, decimal>();

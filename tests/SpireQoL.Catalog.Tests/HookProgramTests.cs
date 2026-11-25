@@ -244,6 +244,21 @@ public class HookProgramTests
         Assert.True(changed.Count == 0 && expected.Length == lines.Count, "hook readings changed (regenerate with SPIREQOL_UPDATE_SNAPSHOT=1 and explain):\n" + string.Join("\n", changed));
     }
 
+    /// <summary>
+    /// Juggling copies the third Attack where each branch's code does (round twenty-one: read from its code, where a branch rule told main's way
+    /// before): beta's AfterCardPlayed, once the card is played (cardToClone == cardPlay.Card), main's BeforeCardPlayed, as it's played.
+    /// </summary>
+    [Theory]
+    [InlineData("beta", "AfterCardPlayed")]
+    [InlineData("main", "BeforeCardPlayed")]
+    public void JugglingCopiesWhereEachBranchsCodeDoes(string branch, string copiesIn)
+    {
+        if (!File.Exists(PathOf(branch))) return;
+        var spec = BranchCode.Of(PathOf(branch)).Specs().Single(read => read.Name == nameof(MegaCrit.Sts2.Core.Models.Powers.JugglingPower));
+        var copying = spec.Hooks.Where(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps().OfType<MakeCopyStep>().Any()).Select(program => program.Hook.ToString());
+        Assert.Equal(new[] { copiesIn }, copying);
+    }
+
     /// <summary>Every power and relic, its hooks read or a gap, written to SPIREQOL_DUMP when set: the scan's whole list, for review.</summary>
     [Fact]
     public void ListEveryReading()

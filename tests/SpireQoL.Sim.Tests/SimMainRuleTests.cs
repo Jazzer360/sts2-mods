@@ -39,14 +39,16 @@ public class SimMainRuleTests
     }
 
     [Fact]
-    public void JugglingCopiesAfterThePlayOnBetaAndBeforeItOnMain()
+    public void JugglingCopiesOnceTheThirdAttackIsPlayedOnBeta()
     {
         // The third Attack with a hand of 10 (the Attack among them) draws 1. Beta: the draw takes the one free slot, then the copy goes to
-        // the discard pile (full hand); main: the copy takes the slot first, and the draw finds the hand full.
+        // the discard pile (full hand). Main's JugglingPower copies it as it's played (BeforeCardPlayed), read from main's code in the game
+        // (catalog HookProgramTests.JugglingCopiesWhereEachBranchsCodeDoes), where its MainRule was before.
         SimState Hand(MainRule rules)
         {
             var state = Board(rules, new SimEnemy { Id = 1, Name = "E1", Hp = 50 });
-            state.You.Powers = state.You.Powers.With(PowerId.Juggling, amount: 1, data: 2);
+            state.You.Powers = state.You.Powers.With(PowerId.Juggling, amount: 1);
+            SimEngine.SetField(state, Who.You, PowerId.Juggling.Name + ".Data.attacksPlayedThisTurn", 2);
             state.You.HandCount = 10;
             state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), 5) } };
             return state;
@@ -58,6 +60,5 @@ public class SimMainRuleTests
             Body = { new CardEventAction(CardEvent.Drawn, Count: 1) },
         };
         Assert.Equal(1, Assert.Single(SimEngine.Run(Hand(MainRule.None), Third()).Branches).You.Drawn);
-        Assert.Equal(0, Assert.Single(SimEngine.Run(Hand(MainRule.JugglingCopiesBeforeThePlay), Third()).Branches).You.Drawn);
     }
 }

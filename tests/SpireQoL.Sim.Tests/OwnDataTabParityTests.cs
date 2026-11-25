@@ -43,8 +43,13 @@ public class OwnDataTabParityTests
             Assert.True(lines.Any(line => line.Contains($"proc:{name} ", StringComparison.Ordinal)), $"no scenario shows {name}'s tab");
     }
 
-    /// <summary>The recording as reviewed (nothing yet).</summary>
-    private static string Reviewed(string line) => line;
+    /// <summary>
+    /// The recording as reviewed: what the play check holds a play to (FiresBy) for a read model is its code's flashes (decision #199), and
+    /// neither SerpentFormPower.AfterCardPlayed (its Vfx's OnEffectTriggered shows it) nor CalamityPower.AfterCardPlayed calls Flash(): none
+    /// expected, where the hand-written models expected one wherever they acted. Their tabs are unchanged.
+    /// </summary>
+    private static string Reviewed(string line) => System.Text.RegularExpressions.Regex.Replace(line, @"(?<=\| checked [^|]*)(SerpentFormPower|CalamityPower) ([01]+)/([01]+)",
+        match => match.Groups[1].Value + " " + new string('0', match.Groups[2].Length) + "/" + new string('0', match.Groups[3].Length));
 
     /// <summary>One generated fight and play: its tabs, as text.</summary>
     private static string Tabs(int index)
@@ -116,7 +121,7 @@ public class OwnDataTabParityTests
 internal static class OwnDataFields
 {
     /// <summary>Juggling's Attacks this turn (its own data's attacksPlayedThisTurn).</summary>
-    public static void Juggling(SimState state, int attacks) { }
+    public static void Juggling(SimState state, int attacks) => SimEngine.SetField(state, Who.You, PowerId.Juggling.Name + ".Data.attacksPlayedThisTurn", attacks);
 
     /// <summary>Pael's Legion's cooldown (its Cooldown).</summary>
     public static void PaelsLegion(SimState state, int cooldown) { }

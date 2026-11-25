@@ -29,10 +29,6 @@ internal static class BranchRules
         "beta's Omnislice splashes a powered hit (ValueProp.Move) with only the damage caps; main's splash is unpowered (Unpowered | Move) through " +
         "every damage modifier, and main's ThornsPower answers it anyway (cardSource is Omnislice): told by that Thorns case, made in the same change");
 
-    public static readonly BranchRule JugglingCopiesAfterThePlay = new(nameof(JugglingCopiesAfterThePlay),
-        new CodeFact(typeof(JugglingPower), nameof(JugglingPower.AfterCardPlayed), Mentions: null), OnBeta: true, MainRule.JugglingCopiesBeforeThePlay,
-        "beta's JugglingPower copies the third Attack into your hand once it's played (AfterCardPlayed); main's as it's played (BeforeCardPlayed)");
-
     public static readonly BranchRule PlowStrengthNeedsPlow = new(nameof(PlowStrengthNeedsPlow),
         new CodeFact(typeof(CeremonialBeast), "PlowMove", nameof(PlowPower)), OnBeta: true, MainRule.None,
         "beta's CeremonialBeast.PlowMove gives its Strength only while it still has Plow (MoveBranches); main's always does");
@@ -45,7 +41,7 @@ internal static class BranchRules
 
     public static IReadOnlyList<BranchRule> All { get; } = new[]
     {
-        OmnisliceSplashIsPowered, JugglingCopiesAfterThePlay, PlowStrengthNeedsPlow, DamageWorkedOutFirst,
+        OmnisliceSplashIsPowered, PlowStrengthNeedsPlow, DamageWorkedOutFirst,
     };
 
     private static readonly ConcurrentDictionary<BranchRule, bool> Beta = new();

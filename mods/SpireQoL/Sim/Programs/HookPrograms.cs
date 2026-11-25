@@ -688,6 +688,13 @@ public sealed record FreeInHandStep : HookStep;
 /// </summary>
 /// <param name="OfEventCard">A copy of the card event's card instead (AfterCardExhausted's card.CreateClone(): Burning Sticks').</param>
 public sealed record MakeCopyStep(bool Ethereal, bool OfEventCard = false) : HookStep;
+
+/// <summary>
+/// CardPileCmd.AddGeneratedCardToCombat of each card of CardFactory.GetForCombat(player, its character's card pool's cards of one type, Count, rng)
+/// into its owner's hand (Calamity's random Attacks): Count cards made, one after another, each joining the hand and told to
+/// Hook.AfterCardGeneratedForCombat as a card of that type whose class is the roll's (SimCard.RandomClass: never read).
+/// </summary>
+public sealed record MakeRandomInHandStep(HookValue Count, SimCardType Type) : HookStep;
 /// <summary>
 /// CardPileCmd.AddGeneratedCardToCombat(CombatState.CreateCard&lt;Card&gt;(player), PileType.Draw, creator, CardPilePosition.Random): a card of a class
 /// its code names made into <paramref name="For"/>'s draw pile at a random spot (SimEngine.IntoDrawPile: a later draw can find it), then
@@ -929,6 +936,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             LetStep let => Inside(let.Value),
             MakeIntoDrawStep make => Inside(make.For),
             UpgradeRandomInHandStep upgrade => Inside(upgrade.Count),
+            MakeRandomInHandStep random => Inside(random.Count),
             _ => Array.Empty<HookValue>(),
         });
         return Hooks.SelectMany(program => Inside(program.Returns).Concat(program.Steps.SelectMany(OfStep)))

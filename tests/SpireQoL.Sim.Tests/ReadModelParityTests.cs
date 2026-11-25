@@ -157,6 +157,8 @@ public class ReadModelParityTests
         [PowerId.Slow.Name] = (1, new[] { (HookField.VarPrefix + "SlowAmount", 1) }),
         // OrbitPower: DisplayAmount is 4 - energySpent % 4.
         [PowerId.Orbit.Name] = (3, new[] { ("Data.energySpent", 1), ("Data.triggerCount", 0) }),
+        // JugglingPower: the Attacks its owner played this turn (its data's attacksPlayedThisTurn).
+        [PowerId.Juggling.Name] = (0, new[] { ("Data.attacksPlayedThisTurn", 0) }),
     };
 
     /// <summary>
@@ -827,7 +829,9 @@ public class ReadModelParityTests
         var text = new StringBuilder();
         foreach (var step in steps)
         {
-            states = states.SelectMany(branch => call(branch, step)).ToList();
+            // Identical branches merged after each step, as the engine merges them between its steps (decision #107): a random target's branches
+            // (Serpent Form's damage on a run of plays) stay as many as the outcomes they reach.
+            states = SimEngine.Then(states, branch => call(branch, step));
             text.Append(Branches(states)).Append(" // ");
         }
         return text.ToString();

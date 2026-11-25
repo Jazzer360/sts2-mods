@@ -1,59 +1,9 @@
 namespace SpireQoL.Sim.Models;
 
-// Your powers that act on your plays and card events (decompile v0.113.1). Amounts bound at BeforeCardPlayed act at
-// AfterCardPlayed, as the game keeps them (amountsForPlayedCards), so a power the play applies doesn't fire on that play.
+// Your powers that act on your plays and card events (decompile v0.113.1).
 
-/// <summary>A power that binds its owner's play at BeforeCardPlayed (when <see cref="Binds"/>) and acts on it at AfterCardPlayed.</summary>
-public abstract class BoundPower : ProcModel
-{
-    protected virtual bool Binds(SimCardPlay play) => true;
-    protected virtual int BoundAmount(SimState state, int owner) => Amount(state, owner);
-    protected abstract IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount);
-
-    public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (Mine(play, owner) && Binds(play)) Bind(state, owner, BoundAmount(state, owner));
-        return One(state);
-    }
-
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && TakeBound(state, owner) is { } bound ? Act(state, owner, play, bound) : One(state);
-}
-
-/// <summary>SerpentFormPower: damage (unpowered) to a random hittable enemy for each card its owner plays.</summary>
-public sealed class SerpentFormPower : BoundPower
-{
-    public override TabKind? Tab => TabKind.Damage;
-    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => amount > 0 ? DamageRandom(state, owner, amount) : One(state);
-}
-
-/// <summary>CalamityPower: each Attack its owner plays adds its amount of random Attacks to their hand (cards created).</summary>
-public sealed class CalamityPower : BoundPower
-{
-    protected override bool Binds(SimCardPlay play) => play.Card.Type == SimCardType.Attack;
-    protected override IEnumerable<SimState> Act(SimState state, int owner, SimCardPlay play, int amount) => MakeInHand(Fire(state, owner), card: null, amount, owner); // random Attacks: no class to tell
-}
-
-/// <summary>
-/// JugglingPower: the third Attack its owner plays each turn (its own count, Data) is copied into their hand, its amount of times
-/// (BeforeCardPlayed counts and binds the third; AfterCardPlayed adds the copies). Main (MainRule.JugglingCopiesBeforeThePlay) adds them as
-/// it counts, before the card resolves.
-/// </summary>
-public sealed class JugglingPower : ProcModel
-{
-    public override IEnumerable<SimState> BeforeCardPlayed(SimState state, int owner, SimCardPlay play)
-    {
-        if (!Mine(play, owner) || play.Card.Type != SimCardType.Attack) return One(state);
-        var count = Data(state, owner) + 1;
-        Set(state, owner, Amount(state, owner), count);
-        if (count != 3) return One(state);
-        if (state.MainRules.HasFlag(MainRule.JugglingCopiesBeforeThePlay)) return MakeInHand(Fire(state, owner), play.Card, Amount(state, owner), owner);
-        Bind(state, owner, Amount(state, owner));
-        return One(state);
-    }
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && TakeBound(state, owner) is { } bound ? MakeInHand(Fire(state, owner), play.Card, bound, owner) : One(state);
-}
+// Serpent Form, Calamity and Juggling are read from their code (ReadModel, round twenty-one): Juggling's copies on each branch as its code makes them
+// (beta's once the card is played, main's as it's played).
 
 // Black Hole is read from its code (ReadModel, decision #250).
 

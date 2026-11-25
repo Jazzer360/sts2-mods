@@ -443,7 +443,7 @@ public sealed class ReadModel : SimModel
         {
             // A power an attack spends (its AfterAttack takes its own stacks: Gigantification's Decrement) acts on that play too (decision #228).
             // A play that changes the state its damage term reads (Slow's SlowAmount++ on every card) acts on that play too (decision #229).
-            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or SummonStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeIntoDrawStep or StunStep or KillStep
+            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or SummonStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or KillStep
                 || hook == HookName.AfterAttack && step is DecrementPowerStep or RemovePowerStep
                 || hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed && step is StoreFieldStep { Field: var termField } && _termFields.Contains(termField);
             // An enchantment's effects are its card's (no tab of its own, nothing in the play log: its card's play shows them).
@@ -1271,7 +1271,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or SummonStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeIntoDrawStep or StunStep or KillStep
+            case FlashStep or GainStarsStep or HealStep or SummonStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or KillStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1563,6 +1563,29 @@ public sealed class ReadModel : SimModel
                     SimEngine.AddToHand(args.State, args.Owner, count: 1, ethereal);
                     var made = ethereal && !played.Card.Ethereal ? played.Card with { Ethereal = true } : played.Card;
                     return SimEngine.ProcCardEvent(args.State, CardEvent.Generated, count: 1, args.Owner, onEach: SimEngine.TallyFor(Name, Tab, CardEvent.Generated, args.Owner), card: made);
+                };
+            }
+            // Cards of a type made at random into its owner's hand (Calamity's): each joins the hand, then what reacts to a card made hears it, a card of
+            // that type whose class is the roll's (CardPileCmd.AddGeneratedCardToCombat for each, in turn).
+            case MakeRandomInHandStep random:
+            {
+                var count = Compile(random.Count);
+                var card = new SimCard("", random.Type) { RandomClass = true };
+                return args =>
+                {
+                    var made = (int)count(in args);
+                    if (made <= 0) return One(args.State);
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                    IEnumerable<SimState> states = new[] { args.State };
+                    var owner = args.Owner;
+                    var tally = SimEngine.TallyFor(Name, Tab, CardEvent.Generated, owner);
+                    for (var i = 0; i < made; i++)
+                        states = SimEngine.Then(states, branch =>
+                        {
+                            SimEngine.AddToHand(branch, owner, count: 1, ethereal: false);
+                            return SimEngine.ProcCardEvent(branch, CardEvent.Generated, count: 1, owner, onEach: tally, card: card);
+                        });
+                    return states;
                 };
             }
             case StunStep:
@@ -1925,8 +1948,13 @@ public sealed class ReadModel : SimModel
                 return (in HookArgs args) => args.Play?.Card.Affliction == affliction ? 1m : 0m;
             }
             case HookFact.CardIs:
-                // The card played (a play hook's: cardPlay.Card is Soul), or the event's card.
-                return (in HookArgs args) => (IsPlayHook(args.Hook) ? args.Play?.Card.Name : args.State.EventCard?.Name) == named ? 1m : 0m;
+                // The card played (a play hook's: cardPlay.Card is Soul), or the event's card; a card made at random has a class only its roll knows.
+                return (in HookArgs args) =>
+                {
+                    var card = IsPlayHook(args.Hook) ? args.Play?.Card : args.State.EventCard;
+                    if (card is { RandomClass: true }) args.State.Unmodelled ??= $"{Name} tests the class of a card made at random";
+                    return card?.Name == named ? 1m : 0m;
+                };
             case HookFact.SourceCardIs:
                 return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card)?.Name == named ? 1m : 0m;
             case HookFact.OwnersTurn: return (in HookArgs args) => Who.IsPlayer(args.Owner) != args.State.EnemyTurnNow ? 1m : 0m;
