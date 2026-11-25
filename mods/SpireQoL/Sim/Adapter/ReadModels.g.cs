@@ -95,6 +95,7 @@ public static partial class ReadModels
         PowerId.Hailstorm.Name,
         PowerId.Hang.Name,
         PowerId.HardToKill.Name,
+        PowerId.HardenedShell.Name,
         PowerId.Hatch.Name,
         PowerId.Haunt.Name,
         RelicId.HelicalDart.Name,

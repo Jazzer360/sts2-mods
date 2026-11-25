@@ -11077,6 +11077,167 @@
     "HelpsOwner": false
   },
   {
+    "Name": "HardenedShellPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageReceived",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.damageReceivedThisTurn",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "Data.damageReceivedThisTurn"
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "HitUnblocked"
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "HardenedShellPower.AfterDamageReceived:0007",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TargetIsOwner"
+                }
+              },
+              "Right": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "HardenedShellPower.AfterDamageReceived:0015",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HitFullyBlocked"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterModifyingHpLostBeforeOsty",
+        "Steps": [
+          {
+            "$kind": "FlashStep"
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.damageReceivedThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyHpLostBeforeOstyLate",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "HardenedShellPower.ModifyHpLostBeforeOstyLate:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "HardenedShellPower.ModifyHpLostBeforeOstyLate:0016",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HpLostSoFar"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "HardenedShellPower.ModifyHpLostBeforeOstyLate:0016",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HpLostSoFar"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Min",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "HpLostSoFar"
+                },
+                "Right": {
+                  "$kind": "HookMath",
+                  "Operation": "Subtract",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  },
+                  "Right": {
+                    "$kind": "HookField",
+                    "Field": "Data.damageReceivedThisTurn"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "HatchPower",
     "Kind": "Power",
     "Hooks": [

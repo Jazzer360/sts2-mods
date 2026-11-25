@@ -111,12 +111,12 @@ public class ShellTabParityTests
     }
 
     /// <summary>
-    /// Hardened Shell on an enemy at <paramref name="amount"/>, having taken <paramref name="taken"/> this turn: its Data what's left (the hand-written
-    /// model's) and its own data's damageReceivedThisTurn (its code's, as the adapter reads it from the game's object).
+    /// Hardened Shell on an enemy at <paramref name="amount"/>, having taken <paramref name="taken"/> this turn: its own data's damageReceivedThisTurn,
+    /// as the adapter reads it from the game's object (the recording was made with the hand-written model's Data, what's left: amount - taken).
     /// </summary>
     internal static void Shell(SimEnemy enemy, int amount, int taken)
     {
-        enemy.Powers = enemy.Powers.With(PowerId.HardenedShell, amount, data: amount - taken);
+        enemy.Powers = enemy.Powers.With(PowerId.HardenedShell, amount);
         enemy.Fields = enemy.Fields.With(PowerId.HardenedShell.Name + ".Data.damageReceivedThisTurn", taken);
     }
 

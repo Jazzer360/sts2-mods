@@ -3,9 +3,9 @@
 
 ## Powers and relics
 
-beta powers: 303 classes, 272 with hooks; read from code 142, hand-written 31, neither 101 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 303 classes, 272 with hooks; read from code 143, hand-written 30, neither 101 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 64, hand-written 9, neither 237 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 119, hand-written 28, neither 90 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 120, hand-written 27, neither 90 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 56, hand-written 9, neither 228 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 7, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 1
@@ -129,7 +129,6 @@ SimReaders.Read (powers): TagTeamPower: hand-written; reads the game's Applier: 
 SimReaders.Read (powers): ImpaledPower: hand-written; reads the game's Applier, the game's ArrowsIn, the game's HitCounter: needs more than its own fields and values
 SimReaders.Read (powers): ImpaledPower: hand-written; reads the game's Applier, the game's ArrowsIn: needs more than its own fields and values
 SimReaders.Read (powers): SkittishPower: hand-written; reads its own field HasGainedBlockThisTurn: a read model's own fields and values replace it
-SimReaders.Read (powers): HardenedShellPower: hand-written; reads the game's DisplayAmount: needs more than its own fields and values
 SimReaders.Read (powers): SurroundedPower: hand-written; reads its own field Facing: a read model's own fields and values replace it
 SimReaders.Read (powers): CoveredPower: hand-written; reads the game's Applier, the game's Owner.Powers: needs more than its own fields and values
 SimReaders.Read (powers): FeralPower: hand-written; reads its own field _internalData, its own field zeroCostAttacksPlayed, the game's DisplayAmount: needs more than its own fields and values
@@ -198,7 +197,6 @@ commands: AutoPlayFromDrawPile: 2 classes, 2 alone: LostLutePower*, DistilledCha
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
 hooks: block (AfterBlockBroken, ShouldClearBlock, AfterModifyingBlockAmount): 2 classes, 2 alone: BurrowedPower*, HandDrill*
 hooks: the power amount given: 2 classes, 2 alone: SneckoSkull*, UnsettlingLamp*
-read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 2 classes, 2 alone: HardenedShellPower*, MagicBombPower*
 the engine runs no read potion (its bodies read whole but for that): 2 classes, 2 alone: PotionOfBinding (potion)*, ShacklingPotion (potion)*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*
 card costs and keywords (cards' own hooks, Part B3): 3 classes, 1 alone: ChemicalX*, CorruptionPower, PhantomBladesPower
@@ -209,6 +207,7 @@ commands: GainStars: 1 classes, 1 alone: StarPotion (potion)*
 commands: OstyCmd.Summon: 1 classes, 1 alone: BoneBrew (potion)*
 hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*
 hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
+read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 1 classes, 1 alone: MagicBombPower*
 the fight's log (the history ledger, decision #191): 1 classes, 1 alone: UnmovablePower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*
 a command on another power (PowerCmd.Remove of another): 2 classes, 0 alone: AsleepPower, SlumberPower

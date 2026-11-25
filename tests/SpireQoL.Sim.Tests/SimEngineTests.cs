@@ -125,7 +125,7 @@ public class SimEngineTests
     public void HardenedShellCapsHpLostPerTurn()
     {
         var enemy = Enemy(id: 1, hp: 10, block: 0, hits: 5);
-        enemy.ShellLeft = enemy.ShellPerTurn = 4;
+        ShellTabParityTests.Shell(enemy, amount: 4, taken: 0);
         var strike = new SimPlay { HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 2, HitDamage = { [1] = 6 } };
         var outcome = SimEngine.Run(new SimState { Enemies = { enemy } }, strike);
         Assert.Equal(6, outcome.Worst.Enemy(id: 1)!.Hp);

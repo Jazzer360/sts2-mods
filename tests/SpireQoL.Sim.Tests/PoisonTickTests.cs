@@ -60,7 +60,7 @@ public class PoisonTickTests
     {
         // HardenedShellPower.BeforeSideTurnStart resets what it took this turn, before any AfterSideTurnStart: the tick meets a whole shell.
         var state = Poisoned(hp: 30, stacks: 4);
-        state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.HardenedShell, amount: 3, data: 0);
+        ShellTabParityTests.Shell(state.Enemies[0], amount: 3, taken: 3);
         Assert.Equal(27, EnemyTurnOver(state).Enemy(id: 1)!.Hp);
     }
 }

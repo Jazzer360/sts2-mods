@@ -78,22 +78,6 @@ public sealed class SimEnemy
     public int Block;
     /// <summary>Can be targeted and hit (alive and hittable when the simulation starts).</summary>
     public bool Hittable = true;
-    /// <summary>Hardened Shell (HardenedShellPower: amount per turn, Data what's left this turn): HP it can still lose this turn, and per turn (int.MaxValue = none).</summary>
-    [JsonIgnore] public int ShellLeft
-    {
-        get => Powers.Has(PowerId.HardenedShell) ? Powers.DataOf(PowerId.HardenedShell) : int.MaxValue;
-        set
-        {
-            if (!Powers.Has(PowerId.HardenedShell) && value == int.MaxValue) return; // no shell: nothing to keep
-            Powers = Powers.With(PowerId.HardenedShell, Powers.Has(PowerId.HardenedShell) ? Powers[PowerId.HardenedShell] : int.MaxValue, value);
-        }
-    }
-    [JsonIgnore] public int ShellPerTurn
-    {
-        get => Powers.Has(PowerId.HardenedShell) ? Powers[PowerId.HardenedShell] : int.MaxValue;
-        set => Powers = value == int.MaxValue ? Powers.Without(PowerId.HardenedShell)
-            : Powers.With(PowerId.HardenedShell, value, Powers.Has(PowerId.HardenedShell) ? Powers.DataOf(PowerId.HardenedShell) : value);
-    }
     /// <summary>Damage of its poison tick at the start of its turn.</summary>
     public int Poison;
     /// <summary>Keeps its block between turns (BarricadePower, or BurrowedPower.ShouldClearBlock).</summary>

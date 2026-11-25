@@ -247,8 +247,7 @@ public class SimReviewTests
     public void DamageStoppedByAnExhaustedHardenedShellDoesNotWakeIt()
     {
         var enemy = Enemy(id: 1, hp: 50, block: 0, hits: 0);
-        enemy.ShellLeft = 0;
-        enemy.ShellPerTurn = 10;
+        ShellTabParityTests.Shell(enemy, amount: 10, taken: 10);
         var hit = new SimPlay { HitTarget = SimPlay.Target.Single, TargetId = 1, Hits = 1, HitDamage = { [1] = 6 } };
         Assert.Equal(0, SimEngine.Run(new SimState { Enemies = { enemy } }, hit).UnblockedMax(enemyId: 1));
     }

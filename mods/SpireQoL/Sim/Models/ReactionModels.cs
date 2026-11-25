@@ -13,25 +13,7 @@ public sealed class SneckoSkull : SimModel
     }
 }
 
-/// <summary>HardenedShellPower: at most what's left this turn (Data) of HP lost (BeforeOstyLate); HP it loses uses that up (AfterDamageReceived).</summary>
-public sealed class HardenedShellPower : SimModel
-{
-    public override decimal ModifyHpLostBeforeOstyLate(SimState state, int owner, DamageCtx damage, decimal amount) =>
-        damage.Target != owner || amount == 0m ? amount : Math.Min(amount, Math.Max(0, SimEngine.PowersOf(state, owner).DataOf(ThisPower)));
-    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
-    {
-        if (hit.Target != owner || hit.Unblocked == 0) return;
-        var powers = SimEngine.PowersOf(state, owner);
-        SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], Math.Max(0, powers.DataOf(ThisPower) - hit.Unblocked)));
-    }
-    /// <summary>BeforeSideTurnStart: what it took this turn starts over as any side's turn starts (no test of the side), before any AfterSideTurnStart.</summary>
-    public override IEnumerable<SimState> BeforeSideTurnStart(SimState state, int owner)
-    {
-        var powers = SimEngine.PowersOf(state, owner);
-        if (powers.Has(ThisPower)) SimEngine.SetPowers(state, owner, powers.With(ThisPower, powers[ThisPower], powers[ThisPower]));
-        return One(state);
-    }
-}
+// Hardened Shell is read from its code (ReadModel, decision #278).
 
 /// <summary>BurrowedPower.AfterBlockBroken: breaking its owner's block stuns it, and the power goes (with its block-keeping).</summary>
 public sealed class BurrowedPower : SimModel

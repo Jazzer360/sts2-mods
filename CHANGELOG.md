@@ -31,6 +31,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Conqueror is worked out from its own code: its tag on Sovereign Blade shows where the Blade hits an enemy with Conqueror, with the aim marker when another target has none (it was on every Sovereign Blade played).
 - Black Hole is worked out from its own code (its damage after a card that spent stars, and on each stars gain). Its tab is unchanged.
 - Compost is worked out from its own code (its energy for each living player on its side when an enemy dies). What's shown is unchanged.
+- Hardened Shell is worked out from its own code (at most its amount of HP lost each side's turn, less what it already took this turn, as it counts it). What's shown is unchanged.
 - An enemy's Infested, Stock and Steam Eruption are worked out from their own code (the creatures each death brings in, the Waterfall Giant's return). Their tabs are unchanged but for the fix below.
 - An enemy's Shriek, Flutter and Ravenous are worked out from their own code (the stun each gives its owner, Flutter's halved damage, Ravenous' Strength). Their tabs are unchanged.
 - Burning Sticks is worked out from its own code (the copy of the first Skill you exhaust each combat). Its tab is unchanged.

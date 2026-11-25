@@ -1648,8 +1648,8 @@ public static class HookReader
                 case StoreStep madeStore when madeStore.Field.StartsWith(ProgramReader.MadeMonsterPrefix, StringComparison.Ordinal):
                     if (_hook != "AfterDeath" || !AddsMadeMonster(madeStore.Field)) throw new Gap(ReaderCapability.MonsterStateSet, $"gap: sets {madeStore.Field[ProgramReader.MadeMonsterPrefix.Length..]} on a monster it doesn't add as it dies");
                     return Array.Empty<HookStep>();
-                // A property its owner's monster's method sets on its own creature (Steam Eruption's base.Creature.HpDisplay): one that only shows (ShownOnly)
-                // is no step; any other is a gap.
+                // A property its owner's monster's method sets on its own creature (Steam Eruption's base.Creature.HpDisplay), or a power on its owner
+                // (Hardened Shell's base.Owner.HpDisplay): one that only shows (ShownOnly) is no step; any other is a gap.
                 case StoreStep creatureStore when creatureStore.Field.StartsWith(ProgramReader.OwnCreaturePrefix, StringComparison.Ordinal):
                     if (!ShownOnly.Contains(nameof(MegaCrit.Sts2.Core.Entities.Creatures.Creature) + ".set_" + creatureStore.Field[ProgramReader.OwnCreaturePrefix.Length..]))
                         throw new Gap(ReaderCapability.OtherModelValueSet, $"gap: sets its owner's {creatureStore.Field[ProgramReader.OwnCreaturePrefix.Length..]}");

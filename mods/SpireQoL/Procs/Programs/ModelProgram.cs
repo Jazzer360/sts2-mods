@@ -748,6 +748,14 @@ public static class ProgramReader
                     into.Add(new StoreStep(instruction.Offset, OwnCreaturePrefix + member.Name[4..], flow.ArgumentValues(i, member)[0]) { Condition = condition });
                     continue;
                 }
+                // A property a power sets on its owner (Hardened Shell's base.Owner.HpDisplay = HpDisplay.InfiniteWithNumbers): the same store, "Creature.HpDisplay",
+                // which the hook reader translates or names as a gap.
+                if (IsPowerOrRelic && member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1, DeclaringType: "Creature" } && member.Name.StartsWith("set_", StringComparison.Ordinal)
+                    && flow.ReceiverValue(i, arguments: 1) is QueryValue { Name: "Owner", Of: NamedValue { Name: "this" } })
+                {
+                    into.Add(new StoreStep(instruction.Offset, OwnCreaturePrefix + member.Name[4..], flow.ArgumentValues(i, member)[0]) { Condition = condition });
+                    continue;
+                }
                 // A change to a collection the code makes itself (List<Creature> wrigglers = new(): Infested's, its Wrigglers kept to show them once its death's
                 // animation ends), whose result isn't used: a step on it, "Local.wrigglers", which the hook reader translates or names as a gap.
                 if (IsPowerOrRelic && member is { Kind: CodeMemberKind.Method, HasThis: true } && member.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)

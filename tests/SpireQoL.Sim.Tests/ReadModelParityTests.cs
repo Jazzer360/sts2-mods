@@ -171,6 +171,9 @@ public class ReadModelParityTests
         [PowerId.Juggling.Name] = (0, new[] { ("Data.attacksPlayedThisTurn", 0) }),
         // InterceptPower: the creatures it covers (its data's coveredCreatures.Count), which the hand-written model kept as its amount (the board's 3).
         [PowerId.Intercept.Name] = (0, new[] { ("Data.coveredCreatures.Count", 3) }),
+        // HardenedShellPower: the HP it can still lose this turn, which the hand-written model kept as its Data (the adapter's DisplayAmount: its
+        // amount less its data's damageReceivedThisTurn): 2 of the board's 3 left, 1 taken.
+        [PowerId.HardenedShell.Name] = (2, new[] { ("Data.damageReceivedThisTurn", 1) }),
     };
 
     /// <summary>
