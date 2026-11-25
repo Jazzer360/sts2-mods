@@ -26,7 +26,8 @@ namespace SpireQoL.Diagnostics;
 ///  - its HP when your end of turn was over, against the branches' range;
 ///  - damage instances that got through its block during your end of turn (what Slumber and Asleep
 ///    count), against the branches' range;
-///  - Imbalanced: whether its first hit on you was fully blocked, when every branch agreed.
+///  - Imbalanced: whether it set off its stun (its code's test: any hit it dealt that a block took whole, any player's), when every branch
+///    agreed (its Flash() in the simulation, decision #273).
 /// Only what no branch allows is reported, so a random target never causes a report.
 /// A one-line summary per combat gives the match rate. Read-only: it only reads the history.
 /// </summary>
@@ -561,7 +562,6 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             var hitAfterKill = killAt >= 0 && window.Skip(killAt + 1).Take(moveAt > killAt ? moveAt - killAt - 1 : int.MaxValue)
                 .Any(entry => entry is DamageReceivedEntry damage && damage.Dealer == creature);
             var diedBeforeActing = killAt >= 0 && (moveAt < 0 || killAt < moveAt) && !hitAfterKill;
-            var firstHit = window.OfType<DamageReceivedEntry>().FirstOrDefault(damage => damage.Result.Receiver == me.Creature && damage.Dealer == creature);
             string Range(int low, int high) => low == high ? $"{low}" : $"{low}-{high}";
             parts.Add($"{name} HP {start.Hp}→{hpAtTurnEnd} (pred {Range(outcome.HpAtTurnEndMin(id), outcome.HpAtTurnEndMax(id))}), through {through} (pred {Range(outcome.UnblockedAtTurnEndMin(id), outcome.UnblockedAtTurnEndMax(id))}), " +
                       $"died before acting {(diedBeforeActing ? "yes" : "no")} (pred {(outcome.DeadInAll(id) ? "always" : outcome.DeadInAny(id) ? "sometimes" : "never")})");
@@ -581,13 +581,15 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             if (through < ulo || through > uhi)
                 result.Add(($"hits through block: {name} predicted {(ulo == uhi ? $"{ulo}" : $"{ulo}-{uhi}")}, actual {through}", monster));
 
-            if (start.Imbalanced && firstHit != null)
+            // Imbalanced's stun: ImbalancedPower.AfterDamageGiven's `dealer == base.Owner && result.WasFullyBlocked`, told of every result of every
+            // damage it deals (CreatureCmd.Damage: each player's, a redirect's), each one the fight's log keeps (DamageReceivedEntry).
+            if (start.Powers.Has(PowerId.Imbalanced))
             {
-                var blocked = firstHit.Result.WasFullyBlocked;
-                if (outcome.FirstHitBlockedInAll(id) && !blocked)
-                    result.Add(($"Imbalanced: {name}'s first hit predicted fully blocked, but it wasn't", monster));
-                if (!outcome.FirstHitBlockedInAny(id) && blocked)
-                    result.Add(($"Imbalanced: {name}'s first hit predicted not fully blocked, but it was", monster));
+                var setOff = window.OfType<DamageReceivedEntry>().Any(damage => damage.Dealer == creature && damage.Result.WasFullyBlocked);
+                if (outcome.FlashedInAll(PowerId.Imbalanced.Name, id) && !setOff)
+                    result.Add(($"Imbalanced: {name} predicted to set off its stun (a hit of its fully blocked), but no hit of its was", monster));
+                if (!outcome.FlashedInAny(PowerId.Imbalanced.Name, id) && setOff)
+                    result.Add(($"Imbalanced: {name} predicted not to set off its stun, but a hit of its was fully blocked", monster));
             }
         }
         summary = string.Join("; ", parts);
@@ -606,7 +608,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             lines.Add($"{enemy.Name}: HP {enemy.Hp}, block {enemy.Block}, poison {enemy.Poison}, hits [{string.Join(", ", enemy.Hits)}]" +
                       $" → HP at turn end {outcome.HpAtTurnEndMin(id)}-{outcome.HpAtTurnEndMax(id)}, hits through block {outcome.UnblockedAtTurnEndMin(id)}-{outcome.UnblockedAtTurnEndMax(id)}, " +
                       $"dead before acting {(outcome.DeadInAll(id) ? "always" : outcome.DeadInAny(id) ? "sometimes" : "never")}" +
-                      $"{(enemy.Imbalanced ? $", first hit fully blocked {(outcome.FirstHitBlockedInAll(id) ? "always" : outcome.FirstHitBlockedInAny(id) ? "sometimes" : "never")}" : "")}");
+                      $"{(enemy.Powers.Has(PowerId.Imbalanced) ? $", Imbalanced set off {(outcome.FlashedInAll(PowerId.Imbalanced.Name, id) ? "always" : outcome.FlashedInAny(PowerId.Imbalanced.Name, id) ? "sometimes" : "never")}" : "")}");
         }
         var player = forecast.State.You;
         lines.Add($"you: block {player.Block}, orbs [{string.Join(", ", player.Orbs.Select(orb => $"{orb.Kind} {orb.Passive}/{orb.Evoke}"))}] (slots {player.OrbCapacity}), Juggernaut {player.Juggernaut}, Plating {player.Plating}, " +

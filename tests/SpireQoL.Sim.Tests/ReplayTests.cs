@@ -65,8 +65,8 @@ public class ReplayTests
     public void ReportedStateRoundTripsThroughJson()
     {
         // What a report carries (SimState.ToJson) must load back into the same simulation.
-        var state = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "A", Hp = 12, Block = 3, Hits = new() { 5, 5 }, Imbalanced = true } } };
-        state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.HardToKill, amount: 4);
+        var state = new SimState { Enemies = { new SimEnemy { Id = 0, Name = "A", Hp = 12, Block = 3, Hits = new() { 5, 5 } } } };
+        state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.HardToKill, amount: 4).With(PowerId.Imbalanced, amount: 1);
         state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Glass, Passive = 5, Evoke = 10, Fields = NamedCounts.Empty.With("_passiveVal", amount: 3) } };
         state.You.Focus = 2;
         state.You.Relics = state.You.Relics.With(RelicId.GoldPlatedCables, amount: 1);
@@ -82,7 +82,7 @@ public class ReplayTests
         Assert.Equal(outcome.TakenMax, simOutcome.TakenMax);
         Assert.Equal(outcome.HpAtTurnEndMax(enemyId: 0), simOutcome.HpAtTurnEndMax(enemyId: 0));
         Assert.Equal(outcome.UnblockedMax(enemyId: 0), simOutcome.UnblockedMax(enemyId: 0));
-        Assert.Equal(outcome.FirstHitBlockedInAll(enemyId: 0), simOutcome.FirstHitBlockedInAll(enemyId: 0));
+        Assert.Equal(outcome.FlashedInAll(PowerId.Imbalanced.Name, owner: 0), simOutcome.FlashedInAll(PowerId.Imbalanced.Name, owner: 0));
         Assert.Equal(state.ToJson(), back.ToJson());
     }
 }

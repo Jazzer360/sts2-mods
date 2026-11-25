@@ -97,15 +97,15 @@ public class SimEngineTests
     }
 
     [Fact]
-    public void ImbalancedFullBlockOnlyWhenTheCardsBlockCoversTheHit()
+    public void ImbalancedStunsOnlyWhenTheCardsBlockCoversTheHit()
     {
         var enemy = Enemy(id: 1, hp: 40, block: 0, hits: 8);
-        enemy.Imbalanced = true;
+        enemy.Powers = enemy.Powers.With(PowerId.Imbalanced, amount: 1);
         var state = new SimState { Enemies = { enemy } };
         state.You.Block = 5;
-        Assert.False(SimEngine.Run(state).FirstHitBlockedInAll(enemyId: 1));
+        Assert.False(SimEngine.Run(state).StunnedInAll(enemyId: 1));
         var defend = new SimPlay { BlockAmount = 5, BlockGains = 1 };
-        Assert.True(SimEngine.Run(state, defend).FirstHitBlockedInAll(enemyId: 1));
+        Assert.True(SimEngine.Run(state, defend).StunnedInAll(enemyId: 1));
     }
 
     [Fact]

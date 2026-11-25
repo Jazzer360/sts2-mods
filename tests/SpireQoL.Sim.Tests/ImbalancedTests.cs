@@ -16,7 +16,7 @@ public class ImbalancedTests
         state.You.Hp = 50;
         state.You.MaxHp = 70;
         state.You.Block = yourBlock;
-        var enemy = new SimEnemy { Id = 0, Name = "Bowlbug", Hp = 40, Hits = hits.ToList(), IntendsToAttack = true, Imbalanced = true };
+        var enemy = new SimEnemy { Id = 0, Name = "Bowlbug", Hp = 40, Hits = hits.ToList(), IntendsToAttack = true };
         enemy.Powers = enemy.Powers.With(PowerId.Imbalanced, amount: 1);
         state.Enemies.Add(enemy);
         return state;
@@ -72,6 +72,26 @@ public class ImbalancedTests
         var state = Fight(yourBlock: 10, hits: 6);
         state.Enemies[0].Monster = "BowlbugRock";
         Assert.False(SimEngine.Run(state).StunnedInAll(enemyId: 0));
+    }
+
+    /// <summary>
+    /// What the forecast audit holds to the game's hits: its code's test (any hit its owner deals that a block takes whole, every player's), as its
+    /// Flash() in every outcome or in none, where the hand-written rule's check was your first hit alone.
+    /// </summary>
+    [Fact]
+    public void ItsCodesTestIsWhatTheForecastAuditHoldsToTheGame()
+    {
+        var imbalanced = PowerId.Imbalanced.Name;
+        // Your hit gets HP through, your teammate's block takes theirs whole: set off, though your first hit wasn't fully blocked.
+        var teammate = Fight(yourBlock: 0, hits: 6);
+        teammate.Teammates.Add(new SimPlayer { Hp = 40, MaxHp = 60, Block = 10 });
+        Assert.True(SimEngine.Run(teammate).FlashedInAll(imbalanced, owner: 0));
+        // Every hit gets HP through: set off in no outcome.
+        Assert.False(SimEngine.Run(Fight(yourBlock: 5, hits: 6)).FlashedInAny(imbalanced, owner: 0));
+        // On Bowlbug Rock too, where it sets its monster's state and stuns nothing itself.
+        var bowlbug = Fight(yourBlock: 10, hits: 6);
+        bowlbug.Enemies[0].Monster = "BowlbugRock";
+        Assert.True(SimEngine.Run(bowlbug).FlashedInAll(imbalanced, owner: 0));
     }
 
     [Fact]

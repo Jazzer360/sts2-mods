@@ -56,7 +56,7 @@ public class SinglePlayerGoldenTests
             if (random.Next(6) == 0) enemy.Thorns = random.Next(1, 4);
             if (random.Next(6) == 0) enemy.Barricade = true;
             if (random.Next(8) == 0) enemy.CurlUp = random.Next(3, 10);
-            if (random.Next(8) == 0) enemy.Imbalanced = true;
+            if (random.Next(8) == 0) enemy.Powers = enemy.Powers.With(PowerId.Imbalanced, amount: 1);
             if (random.Next(10) == 0) enemy.Powers = enemy.Powers.With(PowerId.HardToKill, amount: 1);
             if (random.Next(5) == 0) enemy.AddPoison(random.Next(1, 8));
             state.Enemies.Add(enemy);
@@ -120,7 +120,7 @@ public class SinglePlayerGoldenTests
         var branches = outcome.Branches.Select(branch =>
         {
             var enemies = string.Join(";", branch.Enemies.OrderBy(enemy => enemy.Id).Select(enemy =>
-                $"{enemy.Id}:{enemy.Hp},{enemy.Block},{enemy.Alive},{enemy.DiedBeforeActing},{enemy.Stunned},{enemy.Poison},{enemy.FirstHitFullyBlocked}"));
+                $"{enemy.Id}:{enemy.Hp},{enemy.Block},{enemy.Alive},{enemy.DiedBeforeActing},{enemy.Stunned},{enemy.Poison},{branch.Flashed.Has(SimKeys.Logged(PowerId.Imbalanced.Name, enemy.Id))}"));
             return $"{branch.Taken},{branch.OstyTaken},{branch.DamageThrough},{branch.BlockAtEnemyTurn},{branch.CancelledHits},{branch.You.Block},{branch.BlockDemand},{branch.Weight.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture)}|{enemies}";
         }).OrderBy(line => line, StringComparer.Ordinal);
         text.Append(string.Join("#", branches));

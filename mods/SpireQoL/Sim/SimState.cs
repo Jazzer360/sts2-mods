@@ -129,13 +129,10 @@ public sealed class SimEnemy
     /// target); missing: the same as yours.
     /// </summary>
     public List<List<int>> TeammateHits = new();
-    public bool Imbalanced;
 
     // ---- per-branch results
     /// <summary>Damage instances that got through its block during your turn (incl. end of turn).</summary>
     public int UnblockedInstances;
-    /// <summary>Its first hit on you was fully blocked (Imbalanced).</summary>
-    public bool FirstHitFullyBlocked;
     /// <summary>Dead before it could act (your turn, your end of turn, or its poison tick).</summary>
     public bool DiedBeforeActing;
 
@@ -252,7 +249,7 @@ public sealed class SimEnemy
     /// <summary>For branch keys (SimState.Key): every number that can differ between branches of one run.</summary>
     internal void Hash(ref BranchKey key)
     {
-        key.Add(Id); key.Add(Hp); key.Add(Block); key.Add(UnblockedInstances); key.Add(FirstHitFullyBlocked ? 1 : 0); key.Add(Poison); key.Add(DiedBeforeActing ? 1 : 0);
+        key.Add(Id); key.Add(Hp); key.Add(Block); key.Add(UnblockedInstances); key.Add(Poison); key.Add(DiedBeforeActing ? 1 : 0);
         key.Add(Stunned ? 1 : 0); key.Add(IntendsToAttack ? 1 : 0); key.Add(BlockBroken ? 1 : 0); key.Add(KilledByItsPower ? 1 : 0);
         key.Add(MoveBlock);
         Powers.Hash(ref key); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...

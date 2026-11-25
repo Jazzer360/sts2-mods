@@ -81,7 +81,6 @@ public class MonsterStateTabParityTests
             var amount = power == PowerId.Plow ? random.Next(1, 30) : power == PowerId.Stock ? random.Next(0, 3) : power == PowerId.CurlUp ? random.Next(3, 9) : random.Next(1, 4);
             if (power == PowerId.Imbalanced || power == PowerId.Infested) amount = 1;
             if (amount > 0 || power != PowerId.Stock) enemy.Powers = enemy.Powers.With(power, amount);
-            if (power == PowerId.Imbalanced) enemy.Imbalanced = true;
             // A second power now and then: two of the group on one enemy.
             if (random.Next(5) == 0 && Group[random.Next(Group.Length)] is var second && second != power && second != PowerId.Stock && second != PowerId.Imbalanced)
                 enemy.Powers = enemy.Powers.With(second, second == PowerId.Plow ? random.Next(1, 30) : second == PowerId.CurlUp ? random.Next(3, 9) : 1);

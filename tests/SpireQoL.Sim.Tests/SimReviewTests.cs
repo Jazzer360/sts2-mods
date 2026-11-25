@@ -50,18 +50,20 @@ public class SimReviewTests
     }
 
     [Fact]
-    public void FullyBlockedFirstHitInSomeBranchesOnly()
+    public void ImbalancedStunnedInSomeBranchesOnly()
     {
         // Juggernaut from Plating hits one of two enemies at random; if it kills the first attacker,
         // the second enemy's hit is the first to land on your block.
         var imbalanced = Enemy(id: 2, hp: 30, block: 0, hits: 6);
-        imbalanced.Imbalanced = true;
+        imbalanced.Powers = imbalanced.Powers.With(PowerId.Imbalanced, amount: 1);
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 3, block: 0, hits: 4), imbalanced } };
         state.You.Plating = 6;
         state.You.Juggernaut = 3;
         var outcome = SimEngine.Run(state);
-        Assert.True(outcome.FirstHitBlockedInAny(enemyId: 2));  // the 3 HP enemy died: 6 block covers the 6 hit
-        Assert.False(outcome.FirstHitBlockedInAll(enemyId: 2)); // it survived: its 4 hit used block first
+        Assert.True(outcome.FlashedInAny(PowerId.Imbalanced.Name, owner: 2));  // the 3 HP enemy died: 6 block covers the 6 hit
+        Assert.False(outcome.FlashedInAll(PowerId.Imbalanced.Name, owner: 2)); // it survived: its 4 hit used block first
+        Assert.Contains(outcome.Branches, branch => branch.Enemy(2)!.Stunned);
+        Assert.Contains(outcome.Branches, branch => !branch.Enemy(2)!.Stunned);
     }
 
     /// <summary>Beating Remnant on you: its MaxHpLoss as the adapter reads it, and the HP its own count says you lost this turn.</summary>
@@ -234,11 +236,11 @@ public class SimReviewTests
     {
         // WasFullyBlocked = (blocked > 0 || block > 0) && no HP lost after the AfterOsty modifiers.
         var enemy = Enemy(id: 1, hp: 40, block: 0, hits: 8);
-        enemy.Imbalanced = true;
+        enemy.Powers = enemy.Powers.With(PowerId.Imbalanced, amount: 1);
         var state = new SimState { Enemies = { enemy } };
         state.You.Block = 3;
         state.You.Buffer = 1;
-        Assert.True(SimEngine.Run(state).FirstHitBlockedInAll(enemyId: 1));
+        Assert.True(SimEngine.Run(state).FlashedInAll(PowerId.Imbalanced.Name, owner: 1));
     }
 
     [Fact]

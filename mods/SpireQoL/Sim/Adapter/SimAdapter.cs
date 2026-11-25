@@ -125,7 +125,6 @@ public static partial class SimAdapter
                 Block = creature.Block,
                 Hittable = creature.IsAlive && creature.IsHittable,
                 Stunned = creature.IsStunned,
-                Imbalanced = creature.HasPower<ImbalancedPower>(),
                 Poison = SafeInt(() => creature.GetPower<PoisonPower>()?.CalculateTotalDamageNextTurn() ?? 0),
                 PoisonTriggers = PoisonTriggers(creature, combat),
                 IntendsToAttack = creature.IsAlive && SafeBool(() => creature.Monster?.IntendsToAttack == true),

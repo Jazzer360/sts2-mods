@@ -2253,16 +2253,8 @@ public sealed class PaelsLegion : SimModel
 }
 
 // ---- round twenty-two: a monster's own state set (Sim/Models/OutcomeModels.cs), deleted 2026-11-25
-
-/// <summary>
-/// ImbalancedPower: stunned when its first hit on you is fully blocked (the engine: SimEnemy.FirstHitFullyBlocked). A bonus when the
-/// play makes every branch of an aim block it, and ending the turn now wouldn't.
-/// </summary>
-public sealed class ImbalancedPower : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        Who.IsEnemy(owner) && !now.FirstHitBlockedInAll(owner) ? new(Harmful: false, outcome => outcome.FirstHitBlockedInAll(owner), InPlay: false) : null;
-}
+// ImbalancedPower's frozen copy went in round twenty-three with what it judged (the engine's SimEnemy.FirstHitFullyBlocked, decision #273): its
+// parity was proven in round twenty-two, and its tabs stay held to the recording made with it (MonsterStateTabParityTests).
 
 // ---- round twenty-two: a card kept as its card play's identity (Sim/Models/StatModels.cs, BlockModels.cs), deleted 2026-11-25
 

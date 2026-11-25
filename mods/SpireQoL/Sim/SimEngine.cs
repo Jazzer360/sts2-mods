@@ -165,8 +165,13 @@ public sealed class SimOutcome
     public int UnblockedAtTurnEndMin(int enemyId) => Fewest(branch => branch.Enemy(enemyId)?.UnblockedAtTurnEnd ?? 0);
     public int UnblockedAtTurnEndMax(int enemyId) => Most(branch => branch.Enemy(enemyId)?.UnblockedAtTurnEnd ?? 0);
 
-    public bool FirstHitBlockedInAll(int enemyId) => InEvery(branch => branch.Enemy(enemyId) is { FirstHitFullyBlocked: true });
-    public bool FirstHitBlockedInAny(int enemyId) => InSome(branch => branch.Enemy(enemyId) is { FirstHitFullyBlocked: true });
+    /// <summary>
+    /// A read model's own Flash() ran (SimState.Flashed, decision #199), over the whole run, in every branch: what the forecast audit holds a power
+    /// that acts in the enemy turn to (Imbalanced's, on its code's test).
+    /// </summary>
+    public bool FlashedInAll(string model, int? owner) => InEvery(branch => branch.Flashed.Has(SimKeys.Logged(model, owner)));
+    /// <summary>A read model's own Flash() ran in some branch (SimState.FlashedAny).</summary>
+    public bool FlashedInAny(string model, int? owner) => InSome(branch => branch.FlashedAny.Has(SimKeys.Logged(model, owner)));
 
     /// <summary>Its HP when your end of turn is over: lowest and highest over branches.</summary>
     public int HpAtTurnEndMin(int enemyId) => Fewest(branch => branch.Enemy(enemyId)?.HpAtTurnEnd ?? 0);
@@ -1513,16 +1518,11 @@ public static partial class SimEngine
             var hitsLanded = 0;
             // One player takes one hit (CreatureCmd.Damage of each living player: decision #93), through the one damage on a player (Lands):
             // Thorns before it lands, Wuppy, block, Osty, HP, then Flame Barrier and Reflect, each read from its code, hitting the enemy back
-            // through the damage on it (its block this turn, the read caps, the HP-loss pipeline, its damage hooks). Yours also decides
-            // Imbalanced and feeds the breakdown.
+            // through the damage on it (its block this turn, the read caps, the HP-loss pipeline, its damage hooks). Yours also feeds the breakdown.
             void TakesHit(int player, int amount)
             {
-                var blockBefore = state.Player(player)!.Block;
                 var hit = Lands(state, label: null, player, amount, SimProps.Move, enemy.Id, card: null);
                 if (player != Who.You) return;
-                // DamageResult.WasFullyBlocked: you had block and no damage got through after the AfterOsty modifiers (Tungsten Rod, Buffer...),
-                // Wuppy's share left out. Block only drops during an attack, so the first hit decides it.
-                if (hitsLanded == 0) enemy.FirstHitFullyBlocked = amount > 0 && (hit.Blocked > 0 || blockBefore > 0) && hit.ToOsty == 0 && hit.Lost == 0;
                 landed += hit.Amount;
                 hitsLanded++;
             }
