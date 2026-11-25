@@ -6322,6 +6322,49 @@
     "Outcome": "ReactsToHpLoss"
   },
   {
+    "Name": "DevourLifePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "SummonStep",
+            "Summoner": "PlayOwner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "PetOwner": false,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0024",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CardIs",
+                  "Of": "Soul"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__6.MoveNext:0046",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Summon",
+    "HelpsOwner": false
+  },
+  {
     "Name": "DexterityPower",
     "Kind": "Power",
     "Hooks": [
@@ -23809,6 +23852,157 @@
     ],
     "Tab": "Trigger",
     "HelpsOwner": false
+  },
+  {
+    "Name": "SicEmPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterDamageGiven",
+        "Steps": [
+          {
+            "$kind": "SummonStep",
+            "Summoner": "Dealer",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "PetOwner": true,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterDamageGiven\u003Ed__8.MoveNext:002D",
+                      "Test": {
+                        "$kind": "HookWays",
+                        "Ways": [
+                          {
+                            "When": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "\u003CAfterDamageGiven\u003Ed__8.MoveNext:001B",
+                                "Test": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CreatureThere",
+                                  "Creature": {
+                                    "Who": "Dealer",
+                                    "PetOwner": false
+                                  }
+                                }
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookTest",
+                              "At": "\u003CAfterDamageGiven\u003Ed__8.MoveNext:001B",
+                              "Test": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CreatureThere",
+                                "Creature": {
+                                  "Who": "Dealer",
+                                  "PetOwner": false
+                                }
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CreatureIsPet",
+                              "Creature": {
+                                "Who": "Dealer",
+                                "PetOwner": false
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterDamageGiven\u003Ed__8.MoveNext:003F",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureThere",
+                        "Creature": {
+                          "Who": "Dealer",
+                          "PetOwner": true
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageGiven\u003Ed__8.MoveNext:0047",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HasApplier"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageGiven\u003Ed__8.MoveNext:0064",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "SameCreature",
+                    "Creature": {
+                      "Who": "Dealer",
+                      "PetOwner": true
+                    },
+                    "Other": {
+                      "Who": "Applier",
+                      "PetOwner": false
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageGiven\u003Ed__8.MoveNext:0077",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TargetIsOwner"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__9.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "Tab": "Summon",
+    "HelpsOwner": false,
+    "Copies": "PerApplier"
   },
   {
     "Name": "SignalBoostPower",

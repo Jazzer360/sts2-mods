@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 146 game methods; 3 adapter rules; 60 hand-written models.
+# 20 engine rules naming 146 game methods; 3 adapter rules; 58 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -97,8 +97,6 @@ CoveredPower: CoveredPower.AfterApplied, CoveredPower.AfterDeath, CoveredPower.A
   model: AfterApplied, ModifyDamageMultiplicative
 CurlUpPower: CurlUpPower.AfterCardPlayed, CurlUpPower.AfterDamageReceived, CurlUpPower.InitInternalData
   model: AfterCardPlayed, AfterDamageReceived
-DevourLifePower: DevourLifePower.AfterCardPlayed
-  model: AfterCardPlayed
 FeralPower: FeralPower.AfterApplied, FeralPower.AfterModifyingCardPlayResultLocation, FeralPower.AfterSideTurnStart, FeralPower.InitInternalData, FeralPower.ModifyCardPlayResultLocation
   model: AfterApplied, AfterModifyingCardPlayResultLocation, ModifyCardPlayResultLocation
 HandDrill: HandDrill.AfterBlockBroken
@@ -159,8 +157,6 @@ SerpentFormPower: SerpentFormPower.AfterApplied, SerpentFormPower.AfterCardPlaye
   model: Act
 ShadowmeldPower: ShadowmeldPower.AfterSideTurnEnd, ShadowmeldPower.ModifyBlockMultiplicative
   model: ModifyBlockMultiplicative
-SicEmPower: SicEmPower.AfterDamageGiven, SicEmPower.AfterSideTurnEnd
-  model: AfterDamageGiven
 SkittishPower: SkittishPower.AfterAttack, SkittishPower.AfterSideTurnEnd, SkittishPower.GetScaledAmountForMultiplayer, SkittishPower.InitInternalData
   model: AfterAttack, AfterDamageReceived, BeforeAttack
 SlumberPower: SlumberPower.AfterDamageReceived, SlumberPower.AfterRemoved, SlumberPower.AfterSideTurnEnd

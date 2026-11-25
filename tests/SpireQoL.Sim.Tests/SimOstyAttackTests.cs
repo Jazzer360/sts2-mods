@@ -73,8 +73,13 @@ public class SimOstyAttackTests
     public void SicEmSummonsWhenOstyDamagesItsEnemyNotWhenYouDo()
     {
         // SicEmPower.AfterDamageGiven (a dev-mode report: High Five's Osty hit on a Thieving Hopper with Sic 'Em 4 summoned 4).
+        // Read from its code: dealer.Monster is Osty, its pet owner your applier (its Data, as the adapter reads it), target == base.Owner:
+        // OstyCmd.Summon(dealer.PetOwner, base.Amount), so Osty has the 4 HP more by the enemy turn.
         var state = new SimState { Enemies = { E(id: 1, hp: 30), E(id: 2, hp: 30) } };
-        state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.SicEm, amount: 4);
+        state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.SicEm, amount: 4, data: DataCreature.Of(Who.You));
+        state.You.OstyHp = 5;
+        SimEngine.ApplyPlayTo(state, Poke(target: 1, damage: 6, byOsty: true), out var summoned, out _);
+        Assert.All(summoned, branch => Assert.Equal(9, branch.You.OstyHp));
         var byOsty = SimEngine.Run(state, Poke(target: 1, damage: 6, byOsty: true));
         Assert.All(byOsty.Branches, branch => { Assert.Equal(1, branch.Fired["SicEmPower"]); Assert.Equal(4, branch.Fired.DataOf("SicEmPower")); });
         // Your own hit on it, and Osty's on another enemy: nothing.

@@ -38,7 +38,7 @@ power DanseMacabrePower: BeforeCardPlayed: read
 power DarkEmbracePower: AfterCardExhausted: read | AfterSideTurnEnd: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power DebilitatePower: AfterSideTurnEnd: read
 power DemisePower: AfterSideTurnEnd: read
-power DevourLifePower: AfterCardPlayed: gap: OstyCmd.Summon isn't translated
+power DevourLifePower: AfterCardPlayed: read
 power DieForYouPower: ModifyUnblockedDamageTarget: gap: the simulator runs no read model's ModifyUnblockedDamageTarget | ShouldAllowHitting: gap: the simulator runs no read model's ShouldAllowHitting | ShouldCreatureBeRemovedFromCombatAfterDeath: gap: the simulator runs no read model's ShouldCreatureBeRemovedFromCombatAfterDeath | ShouldPowerBeRemovedAfterOwnerDeath: gap: the simulator runs no read model's ShouldPowerBeRemovedAfterOwnerDeath
 power DisintegrationPower: AfterSideTurnEndLate: read
 power DislikeYouPower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
@@ -140,7 +140,7 @@ power ShowOffPower: AfterDeath: gap: changes a game object outside a command (Sh
 power ShriekPower: AfterDamageReceived: read
 power ShrinkPower: AfterApplied: gap: changes a game object outside a command (Vantom.ScaleTo) | AfterDeath: read | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power ShroudPower: AfterPowerAmountChanged: read
-power SicEmPower: AfterDamageGiven: gap: OstyCmd.Summon isn't translated | AfterSideTurnEnd: read
+power SicEmPower: AfterDamageGiven: read | AfterSideTurnEnd: read
 power SimpletonPower: AfterAutoPostPlayPhaseEntered: gap: the simulator runs no read model's AfterAutoPostPlayPhaseEntered
 power SkittishPower: AfterAttack: gap: tests FirstOrDefault(SelectMany(command.Results, r => r), r => r.Receiver == this.Owner) | AfterSideTurnEnd: read | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply's scaling for the players: read into the class's PowerRule and run by the engine as it lands one (decision #234) | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power SleightOfFleshPower: AfterPowerAmountChanged: read

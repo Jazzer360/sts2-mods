@@ -2100,3 +2100,26 @@ public sealed class BiiigHug : RelicProc
     public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) =>
         cardEvent == CardEvent.Shuffled && player == owner ? Fire(state, owner).SelectMany(branch => SimEngine.IntoDrawPile(branch, owner, CardId.Soot.Name)).ToList() : One(state);
 }
+// ---- summons (round nineteen: Sim/Models/ProcPowerModels.cs, deleted 2026-11-25)
+
+/// <summary>DevourLifePower.AfterCardPlayed: each Soul its owner plays summons its amount (Osty).</summary>
+public sealed class DevourLifePower : ProcModel
+{
+    public override TabKind? Tab => TabKind.Summon;
+    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
+        Mine(play, owner) && play.Card.Name == CardId.Soul.Name ? Fire(state, owner, Amount(state, owner)) : One(state);
+}
+
+/// <summary>
+/// SicEmPower (yours, on an enemy; InstancedPerApplier).AfterDamageGiven: each time its applier's Osty damages the enemy that has it,
+/// its applier summons its amount (OstyCmd.Summon). Owner: the enemy. Only yours is read (SimReaders.Powers: a teammate's instance
+/// reacts to their Osty, whose hits aren't simulated in your turn).
+/// </summary>
+public sealed class SicEmPower : ProcModel
+{
+    public override TabKind? Tab => TabKind.Summon;
+    public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Dealer == Who.YourOsty && hit.Target == owner && hit.Total > 0 && Amount(state, owner) > 0) state.LogFired(Name, Amount(state, owner), owner);
+    }
+}

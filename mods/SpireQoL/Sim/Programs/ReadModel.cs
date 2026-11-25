@@ -443,7 +443,7 @@ public sealed class ReadModel : SimModel
         {
             // A power an attack spends (its AfterAttack takes its own stacks: Gigantification's Decrement) acts on that play too (decision #228).
             // A play that changes the state its damage term reads (Slow's SlowAmount++ on every card) acts on that play too (decision #229).
-            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeIntoDrawStep or StunStep or KillStep
+            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or SummonStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeIntoDrawStep or StunStep or KillStep
                 || hook == HookName.AfterAttack && step is DecrementPowerStep or RemovePowerStep
                 || hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed && step is StoreFieldStep { Field: var termField } && _termFields.Contains(termField);
             // An enchantment's effects are its card's (no tab of its own, nothing in the play log: its card's play shows them).
@@ -715,6 +715,7 @@ public sealed class ReadModel : SimModel
                 case GainEnergyStep energy: return energy.Amount;
                 case DrawStep draw: return draw.Count;
                 case HealStep heal: return heal.Amount;
+                case SummonStep summon: return summon.Amount;
                 case GainStarsStep stars: return stars.Amount;
                 case ApplyPowerStep apply: return apply.Amount;
             }
@@ -1239,7 +1240,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeIntoDrawStep or StunStep or KillStep
+            case FlashStep or GainStarsStep or HealStep or SummonStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeIntoDrawStep or StunStep or KillStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1316,6 +1317,31 @@ public sealed class ReadModel : SimModel
                         ? SimEngine.ProcDamagePlayer(args.State, args.Owner, Name, args.Owner, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer, label: SimEngine.Title(args.State, args.Owner, Name))
                         : SimEngine.ProcDamageOn(args.State, args.Owner, Name, args.Owner, amount(in args), (SimProps)(int)props(in args), noDealer: noDealer),
                     _ => throw new InvalidOperationException($"{Name}: no damage to {damage.Target}"),
+                };
+            }
+            case SummonStep summon:
+            {
+                // OstyCmd.Summon as the engine runs it (SimEngine.Summon), for the player its code names; a summon tab counts what it summons.
+                var amount = Compile(summon.Amount);
+                var tallies = Tab == TabKind.Summon;
+                return args =>
+                {
+                    var summoner = summon.Summoner switch
+                    {
+                        HookTarget.Owner => args.Owner,
+                        HookTarget.PlayOwner => args.Play?.Owner ?? Who.None,
+                        // The hit's dealer's player: your Osty's is you (the one pet the simulator keeps); no one else's dealer has one.
+                        HookTarget.Dealer when summon.PetOwner => (args.Damage?.Dealer ?? args.Hit?.Dealer) == Who.YourOsty ? Who.You : Who.None,
+                        _ => Who.None,
+                    };
+                    if (!Who.IsPlayer(summoner) || args.State.Player(summoner) == null) return One(args.State);
+                    if (fires && !tallies) args.State.LogFired(Name, amount: 0, args.Owner);
+                    var states = SimEngine.Summon(args.State, summoner, amount(in args), tallies ? Name : null, args.Owner, firing: fires);
+                    // Inside a hit no hook can branch: the summon's own hooks (Hook.AfterSummon, AfterOstyRevived) must leave the one state.
+                    if (!InHit(args.Hook)) return states;
+                    var list = states.ToList();
+                    if (list.Count != 1 || !ReferenceEquals(list[0], args.State)) args.State.Unmodelled ??= $"{Name}'s summon inside a hit set off hooks that branch";
+                    return One(args.State);
                 };
             }
             case HealStep heal:

@@ -48,6 +48,7 @@ public static class HookReader
         ["CreatureCmd.GainBlock"] = "GainBlockStep: block for the owner through the block pipeline (its amount and props, or its BlockVar's)",
         ["CreatureCmd.Damage"] = "DamageStep: damage to every hittable enemy, a random one (a branch each), the creature a power landed on or the owner, from the owner or no one",
         ["CreatureCmd.Heal"] = "HealStep: the owner heals, up to its max HP",
+        ["OstyCmd.Summon"] = "SummonStep: a summon for its owner, the player who played the card or the hit's dealer's player, as OstyCmd.Summon runs (SimEngine.Summon)",
         ["CreatureCmd.Stun"] = "StunStep: the owner (an enemy) stunned, when the stunned move it's given calls no command",
         ["CreatureCmd.Kill"] = "KillStep: the owner killed: an enemy marked killed by its power, a player losing all their HP unless a death prevention holds it back",
         ["CardPileCmd.Draw"] = "DrawStep: cards drawn by the owner, each a card event",
@@ -430,6 +431,7 @@ public static class HookReader
             GainEnergyStep energy => energy with { Amount = Map(energy.Amount)! },
             GainStarsStep stars => stars with { Amount = Map(stars.Amount)! },
             HealStep heal => heal with { Amount = Map(heal.Amount)! },
+            SummonStep summon => summon with { Amount = Map(summon.Amount)! },
             ApplyPowerStep apply => apply with { Amount = Map(apply.Amount)! },
             StoreFieldStep store => store with { Value = Map(store.Value)! },
             BindStep bind => bind with { Value = Map(bind.Value)! },
@@ -501,7 +503,7 @@ public static class HookReader
     /// <summary>A command that gives its owner's side something (a payout's command).</summary>
     private static bool Gives(HookStep step) => step switch
     {
-        GainBlockStep { To: null } or GainEnergyStep or DrawStep or ChannelStep or HealStep or GainStarsStep => true,
+        GainBlockStep { To: null } or GainEnergyStep or DrawStep or ChannelStep or HealStep or GainStarsStep or SummonStep => true,
         DamageStep damage => damage.Target is not (HookTarget.Owner or HookTarget.PlayOwner or HookTarget.LivingPlayers),
         ApplyPowerStep apply => apply.Target == HookTarget.Owner ? !apply.Debuff : apply.Target is HookTarget.AllEnemies && apply.Debuff,
         _ => false,
@@ -624,6 +626,7 @@ public static class HookReader
                 case DamageStep: return TabKind.Damage;
                 case DrawStep: return TabKind.Draw;
                 case GainEnergyStep: return TabKind.Energy;
+                case SummonStep: return TabKind.Summon;
                 // Cards made into a player's draw pile: how many (decision #161), unless its crossing makes it a trigger.
                 case MakeIntoDrawStep: return TabKind.CardsMade;
             }
@@ -1704,6 +1707,19 @@ public static class HookReader
                 case "CreatureCmd.Heal":
                     if (!IsOwner(values[0])) throw new Gap(Other(values[0]), $"gap: a heal for {values[0]}");
                     return new HealStep(Value(values[1]));
+                // OstyCmd.Summon(choiceContext, summoner, amount, source) for its owner, the player who played the card, or the hit's dealer's player.
+                case "OstyCmd.Summon":
+                {
+                    var summonerAt = IndexOf(types, "Player");
+                    var amountAt = IndexOf(types, "Decimal");
+                    if (summonerAt < 0 || amountAt < 0) throw new Gap(ReaderCapability.Osty, $"gap: summon overload {string.Join(",", types)}");
+                    var summoner = Unstored(values[summonerAt]);
+                    var amount = Value(values[amountAt]);
+                    if (IsOwner(summoner)) return new SummonStep(HookTarget.Owner, amount);
+                    if (summoner is QueryValue { Name: "Owner", Of: { } card } && IsPlayCard(card)) return new SummonStep(HookTarget.PlayOwner, amount);
+                    if (summoner is QueryValue { Name: "PetOwner", Of: { } pet } && IsDealer(pet) && DamageHooks.Contains(_hook)) return new SummonStep(HookTarget.Dealer, amount) { PetOwner = true };
+                    throw new Gap(ReaderCapability.Osty, $"gap: a summon for {summoner}");
+                }
                 // Its owner stunned (CreatureCmd.Stun(base.Owner, ...)): its stunned move does nothing a simulation follows when the delegate it's given
                 // calls no command (the reader reads a delegate's code: one that does is the command's Inner). The next move's id it's given is for
                 // the turn after, which no simulation reaches (never worked out: Flutter's is a roll's).
@@ -2059,6 +2075,9 @@ public static class HookReader
                         ? new HookWays(monsterWays.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), MonsterIs(way.Value))).ToList())
                         : MonsterIs(monsterOf);
                 }
+                // A creature's pet owner tested as there (osty.Creature.PetOwner != null: Sic 'Em's): the creature is a player's pet.
+                case QueryValue { Name: "PetOwner" } petOwner when CreatureOf(petOwner) is { PetOwner: true } owner:
+                    return CreatureFact(HookFact.CreatureThere, owner);
                 // An attack its data keeps, tested as there (commandToModify as a truth): one is bound to it (decision #228).
                 case var keptAttack when KeptAttack(keptAttack) is { } keptField:
                     return new HookMath(HookOperation.NotEqual, new HookField(keptField), new HookConstant(0m));
@@ -2274,6 +2293,9 @@ public static class HookReader
             if (value is ParameterValue { Name: "target" } or NamedValue { Name: "target" } && DamageHooks.Contains(_hook)) return new HookCreature(HookWho.Target);
             if (IsApplier(value)) return new HookCreature(HookWho.Applier);
             if (value is QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } } && _hook == "AfterPowerAmountChanged") return new HookCreature(HookWho.PowerOwner);
+            // A creature's monster cast to its class, then that monster's creature (dealer?.Monster is Osty osty, then osty.Creature: Sic 'Em's): the
+            // creature itself, where the cast's own test holds.
+            if (value is QueryValue { Name: "Creature", Of: { } castValue } && Unstored(castValue) is QueryValue { Name: "is", Of: { } castOf } && CastCreature(castOf) is { } cast) return cast;
             if (value is QueryValue { Name: "Player" or "Creature", Of: { } of }) return CreatureOf(of);
             if (value is QueryValue { Name: "PetOwner", Of: { } pet } && CreatureOf(pet) is { PetOwner: false } owned) return owned with { PetOwner = true };
             // The attack's attacker (command.Attacker), and its card's owner (cardModel.Owner, the player whose card it is).
@@ -2282,6 +2304,21 @@ public static class HookReader
             // The owner of a model got from a creature (a called model's base.Owner): that creature.
             if (value is QueryValue { Name: "Owner", Of: { } ownerOf } && Getter(ownerOf) is { } got) return got.Holder;
             return null;
+        }
+
+        /// <summary>
+        /// The creature whose monster a cast is of (creature.Monster, or a null-conditional's ways: null where the creature isn't there, its Monster
+        /// where it is); null for anything else.
+        /// </summary>
+        private HookCreature? CastCreature(ProgramValue castOf)
+        {
+            var unstored = Unstored(castOf);
+            if (unstored is WaysValue ways)
+            {
+                var named = ways.Ways.Where(way => way.Value is not NullValue).Select(way => Unstored(way.Value)).ToList();
+                return named is [QueryValue { Name: "Monster", Of: { } wayOf }] ? CreatureOf(wayOf) : null;
+            }
+            return unstored is QueryValue { Name: "Monster", Of: { } creatureOf } ? CreatureOf(creatureOf) : null;
         }
 
         /// <summary>The hooks given a damage's or block's dealer and target (the Modify hooks, a hit's reactions).</summary>

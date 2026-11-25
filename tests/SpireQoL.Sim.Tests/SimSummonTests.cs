@@ -93,6 +93,23 @@ public class SimSummonTests
     }
 
     [Fact]
+    public void DevourLifeSummonsOnASoulYouPlay()
+    {
+        // DevourLifePower.AfterCardPlayed, read from its code: cardPlay.Card is Soul && cardPlay.Card.Owner.Creature == base.Owner →
+        // OstyCmd.Summon(cardPlay.Card.Owner, base.Amount): Osty gains it, and its summon tab counts it.
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 50) } };
+        state.You.OstyHp = 2;
+        state.You.OstyMaxHp = 2;
+        state.You.Powers = state.You.Powers.With(PowerId.DevourLife, amount: 3);
+        var soul = Play(Card(CardId.Soul.Name, SimCardType.Skill), target: Who.None, plays: 1);
+        var after = Assert.Single(After(state, soul));
+        Assert.Equal(5, after.You.OstyHp);
+        Assert.Equal(3, after.Fired.DataOf(PowerId.DevourLife.Name));
+        var strike = Play(Card("Strike", SimCardType.Attack), target: Who.None, plays: 1);
+        Assert.Equal(2, Assert.Single(After(state, strike)).You.OstyHp);
+    }
+
+    [Fact]
     public void ASummonForATeammateRaisesTheirOsty()
     {
         // Legion of Bone: OstyCmd.Summon for each living player of your side, each their own Osty.

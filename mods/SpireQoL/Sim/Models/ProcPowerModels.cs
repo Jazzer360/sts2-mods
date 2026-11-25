@@ -57,27 +57,7 @@ public sealed class JugglingPower : ProcModel
 
 // Black Hole is read from its code (ReadModel, decision #250).
 
-/// <summary>DevourLifePower.AfterCardPlayed: each Soul its owner plays summons its amount (Osty).</summary>
-public sealed class DevourLifePower : ProcModel
-{
-    public override TabKind? Tab => TabKind.Summon;
-    public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        Mine(play, owner) && play.Card.Name == CardId.Soul.Name ? Fire(state, owner, Amount(state, owner)) : One(state);
-}
-
-/// <summary>
-/// SicEmPower (yours, on an enemy; InstancedPerApplier).AfterDamageGiven: each time its applier's Osty damages the enemy that has it,
-/// its applier summons its amount (OstyCmd.Summon). Owner: the enemy. Only yours is read (SimReaders.Powers: a teammate's instance
-/// reacts to their Osty, whose hits aren't simulated in your turn).
-/// </summary>
-public sealed class SicEmPower : ProcModel
-{
-    public override TabKind? Tab => TabKind.Summon;
-    public override void AfterDamageGiven(SimState state, int owner, DamageEvent hit)
-    {
-        if (hit.Dealer == Who.YourOsty && hit.Target == owner && hit.Total > 0 && Amount(state, owner) > 0) state.LogFired(Name, Amount(state, owner), owner);
-    }
-}
+// Devour Life and Sic 'Em are read from their code (ReadModel: OstyCmd.Summon, round nineteen).
 
 /// <summary>SmoggyPower.AfterCardPlayed: each Skill its owner plays afflicts their other Skills with Smog (bad for you).</summary>
 public sealed class SmoggyPower : ProcModel

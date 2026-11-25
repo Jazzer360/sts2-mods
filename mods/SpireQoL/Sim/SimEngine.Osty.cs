@@ -25,9 +25,10 @@ public static partial class SimEngine
     /// dead is revived (his max HP set to it, healed by it: CreatureCmd.SetMaxHp, Heal) and Hook.AfterOstyRevived told, and a player with no Osty
     /// yet gets one (PlayerCmd.AddPet, Die For You on him, then the same max HP and heal); then the fight's log records the summon
     /// (CombatHistory.Summoned) and Hook.AfterSummon is told. A heal of Osty tells AfterCurrentHpChanged a gain, which nothing the simulator runs acts
-    /// on (Necro Mastery acts on a loss). <paramref name="log"/>: a model's summon logs its tab's amount under its name (Devour Life, Sic 'Em).
+    /// on (Necro Mastery acts on a loss). <paramref name="log"/>: a read model's summon logs its tab's amount under its name (Devour Life, Sic 'Em),
+    /// as its firing (<paramref name="firing"/>) or more of one.
     /// </summary>
-    internal static IEnumerable<SimState> Summon(SimState state, int player, decimal amount, string? log = null, int? logOwner = null)
+    internal static IEnumerable<SimState> Summon(SimState state, int player, decimal amount, string? log = null, int? logOwner = null, bool firing = true)
     {
         if (state.Player(player) == null) return new[] { state };
         foreach (var (model, owner) in Listeners(state))
@@ -49,7 +50,8 @@ public static partial class SimEngine
             summoner.OstyMaxHp = summoned;
             summoner.OstyHp = summoned;
         }
-        if (log != null) state.LogFired(log, summoned, logOwner ?? player);
+        if (log != null && firing) state.LogFired(log, summoned, logOwner ?? player);
+        else if (log != null) state.LogAmount(log, summoned, logOwner ?? player);
         IEnumerable<SimState> states = new[] { state };
         if (revived) states = Then(states.ToList(), branch => Hook(branch, nameof(SimModel.AfterOstyRevived), (model, owner, copy) => model.AfterOstyRevived(copy, owner, player)));
         return Then(states.ToList(), branch =>

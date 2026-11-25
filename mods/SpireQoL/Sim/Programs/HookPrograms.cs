@@ -681,6 +681,17 @@ public sealed record MakeIntoDrawStep(string Card, SimCardType Type, IReadOnlyLi
     public bool Harms => Type is SimCardType.Status or SimCardType.Curse;
 }
 
+/// <summary>
+/// OstyCmd.Summon(choiceContext, summoner, amount, this): <paramref name="Amount"/> summoned for <paramref name="Summoner"/>, as SimEngine.Summon runs
+/// the command: its owner (a relic's base.Owner), the player who played the card (cardPlay.Card.Owner: Devour Life), or the hit's dealer's pet owner
+/// (<see cref="PetOwner"/>: dealer.PetOwner, Sic 'Em's Osty's player).
+/// </summary>
+public sealed record SummonStep(HookTarget Summoner, HookValue Amount) : HookStep
+{
+    /// <summary>The summoner is the pet owner of the creature <see cref="Summoner"/> names (the dealer's player when the dealer is their Osty).</summary>
+    public bool PetOwner { get; init; }
+}
+
 /// <summary>PowerCmd.Remove(this): the power itself goes from its owner.</summary>
 public sealed record RemovePowerStep : HookStep;
 
@@ -887,6 +898,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             GainEnergyStep energy => Inside(energy.Amount),
             GainStarsStep stars => Inside(stars.Amount),
             HealStep heal => Inside(heal.Amount),
+            SummonStep summon => Inside(summon.Amount),
             ApplyPowerStep apply => Inside(apply.Amount),
             StoreFieldStep store => Inside(store.Value),
             BindStep bind => Inside(bind.Value),
