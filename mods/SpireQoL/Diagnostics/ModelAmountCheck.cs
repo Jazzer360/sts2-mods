@@ -82,9 +82,7 @@ internal static class ModelAmountCheck
             }
 
 
-            // A relic whose amount the adapter reads from one of its values (SimReaders.RelicAmountVars): its Amount is that value.
-            var amountVar = types.Any(type => type.Namespace == "MegaCrit.Sts2.Core.Models.Relics") && SimReaders.RelicAmountVars.TryGetValue(name, out var read) ? "Var " + read.Var : null;
-            var simulated = ModelAmounts(model).Select(amount => amountVar == null ? amount : amount with { Source = AmountWord.Replace(amount.Source, amountVar) }).ToList();
+            var simulated = ModelAmounts(model).ToList();
             var effects = game.Select(amount => amount.Effect).Intersect(simulated.Select(amount => amount.Effect)).OrderBy(effect => effect, StringComparer.Ordinal).ToList();
             if (effects.Count == 0) continue;
             compared++;
@@ -115,7 +113,6 @@ internal static class ModelAmountCheck
     /// <summary>A read program's step of an effect the check compares on the game's side (CardPileCmd.Draw, PlayerCmd.GainEnergy, CreatureCmd.GainBlock and Damage, PowerCmd.Apply of another power: a change to its own amount is PowerCmd.ModifyAmount, which the check doesn't compare).</summary>
     private static bool IsComparedEffect(HookStep step, string model) => step is DrawStep or GainEnergyStep or GainBlockStep or DamageStep || step is ApplyPowerStep apply && apply.Power != model;
 
-    private static readonly System.Text.RegularExpressions.Regex AmountWord = new(@"\bAmount\b", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
     private static List<string> Sources(IEnumerable<EffectAmount> amounts, string effect) =>
         amounts.Where(amount => amount.Effect == effect).Select(amount => amount.Source).Distinct().OrderBy(source => source, StringComparer.Ordinal).ToList();

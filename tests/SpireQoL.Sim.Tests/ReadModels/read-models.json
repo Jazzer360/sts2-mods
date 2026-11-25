@@ -30229,6 +30229,76 @@
     "HelpsOwner": true
   },
   {
+    "Name": "SneckoSkull",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterModifyingPowerAmountGiven",
+        "Steps": [
+          {
+            "$kind": "FlashStep"
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyPowerAmountGivenAdditive",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "SneckoSkull.ModifyPowerAmountGivenAdditive:0006",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PowerIs",
+                    "Of": "PoisonPower"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "SneckoSkull.ModifyPowerAmountGivenAdditive:001A",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "ApplierIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookVar",
+                "Key": "PoisonPower",
+                "Canonical": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "SoarPower",
     "Kind": "Power",
     "Hooks": [

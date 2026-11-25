@@ -2517,3 +2517,19 @@ public sealed class ReboundPower : SimModel
         if (play.Owner == owner) SimEngine.DecrementPower(state, owner, ThisPower);
     }
 }
+
+// ---- round twenty-seven: the power amount given (Sim/Models/ReactionModels.cs), deleted 2026-11-25
+
+/// <summary>
+/// Snecko Skull (relic, amount = its Poison var, as the adapter read it: SimReaders.RelicAmountVars): poison its owner gives gets that much more
+/// (ModifyPowerAmountGivenAdditive). Answered in the engine's one pass of ModifyPowerAmountGiven then (now its multiplicative pass's).
+/// </summary>
+public sealed class SneckoSkull : SimModel
+{
+    public override int ModifyPowerAmountGiven(SimState state, int owner, PowerId power, int amount, int? applier, int target, bool debuff)
+    {
+        if (power != PowerId.Poison || applier != owner) return amount;
+        state.LogFired(Name, amount: 0, owner);
+        return amount + SimEngine.RelicsOf(state, owner)[ThisRelic];
+    }
+}

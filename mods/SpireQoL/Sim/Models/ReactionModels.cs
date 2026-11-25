@@ -2,16 +2,7 @@ namespace SpireQoL.Sim.Models;
 
 // What reacts to damage and to card plays (decompile v0.113.1): enemy reactions, your on-hit powers, HP-loss modifiers.
 
-/// <summary>Snecko Skull (relic, amount = its Poison var): poison its owner gives gets that much more (ModifyPowerAmountGivenAdditive).</summary>
-public sealed class SneckoSkull : SimModel
-{
-    public override int ModifyPowerAmountGiven(SimState state, int owner, PowerId power, int amount, int? applier, int target, bool debuff)
-    {
-        if (power != PowerId.Poison || applier != owner) return amount;
-        state.LogFired(Name, amount: 0, owner);
-        return amount + SimEngine.RelicsOf(state, owner)[ThisRelic];
-    }
-}
+// Snecko Skull is read from its code (ReadModel: ModifyPowerAmountGivenAdditive and AfterModifyingPowerAmountGiven, decision #287).
 
 // Hardened Shell is read from its code (ReadModel, decision #278).
 

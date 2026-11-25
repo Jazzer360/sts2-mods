@@ -122,6 +122,14 @@ public enum HookName
     /// <summary>Hook.AfterModifyingCardPlayResultLocation: told to the listeners whose return changed the location (Rebound's stack used, Nostalgia's flash).</summary>
     AfterModifyingCardPlayResultLocation,
     /// <summary>
+    /// Hook.ModifyPowerAmountGiven's passes (PowerCmd.Apply, SimEngine.AmountGiven): each listener's additive term on the amount so far, then each one's
+    /// multiplicative one; its power the one given, its giver the applier, its target the creature it lands on.
+    /// </summary>
+    ModifyPowerAmountGivenAdditive,
+    ModifyPowerAmountGivenMultiplicative,
+    /// <summary>Hook.AfterModifyingPowerAmountGiven: told to the listeners whose term changed a power's amount given (Snecko Skull's flash).</summary>
+    AfterModifyingPowerAmountGiven,
+    /// <summary>
     /// Hook.ShouldStopCombatFromEnding: whether the fight goes on with no primary enemy alive (CombatManager.IsEnding: Infested's, Stock's and Steam
     /// Eruption's, whose deaths bring creatures in): 1 it stops it ending.
     /// </summary>

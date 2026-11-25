@@ -109,7 +109,7 @@ internal static partial class CoverageLedger
         ["ScreamingFlagon"] = "covered: read from its code (ReadModel, decision #195): BeforeSideTurnEnd damages all enemies with an empty hand; its tab, plain on a play that leaves your hand empty (its payout set up, decisions #239, #244)",
         ["SelfFormingClay"] = "covered: read from its code (ReadModel, decision #239): AfterDamageReceived applies SelfFormingClayPower (block as its owner's next turn starts) on their HP loss; its tab is its reaction to your HP loss, judged on the play's outcomes",
         ["Shuriken"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed Strength every N attacks (proc tab, tracker)",
-        ["SneckoSkull"] = "covered: ModifyPowerAmountGivenAdditive +1 poison per application (simulator: card poison, Envenom)",
+        ["SneckoSkull"] = "covered: read from its code (ReadModel, decision #287): ModifyPowerAmountGivenAdditive adds its Poison value to Poison its owner gives (card poison, Envenom), in Hook.ModifyPowerAmountGiven's additive pass; AfterModifyingPowerAmountGiven flashes",
         ["SparklingRouge"] = "covered: AfterBlockCleared Strength and Dexterity on turn 3, at the start of your turn (tracker turn timer)",
         ["StoneCalendar"] = "covered: read from its code (ReadModel, decision #195): BeforeSideTurnEnd damages all enemies on the turn its DamageTurn names (the players' turn number, tracker)",
         ["SturdyClamp"] = "ignore: ShouldClearBlock keeps up to 10 block into your next turn",

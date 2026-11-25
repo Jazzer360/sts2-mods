@@ -146,18 +146,6 @@ public static class SimReaders
         }
     }
 
-    /// <summary>
-    /// Relics whose model's amount is one of the relic's values (DynamicVars, with the fallback when it can't be read): Relics reads
-    /// that value into the amount, and ModelAmountCheck reads the model's Amount as it.
-    /// </summary>
-    internal static readonly Dictionary<string, (string Var, int Fallback)> RelicAmountVars = new()
-    {
-        [nameof(SneckoSkull)] = Var("PoisonPower", fallback: 1),
-    };
-
-    /// <summary>A relic's value by its DynamicVars key, and what to take when it can't be read.</summary>
-    private static (string Var, int Fallback) Var(string key, int fallback = 0) => (key, fallback);
-
     /// <summary>A player's relics in relic order (melted ones don't listen), each with the numbers its model keeps.</summary>
     public static RelicSet Relics(Player player)
     {
@@ -166,8 +154,7 @@ public static class SimReaders
         {
             if (relic.IsMelted) continue;
             var name = relic.GetType().Name;
-            var amountIsVar = RelicAmountVars.TryGetValue(name, out var amountVar);
-            int amount = amountIsVar ? Sts2State.Var(relic, amountVar.Var, amountVar.Fallback) : 0, data = 0;
+            int amount = 0, data = 0;
             switch (name)
             {
                 case nameof(Pocketwatch): amount = Sts2State.Private(relic, "_cardsPlayedThisTurn", fallback: 0); data = Sts2State.Var(relic, "CardThreshold", fallback: 3); break;
@@ -176,14 +163,12 @@ public static class SimReaders
                     amount = (int)Math.Floor(player.Creature.MaxHp * Sts2State.Var(relic, "HpThreshold", fallback: 50) / 100m);
                     data = Sts2State.Private(relic, "StrengthApplied", fallback: true) ? Models.RedSkull.StrengthGiven : 0; // its Strength already given
                     break;
-                // End-of-turn relics (their block, damage or stars: RelicAmountVars), and what they wait for (Data).
                 // Its Data is the model's own: energy spent during the play being simulated (PaelsTears), so none yet.
                 case nameof(PaelsTears): data = 0; break;
                 case nameof(UnsettlingLamp):
                     data = Sts2State.Private<object?>(relic, "TriggeringCard", fallback: null) == null && !Sts2State.Private(relic, "IsFinishedTriggering", fallback: true) ? (int)RelicUse.Armed : 0;
                     break;
                 default:
-                    if (amountIsVar) break; // its amount is its value (RelicAmountVars), and it keeps no data
                     amount = Math.Max(0, relic.DisplayAmount);
                     data = Features.RelicCountersFeature.IsArmed(relic) ? (int)RelicUse.Armed : 0;
                     break;

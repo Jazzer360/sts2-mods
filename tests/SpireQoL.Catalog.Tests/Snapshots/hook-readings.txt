@@ -265,7 +265,7 @@ relic RippleBasin: AfterCardPlayed: read | AfterCombatEnd: not run: after the fi
 relic ScreamingFlagon: BeforeSideTurnEnd: read
 relic SelfFormingClay: AfterDamageReceived: read
 relic Shuriken: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers
-relic SneckoSkull: AfterModifyingPowerAmountGiven: gap: the simulator runs no read model's AfterModifyingPowerAmountGiven | ModifyPowerAmountGivenAdditive: gap: the simulator runs no read model's ModifyPowerAmountGivenAdditive
+relic SneckoSkull: AfterModifyingPowerAmountGiven: read | ModifyPowerAmountGivenAdditive: read
 relic SparklingRouge: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
 relic StoneCalendar: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns | AfterSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers | BeforeSideTurnEnd: read
 relic Storyteller: AfterRoomEntered: not run: entering a room: outside the fight's turns | BeforeSideTurnEnd: read
@@ -279,7 +279,7 @@ relic TungstenRod: AfterModifyingHpLostAfterOsty: read | ModifyHpLostAfterOsty: 
 relic TuningFork: AfterCardPlayed: read
 relic Twine: AfterArrowDislodged: read
 relic UnceasingTop: AfterHandEmptied: gap: the simulator runs no read model's AfterHandEmptied
-relic UnsettlingLamp: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeCombatStart: not run: before the fight: the state is read after it | BeforePowerAmountChanged: gap: the simulator runs no read model's BeforePowerAmountChanged | ModifyPowerAmountGivenMultiplicative: gap: the simulator runs no read model's ModifyPowerAmountGivenMultiplicative
+relic UnsettlingLamp: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeCombatStart: not run: before the fight: the state is read after it | BeforePowerAmountChanged: gap: the simulator runs no read model's BeforePowerAmountChanged | ModifyPowerAmountGivenMultiplicative: gap: the value cardSource
 relic Vambrace: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingBlockAmount: read | BeforeCombatStart: not run: before the fight: the state is read after it | ModifyBlockMultiplicative: read
 relic VelvetChoker: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
 relic WhisperingEarring: AfterAutoPrePlayPhaseEnteredLate: gap: the simulator runs no read model's AfterAutoPrePlayPhaseEnteredLate | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy

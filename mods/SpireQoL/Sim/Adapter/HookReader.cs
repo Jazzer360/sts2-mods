@@ -2513,7 +2513,7 @@ public static class HookReader
                         ? new HookFactValue(HookFact.CardAffliction) { Of = afflictionClass } : throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's affliction {afflictionClass}");
                 case QueryValue { Name: "Contains", Of: QueryValue { Name: "Keywords", Of: { } keywordsOf }, Arguments: [ConstantValue keyword] } when IsPlayCard(keywordsOf) || IsEventCard(keywordsOf):
                     return EnumName(_type.Assembly, "CardKeyword", keyword.Value) == "Ethereal" ? new HookFactValue(HookFact.CardEthereal) : throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's keyword {keyword.Value}");
-                case QueryValue { Name: "is", Of: NamedValue { Name: "power" }, Type: var powerClass }:
+                case QueryValue { Name: "is", Of: NamedValue { Name: "power" } or ParameterValue { Name: "power" }, Type: var powerClass }:
                     return PowerIs(powerClass);
                 case QueryValue { Name: "is", Of: { } cardOf, Type: var cardClass } when IsEventCard(cardOf) || IsPlayCard(cardOf):
                     return new HookFactValue(HookFact.CardIs) { Of = cardClass };
@@ -2846,6 +2846,8 @@ public static class HookReader
             if (IsDealer(other)) return new HookFactValue(HookFact.DealerIsOwner);
             if (other is ParameterValue { Name: "target" } or NamedValue { Name: "target" }) return new HookFactValue(HookFact.TargetIsOwner);
             if (other is NamedValue { Name: "applier" } or ParameterValue { Name: "applier" }) return new HookFactValue(HookFact.ApplierIsOwner);
+            // A power's giver (ModifyPowerAmountGiven's passes: the creature applying it).
+            if (other is NamedValue { Name: "giver" } or ParameterValue { Name: "giver" } && _hook.StartsWith("ModifyPowerAmountGiven", StringComparison.Ordinal)) return new HookFactValue(HookFact.ApplierIsOwner);
             // The player an event happened to (AfterOrbChanneled's player, AfterShuffle's, AfterStarsGained's gainer): the event's player is its owner.
             if (other is NamedValue { Name: "player" or "shuffler" } or ParameterValue { Name: "player" or "shuffler" } && _hook is "AfterOrbChanneled" or "AfterShuffle"
                 || other is NamedValue { Name: "gainer" } or ParameterValue { Name: "gainer" } && _hook == "AfterStarsGained")

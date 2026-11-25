@@ -238,7 +238,7 @@ public class HookGapTests
         sources.Where(source => source.Key.StartsWith("Sim/Adapter/", StringComparison.Ordinal)).Any(source => source.Value.Contains(hook, StringComparison.Ordinal) && Regex.IsMatch(source.Value, $@"\.{hook}\("));
 
     /// <summary>
-    /// The adapter's per-class readings (SimReaders.Read's powers, SimReaders.Relics', RelicAmountVars) and every other per-class name in the adapter
+    /// The adapter's per-class readings (SimReaders.Read's powers, SimReaders.Relics') and every other per-class name in the adapter
     /// and the procs (a name gate): each class, what it reads (its own field or value, or the game's), and whether a read model would replace it.
     /// </summary>
     private static IEnumerable<string> AdapterTables(BranchCode beta, Dictionary<string, string> sources)
@@ -260,8 +260,6 @@ public class HookGapTests
                 foreach (var name in classes) lines.Add($"{table}: {name}: {Replaced(name, members, game, models)}");
             }
         }
-        foreach (Match entry in Regex.Matches(readers, @"\[nameof\((\w+)\)\] = Var\(""(\w+)"""))
-            lines.Add($"SimReaders.RelicAmountVars: {entry.Groups[1].Value}: {Replaced(entry.Groups[1].Value, new() { ("value", entry.Groups[2].Value) }, new(), models)}");
         // Every other per-class name in the adapter and the procs: a gate on a power's or relic's class by its name.
         var gates = sources.Where(source => (source.Key.StartsWith("Sim/Adapter/", StringComparison.Ordinal) || source.Key.StartsWith("Procs/", StringComparison.Ordinal)) && source.Key != "Sim/Adapter/SimReaders.cs")
             .SelectMany(source => Regex.Matches(source.Value, @"nameof\((\w+)\)|""(\w+)""").Select(match => match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value)
@@ -296,7 +294,7 @@ public class HookGapTests
     }
 
     /// <summary>
-    /// The adapter keeps no per-class reading for a class read from its code (SimReaders.Read's powers, SimReaders.Relics, RelicAmountVars): its
+    /// The adapter keeps no per-class reading for a class read from its code (SimReaders.Read's powers, SimReaders.Relics): its
     /// own fields and values are seeded for it (SimReaders.Fields, AddVars), so such a reading is dead or stands in for its code.
     /// </summary>
     [Fact]

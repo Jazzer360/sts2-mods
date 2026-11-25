@@ -525,6 +525,9 @@ public sealed class ReadModel : SimModel
         HookName.ShouldClearBlock => nameof(ShouldClearBlock),
         HookName.ModifyCardPlayResultLocation => nameof(ModifyCardPlayResultLocation),
         HookName.AfterModifyingCardPlayResultLocation => nameof(AfterModifyingCardPlayResultLocation),
+        HookName.ModifyPowerAmountGivenAdditive => nameof(ModifyPowerAmountGivenAdditive),
+        HookName.ModifyPowerAmountGivenMultiplicative => nameof(ModifyPowerAmountGivenMultiplicative),
+        HookName.AfterModifyingPowerAmountGiven => nameof(AfterModifyingPowerAmountGiven),
         // Its power's own question as its owner dies (Creature.RemoveAllPowersAfterDeath): asked of it, never of every listener.
         HookName.ShouldPowerBeRemovedAfterOwnerDeath => nameof(StaysOnDeadOwner),
         // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook; an enchantment's OnPlay
@@ -882,6 +885,25 @@ public sealed class ReadModel : SimModel
     {
         foreach (var branch in Run(HookName.AfterModifyingCardPlayResultLocation, new HookArgs { State = state, Owner = owner, Play = play, Location = location }))
             if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingCardPlayResultLocation branched");
+    }
+
+    /// <summary>Hook.ModifyPowerAmountGiven's additive pass: its code's term on the amount so far (Snecko Skull's Poison).</summary>
+    public override int ModifyPowerAmountGivenAdditive(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff) =>
+        _returns[(int)HookName.ModifyPowerAmountGivenAdditive] is { } returns
+            ? (int)returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ModifyPowerAmountGivenAdditive, Play = state.CurrentPlay, Power = power, PowerAmount = amount, Applier = applier, Target = target, Debuff = debuff })
+            : 0;
+
+    /// <summary>Hook.ModifyPowerAmountGiven's multiplicative pass: its code's factor.</summary>
+    public override decimal ModifyPowerAmountGivenMultiplicative(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff) =>
+        _returns[(int)HookName.ModifyPowerAmountGivenMultiplicative] is { } returns
+            ? returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ModifyPowerAmountGivenMultiplicative, Play = state.CurrentPlay, Power = power, PowerAmount = amount, Applier = applier, Target = target, Debuff = debuff })
+            : 1m;
+
+    /// <summary>Hook.AfterModifyingPowerAmountGiven, told to the listeners whose term changed the amount: deterministic, on the state given.</summary>
+    public override void AfterModifyingPowerAmountGiven(SimState state, int owner, PowerId power)
+    {
+        foreach (var branch in Run(HookName.AfterModifyingPowerAmountGiven, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Power = power }))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingPowerAmountGiven branched");
     }
 
     /// <summary>Hook.ShouldClearBlock of <paramref name="creature"/>: its code's answer (Barricade and Burrowed keep their owner's).</summary>

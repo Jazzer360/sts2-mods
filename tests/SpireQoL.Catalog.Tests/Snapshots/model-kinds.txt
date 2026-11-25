@@ -4,9 +4,9 @@
 ## Powers and relics
 
 beta powers: 303 classes, 272 with hooks; read from code 149, hand-written 25, neither 100 (each by its first gap: Snapshots/hook-readings.txt)
-beta relics: 316 classes, 310 with hooks; read from code 65, hand-written 8, neither 237 (each by its first gap: Snapshots/hook-readings.txt)
+beta relics: 316 classes, 310 with hooks; read from code 66, hand-written 7, neither 237 (each by its first gap: Snapshots/hook-readings.txt)
 main powers: 265 classes, 235 with hooks; read from code 125, hand-written 23, neither 89 (each by its first gap: Snapshots/hook-readings.txt)
-main relics: 299 classes, 293 with hooks; read from code 57, hand-written 8, neither 228 (each by its first gap: Snapshots/hook-readings.txt)
+main relics: 299 classes, 293 with hooks; read from code 58, hand-written 7, neither 228 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 7, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 1
 
@@ -138,7 +138,6 @@ SimReaders.Relics: Pocketwatch: hand-written; reads its own field _cardsPlayedTh
 SimReaders.Relics: RedSkull: hand-written; reads its own value HpThreshold, its own field StrengthApplied, the game's MaxHp: needs more than its own fields and values
 SimReaders.Relics: PaelsTears: hand-written; reads nothing named: needs more than its own fields and values
 SimReaders.Relics: UnsettlingLamp: hand-written; reads its own field TriggeringCard, its own field IsFinishedTriggering, the game's DisplayAmount: needs more than its own fields and values
-SimReaders.RelicAmountVars: SneckoSkull: hand-written; reads its own value PoisonPower: a read model's own fields and values replace it
 name gate: AccelerantPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a gate to replace by a rule
 name gate: AimPower in Procs/Fool.cs: read from code: a gate its reading could replace
 name gate: ArtifactPower in Sim/Adapter/SimAdapter.Steps.cs: not modelled from code: a gate to replace by a rule
@@ -186,12 +185,11 @@ a value the reader can't follow (a nullable's GetValueOrDefault, a local it can'
 card costs and keywords (cards' own hooks, Part B3): 3 classes, 2 alone: ChemicalX*, CorruptionPower*, PhantomBladesPower
 commands: AutoPlayFromDrawPile: 2 classes, 2 alone: LostLutePower*, DistilledChaos (potion)*
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
-hooks: the power amount given: 2 classes, 2 alone: SneckoSkull*, UnsettlingLamp*
 the engine runs no read potion (its bodies read whole but for that): 2 classes, 2 alone: PotionOfBinding (potion)*, ShacklingPotion (potion)*
 the fight's log (the history ledger, decision #191): 2 classes, 2 alone: NostalgiaPower*, UnmovablePower*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*
+queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 4 classes, 1 alone: PaelsEye, PhantomBladesPower, TagTeamPower*, UnsettlingLamp
 hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...): 3 classes, 1 alone: SmoggyPower, SurroundedPower, UnceasingTop*
-queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 3 classes, 1 alone: PaelsEye, PhantomBladesPower, TagTeamPower*
 queries: a creature's side or presence: 2 classes, 1 alone: EssenceOfDarkness (potion)*, FairyInABottle (potion)
 commands: GainStars: 1 classes, 1 alone: StarPotion (potion)*
 commands: OstyCmd.Summon: 1 classes, 1 alone: BoneBrew (potion)*
@@ -201,5 +199,6 @@ the owner's energy: 1 classes, 1 alone: PaelsTears*
 a command on another power (PowerCmd.Remove of another): 2 classes, 0 alone: AsleepPower, SlumberPower
 a model's own method (its body read where it's called): 1 classes, 0 alone: FairyInABottle (potion)
 a turn's start (an extra turn): 1 classes, 0 alone: PaelsEye
+hooks: the power amount given: 1 classes, 0 alone: UnsettlingLamp
 multiplayer scaling (GetScaledAmountForMultiplayer, the players' count): 1 classes, 0 alone: PlatingPower
 outcomes: a stun or a kill (outcome tabs): 1 classes, 0 alone: SlumberPower

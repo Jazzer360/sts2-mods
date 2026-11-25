@@ -198,6 +198,7 @@ public static partial class ReadModels
         nameof(MegaCrit.Sts2.Core.Models.Afflictions.Smog),
         PowerId.Smokestack.Name,
         PowerId.Sneaky.Name,
+        RelicId.SneckoSkull.Name,
         PowerId.Soar.Name,
         PowerId.SongPath.Name,
         nameof(MegaCrit.Sts2.Core.Models.Enchantments.Sown),

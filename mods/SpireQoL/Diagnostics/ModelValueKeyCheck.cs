@@ -9,8 +9,7 @@ namespace SpireQoL.Diagnostics;
 /// <summary>
 /// Every value key the simulator names, against the DynamicVars keys of the game class it reads. A model's own keys come from its
 /// code (Var, VarTotal and PropsOf's key; RelicBlock's "Block", RelicDamageAll's and RelicDamageRandom's "Damage"); a SimEngine.Var
-/// anywhere in the simulator that names its model by a literal ("InfusedCore") names that model's; SimReaders.RelicAmountVars names
-/// the key each relic's amount is read from. A key its game class (the class named like the model, its canonical model's
+/// anywhere in the simulator that names its model by a literal ("InfusedCore") names that model's. A key its game class (the class named like the model, its canonical model's
 /// DynamicVars on the installed game) doesn't have reads nothing, so the model runs on its fallback whatever the game holds:
 /// Kunai read "Dexterity" where the key is "DexterityPower". ModelValueKeyTests runs it.
 /// </summary>
@@ -76,7 +75,7 @@ internal static class ModelValueKeyCheck
         return vars.Select(pair => pair.Key).ToList();
     }
 
-    /// <summary>Every value key the simulator names (models' own, literal model names anywhere in it, RelicAmountVars).</summary>
+    /// <summary>Every value key the simulator names (models' own, literal model names anywhere in it).</summary>
     internal static List<ValueKey> Named(List<string> unread)
     {
         var keys = new List<ValueKey>();
@@ -96,7 +95,6 @@ internal static class ModelValueKeyCheck
         foreach (var type in typeof(SimEngine).Assembly.GetTypes().Where(type => type.Namespace?.StartsWith("SpireQoL.Sim", StringComparison.Ordinal) == true && !ModelEffectCheck.OwnTypes(typeof(ReadModel)).Contains(type)))
             foreach (var method in type.GetMethods(All).Cast<MethodBase>().Concat(type.GetConstructors(All)))
                 keys.AddRange(KeysIn(method, ownModel: null, unread));
-        keys.AddRange(SimReaders.RelicAmountVars.Select(entry => new ValueKey(entry.Key, entry.Value.Var, "SimReaders.RelicAmountVars")));
         return keys;
     }
 

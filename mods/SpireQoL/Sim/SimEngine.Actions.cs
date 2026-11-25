@@ -682,6 +682,38 @@ public static partial class SimEngine
         ApplyPower(state, applier, target, power, amount, debuff, out _);
 
     /// <summary>
+    /// Hook.ModifyPowerAmountGiven (PowerCmd.Apply): every listener's additive term on the amount so far (Snecko Skull's Poison), then every
+    /// listener's multiplicative one (Unsettling Lamp's doubling), then Hook.AfterModifyingPowerAmountGiven told to each that changed it, in the
+    /// listeners' order (their flash). The amount given.
+    /// </summary>
+    internal static int AmountGiven(SimState state, int applier, int target, PowerId power, int amount, bool debuff)
+    {
+        var listeners = Listeners(state);
+        HashSet<(SimModel Model, int Owner)>? modifiers = null;
+        foreach (var (model, owner) in listeners)
+        {
+            var term = model.ModifyPowerAmountGivenAdditive(state, owner, power, amount, applier, target, debuff);
+            if (term == 0) continue;
+            amount += term;
+            (modifiers ??= new()).Add((model, owner));
+        }
+        foreach (var (model, owner) in listeners)
+        {
+            var factor = model.ModifyPowerAmountGivenMultiplicative(state, owner, power, amount, applier, target, debuff);
+            if (factor != 1m)
+            {
+                amount = (int)(amount * factor);
+                (modifiers ??= new()).Add((model, owner));
+            }
+            amount = model.ModifyPowerAmountGiven(state, owner, power, amount, applier, target, debuff);
+        }
+        if (modifiers != null)
+            foreach (var (model, owner) in listeners)
+                if (modifiers.Contains((model, owner))) model.AfterModifyingPowerAmountGiven(state, owner, power);
+        return amount;
+    }
+
+    /// <summary>
     /// PowerCmd.Apply, as <see cref="ApplyPower(SimState, int, int, PowerId, int, bool)"/>, giving the amount that landed (<paramref name="landed"/>:
     /// after ModifyPowerAmountGiven and the players' scaling, what Hook.AfterPowerAmountChanged is told). A new one on an enemy in a fight of more
     /// than one player is scaled for the players (PowerModel.GetScaledAmountForMultiplayer, read from its code: SimModels.ScaledForPlayers); more
@@ -695,7 +727,7 @@ public static partial class SimEngine
         // Creature.CanReceivePowers: every listener's ShouldAllowHitting of the target (Die For You and Wuppy's Loyalty, read from their code: a
         // dead creature receives none, as a pet killed by the hit Monarch's Gaze is told of).
         if (!CanReceivePowers(state, target)) return false;
-        foreach (var (model, o) in Listeners(state)) amount = model.ModifyPowerAmountGiven(state, o, power, amount, applier, target, debuff);
+        amount = AmountGiven(state, applier, target, power, amount, debuff);
         if (amount == 0) return false;
         var powers = PowersOf(state, target);
         if (debuff && powers[PowerId.Artifact] > 0)

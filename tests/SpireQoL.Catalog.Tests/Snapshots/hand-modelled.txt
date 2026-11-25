@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 156 game methods; 3 adapter rules; 36 hand-written models.
+# 20 engine rules naming 156 game methods; 3 adapter rules; 35 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -24,7 +24,7 @@ Block: the block math, its hooks, a power's or relic's block, block lost
   simulator: SimEngine.BlockOnce, SimEngine.BlockBaseNow, SimEngine.CalcBlock, SimEngine.GainBlock, SimEngine.ShareBlock, SimEngine.ProcBlock, SimEngine.ProcBlockFor, SimEngine.EnemyBlock, SimEngine.RunBlock, SimEngine.StripBlock
 A power lands: the amount given, Artifact, the players' scaling of a new one on an enemy (its class's own scaling read from its code: decision #234), its instances and copies, the listeners told; a power changed, decremented or removed, gone at the amount its class's AllowNegative says
   game: PowerCmd.Apply, PowerCmd.ModifyAmount, PowerModel.ShouldRemoveDueToAmount, PowerModel.ApplyInternal, PowerCmd.FindExistingInstanceForStacking, PowerCmd.Decrement, PowerCmd.Remove, PowerCmd.TickDownDuration, Hook.ModifyPowerAmountGiven, Hook.AfterModifyingPowerAmountGiven, Hook.BeforePowerAmountChanged, Hook.AfterPowerAmountChanged, Creature.ApplyPowerInternal, Creature.CanReceivePowers, Hook.ShouldAllowHitting
-  simulator: SimEngine.ApplyPower, SimEngine.ApplyAndTell, SimEngine.ApplyInHit, SimEngine.Tell, SimEngine.RunApplyPower, SimEngine.ApplyPowerOf, SimEngine.AmountOf, SimEngine.MovePowers, SimEngine.DecrementPower, SimEngine.CanReceivePowers
+  simulator: SimEngine.ApplyPower, SimEngine.AmountGiven, SimEngine.ApplyAndTell, SimEngine.ApplyInHit, SimEngine.Tell, SimEngine.RunApplyPower, SimEngine.ApplyPowerOf, SimEngine.AmountOf, SimEngine.MovePowers, SimEngine.DecrementPower, SimEngine.CanReceivePowers
 Draws: a full hand, No Draw, the discard pile shuffled in (a card its enchantment puts on top, read from its code), the drawn card's reactions
   game: CardPileCmd.Draw, CardPileCmd.DrawInternal, CardPileCmd.Shuffle, CardPileCmd.ShuffleIfNecessary, Hook.ShouldDraw, Hook.AfterPreventingDraw, Hook.AfterCardDrawn, Hook.ModifyShuffleOrder, Hook.AfterShuffle
   simulator: SimEngine.DrawCards, SimEngine.DrawOne, SimEngine.DrawsStopped, SimEngine.DrawPrevented, SimEngine.Drawn, SimEngine.DrawReactions, SimEngine.DrawsFromPile, SimEngine.RoomIn, SimEngine.JoinHand, SimEngine.RunDrawnCard, SimDrawPile.Shuffled, SimDrawPile.ShuffledWithDiscard
@@ -127,8 +127,6 @@ SlumberPower: SlumberPower.AfterDamageReceived, SlumberPower.AfterRemoved, Slumb
   model: AfterDamageReceived, OutcomeTab
 SmoggyPower: SmoggyPower.AfterCardEnteredCombat, SmoggyPower.AfterCardPlayed, SmoggyPower.AfterSideTurnEnd, SmoggyPower.ShouldPlay
   model: AfterCardPlayed
-SneckoSkull: SneckoSkull.AfterModifyingPowerAmountGiven, SneckoSkull.ModifyPowerAmountGivenAdditive
-  model: ModifyPowerAmountGiven
 StratagemPower: StratagemPower.AfterShuffle
   model: AfterCardEvent
 SurprisePower: SurprisePower.AfterDeath, SurprisePower.ShouldStopCombatFromEnding

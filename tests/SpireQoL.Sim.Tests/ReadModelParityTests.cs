@@ -53,6 +53,9 @@ public class ReadModelParityTests
     {
         ["DoubleDamagePower.AfterSideTurnEnd"] = "PowerCmd.Decrement(this) when its owner takes part: it goes down as your turn ends. After it no card of yours plays this turn (the auto-plays come before), so no damage it doubles is left: no prediction changes",
         ["ReboundPower.AfterSideTurnEnd"] = "participants.Contains(base.Owner): PowerCmd.Remove(this): it goes as its owner's side's turn ends, where the hand-written model kept it. No card of yours plays after it this turn (the auto-plays come before), so no card's result location reads it: no prediction changes",
+        ["SneckoSkull.ModifyPowerAmountGivenAdditive"] = "Flash() in AfterModifyingPowerAmountGiven, told when its term changed the amount: the read model logs its flash (the play check's flash log, which now holds Snecko Skull to the game's flash), where the hand-written model logged an acting fire as it added. It has no tab (no Proc Tags row): nothing shown changes; its amount is the same",
+        ["SneckoSkull.ModifyPowerAmountGiven"] = "Flash() in AfterModifyingPowerAmountGiven, told when its term changed the amount: the read model logs its flash (the play check's flash log, which now holds Snecko Skull to the game's flash), where the hand-written model logged an acting fire as it added. It has no tab (no Proc Tags row): nothing shown changes; its amount is the same",
+        ["SneckoSkull.AfterModifyingPowerAmountGiven"] = "Flash() in AfterModifyingPowerAmountGiven, told when its term changed the amount: the read model logs its flash (the play check's flash log, which now holds Snecko Skull to the game's flash), where the hand-written model logged an acting fire as it added. It has no tab (no Proc Tags row): nothing shown changes; its amount is the same",
         ["RagePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. No card of yours plays after it (the auto-plays come before): no prediction changes",
         ["GravityPower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. No card of yours plays after it (the auto-plays come before): no prediction changes",
         ["BurstPower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. No card of yours plays after it (the auto-plays come before): no prediction changes",
@@ -122,7 +125,7 @@ public class ReadModelParityTests
     private static readonly Dictionary<string, string> RelicAmountVars = new(StringComparer.Ordinal) {
         [RelicId.CharonsAshes.Name] = "Damage", [RelicId.ForgottenSoul.Name] = "Damage", [RelicId.Orichalcum.Name] = "Block", [RelicId.FakeOrichalcum.Name] = "Block",
         [RelicId.ScreamingFlagon.Name] = "Damage", [RelicId.CloakClasp.Name] = "Block", [RelicId.ObsidianVice.Name] = "Damage", [RelicId.LunarPastry.Name] = "Stars", [RelicId.StoneCalendar.Name] = "Damage",
-        [RelicId.MightyWings.Name] = "StrengthPower", [RelicId.TungstenRod.Name] = "HpLossReduction", [RelicId.BeatingRemnant.Name] = "MaxHpLoss", [RelicId.TheBoot.Name] = "DamageMinimum", [RelicId.RippleBasin.Name] = "Block", [RelicId.ParryingShield.Name] = "Damage",
+        [RelicId.MightyWings.Name] = "StrengthPower", [RelicId.TungstenRod.Name] = "HpLossReduction", [RelicId.BeatingRemnant.Name] = "MaxHpLoss", [RelicId.TheBoot.Name] = "DamageMinimum", [RelicId.RippleBasin.Name] = "Block", [RelicId.ParryingShield.Name] = "Damage", [RelicId.SneckoSkull.Name] = "PoisonPower",
     };
 
     /// <summary>
@@ -307,6 +310,7 @@ public class ReadModelParityTests
         nameof(SimModel.ModifyPreBlockDamageTarget), nameof(SimModel.ModifyUnblockedDamageTarget), nameof(SimModel.ShouldAllowHitting),
         nameof(SimModel.ShouldCreatureBeRemovedFromCombatAfterDeath), nameof(SimModel.StaysOnDeadOwner), nameof(SimModel.ShouldStopCombatFromEnding),
         nameof(SimModel.AfterBlockBroken), nameof(SimModel.ShouldClearBlock), nameof(SimModel.ModifyCardPlayResultLocation), nameof(SimModel.AfterModifyingCardPlayResultLocation),
+        nameof(SimModel.ModifyPowerAmountGivenAdditive), nameof(SimModel.ModifyPowerAmountGivenMultiplicative), nameof(SimModel.ModifyPowerAmountGiven), nameof(SimModel.AfterModifyingPowerAmountGiven),
     };
 
     [Fact]
@@ -655,6 +659,25 @@ public class ReadModelParityTests
                             }
                             return text.ToString();
                         });
+                break;
+            case nameof(SimModel.ModifyPowerAmountGivenAdditive) or nameof(SimModel.ModifyPowerAmountGivenMultiplicative) or nameof(SimModel.ModifyPowerAmountGiven)
+                or nameof(SimModel.AfterModifyingPowerAmountGiven):
+                // A power given of each kind by each giver to each creature, its amount through the model's passes as the engine runs them
+                // (SimEngine.AmountGiven: the additive term, the multiplicative factor, a hand-written model's own answer), then
+                // AfterModifyingPowerAmountGiven when it changed it.
+                foreach (var power in new[] { PowerId.Poison, PowerId.Weak, PowerId.Vulnerable, PowerId.Strength })
+                    foreach (var amount in new[] { 3, -1 })
+                        foreach (var applier in others)
+                            foreach (var target in new[] { 0, 1, Who.You, Who.Teammate(0) })
+                                foreach (var debuff in new[] { true, false })
+                                    yield return ($"{power.Name} {amount} given by {applier} to {target}, debuff {debuff}", (model, state) =>
+                                    {
+                                        var given = amount + model.ModifyPowerAmountGivenAdditive(state, owner, power, amount, applier, target, debuff);
+                                        given = (int)(given * model.ModifyPowerAmountGivenMultiplicative(state, owner, power, given, applier, target, debuff));
+                                        given = model.ModifyPowerAmountGiven(state, owner, power, given, applier, target, debuff);
+                                        if (given != amount) model.AfterModifyingPowerAmountGiven(state, owner, power);
+                                        return $"{amount} -> {given}: " + Branches(new[] { state });
+                                    });
                 break;
             case nameof(SimModel.ShouldClearBlock):
                 // Asked of every creature as its side's turn starts.

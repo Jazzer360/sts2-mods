@@ -379,8 +379,20 @@ public abstract class SimModel
     public virtual decimal ModifyDamageCap(SimState state, int owner, DamageCtx damage) => decimal.MaxValue;
     public virtual decimal ModifyBlockAdditive(SimState state, int owner, BlockCtx block) => 0m;
     public virtual decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block) => 1m;
-    /// <summary>Hook.ModifyPowerAmountGiven: a power's amount as <paramref name="applier"/> gives it to <paramref name="target"/> (Snecko Skull).</summary>
+    /// <summary>
+    /// Hook.ModifyPowerAmountGiven's additive pass: what a model adds to a power's amount as <paramref name="applier"/> gives it to <paramref name="target"/>
+    /// (Snecko Skull's Poison), each listener in turn on the amount so far. Pure.
+    /// </summary>
+    public virtual int ModifyPowerAmountGivenAdditive(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff) => 0;
+    /// <summary>Hook.ModifyPowerAmountGiven's multiplicative pass, after every listener's additive one. Pure.</summary>
+    public virtual decimal ModifyPowerAmountGivenMultiplicative(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff) => 1m;
+    /// <summary>
+    /// A hand-written model's answer in the multiplicative pass, as the amount it leaves (Unsettling Lamp's doubling: its own bookkeeping as it
+    /// decides).
+    /// </summary>
     public virtual int ModifyPowerAmountGiven(SimState state, int owner, PowerId power, int amount, int? applier, int target, bool debuff) => amount;
+    /// <summary>Hook.AfterModifyingPowerAmountGiven: told to the models whose term changed a power's amount given (Snecko Skull's flash).</summary>
+    public virtual void AfterModifyingPowerAmountGiven(SimState state, int owner, PowerId power) { }
 
     // ---- hooks (may branch)
 
