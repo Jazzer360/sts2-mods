@@ -471,7 +471,7 @@ public static partial class SimEngine
     {
         if (state.Player(play.Owner) == null) return;
         // A payout a play decides by the fight's log of plays (Ripple Basin's: no Attack this turn; Tune's: a Ki this turn): the play counted here
-        // can turn it off, giving the bonus up there (decision #239), or on, setting it up (decision #250).
+        // can turn it off, giving the bonus up there (decision #239), or on, setting it up (decision #244).
         List<(ReadModel Model, int Owner, bool WasOn)>? watching = null;
         foreach (var (model, owner) in Listeners(state))
             if (model is ReadModel { PayoutReadsThePlayLog: true } read) (watching ??= new()).Add((read, owner, read.PayoutOn(state, owner)));

@@ -9,7 +9,7 @@ public sealed record SourceTab(string Key, bool Crossed, int? Number = null, Tab
     string? Chance = null, bool Aimed = false);
 
 /// <summary>
-/// Which of what the simulator works out about a source's bonus its settings row shows (decision #250): display configuration, the row's
+/// Which of what the simulator works out about a source's bonus its settings row shows (decision #244): display configuration, the row's
 /// (SettingsCatalog's SourceEntry.Shows), never a gate on what the simulation does. The simulator works out every direction from the code
 /// (a payout's condition before and after the play, its amount, a damage term); the row picks the ones that are tabs.
 /// </summary>
@@ -34,7 +34,7 @@ public enum TabShows
 /// </summary>
 /// <param name="LogKind">A tab from the play log of this kind whatever the model says (the engine's own logging: Juggernaut's damage).</param>
 /// <param name="Logs">It has a tab from the play log (a temporary Thorns hasn't: its Thorns has the ThornsPower tab).</param>
-/// <param name="Shows">What its settings row shows of its bonus (decision #250: display configuration).</param>
+/// <param name="Shows">What its settings row shows of its bonus (decision #244: display configuration).</param>
 public sealed record TabSource(string Class, string Model, int? Owner, int OutcomePass, TabKind? LogKind = null, bool Logs = true, TabShows Shows = TabShows.Default);
 
 /// <summary>
@@ -122,7 +122,7 @@ public sealed class CardTabs
                     if (outcomes[i].PlayFlashedAny.Has(SimKeys.UnknownFlash(key))) any[i] = true;
             Merge(source.Class, every, any);
         }
-        // A payout the play decides, given up (decision #239): a tab only where its row shows that direction (decision #250).
+        // A payout the play decides, given up (decision #239): a tab only where its row shows that direction (decision #244).
         if (model is ReadModel { GivesUpDuringTheTurn: true } && (source.Shows & TabShows.GivesUp) == 0) return;
         Func<SimOutcome, bool> at = harmful ? outcome => Fired(outcome.PlayFiredAny) : outcome => Fired(outcome.PlayFiredEvery);
         if (!outcomes.Any(at)) return;
@@ -152,7 +152,7 @@ public sealed class CardTabs
     }
 
     /// <summary>
-    /// A payout the play decides, set up by the play (decision #250: Tune's free card on the turn's first Ki), as its row shows it: a plain trigger
+    /// A payout the play decides, set up by the play (decision #244: Tune's free card on the turn's first Ki), as its row shows it: a plain trigger
     /// where every branch of some aim turns it on (its set-up log, SimKeys.SetUp), with the aim marker where not every aim does. A warning the same
     /// source already has (it gives the payout up in some outcome) stays.
     /// </summary>
@@ -173,7 +173,7 @@ public sealed class CardTabs
     /// A source's rule judged on how the turn ends (SimModel.OutcomeRule): each aim (one simulation each) passes it or not; the tab shows when
     /// some aim does, with the aim marker when not every aim does (several enemies with the same power: when no aim passes any of them). A rule
     /// that tells each branch's change to a bonus (OutcomeRule.Change) is judged on the changes the source's row shows (<paramref name="shows"/>,
-    /// decision #250): none shown on its side, no tab.
+    /// decision #244): none shown on its side, no tab.
     /// </summary>
     private void FromRule(string sourceClass, OutcomeRule rule, SimOutcome[] outcomes, TabShows shows)
     {
@@ -195,7 +195,7 @@ public sealed class CardTabs
     }
 
     /// <summary>
-    /// A rule that tells each branch's change to a bonus, as its row shows it (decision #250): on its side (a warning where some outcome makes a
+    /// A rule that tells each branch's change to a bonus, as its row shows it (decision #244): on its side (a warning where some outcome makes a
     /// change the row shows, with the chance of those; a bonus where every outcome does), the changes the row leaves out as if none. A side the
     /// row shows nothing of sets nothing off.
     /// </summary>

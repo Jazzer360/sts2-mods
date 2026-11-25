@@ -50,7 +50,7 @@ public class BonusTabParityTests
     };
 
     /// <summary>
-    /// The tabs the owner changed on purpose since the recording (decisions #250, #253), each class's changed tabs rewritten out of a line, the
+    /// The tabs the owner changed on purpose since the recording (decisions #244, #247), each class's changed tabs rewritten out of a line, the
     /// recorded one and the one now alike: the class, why, and the rewrite. Every other tab of every scenario stays as recorded, and each class's
     /// new tabs are held to the game's code on boards of their own (BonusTabRowTests, ConquerorTabTests).
     /// </summary>
@@ -58,7 +58,7 @@ public class BonusTabParityTests
     {
         ["ParryingShield"] = ("its row shows the play that sets it up only (TabShows.SetsUp): no crossed tab on a play that stops it",
             line => System.Text.RegularExpressions.Regex.Replace(line, @"proc:ParryingShield crossed[^;]*; ", "")),
-        ["ConquerorPower"] = ("read from its code (decision #253): its tab where its term doubles the Blade's hit on its owner, with the aim marker where some target has none, where the hand-written model's was on every Sovereign Blade played",
+        ["ConquerorPower"] = ("read from its code (decision #247): its tab where its term doubles the Blade's hit on its owner, with the aim marker where some target has none, where the hand-written model's was on every Sovereign Blade played",
             line => System.Text.RegularExpressions.Regex.Replace(line, @"proc:ConquerorPower [^;]*; ", "")),
     };
 
@@ -83,7 +83,7 @@ public class BonusTabParityTests
     {
         // The recording is only a proof where the tabs show: every source has a tab in some scenario, crossed or plain where it can be either.
         var lines = Enumerable.Range(0, Scenarios).Select(Tabs).ToList();
-        // Conqueror's tab now shows where its term changes the Blade's damage (decision #253), which the scenarios' hits, final numbers, never
+        // Conqueror's tab now shows where its term changes the Blade's damage (decision #247), which the scenarios' hits, final numbers, never
         // go through: ConquerorTabTests holds it on boards of its own.
         foreach (var name in new[] { "ArtOfWar", "RippleBasin", "ParryingShield", "EmotionChip", "DemonTongue", "SelfFormingClay", "MonarchsGazePower", "SlipperyPower", "RupturePower" })
             Assert.True(lines.Any(line => line.Contains($"proc:{name} ", StringComparison.Ordinal)), $"no scenario shows {name}'s tab");
@@ -139,7 +139,7 @@ public class BonusTabParityTests
         }).ToArray();
         var baseline = SimEngine.Run(state);
         // The sources as CardPredictions lists them: your powers, your relics, every enemy's powers, every teammate's powers and relics.
-        // Each with what its settings row shows of its bonus (decision #250), as CardPredictions gives it.
+        // Each with what its settings row shows of its bonus (decision #244), as CardPredictions gives it.
         var sources = new List<TabSource>();
         void Add(SimPlayer player, int? owner)
         {

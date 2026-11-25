@@ -23,7 +23,7 @@ public enum CounterKind
 /// <param name="Unit">Short noun for the label ("cards", "energy"...).</param>
 /// <param name="OnEnemy">Lives on an enemy but counts your plays (Withering Presence).</param>
 /// <param name="Countdown">
-/// Counts its own amount down to a payout (The Bomb: decision #254): the turns left from its amount and its last tick, read from its code
+/// Counts its own amount down to a payout (The Bomb: decision #248): the turns left from its amount and its last tick, read from its code
 /// (ReadModel.CountdownAt), and its own Damage; Threshold is the bar's length when the card that makes it can't be read.
 /// </param>
 public sealed record PowerCounterSpec(string TypeName, int Threshold, string Unit, bool CrossTurn = false, bool OnEnemy = false, bool Countdown = false);

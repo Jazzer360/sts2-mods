@@ -3,7 +3,7 @@ using Xunit;
 namespace SpireQoL.Sim.Tests;
 
 /// <summary>
-/// The bonus tabs as each source's settings row shows them (decision #250): the simulator works out both directions of a payout from the
+/// The bonus tabs as each source's settings row shows them (decision #244): the simulator works out both directions of a payout from the
 /// code (decision #239), the row picks which are tabs (TabShows, from SettingsCatalog through ReadModels/tab-rows.json). Each source's tab
 /// here is the one a card's play shows (CardTabs, the rules the game shows), on boards built from the game's own code's conditions.
 /// </summary>
@@ -240,7 +240,7 @@ public class BonusTabRowTests
 
     // ---- on generated boards: each end-of-turn payout's tab against what its code did as the turn ended
 
-    /// <summary>The end-of-turn payouts given rows (decision #250), each with the value its code reads and that value.</summary>
+    /// <summary>The end-of-turn payouts given rows (decision #244), each with the value its code reads and that value.</summary>
     private static readonly (string Class, string Var, int Value)[] EndOfTurnRelics =
     {
         ("Orichalcum", "Block", 6), ("FakeOrichalcum", "Block", 3), ("CloakClasp", "Block", 1), ("ObsidianVice", "Damage", 1), ("ScreamingFlagon", "Damage", 20),

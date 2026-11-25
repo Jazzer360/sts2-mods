@@ -261,7 +261,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
     }
 
     /// <summary>
-    /// A power counting its amount down to a payout (The Bomb, decision #254), each copy its own row: the turns left (its amount against its last
+    /// A power counting its amount down to a payout (The Bomb, decision #248), each copy its own row: the turns left (its amount against its last
     /// tick, read from its code: ReadModel.CountdownAt; 1 until the models are read) and its own Damage, the bar filling toward it (its length the
     /// Turns of the card that makes it, or the spec's), flashing on its last turn.
     /// </summary>

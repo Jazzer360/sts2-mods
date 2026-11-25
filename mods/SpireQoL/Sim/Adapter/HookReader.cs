@@ -186,7 +186,7 @@ public static class HookReader
             Copies = kind == ModelKind.Power ? reader.Copies() : PowerCopies.One,
             Commands = commands.Count > 0 ? commands : null,
         };
-        // Nothing else gives it a tab, and its damage term changing a damage is it acting (decision #253: Conqueror on a Sovereign Blade's hit).
+        // Nothing else gives it a tab, and its damage term changing a damage is it acting (decision #247: Conqueror on a Sovereign Blade's hit).
         if (spec.Tab == null && outcome == null && payouts.Count == 0 && TermActsOf(programs)) spec = spec with { Tab = TabKind.Trigger, TermActs = true };
         return new ModelReading(spec, readings);
     }

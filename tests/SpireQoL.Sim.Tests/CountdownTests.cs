@@ -3,7 +3,7 @@ using Xunit;
 namespace SpireQoL.Sim.Tests;
 
 /// <summary>
-/// A power that counts its own amount down to a payout (decision #254): The Bomb (TheBombPower.BeforeSideTurnEnd: Decrement while Amount > 1,
+/// A power that counts its own amount down to a payout (decision #248): The Bomb (TheBombPower.BeforeSideTurnEnd: Decrement while Amount > 1,
 /// then its Damage to every enemy and Remove at Amount &lt;= 1). Its last tick is read from its code (ReadModel.CountdownAt), so its Relic Counters
 /// row says how many turns are left and what it deals, as the simulation plays it.
 /// </summary>

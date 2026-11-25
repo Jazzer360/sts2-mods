@@ -5,7 +5,7 @@ namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
 /// Decision #153: the tabs of powers that act on every card you play, whatever the card, and never run out start off, and so do the
-/// relics' crossed tabs nearly every card gets (Cloak Clasp, Obsidian Vice: decision #251); every other tab starts on, and one you've
+/// relics' crossed tabs nearly every card gets (Cloak Clasp, Obsidian Vice: decision #245); every other tab starts on, and one you've
 /// switched keeps your choice.
 /// </summary>
 public class TabDefaultTests

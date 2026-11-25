@@ -36,7 +36,7 @@ public static class SimKeys
     private static readonly ConcurrentDictionary<string, string> SetUpNames = new();
 
     /// <summary>
-    /// The play log's name for a payout the play decides being set up by it (decision #250: Tune's free card on the turn's first Ki): "+" before
+    /// The play log's name for a payout the play decides being set up by it (decision #244: Tune's free card on the turn's first Ki): "+" before
     /// the source's name, logged as the source's own firings are (SimState.LogFired: "+Name", "+Name@id").
     /// </summary>
     public static string SetUp(string name) => SetUpNames.GetOrAdd(name, plain => "+" + plain);

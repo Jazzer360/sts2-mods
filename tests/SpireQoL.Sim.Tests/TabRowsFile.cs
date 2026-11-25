@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace SpireQoL.Sim.Tests;
 
 /// <summary>
-/// What each source's settings row shows of its bonus (TabShows: decision #250), from ReadModels/tab-rows.json, which the catalog tests write
+/// What each source's settings row shows of its bonus (TabShows: decision #244), from ReadModels/tab-rows.json, which the catalog tests write
 /// from SettingsCatalog and hold to it (TabRowsTests): the game isn't here, and the rows are the mod's. A class the file doesn't name shows what
 /// every row shows unless it says otherwise (TabShows.Default).
 /// </summary>

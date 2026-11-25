@@ -26,7 +26,7 @@ public class ReadModelParityTests
     };
 
     /// <summary>
-    /// Classes given a settings row since their conversion (decision #250, the owner's call): their tab is new, judged on the turn's outcome where the
+    /// Classes given a settings row since their conversion (decision #244, the owner's call): their tab is new, judged on the turn's outcome where the
     /// hand-written model had none (BonusTabRowTests holds it to their code); what they do is compared as before.
     /// </summary>
     private static readonly Dictionary<string, string> NewTabs = new(StringComparer.Ordinal)

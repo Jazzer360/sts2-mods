@@ -151,7 +151,7 @@ public sealed partial class ProcAudit
                 continue;
             }
             if (otherTab.Crossed) continue;
-            // A payout the play decides, set up by it (decision #250: Tune's free card next turn on the turn's first Ki): paid after the play, with
+            // A payout the play decides, set up by it (decision #244: Tune's free card next turn on the turn's first Ki): paid after the play, with
             // nothing of it to see during the play. Counted, not passed.
             if (SimModels.Get(name) is ReadModel { GivesUpDuringTheTurn: true })
             {

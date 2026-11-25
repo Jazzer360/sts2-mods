@@ -6,7 +6,7 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// What each Proc Tags row shows of its bonus (SourceEntry.Shows: decision #250), as the simulator's tests read it (ReadModels/tab-rows.json: the
+/// What each Proc Tags row shows of its bonus (SourceEntry.Shows: decision #244), as the simulator's tests read it (ReadModels/tab-rows.json: the
 /// rows that say otherwise than TabShows.Default). The tests run the tab rules the game shows with the rows' own display configuration, so the file
 /// is the catalog's (SPIREQOL_UPDATE_SNAPSHOT=1 regenerates it).
 /// </summary>
@@ -42,7 +42,7 @@ public class TabRowsTests
     [Fact]
     public void TheBonusRowsShowWhatTheOwnerDecided()
     {
-        // Decisions #250, #251: each row's directions and default.
+        // Decisions #244, #245: each row's directions and default.
         var expected = new Dictionary<string, (TabShows Shows, bool On)>(StringComparer.Ordinal)
         {
             ["ParryingShield"] = (TabShows.SetsUp, true),

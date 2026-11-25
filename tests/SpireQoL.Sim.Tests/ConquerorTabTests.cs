@@ -3,7 +3,7 @@ using Xunit;
 namespace SpireQoL.Sim.Tests;
 
 /// <summary>
-/// Conqueror read from its code (decision #253): ConquerorPower.ModifyDamageMultiplicative is 2 on its owner for a Sovereign Blade's powered
+/// Conqueror read from its code (decision #247): ConquerorPower.ModifyDamageMultiplicative is 2 on its owner for a Sovereign Blade's powered
 /// attack (`cardSource is SovereignBlade`). A read damage term that changes this play's damage acts on it (the game tells it so:
 /// Hook.AfterModifyingDamageAmount on the modifiers), so its tab shows where the Blade hits an enemy with Conqueror, with the aim marker when
 /// some target has none.

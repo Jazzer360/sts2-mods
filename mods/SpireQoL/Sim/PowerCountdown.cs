@@ -1,7 +1,7 @@
 namespace SpireQoL.Sim;
 
 /// <summary>
-/// A power counting its amount down to a payout (decision #254: The Bomb), as its Relic Counters row says it: the turns left, this one counted,
+/// A power counting its amount down to a payout (decision #248: The Bomb), as its Relic Counters row says it: the turns left, this one counted,
 /// from its amount and its last tick read from its code (ReadModel.CountdownAt). Pure, so its tests run what the tray shows.
 /// </summary>
 public static class PowerCountdown

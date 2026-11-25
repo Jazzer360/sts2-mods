@@ -109,7 +109,7 @@ public sealed class ReadModel : SimModel
 
     /// <summary>
     /// Its payouts decided where they're paid, by their hook: each condition, asked as the engine runs the hook, and what it pays there (its giving
-    /// command's amount, worked out as the hook starts: Cloak Clasp's block per card in hand; 1 for a command with no amount: decision #250).
+    /// command's amount, worked out as the hook starts: Cloak Clasp's block per card in hand; 1 for a command with no amount: decision #244).
     /// </summary>
     private readonly Dictionary<HookName, (Evaluate Condition, Evaluate Amount)[]> _paidWhere = new();
 
@@ -149,7 +149,7 @@ public sealed class ReadModel : SimModel
     }
 
     /// <summary>
-    /// A payout that was off is on now: the play set the bonus up (Tune's free card on the turn's first Ki: its plain tab's firing, decision #250),
+    /// A payout that was off is on now: the play set the bonus up (Tune's free card on the turn's first Ki: its plain tab's firing, decision #244),
     /// logged under its set-up name (SimKeys.SetUp), apart from its own firings.
     /// </summary>
     public void SetUp(SimState state, int owner, bool wasOn)
@@ -165,7 +165,7 @@ public sealed class ReadModel : SimModel
     }
 
     /// <summary>
-    /// The amount its payout waits for, a countdown's last tick (decision #254: The Bomb's BeforeSideTurnEnd deals its Damage at Amount &lt;= 1, and
+    /// The amount its payout waits for, a countdown's last tick (decision #248: The Bomb's BeforeSideTurnEnd deals its Damage at Amount &lt;= 1, and
     /// decrements before): the constant its code's first giving command's condition holds its amount at or under; null when it has none.
     /// </summary>
     public int? CountdownAt { get; }
@@ -680,7 +680,7 @@ public sealed class ReadModel : SimModel
     /// Its payout decided where it's paid (decision #239), yours: ending the turn now, does it pay in every outcome? If not, a bonus where the play
     /// makes it pay in every outcome (it sets it up); if so, a warning where the play stops it in some outcome (it gives it up), with the chance of
     /// those. Set off after the play (as your turn ends), so the play check can't see it. Not a teammate's: the play's bonus is its own player's.
-    /// Each branch's change against ending the turn now is told too (OutcomeRule.Change, decision #250): on the bonus's side, it pays where ending
+    /// Each branch's change against ending the turn now is told too (OutcomeRule.Change, decision #244): on the bonus's side, it pays where ending
     /// now doesn't in every outcome (sets it up); on the warning's, it pays nothing (gives it up) or less than ending now pays in every outcome
     /// (makes it smaller: Cloak Clasp's block for a card fewer in hand). The source's settings row shows the changes it names.
     /// </summary>
@@ -697,7 +697,7 @@ public sealed class ReadModel : SimModel
     }
 
     /// <summary>
-    /// What a payout decided where it's paid pays (decision #250): the amount of its hook's first giving command on its condition (block, damage,
+    /// What a payout decided where it's paid pays (decision #244): the amount of its hook's first giving command on its condition (block, damage,
     /// energy, cards drawn, a heal, stars, a power's amount), as its code works it out; 1 for one with no amount (a channel). Kept with the payout in
     /// each branch, so a play that makes it smaller shows.
     /// </summary>
@@ -751,7 +751,7 @@ public sealed class ReadModel : SimModel
             foreach (var (condition, amount) in payouts)
                 if (condition(in asked) != 0m)
                 {
-                    // What it pays there too, so a play that makes it smaller shows (decision #250).
+                    // What it pays there too, so a play that makes it smaller shows (decision #244).
                     state.Payouts = state.Payouts.With(PaidKey(owner), 1, data: (int)amount(in asked));
                     break;
                 }
@@ -772,7 +772,7 @@ public sealed class ReadModel : SimModel
     {
         if (_steps[(int)HookName.AfterModifyingDamageAmount] == null)
         {
-            // Its code answers nothing here; its term changing the damage is what it does (ModelSpec.TermActs, decision #253: Conqueror).
+            // Its code answers nothing here; its term changing the damage is what it does (ModelSpec.TermActs, decision #247: Conqueror).
             if (Spec.TermActs) state.LogFired(Name, amount: 0, owner);
             return;
         }
@@ -1419,7 +1419,7 @@ public sealed class ReadModel : SimModel
                     var onAPlay = decides && args.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed;
                     var wasOn = onAPlay && PayoutOn(args.State, args.Owner);
                     SimEngine.SetField(args.State, args.Owner, args.Copy > 0 ? CopyFieldKey(args.Copy, field) : key, stored);
-                    // The play gives the bonus up there, or sets it up (decision #250).
+                    // The play gives the bonus up there, or sets it up (decision #244).
                     if (onAPlay) Decided(args.State, args.Owner, wasOn);
                     return One(args.State);
                 };

@@ -754,7 +754,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     public bool DarkensOnPlay { get; init; }
 
     /// <summary>
-    /// Its damage term changing a damage is it acting (decision #253: Conqueror's ×2 on a Sovereign Blade's hit on its owner): a class whose own
+    /// Its damage term changing a damage is it acting (decision #247: Conqueror's ×2 on a Sovereign Blade's hit on its owner): a class whose own
     /// commands give it no tab but whose Modify damage hook returns a term, which the game tells it changed a damage (Hook.AfterModifyingDamageAmount
     /// on the modifiers) where its code answers nothing there. Its trigger tab is logged then. False with no settings row (ReadModels.Specs).
     /// </summary>

@@ -23,7 +23,7 @@ public enum SourceGroup { Relic, YourPower, EnemyPower, Card }
 /// <param name="Shop">What its icon beside shop prices marks; null = none.</param>
 /// <param name="Map">What its icon beside the map legend marks (pathing, decision #65); null = none.</param>
 /// <param name="Shows">
-/// Which of what the simulator works out about its bonus its tab shows (decision #250: display configuration, never a gate on the simulation):
+/// Which of what the simulator works out about its bonus its tab shows (decision #244: display configuration, never a gate on the simulation):
 /// a play that sets a payout up, gives it up, or makes it smaller (Sim.TabShows). Both directions of a payout unless it says otherwise.
 /// </param>
 public sealed record SourceEntry(string Type, SourceGroup Group, string? Tag, string? Tracker = null,
@@ -102,7 +102,7 @@ public static class SettingsCatalog
     public static IReadOnlySet<string> TabsOffByDefault => _tabsOffByDefault ??= Sources.Where(source => !source.TagDefault && source.TagKey != null).Select(source => source.TagKey!).ToHashSet();
     private static HashSet<string>? _tabsOffByDefault;
 
-    /// <summary>What a class's Proc Tags row shows of its bonus (SourceEntry.Shows, decision #250); the default for a class with no such row.</summary>
+    /// <summary>What a class's Proc Tags row shows of its bonus (SourceEntry.Shows, decision #244); the default for a class with no such row.</summary>
     public static Sim.TabShows ShowsOf(string type) => (_shows ??= Sources.Where(source => source.TagPrefix == "proc:" && source.Tag != null)
         .ToDictionary(source => source.Type, source => source.Shows, StringComparer.Ordinal)).TryGetValue(type, out var shows) ? shows : Sim.TabShows.Default;
     private static Dictionary<string, Sim.TabShows>? _shows;
