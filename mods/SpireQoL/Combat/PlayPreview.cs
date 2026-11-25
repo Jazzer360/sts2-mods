@@ -11,8 +11,9 @@ using Sts2Mods.Core.Game;
 namespace SpireQoL.Combat;
 
 /// <summary>
-/// Play Preview (decision #183): while you hold a card (aimed, for one that needs a target), Incoming Damage, the Death Skull's odds,
-/// Teammate Incoming Damage and the enemies' intents show the turn as it would go after playing it there. Nothing new is worked out:
+/// Play Preview (decision #183): while you hold a card (aimed, for one that needs a target), or select a potion's Drink or aim it (decision #314:
+/// PotionPreview), Incoming Damage, the Death Skull's odds, Teammate Incoming Damage and the enemies' intents show the turn as it would go after
+/// playing or using it there. Nothing new is worked out:
 /// each card's simulation already searches its play, the end of your turn and the enemy turn at every aim (CardPredictions); this
 /// picks the held card's outcome at its aim. The card tabs don't change.
 /// </summary>
@@ -30,8 +31,8 @@ internal static class PlayPreview
     /// <summary>The preview last built, kept while the held card's outcome is the same one (no model rebuilt every frame).</summary>
     private static Shown? _built;
 
-    /// <summary>The held card and the outcome shown for it: the card, its aim's outcome, and the turn built from it.</summary>
-    internal sealed record Shown(CardModel Card, SimOutcome Outcome, TurnEndModel Model, IReadOnlyDictionary<Creature, int> Ids);
+    /// <summary>The held card or the potion about to be used, and the outcome shown for it: its aim's outcome, and the turn built from it.</summary>
+    internal sealed record Shown(AbstractModel Source, SimOutcome Outcome, TurnEndModel Model, IReadOnlyDictionary<Creature, int> Ids);
 
     /// <summary>
     /// The turn after playing the held card at its aim, or null: no card held, one that needs a target not aimed yet, Play Preview
@@ -40,7 +41,8 @@ internal static class PlayPreview
     public static Shown? Current(QolContext ctx)
     {
         if (!Sts2State.IsPlayerTurn || !(ctx.Settings.Features.TryGetValue(FeatureId, out var on) ? on : true)) return null;
-        if (Sts2State.HeldCard() is not var (node, card)) return null;
+        // No card held: a potion about to be used (decision #314).
+        if (Sts2State.HeldCard() is not var (node, card)) return Sts2State.Me is { } me ? PotionPreview.Current(me) : null;
         var target = PreviewTarget?.GetValue(node) as Creature;
         if (card.TargetType is TargetType.AnyEnemy or TargetType.AnyAlly)
         {
@@ -60,7 +62,7 @@ internal static class PlayPreview
         // board read again is a new state object with the same key).
         if (TurnEndModel.Begin() is not { } start) return NotShown(card, NoPreview.NoForecast);
         if (start.StateKey != inputs.StartKey) return NotShown(card, NoPreview.AnotherBoard);
-        if (_built is { } built && ReferenceEquals(built.Outcome, outcome) && ReferenceEquals(built.Card, card)) return built;
+        if (_built is { } built && ReferenceEquals(built.Outcome, outcome) && ReferenceEquals(built.Source, card)) return built;
         // The card's own result: its search keeps the totals the displays show (not the breakdown by source: TurnEndModel._breakdown).
         return _built = new Shown(card, outcome, TurnEndModel.Preview(start, outcome), start.Ids);
     }

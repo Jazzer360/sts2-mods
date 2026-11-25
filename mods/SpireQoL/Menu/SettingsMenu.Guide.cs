@@ -439,7 +439,9 @@ public sealed partial class SettingsMenu
         GuideRow(example: null, "Play Preview",
             "Hold a card (and aim it, for one that needs a target): Incoming Damage, Teammate Incoming Damage and the Death Skull show the turn as it would go after you play it, "
             + "tinted lavender, and an enemy intent the play changes gets a line through its damage and the new number above it (Weak lowering it, Strength raising it; the line alone for an enemy the play kills). "
-            + "Every outcome of the play is already worked out for each card and target, so it shows at once. The card tags don't change.");
+            + "Every outcome of the play is already worked out for each card and target, so it shows at once. The card tags don't change. "
+            + "Potions too: while you point at a potion's Drink, or aim it (at an enemy, or a teammate you throw it at), the same displays show the turn after using it, "
+            + "once its outcome is worked out (a moment, in the background). Entropic Brew shows nothing: its random potions don't change the fight.");
     }
 
     private void BuildGuideProgress()

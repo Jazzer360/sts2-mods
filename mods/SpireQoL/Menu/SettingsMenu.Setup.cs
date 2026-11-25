@@ -45,7 +45,7 @@ public sealed partial class SettingsMenu
             new[] { "intent-details", "intent-forecast", "death-skull" }),
         new("Beside you", "What ending your turn costs you, after block, beside your HP (and a teammate's when you hover them); the tray of relics that count up to something; tags under your potions for the relics drinking one sets off.",
             new[] { "incoming-damage", "teammate-incoming-damage", "relic-counters", "potion-tabs" }),
-        new("Play Preview", "While you hold a card, the damage you'll take, the enemies' intents and the skulls show the turn as it would go after you play it.",
+        new("Play Preview", "While you hold a card, or point at a potion's Drink or aim it, the damage you'll take, the enemies' intents and the skulls show the turn as it would go after you play or use it.",
             new[] { "play-preview" }),
         new("Ethereal Fade", "An Ethereal card in your hand is see-through: it exhausts if it's still there at the end of your turn.",
             new[] { Features.EtherealFadeFeature.FeatureId }),
