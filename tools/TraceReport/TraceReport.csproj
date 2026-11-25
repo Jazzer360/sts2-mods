@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Reads a dev-mode trace offline (decision #256; docs/DEVELOPMENT.md "Performance traces"): CPU by method, allocations by type
+       and by call site, the collections. A developer's tool: not part of the mod, never shipped, not built by scripts/check.ps1.
+       `scripts/trace-report.ps1` runs it on the newest trace. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <RootNamespace>TraceReport</RootNamespace>
+    <!-- A program, not a mod: its packages are copied beside it. -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.16" />
+  </ItemGroup>
+</Project>
