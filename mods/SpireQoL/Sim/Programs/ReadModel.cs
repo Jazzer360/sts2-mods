@@ -109,10 +109,10 @@ public sealed class ReadModel : SimModel
     public override ActedSeen Seen => Spec.DarkensOnPlay ? ActedSeen.StatusCleared : ActedSeen.Flash;
 
     /// <summary>
-    /// The enemies' turn's end reaches its hook for this owner unless every step there waits on its owner taking part (participants.Contains(base.Owner),
+    /// The enemies' turn's end or start reaches its hook for this owner unless every step there waits on its owner taking part (participants.Contains(base.Owner),
     /// HookFact.TakesPart) and its owner is of the players' side, or nothing is paid there (decision #239's payouts are asked as the hook starts).
     /// </summary>
-    public override bool MayActAtTheEnemiesTurnEnd(string hook, int owner) =>
+    public override bool MayActOnTheEnemiesSide(string hook, int owner) =>
         Overrides(hook) && (Who.IsEnemy(owner) || !Enum.TryParse<HookName>(hook, out var name) || _paidWhere.ContainsKey(name)
             || Spec.Of(name) is not { } program || !program.Steps.All(step => WaitsOnTakingPart(step.When)));
 
@@ -321,8 +321,8 @@ public sealed class ReadModel : SimModel
     private readonly (string Property, Evaluate Value)[] _orbValues = Array.Empty<(string, Evaluate)>();
     private readonly IReadOnlyDictionary<string, decimal> _orbStarts = new Dictionary<string, decimal>();
 
-    /// <summary>Its passive goes off as its owner's turn ends (OrbQueue.BeforeTurnEnd), the one turn end a simulation covers.</summary>
-    public bool PassiveAtTurnEnd => Spec.PassiveAt == OrbTrigger.TurnEnd;
+    /// <summary>When its passive goes off: as its owner's turn ends (OrbQueue.BeforeTurnEnd) or as their next turn starts (OrbQueue.AfterTurnStart).</summary>
+    public OrbTrigger? PassiveAt => Spec.PassiveAt;
 
     /// <summary>A new orb of this kind for <paramref name="player"/> (OrbCmd.Channel's ToMutable): its fields as they start, its values worked out.</summary>
     public SimOrb NewOrb(SimState state, int player)
@@ -546,6 +546,13 @@ public sealed class ReadModel : SimModel
         HookName.BeforeSideTurnStart => nameof(BeforeSideTurnStart),
         HookName.AfterSideTurnStart => nameof(AfterSideTurnStart),
         HookName.AfterSideTurnStartLate => nameof(AfterSideTurnStartLate),
+        HookName.AfterEnergyReset => nameof(AfterEnergyReset),
+        HookName.AfterEnergyResetLate => nameof(AfterEnergyResetLate),
+        HookName.BeforeHandDraw => nameof(BeforeHandDraw),
+        HookName.BeforeHandDrawLate => nameof(BeforeHandDrawLate),
+        HookName.AfterPlayerTurnStartEarly => nameof(AfterPlayerTurnStartEarly),
+        HookName.AfterPlayerTurnStart => nameof(AfterPlayerTurnStart),
+        HookName.AfterPlayerTurnStartLate => nameof(AfterPlayerTurnStartLate),
         HookName.AfterOrbChanneled => nameof(AfterOrbChanneled),
         HookName.ModifyHpLostBeforeOsty => nameof(ModifyHpLostBeforeOsty),
         HookName.ModifyHpLostBeforeOstyLate => nameof(ModifyHpLostBeforeOstyLate),
@@ -631,6 +638,17 @@ public sealed class ReadModel : SimModel
     public override IEnumerable<SimState> BeforeSideTurnStart(SimState state, int owner) => TurnEnd(HookName.BeforeSideTurnStart, state, owner);
     public override IEnumerable<SimState> AfterSideTurnStart(SimState state, int owner) => TurnEnd(HookName.AfterSideTurnStart, state, owner);
     public override IEnumerable<SimState> AfterSideTurnStartLate(SimState state, int owner) => TurnEnd(HookName.AfterSideTurnStartLate, state, owner);
+    public override IEnumerable<SimState> AfterEnergyReset(SimState state, int owner, int player) => PlayersTurnStart(HookName.AfterEnergyReset, state, owner, player);
+    public override IEnumerable<SimState> AfterEnergyResetLate(SimState state, int owner, int player) => PlayersTurnStart(HookName.AfterEnergyResetLate, state, owner, player);
+    public override IEnumerable<SimState> BeforeHandDraw(SimState state, int owner, int player) => PlayersTurnStart(HookName.BeforeHandDraw, state, owner, player);
+    public override IEnumerable<SimState> BeforeHandDrawLate(SimState state, int owner, int player) => PlayersTurnStart(HookName.BeforeHandDrawLate, state, owner, player);
+    public override IEnumerable<SimState> AfterPlayerTurnStartEarly(SimState state, int owner, int player) => PlayersTurnStart(HookName.AfterPlayerTurnStartEarly, state, owner, player);
+    public override IEnumerable<SimState> AfterPlayerTurnStart(SimState state, int owner, int player) => PlayersTurnStart(HookName.AfterPlayerTurnStart, state, owner, player);
+    public override IEnumerable<SimState> AfterPlayerTurnStartLate(SimState state, int owner, int player) => PlayersTurnStart(HookName.AfterPlayerTurnStartLate, state, owner, player);
+
+    /// <summary>A player's next turn's start in a projection (CombatManager.SetupPlayerTurn's hooks): its code's steps, the hook's player <paramref name="player"/>.</summary>
+    private IEnumerable<SimState> PlayersTurnStart(HookName hook, SimState state, int owner, int player) =>
+        Run(hook, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Player = player });
 
     /// <summary>Hook.AfterOrbChanneled: an orb was channeled for <paramref name="player"/> (the hook's player, EventIsOwners).</summary>
     public override IEnumerable<SimState> AfterOrbChanneled(SimState state, int owner, int player) =>
@@ -2385,9 +2403,9 @@ public sealed class ReadModel : SimModel
             }
             case HookFact.CardIsOwners: return (in HookArgs args) => (args.Damage?.Play ?? args.Block?.Play)?.Owner == args.Owner ? 1m : 0m;
             // The side whose turn ends is the players' as your turn ends (a living player takes part), the enemies' as theirs does (a living enemy:
-            // CombatManager.EndEnemyTurnInternal's CreaturesOnCurrentSide); the side whose turn starts, the enemies' (a living enemy).
-            case HookFact.TakesPart: return (in HookArgs args) => (args.Hook is HookName.BeforeSideTurnStart or HookName.AfterSideTurnStart or HookName.AfterSideTurnStartLate
-                ? args.State.Enemy(args.Owner) is { Alive: true } : args.State.EndsTheirTurn(args.Owner)) ? 1m : 0m;
+            // CombatManager.EndEnemyTurnInternal's CreaturesOnCurrentSide); the side whose turn starts, its creatures (CombatManager.StartTurn's
+            // CreaturesOnCurrentSide: the living enemies, or the living players and their pets: SimState.TakesPartInTheTurn).
+            case HookFact.TakesPart: return (in HookArgs args) => args.State.TakesPartInTheTurn(args.Owner) ? 1m : 0m;
             case HookFact.TakeBound: return (in HookArgs args) => Take(in args) ? 1m : 0m;
             case HookFact.BoundTaken: return (in HookArgs args) => args.Taken?[0] ?? 0;
             case HookFact.HitUnblocked: return (in HookArgs args) => args.Hit?.Unblocked ?? 0;

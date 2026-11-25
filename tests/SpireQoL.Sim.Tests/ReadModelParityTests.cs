@@ -60,7 +60,13 @@ public class ReadModelParityTests
     /// </summary>
     private static readonly Dictionary<string, string> Reviewed = new(StringComparer.Ordinal)
     {
-        ["DoubleDamagePower.AfterSideTurnEnd"] = "PowerCmd.Decrement(this) when its owner takes part: it goes down as your turn ends. After it no card of yours plays this turn (the auto-plays come before), so no damage it doubles is left: no prediction changes",
+        // The players' next turn's start, which only a projection runs (decision #306): the hand-written models never ran it (it was past the turns a
+        // simulation covered); the read ones run their code there.
+        ["PlatingPower.BeforeSideTurnStart"] = "side == CombatSide.Player, its owner an enemy, the fight's first round: CreatureCmd.GainBlock(base.Owner, base.Amount) as the players' turn starts (a projection's, decision #306), which the hand-written model never ran. The enemies' turn starting differs by AfterSideTurnStart's reviewed difference, which this scenario runs too",
+        ["ConductorsBatonPower.AfterSideTurnStart"] = "participants.Contains(base.Owner): PowerCmd.Remove(this) as its owner's next turn starts (a projection's, decision #306), which the hand-written model never ran",
+        ["EmotionChip.AfterPlayerTurnStart"] = "its loop over its owner's orbs (OrbCmd.Passive for each) doesn't read: unknown as a player's next turn starts (a projection's, decision #306), which the hand-written model never ran",
+        ["InfernoPower.AfterPlayerTurnStart"] = "player == base.Owner.Player: CreatureCmd.Damage(base.Owner, SelfDamage) as its owner's next turn starts (a projection's, decision #306), which the hand-written model never ran",
+        ["DoubleDamagePower.AfterSideTurnEnd"] ="PowerCmd.Decrement(this) when its owner takes part: it goes down as your turn ends. After it no card of yours plays this turn (the auto-plays come before), so no damage it doubles is left: no prediction changes",
         ["BurrowedPower.AfterRemoved"] = "CreatureCmd.LoseBlock(new BlockingPlayerChoiceContext(), oldOwner, 999999999m, null): its old owner's block goes as it goes (decision #288), where the hand-written model ran nothing (AfterRemoved was classed as outside fights). Its one removal is its AfterBlockBroken's, on a block already broken: no prediction changes",
         ["ConsumingShadowPower.AfterSideTurnEnd"] = "OrbCmd.EvokeLast(choiceContext, base.Owner.Player) its amount of times while its owner has orbs: the same evokes, logged as it acting (an evoke is a command, as a channel is: decision #291), where the hand-written model logged nothing. It has no tab (no Proc Tags row) and its turn-end evokes are after the play, which the play check doesn't hold: nothing shown changes",
         ["InterceptPower.AfterRemoved"] = "a loop over its old owner's teammates' Covered whose Applier is it, each PowerCmd.Remove'd, which the reader doesn't read: unknown where it runs (decision #288), where the hand-written model ran nothing. Nothing a simulation does removes it (its own Remove is its AfterSideTurnEnd's on the enemies' side, which no simulation reaches; Covered, hand-written, never removes it; a read model's removal of a class with an AfterRemoved is a gap): no prediction changes",
@@ -329,6 +335,8 @@ public class ReadModelParityTests
         nameof(SimModel.AfterBlockBroken), nameof(SimModel.ShouldClearBlock), nameof(SimModel.ModifyCardPlayResultLocation), nameof(SimModel.AfterModifyingCardPlayResultLocation),
         nameof(SimModel.ModifyPowerAmountGivenAdditive), nameof(SimModel.ModifyPowerAmountGivenMultiplicative), nameof(SimModel.ModifyPowerAmountGiven), nameof(SimModel.AfterModifyingPowerAmountGiven),
         nameof(SimModel.AfterRemoved),
+        nameof(SimModel.AfterEnergyReset), nameof(SimModel.AfterEnergyResetLate), nameof(SimModel.BeforeHandDraw), nameof(SimModel.BeforeHandDrawLate),
+        nameof(SimModel.AfterPlayerTurnStartEarly), nameof(SimModel.AfterPlayerTurnStart), nameof(SimModel.AfterPlayerTurnStartLate),
     };
 
     [Fact]
@@ -788,6 +796,12 @@ public class ReadModelParityTests
                     var attacks = string.Join(", ", new[] { 0, Who.You }.Select(dealer => model.ModifyDamageMultiplicative(state, owner, new DamageCtx(dealer, owner, SimProps.Move, Card: null, Play: null))));
                     return after + " // attacks on its owner Ã— " + attacks;
                 });
+                // Your next turn starting (a projection's, decision #306): every hook of it in the game's order, for each player.
+                yield return ("your next turn starting", (model, state) => YourTurnStarting(model, state, owner));
+                break;
+            case nameof(SimModel.AfterEnergyReset) or nameof(SimModel.AfterEnergyResetLate) or nameof(SimModel.BeforeHandDraw) or nameof(SimModel.BeforeHandDrawLate)
+                or nameof(SimModel.AfterPlayerTurnStartEarly) or nameof(SimModel.AfterPlayerTurnStart) or nameof(SimModel.AfterPlayerTurnStartLate):
+                yield return ("your next turn starting", (model, state) => YourTurnStarting(model, state, owner));
                 break;
             case nameof(SimModel.AfterOrbChanneled):
                 // Twelve orbs channeled for its owner in turn (a counter's count), and one for each other player.
@@ -874,6 +888,32 @@ public class ReadModelParityTests
         select new OrbCtx(player, index, kind);
 
     /// <summary>The hooks of the enemies' side's turn starting, in the game's order (CombatManager.StartTurn).</summary>
+    /// <summary>
+    /// The players' next turn starting as a projection runs it (decision #306): their side's turn, BeforeSideTurnStart, each player's SetupPlayerTurn
+    /// hooks (you, then a teammate), AfterSideTurnStart and Late; each step's outcome, then a powered attack on its owner from enemy 0 and from you.
+    /// </summary>
+    private static string YourTurnStarting(SimModel model, SimState state, int owner)
+    {
+        state.EnemyTurnNow = false;
+        state.SideStarting = TurnSide.Players;
+        state.TurnNumber++;
+        state.RoundNumber++;
+        var steps = new List<Func<SimState, IEnumerable<SimState>>> { branch => model.BeforeSideTurnStart(branch, owner) };
+        foreach (var player in new[] { Who.You, Who.Teammate(0) })
+            steps.AddRange(new Func<SimState, IEnumerable<SimState>>[]
+            {
+                branch => model.AfterEnergyReset(branch, owner, player), branch => model.AfterEnergyResetLate(branch, owner, player),
+                branch => model.BeforeHandDraw(branch, owner, player), branch => model.BeforeHandDrawLate(branch, owner, player),
+                branch => model.AfterPlayerTurnStartEarly(branch, owner, player), branch => model.AfterPlayerTurnStart(branch, owner, player),
+                branch => model.AfterPlayerTurnStartLate(branch, owner, player),
+            });
+        steps.Add(branch => model.AfterSideTurnStart(branch, owner));
+        steps.Add(branch => model.AfterSideTurnStartLate(branch, owner));
+        var after = Sequence(state, steps, (branch, step) => step(branch));
+        var attacks = string.Join(", ", new[] { 0, Who.You }.Select(dealer => model.ModifyDamageMultiplicative(state, owner, new DamageCtx(dealer, owner, SimProps.Move, Card: null, Play: null))));
+        return after + " // attacks on its owner Ã— " + attacks;
+    }
+
     private static readonly Func<SimModel, SimState, int, IEnumerable<SimState>>[] TurnStartHooks =
     {
         (model, state, owner) => model.BeforeSideTurnStart(state, owner), (model, state, owner) => model.AfterSideTurnStart(state, owner),

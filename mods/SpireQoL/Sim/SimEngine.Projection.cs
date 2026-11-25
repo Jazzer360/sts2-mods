@@ -50,8 +50,8 @@ public static partial class SimEngine
 {
     /// <summary>
     /// The Intent Forecast's later turns, projected from the board (decision #304): this turn's end with no more plays and the enemy turn (as Run),
-    /// the enemies' turn end; then for each forecast turn your next turn (its start: your block cleared, your hand left out, since what you'd draw
-    /// isn't known; its end with no plays: your powers, relics and orbs as their code says), the enemies' turn start, each enemy's forecast move (a
+    /// the enemies' turn end; then for each forecast turn your next turn (its start: every listener's turn-start code, your block cleared, your hand left
+    /// out, since what you'd draw isn't known: YourTurnStart, decision #306; its end with no plays: your powers, relics and orbs as their code says), the enemies' turn start, each enemy's forecast move (a
     /// branch for each move of a random pick, with its chance; its code's steps before its hits) and their turn's end. Each move's hits on you are
     /// read as they land and as its intent reads when your turn starts; a number some branches don't share is unknown (a roll decides it), and so
     /// is everything past what the simulator can't follow (SimState.Unmodelled, UnmodelledAtTheirTurnEnd, a move it doesn't know).
@@ -84,11 +84,14 @@ public static partial class SimEngine
                 // The branches whose fight goes on with you in it: the others have no next turn.
                 branches.States = branches.States.Where(branch => !FightOver(branch) && !branch.You.Died).ToList();
                 if (branches.States.Count == 0) break;
+                // Your next turn starts (CombatManager.StartTurn for the players, its listeners' code: decision #306): what its intents read then.
+                // One it ends (your poison killing you, its own Noxious Fumes' kill ending the fight) has no turn after it.
+                YourTurnStart(branches);
+                branches.States = branches.States.Where(branch => !FightOver(branch) && !branch.You.Died).ToList();
+                if (branches.States.Count == 0) break;
                 var row = new Dictionary<int, Dictionary<string, ProjectedHits>>();
                 projection.Turns.Add(row);
                 var unknown = branches.States.Select(branch => branch.Unmodelled ?? branch.UnmodelledAtTheirTurnEnd).FirstOrDefault(why => why != null);
-                // Your next turn starts (CombatManager.StartTurn for the players): what its intents read then.
-                branches.Do(YourNextTurnStarts);
                 foreach (var choice in choices)
                     row[choice.EnemyId] = choice.Options.ToDictionary(option => option.Move.Id,
                         option => unknown != null ? new ProjectedHits(Lands: null, AtYourTurnStart: null) { Unknown = unknown } : AtYourTurnStart(branches.States, choice.EnemyId, option.Move), StringComparer.Ordinal);
@@ -131,32 +134,6 @@ public static partial class SimEngine
         {
             (enemy.TurnEndBlock, enemy.TurnEndBlockBroken) = (-1, false);
             (enemy.ProjectedMove, enemy.MoveUnknown, enemy.LandedOnYou, enemy.LandedUnknown) = (null, null, null, false);
-        }
-    }
-
-    /// <summary>
-    /// The players' next turn starts (CombatManager.StartTurn, as far as a projection follows it): it's their side's turn, a new turn's counts, each
-    /// player's block cleared (Hook.ShouldClearBlock: Barricade, Blur) and their hand left out (what they'd draw is a roll: no card in hand acts as
-    /// that turn ends, none is Ethereal, none auto-plays). The players' turn's start hooks aren't run (the hook reader folds a turn's start to the
-    /// enemies' side): a gap the forecast audit checks (decision #304).
-    /// </summary>
-    private static void YourNextTurnStarts(SimState state)
-    {
-        state.EnemyTurnNow = false;
-        state.TurnNumber++;
-        state.RoundNumber++;
-        TurnCountsStartOver(state);
-        foreach (var id in state.PlayerIds)
-        {
-            var clears = ClearsBlock(state, id);
-            var player = state.MutablePlayer(id);
-            if (clears) player.Block = 0;
-            player.HandCount = 0;
-            player.TurnEndCards = new();
-            player.ExhaustingInHand = new();
-            player.Fading = player.HexFading = player.UpgradableAtTurnEnd = 0;
-            player.Stampede = player.Simpleton = 0;
-            player.AutoHand = null;
         }
     }
 

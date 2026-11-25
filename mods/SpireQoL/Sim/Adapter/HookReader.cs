@@ -114,8 +114,50 @@ public static class HookReader
     /// </summary>
     private static readonly HashSet<string> SideTurnStartHooks = new(StringComparer.Ordinal) { "BeforeSideTurnStart", "AfterSideTurnStart", "AfterSideTurnStartLate" };
 
-    /// <summary>The hook runs as a side's turn starts (the side the simulator starts is the enemies').</summary>
-    private static bool StartsATurn(string hook) => SideTurnStartHooks.Contains(hook);
+    /// <summary>The hook runs as a side's turn starts: the enemies', or the players' next turn in a projection (decision #306).</summary>
+    internal static bool StartsATurn(string? hook) => hook != null && SideTurnStartHooks.Contains(hook);
+
+    /// <summary>The hook runs only as a player's next turn starts (CombatManager.SetupPlayerTurn's hooks), which only a projection runs (decision #306).</summary>
+    internal static bool StartsAPlayersTurn(string? hook) => hook != null && PlayersTurnStartHooks.Contains(hook);
+
+    /// <summary>
+    /// A class's programs as the turn a play is in runs them (decision #306): the players' next turn's start left out (its SetupPlayerTurn hooks, and
+    /// each side turn's-start step that can't run as the enemies' turn starts), which only a projection runs. What its tab, its payouts and its
+    /// flags are read from: what a play and a turn's end make it do.
+    /// </summary>
+    private static List<HookProgram> InTheTurn(IEnumerable<HookProgram> programs, ModelKind kind) =>
+        programs.Where(program => !StartsAPlayersTurn(program.Hook.ToString()))
+            .Select(program => StartsATurn(program.Hook.ToString()) ? program with { Steps = program.Steps.Where(step => AsTheEnemiesTurnStarts(step.When, kind) != 0m).ToList() } : program)
+            .Where(program => program.Returns != null || program.Steps.Count > 0).ToList();
+
+    /// <summary>
+    /// A condition's value as the enemies' side's turn starts, as far as it's known before the fight (null: not known): their side's turn
+    /// (HookFact.EnemiesTurn); a relic's owner, a player, isn't among their participants (HookFact.TakesPart, OwnersTurn).
+    /// </summary>
+    private static decimal? AsTheEnemiesTurnStarts(HookValue? value, ModelKind kind)
+    {
+        static decimal Truth(bool holds) => holds ? 1m : 0m;
+        switch (value)
+        {
+            case null: return 1m;
+            case HookConstant constant: return constant.Value;
+            case HookTest test: return AsTheEnemiesTurnStarts(test.Test, kind);
+            case HookNot not: return AsTheEnemiesTurnStarts(not.Inner, kind) is { } inner ? Truth(inner == 0m) : null;
+            case HookFactValue { Fact: HookFact.EnemiesTurn }: return 1m;
+            case HookFactValue { Fact: HookFact.TakesPart or HookFact.OwnersTurn } when kind == ModelKind.Relic: return 0m;
+            case HookMath { Operation: HookOperation.And } both:
+            {
+                var (left, right) = (AsTheEnemiesTurnStarts(both.Left, kind), AsTheEnemiesTurnStarts(both.Right, kind));
+                return left == 0m || right == 0m ? 0m : left != null && right != null ? 1m : null;
+            }
+            case HookMath { Operation: HookOperation.Or } either:
+            {
+                var (left, right) = (AsTheEnemiesTurnStarts(either.Left, kind), AsTheEnemiesTurnStarts(either.Right, kind));
+                return left is { } leftValue && leftValue != 0m || right is { } rightValue && rightValue != 0m ? 1m : left == 0m && right == 0m ? 0m : null;
+            }
+            default: return null;
+        }
+    }
 
     /// <summary>
     /// The hooks that run as either side's turn ends (Hook.BeforeSideTurnEnd: VeryEarly, Early, then its own; Hook.AfterSideTurnEnd, then Late): a
@@ -174,6 +216,14 @@ public static class HookReader
                 programs.Add(new HookProgram(HookName.AfterRemoved, new HookStep[] { new UnknownStep($"{type.Name}'s AfterRemoved isn't read ({gap.Value.Text})") }));
                 continue;
             }
+            // A hook that runs only as the players' next turn starts (decision #306: a projection's), whose body doesn't read: unknown there, the
+            // class's other hooks read as they were.
+            if (reader.UnknownWhereItRuns is { } unknown && program != null)
+            {
+                readings.Add(new HookReading(hook.Name, null) { Unknown = unknown });
+                programs.Add(program);
+                continue;
+            }
             readings.Add(new HookReading(hook.Name, gap?.Text) { NotRun = notRun, Capability = gap?.Capability });
             if (program != null) programs.Add(program);
         }
@@ -192,9 +242,12 @@ public static class HookReader
         // What it pays out after the play, on what (decision #239): read from its turn-end hooks and its next turn's start, which never run.
         var nextTurn = Hooks(type).Where(hook => PlayersTurnStartHooks.Contains(hook.Name)).OrderBy(hook => hook.Name, StringComparer.Ordinal)
             .Select(hook => (hook.Name, Steps: reader.NextTurnSteps(hook))).ToList();
+        // Its tab, payouts and flags are what it does through the turn a play is in: the players' next turn's start, which only a projection runs
+        // (decision #306), left out of them.
+        var inTheTurn = InTheTurn(programs, kind);
         // A model whose commands act during the play too (Joss Paper's draw as a card exhausts) keeps its play tab: its payouts give none.
-        var actsDuringThePlay = TabOf(programs.Where(program => !TurnEndHooks.Contains(program.Hook) && !StartsATurn(program.Hook.ToString())).ToList()) != null;
-        var payouts = actsDuringThePlay ? new List<Payout>() : PayoutsOf(programs, nextTurn);
+        var actsDuringThePlay = TabOf(inTheTurn.Where(program => !TurnEndHooks.Contains(program.Hook) && !StartsATurn(program.Hook.ToString())).ToList()) != null;
+        var payouts = actsDuringThePlay ? new List<Payout>() : PayoutsOf(inTheTurn, nextTurn);
         // A play hook that sets the relic's Status to Normal (RelicStatus.Normal, 0): it goes dark, the game's sign of a bonus given up.
         var darkens = kind == ModelKind.Relic && programs.Where(program => program.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed)
             .SelectMany(program => new ModelSpec(type.Name, kind, new[] { program }).Steps()).Any(step => step is StoreFieldStep { Field: StatusField, Value: HookConstant { Value: 0m } });
@@ -202,10 +255,11 @@ public static class HookReader
         var fieldsRead = new ModelSpec(type.Name, kind, programs) { Payouts = payouts }.Values().OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
         programs = programs.Select(program => program with { Steps = program.Steps.Where(step => step is not StoreFieldStep store || fieldsRead.Contains(store.Field)).ToList() })
             .Where(program => program.Returns != null || program.Steps.Count > 0).ToList();
-        var helpsOwner = HelpsOwnerOf(programs);
-        var hurtsOwner = HurtsOwnerOf(programs);
-        var hurtsPlayOwner = HurtsPlayOwnerOf(programs);
-        var outcome = OutcomeOf(programs);
+        inTheTurn = InTheTurn(programs, kind);
+        var helpsOwner = HelpsOwnerOf(inTheTurn);
+        var hurtsOwner = HurtsOwnerOf(inTheTurn);
+        var hurtsPlayOwner = HurtsPlayOwnerOf(inTheTurn);
+        var outcome = OutcomeOf(inTheTurn);
         // Its own commands another class calls (PoisonPower.Trigger, which Outbreak calls on each enemy's poison): each read as a program; one that
         // doesn't read whole is left out, and a call to it stays what the caller's translation makes of it.
         var commands = OwnCommands(type).Select(method => (method.Name, Steps: reader.OwnCommand(method))).Where(command => command.Steps != null)
@@ -217,7 +271,7 @@ public static class HookReader
         var spec = new ModelSpec(type.Name, kind, programs)
         {
             Tab = outcome != null || payouts.Any(payout => payout.DuringTheTurn == null) ? null : payouts.Count > 0 ? TabKind.Trigger
-                : (helpsOwner || hurtsOwner) && TabOf(programs) != null ? TabKind.Trigger : TabOf(programs),
+                : (helpsOwner || hurtsOwner) && TabOf(inTheTurn) != null ? TabKind.Trigger : TabOf(inTheTurn),
             // Going dark labels a bonus given up only with a payout the play decides: with none, it's a bonus spent on the play (Pael's Legion's doubled
             // block), shown by its flash beside it.
             Payouts = payouts.Count > 0 ? payouts : null, DarkensOnPlay = darkens && payouts.Any(payout => payout.DuringTheTurn != null),
@@ -226,7 +280,7 @@ public static class HookReader
             Commands = commands.Count > 0 ? commands : null,
         };
         // Nothing else gives it a tab, and its damage term changing a damage is it acting (decision #247: Conqueror on a Sovereign Blade's hit).
-        if (spec.Tab == null && outcome == null && payouts.Count == 0 && TermActsOf(programs)) spec = spec with { Tab = TabKind.Trigger, TermActs = true };
+        if (spec.Tab == null && outcome == null && payouts.Count == 0 && TermActsOf(inTheTurn)) spec = spec with { Tab = TabKind.Trigger, TermActs = true };
         return new ModelReading(spec, readings);
     }
 
@@ -1023,14 +1077,22 @@ public static class HookReader
             }
         }
 
+        /// <summary>
+        /// Why the last hook read (Hook) is unknown where it runs: a body that acts only as the players' next turn starts (decision #306) and doesn't
+        /// read, its program an UnknownStep there; null for any other.
+        /// </summary>
+        public string? UnknownWhereItRuns { get; private set; }
+
         public (HookProgram? Program, GapOf? Gap, string? NotRun) Hook(MethodInfo hook)
         {
             _hook = hook.Name;
+            UnknownWhereItRuns = null;
             if (NotRun.TryGetValue(hook.Name, out var why)) return (null, null, why);
             if (OutsideFights(hook.Name)) return (null, null, "it acts outside fights (Diagnostics/OutOfCombatHooks.txt)");
             try
             {
-                if (PlayersTurnStartHooks.Contains(hook.Name)) return (null, null, "it runs as the players' next turn starts, past the turns a simulation covers");
+                // A player's next turn's start (CombatManager.SetupPlayerTurn's hooks, decision #306): run in a projection, the hook's player that player.
+                if (PlayersTurnStartHooks.Contains(hook.Name)) return OnlyAsThePlayersTurnStarts(hook, Enum.Parse<HookName>(hook.Name), when: null);
                 // PowerCmd.Apply calls it only for a power whose ShouldScaleInMultiplayer is true (read from its code: PowerModel's is false); then
                 // it's PowerCmd.Apply's own rule, read for every power class into its PowerRule (decision #234) and run by the engine as it lands one.
                 if (hook.Name == "GetScaledAmountForMultiplayer")
@@ -1045,7 +1107,12 @@ public static class HookReader
                 if (ChangesCostsAtFlushOnly(hook)) return (null, null, CostsAtFlush);
                 if (SetsShownOnly(hook)) return (null, null, "it only sets what its cards show (an affliction's amount): no code a fight runs reads it");
                 if (StartsATurn(hook.Name) && PastTheHorizon(hook) is { } horizon)
-                    return horizon.Length == 0 ? (null, null, "it acts as its owner's next turn starts, past the turns a simulation covers") : (null, new GapOf(ReaderCapability.ValueNotFollowed, horizon), null);
+                {
+                    if (horizon.Length > 0) return (null, new GapOf(ReaderCapability.ValueNotFollowed, horizon), null);
+                    // A relic's body whose every command waits on its owner, a player, taking part: it acts only as the players' next turn starts,
+                    // which a projection runs (decision #306).
+                    return OnlyAsThePlayersTurnStarts(hook, Enum.Parse<HookName>(hook.Name), when: new HookFactValue(HookFact.TakesPart));
+                }
                 if (!Enum.TryParse<HookName>(hook.Name, out var name)) return (null, new GapOf(ReaderCapabilities.OfHook(hook.Name), $"gap: the simulator runs no read model's {hook.Name}"), null);
                 // A creature-valued Modify hook (a damage's redirect: Wuppy's Loyalty, Die For You): the creature of the first way that holds.
                 if (name is HookName.ModifyPreBlockDamageTarget or HookName.ModifyUnblockedDamageTarget)
@@ -1066,9 +1133,9 @@ public static class HookReader
                 var body = BodySteps(hook);
                 if (body.Gap is { } bodyGap) return (null, bodyGap, null);
                 var steps = body.Steps!;
-                // A step its code runs on a side whose turn the simulator never starts (the players' side's next turn) never runs: left out.
+                // A step whose condition never holds in a fight never runs: left out.
                 var never = steps.RemoveAll(step => step.When is HookConstant { Value: 0m });
-                if (steps.Count == 0) return (null, null, never == 0 ? null : StartsATurn(hook.Name) ? "its commands wait on the players' side's turn starting, past the turns a simulation covers" : "its commands' conditions never hold in a fight");
+                if (steps.Count == 0) return (null, null, never == 0 ? null : "its commands' conditions never hold in a fight");
                 return (new HookProgram(name, steps), null, null);
             }
             catch (Gap gap)
@@ -1079,6 +1146,28 @@ public static class HookReader
             {
                 return (null, new GapOf(ReaderCapability.NotRead, $"gap: not read ({exception.GetType().Name}: {exception.Message})"), null);
             }
+        }
+
+        /// <summary>
+        /// A hook body that acts only as the players' next turn starts (a player's SetupPlayerTurn hooks; a relic's turn's-start body whose every
+        /// command waits on its owner taking part), which only a projection runs (decision #306): its program, or, where it doesn't read, an
+        /// UnknownStep there (on <paramref name="when"/>), the class's other hooks read as they were (UnknownWhereItRuns).
+        /// </summary>
+        private (HookProgram? Program, GapOf? Gap, string? NotRun) OnlyAsThePlayersTurnStarts(MethodInfo hook, HookName name, HookValue? when)
+        {
+            (List<HookStep>? Steps, GapOf? Gap) body;
+            try { body = BodySteps(hook); }
+            catch (Gap gap) { body = (null, new GapOf(gap.Capability, gap.Message)); }
+            catch (Exception exception) { body = (null, new GapOf(ReaderCapability.NotRead, $"gap: not read ({exception.GetType().Name}: {exception.Message})")); }
+            if (body.Gap is { } bodyGap)
+            {
+                UnknownWhereItRuns = bodyGap.Text;
+                return (new HookProgram(name, new HookStep[] { new UnknownStep($"{_type.Name}'s {hook.Name} isn't read ({bodyGap.Text})") { When = when } }), null, null);
+            }
+            var steps = body.Steps!;
+            var never = steps.RemoveAll(step => step.When is HookConstant { Value: 0m });
+            if (steps.Count == 0) return (null, null, never == 0 ? "nothing in its body acts" : "its commands' conditions never hold in a fight");
+            return (new HookProgram(name, steps), null, null);
         }
 
         /// <summary>A hook body's commands, each translated at its place (a let where the code keeps a local), or the gap where the reader stops.</summary>
@@ -2746,12 +2835,10 @@ public static class HookReader
             {
                 if (compare.Right is QueryValue { Name: "Side", Of: { } rightOf } && CreatureOf(rightOf) is { } rightSide)
                     holds = CreatureFact(HookFact.SameSide, leftSide) with { Other = rightSide };
-                // The side whose turn ends (AfterSideTurnEnd's side): the players' as your turn ends, the enemies' as theirs does, a fact of the
-                // turn's end it runs at; the side whose turn starts, the enemies'.
-                else if (compare.Right is ParameterValue { Name: "side" } or NamedValue { Name: "side" } && EndsATurn(_hook))
+                // The side whose turn ends or starts (AfterSideTurnEnd's side, AfterSideTurnStart's): the players' as your turn ends or starts, the
+                // enemies' as theirs does, a fact of the turn's end or start it runs at (decision #306: the side whose turn it is now).
+                else if (compare.Right is ParameterValue { Name: "side" } or NamedValue { Name: "side" } && (EndsATurn(_hook) || StartsATurn(_hook)))
                     holds = CreatureFact(HookFact.CreatureOnEndingSide, leftSide);
-                else if (compare.Right is ParameterValue { Name: "side" } or NamedValue { Name: "side" } && StartsATurn(_hook))
-                    holds = Not(CreatureFact(HookFact.CreatureOnPlayersSide, leftSide));
                 else if (compare.Right is ConstantValue side && EnumName(_type.Assembly, "CombatSide", side.Value) is { } sideName)
                     holds = sideName == "Player" ? CreatureFact(HookFact.CreatureOnPlayersSide, leftSide) : Not(CreatureFact(HookFact.CreatureOnPlayersSide, leftSide));
             }
@@ -2886,19 +2973,19 @@ public static class HookReader
                 return compare.Op == Comparison.Equal ? debuff : Not(debuff);
             }
             // The side whose turn is ending against a side named (Weak's side == CombatSide.Enemy): the side whose turn it is (CombatManager passes
-            // CurrentSide), the enemies' as their turn ends, a fact of the turn's end it runs at. The side whose turn is starting: the simulator starts
-            // the enemies' side's turn only.
+            // CurrentSide), the enemies' as their turn ends, a fact of the turn's end it runs at; the side whose turn is starting, a fact of the turn's
+            // start it runs at (the enemies', or the players' next turn in a projection: decision #306).
             if (compare.Left is NamedValue { Name: "side" } or ParameterValue { Name: "side" } && compare.Right is ConstantValue side)
             {
                 var named = EnumName(_type.Assembly, "CombatSide", side.Value);
-                if (EndsATurn(_hook) && named is "Player" or "Enemy")
+                if ((EndsATurn(_hook) || StartsATurn(_hook)) && named is "Player" or "Enemy")
                 {
                     var enemies = new HookFactValue(HookFact.EnemiesTurn);
                     var isSide = named == "Enemy" ? (HookValue)enemies : Not(enemies);
                     return compare.Op == Comparison.Equal ? isSide : Not(isSide);
                 }
-                var starts = StartsATurn(_hook) ? named == "Enemy" : named == "Player";
-                return new HookConstant((compare.Op == Comparison.Equal) == starts ? 1m : 0m);
+                var players = named == "Player"; // a side named on another hook: the players' side whose turn it is during the play
+                return new HookConstant((compare.Op == Comparison.Equal) == players ? 1m : 0m);
             }
             if (CreatureCompare(compare) is { } creatures) return creatures;
             // The side whose turn it is against a side named (CombatState.CurrentSide == CombatSide.Enemy): the enemies' turn, or not.
@@ -3575,8 +3662,9 @@ public static class HookReader
                 case StoredValue stored: return VarKey(stored.Value);
                 case CardValue card: return KeyOfProperty(card.Key);
                 case QueryValue { Name: "BaseValue" or "IntValue", Of: { } of }: return VarKey(of);
-                case QueryValue { Type: "DynamicVarSet", Name: var property, Of: QueryValue { Name: "DynamicVars", Of: NamedValue { Name: "this" } } }: return KeyOfProperty(property);
+                // An indexed key (base.DynamicVars["SelfDamage"], cast to its kind: Inferno's DamageVar) before a property's.
                 case QueryValue { Type: "DynamicVarSet", Name: "Item", Arguments: [NamedValue named] }: return named.Name.Trim('"');
+                case QueryValue { Type: "DynamicVarSet", Name: var property, Of: QueryValue { Name: "DynamicVars", Of: NamedValue { Name: "this" } } }: return KeyOfProperty(property);
                 default: return null;
             }
         }

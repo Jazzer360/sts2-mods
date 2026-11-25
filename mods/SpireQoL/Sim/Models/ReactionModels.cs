@@ -120,7 +120,7 @@ public sealed class SkittishPower : SimModel
     }
 
     /// <summary>Its AfterSideTurnEnd acts on the other side's turn ending: never on its owner's, an enemy's.</summary>
-    public override bool MayActAtTheEnemiesTurnEnd(string hook, int owner) => Overrides(hook) && !Who.IsEnemy(owner);
+    public override bool MayActOnTheEnemiesSide(string hook, int owner) => Overrides(hook) && !Who.IsEnemy(owner);
 
     /// <summary>AfterSideTurnEnd: the other side's turn ending (side != base.Owner.Side) clears HasGainedBlockThisTurn.</summary>
     public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner)

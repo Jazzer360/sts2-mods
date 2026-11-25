@@ -194,34 +194,103 @@ public static partial class ReadModels
     /// its condition isn't known to fail there, the side ending the enemies' (HookFact.EnemiesTurn) and its owner taking part only when an enemy
     /// (HookFact.TakesPart, OwnersTurn, CreatureOnEndingSide of the owner).
     /// </summary>
-    private static bool ActsAtTheirTurnEnd(HookProgram program, bool enemyOwner) => program.Steps.Any(step => Holds(step.When, enemyOwner) != 0m);
+    private static bool ActsAtTheirTurnEnd(HookProgram program, bool enemyOwner) => program.Steps.Any(step => Holds(step.When, enemyOwner, enemiesSide: true) != 0m);
 
-    /// <summary>A condition's value as the enemies' side's turn ends for an owner of a side (null: not known there).</summary>
-    private static decimal? Holds(HookValue? value, bool enemyOwner)
+    /// <summary>The hooks of the players' next turn's start, in the order it runs them (CombatManager.StartTurn, SetupPlayerTurn, the AutoPrePlay phase).</summary>
+    private static readonly string[] TurnStartRunOrder =
+    {
+        "BeforeSideTurnStart", "AfterBlockCleared", "AfterEnergyReset", "AfterEnergyResetLate", "BeforeHandDraw", "BeforeHandDrawLate",
+        "AfterPlayerTurnStartEarly", "AfterPlayerTurnStart", "AfterPlayerTurnStartLate", "AfterSideTurnStart", "AfterSideTurnStartLate", "AfterAutoPrePlayPhaseEntered",
+    };
+
+    /// <summary>The running game's listeners the players' next turn's start doesn't follow (TurnStartGap, decision #306), for SimModels (on a worker, with the models).</summary>
+    public static IEnumerable<TurnStartGap> TurnStartGaps() => TurnStartGaps(Diagnostics.CoverageLedger.ModelTypes(), RuntimeCode.Read);
+
+    /// <summary>
+    /// Every power and relic class of <paramref name="types"/> whose code acts as the players' next turn starts (a turn's-start hook it overrides:
+    /// TurnStartRunOrder) and that a projection doesn't follow there, with why, and for which owners it may act (decision #306): one with no model
+    /// (not hand-written, not read whole and compiled), or a hand-written one whose model doesn't answer that hook. A hook that doesn't read acts
+    /// for both kinds of owner; a read one acts unless every step waits on what doesn't hold as the players' turn starts (an enemy owner taking
+    /// part, the enemies' side: HookFact.TakesPart, EnemiesTurn; the hook's player its owner: EventIsOwners). A class read whole at the reviewed
+    /// builds that isn't now is unread already (every simulation it's in is unknown: Specs), so it isn't listed.
+    /// </summary>
+    public static List<TurnStartGap> TurnStartGaps(IEnumerable<Type> types, Func<MethodBase, List<CodeOp>> read)
+    {
+        var all = types.ToList();
+        var gaps = new List<TurnStartGap>();
+        foreach (var type in HookReader.Powers(all).Concat(HookReader.Relics(all)).OrderBy(type => type.Name, StringComparer.Ordinal))
+        {
+            var handWritten = SimModels.HandWritten(type.Name);
+            if (handWritten == null && ReadWholeAtReview.Contains(type.Name)) continue;
+            var starts = HookReader.Hooks(type).Select(hook => hook.Name).Where(TurnStartRunOrder.Contains).ToHashSet(StringComparer.Ordinal);
+            if (starts.Count == 0) continue;
+            ModelReading reading;
+            try { reading = HookReader.Read(type, read); }
+            catch (Exception exception)
+            {
+                gaps.Add(new TurnStartGap(type.Name, $"{type.Name}'s hooks couldn't be read ({exception.GetType().Name}): what it does as your turn starts isn't simulated") { ActsForAnEnemy = true, ActsForAPlayer = true });
+                continue;
+            }
+            if (handWritten == null && reading.Whole && Compiles(reading.Spec) == null) continue; // modelled from its code: it runs there itself
+            var (forEnemy, forPlayer) = (false, false);
+            string? first = null;
+            foreach (var hook in TurnStartRunOrder.Where(starts.Contains))
+            {
+                if (handWritten != null && handWritten.Overrides(hook)) continue; // its hand-written model answers it
+                var hookReading = reading.Hooks.FirstOrDefault(each => each.Hook == hook);
+                bool enemy, player;
+                if (hookReading is not { Translated: true } || !Enum.TryParse<HookName>(hook, out var name))
+                    (enemy, player) = (hookReading?.NotRun == null, hookReading?.NotRun == null); // a body not read acts for both
+                else if (reading.Spec.Of(name) is not { } program) (enemy, player) = (false, false); // read: nothing it runs there
+                else (enemy, player) = (ActsAsYourTurnStarts(program, enemyOwner: true), ActsAsYourTurnStarts(program, enemyOwner: false));
+                if ((enemy || player) && first == null)
+                    first = hookReading is { Read: false } ? $"{hook} ({hookReading.Gap})" : hookReading is { Unknown: { } unknown } ? $"{hook} ({unknown})"
+                        : handWritten != null ? $"{hook}, which its hand-written model doesn't answer" : $"{hook}, its other hooks not read ({string.Join("; ", reading.Gaps.Take(1))})";
+                forEnemy |= enemy;
+                forPlayer |= player;
+            }
+            if (handWritten != null && !forEnemy && !forPlayer) continue; // answered, or never acting there
+            var why = first != null ? $"{type.Name} acts as your turn starts and isn't simulated there: {first}"
+                : $"{type.Name} isn't modelled, and its turn's-start hooks never act as your turn starts";
+            gaps.Add(new TurnStartGap(type.Name, why) { ActsForAnEnemy = forEnemy, ActsForAPlayer = forPlayer });
+        }
+        return gaps;
+    }
+
+    /// <summary>Some step of a read turn's-start <paramref name="program"/> may run as the players' next turn starts for an owner of that side or the enemies'.</summary>
+    private static bool ActsAsYourTurnStarts(HookProgram program, bool enemyOwner) => program.Steps.Any(step => Holds(step.When, enemyOwner, enemiesSide: false) != 0m);
+
+    /// <summary>
+    /// A condition's value as a side's turn ends or starts (the enemies' when <paramref name="enemiesSide"/>, else the players') for an owner of a
+    /// side (null: not known there).
+    /// </summary>
+    private static decimal? Holds(HookValue? value, bool enemyOwner, bool enemiesSide)
     {
         static decimal? Truth(bool holds) => holds ? 1m : 0m;
         switch (value)
         {
             case null: return 1m;
             case HookConstant constant: return constant.Value;
-            case HookTest test: return Holds(test.Test, enemyOwner);
-            case HookNot not: return Holds(not.Inner, enemyOwner) is { } inner ? Truth(inner == 0m) : null;
-            case HookFactValue { Fact: HookFact.EnemiesTurn }: return 1m;
-            case HookFactValue { Fact: HookFact.TakesPart or HookFact.OwnersTurn }: return Truth(enemyOwner);
-            case HookFactValue { Fact: HookFact.CreatureOnEndingSide, Creature.Who: HookWho.Owner }: return Truth(enemyOwner);
+            case HookTest test: return Holds(test.Test, enemyOwner, enemiesSide);
+            case HookNot not: return Holds(not.Inner, enemyOwner, enemiesSide) is { } inner ? Truth(inner == 0m) : null;
+            case HookFactValue { Fact: HookFact.EnemiesTurn }: return Truth(enemiesSide);
+            case HookFactValue { Fact: HookFact.TakesPart or HookFact.OwnersTurn }: return Truth(enemyOwner == enemiesSide);
+            case HookFactValue { Fact: HookFact.CreatureOnEndingSide, Creature.Who: HookWho.Owner }: return Truth(enemyOwner == enemiesSide);
+            // The player whose turn starts is its owner (a SetupPlayerTurn hook's player == base.Owner): never an enemy.
+            case HookFactValue { Fact: HookFact.EventIsOwners } when !enemiesSide && enemyOwner: return 0m;
             case HookMath { Operation: HookOperation.And } both:
             {
-                var (left, right) = (Holds(both.Left, enemyOwner), Holds(both.Right, enemyOwner));
+                var (left, right) = (Holds(both.Left, enemyOwner, enemiesSide), Holds(both.Right, enemyOwner, enemiesSide));
                 return left == 0m || right == 0m ? 0m : left != null && right != null ? 1m : null;
             }
             case HookMath { Operation: HookOperation.Or } either:
             {
-                var (left, right) = (Holds(either.Left, enemyOwner), Holds(either.Right, enemyOwner));
+                var (left, right) = (Holds(either.Left, enemyOwner, enemiesSide), Holds(either.Right, enemyOwner, enemiesSide));
                 return left is { } leftValue && leftValue != 0m || right is { } rightValue && rightValue != 0m ? 1m : left == 0m && right == 0m ? 0m : null;
             }
             case HookMath { Operation: HookOperation.Equal or HookOperation.NotEqual } compare:
             {
-                if (Holds(compare.Left, enemyOwner) is not { } left || Holds(compare.Right, enemyOwner) is not { } right) return null;
+                if (Holds(compare.Left, enemyOwner, enemiesSide) is not { } left || Holds(compare.Right, enemyOwner, enemiesSide) is not { } right) return null;
                 return Truth((left == right) == (compare.Operation == HookOperation.Equal));
             }
             default: return null;

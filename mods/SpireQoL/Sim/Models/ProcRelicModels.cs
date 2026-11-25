@@ -56,7 +56,7 @@ public sealed class PaelsEye : RelicProc
     /// <summary>The turn's first card clears its Active status (BeforeCardPlayed: Status = Normal); it doesn't flash.</summary>
     public override ActedSeen Seen => ActedSeen.StatusCleared;
     /// <summary>Its BeforeSideTurnEndEarly waits on its owner, a player, taking part: never as the enemies' turn ends.</summary>
-    public override bool MayActAtTheEnemiesTurnEnd(string hook, int owner) => false;
+    public override bool MayActOnTheEnemiesSide(string hook, int owner) => false;
 
     /// <summary>
     /// BeforeSideTurnEndEarly: still armed (no card played this turn: SimPlayer.PaelsEyeExhaust), its owner's whole hand is

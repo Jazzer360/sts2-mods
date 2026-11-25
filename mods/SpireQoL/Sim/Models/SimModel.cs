@@ -369,11 +369,11 @@ public abstract class SimModel
     public bool Overrides(string hook) => _overrides.Contains(hook);
 
     /// <summary>
-    /// It may act in this turn's-end hook as the enemies' side's turn ends (SimEngine.EnemyTurnEnd), for this owner. A hook whose code acts only for
-    /// its owner taking part (participants.Contains(base.Owner)) can't for a creature of the players' side, which isn't among the enemies ending
-    /// their turn: the engine skips a hook no listener may act in there, as it skips one no listener overrides.
+    /// It may act in this turn's-end or turn's-start hook as the enemies' side's turn ends or starts (SimEngine.EnemyTurnEnd, EnemyTurnStart), for this
+    /// owner. A hook whose code acts only for its owner taking part (participants.Contains(base.Owner)) can't for a creature of the players' side,
+    /// which isn't among the enemies: the engine skips a hook no listener may act in there, as it skips one no listener overrides.
     /// </summary>
-    public virtual bool MayActAtTheEnemiesTurnEnd(string hook, int owner) => Overrides(hook);
+    public virtual bool MayActOnTheEnemiesSide(string hook, int owner) => Overrides(hook);
 
     /// <summary>It acts inside damage (SimEngine.Damage): without such a model, damage takes the plain path.</summary>
     public bool ListensToDamage { get; }
@@ -473,12 +473,23 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner) => One(state);
     public virtual IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner) => One(state);
     public virtual IEnumerable<SimState> AfterSideTurnEndLate(SimState state, int owner) => One(state);
-    // ---- the enemies' side's turn start (Hook.BeforeSideTurnStart, then Hook.AfterSideTurnStart: AfterSideTurnStart, then Late), the one
-    // turn start a simulation reaches: its participants are the enemies (CombatManager.StartTurn: CreaturesOnCurrentSide). Every listener.
+    // ---- a side's turn start (Hook.BeforeSideTurnStart, then Hook.AfterSideTurnStart: AfterSideTurnStart, then Late): the enemies', its
+    // participants the living enemies, and in a projection the players' next turn, its participants the living players and their pets
+    // (CombatManager.StartTurn: CreaturesOnCurrentSide; SimState.SideStarting). Every listener.
 
     public virtual IEnumerable<SimState> BeforeSideTurnStart(SimState state, int owner) => One(state);
     public virtual IEnumerable<SimState> AfterSideTurnStart(SimState state, int owner) => One(state);
     public virtual IEnumerable<SimState> AfterSideTurnStartLate(SimState state, int owner) => One(state);
+    // ---- a player's next turn's start in a projection (CombatManager.SetupPlayerTurn: decision #306): Hook.AfterEnergyReset (then Late),
+    // Hook.BeforeHandDraw (then Late), Hook.AfterPlayerTurnStart (Early, its own, Late), each told the player whose turn it sets up. Every listener.
+
+    public virtual IEnumerable<SimState> AfterEnergyReset(SimState state, int owner, int player) => One(state);
+    public virtual IEnumerable<SimState> AfterEnergyResetLate(SimState state, int owner, int player) => One(state);
+    public virtual IEnumerable<SimState> BeforeHandDraw(SimState state, int owner, int player) => One(state);
+    public virtual IEnumerable<SimState> BeforeHandDrawLate(SimState state, int owner, int player) => One(state);
+    public virtual IEnumerable<SimState> AfterPlayerTurnStartEarly(SimState state, int owner, int player) => One(state);
+    public virtual IEnumerable<SimState> AfterPlayerTurnStart(SimState state, int owner, int player) => One(state);
+    public virtual IEnumerable<SimState> AfterPlayerTurnStartLate(SimState state, int owner, int player) => One(state);
     /// <summary>A player's Osty lost HP (AfterCurrentHpChanged with a loss on Osty): Necro Mastery. Runs inside the damage.</summary>
     public virtual void AfterOstyHpLost(SimState state, int owner, int player, int lost) { }
     /// <summary>Hook.ModifySummonAmount: a summon's amount for <paramref name="summoner"/> as this listener leaves it (OstyCmd.Summon). Pure.</summary>
@@ -576,6 +587,9 @@ public static class SimModels
     /// <summary>Where the turn's-end listeners the simulator doesn't follow come from (TurnEndGap: decision #303), set with <see cref="Read"/>. Null: none.</summary>
     public static Func<IEnumerable<TurnEndGap>>? ReadTurnEndGaps { get; set; }
 
+    /// <summary>Where the listeners the players' next turn's start doesn't follow come from (TurnStartGap: decision #306), set with <see cref="Read"/>. Null: none.</summary>
+    public static Func<IEnumerable<TurnStartGap>>? ReadTurnStartGaps { get; set; }
+
     /// <summary>The read started on a worker (StartReading), or null: the models are read on the first ask, on its thread.</summary>
     private static volatile Task<LoadedModels>? _reading;
 
@@ -585,11 +599,13 @@ public static class SimModels
     /// until it is (<see cref="Loaded"/>, SimWait.Models: a prediction is pending until then, never made without the models).
     /// </summary>
     /// <returns>The read, so the caller can say when it's done (the dev log's load times).</returns>
-    public static Task StartReading(Func<IEnumerable<ModelSpec>> read, Func<IEnumerable<PowerRule>> readRules, Func<IEnumerable<TurnEndGap>>? readTurnEndGaps = null)
+    public static Task StartReading(Func<IEnumerable<ModelSpec>> read, Func<IEnumerable<PowerRule>> readRules, Func<IEnumerable<TurnEndGap>>? readTurnEndGaps = null,
+        Func<IEnumerable<TurnStartGap>>? readTurnStartGaps = null)
     {
         Read = read;
         ReadRules = readRules;
         ReadTurnEndGaps = readTurnEndGaps;
+        ReadTurnStartGaps = readTurnStartGaps;
         var reading = Task.Run(Load);
         _reading = reading;
         return reading;
@@ -615,7 +631,8 @@ public static class SimModels
     /// their kind (an orb is never a listener: the engine runs its programs where OrbCmd and OrbQueue do).
     /// </summary>
     private sealed record LoadedModels(IReadOnlyDictionary<string, SimModel> ByName, IReadOnlyDictionary<string, string> Unread, IReadOnlyDictionary<OrbKind, ReadModel> Orbs,
-        IReadOnlyDictionary<string, ReadModel> Enchantments, IReadOnlyDictionary<string, LoadedRule> Rules, IReadOnlyDictionary<string, TurnEndGap> TurnEndGaps);
+        IReadOnlyDictionary<string, ReadModel> Enchantments, IReadOnlyDictionary<string, LoadedRule> Rules, IReadOnlyDictionary<string, TurnEndGap> TurnEndGaps,
+        IReadOnlyDictionary<string, TurnStartGap> TurnStartGaps);
 
     /// <summary>A power class's rules as the engine asks them (PowerRule), its scaling compiled once.</summary>
     private sealed record LoadedRule(bool AllowNegative, Func<SimState, int, decimal>? Scaled, string? Unread, bool Debuff, bool Counter);
@@ -683,7 +700,11 @@ public static class SimModels
         var turnEndGaps = new Dictionary<string, TurnEndGap>(StringComparer.Ordinal);
         foreach (var gap in ReadTurnEndGaps?.Invoke() ?? Enumerable.Empty<TurnEndGap>())
             if (!byName.ContainsKey(gap.Name) && (gap.ActsForAnEnemy || gap.ActsForAPlayer)) turnEndGaps[gap.Name] = gap;
-        return new LoadedModels(byName, unread, orbs, enchantments, rules, turnEndGaps);
+        // A hand-written model may leave a turn's-start hook of its class unanswered (decision #306): its gap stays; a read one runs itself there.
+        var turnStartGaps = new Dictionary<string, TurnStartGap>(StringComparer.Ordinal);
+        foreach (var gap in ReadTurnStartGaps?.Invoke() ?? Enumerable.Empty<TurnStartGap>())
+            if ((!byName.ContainsKey(gap.Name) || IsHandWritten(gap.Name)) && (gap.ActsForAnEnemy || gap.ActsForAPlayer)) turnStartGaps[gap.Name] = gap;
+        return new LoadedModels(byName, unread, orbs, enchantments, rules, turnEndGaps, turnStartGaps);
     }
 
     /// <summary>The power can go below 0 (PowerModel.AllowNegative, read from its code: decision #234): ShouldRemoveDueToAmount takes it at exactly 0.</summary>
@@ -726,6 +747,9 @@ public static class SimModels
     /// <summary>The class has a hand-written model (Sim/Models): it keeps it until a parity proof converts it (decision #195), so it isn't read.</summary>
     public static bool IsHandWritten(string name) => HandWrittenByName.Value.ContainsKey(name);
 
+    /// <summary>The hand-written model of a class, or null (made without reading the game's code: safe while the read models load).</summary>
+    public static SimModel? HandWritten(string name) => HandWrittenByName.Value.GetValueOrDefault(name);
+
     /// <summary>The hand-written models' names (Sim/Models), each a game class's or one of the simulator's own.</summary>
     public static IEnumerable<string> HandWrittenNames => HandWrittenByName.Value.Keys;
 
@@ -741,6 +765,13 @@ public static class SimModels
     /// </summary>
     public static string? TheirTurnEndGap(string name, bool enemyOwner) =>
         Models.Value.TurnEndGaps.GetValueOrDefault(name) is { } gap && (enemyOwner ? gap.ActsForAnEnemy : gap.ActsForAPlayer) ? gap.Why : null;
+
+    /// <summary>
+    /// Why the class, owned by an enemy (<paramref name="enemyOwner"/>) or a player, acts as the players' next turn starts where a projection doesn't
+    /// follow it (TurnStartGap, decision #306): the state after that turn's start is unknown. Null: modelled there, or it never acts there.
+    /// </summary>
+    public static string? YourTurnStartGap(string name, bool enemyOwner) =>
+        Models.Value.TurnStartGaps.GetValueOrDefault(name) is { } gap && (enemyOwner ? gap.ActsForAnEnemy : gap.ActsForAPlayer) ? gap.Why : null;
 
     public static SimModel? Get(string name) => ByName.GetValueOrDefault(name);
 

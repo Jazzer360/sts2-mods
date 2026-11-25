@@ -15,6 +15,7 @@ public class ModelReadingTests
         var read = SimModels.Read!;
         var readRules = SimModels.ReadRules!;
         var readTurnEndGaps = SimModels.ReadTurnEndGaps;
+        var readTurnStartGaps = SimModels.ReadTurnStartGaps;
         using var gate = new ManualResetEventSlim();
         var reader = 0;
         SimModels.StartReading(() =>
@@ -22,7 +23,7 @@ public class ModelReadingTests
             reader = Environment.CurrentManagedThreadId;
             gate.Wait(TimeSpan.FromSeconds(30));
             return read();
-        }, readRules, readTurnEndGaps);
+        }, readRules, readTurnEndGaps, readTurnStartGaps);
         try
         {
             Assert.False(SimModels.Loaded);

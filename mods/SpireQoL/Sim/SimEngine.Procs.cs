@@ -185,6 +185,8 @@ public static partial class SimEngine
     /// <param name="card">The card each event is about, when known (a made card's class and type: Hook.AfterCardGeneratedForCombat's card).</param>
     public static IEnumerable<SimState> ProcCardEvent(SimState state, CardEvent cardEvent, int count, int player, bool indirect = true, Action<SimState>? onEach = null, SimCard? card = null, bool causedByEthereal = false)
     {
+        // A projection's later turn leaves your hand out (decision #304): a draw there gives nothing it follows, as the turn's own hand draw.
+        if (cardEvent == CardEvent.Drawn && state.HandLeftOut) return new[] { state };
         // Your draws come from your draw pile (decision #90): which card matters.
         if (cardEvent == CardEvent.Drawn && DrawsStopped(state, player)) return DrawPrevented(state, player);
         if (cardEvent == CardEvent.Drawn && DrawsFromPile(state, player)) return DrawCards(state, player, count, indirect, onEach);

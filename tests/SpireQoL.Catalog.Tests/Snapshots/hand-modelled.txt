@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 23 engine rules naming 162 game methods; 3 adapter rules; 32 hand-written models.
+# 24 engine rules naming 168 game methods; 3 adapter rules; 32 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -60,10 +60,13 @@ The players' turn's end: its hooks in their places, Ethereal cards, the cards th
   simulator: SimEngine.EndOfTurn, SimEngine.EndOfTurnSteps, SimEngine.Exhausting, SimEngine.CardsActInHand
 The enemies' turn: its start's hooks, block cleared, each move in turn order, its end's hooks, the intents read after a play
   game: CombatManager.StartTurn, CombatManager.ExecuteEnemyTurn, MonsterModel.PerformMove, Hook.BeforeSideTurnStart, Hook.AfterSideTurnStart, Hook.ShouldClearBlock, Creature.ClearBlock, CombatManager.EndEnemyTurn, CombatManager.EndEnemyTurnInternal
-  simulator: SimEngine.EnemyTurnStart, SimEngine.StartTheEnemiesTurn, SimEngine.EnemyTurn, SimEngine.EnemyTurnEnd, SimEngine.EnemyTurnEndSteps, SimEngine.TheirTurnEndStep, SimEngine.TheirTurnEndUnknownApart, SimEngine.TheirTurnEndGaps, SimEngine.TurnEndBlockBack, SimEngine.ClearsBlock, SimEngine.IntentsAfter
+  simulator: SimEngine.EnemyTurnStart, SimEngine.StartTheEnemiesTurn, SimEngine.EnemyTurn, SimEngine.EnemyTurnEnd, SimEngine.EnemyTurnEndSteps, SimEngine.EnemiesSideStep, SimEngine.TheirTurnEndUnknownApart, SimEngine.TheirTurnEndGaps, SimEngine.TurnEndBlockBack, SimEngine.ClearsBlock, SimEngine.IntentsAfter
 The Intent Forecast's later turns (decision #304): your next turn's start (block cleared, your hand left out) and end with no plays, the enemies' turn start, each enemy's forecast move (a branch per move of a random pick), their turn's end; each move's hits on you as they land and as its intent reads when your turn starts
   game: CombatManager.StartTurn, MonsterModel.PerformMove, AttackIntent.GetSingleDamage
   simulator: SimEngine.Project, SimEngine.TheirTurnIsOver, SimEngine.YourNextTurnStarts, SimEngine.AtYourTurnStart, SimEngine.HitOnYou, SimEngine.GiveMoves, SimEngine.Give, SimEngine.LandsOnYou, SimEngine.Landed
+Your next turn's start in a projection (decision #306): its listeners' own code in the game's order (Hook.BeforeSideTurnStart, the block cleared, each player's SetupPlayerTurn hooks, Hook.AfterSideTurnStart, the orbs' turn-start passives), its participants the players and their pets; your hand and draws left out; a listener it doesn't follow there unknown
+  game: CombatManager.StartTurn, CombatManager.SetupPlayerTurn, Creature.AfterTurnStart, Hook.BeforeSideTurnStart, Hook.AfterEnergyReset, Hook.BeforeHandDraw, Hook.AfterPlayerTurnStart, Hook.AfterSideTurnStart, OrbQueue.AfterTurnStart
+  simulator: SimEngine.YourTurnStart, SimEngine.ClearPlayersBlock, SimEngine.YourTurnStartGaps
 A heal: up to max HP
   game: CreatureCmd.Heal, Creature.HealInternal
   simulator: SimEngine.Heal
@@ -109,7 +112,7 @@ LostLutePower: LostLutePower.AfterCardPlayed (beta only)
 NecroMasteryPower: NecroMasteryPower.AfterCurrentHpChanged
   model: AfterOstyHpLost
 PaelsEye: PaelsEye.AfterCombatEnd, PaelsEye.AfterObtained, PaelsEye.AfterSideTurnStart, PaelsEye.AfterTakingExtraTurn, PaelsEye.BeforeCardPlayed, PaelsEye.BeforeSideTurnEndEarly, PaelsEye.ShouldTakeExtraTurnEarly (beta only)
-  model: BeforeCardPlayed, BeforeSideTurnEndEarly, MayActAtTheEnemiesTurnEnd
+  model: BeforeCardPlayed, BeforeSideTurnEndEarly, MayActOnTheEnemiesSide
 PaelsTears: PaelsTears.AfterCombatEnd, PaelsTears.AfterSideTurnStart, PaelsTears.BeforeSideTurnEnd
   model: AfterCardEvent, AfterPlayResolved
 ParryPower: no hooks of its own
@@ -121,11 +124,11 @@ Pocketwatch: Pocketwatch.AfterCardPlayed, Pocketwatch.AfterCombatEnd, Pocketwatc
 RedSkull: RedSkull.AfterCombatEnd, RedSkull.AfterCurrentHpChanged, RedSkull.AfterRoomEntered
   model: AfterDamageReceived, OutcomeTab
 Regret: no game class by its name (the simulator's own)
-  model: BeforeSideTurnEnd, MayActAtTheEnemiesTurnEnd
+  model: BeforeSideTurnEnd, MayActOnTheEnemiesSide
 SeekingEdgePower: no hooks of its own
   model: nothing it overrides
 SkittishPower: SkittishPower.AfterAttack, SkittishPower.AfterSideTurnEnd, SkittishPower.GetScaledAmountForMultiplayer, SkittishPower.InitInternalData
-  model: AfterAttack, AfterDamageReceived, AfterSideTurnEnd, BeforeAttack, MayActAtTheEnemiesTurnEnd
+  model: AfterAttack, AfterDamageReceived, AfterSideTurnEnd, BeforeAttack, MayActOnTheEnemiesSide
 SlumberPower: SlumberPower.AfterDamageReceived, SlumberPower.AfterRemoved, SlumberPower.AfterSideTurnEnd
   model: AfterDamageReceived, AfterSideTurnEnd, OutcomeTab
 SmoggyPower: SmoggyPower.AfterCardEnteredCombat, SmoggyPower.AfterCardPlayed, SmoggyPower.AfterSideTurnEnd, SmoggyPower.ShouldPlay

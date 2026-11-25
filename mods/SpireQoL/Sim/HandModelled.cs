@@ -94,11 +94,14 @@ public static class HandModelled
             new[] { "CombatManager.EndPlayerTurnPhaseOneInternal", "CombatManager.EndPlayerTurnPhaseTwoInternal", "CombatManager.DoTurnEnd", "CombatManager.FlushPlayerHand", "Hook.BeforeSideTurnEnd",
                 "Hook.AfterSideTurnEnd", "Hook.ShouldEtherealTrigger", "Hook.ShouldFlush", "Hook.BeforeFlush" }),
         new("The enemies' turn: its start's hooks, block cleared, each move in turn order, its end's hooks, the intents read after a play",
-            new[] { "SimEngine.EnemyTurnStart", "SimEngine.StartTheEnemiesTurn", "SimEngine.EnemyTurn", "SimEngine.EnemyTurnEnd", "SimEngine.EnemyTurnEndSteps", "SimEngine.TheirTurnEndStep", "SimEngine.TheirTurnEndUnknownApart", "SimEngine.TheirTurnEndGaps", "SimEngine.TurnEndBlockBack", "SimEngine.ClearsBlock", "SimEngine.IntentsAfter" },
+            new[] { "SimEngine.EnemyTurnStart", "SimEngine.StartTheEnemiesTurn", "SimEngine.EnemyTurn", "SimEngine.EnemyTurnEnd", "SimEngine.EnemyTurnEndSteps", "SimEngine.EnemiesSideStep", "SimEngine.TheirTurnEndUnknownApart", "SimEngine.TheirTurnEndGaps", "SimEngine.TurnEndBlockBack", "SimEngine.ClearsBlock", "SimEngine.IntentsAfter" },
             new[] { "CombatManager.StartTurn", "CombatManager.ExecuteEnemyTurn", "MonsterModel.PerformMove", "Hook.BeforeSideTurnStart", "Hook.AfterSideTurnStart", "Hook.ShouldClearBlock", "Creature.ClearBlock", "CombatManager.EndEnemyTurn", "CombatManager.EndEnemyTurnInternal" }),
         new("The Intent Forecast's later turns (decision #304): your next turn's start (block cleared, your hand left out) and end with no plays, the enemies' turn start, each enemy's forecast move (a branch per move of a random pick), their turn's end; each move's hits on you as they land and as its intent reads when your turn starts",
             new[] { "SimEngine.Project", "SimEngine.TheirTurnIsOver", "SimEngine.YourNextTurnStarts", "SimEngine.AtYourTurnStart", "SimEngine.HitOnYou", "SimEngine.GiveMoves", "SimEngine.Give", "SimEngine.LandsOnYou", "SimEngine.Landed" },
             new[] { "CombatManager.StartTurn", "MonsterModel.PerformMove", "AttackIntent.GetSingleDamage" }),
+        new("Your next turn's start in a projection (decision #306): its listeners' own code in the game's order (Hook.BeforeSideTurnStart, the block cleared, each player's SetupPlayerTurn hooks, Hook.AfterSideTurnStart, the orbs' turn-start passives), its participants the players and their pets; your hand and draws left out; a listener it doesn't follow there unknown",
+            new[] { "SimEngine.YourTurnStart", "SimEngine.ClearPlayersBlock", "SimEngine.YourTurnStartGaps" },
+            new[] { "CombatManager.StartTurn", "CombatManager.SetupPlayerTurn", "Creature.AfterTurnStart", "Hook.BeforeSideTurnStart", "Hook.AfterEnergyReset", "Hook.BeforeHandDraw", "Hook.AfterPlayerTurnStart", "Hook.AfterSideTurnStart", "OrbQueue.AfterTurnStart" }),
         new("A heal: up to max HP",
             new[] { "SimEngine.Heal" },
             new[] { "CreatureCmd.Heal", "Creature.HealInternal" }),
@@ -133,7 +136,7 @@ public static class HandModelled
     /// </summary>
     public static readonly IReadOnlyList<string> Plumbing = new[]
     {
-        "SimEngine.Run", "SimEngine.RunAction", "SimEngine.Then", "SimEngine.AnyListens", "SimEngine.OrbLabel", "SimEngine.Merge", "SimEngine.Detached", "SimEngine.Scratch", "SimEngine.Capped", "SimEngine.MarkUnread", "SimEngine.PlayResults", "SimEngine.Breakdown",
+        "SimEngine.Run", "SimEngine.RunAction", "SimEngine.AnyMayActOnTheEnemiesSide", "SimEngine.Then", "SimEngine.AnyListens", "SimEngine.OrbLabel", "SimEngine.Merge", "SimEngine.Detached", "SimEngine.Scratch", "SimEngine.Capped", "SimEngine.MarkUnread", "SimEngine.PlayResults", "SimEngine.Breakdown",
         "SimEngine.Title", "SimEngine.Var", "SimEngine.VarValue", "SimEngine.VarTotal", "SimEngine.PowersOf", "SimEngine.SetPowers", "SimEngine.RelicsOf", "SimEngine.SetRelics", "SimEngine.PowerOn",
         "SimEngine.HasPower", "SimEngine.FieldsOf", "SimEngine.SetField", "SimEngine.SetFields", "SimEngine.TurnOf", "SimEngine.TallyFor", "SimEngine.CountOf", "SimEngine.MostOf", "SimEngine.RunWhen",
         "SimEngine.RunAsk", "SimEngine.Holds", "SimEngine.HoldsNow", "SimEngine.Compares", "SimEngine.IsConditionFilter", "SimEngine.HandFilters", "SimEngine.Flattened", "SimEngine.ConditionParts",

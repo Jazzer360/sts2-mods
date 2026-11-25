@@ -31,7 +31,7 @@ public sealed class RegretCard : CardListener
     public override string Name => CardId.Regret.Name;
 
     /// <summary>Its BeforeSideTurnEnd waits on its owner, a player, taking part: never as the enemies' turn ends.</summary>
-    public override bool MayActAtTheEnemiesTurnEnd(string hook, int owner) => false;
+    public override bool MayActOnTheEnemiesSide(string hook, int owner) => false;
 
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner)
     {

@@ -1579,19 +1579,20 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// The enemies' side's turn starts (CombatManager.StartTurn, the one turn start a simulation reaches): the deaths at your end of turn are
-    /// handled, it's the enemies' turn, then every listener's BeforeSideTurnStart and AfterSideTurnStart (then Late), its participants the
-    /// living enemies: Hardened Shell's budget resets (its BeforeSideTurnStart), each enemy's poison ticks (PoisonPower.AfterSideTurnStart, read
-    /// from its code) in its place among the listeners, as the game's listener order has it.
+    /// The enemies' side's turn starts (CombatManager.StartTurn): the deaths at your end of turn are handled, it's the enemies' turn, then every
+    /// listener's BeforeSideTurnStart and AfterSideTurnStart (then Late), its participants the living enemies: Hardened
+    /// Shell's budget resets (its BeforeSideTurnStart), each enemy's poison ticks (PoisonPower.AfterSideTurnStart, read from its code) in its place
+    /// among the listeners, as the game's listener order has it (its side the enemy turn's: SimState.EnemyTurnNow). A listener whose code acts only for its owner, a player, taking part (a relic's
+    /// next turn's start: decision #306) can't act there (SimModel.MayActOnTheEnemiesSide).
     /// </summary>
     private static void EnemyTurnStart(BranchSet branches)
     {
         string[] hooks = { nameof(SimModel.BeforeSideTurnStart), nameof(SimModel.AfterSideTurnStart), nameof(SimModel.AfterSideTurnStartLate) };
-        if (!branches.States.Any(branch => hooks.Any(hook => Listens(branch, hook)))) return; // EnemyTurn starts it
+        if (!branches.States.Any(branch => hooks.Any(hook => AnyMayActOnTheEnemiesSide(branch, hook)))) return; // EnemyTurn starts it
         branches.Do(StartTheEnemiesTurn);
-        HookStep(branches, nameof(SimModel.BeforeSideTurnStart), (model, owner, branch) => model.BeforeSideTurnStart(branch, owner));
-        HookStep(branches, nameof(SimModel.AfterSideTurnStart), (model, owner, branch) => model.AfterSideTurnStart(branch, owner));
-        HookStep(branches, nameof(SimModel.AfterSideTurnStartLate), (model, owner, branch) => model.AfterSideTurnStartLate(branch, owner));
+        EnemiesSideStep(branches, nameof(SimModel.BeforeSideTurnStart), (model, owner, branch) => model.BeforeSideTurnStart(branch, owner));
+        EnemiesSideStep(branches, nameof(SimModel.AfterSideTurnStart), (model, owner, branch) => model.AfterSideTurnStart(branch, owner));
+        EnemiesSideStep(branches, nameof(SimModel.AfterSideTurnStartLate), (model, owner, branch) => model.AfterSideTurnStartLate(branch, owner));
     }
 
     private static void StartTheEnemiesTurn(SimState state)
@@ -1820,32 +1821,34 @@ public static partial class SimEngine
 
     private static void EnemyTurnEndSteps(BranchSet branches)
     {
-        TheirTurnEndStep(branches, nameof(SimModel.BeforeSideTurnEndVeryEarly), (model, owner, branch) => model.BeforeSideTurnEndVeryEarly(branch, owner));
-        TheirTurnEndStep(branches, nameof(SimModel.BeforeSideTurnEndEarly), (model, owner, branch) => model.BeforeSideTurnEndEarly(branch, owner));
+        EnemiesSideStep(branches, nameof(SimModel.BeforeSideTurnEndVeryEarly), (model, owner, branch) => model.BeforeSideTurnEndVeryEarly(branch, owner));
+        EnemiesSideStep(branches, nameof(SimModel.BeforeSideTurnEndEarly), (model, owner, branch) => model.BeforeSideTurnEndEarly(branch, owner));
         DeathCheck(branches);
-        TheirTurnEndStep(branches, nameof(SimModel.BeforeSideTurnEnd), (model, owner, branch) => model.BeforeSideTurnEnd(branch, owner));
+        EnemiesSideStep(branches, nameof(SimModel.BeforeSideTurnEnd), (model, owner, branch) => model.BeforeSideTurnEnd(branch, owner));
         DeathCheck(branches);
-        TheirTurnEndStep(branches, nameof(SimModel.AfterSideTurnEnd), (model, owner, branch) => model.AfterSideTurnEnd(branch, owner));
+        EnemiesSideStep(branches, nameof(SimModel.AfterSideTurnEnd), (model, owner, branch) => model.AfterSideTurnEnd(branch, owner));
         DeathCheck(branches);
-        TheirTurnEndStep(branches, nameof(SimModel.AfterSideTurnEndLate), (model, owner, branch) => model.AfterSideTurnEndLate(branch, owner));
+        EnemiesSideStep(branches, nameof(SimModel.AfterSideTurnEndLate), (model, owner, branch) => model.AfterSideTurnEndLate(branch, owner));
         DeathCheck(branches);
     }
 
     /// <summary>
-    /// A turn's-end hook as the enemies' side's turn ends: every listener that may act there (SimModel.MayActAtTheEnemiesTurnEnd), as one step, or
-    /// nothing when none may in any branch (a player's relic that acts only for its owner taking part never does then).
+    /// A turn's-end or turn's-start hook as the enemies' side's turn ends or starts: every listener that may act there (SimModel.MayActOnTheEnemiesSide),
+    /// as one step, or nothing when none may in any branch (a player's relic that acts only for its owner taking part never does then).
     /// </summary>
-    private static void TheirTurnEndStep(BranchSet branches, string hook, Func<SimModel, int, SimState, IEnumerable<SimState>> call)
+    private static void EnemiesSideStep(BranchSet branches, string hook, Func<SimModel, int, SimState, IEnumerable<SimState>> call)
     {
-        static bool AnyMayAct(SimState branch, string hook)
-        {
-            foreach (var (model, owner) in Listeners(branch))
-                if (model.MayActAtTheEnemiesTurnEnd(hook, owner)) return true;
-            return false;
-        }
         var any = false;
-        foreach (var branch in branches.States) any |= AnyMayAct(branch, hook);
+        foreach (var branch in branches.States) any |= AnyMayActOnTheEnemiesSide(branch, hook);
         if (!any) return;
-        HookStep(branches, hook, (model, owner, branch) => model.MayActAtTheEnemiesTurnEnd(hook, owner) ? call(model, owner, branch) : new[] { branch });
+        HookStep(branches, hook, (model, owner, branch) => model.MayActOnTheEnemiesSide(hook, owner) ? call(model, owner, branch) : new[] { branch });
+    }
+
+    /// <summary>Some listener may act in this hook as the enemies' side's turn ends or starts (SimModel.MayActOnTheEnemiesSide).</summary>
+    private static bool AnyMayActOnTheEnemiesSide(SimState branch, string hook)
+    {
+        foreach (var (model, owner) in Listeners(branch))
+            if (model.MayActOnTheEnemiesSide(hook, owner)) return true;
+        return false;
     }
 }

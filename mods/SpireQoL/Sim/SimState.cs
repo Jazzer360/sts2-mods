@@ -945,12 +945,23 @@ public sealed class SimState
     /// your turn ends, the enemies' after their turn), None otherwise: what a turn's-end hook's side and participants are (decision #303).
     /// </summary>
     internal TurnSide SideEnding;
+    /// <summary>
+    /// The side whose turn is starting while a turn's start runs (CombatManager.StartTurn's side for Hook.BeforeSideTurnStart, AfterSideTurnStart and
+    /// the players' SetupPlayerTurn hooks): the players', as their next turn starts in a projection (decision #306), whose creatures (players and
+    /// their pets) take part; None otherwise (the enemies' turn start is the enemy turn's: EnemyTurnNow).
+    /// </summary>
+    internal TurnSide SideStarting;
+    /// <summary>
+    /// In a projection's later turns your hand is left out (decision #304: what you'd draw is a roll): a draw then gives nothing the simulation
+    /// follows, as the turn's own hand draw (SimEngine.ProcCardEvent).
+    /// </summary>
+    internal bool HandLeftOut;
 
     /// <summary>
-    /// The side the game's CombatState.CurrentSide is on is the enemies': the side ending while a turn's end runs (SideEnding), else the enemy turn
-    /// under way (EnemyTurnNow).
+    /// The side the game's CombatState.CurrentSide is on is the enemies': the side ending while a turn's end runs (SideEnding), the side starting
+    /// while a turn's start runs (SideStarting), else the enemy turn under way (EnemyTurnNow).
     /// </summary>
-    internal bool EnemiesSideNow => SideEnding != TurnSide.None ? SideEnding == TurnSide.Enemies : EnemyTurnNow;
+    internal bool EnemiesSideNow => SideEnding != TurnSide.None ? SideEnding == TurnSide.Enemies : SideStarting != TurnSide.None ? SideStarting == TurnSide.Enemies : EnemyTurnNow;
     /// <summary>Your side's turn is ending (EndOfTurn): block and damage from models go into the Incoming Damage breakdown.</summary>
     internal bool EndOfTurnNow;
     /// <summary>Relics' and powers' names as the game shows them ("id:Name"), for the Incoming Damage breakdown. Shared, never changed.</summary>
@@ -1059,6 +1070,16 @@ public sealed class SimState
     /// your turn ends, a living enemy as the enemies' turn does (CombatManager.EndEnemyTurnInternal: CreaturesOnCurrentSide).
     /// </summary>
     public bool EndsTheirTurn(int id) => EnemiesSideNow ? Enemy(id) is { Alive: true } : TakesPart(id);
+
+    /// <summary>
+    /// The creature is among the participants of the side's turn now starting or ending (a side turn hook's participants.Contains): as the players'
+    /// turn starts, a living player or a living pet of one (CombatManager.StartTurn: CreaturesOnCurrentSide); else as EndsTheirTurn.
+    /// </summary>
+    public bool TakesPartInTheTurn(int id)
+    {
+        if (SideStarting != TurnSide.Players || !Who.IsPet(id)) return EndsTheirTurn(id);
+        return Player(Who.PetOwnerOf(id)) is { } owner && owner.PetHp(Who.PetKindOf(id)) > 0;
+    }
 
     /// <summary>Every player's id in player order (Who.InPlayerOrder).</summary>
     [JsonIgnore] public int[] PlayerIds => Who.InPlayerOrder(Teammates.Count, TeammatesBeforeMe);

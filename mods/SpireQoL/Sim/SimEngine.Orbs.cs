@@ -190,10 +190,11 @@ public static partial class SimEngine
 
     /// <summary>
     /// One player's orb passives at the turn's end (OrbQueue.BeforeTurnEnd: each orb in order, front first, whose class's BeforeTurnEndOrbTrigger
-    /// calls OrbModel.TriggerPassive): Hook.ModifyOrbPassiveTriggerCount for it (Gold-Plated Cables on the front one), the listeners that changed it
+    /// calls OrbModel.TriggerPassive), or as their next turn starts in a projection (OrbQueue.AfterTurnStart, AfterTurnStartOrbTrigger: Plasma's
+    /// energy, decision #306), as <paramref name="at"/> says: Hook.ModifyOrbPassiveTriggerCount for it (Gold-Plated Cables on the front one), the listeners that changed it
     /// told (AfterModifyingOrbPassiveTriggerCount), then its Passive's code that many times. Yours, or a teammate's (their Frost blocks for them).
     /// </summary>
-    private static void OrbPassives(BranchSet branches, int player)
+    private static void OrbPassives(BranchSet branches, int player, OrbTrigger at = OrbTrigger.TurnEnd)
     {
         var maxOrbs = branches.States.Max(branch => branch.Player(player)!.Orbs.Count);
         for (var i = 0; i < maxOrbs; i++)
@@ -203,9 +204,9 @@ public static partial class SimEngine
             bool Acts(SimState state)
             {
                 if (state.Player(player) is not { } simPlayer || index >= simPlayer.Orbs.Count) return false;
-                if (ModelAt(state) is { } model) return model.PassiveAtTurnEnd;
+                if (ModelAt(state) is { } model) return model.PassiveAt == at;
                 // An orb whose code isn't read (another mod's): what its passive does isn't modelled.
-                state.Unmodelled ??= simPlayer.Orbs[index].Kind == OrbKind.Unknown ? "an orb the simulator doesn't know acts at the end of the turn" : SimModels.OrbUnreadReason(simPlayer.Orbs[index].Kind);
+                state.Unmodelled ??= simPlayer.Orbs[index].Kind == OrbKind.Unknown ? (at == OrbTrigger.TurnEnd ? "an orb the simulator doesn't know acts at the end of the turn" : "an orb the simulator doesn't know acts as your turn starts") : SimModels.OrbUnreadReason(simPlayer.Orbs[index].Kind);
                 return false;
             }
             OrbCtx Ctx(SimState state) => new(player, index, state.Player(player)!.Orbs[index].Kind);

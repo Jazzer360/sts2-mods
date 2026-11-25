@@ -42,11 +42,14 @@ public enum HookName
     AfterModifyingBlockAmount,
     /// <summary>PowerModel.AfterApplied: a new instance of the power landed (a copy of an instanced one: each application).</summary>
     AfterApplied,
-    /// <summary>Hook.BeforeSideTurnStart as the enemies' turn starts (the one turn start a simulation reaches): its participants the enemies.</summary>
+    /// <summary>
+    /// Hook.BeforeSideTurnStart as a side's turn starts: the enemies' (its participants the living enemies), or the players' next turn in a projection
+    /// (its participants the living players and their pets: SimState.SideStarting).
+    /// </summary>
     BeforeSideTurnStart,
-    /// <summary>Hook.AfterSideTurnStart as the enemies' turn starts: its participants the enemies.</summary>
+    /// <summary>Hook.AfterSideTurnStart as a side's turn starts (the enemies', or the players' in a projection).</summary>
     AfterSideTurnStart,
-    /// <summary>Hook.AfterSideTurnStart's second pass (AfterSideTurnStartLate) as the enemies' turn starts.</summary>
+    /// <summary>Hook.AfterSideTurnStart's second pass (AfterSideTurnStartLate) as a side's turn starts.</summary>
     AfterSideTurnStartLate,
     /// <summary>Hook.AfterOrbChanneled: an orb was channeled for a player (its player the hook's).</summary>
     AfterOrbChanneled,
@@ -139,6 +142,18 @@ public enum HookName
     /// told to that power alone, never to every listener.
     /// </summary>
     AfterRemoved,
+    /// <summary>
+    /// The players' next turn's start, each player's in turn (CombatManager.SetupPlayerTurn, run in a projection: decision #306): Hook.AfterEnergyReset
+    /// (AfterEnergyReset, then Late), Hook.BeforeHandDraw (then Late), the hand's draw (left out: a roll), Hook.AfterPlayerTurnStart (Early, its own,
+    /// Late); the hook's player that player (HookFact.EventIsOwners).
+    /// </summary>
+    AfterEnergyReset,
+    AfterEnergyResetLate,
+    BeforeHandDraw,
+    BeforeHandDrawLate,
+    AfterPlayerTurnStartEarly,
+    AfterPlayerTurnStart,
+    AfterPlayerTurnStartLate,
 }
 
 /// <summary>When an orb's passive goes off: the OrbModel trigger hook its class overrides with a call of TriggerPassive (OrbQueue calls them).</summary>
@@ -146,7 +161,7 @@ public enum OrbTrigger
 {
     /// <summary>BeforeTurnEndOrbTrigger: as its owner's turn ends (OrbQueue.BeforeTurnEnd, in CombatManager.DoTurnEnd), front orb first.</summary>
     TurnEnd,
-    /// <summary>AfterTurnStartOrbTrigger: as its owner's next turn starts, past the turns a simulation covers.</summary>
+    /// <summary>AfterTurnStartOrbTrigger: as its owner's next turn starts (OrbQueue.AfterTurnStart, after Hook.AfterSideTurnStart): run in a projection.</summary>
     TurnStart,
 }
 
@@ -307,8 +322,8 @@ public enum HookFact
     /// <summary>The creature named in Creature is on the players' side (its Side is CombatSide.Player, a side named).</summary>
     CreatureOnPlayersSide,
     /// <summary>
-    /// The creature named in Creature is on the side whose turn is ending (a SideTurnEnd hook's side: CombatState.CurrentSide, the players' as your
-    /// turn ends, the enemies' as theirs does).
+    /// The creature named in Creature is on the side whose turn is ending or starting (a SideTurnEnd or SideTurnStart hook's side: CombatState.CurrentSide,
+    /// the players' as your turn ends or starts, the enemies' as theirs does: decision #306).
     /// </summary>
     CreatureOnEndingSide,
     /// <summary>
@@ -1253,6 +1268,24 @@ public sealed record TurnEndGap(string Name, string Why)
     public bool ActsForAPlayer { get; init; }
 }
 
+/// <summary>
+/// A power or relic class (or an orb) with no model for the players' next turn's start (decision #306): no hand-written model answering the hook,
+/// its hooks not read whole, or a hook the simulator runs no read model's (AfterBlockCleared, the AutoPrePlay phase), whose code acts as their turn
+/// starts: a projection doesn't follow it there, so the state after that turn's start is unknown where it's on the board (SimState.Unmodelled),
+/// with why. Whether it acts there is read from its turn's-start hooks for each kind of owner, as TurnEndGap's are for a turn's end. Pure data:
+/// the same in the game and in the tests (ReadModels/turn-start-gaps.json).
+/// </summary>
+public sealed record TurnStartGap(string Name, string Why)
+{
+    /// <summary>It may act as the players' next turn starts when an enemy owns it.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ActsForAnEnemy { get; init; }
+
+    /// <summary>It may act as the players' next turn starts when a player (or a player's pet) owns it.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ActsForAPlayer { get; init; }
+}
+
 /// <summary>How hook programs are written as JSON (the simulator tests' read models: Cases/read-models.json).</summary>
 public static class HookProgramJson
 {
@@ -1289,4 +1322,8 @@ public static class HookProgramJson
     public static string WriteTurnEndGaps(IEnumerable<TurnEndGap> gaps) => System.Text.Json.JsonSerializer.Serialize(gaps.OrderBy(gap => gap.Name, StringComparer.Ordinal).ToList(), Options);
 
     public static List<TurnEndGap> ReadTurnEndGaps(string json) => System.Text.Json.JsonSerializer.Deserialize<List<TurnEndGap>>(json, Options) ?? new List<TurnEndGap>();
+
+    public static string WriteTurnStartGaps(IEnumerable<TurnStartGap> gaps) => System.Text.Json.JsonSerializer.Serialize(gaps.OrderBy(gap => gap.Name, StringComparer.Ordinal).ToList(), Options);
+
+    public static List<TurnStartGap> ReadTurnStartGaps(string json) => System.Text.Json.JsonSerializer.Deserialize<List<TurnStartGap>>(json, Options) ?? new List<TurnStartGap>();
 }

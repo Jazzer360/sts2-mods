@@ -52,11 +52,22 @@ internal static class ReadModelsFile
         return File.Exists(path) ? HookProgramJson.ReadTurnEndGaps(File.ReadAllText(path)) : new List<TurnEndGap>();
     }
 
+    /// <summary>
+    /// The listeners the players' next turn's start doesn't follow (decision #306), from ReadModels/turn-start-gaps.json, which the catalog tests write
+    /// from the installed game.
+    /// </summary>
+    public static List<TurnStartGap> TurnStartGaps()
+    {
+        var path = Path.Combine(AppContext.BaseDirectory, "ReadModels", "turn-start-gaps.json");
+        return File.Exists(path) ? HookProgramJson.ReadTurnStartGaps(File.ReadAllText(path)) : new List<TurnStartGap>();
+    }
+
     [ModuleInitializer]
     internal static void Use()
     {
         SimModels.Read = () => Specs().Append(Unreadable).Append(Uncompilable).Append(StopsBurns);
         SimModels.ReadRules = Rules;
         SimModels.ReadTurnEndGaps = TurnEndGaps;
+        SimModels.ReadTurnStartGaps = TurnStartGaps;
     }
 }
