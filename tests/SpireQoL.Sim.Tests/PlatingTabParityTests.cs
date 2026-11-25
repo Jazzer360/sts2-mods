@@ -23,8 +23,8 @@ public class PlatingTabParityTests
 
     /// <summary>
     /// The recorded line with each living enemy's Plating at the turn's end one less (none below 0) where it's past the fight's first round: a fix,
-    /// reviewed by rule (decision #289). PlatingPower.AfterSideTurnStart: `participants.Contains(base.Owner) && (base.Owner.Player == null || ...)
-    /// && (base.Owner.Side != CombatSide.Enemy || combatState.RoundNumber != 1)` → PowerCmd.ModifyAmount(this, -DynamicVars["Decrement"].BaseValue),
+    /// reviewed by rule (decision #289). PlatingPower.AfterSideTurnStart: `participants.Contains(base.Owner) &amp;&amp; (base.Owner.Player == null || ...)
+    /// &amp;&amp; (base.Owner.Side != CombatSide.Enemy || combatState.RoundNumber != 1)` → PowerCmd.ModifyAmount(this, -DynamicVars["Decrement"].BaseValue),
     /// as the enemies' turn starts, its Decrement 1 here (the players' count it's set to as it's applied, the canonical 1 on these boards), where the
     /// hand-written model kept it. Nothing a turn shows reads an enemy's Plating after its turn starts (its block comes as its own turn ends).
     /// </summary>

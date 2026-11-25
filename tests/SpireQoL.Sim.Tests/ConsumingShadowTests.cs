@@ -3,7 +3,7 @@ using Xunit;
 namespace SpireQoL.Sim.Tests;
 
 /// <summary>
-/// Consuming Shadow read from its code (decision #291): AfterSideTurnEnd, `participants.Contains(base.Owner) && OrbQueue.Orbs.Count != 0`, then
+/// Consuming Shadow read from its code (decision #291): AfterSideTurnEnd, `participants.Contains(base.Owner) &amp;&amp; OrbQueue.Orbs.Count != 0`, then
 /// OrbCmd.EvokeLast(base.Owner.Player) its amount of times (a counter loop): the last orb evoked and dequeued each time, nothing once none is left.
 /// </summary>
 public class ConsumingShadowTests
