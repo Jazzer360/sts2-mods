@@ -26,7 +26,7 @@ power ConcoctPower: AfterDamageGiven: read | AfterSideTurnEnd: read
 power ConfusedPower: AfterCardDrawn: gap: changes a game object outside a command (CardEnergyCost.SetThisCombat)
 power ConquerorPower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power ConstrictPower: AfterDeath: read | AfterSideTurnEnd: read
-power ConsumingShadowPower: AfterSideTurnEnd: gap: OrbCmd.EvokeLast isn't translated
+power ConsumingShadowPower: AfterSideTurnEnd: read
 power CorrosiveWavePower: AfterCardDrawn: read | AfterSideTurnEnd: read
 power CorruptionPower: AfterModifyingCardPlayResultLocation: read | ModifyCardPlayResultLocation: read | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
 power CoveredPower: AfterApplied: gap: changes a game object outside a command (InterceptPower.AddCoveredCreature) | AfterDeath: read | AfterRemoved: unknown where it runs: gap: changes a game object outside a command (InterceptPower.RemoveCoveredCreature) | AfterSideTurnEnd: not run: its commands wait on the enemies' side's turn ending, which no simulation reaches | ModifyDamageMultiplicative: read

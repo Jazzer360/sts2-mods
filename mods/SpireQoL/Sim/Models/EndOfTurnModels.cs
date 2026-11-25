@@ -13,17 +13,7 @@ public abstract class EndOfTurnModel : ProcModel
 
 // Plating is read from its code (ReadModel, decision #289): its block as its owner's turn ends, an enemy's stacks down by the players' count.
 
-/// <summary>ConsumingShadowPower.AfterSideTurnEnd: its owner's last orb is evoked, its amount of times (OrbCmd.EvokeLast).</summary>
-public sealed class ConsumingShadowPower : EndOfTurnModel
-{
-    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner)
-    {
-        if (!state.TakesPart(owner)) return One(state);
-        IEnumerable<SimState> states = One(state);
-        for (var i = 0; i < Amount(state, owner); i++) states = states.SelectMany(branch => SimEngine.EvokeLast(branch, owner)).ToList();
-        return states;
-    }
-}
+// Consuming Shadow is read from its code (ReadModel, decision #291): its owner's last orb evoked, its amount of times, while they have one.
 
 // ---- debuffs on a player that hurt them when their side's turn ends (AfterSideTurnEnd, AfterSideTurnEndLate), in listener order
 // with that player's other powers.

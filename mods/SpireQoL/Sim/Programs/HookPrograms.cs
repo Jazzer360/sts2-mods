@@ -270,7 +270,7 @@ public enum HookFact
     TurnNumber,
     /// <summary>The fight's round (combatState.RoundNumber, base.Owner.CombatState.RoundNumber: SimState.RoundNumber).</summary>
     RoundNumber,
-    /// <summary>The owner's orbs of the kind named in Of (OrbQueue.Orbs.Count(o => o is FrostOrb): an OrbKind's name).</summary>
+    /// <summary>The owner's orbs of the kind named in Of (OrbQueue.Orbs.Count(o => o is FrostOrb): an OrbKind's name), or all of them with none (OrbQueue.Orbs.Count).</summary>
     OwnerOrbCount,
     /// <summary>
     /// The creature that died is the one who applied this power (AfterDeath's creature == base.Applier): the power keeps its applier as its Data
@@ -632,6 +632,9 @@ public sealed record LoseBlockStep(HookValue Amount) : HookStep
 {
     public bool ByOwner { get; init; }
 }
+
+/// <summary>OrbCmd.EvokeLast for the owner: their last orb evoked and out of its slot (SimEngine.EvokeLast), nothing with none.</summary>
+public sealed record EvokeLastStep : HookStep;
 
 /// <summary>
 /// A hook body the reader doesn't read, run where its hook runs as an unknown (SimState.Unmodelled, with why: decision #92): a power's AfterRemoved,

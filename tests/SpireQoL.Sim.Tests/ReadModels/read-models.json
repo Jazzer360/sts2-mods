@@ -5595,6 +5595,58 @@
     "HelpsOwner": false
   },
   {
+    "Name": "ConsumingShadowPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "RepeatStep",
+            "Times": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "Steps": [
+              {
+                "$kind": "EvokeLastStep"
+              }
+            ],
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__4.MoveNext:002C",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__4.MoveNext:0052",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerOrbCount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "CorrosiveWavePower",
     "Kind": "Power",
     "Hooks": [

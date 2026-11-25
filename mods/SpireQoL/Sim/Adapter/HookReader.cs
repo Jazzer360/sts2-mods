@@ -66,6 +66,7 @@ public static class HookReader
         ["PowerCmd.Decrement"] = "DecrementPowerStep: the power itself goes down by one (PowerCmd.Decrement(this))",
         ["PowerCmd.TickDownDuration"] = "DecrementPowerStep: the power itself goes down by one (PowerCmd.TickDownDuration(this))",
         ["OrbCmd.Channel"] = "ChannelStep: an orb of the kind named channeled for the owner",
+        ["OrbCmd.EvokeLast"] = "EvokeLastStep: the owner's last orb evoked and dequeued",
         ["CardCmd.Upgrade"] = "UpgradeCardStep: the card played upgraded, its later plays its upgraded copy's",
         ["CardCmd.ApplyKeyword"] = "ApplyKeywordStep: a keyword added to the card played, for its later plays",
     };
@@ -2074,6 +2075,15 @@ public static class HookReader
                     return Enum.TryParse<OrbKind>(orb.EndsWith("Orb", StringComparison.Ordinal) ? orb[..^3] : orb, out var kind) && kind is not (OrbKind.Unknown or OrbKind.Random)
                         ? new ChannelStep(kind) : throw new Gap(ReaderCapability.Orbs, $"gap: channels a {orb}");
                 }
+                // OrbCmd.EvokeLast(choiceContext, player, dequeue): its owner's last orb evoked and dequeued (Consuming Shadow's); one kept in its slot is a gap.
+                case "OrbCmd.EvokeLast":
+                {
+                    var playerAt = IndexOf(types, "Player");
+                    if (playerAt < 0 || !IsOwner(values[playerAt])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, "gap: an orb evoked for someone else");
+                    var dequeueAt = IndexOf(types, "Boolean");
+                    if (dequeueAt >= 0 && values[dequeueAt] is not ConstantValue { Value: not 0 }) throw new Gap(ReaderCapability.Orbs, "gap: an orb evoked and kept in its slot");
+                    return new EvokeLastStep();
+                }
                 // PowerCmd.ModifyAmount(this, offset, applier, cardSource): its own amount changed (Vigor's spent), as PowerCmd.Apply of itself on its owner
                 // changes an instance there (the same pipeline: the amount received, the log, AfterPowerAmountChanged; gone at 0 unless it can go below).
                 // Another power's, or one copy of a power kept in copies, is a gap.
@@ -2588,6 +2598,9 @@ public static class HookReader
                 // The enemies that can be hit are there (HittableEnemies.Count, a list of them kept: its Count).
                 case QueryValue { Name: "Count", Of: { } hittable } when IsHittableEnemies(hittable):
                     return new HookMath(HookOperation.NotEqual, new HookFactValue(HookFact.HittableEnemyCount), new HookConstant(0m));
+                // The owner has orbs (OrbQueue.Orbs.Count tested as a true-or-false: Consuming Shadow's).
+                case QueryValue { Name: "Count", Of: { } ownersOrbs } when IsOwnersOrbs(ownersOrbs):
+                    return new HookMath(HookOperation.NotEqual, new HookFactValue(HookFact.OwnerOrbCount), new HookConstant(0m));
                 // The orb a hook is given is of a class (orb is LightningOrb).
                 case QueryValue { Name: "is", Of: { } orbOf, Type: var orbClass } when IsHookOrb(orbOf):
                     return OrbKindOf(orbClass) is { } orbKind ? new HookFactValue(HookFact.OrbIs) { Of = orbKind.ToString() } : throw new Gap(ReaderCapability.Orbs, $"gap: tests the orb is {orbClass}");
@@ -3119,6 +3132,9 @@ public static class HookReader
                 // The owner's orbs of a kind (OrbQueue.Orbs.Count(o => o is FrostOrb)).
                 case QueryValue { Type: "Enumerable", Name: "Count", Arguments: [var orbs, LambdaValue lambda] } when IsOwnersOrbs(orbs) && OrbKindTested(lambda) is { } orbKind:
                     return new HookFactValue(HookFact.OwnerOrbCount) { Of = orbKind.ToString() };
+                // All the owner's orbs (OrbQueue.Orbs.Count: Consuming Shadow's).
+                case QueryValue { Name: "Count", Of: { } allOrbs } when IsOwnersOrbs(allOrbs):
+                    return new HookFactValue(HookFact.OwnerOrbCount);
                 // What its own data's Remove(cardPlay.Card, out value) took: the amount bound to the play.
                 case OutValue { Call: var take, Parameter: 1 } when IsTakeBound(take):
                     return new HookFactValue(HookFact.BoundTaken);

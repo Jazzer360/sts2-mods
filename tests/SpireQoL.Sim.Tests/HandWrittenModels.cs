@@ -2562,3 +2562,17 @@ public sealed class NostalgiaPower : ProcModel
 
     public override void AfterModifyingCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location) => Fire(state, owner);
 }
+
+// ---- round twenty-eight: an orb evoked by a power (Sim/Models/EndOfTurnModels.cs), deleted 2026-11-25
+
+/// <summary>ConsumingShadowPower.AfterSideTurnEnd: its owner's last orb is evoked, its amount of times (OrbCmd.EvokeLast).</summary>
+public sealed class ConsumingShadowPower : EndOfTurnModel
+{
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner)
+    {
+        if (!state.TakesPart(owner)) return One(state);
+        IEnumerable<SimState> states = One(state);
+        for (var i = 0; i < Amount(state, owner); i++) states = states.SelectMany(branch => SimEngine.EvokeLast(branch, owner)).ToList();
+        return states;
+    }
+}

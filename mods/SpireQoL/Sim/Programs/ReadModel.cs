@@ -461,7 +461,7 @@ public sealed class ReadModel : SimModel
         {
             // A power an attack spends (its AfterAttack takes its own stacks: Gigantification's Decrement) acts on that play too (decision #228).
             // A play that changes the state its damage term reads (Slow's SlowAmount++ on every card) acts on that play too (decision #229).
-            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or SummonStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep
+            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or SummonStep or ApplyPowerStep or ChannelStep or EvokeLastStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep
                 || hook == HookName.AfterAttack && step is DecrementPowerStep or RemovePowerStep
                 // Not a store of 0, which lets go of what it kept (Pen Nib's AttackToDouble = null as its 10th Attack ends: decision #272).
                 || hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed && step is StoreFieldStep { Field: var termField, Value: not HookConstant { Value: 0m } } && _termFields.Contains(termField);
@@ -1246,6 +1246,14 @@ public sealed class ReadModel : SimModel
                     return SimEngine.ChannelKind(args.State, orb, args.Owner);
                 };
             }
+            // OrbCmd.EvokeLast: its owner's last orb evoked (a branch per target of a random evoke), nothing with none.
+            case EvokeLastStep:
+                return args =>
+                {
+                    if (args.State.Player(args.Owner) is not { Orbs.Count: > 0 }) return One(args.State);
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                    return SimEngine.EvokeLast(args.State, args.Owner);
+                };
             case RepeatStep repeat:
             {
                 var times = Compile(repeat.Times);
@@ -1409,7 +1417,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or LoseBlockStep or UnknownStep or SummonStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep or SpawnStep or SetHpStep or SetMoveStep
+            case FlashStep or GainStarsStep or HealStep or LoseBlockStep or UnknownStep or SummonStep or ChannelStep or EvokeLastStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep or SpawnStep or SetHpStep or SetMoveStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -2366,6 +2374,8 @@ public sealed class ReadModel : SimModel
             case HookFact.ResultLocationSoFar: return (in HookArgs args) => (int)args.Location;
             case HookFact.OwnerBlock: return (in HookArgs args) => args.State.Player(args.Owner)?.Block ?? args.State.Enemy(args.Owner)?.Block ?? 0;
             case HookFact.OwnerHandCount: return (in HookArgs args) => args.State.Player(args.Owner)?.HandCount ?? 0;
+            case HookFact.OwnerOrbCount when named == null:
+                return (in HookArgs args) => args.State.Player(args.Owner)?.Orbs.Count ?? 0;
             case HookFact.OwnerOrbCount:
             {
                 var kind = Enum.Parse<OrbKind>(named!);

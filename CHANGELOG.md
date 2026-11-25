@@ -38,6 +38,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Hand Drill, an enemy's Burrowed and Barricade are worked out from their own code (Hand Drill's Vulnerable on a block you or your Osty break, Burrowed's stun of the Tunneler whose block breaks, the block Barricade and Burrowed keep as the enemies' turn starts). What's shown is unchanged.
 - Rebound is worked out from its own code (your next card bound for the discard pile goes on top of your draw pile, a stack each). What's shown is unchanged.
 - Snecko Skull is worked out from its own code (its 1 more Poison on each Poison you give). What's shown is unchanged but for the fix below.
+- Consuming Shadow is worked out from its own code (your last orb evoked its amount of times as your turn ends, while you have one). What's shown is unchanged.
 - Nostalgia is worked out from its own code (your Attack or Skill goes on top of your draw pile while you've started fewer Attacks and Skills this turn than its amount). What's shown is unchanged.
 - Plating is worked out from its own code (its block as your turn ends; an enemy's comes down by the number of players as the enemies' turn starts, past the fight's first round). What's shown is unchanged.
 - What a power's own code does as it's taken off mid-fight is worked out where it goes (Burrowed's block loss), and one whose code for that can't be read makes the play's forecast uncertain where it goes. What's shown is unchanged.

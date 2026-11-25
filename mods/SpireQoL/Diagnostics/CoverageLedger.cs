@@ -161,7 +161,7 @@ internal static partial class CoverageLedger
         ["ConfusedPower"] = "ignore: AfterCardDrawn random costs (costs read live; draws are random)",
         ["ConquerorPower"] = "covered: read from its code (ReadModel, decision #247): ModifyDamageMultiplicative doubles a Sovereign Blade's powered attack on its owner, its tab where that term changes the play's damage (the aim marker where another target has none); AfterSideTurnEnd ticks down",
         ["ConstrictPower"] = "covered: read from its code (ReadModel, decision #195): AfterSideTurnEnd deals its amount to its owner, blockable, dealt by its owner; AfterDeath of its applier removes it",
-        ["ConsumingShadowPower"] = "covered: AfterSideTurnEnd evokes your last orb (model ConsumingShadowPower)",
+        ["ConsumingShadowPower"] = "covered: read from its code (ReadModel, decision #291): AfterSideTurnEnd evokes its owner's last orb its amount of times while they have orbs (OrbCmd.EvokeLast)",
         ["CorrosiveWavePower"] = "covered: read from its code (ReadModel, decision #195): AfterCardDrawn poisons all enemies per draw (proc tab)",
         ["CorruptionPower"] = "covered: ModifyCardPlayResultLocation exhausts played Skills (in the simulator its model, decided once before a card play's plays: decision #192; SimAdapter.ExhaustsAfterPlay for the tags)",
         ["CoveredPower"] = "covered: ModifyDamageMultiplicative zeroes powered attacks on the covered player: the intent's damage to you is read through the game's damage hooks; AfterDeath/AfterSideTurnEnd remove it",
