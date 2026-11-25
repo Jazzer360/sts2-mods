@@ -122,7 +122,7 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
         public HashSet<Creature>? DeadAtFightEnd;
     }
 
-    private enum Effect { Draw, Exhaust, Discard, Generate, Orb, Summon, Power }
+    internal enum Effect { Draw, Exhaust, Discard, Generate, Orb, Summon, Power }
 
     /// <summary>
     /// Powers that flash when they change damage (caps), not because a play set them off: their code caps a damage or the HP it takes
@@ -210,36 +210,42 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
     /// <summary>Your stats a source that changes powers can take away (Tender: 1 Strength and Dexterity per card).</summary>
     private static readonly HashSet<string> Stats = new() { nameof(StrengthPower), nameof(DexterityPower), nameof(FocusPower) };
 
-    /// <summary>What a trigger tab's source can add beyond the card itself (for the budget check).</summary>
-    private static readonly Dictionary<string, Effect[]> SourceEffects = new()
+    /// <summary>
+    /// What a trigger tab's source can add beyond the card itself (for the budget check), from its class's own code (CodeIndex: the commands it
+    /// calls, the hooks it overrides). A source the simulator models has every card event and channel it makes in the play's own counts (its
+    /// simulation's log: SimKeys.PlayEvent, PlayOrbChanneled), so it explains none of those; it explains the powers it applies or changes (the
+    /// power check holds a play to the card's own powers) and the summons it makes (the summon check to the card's own Summon). A source the
+    /// simulator doesn't model explains everything its code does; one whose code plays cards (CardCmd.AutoPlay, CardPileCmd.AutoPlayFromDrawPile:
+    /// Lost Lute, Imitation Learning) explains whatever they do.
+    /// </summary>
+    internal static IReadOnlyCollection<Effect> EffectsOf(string source) => SourceEffects.GetOrAdd(source, name =>
     {
-        // draws (Dark Embrace, Game Piece, Iron Club, Joss Paper, Vicious and Centennial Puzzle are
-        // counted in the play's simulated draws, so their tabs explain nothing beyond it)
-        [nameof(GremlinHorn)] = new[] { Effect.Draw }, [nameof(UnceasingTop)] = new[] { Effect.Draw }, [nameof(CorrosiveWavePower)] = new[] { Effect.Power },
-        [nameof(PagestormPower)] = new[] { Effect.Draw }, [nameof(IterationPower)] = new[] { Effect.Draw },
-        [nameof(MotifPower)] = new[] { Effect.Draw }, [nameof(ConductorsBaton)] = new[] { Effect.Power },
-        // plays cards from the top of your draw pile: whatever those do
-        [nameof(LostLutePower)] = new[] { Effect.Draw, Effect.Exhaust, Effect.Discard, Effect.Generate, Effect.Orb, Effect.Summon, Effect.Power },
-        [nameof(BiiigHug)] = new[] { Effect.Generate },
-        // created cards
-        [nameof(CalamityPower)] = new[] { Effect.Generate }, [nameof(JugglingPower)] = new[] { Effect.Generate }, [nameof(MusicBox)] = new[] { Effect.Generate },
-        [nameof(BurningSticks)] = new[] { Effect.Generate }, [nameof(PersonalHivePower)] = new[] { Effect.Generate }, [nameof(WitheringPresencePower)] = new[] { Effect.Generate },
-        [nameof(ImitationLearningPower)] = new[] { Effect.Generate, Effect.Power },
-        // orbs
-        [nameof(StormPower)] = new[] { Effect.Orb }, [nameof(TrashToTreasurePower)] = new[] { Effect.Orb },
-        // summons
-        [nameof(DevourLifePower)] = new[] { Effect.Summon },
-        // powers
-        [nameof(MonologuePower)] = new[] { Effect.Power }, [nameof(Kunai)] = new[] { Effect.Power }, [nameof(Shuriken)] = new[] { Effect.Power },
-        [nameof(HelicalDart)] = new[] { Effect.Power }, [nameof(RainbowRing)] = new[] { Effect.Power }, [nameof(MiniRegent)] = new[] { Effect.Power },
-        [nameof(ArsenalPower)] = new[] { Effect.Power }, [nameof(RupturePower)] = new[] { Effect.Power }, [nameof(EnvenomPower)] = new[] { Effect.Power },
-        [nameof(ConcoctPower)] = new[] { Effect.Power }, [nameof(ReaperFormPower)] = new[] { Effect.Power }, [nameof(MonarchsGazePower)] = new[] { Effect.Power },
-        [nameof(OblivionPower)] = new[] { Effect.Power }, [nameof(TenderPower)] = new[] { Effect.Power }, [nameof(EnragePower)] = new[] { Effect.Power },
-        [nameof(HandDrill)] = new[] { Effect.Power }, [nameof(Fertilizer)] = new[] { Effect.Power }, [nameof(WhittlingKnife)] = new[] { Effect.Power }, [nameof(MightyWings)] = new[] { Effect.Power }, [nameof(UnsettlingLamp)] = new[] { Effect.Power }, [nameof(SelfFormingClay)] = new[] { Effect.Power },
-        [nameof(RedSkull)] = new[] { Effect.Power }, [nameof(CrabRagePower)] = new[] { Effect.Power }, [nameof(RavenousPower)] = new[] { Effect.Power },
-        [nameof(SlowPower)] = new[] { Effect.Power }, [nameof(SmoggyPower)] = new[] { Effect.Power }, [nameof(VitalSparkPower)] = new[] { Effect.Power },
-        [nameof(SleightOfFleshPower)] = new[] { Effect.Power }, [nameof(MasterPlannerPower)] = new[] { Effect.Power }, [nameof(PaleBlueDotPower)] = new[] { Effect.Power },
+        if (ModelTypeNamed(name) is not { } type) return Array.Empty<Effect>();
+        if (CodeIndex.Does(type, AutoPlays, Array.Empty<string>())) return Enum.GetValues<Effect>();
+        var coded = EffectCode.Where(effect => CodeIndex.Does(type, effect.Calls, effect.Hooks)).Select(effect => effect.Effect);
+        if (SimModels.Has(name)) coded = coded.Where(effect => effect is Effect.Power or Effect.Summon);
+        return coded.ToArray();
+    });
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, IReadOnlyCollection<Effect>> SourceEffects = new(StringComparer.Ordinal);
+
+    /// <summary>The game's commands that play cards: a source calling one does what the cards it plays do.</summary>
+    private static readonly string[] AutoPlays = { "CardCmd.AutoPlay", "CardPileCmd.AutoPlayFromDrawPile" };
+
+    /// <summary>The game's commands (and hooks) each effect comes from.</summary>
+    private static readonly (Effect Effect, string[] Calls, string[] Hooks)[] EffectCode =
+    {
+        (Effect.Draw, new[] { "CardPileCmd.Draw" }, Array.Empty<string>()),
+        (Effect.Exhaust, new[] { "CardCmd.Exhaust" }, Array.Empty<string>()),
+        (Effect.Discard, new[] { "CardCmd.Discard*" }, Array.Empty<string>()),
+        (Effect.Generate, new[] { "CardPileCmd.AddGenerated*", "CardPileCmd.AddToCombat*" }, Array.Empty<string>()),
+        (Effect.Orb, new[] { "OrbCmd.Channel*" }, Array.Empty<string>()),
+        (Effect.Summon, new[] { "OstyCmd.Summon" }, Array.Empty<string>()),
+        (Effect.Power, new[] { "PowerCmd.Apply*", "PowerCmd.ModifyAmount" }, new[] { "ModifyPowerAmountGiven", "ModifyPowerAmountGivenMultiplicative", "ModifyPowerAmountReceived" }),
     };
+
+    /// <summary>The game's power or relic class with this name.</summary>
+    private static Type? ModelTypeNamed(string name) => PowerTypeNamed(name) ?? typeof(Kunai).Assembly.GetType(typeof(Kunai).Namespace + "." + name);
 
     private CombatHistory? _history;
     private readonly HashSet<AbstractModel> _subscribed = new(ReferenceEqualityComparer.Instance);

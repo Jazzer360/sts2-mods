@@ -63,7 +63,7 @@ public sealed partial class ProcAudit
                 && CodeIndex.Does(countSource, Array.Empty<string>(), new[] { "ModifyCardPlayCount" })
                 && entries.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.Card == window.Card && cardPlayStartedEntry.CardPlay.PlayCount > 1)) continue;
             if (creature == me.Creature && Stats.Contains(type)
-                && acted.Concat(tabbed).Any(source => SourceEffects.TryGetValue(source, out var effects) && effects.Contains(Effect.Power))) continue;
+                && acted.Concat(tabbed).Any(source => EffectsOf(source).Contains(Effect.Power))) continue;
             // A tabbed or flashed power on that creature removes it (Plow takes the Ceremonial Beast's Strength
             // as it stuns her: PowerCmd.Remove; the index has no type arguments).
             // (Read from the powers before the play: Plow removes itself too.)
@@ -87,21 +87,17 @@ public sealed partial class ProcAudit
     }
 
     /// <summary>
-    /// The end-of-turn forecast without this play already has this simulator-tab power on <paramref name="enemy"/> going
-    /// off (stunned for Shriek, Plow, Burrowed, Flutter; woken for Asleep), so its tab rule rightly showed nothing.
+    /// The end-of-turn forecast without this play already has this simulator-tab power on <paramref name="enemy"/> going off, so its tab rule
+    /// rightly showed nothing: its own outcome rule, given the turn ended now, has none for it here (SimModel.OutcomeTab: it happens anyway;
+    /// stunned for Shriek, Plow, Burrowed, Flutter, woken for Asleep, Slumber's last stack).
     /// </summary>
     private static bool BaselineHasIt(Window window, string power, Creature enemy)
     {
-        if (!SimTabSources.Contains(power) || window.Prediction?.Sim is not { } sim || !sim.Ids.TryGetValue(enemy, out var id)) return false;
+        if (!SimTabSources.Contains(power) || SimModels.Get(power) is not { JudgedOnOutcome: true } model || window.Prediction?.Sim is not { } sim
+            || !sim.Ids.TryGetValue(enemy, out var id)) return false;
         try
         {
-            var baseline = SimEngine.Run(sim.Start);
-            return power switch
-            {
-                nameof(ShriekPower) or nameof(PlowPower) or nameof(BurrowedPower) or nameof(FlutterPower) => baseline.StunnedInAll(id),
-                nameof(AsleepPower) => baseline.UnblockedMax(id) >= 1,
-                _ => false,
-            };
+            return CardTabs.AlreadySetOff(model, sim.Start, SimEngine.Run(sim.Start), id);
         }
         catch
         {

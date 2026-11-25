@@ -67,6 +67,14 @@ public sealed class CardTabs
     /// <summary>Indirect firings (from draws, exhausts, discards, created cards, shuffles) count (the Indirect procs setting).</summary>
     public bool Indirect { get; set; }
 
+    /// <summary>
+    /// A source judged on how the turn ends that ending it now already sets off on <paramref name="owner"/> (its outcome rule has none for it there:
+    /// SimModel.OutcomeTab is null where it happens anyway), so no play's tab shows it: the Play audit's reason a power went down with no tab
+    /// (a stun, a wake the turn's end already makes). One with no such rule isn't.
+    /// </summary>
+    public static bool AlreadySetOff(SimModel model, SimState start, SimOutcome endingNow, int owner) =>
+        model.JudgedOnOutcome && model.OutcomeTab(start, endingNow, owner) == null;
+
     /// <summary>A warning only some outcomes set off shows its chance (the Chances setting, decision #159).</summary>
     public bool Chances { get; set; }
 

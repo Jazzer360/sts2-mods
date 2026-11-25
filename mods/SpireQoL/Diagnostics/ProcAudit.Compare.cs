@@ -317,7 +317,7 @@ public sealed partial class ProcAudit
         var autoPlayed = UnpredictedAutoPlay(window, entries, me);
         if (autoPlayed) modelLines.Skip("budget", AutoPlayReason(window, entries, "random auto-plays"));
         var prediction = autoPlayed ? null : window.Prediction;
-        bool Explained(Effect effect) => sourceOf.Keys.Any(key => SourceEffects.TryGetValue(key, out var effects) && effects.Contains(effect));
+        bool Explained(Effect effect) => sourceOf.Keys.Any(key => EffectsOf(key).Contains(effect));
         void Budget(Effect effect, string what, int actual, int own)
         {
             if (actual > own && !Explained(effect) && randomKill) modelLines.Skip($"unexplained {what}", "after a random kill", $"{actual - own} more than the card's own {own}");
@@ -344,7 +344,7 @@ public sealed partial class ProcAudit
             var made = sourceOf.Values.Where(tab => tab.Kind == TabAmount.CardsMade).ToList();
             if (made.Count == 0) return;
             var otherMakers = sourceOf.Where(entry => entry.Value.Kind != TabAmount.CardsMade)
-                .Where(entry => SourceEffects.TryGetValue(entry.Key, out var effects) && effects.Contains(Effect.Generate)).Select(entry => entry.Key).ToList();
+                .Where(entry => EffectsOf(entry.Key).Contains(Effect.Generate)).Select(entry => entry.Key).ToList();
             if (otherMakers.Count > 0) { modelLines.Skip("cards made by tabs", "another source made cards", string.Join(", ", otherMakers)); return; }
             var (least, most) = (made.Sum(tab => tab.AuditMin), made.Sum(tab => tab.AuditMax));
             var what = $"cards made: tabs {least}-{most} beyond the card's own {own}, created {generated}";
