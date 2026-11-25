@@ -1,5 +1,5 @@
-Ambergris [you]: HealAction { Amount = 500, Osty = False }
-Ambergris [teammate]: ? Ambergris: a heal of a creature other than you
+Ambergris [you]: HealAction { Amount = 500, Osty = False }; ExtraTurnPower 1 on You
+Ambergris [teammate]: ? Ambergris: a heal of a creature other than you; ExtraTurnPower 1 on teammate
 Ashwater [you]: ? Ashwater: a loop the simulator can't count (each of GetResult)
 Ashwater [teammate]: ? Ashwater: a loop the simulator can't count (each of GetResult)
 AttackPotion [you]: ? AttackPotion: a step on what a pick of yours or a roll gives (CardPileCmd.AddGeneratedCardToCombat)
@@ -53,7 +53,7 @@ FocusPotion [you]: FocusAction { Delta = 2 }
 FocusPotion [teammate]: ? FocusPotion: FocusPower applied by someone other than you
 Fortifier [you]: block 0 Unpowered to you
 Fortifier [teammate]: block 0 Unpowered to teammate
-FoulPotion [no one]: ? FoulPotion: a step on a test the simulator doesn't ask (not Instance.IsInProgress and this.Owner.RunState.CurrentRoom is MerchantRoom)
+FoulPotion [no one]: ? FoulPotion: damage to a creature the simulator doesn't name (Where(this.Owner.Creature.CombatState.Creatures, c => c.IsPet == 0))
 FruitJuice [you]: ? CreatureCmd.GainMaxHp: max HP gained: not followed
 FruitJuice [teammate]: ? CreatureCmd.GainMaxHp: max HP gained: not followed
 FyshOil [you]: StrengthPower 1 on You; DexterityPower 1 on You

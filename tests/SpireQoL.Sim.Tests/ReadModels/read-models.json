@@ -11116,6 +11116,69 @@
     "Outcome": "KillsIt"
   },
   {
+    "Name": "ExtraTurnPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "ShouldTakeExtraTurn",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "ExtraTurnPower.ShouldTakeExtraTurn:0007",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "Amount"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "ExtraTurnPower.ShouldTakeExtraTurn:0007",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "Amount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "FakeBloodVial",
     "Kind": "Relic",
     "Hooks": [

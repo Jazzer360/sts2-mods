@@ -59,7 +59,7 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
     {
         // The held card's turn while you hold one (Play Preview, decision #183), else ending it now.
         var forecast = Sts2State.IsPlayerTurn ? PlayPreview.Model(_ctx) : null;
-        if (forecast == null || (!forecast.Unknown && forecast.BlockableTotal == 0 && forecast.UnblockableTotal == 0))
+        if (forecast == null || (!forecast.Unknown && forecast.ExtraTurnFrom == null && forecast.BlockableTotal == 0 && forecast.UnblockableTotal == 0))
         {
             _widget!.HasContent = false;
             _tip?.Hide();
@@ -79,14 +79,21 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
             _shownFor = default;
             return;
         }
+        // Another turn of yours comes before the enemies act, in every outcome (decision #319): only that shows, with no sum to hover.
+        var extraTurn = forecast.ExtraTurnFrom;
         // Hovering the sum: every way the enemy turn can go (decision #155). Polled: the sum takes no mouse input.
         var root = _panel!.Root;
-        if (root.IsVisibleInTree() && root.GetGlobalRect().HasPoint(root.GetGlobalMousePosition())) _tip!.Show(root, forecast, _ctx.Settings.Chances);
+        if (extraTurn == null && root.IsVisibleInTree() && root.GetGlobalRect().HasPoint(root.GetGlobalMousePosition())) _tip!.Show(root, forecast, _ctx.Settings.Chances);
         else _tip!.Hide();
         // The same forecast, its ? and the board (the settings among it) as last frame: the panel shows it already.
         var shownFor = (forecast, forecast.ShownMark, Sts2State.Me is { } player && Sts2State.Combat is { } combat ? BoardProbe.Hash(player, combat) : 0);
         if (shownFor == _shownFor) return;
         _shownFor = shownFor;
+        if (extraTurn != null)
+        {
+            _panel!.ShowExtraTurn(Sts2State.Me is { } me ? ExtraTurnIcon(me, extraTurn) : null, forecast.ShownMark);
+            return;
+        }
         // The most likely way the enemy turn goes, when a roll decides between several (decision #155); else the worst, as before.
         var likely = _ctx.Settings.ShowMostLikely && forecast.Outcomes.Count > 1 ? forecast.MostLikely : null;
         // A lethal enemy turn: the skull. One something keeps you alive through (Fairy in a Bottle first, then
@@ -97,6 +104,8 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         var revived = likely == null ? null : forecast.Outcomes.FirstOrDefault(outcome => outcome.Revived);
         var fairies = likely == null ? forecast.FairiesUsed : revived?.FairiesUsed ?? 0;
         var tailUsed = likely == null ? forecast.LizardTailUsed : revived?.LizardTailUsed ?? false;
+        // Some outcomes give you another turn first, not all: its icon above the sum.
+        var someExtraTurn = forecast.ExtraTurnInSome is { } some && Sts2State.Me is { } you ? ExtraTurnIcon(you, some) : null;
         if (fairies > 0 || tailUsed)
         {
             var me = Sts2State.Me;
@@ -114,43 +123,39 @@ public sealed class IncomingDamageFeature : IFeature, IFrameFeature
         if (likely != null)
         {
             var (incoming, block, osty, through, unblockableLikely) = forecast.Sum(likely);
-            _panel!.Show(incoming, block, osty, through, dies, revive, ExtraTurnIcon(), chance, forecast.ShownMark, unblockableLikely,
+            _panel!.Show(incoming, block, osty, through, dies, revive, someExtraTurn, chance, forecast.ShownMark, unblockableLikely,
                 outcomeChance: likely.Chance.Text(), reviveChance: reviveChance);
             return;
         }
         int? unblockable = forecast.UnblockableTotal > 0 ? forecast.UnblockableTaken : null;
         _panel!.Show(forecast.BlockableTotal, forecast.ExpectedBlock,
-            forecast.OstyHp > 0 ? (forecast.OstyTaken, forecast.OstyDies) : null, forecast.Taken - (unblockable ?? 0), dies, revive, ExtraTurnIcon(), chance, forecast.ShownMark, unblockable);
+            forecast.OstyHp > 0 ? (forecast.OstyTaken, forecast.OstyDies) : null, forecast.Taken - (unblockable ?? 0), dies, revive, someExtraTurn, chance, forecast.ShownMark, unblockable);
     }
 
-    /// <summary>
-    /// What gives you an extra turn if you end yours now (Hook.ShouldTakeExtraTurn with its source): beta only (decision #163); main's
-    /// gives no source, so no icon there.
-    /// </summary>
-    [BetaOnly, System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-    private static MegaCrit.Sts2.Core.Models.AbstractModel? ExtraTurnSource(MegaCrit.Sts2.Core.Combat.ICombatState combat, MegaCrit.Sts2.Core.Entities.Players.Player me) =>
-        MegaCrit.Sts2.Core.Hooks.Hook.ShouldTakeExtraTurn(combat, me, out var source) ? source : null;
-
-    private static readonly Func<MegaCrit.Sts2.Core.Combat.ICombatState, MegaCrit.Sts2.Core.Entities.Players.Player, MegaCrit.Sts2.Core.Models.AbstractModel?>? ExtraTurnSourceOf =
-        BetaOnly.Gate<Func<MegaCrit.Sts2.Core.Combat.ICombatState, MegaCrit.Sts2.Core.Entities.Players.Player, MegaCrit.Sts2.Core.Models.AbstractModel?>>(ExtraTurnSource);
+    /// <summary>The icons of the power classes an extra turn came from, by name (a play's or a potion's power, not on the board yet).</summary>
+    private static readonly Dictionary<string, Godot.Texture2D?> ExtraTurnPowerIcons = new(StringComparer.Ordinal);
 
     /// <summary>
-    /// Ending your turn now gives you another turn before the enemies act (Hook.ShouldTakeExtraTurn, a pure query:
-    /// Pael's Eye when you've played nothing, Extra Turn): its source's icon. The forecast is still the enemies' next
-    /// turn, which comes after that one (your end-of-turn block will be gone by then).
+    /// The icon of what gives <paramref name="player"/> an extra turn (decision #319: the simulator's source, its model's name): their relic
+    /// (Pael's Eye) or power by that name, else the power class's own (Extra Turn from a held The Hanged Man, or a potion about to be drunk).
+    /// Asked only when what's shown changes (yours) or for a hovered teammate: by index, no enumerator.
     /// </summary>
-    private static Godot.Texture2D? ExtraTurnIcon()
+    internal static Godot.Texture2D? ExtraTurnIcon(MegaCrit.Sts2.Core.Entities.Players.Player player, string source)
     {
         try
         {
-            if (Sts2State.Me is not { } me || Sts2State.Combat is not { } combat) return null;
-            if (ExtraTurnSourceOf?.Invoke(combat, me) is not { } source) return null;
-            return source switch
+            var relics = player.Relics;
+            for (var i = 0; i < relics.Count; i++)
+                if (relics[i].GetType().Name == source) return Cards.GameIcons.Relic(relics[i]);
+            var powers = player.Creature.Powers;
+            for (var i = 0; i < powers.Count; i++)
+                if (powers[i].GetType().Name == source) return Cards.GameIcons.Power(powers[i]);
+            if (!ExtraTurnPowerIcons.TryGetValue(source, out var icon))
             {
-                MegaCrit.Sts2.Core.Models.RelicModel relic => Cards.GameIcons.Relic(relic),
-                MegaCrit.Sts2.Core.Models.PowerModel power => Cards.GameIcons.Power(power),
-                _ => null,
-            };
+                var type = typeof(MegaCrit.Sts2.Core.Models.PowerModel).Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + source);
+                ExtraTurnPowerIcons[source] = icon = type == null ? null : Cards.GameIcons.Power(type);
+            }
+            return icon;
         }
         catch
         {

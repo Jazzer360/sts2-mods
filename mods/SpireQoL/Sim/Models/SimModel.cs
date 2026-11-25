@@ -450,6 +450,12 @@ public abstract class SimModel
     /// Burrowed: no), as SimEngine.EnemyTurn asks it of each enemy. Pure.
     /// </summary>
     public virtual bool ShouldClearBlock(SimState state, int owner, int creature) => true;
+    /// <summary>
+    /// Hook.ShouldTakeExtraTurn's passes, Early then its own: whether <paramref name="player"/> takes another turn before the enemies act (Pael's Eye
+    /// early; Extra Turn), as SimEngine.ExtraTurns asks it of each player once the players' turn is over (CombatManager.SwitchFromPlayerToEnemySide). Pure.
+    /// </summary>
+    public virtual bool ShouldTakeExtraTurnEarly(SimState state, int owner, int player) => false;
+    public virtual bool ShouldTakeExtraTurn(SimState state, int owner, int player) => false;
     /// <summary>Hook.ShouldAllowHitting: whether <paramref name="creature"/> can be hit and receive powers (Creature.IsHittable, CanReceivePowers). Pure.</summary>
     public virtual bool ShouldAllowHitting(SimState state, int owner, int creature) => true;
     /// <summary>The HP-loss pipeline (Hook.ModifyHpLost*): BeforeOsty, BeforeOstyLate, AfterOsty, AfterOstyLate.</summary>

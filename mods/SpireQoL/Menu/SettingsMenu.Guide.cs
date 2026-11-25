@@ -240,8 +240,9 @@ public sealed partial class SettingsMenu
             damageMathPanel => damageMathPanel.Show(incoming: 18, block: 5, (6, false), take: 7));
         IncomingCell(flow, "Unblockable too", "Regret in hand: 3 HP lost whatever your block. The skull sits beside the last line.",
             damageMathPanel => damageMathPanel.Show(incoming: 14, block: 11, osty: null, take: 3, unblockable: 3));
-        IncomingCell(flow, "Another turn first", "Ending your turn now gives you another one before the enemies act (Pael's Eye, Extra Turn).",
-            damageMathPanel => damageMathPanel.Show(incoming: 12, block: 0, osty: null, take: 12, extraTurn: Relic<PaelsEye>()));
+        IncomingCell(flow, "Another turn first", "Ending your turn now gives you another one before the enemies act (Pael's Eye, Extra Turn from The Hanged Man "
+            + "or Ambergris): no damage is shown, since your block and HP don't matter for ending this turn. Holding a card or a potion shows whether it would.",
+            damageMathPanel => damageMathPanel.ShowExtraTurn(Relic<PaelsEye>(), progress: null));
         _rows!.AddChild(flow);
         Paragraph("Teammate Incoming Damage: in multiplayer, hover a teammate to see theirs beside their HP bar, worked out the same way "
             + "from what you can see of them (their block, powers, orbs and relics; not the cards in their hand).");

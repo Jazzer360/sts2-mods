@@ -469,13 +469,35 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             return;
         }
 
-        // No enemy turn came (an extra turn: The Hanged Man's ExtraTurnPower.ShouldTakeExtraTurn): nothing to compare.
+        // No enemy turn came (an extra turn: Hook.ShouldTakeExtraTurn, The Hanged Man's Extra Turn, Pael's Eye): nothing to compare. The forecast
+        // predicted it (decision #319: some player's extra turn in some branch), or it's a mismatch: an extra turn it didn't see coming.
+        var extraTurnPredicted = forecast.Outcome.Branches.Any(branch => branch.PlayerIds.Any(player => branch.Player(player)?.ExtraTurnFrom != null));
         if (!sawEnemy && !youDied)
         {
+            if (!extraTurnPredicted && !forecast.Outcome.Truncated && !forecast.Outcome.AnyUnmodelled)
+            {
+                ReportExtraTurn(forecast, "an extra turn came, which no branch of the forecast had");
+                return;
+            }
             ModEntry.Log.Detail($"[audit] [outcome] turn {_frozenTurn}: not checked (no enemy turn followed: an extra turn)");
             Skip("an extra turn (no enemy turn to compare)");
             return;
         }
+        // The enemies acted, where every branch had an extra turn coming: what was shown said they wouldn't (Incoming Damage showed only +1 turn).
+        if (forecast.Outcome.Branches.Count > 0 && forecast.Outcome.Branches.All(branch => branch.PlayerIds.Any(player => branch.Player(player)?.ExtraTurnFrom != null)))
+        {
+            if (!forecast.Outcome.Truncated && !forecast.Outcome.AnyUnmodelled)
+            {
+                ReportExtraTurn(forecast, "the forecast had an extra turn coming in every branch, and the enemies acted");
+                return;
+            }
+            ModEntry.Log.Detail($"[audit] [outcome] turn {_frozenTurn}: not checked (an extra turn forecast where something wasn't modelled, and the enemies acted)");
+            Skip("an extra turn forecast, and the enemies acted (not modelled)");
+            return;
+        }
+        // Some branches had one: the enemies acted, so only the others are what happened.
+        if (extraTurnPredicted && forecast.Narrowed(branch => branch.PlayerIds.All(player => branch.Player(player)?.ExtraTurnFrom == null)) is { } withoutExtraTurn)
+            forecast = withoutExtraTurn;
 
         var osty = me.Osty;
         var damage = window.OfType<DamageReceivedEntry>().ToList();
@@ -627,6 +649,24 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 new Dictionary<string, string> { ["audit_window"] = fullWindow, ["sim_state"] = forecast.State.ToJson() },
                 new Dictionary<string, string> { ["check"] = kind, ["encounter"] = encounter, ["monster"] = monster ?? "" });
         }
+    }
+
+    /// <summary>
+    /// An extra turn the forecast got wrong (decision #319): whether one came is what Incoming Damage shows then, so it's a mismatch of its own,
+    /// counted and reported with the start state (nothing else of the turn is compared).
+    /// </summary>
+    private void ReportExtraTurn(TurnEndModel forecast, string issue)
+    {
+        _checked++;
+        Telemetry.DevEvents.Post(new Telemetry.CheckDone(Telemetry.Audits.Forecast, _frozenTurn, false, "extra turn"));
+        ModEntry.Log.Detail($"[audit] turn {_frozenTurn} enemy turn: extra turn: {issue}.");
+        var reporter = Sts2Mods.Core.Diagnostics.ErrorReporter.Instance;
+        if (reporter is not { Enabled: true }) return;
+        var encounter = Sts2State.Combat?.Encounter?.GetType().Name ?? "unknown";
+        reporter.Mismatch("forecast", $"Forecast audit: extra turn: {issue} ({encounter}, turn {_frozenTurn})", new[] { "extra turn", encounter },
+            $"Enemy turn after your turn {_frozenTurn}.\nIssue: extra turn: {issue}",
+            new Dictionary<string, string> { ["sim_state"] = forecast.State.ToJson() },
+            new Dictionary<string, string> { ["check"] = "extra turn", ["encounter"] = encounter, ["monster"] = "" });
     }
 
     /// <summary>

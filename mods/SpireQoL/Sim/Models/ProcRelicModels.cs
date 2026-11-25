@@ -59,6 +59,12 @@ public sealed class PaelsEye : RelicProc
     public override bool MayActOnTheEnemiesSide(string hook, int owner) => false;
 
     /// <summary>
+    /// ShouldTakeExtraTurnEarly: still armed as the players' turn is over (unused this combat, its owner took part and played no card this turn:
+    /// SimPlayer.PaelsEyeExhaust), its owner takes another turn before the enemies act.
+    /// </summary>
+    public override bool ShouldTakeExtraTurnEarly(SimState state, int owner, int player) => player == owner && state.Player(owner) is { PaelsEyeExhaust: true };
+
+    /// <summary>
     /// BeforeSideTurnEndEarly: still armed (no card played this turn: SimPlayer.PaelsEyeExhaust), its owner's whole hand is
     /// exhausted (Feel No Pain, Charon's Ashes... react to each card); nothing is left to act in hand or exhaust as Ethereal.
     /// </summary>

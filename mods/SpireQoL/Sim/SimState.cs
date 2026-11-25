@@ -626,6 +626,12 @@ public sealed class SimPlayer
     public bool Died, LizardTailUsed;
     public int FairiesUsed;
     /// <summary>
+    /// What gives this player another turn before the enemies act, as the players' turn is over (Hook.ShouldTakeExtraTurn: the first listener that
+    /// says yes, its model's name: Pael's Eye, Extra Turn); null when none does. Set by SimEngine.ExtraTurns; the enemy turn after it is still
+    /// simulated (what kills an enemy before it acts stays as it was), but what it does to this player isn't shown (decision #319).
+    /// </summary>
+    [JsonIgnore] public string? ExtraTurnFrom;
+    /// <summary>
     /// Beacon of Hope: half of each block this player gains on the players' side goes to every other
     /// living player (BeaconOfHopePower.AfterBlockGained). BeaconGiving: held while it gives (the game's
     /// guard against two Beacons trading block forever).
@@ -678,6 +684,7 @@ public sealed class SimPlayer
         key.Add(WuppyHp); key.Add(WuppyTaken); key.Add(OstyHp); key.Add(OstyMaxHp); key.Add(OstyShields ? 1 : 0); key.Add(Died ? 1 : 0); key.Add(LizardTailUsed ? 1 : 0); key.Add(LizardTailHeal); key.Add(FairiesUsed); key.Add(Fairies);
         key.Add(BlockGains); key.Add(Energy); key.Add(HandCount); key.Add(PlayingFromHand); key.Add(Arrows); key.Add(Fading); key.Add(UpgradableAtTurnEnd); key.Add(HexFading); key.Add(HexFrom); key.Add(Drawn); key.Add(ExhaustPile); key.Add(TakenToHand);
         key.Add(OrbCapacity); key.Add(BeaconGiving ? 1 : 0); key.Add(InvincibleBlock); key.Add(InvincibleDrawPile);
+        if (ExtraTurnFrom != null) key.Add(ExtraTurnFrom.GetHashCode());
         Draw?.Hash(ref key);
         key.Add(TurnEndCards.Count);
         foreach (var turnEndCard in TurnEndCards) { key.Add(turnEndCard.Card.GetHashCode()); key.Add(turnEndCard.Amount); }

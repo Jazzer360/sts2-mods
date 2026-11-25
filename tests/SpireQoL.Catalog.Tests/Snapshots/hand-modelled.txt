@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 27 engine rules naming 179 game methods; 3 adapter rules; 30 hand-written models.
+# 28 engine rules naming 181 game methods; 3 adapter rules; 30 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -64,6 +64,9 @@ The fight's end inside a turn (decision #301): once no primary enemy is alive an
 The players' turn's end: its hooks in their places, Ethereal cards, the cards that act in hand, the hand flushed
   game: CombatManager.EndPlayerTurnPhaseOneInternal, CombatManager.EndPlayerTurnPhaseTwoInternal, CombatManager.DoTurnEnd, CombatManager.FlushPlayerHand, Hook.BeforeSideTurnEnd, Hook.AfterSideTurnEnd, Hook.ShouldEtherealTrigger, Hook.ShouldFlush, Hook.BeforeFlush
   simulator: SimEngine.EndOfTurn, SimEngine.EndOfTurnSteps, SimEngine.Exhausting, SimEngine.CardsActInHand
+Who takes an extra turn as the players' turn is over (decision #319): each player asked of every listener, Early first; the first that says yes is the source
+  game: CombatManager.SwitchFromPlayerToEnemySide, Hook.ShouldTakeExtraTurn
+  simulator: SimEngine.ExtraTurns, SimEngine.ExtraTurnSource
 The enemies' turn: its start's hooks, block cleared, each move in turn order, its end's hooks, the intents read after a play
   game: CombatManager.StartTurn, CombatManager.ExecuteEnemyTurn, MonsterModel.PerformMove, Hook.BeforeSideTurnStart, Hook.AfterSideTurnStart, Hook.ShouldClearBlock, Creature.ClearBlock, CombatManager.EndEnemyTurn, CombatManager.EndEnemyTurnInternal
   simulator: SimEngine.EnemyTurnStart, SimEngine.StartTheEnemiesTurn, SimEngine.EnemyTurn, SimEngine.EnemyTurnEnd, SimEngine.EnemyTurnEndSteps, SimEngine.EnemiesSideStep, SimEngine.TheirTurnEndUnknownApart, SimEngine.TheirTurnEndGaps, SimEngine.TurnEndBlockBack, SimEngine.ClearsBlock, SimEngine.IntentsAfter
@@ -119,7 +122,7 @@ LostLutePower: LostLutePower.AfterCardPlayed (beta only)
 NecroMasteryPower: NecroMasteryPower.AfterCurrentHpChanged
   model: AfterOstyHpLost
 PaelsEye: PaelsEye.AfterCombatEnd, PaelsEye.AfterObtained, PaelsEye.AfterSideTurnStart, PaelsEye.AfterTakingExtraTurn, PaelsEye.BeforeCardPlayed, PaelsEye.BeforeSideTurnEndEarly, PaelsEye.ShouldTakeExtraTurnEarly (beta only)
-  model: BeforeCardPlayed, BeforeSideTurnEndEarly, MayActOnTheEnemiesSide
+  model: BeforeCardPlayed, BeforeSideTurnEndEarly, MayActOnTheEnemiesSide, ShouldTakeExtraTurnEarly
 PaelsTears: PaelsTears.AfterCombatEnd, PaelsTears.AfterSideTurnStart, PaelsTears.BeforeSideTurnEnd
   model: AfterCardEvent, AfterPlayResolved
 ParryPower: no hooks of its own

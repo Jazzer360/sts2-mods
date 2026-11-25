@@ -316,6 +316,8 @@ public static class ProgramEvaluator
     {
         // The fight going on (CombatManager.IsOverOrEnding): a play is only predicted in a fight that isn't over, as ConditionReader decides it.
         if (query is { Name: "IsOverOrEnding", IsProperty: true }) return false;
+        // The fight in progress (CombatManager.IsInProgress: Ambergris's Extra Turn only in one): a play or a use is only predicted in a fight.
+        if (query is { Name: "IsInProgress", IsProperty: true, Type: "CombatManager" }) return true;
         var asked = query.Of == null ? null : Evaluate(query.Of, context);
         if (asked == Unknown || asked != null && Forbidden(asked.GetType())) return Unknown;
         var board = context.Board;

@@ -49,6 +49,7 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.Taken), nameof(SimPlayer.Through), nameof(SimPlayer.OstyTaken), nameof(SimPlayer.Incoming),
         nameof(SimPlayer.UnblockableTaken), nameof(SimPlayer.WuppyTaken), nameof(SimPlayer.Died), nameof(SimPlayer.LizardTailUsed), nameof(SimPlayer.FairiesUsed), // results
         nameof(SimPlayer.BlockGained), nameof(SimPlayer.BeaconOfHope), nameof(SimPlayer.BeaconGiving),
+        nameof(SimPlayer.ExtraTurnFrom), // a result: what gives them an extra turn (their powers and relics, on screen; decision #319)
         nameof(SimPlayer.Powers), nameof(SimPlayer.Relics), nameof(SimPlayer.OstyPowers), nameof(SimPlayer.WuppyPowers), // their powers and relics, and their pets', are on screen
         nameof(SimPlayer.Turn), // the cards they played this turn: you watch them play
         nameof(SimPlayer.Fight), // the fight's log (decision #191): what happened, on screen
@@ -96,6 +97,7 @@ public class SimTeammateHandFieldsTests
     {
         var type = field.FieldType;
         if (type == typeof(int)) field.SetValue(player, 7);
+        else if (type == typeof(string)) field.SetValue(player, "X");
         else if (type == typeof(bool)) field.SetValue(player, true);
         else if (type == typeof(List<(string, int)>)) field.SetValue(player, new List<(string, int)> { ("X", 3) });
         else if (type == typeof(List<TurnEndCard>)) field.SetValue(player, new List<TurnEndCard> { new("Burn", "Burn", Amount: 2) });

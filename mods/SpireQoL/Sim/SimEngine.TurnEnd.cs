@@ -42,4 +42,33 @@ public static partial class SimEngine
             DamagePlayer(state, card.Title, player, card.Amount, props, dealer: player, card: card.Source ?? new SimCard(card.Card, SimCardType.None));
         }
     }
+
+    /// <summary>
+    /// Hook.ShouldTakeExtraTurn of each player as the players' turn is over (CombatManager.SwitchFromPlayerToEnemySide, decision #319): every
+    /// listener's Early pass, then its own, in the game's listener order; the first that says yes gives that player another turn before the
+    /// enemies act, and is kept as its source (SimPlayer.ExtraTurnFrom). Not asked in a branch whose fight is over (the turn loop ends the combat
+    /// instead: decision #301), nor of a player who died. The enemy turn is still simulated after it: what happens before the enemies act (an
+    /// enemy's death, the lethal tags) is unchanged, and what the enemies would do to that player isn't shown.
+    /// </summary>
+    private static void ExtraTurns(SimState state)
+    {
+        if (FightOver(state)) return;
+        foreach (var player in state.PlayerIds)
+        {
+            if (state.Player(player) is not { Died: false } simPlayer) continue;
+            var source = ExtraTurnSource(state, player);
+            if (source != simPlayer.ExtraTurnFrom) state.MutablePlayer(player).ExtraTurnFrom = source;
+        }
+    }
+
+    /// <summary>Hook.ShouldTakeExtraTurn's answer for <paramref name="player"/>: the name of the first listener that says yes (Early first), or null.</summary>
+    private static string? ExtraTurnSource(SimState state, int player)
+    {
+        var listeners = Listeners(state);
+        for (var i = 0; i < listeners.Count; i++)
+            if (listeners[i].Model.ShouldTakeExtraTurnEarly(state, listeners[i].Owner, player)) return listeners[i].Model.Name;
+        for (var i = 0; i < listeners.Count; i++)
+            if (listeners[i].Model.ShouldTakeExtraTurn(state, listeners[i].Owner, player)) return listeners[i].Model.Name;
+        return null;
+    }
 }

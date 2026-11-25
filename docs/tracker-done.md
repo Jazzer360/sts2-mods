@@ -474,3 +474,4 @@ written when checked off: the record of how each was done. What's open stays in 
 
 ## 23. Potions (decision #313, 2026-11-25)
 - [x] Potion Tags from the potion's use (decision #318): the use alone searched on a worker once per potion and board (`SimSearch.PlayOnly`), its tags for your relics whose code answers a potion's use where its log shows them acting (`PotionTabs`); the check by which relic flashed; the catalog check holds the potion rows to those relics and the board rules (White Beast Statue).
+- [x] Ambergris' Extra Turn (`ExtraTurnPower`; main's `AmbergrisPower`) is in its use, as The Hanged Man's is in its play: both powers are read from their code, and Incoming Damage shows only +1 turn while an extra turn is coming (decision #319).

@@ -89,6 +89,23 @@ public sealed class SimOutcome
     public SimChance YouDieChance() => Chance(branch => branch.Died);
 
     /// <summary>
+    /// What gives <paramref name="player"/> another turn before the enemies act (SimPlayer.ExtraTurnFrom, decision #319), when it does in every
+    /// branch of a finished search; null otherwise (none, only in some, or a search stopped at its cap before the players' turn was over).
+    /// </summary>
+    public string? ExtraTurnFrom(int player)
+    {
+        if (Truncated || Branches.Count == 0) return null;
+        var source = Branches[0].Player(player)?.ExtraTurnFrom;
+        if (source == null) return null;
+        for (var i = 1; i < Branches.Count; i++)
+            if (Branches[i].Player(player)?.ExtraTurnFrom == null) return null;
+        return source;
+    }
+
+    /// <summary>Some branch gives <paramref name="player"/> another turn before the enemies act (SimPlayer.ExtraTurnFrom).</summary>
+    public bool ExtraTurnInSome(int player) => InSome(branch => branch.Player(player)?.ExtraTurnFrom != null);
+
+    /// <summary>
     /// The simulator's work, the same on every machine (the performance tests limit these, not time): steps applied to the
     /// branch set, branches stepped over all steps, state copies, the most copies one step made, and the most states held at once.
     /// </summary>
@@ -1489,6 +1506,7 @@ public static partial class SimEngine
         branches.Do(branch =>
         {
             (branch.EndOfTurnNow, branch.SideEnding) = (false, TurnSide.None);
+            ExtraTurns(branch);
             branch.BlockAtEnemyTurn = branch.You.Block;
             foreach (var enemy in branch.Enemies) { enemy.HpAtTurnEnd = Math.Max(0, enemy.Hp); enemy.UnblockedAtTurnEnd = enemy.UnblockedInstances; }
         });

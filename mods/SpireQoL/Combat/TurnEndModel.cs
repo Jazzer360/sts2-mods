@@ -58,6 +58,16 @@ public sealed class TurnEndModel
     public bool LizardTailUsed { get; private set; }
     /// <summary>Your HP once the enemy turn is over (worst branch).</summary>
     public int HpAfter { get; private set; }
+    /// <summary>
+    /// What gives you another turn before the enemies act, in every outcome (SimOutcome.ExtraTurnFrom: its model's name, Pael's Eye or Extra
+    /// Turn), or null. Then Incoming Damage shows only that it's coming (decision #319): block and damage don't matter for ending this turn.
+    /// </summary>
+    public string? ExtraTurnFrom { get; private set; }
+    /// <summary>
+    /// What gives you another turn first in some outcome (its model's name), or null: when it isn't every outcome (ExtraTurnFrom null), the sum
+    /// shows with its icon above it.
+    /// </summary>
+    public string? ExtraTurnInSome { get; private set; }
     public bool OstyDies => OstyHp > 0 && OstyTaken >= OstyHp;
 
     /// <summary>
@@ -228,9 +238,11 @@ public sealed class TurnEndModel
     /// <summary>
     /// A teammate's Incoming Damage as shown (from the shown outcome: without the cards in their hand unless
     /// CountTeammateHands): damage landing on them, their block by the enemy turn, what their Osty absorbs (OstyHp 0:
-    /// not out), HP lost (worst and best branch), and the part of it no block stops (on its own line, as yours: decision #93).
+    /// not out), HP lost (worst and best branch), and the part of it no block stops (on its own line, as yours: decision #93). With an extra
+    /// turn theirs in every outcome (ExtraTurnFrom, its source's name: decision #319), only that shows.
     /// </summary>
-    public sealed record TeammateForecast(Player Player, int Incoming, int Block, int OstyHp, int OstyTaken, int TakenMin, int TakenMax, int Unblockable = 0)
+    public sealed record TeammateForecast(Player Player, int Incoming, int Block, int OstyHp, int OstyTaken, int TakenMin, int TakenMax, int Unblockable = 0,
+        string? ExtraTurnFrom = null)
     {
         public bool OstyDies => OstyHp > 0 && OstyTaken >= OstyHp;
     }
@@ -249,7 +261,7 @@ public sealed class TurnEndModel
             var worst = outcome.TeammateWorst(teammateIndex);
             view.Add(new TeammateForecast(Teammates[teammateIndex], worst.Incoming, State.Teammates[teammateIndex].Block + worst.BlockGained,
                 State.Teammates[teammateIndex].OstyShields ? State.Teammates[teammateIndex].OstyHp : 0, worst.OstyTaken, outcome.TeammateTakenMin(teammateIndex), outcome.TeammateTakenMax(teammateIndex),
-                Math.Min(worst.UnblockableTaken, outcome.TeammateTakenMax(teammateIndex))));
+                Math.Min(worst.UnblockableTaken, outcome.TeammateTakenMax(teammateIndex)), outcome.ExtraTurnFrom(Who.Teammate(teammateIndex))));
         }
         return view;
     }
@@ -498,6 +510,8 @@ public sealed class TurnEndModel
             _breakdown = branch.Log,
             _incoming = branch.You.Incoming,
             _blockAtEnemyTurn = branch.BlockAtEnemyTurn,
+            ExtraTurnFrom = outcome.ExtraTurnFrom(Who.You),
+            ExtraTurnInSome = outcome.Branches.FirstOrDefault(each => each.You.ExtraTurnFrom != null)?.You.ExtraTurnFrom,
         };
         // Same-name entries (one per Frost trigger, per Feel No Pain exhaust...) are summed for display.
         foreach (var bySource in branch.EndOfTurnBlock.GroupBy(nameAmount => nameAmount.Name)) forecast.EndOfTurnBlock.Add(new Source(bySource.Key, bySource.Sum(nameAmount => nameAmount.Amount)));

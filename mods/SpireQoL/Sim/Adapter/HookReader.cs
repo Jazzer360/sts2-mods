@@ -91,6 +91,9 @@ public static class HookReader
         // where a listener's class overrides AfterPotionProcured (SimAdapter.HookOnlyCommands).
         ["AfterPotionProcured"] = "a potion procured: no simulated decision procures one without its outcome being unknown where this hook is overridden",
         ["AfterPotionDiscarded"] = "a potion discarded: no simulated decision discards one",
+        // CombatManager.SwitchFromPlayerToEnemySide tells the source as the extra turn it gave begins: past every simulation's horizon, whose players'
+        // turn ends where Hook.ShouldTakeExtraTurn is asked (SimEngine.ExtraTurns).
+        ["AfterTakingExtraTurn"] = "as the extra turn it gave begins: past the simulation's horizon, which ends where the extra turn is decided",
     };
 
     /// <summary>
@@ -1148,7 +1151,7 @@ public static class HookReader
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(LocationWays(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
                 // A Should hook the engine asks (a true-or-false: 1 or 0).
                 if (name is HookName.ShouldAllowHitting or HookName.ShouldCreatureBeRemovedFromCombatAfterDeath or HookName.ShouldPowerBeRemovedAfterOwnerDeath or HookName.ShouldStopCombatFromEnding
-                        or HookName.ShouldClearBlock
+                        or HookName.ShouldClearBlock or HookName.ShouldTakeExtraTurnEarly or HookName.ShouldTakeExtraTurn
                     && hook.ReturnType.Name == "Boolean")
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(TestWays(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
                 if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name is HookName.ModifyCardPlayCount or HookName.ModifyOrbPassiveTriggerCounts)
@@ -3160,6 +3163,9 @@ public static class HookReader
             if (_hook is "BeforePotionUsed" or "AfterPotionUsed" && IsPotionOwner(other)) return new HookFactValue(HookFact.EventIsOwners);
             // The player whose next turn starts (AfterEnergyReset's, AfterPlayerTurnStart's player: a payout's hook, decision #239): asked of its owner's.
             if (other is NamedValue { Name: "player" } or ParameterValue { Name: "player" } && PlayersTurnStartHooks.Contains(_hook))
+                return new HookFactValue(HookFact.EventIsOwners);
+            // The player asked whether they take an extra turn (ShouldTakeExtraTurn's player): the hook's player, the one the engine asks it for.
+            if (other is NamedValue { Name: "player" } or ParameterValue { Name: "player" } && _hook is nameof(HookName.ShouldTakeExtraTurnEarly) or nameof(HookName.ShouldTakeExtraTurn))
                 return new HookFactValue(HookFact.EventIsOwners);
             // Another creature the code names (a pet's player, a creature's player): the creatures' comparison (CreatureCompare).
             if (CreatureOf(other) != null) return null;

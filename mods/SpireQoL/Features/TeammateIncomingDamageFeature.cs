@@ -61,7 +61,7 @@ public sealed class TeammateIncomingDamageFeature : IFeature, IFrameFeature
         var mate = Sts2State.IsPlayerTurn ? Sts2State.FocusedTeammate() : null;
         var model = mate != null ? PlayPreview.Model(_ctx) : null;
         var view = model == null ? null : ViewOf(model, mate!);
-        if (model == null || view == null || (!model.Unknown && view.Incoming == 0 && view.Unblockable == 0))
+        if (model == null || view == null || (!model.Unknown && view.ExtraTurnFrom == null && view.Incoming == 0 && view.Unblockable == 0))
         {
             _widget!.HasContent = false;
             return;
@@ -71,6 +71,12 @@ public sealed class TeammateIncomingDamageFeature : IFeature, IFrameFeature
         if (model.Unknown)
         {
             _panel!.ShowUnknown();
+            return;
+        }
+        // Another turn of theirs comes before the enemies act, in every outcome (decision #319): only that, as on yours.
+        if (view.ExtraTurnFrom is { } extraTurn)
+        {
+            _panel!.ShowExtraTurn(IncomingDamageFeature.ExtraTurnIcon(mate!, extraTurn), model.ShownMark);
             return;
         }
         int? unblockable = view.Unblockable > 0 ? view.Unblockable : null;

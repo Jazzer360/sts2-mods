@@ -334,7 +334,8 @@ public class ReadModelParityTests
         nameof(SimModel.BeforeDamageReceived), nameof(SimModel.AfterArrowShot), nameof(SimModel.AfterArrowImpaled),
         nameof(SimModel.ModifyPreBlockDamageTarget), nameof(SimModel.ModifyUnblockedDamageTarget), nameof(SimModel.ShouldAllowHitting),
         nameof(SimModel.ShouldCreatureBeRemovedFromCombatAfterDeath), nameof(SimModel.StaysOnDeadOwner), nameof(SimModel.ShouldStopCombatFromEnding),
-        nameof(SimModel.AfterBlockBroken), nameof(SimModel.ShouldClearBlock), nameof(SimModel.ModifyCardPlayResultLocation), nameof(SimModel.AfterModifyingCardPlayResultLocation),
+        nameof(SimModel.AfterBlockBroken), nameof(SimModel.ShouldClearBlock), nameof(SimModel.ShouldTakeExtraTurnEarly), nameof(SimModel.ShouldTakeExtraTurn),
+        nameof(SimModel.ModifyCardPlayResultLocation), nameof(SimModel.AfterModifyingCardPlayResultLocation),
         nameof(SimModel.ModifyPowerAmountGivenAdditive), nameof(SimModel.ModifyPowerAmountGivenMultiplicative), nameof(SimModel.ModifyPowerAmountGiven), nameof(SimModel.AfterModifyingPowerAmountGiven),
         nameof(SimModel.AfterRemoved),
         nameof(SimModel.AfterEnergyReset), nameof(SimModel.AfterEnergyResetLate), nameof(SimModel.BeforeHandDraw), nameof(SimModel.BeforeHandDrawLate),
@@ -708,6 +709,12 @@ public class ReadModelParityTests
                                         if (given != amount) model.AfterModifyingPowerAmountGiven(state, owner, power);
                                         return $"{amount} -> {given}: " + Branches(new[] { state });
                                     });
+                break;
+            case nameof(SimModel.ShouldTakeExtraTurnEarly) or nameof(SimModel.ShouldTakeExtraTurn):
+                // Asked of every player as the players' turn is over (SimEngine.ExtraTurns).
+                foreach (var player in new[] { Who.You, Who.Teammate(0) })
+                    yield return ($"asked of {player}", (model, state) =>
+                        $"{model.ShouldTakeExtraTurnEarly(state, owner, player)} {model.ShouldTakeExtraTurn(state, owner, player)}");
                 break;
             case nameof(SimModel.ShouldClearBlock):
                 // Asked of every creature as its side's turn starts.

@@ -165,6 +165,12 @@ public enum HookName
     /// </summary>
     BeforePotionUsed,
     AfterPotionUsed,
+    /// <summary>
+    /// Hook.ShouldTakeExtraTurn's two passes (CombatManager.SwitchFromPlayerToEnemySide, as the players' turn is over): whether the hook's player
+    /// takes another turn before the enemies act, every listener's Early first; 1 they do. The hook's player is the one asked (HookFact.EventIsOwners).
+    /// </summary>
+    ShouldTakeExtraTurnEarly,
+    ShouldTakeExtraTurn,
 }
 
 /// <summary>When an orb's passive goes off: the OrbModel trigger hook its class overrides with a call of TriggerPassive (OrbQueue calls them).</summary>

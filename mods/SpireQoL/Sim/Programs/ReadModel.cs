@@ -587,6 +587,8 @@ public sealed class ReadModel : SimModel
         HookName.ShouldStopCombatFromEnding => nameof(ShouldStopCombatFromEnding),
         HookName.AfterBlockBroken => nameof(AfterBlockBroken),
         HookName.ShouldClearBlock => nameof(ShouldClearBlock),
+        HookName.ShouldTakeExtraTurnEarly => nameof(ShouldTakeExtraTurnEarly),
+        HookName.ShouldTakeExtraTurn => nameof(ShouldTakeExtraTurn),
         HookName.ModifyCardPlayResultLocation => nameof(ModifyCardPlayResultLocation),
         HookName.AfterModifyingCardPlayResultLocation => nameof(AfterModifyingCardPlayResultLocation),
         HookName.ModifyPowerAmountGivenAdditive => nameof(ModifyPowerAmountGivenAdditive),
@@ -1065,6 +1067,14 @@ public sealed class ReadModel : SimModel
     /// <summary>Hook.ShouldClearBlock of <paramref name="creature"/>: its code's answer (Barricade and Burrowed keep their owner's).</summary>
     public override bool ShouldClearBlock(SimState state, int owner, int creature) =>
         _returns[(int)HookName.ShouldClearBlock] is not { } returns || returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ShouldClearBlock, Target = creature }) != 0m;
+
+    /// <summary>Hook.ShouldTakeExtraTurnEarly of <paramref name="player"/>: its code's answer.</summary>
+    public override bool ShouldTakeExtraTurnEarly(SimState state, int owner, int player) =>
+        _returns[(int)HookName.ShouldTakeExtraTurnEarly] is { } returns && returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ShouldTakeExtraTurnEarly, Player = player }) != 0m;
+
+    /// <summary>Hook.ShouldTakeExtraTurn of <paramref name="player"/>: its code's answer (Extra Turn's, Ambergris's: while its amount is above 0, for its owner).</summary>
+    public override bool ShouldTakeExtraTurn(SimState state, int owner, int player) =>
+        _returns[(int)HookName.ShouldTakeExtraTurn] is { } returns && returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ShouldTakeExtraTurn, Player = player }) != 0m;
 
     /// <summary>Its ShouldPowerBeRemovedAfterOwnerDeath says no: it stays on its dead owner (Die For You, Wuppy's Loyalty).</summary>
     public override bool StaysOnDeadOwner(SimState state, int owner) =>

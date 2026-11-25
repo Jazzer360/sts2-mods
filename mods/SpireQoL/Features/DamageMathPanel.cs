@@ -20,8 +20,8 @@ namespace SpireQoL.Features;
 /// The skull (and the chance) sits beside the last number, when the enemy turn kills you. With nothing blockable coming,
 /// only the heart line shows.
 ///
-/// Above it, [eye] +1 turn when ending your turn now gives you another turn first (Pael's Eye, Extra Turn): the
-/// enemies' turn shown comes after that one.
+/// When ending the turn gives the player another turn first in every outcome (Pael's Eye, Extra Turn: decision #319), only
+/// [eye] +1 turn shows (ShowExtraTurn); when only some outcomes do, it shows above the sum.
 /// </summary>
 internal sealed class DamageMathPanel
 {
@@ -76,7 +76,7 @@ internal sealed class DamageMathPanel
         _extraTurnIcon.Visible = false;
         grid.AddChild(_extraTurnIcon);
         _extraTurn = Number(SafeColor);
-        _extraTurn.Text = "+1 turn";
+        _extraTurn.Text = ExtraTurnText;
         _extraTurn.Visible = false;
         grid.AddChild(_extraTurn);
         _attackIcon = UiKit.Icon(_attackTiers[0], IconSize);
@@ -198,6 +198,7 @@ internal sealed class DamageMathPanel
         _extraTurnIcon.Visible = extraTurn != null;
         _extraTurn.Visible = extraTurn != null;
         _extraTurnIcon.Texture = extraTurn;
+        SetExtraTurnText(ExtraTurnText);
         _skull.Visible = dies;
         // With its chance, the line shows even beside the skull: one outcome saves you, another doesn't.
         var reviveShown = revive != null && (!dies || reviveChance != null);
@@ -240,6 +241,37 @@ internal sealed class DamageMathPanel
         _ostyIcon.Visible = _osty.Visible = false;
         _result.Text = "?";
         _result.AddThemeColorOverride(GodotNames.Name("font_color"), TakeColor);
+    }
+
+    private const string ExtraTurnText = "+1 turn";
+    private const string ExtraTurnUncertainText = "+1 turn ?";
+
+    /// <summary>
+    /// Another turn of the player's comes before the enemies act, in every outcome (decision #319): only its source's icon and +1 turn, with
+    /// <paramref name="progress"/> (a ?) after it while what's shown isn't certain. No sum, no skull: block and damage taken don't matter for
+    /// ending this turn.
+    /// </summary>
+    public void ShowExtraTurn(Texture2D? icon, string? progress)
+    {
+        foreach (var control in _math) control.Visible = false;
+        _heartIcon.Visible = _unblockableRow.Visible = false;
+        _deathChance.Visible = _skull.Visible = _progress.Visible = _outcomeChance.Visible = _reviveChance.Visible = false;
+        _reviveIcon.Visible = _revive.Visible = false;
+        _ostyIcon.Visible = _osty.Visible = false;
+        // The icon stays in its cell even without a texture, so the text keeps its column.
+        _extraTurnIcon.Texture = icon;
+        _extraTurnIcon.Visible = _extraTurn.Visible = true;
+        SetExtraTurnText(progress == null ? ExtraTurnText : ExtraTurnUncertainText);
+    }
+
+    /// <summary>The text set last (reading a Label's Text back makes a new string: the teammate's panel is shown every frame).</summary>
+    private string _extraTurnText = ExtraTurnText;
+
+    private void SetExtraTurnText(string text)
+    {
+        if (ReferenceEquals(_extraTurnText, text)) return;
+        _extraTurnText = text;
+        _extraTurn.Text = text;
     }
 
     internal static Label Number(Color color)

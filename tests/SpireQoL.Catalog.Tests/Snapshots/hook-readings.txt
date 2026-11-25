@@ -53,7 +53,7 @@ power EnvenomPower: AfterDamageGiven: read
 power EscapeArtistPower: AfterSideTurnEnd: read
 power ExplosiveArrowsPower: AfterArrowImpaled: read
 power ExplosivePower: AfterDeath: read
-power ExtraTurnPower: AfterTakingExtraTurn: gap: the simulator runs no read model's AfterTakingExtraTurn | ShouldTakeExtraTurn: gap: the simulator runs no read model's ShouldTakeExtraTurn
+power ExtraTurnPower: AfterTakingExtraTurn: not run: as the extra turn it gave begins: past the simulation's horizon, which ends where the extra turn is decided | ShouldTakeExtraTurn: read
 power FeelNoPainPower: AfterCardExhausted: read
 power FeralPower: AfterApplied: read | AfterModifyingCardPlayResultLocation: read | AfterSideTurnStart: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyCardPlayResultLocation: gap: the value resources.EnergyValue
 power FlameBarrierPower: AfterDamageReceived: read | AfterSideTurnEnd: read
@@ -249,7 +249,7 @@ relic Nunchaku: AfterCardPlayed: read
 relic ObsidianVice: BeforeSideTurnEnd: read
 relic Orichalcum: BeforeSideTurnEnd: read | BeforeSideTurnEndVeryEarly: read | BeforeSideTurnStart: read
 relic OrnamentalFan: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: read
-relic PaelsEye: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterSideTurnStart: read | AfterTakingExtraTurn: gap: the simulator runs no read model's AfterTakingExtraTurn | BeforeCardPlayed: gap: tests cardPlay.IsAutoPlay | BeforeSideTurnEndEarly: gap: a loop | ShouldTakeExtraTurnEarly: gap: the simulator runs no read model's ShouldTakeExtraTurnEarly
+relic PaelsEye: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterSideTurnStart: read | AfterTakingExtraTurn: not run: as the extra turn it gave begins: past the simulation's horizon, which ends where the extra turn is decided | BeforeCardPlayed: gap: tests cardPlay.IsAutoPlay | BeforeSideTurnEndEarly: gap: a loop | ShouldTakeExtraTurnEarly: gap: tests this.Owner.PlayerCombatState
 relic PaelsLegion: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingBlockAmount: read | AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterSideTurnStart: read | BeforeCombatStart: not run: before the fight: the state is read after it | ModifyBlockMultiplicative: read
 relic PaelsTears: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterSideTurnStart: read | BeforeSideTurnEnd: gap: the value this.Owner.PlayerCombatState.Energy
 relic ParryingShield: AfterSideTurnEnd: read
