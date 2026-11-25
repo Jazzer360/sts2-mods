@@ -69,6 +69,7 @@ power GigantificationPower: AfterAttack: read | BeforeAttack: read | InitInterna
 power GravityPower: AfterCardPlayed: read | AfterSideTurnEnd: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power GuardedPower: AfterApplied: read | AfterDeath: read | ModifyDamageMultiplicative: read
 power HailstormPower: BeforeSideTurnEnd: read
+power HardToKillPower: AfterModifyingHpLostBeforeOsty: read | ModifyHpLostBeforeOstyLate: read
 power HardenedShellPower: AfterDamageReceived: gap: sets Creature.HpDisplay where the reader reads no store | AfterModifyingHpLostBeforeOsty: read | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyHpLostBeforeOstyLate: read
 power HatchPower: AfterSideTurnEnd: read
 power HauntPower: AfterCardPlayed: read
