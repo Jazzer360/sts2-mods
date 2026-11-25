@@ -31,7 +31,8 @@ public sealed partial class ProcAudit
         }
         if (window.FightEnded || window.After == null || window.AfterIds == null)
         {
-            model.Skip("preview", window.FightEnded ? "the play ended the fight" : window.AfterSkipped ?? "the board after the play wasn't captured");
+            // The play ended the fight: nothing after it to compare (an expected skip, CheckSkip.FightEnded, as the other checks' are).
+            model.Skip("preview", window.FightEnded ? CheckSkip.FightEnded : window.AfterSkipped ?? "the board after the play wasn't captured");
             return;
         }
         if (PostPlay(window, sim) is not { } post)
