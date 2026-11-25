@@ -36,6 +36,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Shadowmeld is worked out from its own code (your block multiplied by 2 to the power of its amount, until your turn ends). What's shown is unchanged.
 - Insatiable Dominion is worked out from its own code (its damage to you as your turn ends, 2 plus the turn number). What's shown is unchanged.
 - Hand Drill, an enemy's Burrowed and Barricade are worked out from their own code (Hand Drill's Vulnerable on a block you or your Osty break, Burrowed's stun of the Tunneler whose block breaks, the block Barricade and Burrowed keep as the enemies' turn starts). What's shown is unchanged.
+- Rebound is worked out from its own code (your next card bound for the discard pile goes on top of your draw pile, a stack each). What's shown is unchanged.
 - A power a card gives you whose code a game update leaves unreadable (one worked out from its own code today) makes the play's forecast uncertain instead of being left out, as Poison's already did. What's shown today is unchanged.
 - An enemy's Infested, Stock and Steam Eruption are worked out from their own code (the creatures each death brings in, the Waterfall Giant's return). Their tabs are unchanged but for the fix below.
 - An enemy's Shriek, Flutter and Ravenous are worked out from their own code (the stun each gives its owner, Flutter's halved damage, Ravenous' Strength). Their tabs are unchanged.

@@ -2499,3 +2499,21 @@ public sealed class BurrowedPower : SimModel
     /// </summary>
     public override bool ShouldClearBlock(SimState state, int owner, int creature) => creature != owner;
 }
+
+// ---- round twenty-seven: the play's result location (Sim/Models/ProcPowerModels.cs), deleted 2026-11-25
+
+/// <summary>
+/// ReboundPower.ModifyCardPlayResultLocation, decided once before a card play's plays: its owner's card bound for their discard pile goes on
+/// top of their draw pile; AfterModifyingCardPlayResultLocation uses a stack (PowerCmd.Decrement). Where the card lands isn't followed
+/// further, as Nostalgia's.
+/// </summary>
+public sealed class ReboundPower : SimModel
+{
+    public override SimResultLocation ModifyCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location) =>
+        play.Owner == owner && location == SimResultLocation.Default ? SimResultLocation.DrawTop : location;
+
+    public override void AfterModifyingCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location)
+    {
+        if (play.Owner == owner) SimEngine.DecrementPower(state, owner, ThisPower);
+    }
+}

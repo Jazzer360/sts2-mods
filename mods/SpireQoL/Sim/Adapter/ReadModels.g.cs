@@ -173,6 +173,7 @@ public static partial class ReadModels
         PowerId.Ravenous.Name,
         RelicId.RazorTooth.Name,
         PowerId.ReaperForm.Name,
+        PowerId.Rebound.Name,
         PowerId.Reflect.Name,
         RelicId.Regalite.Name,
         PowerId.Regen.Name,

@@ -1492,8 +1492,51 @@ public static class ProgramReader
         {
             var ways = new List<(ProgramCondition When, ProgramValue Value)>();
             for (var i = 0; i < Ops.Count; i++)
-                if (Ops[i].OpCode == OpCodes.Ret && ReachedAt(i) is { IsNever: false } reached) ways.Add((reached, ValueBefore(i)));
+                if (Ops[i].OpCode == OpCodes.Ret && ReachedAt(i) is { IsNever: false } reached) ways.Add((reached, WithFieldsSet(i, ValueBefore(i))));
             return new WaysValue(ways);
+        }
+
+        /// <summary>
+        /// A parameter returned with fields the code set on it on the way to that return (ldarga location; a value; stfld pileType: Rebound's
+        /// location.pileType = PileType.Draw): the parameter with those fields, each the last store in the straight run of code just before the
+        /// return. A store to it anywhere else (before a branch, so it may or may not have run) makes the value unknown.
+        /// </summary>
+        private ProgramValue WithFieldsSet(int ret, ProgramValue returned)
+        {
+            if (returned is not ParameterValue parameter) return returned;
+            var stores = new List<int>();
+            for (var i = 0; i < Ops.Count; i++)
+                if (Ops[i].OpCode == OpCodes.Stfld && ReceiverValue(i, arguments: 1) is ParameterValue { Name: var stored } && stored == parameter.Name) stores.Add(i);
+            if (stores.Count == 0) return returned;
+            var targets = Ops.SelectMany(instruction => instruction.Targets).ToHashSet();
+            // The straight run before the return: back to the first branch, return or branch target.
+            var start = ret;
+            while (start > 0 && !Ops[start - 1].IsBranch && Ops[start - 1].OpCode != OpCodes.Ret && !targets.Contains(Ops[start].Offset)) start--;
+            var fields = new List<(string Field, ProgramValue Value)>();
+            foreach (var store in stores)
+            {
+                if (store < start || store > ret)
+                {
+                    // A store reached on the way to another return only (its own straight run) leaves this one's value as it was.
+                    if (!StraightBeforeAnotherReturn(store, targets)) return new UnknownValue($"{parameter.Name}.{Ops[store].Member?.Name} set before a branch");
+                    continue;
+                }
+                var field = Ops[store].Member?.Name ?? "?";
+                fields.RemoveAll(set => set.Field == field);
+                fields.Add((field, ValueBefore(store)));
+            }
+            return fields.Count == 0 ? returned : new FieldsSetValue(parameter, fields);
+        }
+
+        /// <summary>A store with nothing but straight code between it and a return (no branch, no branch target after it).</summary>
+        private bool StraightBeforeAnotherReturn(int store, HashSet<int> targets)
+        {
+            for (var i = store + 1; i < Ops.Count; i++)
+            {
+                if (targets.Contains(Ops[i].Offset) || Ops[i].IsBranch) return false;
+                if (Ops[i].OpCode == OpCodes.Ret) return true;
+            }
+            return false;
         }
 
         /// <summary>What a method returns when one way reaches its return (a helper's value); null otherwise.</summary>

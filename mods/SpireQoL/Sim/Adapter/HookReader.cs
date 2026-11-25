@@ -1002,6 +1002,9 @@ public static class HookReader
                 // A creature-valued Modify hook (a damage's redirect: Wuppy's Loyalty, Die For You): the creature of the first way that holds.
                 if (name is HookName.ModifyPreBlockDamageTarget or HookName.ModifyUnblockedDamageTarget)
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(CreatureWays(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
+                // Where a played card goes (a location-valued return: the location given, or it with its pile and position set).
+                if (name is HookName.ModifyCardPlayResultLocation)
+                    return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(LocationWays(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
                 // A Should hook the engine asks (a true-or-false: 1 or 0).
                 if (name is HookName.ShouldAllowHitting or HookName.ShouldCreatureBeRemovedFromCombatAfterDeath or HookName.ShouldPowerBeRemovedAfterOwnerDeath or HookName.ShouldStopCombatFromEnding
                         or HookName.ShouldClearBlock
@@ -2965,6 +2968,11 @@ public static class HookReader
                     return new HookFactValue(HookFact.EncounterScaling);
                 // The play count the listeners before it gave (ModifyCardPlayCount's playCount).
                 case ParameterValue { Name: "playCount" } or NamedValue { Name: "playCount" } when _hook == "ModifyCardPlayCount": return new HookFactValue(HookFact.PlayCountSoFar);
+                // Where the played card goes so far (ModifyCardPlayResultLocation's and AfterModifyingCardPlayResultLocation's location), and its pile.
+                case ParameterValue { Name: "location" } or NamedValue { Name: "location" } when _hook is "ModifyCardPlayResultLocation" or "AfterModifyingCardPlayResultLocation":
+                    return new HookFactValue(HookFact.ResultLocationSoFar);
+                case QueryValue { Name: "pileType", Of: ParameterValue { Name: "location" } or NamedValue { Name: "location" } } when _hook is "ModifyCardPlayResultLocation" or "AfterModifyingCardPlayResultLocation":
+                    return PileSoFar();
                 case QueryValue { Type: "Decimal", Name: ".ctor", Arguments: var parts } when parts.All(part => part is ConstantValue):
                 {
                     var numbers = parts.Cast<ConstantValue>().Select(part => part.Value).ToList();
@@ -3315,6 +3323,63 @@ public static class HookReader
                 : Unstored(value) is NullValue ? new HookConstant(Who.None)
                 : throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: returns a creature the reader can't name ({value})");
             return new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), CreatureValue(way.Value))).ToList());
+        }
+
+        /// <summary>
+        /// A played card's result location's ways (ModifyCardPlayResultLocation's returns: the location it's given, or that location with its pile and
+        /// position set), each as the simulator's SimResultLocation (HookFact.ResultLocationSoFar for the one given). A pile and position the
+        /// simulator has no location for (the bottom of the draw pile, a random place) is a gap.
+        /// </summary>
+        private HookValue LocationWays(WaysValue ways)
+        {
+            if (ways.Ways.Count == 0) throw new Gap(ReaderCapability.ResultLocation, "gap: no return read");
+            HookValue LocationValue(ProgramValue value) => Unstored(value) switch
+            {
+                ParameterValue { Name: "location" } or NamedValue { Name: "location" } => new HookFactValue(HookFact.ResultLocationSoFar),
+                FieldsSetValue { Of: ParameterValue { Name: "location" } or NamedValue { Name: "location" }, Fields: var fields } => new HookConstant((int)LocationOf(fields)),
+                var other => throw new Gap(ReaderCapability.ResultLocation, $"gap: returns a location the reader can't follow ({other})"),
+            };
+            return new HookWays(ways.Ways.Select(way => new HookWay(Condition(way.When) ?? new HookConstant(1m), LocationValue(way.Value))).ToList());
+        }
+
+        /// <summary>The location a CardLocation's pile and position set name (PileType, CardPilePosition: the game's enums, read by name).</summary>
+        private SimResultLocation LocationOf(IReadOnlyList<(string Field, ProgramValue Value)> fields)
+        {
+            string? Named(string field, string enumType) =>
+                fields.FirstOrDefault(set => set.Field == field).Value is ConstantValue { Value: var number } ? EnumMembers(enumType).FirstOrDefault(member => member.Value == number).Name : null;
+            var pile = Named("pileType", "PileType") ?? throw new Gap(ReaderCapability.ResultLocation, "gap: a location whose pile the reader can't follow");
+            var position = Named("position", "CardPilePosition");
+            return (pile, position) switch
+            {
+                ("Draw", "Top") => SimResultLocation.DrawTop,
+                ("Hand", _) => SimResultLocation.HandTop,
+                ("Exhaust", _) => SimResultLocation.Exhaust,
+                ("Discard", _) => SimResultLocation.Default,
+                ("None", _) => SimResultLocation.Nowhere,
+                _ => throw new Gap(ReaderCapability.ResultLocation, $"gap: a location the simulator has none for ({pile}, {position ?? "its position as given"})"),
+            };
+        }
+
+        /// <summary>An enum of the game's, by name: its members' names and numbers (read from its fields' constants: the assembly may be read apart from the runtime).</summary>
+        private List<(string Name, long Value)> EnumMembers(string enumType) =>
+            (_type.Assembly.GetTypes().FirstOrDefault(type => type.IsEnum && type.Name == enumType) ?? throw new Gap(ReaderCapability.ResultLocation, $"gap: no enum {enumType}"))
+                .GetFields(BindingFlags.Public | BindingFlags.Static).Select(field => (field.Name, Convert.ToInt64(field.GetRawConstantValue(), System.Globalization.CultureInfo.InvariantCulture))).ToList();
+
+        /// <summary>
+        /// The pile a location so far is in (ModifyCardPlayResultLocation's location.pileType), as the game's PileType number: the simulator's
+        /// location so far, each way its pile.
+        /// </summary>
+        private HookValue PileSoFar()
+        {
+            var piles = EnumMembers("PileType");
+            decimal Number(string pile) => piles.FirstOrDefault(member => member.Name == pile) is { Name: not null } found ? found.Value : throw new Gap(ReaderCapability.ResultLocation, $"gap: no PileType.{pile}");
+            HookWay Way(SimResultLocation location, string pile) =>
+                new(new HookMath(HookOperation.Equal, new HookFactValue(HookFact.ResultLocationSoFar), new HookConstant((int)location)), new HookConstant(Number(pile)));
+            return new HookWays(new List<HookWay>
+            {
+                Way(SimResultLocation.Default, "Discard"), Way(SimResultLocation.DrawTop, "Draw"), Way(SimResultLocation.HandTop, "Hand"),
+                Way(SimResultLocation.Exhaust, "Exhaust"), Way(SimResultLocation.Nowhere, "None"),
+            });
         }
 
         /// <summary>
@@ -3694,7 +3759,7 @@ public static class HookReader
             || value is NamedValue { Name: "card" } or ParameterValue { Name: "card" } && PlayShapeHooks.Contains(_hook);
 
         /// <summary>The hooks that decide a card play's shape before its plays, their card the one played (decision #192).</summary>
-        private static readonly HashSet<string> PlayShapeHooks = new(StringComparer.Ordinal) { "ModifyCardPlayCount", "AfterModifyingCardPlayCount" };
+        private static readonly HashSet<string> PlayShapeHooks = new(StringComparer.Ordinal) { "ModifyCardPlayCount", "AfterModifyingCardPlayCount", "ModifyCardPlayResultLocation", "AfterModifyingCardPlayResultLocation" };
 
         private bool IsEventCard(ProgramValue value) => value is NamedValue { Name: "card" } or ParameterValue { Name: "card" } && _hook != "AfterCardPlayed" && !PlayShapeHooks.Contains(_hook);
 

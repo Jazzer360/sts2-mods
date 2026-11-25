@@ -3,9 +3,9 @@
 
 ## Powers and relics
 
-beta powers: 303 classes, 272 with hooks; read from code 148, hand-written 26, neither 100 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 303 classes, 272 with hooks; read from code 149, hand-written 25, neither 100 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 65, hand-written 8, neither 237 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 124, hand-written 24, neither 89 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 125, hand-written 23, neither 89 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 57, hand-written 8, neither 228 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 7, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 1
@@ -177,19 +177,19 @@ the engine runs no read enchantment (its bodies read whole but for that): 5 clas
 a loop over items (creatures, cards): 7 classes, 4 alone: ImpaledPower, PaelsEye, SmoggyPower, BlessingOfTheForge (potion)*, CosmicConcoction (potion)*, EntropicBrew (potion)*, GlowwaterPotion (potion)*
 another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 4 classes, 4 alone: CoveredPower*, SurprisePower*, Goopy (enchantment)*, FoulPotion (potion)*
 its own data: a card or a play kept, a field used directly: 4 classes, 3 alone: ImitationLearningPower*, SurroundedPower, WitheringPresencePower*, Ashwater (potion)*
-the play's result location (ModifyCardPlayResultLocation): 4 classes, 3 alone: CorruptionPower, FeralPower*, NostalgiaPower*, ReboundPower*
 a pick: 3 classes, 3 alone: StratagemPower*, DropletOfPrecognition (potion)*, GamblersBrew (potion)*
 commands: a card made (AddGeneratedCardToCombat, a made card): 3 classes, 3 alone: CrystallineEuphoria (potion)*, CunningPotion (potion)*, PotOfGhouls (potion)*
 commands: another command (no translation): 3 classes, 3 alone: BottledPotential (potion)*, FruitJuice (potion)*, KingsCourage (potion)*
 orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first): 3 classes, 3 alone: ConsumingShadowPower*, TrashToTreasurePower*, PotionOfCapacity (potion)*
 the simulator's own model (no game class by its name): 3 classes, 3 alone: ImpaledPowerOther*, Regret*, Void*
+a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 7 classes, 2 alone: AsleepPower, FeralPower*, ImpaledPower, PlatingPower, SkittishPower*, SmoggyPower, SurroundedPower
+card costs and keywords (cards' own hooks, Part B3): 3 classes, 2 alone: ChemicalX*, CorruptionPower*, PhantomBladesPower
 commands: AutoPlayFromDrawPile: 2 classes, 2 alone: LostLutePower*, DistilledChaos (potion)*
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
 hooks: the power amount given: 2 classes, 2 alone: SneckoSkull*, UnsettlingLamp*
 the engine runs no read potion (its bodies read whole but for that): 2 classes, 2 alone: PotionOfBinding (potion)*, ShacklingPotion (potion)*
+the fight's log (the history ledger, decision #191): 2 classes, 2 alone: NostalgiaPower*, UnmovablePower*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*
-a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 6 classes, 1 alone: AsleepPower, ImpaledPower, PlatingPower, SkittishPower*, SmoggyPower, SurroundedPower
-card costs and keywords (cards' own hooks, Part B3): 3 classes, 1 alone: ChemicalX*, CorruptionPower, PhantomBladesPower
 hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...): 3 classes, 1 alone: SmoggyPower, SurroundedPower, UnceasingTop*
 queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 3 classes, 1 alone: PaelsEye, PhantomBladesPower, TagTeamPower*
 queries: a creature's side or presence: 2 classes, 1 alone: EssenceOfDarkness (potion)*, FairyInABottle (potion)
@@ -197,7 +197,6 @@ commands: GainStars: 1 classes, 1 alone: StarPotion (potion)*
 commands: OstyCmd.Summon: 1 classes, 1 alone: BoneBrew (potion)*
 hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*
 hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
-the fight's log (the history ledger, decision #191): 1 classes, 1 alone: UnmovablePower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*
 a command on another power (PowerCmd.Remove of another): 2 classes, 0 alone: AsleepPower, SlumberPower
 a model's own method (its body read where it's called): 1 classes, 0 alone: FairyInABottle (potion)

@@ -28,7 +28,7 @@ power ConquerorPower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power ConstrictPower: AfterDeath: read | AfterSideTurnEnd: read
 power ConsumingShadowPower: AfterSideTurnEnd: gap: OrbCmd.EvokeLast isn't translated
 power CorrosiveWavePower: AfterCardDrawn: read | AfterSideTurnEnd: read
-power CorruptionPower: AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
+power CorruptionPower: AfterModifyingCardPlayResultLocation: read | ModifyCardPlayResultLocation: read | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
 power CoveredPower: AfterApplied: gap: changes a game object outside a command (InterceptPower.AddCoveredCreature) | AfterDeath: read | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | AfterSideTurnEnd: not run: its commands wait on the enemies' side's turn ending, which no simulation reaches | ModifyDamageMultiplicative: read
 power CoveringFirePower: AfterArrowShot: read
 power CrabRagePower: AfterDeath: read
@@ -55,7 +55,7 @@ power ExplosiveArrowsPower: AfterArrowImpaled: read
 power ExplosivePower: AfterDeath: read
 power ExtraTurnPower: AfterTakingExtraTurn: gap: the simulator runs no read model's AfterTakingExtraTurn | ShouldTakeExtraTurn: gap: the simulator runs no read model's ShouldTakeExtraTurn
 power FeelNoPainPower: AfterCardExhausted: read
-power FeralPower: AfterApplied: read | AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | AfterSideTurnStart: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
+power FeralPower: AfterApplied: read | AfterModifyingCardPlayResultLocation: read | AfterSideTurnStart: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyCardPlayResultLocation: gap: the value resources.EnergyValue
 power FlameBarrierPower: AfterDamageReceived: read | AfterSideTurnEnd: read
 power FlankingPower: AfterApplied: read | AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power FlutterPower: AfterDamageReceived: read | ModifyDamageMultiplicative: read
@@ -105,7 +105,7 @@ power NemesisPower: AfterSideTurnEnd: gap: PowerCmd.Remove of another power
 power NoBlockPower: AfterSideTurnEnd: not run: its commands wait on the enemies' side's turn ending, which no simulation reaches | ModifyBlockMultiplicative: read
 power NoDrawPower: AfterSideTurnEnd: read | ShouldDraw: gap: the simulator runs no read model's ShouldDraw
 power NoEnergyGainPower: AfterModifyingEnergyGain: gap: the simulator runs no read model's AfterModifyingEnergyGain | AfterSideTurnEnd: read | ModifyEnergyGain: gap: the simulator runs no read model's ModifyEnergyGain
-power NostalgiaPower: AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
+power NostalgiaPower: AfterModifyingCardPlayResultLocation: read | ModifyCardPlayResultLocation: gap: the fight's log (more than one way: ((e.HappenedThisTurn(this.CombatState) and (e.CardPlay.Card.Type sub 1) <= 1) or (e.HappenedThisTurn(this.CombatState) and not e.HappenedThisTurn(this.CombatState)))): Count(Instance.History.CardPlaysStarted, e => ((e.HappenedThisTurn(this.CombatState) and (e.CardPlay.Card.Type sub 1) <= 1) or (e.HappenedThisTurn(this.CombatState) and not e.HappenedThisTurn(this.CombatState))) and e.CardPlay.Player == this.Owner.Player)
 power OblivionPower: AfterCardPlayed: read | AfterSideTurnEnd: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power OneTwoPunchPower: AfterModifyingCardPlayCount: read | AfterSideTurnEnd: read | ModifyCardPlayCount: read
 power OrbitPower: AfterEnergySpent: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
@@ -125,7 +125,7 @@ power RagePower: AfterCardPlayed: read | AfterSideTurnEnd: read
 power RavenousPower: AfterDeath: read
 power ReaperFormPower: AfterApplied: read | AfterDamageGiven: read | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 power ReattachPower: AfterDeath: gap: changes a game object outside a command (MonsterModel.SetMoveImmediate) | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ShouldAllowHitting: read | ShouldCreatureBeRemovedFromCombatAfterDeath: read | ShouldOwnerDeathTriggerFatal: gap: the simulator runs no read model's ShouldOwnerDeathTriggerFatal | ShouldPowerBeRemovedAfterOwnerDeath: read
-power ReboundPower: AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | AfterSideTurnEnd: read | ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
+power ReboundPower: AfterModifyingCardPlayResultLocation: read | AfterSideTurnEnd: read | ModifyCardPlayResultLocation: read
 power ReflectPower: AfterDamageReceived: read | AfterSideTurnStart: read
 power RegenPower: BeforeSideTurnEndEarly: read
 power RetainHandPower: AfterSideTurnEnd: read | ShouldFlush: gap: the simulator runs no read model's ShouldFlush

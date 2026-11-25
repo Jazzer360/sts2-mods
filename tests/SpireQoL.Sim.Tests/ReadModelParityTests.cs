@@ -52,6 +52,7 @@ public class ReadModelParityTests
     private static readonly Dictionary<string, string> Reviewed = new(StringComparer.Ordinal)
     {
         ["DoubleDamagePower.AfterSideTurnEnd"] = "PowerCmd.Decrement(this) when its owner takes part: it goes down as your turn ends. After it no card of yours plays this turn (the auto-plays come before), so no damage it doubles is left: no prediction changes",
+        ["ReboundPower.AfterSideTurnEnd"] = "participants.Contains(base.Owner): PowerCmd.Remove(this): it goes as its owner's side's turn ends, where the hand-written model kept it. No card of yours plays after it this turn (the auto-plays come before), so no card's result location reads it: no prediction changes",
         ["RagePower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. No card of yours plays after it (the auto-plays come before): no prediction changes",
         ["GravityPower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. No card of yours plays after it (the auto-plays come before): no prediction changes",
         ["BurstPower.AfterSideTurnEnd"] = "PowerCmd.Remove(this) when its owner takes part: it goes as your turn ends. No card of yours plays after it (the auto-plays come before): no prediction changes",
@@ -305,7 +306,7 @@ public class ReadModelParityTests
         nameof(SimModel.BeforeDamageReceived), nameof(SimModel.AfterArrowShot), nameof(SimModel.AfterArrowImpaled),
         nameof(SimModel.ModifyPreBlockDamageTarget), nameof(SimModel.ModifyUnblockedDamageTarget), nameof(SimModel.ShouldAllowHitting),
         nameof(SimModel.ShouldCreatureBeRemovedFromCombatAfterDeath), nameof(SimModel.StaysOnDeadOwner), nameof(SimModel.ShouldStopCombatFromEnding),
-        nameof(SimModel.AfterBlockBroken), nameof(SimModel.ShouldClearBlock),
+        nameof(SimModel.AfterBlockBroken), nameof(SimModel.ShouldClearBlock), nameof(SimModel.ModifyCardPlayResultLocation), nameof(SimModel.AfterModifyingCardPlayResultLocation),
     };
 
     [Fact]
@@ -635,6 +636,25 @@ public class ReadModelParityTests
                 break;
             case nameof(SimModel.ShouldStopCombatFromEnding):
                 yield return ("as the fight would end", (model, state) => model.ShouldStopCombatFromEnding(state, owner).ToString());
+                break;
+            case nameof(SimModel.ModifyCardPlayResultLocation) or nameof(SimModel.AfterModifyingCardPlayResultLocation):
+                // Each play's result location decided three times in turn from each location it can start at, as the engine decides it
+                // (DecideCardPlay): the location, and AfterModifyingCardPlayResultLocation when it changed it (a stack used each time).
+                foreach (var play in Plays(others))
+                    foreach (var from in Enum.GetValues<SimResultLocation>())
+                        yield return ($"the result location of {Describe(play)} from {from}, three times", (model, state) =>
+                        {
+                            var text = new StringBuilder();
+                            for (var time = 0; time < 3; time++)
+                            {
+                                // A listener only while it's there: a power used up answers no more.
+                                if (!SimEngine.PowersOf(state, owner).Has(new PowerId(model.Name)) && !SimEngine.RelicsOf(state, owner).Has(new RelicId(model.Name))) { text.Append("gone // "); continue; }
+                                var location = model.ModifyCardPlayResultLocation(state, owner, play, from);
+                                if (location != from) model.AfterModifyingCardPlayResultLocation(state, owner, play, location);
+                                text.Append($"{from} -> {location}: ").Append(Branches(new[] { state })).Append(" // ");
+                            }
+                            return text.ToString();
+                        });
                 break;
             case nameof(SimModel.ShouldClearBlock):
                 // Asked of every creature as its side's turn starts.

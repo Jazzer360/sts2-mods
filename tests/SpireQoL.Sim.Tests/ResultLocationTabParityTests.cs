@@ -21,6 +21,13 @@ public class ResultLocationTabParityTests
     /// <summary>Scenarios whose tabs a class read from its code places otherwise, each a fix: the scenario, and the game's line that moves them.</summary>
     private static readonly Dictionary<int, string> ReviewedTabs = new();
 
+    /// <summary>
+    /// A scenario whose only change is Rebound gone by the turn's end, read from its code: ReboundPower.AfterSideTurnEnd, `participants.Contains(base.Owner)`
+    /// then PowerCmd.Remove(this), where the hand-written model kept it (a fix: no card of yours plays after it, so nothing the play shows changes).
+    /// </summary>
+    private static bool ReboundGoesAsTheTurnEnds(string was, string now) =>
+        was != now && System.Text.RegularExpressions.Regex.Replace(was, @"ReboundPower \d+(,\d+)*;", "ReboundPower 0;") == now;
+
     private static readonly PowerId[] Powers = { PowerId.Rebound, PowerId.Nostalgia };
 
     [Fact]
@@ -35,7 +42,7 @@ public class ResultLocationTabParityTests
         var expected = File.ReadAllLines(ParityPath).ToList();
         Assert.Equal(expected.Count, actual.Count);
         var changed = actual.Zip(expected, (now, was) => (Now: now, Was: was)).Select((pair, scenario) => (pair.Now, pair.Was, Scenario: scenario))
-            .Where(entry => entry.Now != entry.Was && !ReviewedTabs.ContainsKey(entry.Scenario)).Select(entry => $"{entry.Was}\n  now: {entry.Now}").ToList();
+            .Where(entry => entry.Now != entry.Was && !ReviewedTabs.ContainsKey(entry.Scenario) && !ReboundGoesAsTheTurnEnds(entry.Was, entry.Now)).Select(entry => $"{entry.Was}\n  now: {entry.Now}").ToList();
         Assert.True(changed.Count == 0, $"the tabs changed in {changed.Count} of {actual.Count} scenarios:\n{string.Join("\n", changed.Take(6))}");
         var stale = ReviewedTabs.Keys.Where(scenario => actual[scenario] == expected[scenario]).ToList();
         Assert.True(stale.Count == 0, $"reviewed, but the tabs are as recorded: {string.Join(", ", stale)}");

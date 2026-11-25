@@ -60,6 +60,8 @@ internal readonly struct HookArgs
     public int Each { get; init; }
     /// <summary>Who broke the block an AfterBlockBroken is told of (Who.None: no one).</summary>
     public int Breaker { get; init; }
+    /// <summary>Where the played card goes so far (ModifyCardPlayResultLocation's location; AfterModifyingCardPlayResultLocation's, as it came to).</summary>
+    public SimResultLocation Location { get; init; }
     /// <summary>The locals this run kept (LetStep, by its slot); null: it keeps none.</summary>
     public decimal[]? Locals { get; init; }
     /// <summary>Asked of the players' next turn (a payout there: decision #239): the turn number is the next one.</summary>
@@ -521,6 +523,8 @@ public sealed class ReadModel : SimModel
         HookName.ShouldStopCombatFromEnding => nameof(ShouldStopCombatFromEnding),
         HookName.AfterBlockBroken => nameof(AfterBlockBroken),
         HookName.ShouldClearBlock => nameof(ShouldClearBlock),
+        HookName.ModifyCardPlayResultLocation => nameof(ModifyCardPlayResultLocation),
+        HookName.AfterModifyingCardPlayResultLocation => nameof(AfterModifyingCardPlayResultLocation),
         // Its power's own question as its owner dies (Creature.RemoveAllPowersAfterDeath): asked of it, never of every listener.
         HookName.ShouldPowerBeRemovedAfterOwnerDeath => nameof(StaysOnDeadOwner),
         // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook; an enchantment's OnPlay
@@ -863,6 +867,22 @@ public sealed class ReadModel : SimModel
     /// <summary>Hook.ShouldStopCombatFromEnding: its code's answer (Infested's, Stock's, Steam Eruption's: true).</summary>
     public override bool ShouldStopCombatFromEnding(SimState state, int owner) =>
         _returns[(int)HookName.ShouldStopCombatFromEnding] is { } returns && returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ShouldStopCombatFromEnding }) != 0m;
+
+    /// <summary>
+    /// Hook.ModifyCardPlayResultLocation: where its code leaves the played card's location (its first way that holds), decided once before the card
+    /// play's plays (SimEngine.DecideCardPlay).
+    /// </summary>
+    public override SimResultLocation ModifyCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location) =>
+        _returns[(int)HookName.ModifyCardPlayResultLocation] is { } returns
+            ? (SimResultLocation)(int)returns(new HookArgs { State = state, Owner = owner, Hook = HookName.ModifyCardPlayResultLocation, Play = play, Location = location })
+            : location;
+
+    /// <summary>Hook.AfterModifyingCardPlayResultLocation, told to the listeners that changed it, before the plays: deterministic, on the state given.</summary>
+    public override void AfterModifyingCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location)
+    {
+        foreach (var branch in Run(HookName.AfterModifyingCardPlayResultLocation, new HookArgs { State = state, Owner = owner, Play = play, Location = location }))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingCardPlayResultLocation branched");
+    }
 
     /// <summary>Hook.ShouldClearBlock of <paramref name="creature"/>: its code's answer (Barricade and Burrowed keep their owner's).</summary>
     public override bool ShouldClearBlock(SimState state, int owner, int creature) =>
@@ -2277,6 +2297,7 @@ public sealed class ReadModel : SimModel
             }
             case HookFact.HitTotal: return (in HookArgs args) => args.Hit?.Total ?? 0;
             case HookFact.PlayCountSoFar: return (in HookArgs args) => args.PlayCount;
+            case HookFact.ResultLocationSoFar: return (in HookArgs args) => (int)args.Location;
             case HookFact.OwnerBlock: return (in HookArgs args) => args.State.Player(args.Owner)?.Block ?? args.State.Enemy(args.Owner)?.Block ?? 0;
             case HookFact.OwnerHandCount: return (in HookArgs args) => args.State.Player(args.Owner)?.HandCount ?? 0;
             case HookFact.OwnerOrbCount:
@@ -2390,7 +2411,8 @@ public sealed class ReadModel : SimModel
 
     /// <summary>A hook whose card is the card played (its play's or its count's), not an event's.</summary>
     private static bool IsPlayHook(HookName hook) =>
-        hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed or HookName.ModifyCardPlayCount or HookName.AfterModifyingCardPlayCount;
+        hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed or HookName.ModifyCardPlayCount or HookName.AfterModifyingCardPlayCount
+            or HookName.ModifyCardPlayResultLocation or HookName.AfterModifyingCardPlayResultLocation;
 
     /// <summary>
     /// The type of the hook's card: the card played, or the event's card (a made card's, as the code that made it names it; one drawn as its

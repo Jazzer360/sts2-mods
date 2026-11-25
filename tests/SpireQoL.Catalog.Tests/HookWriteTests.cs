@@ -65,8 +65,12 @@ public class HookWriteTests
                 var steps = program.All().ToList();
                 // Its own data's Remove(cardPlay.Card, out amount) tested or taken for its value: a fact of the program (HookFact.TakeBound).
                 var takes = spec.Values().Any(value => value is HookFactValue { Fact: HookFact.TakeBound or HookFact.BoundTaken }) || spec.Steps().Any(step => step is UnbindStep);
+                // A field of the struct a hook returns, set on the copy it's given (ModifyCardPlayResultLocation's location.pileType): its returned value's
+                // (ProgramReader.ReadReturnedWays: the parameter with its fields set), read with its returns.
+                bool OfItsReturn(Write write) => write.Kind == "store" && hook.ReturnType.IsValueType && hook.ReturnType.GetField(write.Name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic) != null
+                    && spec.Of(name) is { Returns: not null };
                 foreach (var write in Writes(type, ProgramReader.BodyOf(hook), code.Read))
-                    if (!Maps(write, steps) && !(takes && write is { Kind: "data", Name: "Remove" })) dropped.Add($"{type.Name}.{hook.Name}: {write} has no step");
+                    if (!Maps(write, steps) && !(takes && write is { Kind: "data", Name: "Remove" }) && !OfItsReturn(write)) dropped.Add($"{type.Name}.{hook.Name}: {write} has no step");
                 // A Modify hook is its returns: nothing it runs is a step, so it may change nothing.
                 if (spec.Of(name) is { Returns: not null }) continue;
                 var translated = spec.Of(name)?.Steps ?? Array.Empty<HookStep>();

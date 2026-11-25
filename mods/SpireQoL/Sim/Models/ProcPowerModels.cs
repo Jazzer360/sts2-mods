@@ -119,21 +119,7 @@ public sealed class CorruptionPower : SimModel
         play.Owner == owner && play.Card.Type == SimCardType.Skill ? SimResultLocation.Exhaust : location;
 }
 
-/// <summary>
-/// ReboundPower.ModifyCardPlayResultLocation, decided once before a card play's plays: its owner's card bound for their discard pile goes on
-/// top of their draw pile; AfterModifyingCardPlayResultLocation uses a stack (PowerCmd.Decrement). Where the card lands isn't followed
-/// further, as Nostalgia's.
-/// </summary>
-public sealed class ReboundPower : SimModel
-{
-    public override SimResultLocation ModifyCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location) =>
-        play.Owner == owner && location == SimResultLocation.Default ? SimResultLocation.DrawTop : location;
-
-    public override void AfterModifyingCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location)
-    {
-        if (play.Owner == owner) SimEngine.DecrementPower(state, owner, ThisPower);
-    }
-}
+// Rebound is read from its code (ReadModel: ModifyCardPlayResultLocation and AfterModifyingCardPlayResultLocation, decision #286).
 
 /// <summary>
 /// NostalgiaPower.ModifyCardPlayResultLocation, decided once before a card play's plays: its owner's Attack or Skill bound for their

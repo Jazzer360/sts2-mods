@@ -27017,6 +27017,311 @@
     "HelpsOwner": false
   },
   {
+    "Name": "ReboundPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterModifyingCardPlayResultLocation",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterModifyingCardPlayResultLocation\u003Ed__5.MoveNext:0027",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              }
+            }
+          },
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterModifyingCardPlayResultLocation\u003Ed__5.MoveNext:0027",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "PlayIsOwners"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyCardPlayResultLocation",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "ReboundPower.ModifyCardPlayResultLocation:0011",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "ResultLocationSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "ReboundPower.ModifyCardPlayResultLocation:001E",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookWays",
+                      "Ways": [
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "ResultLocationSoFar"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookConstant",
+                            "Value": 3
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "ResultLocationSoFar"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "ResultLocationSoFar"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookConstant",
+                            "Value": 2
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "ResultLocationSoFar"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 3
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookConstant",
+                            "Value": 4
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "ResultLocationSoFar"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 4
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      ]
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "ResultLocationSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "ReboundPower.ModifyCardPlayResultLocation:001E",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookWays",
+                    "Ways": [
+                      {
+                        "When": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "ResultLocationSoFar"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookConstant",
+                          "Value": 3
+                        }
+                      },
+                      {
+                        "When": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "ResultLocationSoFar"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 2
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        }
+                      },
+                      {
+                        "When": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "ResultLocationSoFar"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookConstant",
+                          "Value": 2
+                        }
+                      },
+                      {
+                        "When": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "ResultLocationSoFar"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 3
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookConstant",
+                          "Value": 4
+                        }
+                      },
+                      {
+                        "When": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "ResultLocationSoFar"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 4
+                          }
+                        },
+                        "Value": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    ]
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 3
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 2
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "ReflectPower",
     "Kind": "Power",
     "Hooks": [

@@ -115,6 +115,13 @@ public enum HookName
     /// <summary>Hook.ShouldClearBlock: whether a creature's block is cleared as its side's turn starts (CombatManager.StartTurn): 1 it is.</summary>
     ShouldClearBlock,
     /// <summary>
+    /// Hook.ModifyCardPlayResultLocation: where a played card goes once its plays are over, as each listener in turn leaves it (CardModel.OnPlayWrapper,
+    /// before the first play): a location-valued return (HookFact.ResultLocationSoFar the location so far).
+    /// </summary>
+    ModifyCardPlayResultLocation,
+    /// <summary>Hook.AfterModifyingCardPlayResultLocation: told to the listeners whose return changed the location (Rebound's stack used, Nostalgia's flash).</summary>
+    AfterModifyingCardPlayResultLocation,
+    /// <summary>
     /// Hook.ShouldStopCombatFromEnding: whether the fight goes on with no primary enemy alive (CombatManager.IsEnding: Infested's, Stock's and Steam
     /// Eruption's, whose deaths bring creatures in): 1 it stops it ending.
     /// </summary>
@@ -222,6 +229,11 @@ public enum HookFact
     BoundTaken,
     /// <summary>The card play's count as the listeners before it left it (ModifyCardPlayCount's playCount).</summary>
     PlayCountSoFar,
+    /// <summary>
+    /// Where the played card goes as the listeners before it left it (ModifyCardPlayResultLocation's and AfterModifyingCardPlayResultLocation's location),
+    /// as the simulator's SimResultLocation.
+    /// </summary>
+    ResultLocationSoFar,
     /// <summary>The HP a hit took past block (AfterDamageGiven's and AfterDamageReceived's result.UnblockedDamage).</summary>
     HitUnblocked,
     /// <summary>What a hit's block took (AfterDamageGiven's and AfterDamageReceived's result.BlockedDamage: Reflect's damage back).</summary>

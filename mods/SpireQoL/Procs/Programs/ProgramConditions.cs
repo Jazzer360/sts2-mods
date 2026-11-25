@@ -252,6 +252,25 @@ public sealed record ArrayValue(IReadOnlyList<ProgramValue> Items) : ProgramValu
     public override string ToString() => "[" + string.Join(", ", Items) + "]";
 }
 
+/// <summary>
+/// A value with fields the code set on it (a struct parameter returned after stores through its address: Rebound's location with its pileType
+/// and position set), each field's value the last one stored.
+/// </summary>
+public sealed record FieldsSetValue(ProgramValue Of, IReadOnlyList<(string Field, ProgramValue Value)> Fields) : ProgramValue
+{
+    public override IEnumerable<ProgramValue> Parts()
+    {
+        yield return this;
+        foreach (var part in Of.Parts()) yield return part;
+        foreach (var (_, value) in Fields) foreach (var part in value.Parts()) yield return part;
+    }
+
+    public override ProgramValue Map(Func<ProgramValue, ProgramValue?> replace) =>
+        replace(this) ?? this with { Of = Of.Map(replace), Fields = Fields.Select(set => (set.Field, set.Value.Map(replace))).ToList() };
+
+    public override string ToString() => $"{Of} with {string.Join(", ", Fields.Select(set => $"{set.Field} = {set.Value}"))}";
+}
+
 /// <summary>Something the reader couldn't follow, named by what it saw.</summary>
 public sealed record UnknownValue(string Text) : ProgramValue
 {
