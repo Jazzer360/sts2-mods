@@ -1732,7 +1732,24 @@ public sealed class MonarchsGazePower : SimModel
     }
 }
 
-// ---- reactions to losing HP (Sim/Models/OutcomeModels.cs and ReactionModels.cs, deleted 2026-11-24)
+// ---- reactions to losing HP (Sim/Models/OutcomeModels.cs and ReactionModels.cs, deleted 2026-11-24; Rupture and their base with OutcomeRules.YouLoseHp
+// in round sixteen)
+
+/// <summary>The outcome rules only the frozen models still use (Sim/Models/OutcomeModels.cs' OutcomeRules, as they were).</summary>
+public static class FrozenRules
+{
+    /// <summary>You lose HP during the play (its own HP cost, Thorns hitting back), in every branch of an aim: a bonus.</summary>
+    public static readonly OutcomeRule YouLoseHp = new(Harmful: false, outcome => outcome.PlayHpLossesMin > 0);
+}
+
+/// <summary>A relic or power of yours that reacts to HP you lose (AfterDamageReceived with UnblockedDamage &gt; 0, after Tungsten Rod).</summary>
+public abstract class ReactsToYourHpLoss : SimModel
+{
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => owner == Who.You ? FrozenRules.YouLoseHp : null;
+}
+
+/// <summary>RupturePower: Strength when you lose HP on your turn.</summary>
+public sealed class RupturePower : ReactsToYourHpLoss { }
 
 /// <summary>SelfFormingClay: block next turn.</summary>
 public sealed class SelfFormingClay : ReactsToYourHpLoss { }
@@ -1747,7 +1764,7 @@ public sealed class EmotionChip : ReactsToYourHpLoss { }
 public sealed class DemonTongue : SimModel
 {
     public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        owner == Who.You && !((RelicUse)SimEngine.RelicsOf(start, owner).DataOf(ThisRelic)).HasFlag(RelicUse.UsedThisTurn) ? OutcomeRules.YouLoseHp : null;
+        owner == Who.You && !((RelicUse)SimEngine.RelicsOf(start, owner).DataOf(ThisRelic)).HasFlag(RelicUse.UsedThisTurn) ? FrozenRules.YouLoseHp : null;
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
     {
         if (hit.Target != owner || hit.Unblocked <= 0 || state.EnemyTurnNow || state.Player(owner) is not { Died: false, Hp: < int.MaxValue }) return;

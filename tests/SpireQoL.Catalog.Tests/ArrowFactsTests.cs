@@ -5,7 +5,7 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// What the model reader takes from ArrowCmd's code about an arrow (decision #241), held to it on both branches: AfterArrowImpaled's Impaled has an
+/// What the model reader takes from ArrowCmd's code about an arrow (decision #242), held to it on both branches: AfterArrowImpaled's Impaled has an
 /// arrow, and its first arrow's owner is the shooter (HookReader.IsImpaledsFirstArrow), because ImpaledPower.AddArrow is called by ArrowCmd.ImpaleTarget
 /// alone, on the instance of the arrow's owner (one per applier: ImpaledPower is InstancedPerApplier), before Hook.AfterArrowImpaled.
 /// </summary>

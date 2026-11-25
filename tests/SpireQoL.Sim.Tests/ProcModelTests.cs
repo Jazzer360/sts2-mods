@@ -405,6 +405,19 @@ public class ProcModelTests
     }
 
     [Fact]
+    public void RupturesStrengthLandsAsYouLoseHp()
+    {
+        // RupturePower.AfterDamageReceived: HP you lose on your turn from no card of yours in play (an enemy's Thorns hitting back) gives its Strength
+        // at once (PowerCmd.Apply<StrengthPower>), so the attack's second hit has it: 5 then 7.
+        var state = Power(State(hp: 100), PowerId.Rupture, amount: 2);
+        state.You.Hp = 50;
+        state.Enemies[0].Thorns = 3;
+        var after = One(state, Play(Card("TwinStrike"), target: 0, plays: 1, Attack(baseDamage: 5, hits: 2)));
+        Assert.Equal(88, after.Enemy(id: 0)!.Hp);
+        Assert.Equal(4, after.You.Powers[PowerId.Strength]);
+    }
+
+    [Fact]
     public void QuietusDestroysTheShotsArrowOnceItImpales()
     {
         // QuietusPower.AfterArrowShot: arrow.DestroyAfterImpaled = true, so ArrowCmd.ImpaleTarget destroys it (DestroyArrow): out of a living target

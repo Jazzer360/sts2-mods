@@ -572,6 +572,8 @@ public static class HookReader
         {
             HookTest test => matches(test.Test) || Needs(test.Test, matches),
             HookMath { Operation: HookOperation.And } both => Needs(both.Left, matches) || Needs(both.Right, matches),
+            // Each way of an or needs it (Rupture's apply on its two ways, a card's or none).
+            HookMath { Operation: HookOperation.Or } either => Needs(either.Left, matches) && Needs(either.Right, matches),
             _ => when != null && matches(when),
         };
         return steps.Any(step => step is not StoreFieldStep)
@@ -1489,6 +1491,11 @@ public static class HookReader
         /// </summary>
         private HookStep Data(DataStep data)
         {
+            // More on what it bound to the play in progress, under the damage's card (Rupture's playedCards[cardSource] += base.Amount): its condition holds the
+            // damage's card to the bound one (ContainsKey(cardSource): HookFact.SourceBound), the only key its data keeps.
+            if (data.Operation == "set_Item" && data.Values is [var sourceKey, ArithmeticValue { Op: "add", Left: QueryValue { Name: "Item" or "get_Item", Arguments: [var readKey] }, Right: var added }]
+                && IsSourceCard(Unstored(sourceKey)) && IsSourceCard(Unstored(readKey)))
+                return new BindAddStep(Value(added));
             if (data.Values.Count == 0 || !IsPlayCard(data.Values[0])) throw new Gap(ReaderCapability.OwnData, $"gap: changes its own data ({data.Data}.{data.Operation}) by {(data.Values.Count > 0 ? data.Values[0] : "nothing")}");
             return data.Operation switch
             {
@@ -2041,6 +2048,10 @@ public static class HookReader
                     return new HookFactValue(HookFact.ShotHadArrow);
                 case ParameterValue { Name: "source" } or NamedValue { Name: "source" } when _hook == "AfterArrowShot":
                     return new HookFactValue(HookFact.HookCardThere);
+                // The damage's card is the play its model bound (its own data's ContainsKey(cardSource): Rupture's, the card in play its BeforeCardPlayed added).
+                case QueryValue { Name: "ContainsKey", Of: { } boundOf, Arguments: [var boundKey] } when Unstored(boundOf) is QueryValue { Of: { } dataOf } && ProgramReader.IsOwnData(dataOf)
+                    && IsSourceCard(Unstored(boundKey)) && DamageHooks.Contains(_hook):
+                    return new HookFactValue(HookFact.SourceBound);
                 case var firstArrow when IsImpaledsFirstArrow(firstArrow):
                     return new HookConstant(1m);
                 case var creatureTest when CreatureTest(creatureTest) is { } creatureFact:

@@ -280,7 +280,7 @@ public class GameBranchTests
     }
 
     /// <summary>
-    /// Thorns is read from its code on each branch (decision #240): main's ThornsPower answers Omnislice's unpowered splash (cardSource is Omnislice),
+    /// Thorns is read from its code on each branch (decision #241): main's ThornsPower answers Omnislice's unpowered splash (cardSource is Omnislice),
     /// beta's answers powered attacks alone, and the reading has it so on each, where the hand-written model asked MainRule.SplashIsUnpowered.
     /// </summary>
     [Fact]

@@ -624,7 +624,7 @@ public static class ProgramReader
                 // A change to one of the model's own data's collections whose result isn't used (an Add, a Remove for its out value).
                 if (member is { Kind: CodeMemberKind.Method, HasThis: true } && member.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)
                     && (!member.ReturnsValue || i + 1 < ops.Count && ops[i + 1].OpCode == OpCodes.Pop)
-                    && flow.ReceiverValue(i, member.ParameterCount) is QueryValue { Of: { } dataOf, Name: var collection } && IsOwnData(dataOf))
+                    && (flow.ReceiverValue(i, member.ParameterCount) is StoredValue { Value: var kept } ? kept : flow.ReceiverValue(i, member.ParameterCount)) is QueryValue { Of: { } dataOf, Name: var collection } && IsOwnData(dataOf))
                 {
                     into.Add(new DataStep(instruction.Offset, collection, member.Name, flow.ArgumentValues(i, member)) { Condition = condition });
                     continue;

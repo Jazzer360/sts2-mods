@@ -1,9 +1,9 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by the capability the reader names.
-# 72 hand-written models.
+# 71 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
-its own data: a card or a play kept, a field used directly: 10 classes, 7 alone: BlackHolePower, CalamityPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, PaelsLegion, RupturePower*, SerpentFormPower*, StretchPower*, WitheringPresencePower*
+its own data: a card or a play kept, a field used directly: 9 classes, 6 alone: BlackHolePower, CalamityPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, PaelsLegion, SerpentFormPower*, StretchPower*, WitheringPresencePower*
 a monster's own state set (its flag, its next move): 10 classes, 4 alone: AsleepPower, CurlUpPower, FlutterPower*, ImbalancedPower*, InfestedPower, PlowPower*, RavenousPower*, SlumberPower, SteamEruptionPower, StockPower
 a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 4 classes, 3 alone: InsatiableDominionPower*, PlatingPower, ShadowmeldPower*, SkittishPower*
 commands: a card made (AddGeneratedCardToCombat, a made card): 3 classes, 3 alone: BiiigHug*, BurningSticks*, PersonalHivePower*
@@ -86,7 +86,6 @@ RavenousPower: [a monster's own state set (its flag, its next move)] AfterDeath:
 ReboundPower: [the play's result location (ModifyCardPlayResultLocation)] AfterModifyingCardPlayResultLocation: gap: the simulator runs no read model's AfterModifyingCardPlayResultLocation | [the play's result location (ModifyCardPlayResultLocation)] ModifyCardPlayResultLocation: gap: the simulator runs no read model's ModifyCardPlayResultLocation
 RedSkull: [hooks: AfterCurrentHpChanged] AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged
 Regret: [the simulator's own model (no game class by its name)] no game class
-RupturePower: [its own data: a card or a play kept, a field used directly] AfterDamageReceived: gap: changes a collection (Dictionary`2.set_Item) where the reader reads no step
 SeekingEdgePower: [the simulator's own model (its game class has no hooks: another class's code reads it)] no hooks
 SerpentFormPower: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: acts on this.Owner.Player.RunState.Rng.CombatTargets.NextItem<Creature>({cardPlay.Card.Owner == this.Owner.Player and this.GetInternalData<Data>().amoun...
 ShadowmeldPower: [a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)] ModifyBlockMultiplicative: gap: the value ?Pow

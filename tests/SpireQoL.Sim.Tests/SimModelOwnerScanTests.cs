@@ -20,7 +20,6 @@ public class SimModelOwnerScanTests
         ["play.Owner != Who.You"] = "Withering Presence counts its Target's cards; the adapter loads only the one aimed at you (SimReaders.Powers)",
         ["(owner == Who.You && breaker == Who.YourOsty)"] = "Hand Drill: your Osty breaking block counts as you (only your Osty is a dealer in the simulator; a teammate's Osty's hits are captured numbers)",
         ["owner == Who.You ? new(Harmful: false, outcome => outcome.PlayBreaksBlockInAll)"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
-        ["owner == Who.You ? OutcomeRules.YouLoseHp"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
         ["if (owner != Who.You) return null;"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
         ["var hp = start.You.Hp;"] = "Red Skull's outcome tab is yours only (the line before returns for anyone else): your HP",
         ["(owner == Who.You && damage.Dealer == Who.YourOsty)"] = "your Osty's attacks count as yours for your powers",

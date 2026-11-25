@@ -15,9 +15,6 @@ internal static class OutcomeRules
     /// <summary>The play kills some enemy in every branch of an aim (not always the same one): a bonus.</summary>
     public static readonly OutcomeRule KillsOne = new(Harmful: false, outcome => outcome.PlayKillsInAll, InSome: outcome => outcome.KilledByPlayInAny.Count > 0);
 
-    /// <summary>You lose HP during the play (its own HP cost, Thorns hitting back), in every branch of an aim: a bonus.</summary>
-    public static readonly OutcomeRule YouLoseHp = new(Harmful: false, outcome => outcome.PlayHpLossesMin > 0);
-
     /// <summary>
     /// Stunned during your turn and alive when its turn comes, in every branch of an aim, when it isn't already without the play: a
     /// bonus. Null for anything but an enemy.
@@ -97,14 +94,7 @@ public sealed class CompostPower : SimModel
     }
 }
 
-/// <summary>A relic or power of yours that reacts to HP you lose (AfterDamageReceived with UnblockedDamage &gt; 0, after Tungsten Rod).</summary>
-public abstract class ReactsToYourHpLoss : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) => owner == Who.You ? OutcomeRules.YouLoseHp : null;
-}
-
-/// <summary>RupturePower: Strength when you lose HP on your turn.</summary>
-public sealed class RupturePower : ReactsToYourHpLoss { }
+// Rupture is read from its code (ReadModel, decision #243).
 
 /// <summary>
 /// RedSkull: Strength once your HP is at or below its threshold (AfterCurrentHpChanged). The adapter's amount is the HP at the

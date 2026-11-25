@@ -294,7 +294,7 @@ public sealed class LostLutePower : ProcModel
             : One(state);
 }
 
-// Explosive Arrows and Covering Fire are read from their code (ReadModel, decision #241).
+// Explosive Arrows and Covering Fire are read from their code (ReadModel, decision #242).
 
 /// <summary>
 /// ImpaledPower (yours, on an enemy: Amount = your arrows in it, Data = its HitCounter): every third powered hit of yours knocks an

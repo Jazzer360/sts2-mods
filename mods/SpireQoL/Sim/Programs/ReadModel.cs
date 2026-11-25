@@ -959,6 +959,17 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
+            case BindAddStep bindAdd:
+            {
+                // More on what it bound to the play in progress (inside a hit: no branching), taken back with it.
+                var value = Compile(bindAdd.Value);
+                return args =>
+                {
+                    var key = BoundKey(in args);
+                    if (args.State.Bound.Has(key)) args.State.Bound = args.State.Bound.With(key, args.State.Bound[key] + (int)value(in args));
+                    return One(args.State);
+                };
+            }
             case UnbindStep:
                 return args =>
                 {
@@ -1137,7 +1148,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or DestroyArrowStep
+            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or DestroyArrowStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1262,6 +1273,9 @@ public sealed class ReadModel : SimModel
                 {
                     var state = args.State;
                     var given = (int)amount(in args);
+                    // PowerCmd.Apply of 0 does nothing (its first test: amount == 0m returns), so the model doesn't act (Rupture's Strength for a card
+                    // that cost no HP). PowerCmd.ModifyAmount of itself (GoesAtZero) isn't Apply.
+                    if (given == 0 && !goesAtZero) return One(state);
                     var debuff = alwaysDebuff || debuffWhenNegative && given < 0;
                     // Its applier: its owner, or the creature its code names (the applier it keeps; no one).
                     var applier = appliedBy == null ? args.Owner : CreatureOf(in args, appliedBy);
@@ -1756,6 +1770,9 @@ public sealed class ReadModel : SimModel
             case HookFact.HitUnblocked: return (in HookArgs args) => args.Hit?.Unblocked ?? 0;
             case HookFact.HitBlocked: return (in HookArgs args) => args.Hit?.Blocked ?? 0;
             case HookFact.ShotHadArrow: return (in HookArgs args) => args.State.ArrowAwayAt != Who.None ? 1m : 0m;
+            // The damage's card is the card in play, bound (what its BeforeCardPlayed added for the play, still there).
+            case HookFact.SourceBound: return (in HookArgs args) => (args.Hit?.Card ?? args.Damage?.Card) is { } source && args.State.CurrentPlay is { } inPlay && source == inPlay.Card
+                && args.State.Bound.Has(BoundKey(in args)) ? 1m : 0m;
             case HookFact.HookCardThere: return (in HookArgs args) => args.Play != null ? 1m : 0m;
             case HookFact.CreatureAlive:
             {

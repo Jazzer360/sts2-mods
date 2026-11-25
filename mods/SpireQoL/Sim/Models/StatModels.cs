@@ -9,7 +9,7 @@ namespace SpireQoL.Sim.Models;
 
 // Aim is read from its code (ReadModel, decision #232).
 
-// Quietus is read from its code (ReadModel, decision #241).
+// Quietus is read from its code (ReadModel, decision #242).
 
 // Slow is read from its code (ReadModel, decision #229).
 

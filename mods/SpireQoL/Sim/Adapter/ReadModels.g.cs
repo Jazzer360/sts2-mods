@@ -153,6 +153,7 @@ public static partial class ReadModels
         nameof(MegaCrit.Sts2.Core.Models.Afflictions.Ringing),
         RelicId.RippleBasin.Name,
         PowerId.Ritual.Name,
+        PowerId.Rupture.Name,
         RelicId.ScreamingFlagon.Name,
         RelicId.SelfFormingClay.Name,
         PowerId.SerratedArrows.Name,

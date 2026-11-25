@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 137 game methods; 3 adapter rules; 72 hand-written models.
+# 20 engine rules naming 137 game methods; 3 adapter rules; 71 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -167,8 +167,6 @@ RedSkull: RedSkull.AfterCombatEnd, RedSkull.AfterCurrentHpChanged, RedSkull.Afte
   model: AfterDamageReceived, OutcomeTab
 Regret: no game class by its name (the simulator's own)
   model: BeforeSideTurnEnd
-RupturePower: RupturePower.AfterCardPlayed, RupturePower.AfterDamageReceived, RupturePower.BeforeCardPlayed, RupturePower.InitInternalData
-  model: nothing it overrides
 SeekingEdgePower: no hooks of its own
   model: nothing it overrides
 SerpentFormPower: SerpentFormPower.AfterApplied, SerpentFormPower.AfterCardPlayed, SerpentFormPower.AfterRemoved, SerpentFormPower.BeforeCardPlayed, SerpentFormPower.InitInternalData

@@ -21338,6 +21338,285 @@
     "HelpsOwner": false
   },
   {
+    "Name": "RupturePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "BoundTaken"
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "DebuffWhenNegative": true,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__10.MoveNext:002F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__10.MoveNext:0053",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakeBound"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "AfterDamageReceived",
+        "Steps": [
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "DebuffWhenNegative": true,
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "Or",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterDamageReceived\u003Ed__9.MoveNext:0020",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "TargetIsOwner"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterDamageReceived\u003Ed__9.MoveNext:0033",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Greater",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "HitUnblocked"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__9.MoveNext:0050",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "OwnersTurn"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__9.MoveNext:005D",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "FromCard"
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterDamageReceived\u003Ed__9.MoveNext:0020",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "TargetIsOwner"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterDamageReceived\u003Ed__9.MoveNext:0033",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Greater",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "HitUnblocked"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__9.MoveNext:0050",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "OwnersTurn"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__9.MoveNext:0075",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "SourceBound"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "BindAddStep",
+            "Value": {
+              "$kind": "HookFactValue",
+              "Fact": "Amount"
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterDamageReceived\u003Ed__9.MoveNext:0020",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "TargetIsOwner"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterDamageReceived\u003Ed__9.MoveNext:0033",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Greater",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "HitUnblocked"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CAfterDamageReceived\u003Ed__9.MoveNext:0050",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "OwnersTurn"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CAfterDamageReceived\u003Ed__9.MoveNext:005D",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "FromCard"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterDamageReceived\u003Ed__9.MoveNext:0075",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "SourceBound"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeCardPlayed",
+        "Steps": [
+          {
+            "$kind": "BindStep",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "RupturePower.BeforeCardPlayed:0016",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "RupturePower.BeforeCardPlayed:0034",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "OwnersTurn"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false,
+    "Outcome": "ReactsToHpLoss"
+  },
+  {
     "Name": "ScreamingFlagon",
     "Kind": "Relic",
     "Hooks": [

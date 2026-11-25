@@ -203,6 +203,11 @@ public enum HookFact
     HitBlocked,
     /// <summary>The shot had an arrow (AfterArrowShot's arrow isn't null: its player had one to shoot).</summary>
     ShotHadArrow,
+    /// <summary>
+    /// The damage's card is the play the model bound (its own data's ContainsKey(cardSource): Rupture's, the card in play its BeforeCardPlayed bound),
+    /// what it bound still there.
+    /// </summary>
+    SourceBound,
     /// <summary>The hook's card is there (AfterArrowShot's source: a shot a card makes).</summary>
     HookCardThere,
     /// <summary>The creature named in Creature is alive (creature.IsAlive).</summary>
@@ -598,6 +603,12 @@ public sealed record ForEachStep(HookItems Over, IReadOnlyList<HookStep> Steps) 
 /// </summary>
 public sealed record DestroyArrowStep : HookStep;
 
+/// <summary>
+/// More on what the model bound to the play in progress (its own data's playedCards[cardSource] += Value, under the damage's card, the bound one:
+/// Rupture's Strength from a card's own HP cost, given as the card is played): taken back with it (HookFact.TakeBound, BoundTaken).
+/// </summary>
+public sealed record BindAddStep(HookValue Value) : HookStep;
+
 /// <summary>OrbCmd.Channel&lt;T&gt; for the owner: one orb of the kind named (SimEngine.ChannelKind).</summary>
 public sealed record ChannelStep(OrbKind Orb) : HookStep;
 
@@ -816,6 +827,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             ApplyPowerStep apply => Inside(apply.Amount),
             StoreFieldStep store => Inside(store.Value),
             BindStep bind => Inside(bind.Value),
+            BindAddStep added => Inside(added.Value),
             RepeatStep repeat => Inside(repeat.Times).Concat(repeat.Steps.SelectMany(OfStep)),
             ForEachStep each => Inside(each.Where).Concat(each.Steps.SelectMany(OfStep)),
             LetStep let => Inside(let.Value),
