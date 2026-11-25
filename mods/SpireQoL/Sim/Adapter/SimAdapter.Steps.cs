@@ -18,7 +18,8 @@ namespace SpireQoL.Sim;
 /// translated into the simulator's action for that command, once for every card that calls it, its values read from the step's own
 /// arguments (on the board where only the game's own math gives them: damage and block terms, B1), in the order the code runs them. A
 /// step on a condition is its action under that condition (decision #190): asked by the simulator as it runs when it's translated, decided
-/// on the board when nothing in the play can change it, and (a gap the card scan lists) decided on the board when it isn't translated yet.
+/// on the board when nothing in the play can change it, and (a gap the card scan lists) unknown where it runs when it isn't translated yet and
+/// the play can change it (decision #311; the board's for a first play that reads it before any command).
 /// Nothing decides on the board whether a step's action exists: its condition does, where the code puts it.
 /// </summary>
 public static partial class SimAdapter
@@ -182,10 +183,10 @@ public static partial class SimAdapter
 
     /// <summary>
     /// The step's actions under its condition (decision #190): a WhenAction when the simulator asks it; decided on the board when it reads
-    /// only what the play can't change (the card's own values, a pick, the fight's room: decision #311), left out when that's false; and
-    /// decided on the board, a gap the card scan lists, when it has no translation yet. A test decided on the board that reads what the play
-    /// can change (ConditionReader.ChangeableInput) holds as the board says on the first play when the play runs no command before it's read;
-    /// anywhere else the step is unknown where it runs (a NotModelledAction with its reason, then the board's answer), never left out.
+    /// only what the play can't change (the card's own values, a pick, the fight's room: decision #311), left out when that's false. One with
+    /// no translation yet (a gap the card scan lists) that reads what the play can change (ConditionReader.ChangeableInput) holds as the board
+    /// says on the first play when the play runs no command before it's read; anywhere else the step is unknown where it runs (a
+    /// NotModelledAction with its reason, then the board's answer), never left out.
     /// </summary>
     private static void Guard(CommandStep command, ProgramCondition condition, List<SimAction> actions, StepPlay play, List<SimAction> into)
     {

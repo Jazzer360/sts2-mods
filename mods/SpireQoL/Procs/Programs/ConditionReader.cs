@@ -12,7 +12,7 @@ public enum ConditionWay
     Simulated,
     /// <summary>Decided before the play (Holds), nothing in the play can change it (the card's own values, its upgrade, a pick: decision #188).</summary>
     Decided,
-    /// <summary>A test with no simulator translation yet (Reason): decided on the board before the play, a gap the card scan lists.</summary>
+    /// <summary>A test with no simulator translation yet (Reason), a gap the card scan lists: decided on the board only where the play can't change what it reads, else the board's for a first play that reads it before any command and unknown elsewhere (decision #311).</summary>
     NotRead,
 }
 
@@ -48,7 +48,8 @@ public sealed record ConditionReading(ConditionWay Way)
 /// <item>the card's own values (a card value, a constant, its upgrade, an auto-property: Mad Science's rider) and a pick's card (decision
 /// #188): decided before the play.</item>
 /// </list>
-/// Anything else is NotRead, with the test named: decided on the board as before, and listed by the card scan as a gap.
+/// Anything else is NotRead, with the test named, and listed by the card scan as a gap: decided on the board only where the play can't change
+/// what it reads (SimAdapter.Decide, decision #311).
 /// </summary>
 public static class ConditionReader
 {

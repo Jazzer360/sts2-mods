@@ -471,3 +471,6 @@ written when checked off: the record of how each was done. What's open stays in 
 - [x] Fixed (build only): the test-build note didn't show for an incremental dirty build (the DLL had no GitDirty attribute): StampGitDirty likely runs but the generated assembly-info file isn't regenerated. Fix in Directory.Build.targets.
 - [x] 0.31.25 (decision #28): each play's proc check uses a prediction made as its action starts, from the board then; the play queue reader and the lead-in are gone.
 - [x] 1.20.8 (decision #103): the tabs shown on the card's last frame in hand are held to that prediction when nothing came between them (`tabs shown` issues); skips counted with their reason.
+
+## 23. Potions (decision #313, 2026-11-25)
+- [x] Potion Tags from the potion's use (decision #318): the use alone searched on a worker once per potion and board (`SimSearch.PlayOnly`), its tags for your relics whose code answers a potion's use where its log shows them acting (`PotionTabs`); the check by which relic flashed; the catalog check holds the potion rows to those relics and the board rules (White Beast Statue).
