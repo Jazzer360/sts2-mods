@@ -374,7 +374,7 @@ public static class SimReaders
         var name = enchantment.GetType().Name;
         var fields = NamedCounts.Empty;
         if (SimModels.Enchantment(name) is { } read)
-            foreach (var field in read.Spec.Fields())
+            foreach (var (field, _) in read.OwnFields)
                 fields = fields.With(field, FieldOf(enchantment, field) switch
                 {
                     int number => number,
@@ -465,8 +465,8 @@ public static class SimReaders
                 var applier = power.Applier is { } applierCreature && idOf?.Invoke(applierCreature) is { } applierId ? applierId : Who.None;
                 fields = fields.With(read.Name + "@" + copy.ToString(System.Globalization.CultureInfo.InvariantCulture), power.Amount, DataCreature.Of(applier));
             }
-            foreach (var field in read.Spec.Fields())
-                fields = fields.With(copy > 0 ? read.CopyFieldKey(copy, field) : read.FieldKey(field), FieldOf(model, field) switch
+            foreach (var (field, fieldKey) in read.OwnFields)
+                fields = fields.With(copy > 0 ? read.CopyFieldKey(copy, field) : fieldKey, FieldOf(model, field) switch
                 {
                     int number => number,
                     bool flag => flag ? 1 : 0,

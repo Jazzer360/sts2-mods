@@ -736,8 +736,16 @@ public sealed class ReadModel : SimModel
         return now.ActedInAny(Name, owner) ? null : new OutcomeRule(Harmful: true, outcome => outcome.ActedInAny(Name, owner), Acted);
     }
 
-    /// <summary>It keeps its applier as its Data (its code asks base.Applier): the engine lands it so (SimEngine.ApplyPower).</summary>
-    public bool UsesApplier => Spec.UsesApplier();
+    /// <summary>It keeps its applier as its Data (its code asks base.Applier): the engine lands it so (SimEngine.ApplyPower). Worked out once.</summary>
+    public bool UsesApplier => _usesApplier ??= Spec.UsesApplier();
+    private bool? _usesApplier;
+
+    /// <summary>
+    /// Its own fields its programs read or store (ModelSpec.Fields), and each one's key among its owner's (FieldKey), worked out once: the
+    /// adapter seeds them every time it reads the board or a card, and walking the spec each time made garbage on the game's thread.
+    /// </summary>
+    public IReadOnlyList<(string Field, string Key)> OwnFields => _ownFields ??= Spec.Fields().Select(field => (field, FieldKey(field))).ToArray();
+    private (string Field, string Key)[]? _ownFields;
 
     /// <summary>A hook of the players' side's turn ending (decision #51), in its place among them.</summary>
     private IEnumerable<SimState> TurnEnd(HookName hook, SimState state, int owner)
