@@ -81,11 +81,15 @@ public class BoardDecidedConditionTests
     {
         var decisions = Decisions();
         SimAdapter.StepDecisionReading Of(string card, string command) => decisions.First(entry => entry.Card == card && entry.Step.Command.FullName == command).Decision;
-        // MementoMori.OnPlay: if (CombatState.HittableEnemies.Count != 0), read before its attack: the board's for the first play.
-        Assert.Equal(SimAdapter.StepDecision.FirstPlayOnTheBoard, Of(nameof(MementoMori), "DamageCmd.Attack").Way);
-        Assert.Equal("HittableEnemies", Of(nameof(MementoMori), "DamageCmd.Attack").Input);
-        // Optimism's count of your Sadness is stored before its exhausts: read before any command.
-        Assert.Equal(SimAdapter.StepDecision.FirstPlayOnTheBoard, Of(nameof(Optimism), "CardPileCmd.Draw").Way);
+        // Imitation Learning's test of your power aimed at that player is read before any command: the board's for the first play.
+        Assert.Equal(SimAdapter.StepDecision.FirstPlayOnTheBoard, Of(nameof(ImitationLearning), "PowerCmd.Apply").Way);
+        Assert.Equal("Powers", Of(nameof(ImitationLearning), "PowerCmd.Apply").Input);
+        // A test that a count the step's action reads as it runs is above none, or that there's an enemy to hit for an attack that finds its
+        // targets as it runs, is the action's own (decision #316): what's left of these steps' tests is fixed for the play (Storm of Steel's fight
+        // going on), never decided on the board for a test the play can change.
+        Assert.DoesNotContain(decisions, entry => entry.Card is nameof(MementoMori) or nameof(Dredge) or nameof(Optimism) or nameof(StormOfSteel) or nameof(TheMoon)
+                                                  && entry.Step.Command.FullName is "DamageCmd.Attack" or "CardPileCmd.Add" or "CardPileCmd.Draw" or "CardPileCmd.AddGeneratedCardsToCombat"
+                                                  && entry.Decision.Way != SimAdapter.StepDecision.Fixed);
         // The Hunt's room (a combat room for every play) is fixed for the play; its reward's test of the target's Fatal and its kill isn't.
         Assert.Equal(SimAdapter.StepDecision.Fixed, Of(nameof(TheHunt), "DamageCmd.Attack").Way);
         Assert.Equal(SimAdapter.StepDecision.Unknown, Of(nameof(TheHunt), "PowerCmd.Apply").Way);
@@ -98,9 +102,10 @@ public class BoardDecidedConditionTests
     }
 
     [Fact]
-    public void MementoMorisLaterPlayIsUnknownNotDecidedByTheFirstPlaysBoard()
+    public void MementoMorisLaterPlayAttacksWithNoQuestion()
     {
-        // Played twice, its second attack's test (any enemy hittable) is read after its first attack: unknown, with the board's answer.
+        // MementoMori.OnPlay: if (HittableEnemies.Count != 0) an attack on one of them. Played twice, its second test is read after its first attack,
+        // but it's the attack's own (decision #316): the attack finds its target among the hittable enemies as it runs, none with none.
         var gameFight = new GameFight();
         var enemy = gameFight.Combat.CreateCreature(ModelDb.Monster<Axebot>().ToMutable(), CombatSide.Enemy, slot: null);
         gameFight.Combat.AddCreature(enemy);
@@ -110,11 +115,26 @@ public class BoardDecidedConditionTests
         var card = gameFight.Add<MementoMori>();
         SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
         var play = SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, ids[enemy], plays: 2);
-        var firstPlayOnly = Assert.Single(play.Body.OfType<FirstPlayOnly>());
-        Assert.Contains(firstPlayOnly.Actions, action => action is AttackAction);
-        Assert.NotNull(firstPlayOnly.LaterPlays);
-        Assert.IsType<NotModelledAction>(firstPlayOnly.LaterPlays![0]);
-        Assert.Contains(firstPlayOnly.LaterPlays, action => action is AttackAction);
+        Assert.Empty(play.Body.OfType<FirstPlayOnly>());
+        Assert.Empty(play.Body.OfType<NotModelledAction>());
+        Assert.Equal(SimPlay.Target.Random, Assert.IsType<AttackAction>(Assert.Single(play.Body)).Mode);
+    }
+
+    [Fact]
+    public void DredgesPickIsCappedByYourHandsRoomAsItRuns()
+    {
+        // Dredge.OnPlay: num = Min(Cards, MaxCardsInHand - your hand); if (num > 0) a pick of num from your discard pile into your hand. The pick's most
+        // reads your hand's room as it runs (SimCount.HandRoom, its Cards the most), so its test of num is the pick's own (decision #316).
+        var gameFight = new GameFight();
+        var enemy = gameFight.Combat.CreateCreature(ModelDb.Monster<Axebot>().ToMutable(), CombatSide.Enemy, slot: null);
+        gameFight.Combat.AddCreature(enemy);
+        for (var i = 0; i < 5; i++) gameFight.Add<DefendIronclad>(PileType.Discard);
+        var card = gameFight.Add<Dredge>();
+        SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
+        var play = SimAdapter.Play(card, gameFight.Me, gameFight.Combat, ids, ids[enemy], plays: 2);
+        var take = Assert.IsType<TakeToHandAction>(Assert.Single(play.Body));
+        Assert.Equal(SimCount.HandRoom, take.CountFrom);
+        Assert.Equal(card.DynamicVars.Cards.IntValue, take.Count);
     }
 
     [Fact]

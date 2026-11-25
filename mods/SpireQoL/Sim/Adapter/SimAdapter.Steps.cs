@@ -238,7 +238,9 @@ public static partial class SimAdapter
     /// a test of what the play can't change may be (ConditionReader.ChangeableInput: the card's own values and upgrade, a pick, the fight's
     /// room...). One the play can change is decided on the board for the first play when it's read before the play runs any command, and
     /// unknown anywhere else. Before that, where the board would decide it, a test that the roll the step acts on found something, or that the
-    /// cards a take takes from are there, is the step's action's own: it rolls, or takes the cards there are, as it runs.
+    /// cards a take takes from are there, is the step's action's own: it rolls, or takes the cards there are, as it runs; so is (decision #316)
+    /// a test that a count the action reads as it runs is above none (TestsOwnCount: your hand's room, the cards a take took), or that there's
+    /// an enemy to hit for an attack that finds its targets among them as it runs (TestsOwnTargets).
     /// </summary>
     internal static StepDecisionReading Decide(CardModel card, CommandStep command, ProgramCondition condition, ProgramBoard board, CardEffects.Found? found)
     {
@@ -249,7 +251,9 @@ public static partial class SimAdapter
             var take = CardEffects.ExhaustsOfOthers(type).Concat(CardEffects.Discards(type)).Concat(CardEffects.Transforms(type))
                 .Concat(CardEffects.TakesIntoHandOf(type)).Any(taken => ReferenceEquals(taken.Command, command));
             var takenFrom = command.Values.Concat(found?.Loops.Select(loop => loop.Items).OfType<ProgramValue>() ?? Array.Empty<ProgramValue>()).ToList();
-            var withoutOwn = Without(condition, literal => TestsOwnRoll(literal, command) || TestsOwnTake(literal, takenFrom, take));
+            var counts = CountsReadAsItRuns(type, command);
+            var withoutOwn = Without(condition, literal => TestsOwnRoll(literal, command) || TestsOwnTake(literal, takenFrom, take)
+                                                           || TestsOwnCount(literal, counts) || TestsOwnTargets(literal, command, card));
             if (!ReferenceEquals(withoutOwn, condition)) reading = PlayConditions.Reading(card, condition = withoutOwn);
         }
         var holds = reading.Way switch
@@ -263,6 +267,66 @@ public static partial class SimAdapter
         if (reading.Way == ConditionWay.Simulated) return new StepDecisionReading(StepDecision.Asked, condition, reading);
         if (PlayConditions.ChangeableInput(card, command, condition, board) is not { } changeable) return new StepDecisionReading(StepDecision.Fixed, condition, reading, holds);
         return new StepDecisionReading(changeable.BeforeAnyCommand ? StepDecision.FirstPlayOnTheBoard : StepDecision.Unknown, condition, reading, holds, changeable.Input);
+    }
+
+    /// <summary>
+    /// The counts the step's own action reads as it runs (decision #316): a draw's, a make's (its own or the bound of the loop that fills
+    /// it), a take into your hand's (a pick's most, a roll's count), each one that reads your hand's room or the cards a take of the play
+    /// took (SimCount.HandRoom, SimCount.CardsTaken), which the action counts on the state as it runs.
+    /// </summary>
+    private static List<ProgramValue> CountsReadAsItRuns(Type type, CommandStep command)
+    {
+        var counts = new List<ProgramValue>();
+        foreach (var draw in CardEffects.DrawsForYou(type))
+            if (ReferenceEquals(draw.Command, command)) counts.Add(draw.Count);
+        foreach (var make in MadeCards.Of(type))
+            if (ReferenceEquals(make.Found?.Command, command) && make.CountValue is { } made) counts.Add(made);
+        foreach (var intoHand in CardEffects.TakesIntoHandOf(type))
+            if (ReferenceEquals(intoHand.Command, command) && (intoHand.Way == CardEffects.TakeWay.Picked ? intoHand.PerPick : intoHand.RollCount) is { } taken) counts.Add(taken);
+        if (counts.Count == 0) return counts;
+        var takes = CardEffects.ExhaustsOfOthers(type).Concat(CardEffects.Discards(type)).ToList();
+        return counts.Where(count => CardEffects.ReadsHandRoom(count) || takes.Any(take => CardEffects.CountsTaken(count, take))).ToList();
+    }
+
+    /// <summary>
+    /// The test is that a count the step's action reads as it runs is above none (The Moon's room, Storm of Steel's hand, Optimism's Sadness,
+    /// Dredge's pick: <paramref name="counts"/>, CountsReadAsItRuns): the action counts it on the state as it runs, and with none it does
+    /// nothing, as the command given none does (decision #316).
+    /// </summary>
+    private static bool TestsOwnCount(ConditionLiteral literal, IReadOnlyList<ProgramValue> counts)
+    {
+        if (counts.Count == 0) return false;
+        var (tested, above) = literal.Test switch
+        {
+            CompareValue { Op: Comparison.NotEqual or Comparison.Greater, Right: ConstantValue { Value: 0 } } some => (some.Left, literal.Holds),
+            CompareValue { Op: Comparison.Equal or Comparison.LessOrEqual, Right: ConstantValue { Value: 0 } } none => (none.Left, !literal.Holds),
+            var truthy => (truthy, literal.Holds),
+        };
+        if (!above) return false;
+        var text = Unstored(tested)!.ToString();
+        return counts.Any(count => Unstored(count)!.ToString() == text);
+    }
+
+    /// <summary>
+    /// The test is that there's an enemy to hit (HittableEnemies' Count, Any: Memento Mori's), on an attack whose targets its action finds
+    /// among the hittable enemies as it runs (every one, or a random one: ModeOf), which with none hits no one (decision #316).
+    /// </summary>
+    private static bool TestsOwnTargets(ConditionLiteral literal, CommandStep command, CardModel card)
+    {
+        if (command.Command.FullName != "DamageCmd.Attack" || ModeOf(command, card) is not (SimPlay.Target.Random or SimPlay.Target.All)) return false;
+        var (counted, any) = literal.Test switch
+        {
+            CompareValue { Op: Comparison.NotEqual or Comparison.Greater, Right: ConstantValue { Value: 0 } } some => (some.Left, literal.Holds),
+            CompareValue { Op: Comparison.Equal or Comparison.LessOrEqual, Right: ConstantValue { Value: 0 } } none => (none.Left, !literal.Holds),
+            var truthy => (truthy, literal.Holds),
+        };
+        var collection = Unstored(counted) switch
+        {
+            QueryValue { Name: "Count", IsProperty: true, Of: { } of } => of,
+            QueryValue { Type: "Enumerable", Name: "Count" or "Any", Arguments: [var source] } => source,
+            _ => null,
+        };
+        return any && collection != null && Unstored(collection) is QueryValue { Name: "HittableEnemies", IsProperty: true };
     }
 
     /// <summary>

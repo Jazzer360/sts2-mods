@@ -61,6 +61,24 @@ public class SimTakeToHandTests
     }
 
     [Fact]
+    public void APickOfAtMostYourHandsRoomCountsTheRoomAsItRuns()
+    {
+        // Dredge: Min(Cards, MaxCardsInHand - your hand) picked into your hand, its test of that count above none its own (decision #316). Read as it
+        // runs (SimCount.HandRoom), with room for one it takes one; with none (a full hand), none, and nothing is unknown.
+        var roomForOne = You((Plain, 4));
+        roomForOne.You.HandCount = 9;
+        var take = new TakeToHandAction(Count: 3, new Dictionary<string, int> { ["plain"] = 4 }) { JoinsHand = true, CountFrom = SimCount.HandRoom };
+        var one = Assert.Single(SimEngine.Run(roomForOne, new SimPlay { Name = "Dredge", Body = { take } }).Branches);
+        Assert.Equal(3, one.You.Draw!.RestCount);
+        Assert.Null(one.Unmodelled);
+        var full = You((Plain, 4));
+        full.You.HandCount = 10;
+        var none = Assert.Single(SimEngine.Run(full, new SimPlay { Name = "Dredge", Body = { take } }).Branches);
+        Assert.Equal(4, none.You.Draw!.RestCount);
+        Assert.Null(none.Unmodelled);
+    }
+
+    [Fact]
     public void TakingEveryOneItCanIsntAPick()
     {
         var outcome = SimEngine.Run(You((Plain, 3), (Burn, 1)),

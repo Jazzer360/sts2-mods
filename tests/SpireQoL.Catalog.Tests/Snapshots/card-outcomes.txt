@@ -1195,7 +1195,7 @@ DramaticEntrance [Alone] 1 you=80/0 e3 h0 d6/3 enemy0=189/0 [Exhausted1]
 Dredge [Standard] 1 you=80/0 e2 h6 d6/0 enemy0=200/0 [Exhausted1]
 Dredge [Upgraded] 1 you=80/0 e2 h6 d6/0 enemy0=200/0 [Exhausted1]
 Dredge [Crowded] 1 you=80/0 e2 h10 d0/2 enemy0=200/0 enemy1=30/0 [Exhausted1]
-Dredge [Replayed] 1 you=80/0 e2 h6 d6/0 enemy0=200/0 [Exhausted1] ?Dredge: CardPileCmd.Add on a test the simulator doesn't ask, which the play can change (Cards)
+Dredge [Replayed] 1 you=80/0 e2 h6 d6/0 enemy0=200/0 [Exhausted1]
 Dredge [Teammate] 1 you=80/0 e2 h6 d6/0 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted1]
 Dredge [Alone] 1 you=80/0 e2 h3 d6/0 enemy0=200/0 [Exhausted1]
 DrumOfBattle [Standard] 1 you=80/0 e2 h5 d4/3 enemy0=200/0 [Drawn2]
@@ -2311,7 +2311,7 @@ MelodicShot [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 []
 MementoMori [Standard] 1 you=80/0 e0 h3 d6/3 enemy0=181/0 []
 MementoMori [Upgraded] 1 you=80/0 e0 h3 d6/3 enemy0=177/0 []
 MementoMori [Crowded] 0.5 you=80/0 e0 h9 d0/3 enemy0=181/0 enemy1=30/0 [] | 0.5 you=80/0 e0 h9 d0/3 enemy0=200/0 enemy1=11/0 []
-MementoMori [Replayed] 1 you=80/0 e0 h3 d6/3 enemy0=162/0 [] ?MementoMori: DamageCmd.Attack on a test the simulator doesn't ask, which the play can change (HittableEnemies)
+MementoMori [Replayed] 1 you=80/0 e0 h3 d6/3 enemy0=162/0 []
 MementoMori [Teammate] 1 you=80/0 e0 h3 d6/3 mate0=70/0 e3 h2 enemy0=181/0 []
 MementoMori [Alone] 1 you=80/0 e0 h0 d6/3 enemy0=181/0 []
 Metamorphosis [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [Exhausted1 Generated3]
@@ -2587,7 +2587,7 @@ OneTwoPunch [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 []
 Optimism [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Exhausted1]
 Optimism [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
 Optimism [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 [Exhausted1]
-Optimism [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Exhausted1] ?Optimism: CardPileCmd.Draw on a test the simulator doesn't ask, which the play can change (Cards)
+Optimism [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Exhausted1]
 Optimism [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted1]
 Optimism [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 [Exhausted1]
 Orbit [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 []
@@ -3553,7 +3553,7 @@ Storm [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 []
 StormOfSteel [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Discarded3 Generated3]
 StormOfSteel [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Discarded3 Generated3] ?CardCmd.Upgrade: a card upgraded mid-play: its numbers after it aren't followed
 StormOfSteel [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 [Discarded9 Generated9] ?a Sly card in your hand it discards plays itself
-StormOfSteel [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Discarded3 Generated3] ?StormOfSteel: CardPileCmd.AddGeneratedCardsToCombat on a test the simulator doesn't ask, which the play can change (Cards)
+StormOfSteel [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Discarded3 Generated3]
 StormOfSteel [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Discarded3 Generated3]
 StormOfSteel [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 []
 Strangle [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=192/0 []
@@ -3841,7 +3841,7 @@ TheMagician [Alone] 0.008 you=80/0 e3 h0 d6/3 enemy0=200/0 [Exhausted1] | 0.008 
 TheMoon [Standard] 1 you=80/0 e3 h10 d6/3 enemy0=200/0 [Exhausted1 Generated7]
 TheMoon [Upgraded] 1 you=80/0 e3 h10 d6/3 enemy0=200/0 [Exhausted1 Generated7] ?CardCmd.Upgrade: a card upgraded mid-play: its numbers after it aren't followed
 TheMoon [Crowded] 1 you=80/0 e3 h10 d0/3 enemy0=200/0 enemy1=30/0 [Exhausted1 Generated1]
-TheMoon [Replayed] 1 you=80/0 e3 h10 d6/3 enemy0=200/0 [Exhausted1] ?TheMoon: CardPileCmd.AddGeneratedCardsToCombat on a test the simulator doesn't ask, which the play can change (GetCards)
+TheMoon [Replayed] 1 you=80/0 e3 h10 d6/3 enemy0=200/0 [Exhausted1]
 TheMoon [Teammate] 1 you=80/0 e3 h10 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted1 Generated7]
 TheMoon [Alone] 1 you=80/0 e3 h10 d6/3 enemy0=200/0 [Exhausted1 Generated10]
 TheScythe [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=187/0 [Exhausted1]

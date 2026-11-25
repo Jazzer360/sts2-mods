@@ -563,6 +563,9 @@ public static class BoardCounts
         int Number(ProgramValue value) => ProgramEvaluator.Number(value, board, program) is { } read ? Math.Max(0, (int)read) : 1;
         switch (take.Way)
         {
+            // A pick of at most your hand's room (Dredge's Min(Cards, room)): read as it runs (decision #316).
+            case CardEffects.TakeWay.Picked when CardEffects.ReadsHandRoom(take.PerPick):
+                return (CardEffects.WithoutRoom(take.PerPick) is { } most ? Number(most) : int.MaxValue, SimCount.HandRoom);
             case CardEffects.TakeWay.Picked:
                 return (Number(take.PerPick), SimCount.Given);
             case CardEffects.TakeWay.Random when take.RollCount is { } roll:
