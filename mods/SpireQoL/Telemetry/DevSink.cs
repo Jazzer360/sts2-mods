@@ -23,13 +23,6 @@ public sealed record FrameRollup(double Seconds, int Frames, double ModP50, doub
     double SimMb, int Compiles, int Nodes, int OrphanNodes, bool Quiet = false, int DevChecks = 0) : DevEvent;
 
 /// <summary>
-/// What the garbage was made of over the last few seconds (AllocationSampler, decision #176): KB by "thread|type" (thread: game or
-/// other), from the runtime's allocation ticks, split by whether the moment was quiet (steady: nothing the mod reads changed, decision #177) or active.
-/// Seconds and QuietSeconds count only the time the sampler listened (its bursts), so KB over them is a rate.
-/// </summary>
-public sealed record AllocationSample(double Seconds, double QuietSeconds, Dictionary<string, double> QuietKb, Dictionary<string, double> ActiveKb) : DevEvent;
-
-/// <summary>
 /// Garbage while nothing changed (SteadyWatch, decision #177), over the last few seconds: the steady time in each place ("fight",
 /// "run", "menu") and every feature that allocated on a steady frame there, however little.
 /// </summary>

@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Reads a dev-mode performance trace (decision #256): who allocates and who uses the CPU, with stacks, and the collections.
+  Reads a dev-mode performance trace (decision #258): who allocates and who uses the CPU, with stacks, and the collections.
 
 .DESCRIPTION
   Runs tools/TraceReport on the newest trace in the dev folder's traces (or the one given), which writes beside it a text summary

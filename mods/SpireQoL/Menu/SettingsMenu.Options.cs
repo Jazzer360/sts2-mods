@@ -111,6 +111,10 @@ public sealed partial class SettingsMenu
         "Keeps error reports and session summaries on this computer instead of sending them, and writes the dev dashboard's files. Applies at the next launch.",
         settings => settings.DevMode ?? ModEntry.DevMode);
 
+    internal static readonly MenuOption PerformanceTrace = new("trace-level", "Record a performance trace",
+        "Microsoft's dotnet-trace attached to the game while you play, a new file each launch in the dev folder's traces (the oldest go past TraceBudgetMb). Memory: the garbage collections and who allocates, with stacks; cheap, small files. Full: that and CPU samples of every thread about every millisecond; it costs more and the files are far larger. Starts and stops at once. Read with scripts/trace-report.ps1 and the dashboard's Traces page.",
+        Value: null, Any(DevMode.Id));
+
     /// <summary>Every option row, by its id (the fields above: declared after them, so they're set).</summary>
     internal static readonly IReadOnlyDictionary<string, MenuOption> Options = typeof(SettingsMenu)
         .GetFields(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public)

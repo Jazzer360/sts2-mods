@@ -100,6 +100,17 @@ public sealed class QolSettings
     /// </summary>
     public string? DevFolder { get; set; }
 
+    /// <summary>
+    /// Dev mode: the performance trace's level (decision #258; on the settings menu's General page only in a developer's game): Microsoft's
+    /// dotnet-trace attached to the game, writing <c>traces\trace-*.nettrace</c> in the dev folder. Memory (the default): the collections
+    /// and the allocation ticks with their stacks; Full: those and CPU samples; Off: none. Nothing runs outside dev mode. See
+    /// docs/DEVELOPMENT.md "Performance traces".
+    /// </summary>
+    public Telemetry.TracingLevel TraceLevel { get; set; } = Telemetry.TracingLevel.Memory;
+
+    /// <summary>Dev mode: how much disk the performance traces may use (MB, hidden): the oldest past it are deleted.</summary>
+    public long TraceBudgetMb { get; set; } = Telemetry.TraceRecorder.DefaultBudgetMb;
+
     public string UnlockLayoutKey { get; set; } = "F8";
     public string HideAllKey { get; set; } = "F9";
     public string SettingsKey { get; set; } = "F10";

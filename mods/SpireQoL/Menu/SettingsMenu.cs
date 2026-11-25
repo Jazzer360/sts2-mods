@@ -620,6 +620,47 @@ public sealed partial class SettingsMenu
         if (!ModEntry.DevMode && Settings.DevMode == null) return;
         Section("Developer");
         Option(DevMode, enabled => Settings.DevMode = enabled);
+        TraceLevelRow();
+    }
+
+    /// <summary>
+    /// The performance trace's level (decision #258): Off, Memory or Full, applied at once (Telemetry.DevDashboard.Trace), with what the
+    /// recorder says now (recording which file, or dotnet-trace isn't installed and how to install it).
+    /// </summary>
+    private void TraceLevelRow()
+    {
+        var option = PerformanceTrace;
+        if (!Matches(option.Name, option.Description)) return;
+        var needs = NeedsOf(option.Needs);
+        var row = RowBox();
+        row.AddChild(new Control { CustomMinimumSize = new Vector2(Indent + CheckSize, 0), MouseFilter = Control.MouseFilterEnum.Ignore });
+        if (needs != null) row.Modulate = new Color(1, 1, 1, 0.5f);
+        row.AddChild(IconSpacer());
+        row.AddChild(Label(option.Name, size: 20, Text, NameWidth));
+        var group = new ButtonGroup();
+        foreach (var level in Enum.GetValues<Telemetry.TracingLevel>())
+        {
+            var button = MakeButton(level.ToString(), size: 18);
+            button.ToggleMode = true;
+            button.ButtonGroup = group;
+            button.ButtonPressed = Settings.TraceLevel == level;
+            button.Disabled = needs != null;
+            button.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+            button.Pressed += () =>
+            {
+                Settings.TraceLevel = level;
+                Saved();
+                Telemetry.DevDashboard.Trace(level);
+                Refresh(); // the status line: the recorder says what it does on its next pass
+            };
+            row.AddChild(button);
+        }
+        var status = Telemetry.DevDashboard.TraceStatus();
+        var label = Label(NeedsText(status == null ? option.Description : $"{status} {option.Description}", needs), size: 18, Muted);
+        label.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+        row.AddChild(label);
+        AddRow(row);
     }
 
     /// <summary>Which source the Tags by source page lists (decision #186): relics until another is picked.</summary>

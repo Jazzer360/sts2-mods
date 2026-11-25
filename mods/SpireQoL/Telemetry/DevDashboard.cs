@@ -26,8 +26,9 @@ public static class DevDashboard
     private static double _lastRollup, _lastState;
     private static (int G0, int G1, int G2, long Alloc, TimeSpan Pause) _gc;
     private static long _simAllocated;
-    private static AllocationSampler? _sampler;
-    private static double _lastSample, _quietSecondsInSample, _sampledSecondsInSample;
+    private static double _lastSample;
+    /// <summary>The performance trace (decision #258): dotnet-trace attached to the game, at the setting's level.</summary>
+    private static TraceRecorder? _tracer;
 
     // ---- steady moments (decision #177, replacing #176's quiet ones): nothing the mod reads changed for a second, when no feature
     // should allocate anything. The rollups' and the sampler's "quiet" are these.
@@ -83,12 +84,6 @@ public static class DevDashboard
         Steady.Frame(key, Clock.Elapsed.TotalSeconds, gapMs / 1000, where, devCheck, FrameKb);
         var quiet = Steady.Steady;
         _watchKb = (GC.GetAllocatedBytesForCurrentThread() - allocated) / 1024.0;
-        _sampler?.SetQuiet(quiet);
-        if (_sampler is { Sampling: true })
-        {
-            _sampledSecondsInSample += gapMs / 1000;
-            if (quiet) _quietSecondsInSample += gapMs / 1000;
-        }
         if (!quiet) _quietAllWindow = false;
     }
     /// <summary>The engine's shader compiles: its running total at the last frame, those in this rollup, those since the frame before.</summary>
@@ -117,10 +112,28 @@ public static class DevDashboard
 
     public static bool Running => _sink != null;
 
-    /// <summary>How often the allocation sample is written (seconds).</summary>
+    /// <summary>How long the game's exit waits for the performance trace to write its rundown and end (then it's killed).</summary>
+    private static readonly TimeSpan ExitTraceWait = TimeSpan.FromSeconds(10);
+
+    /// <summary>How often the steady sample is written (seconds).</summary>
     private const double SampleSeconds = 10;
 
-    private static Dictionary<string, double> Rounded(Dictionary<string, double> kilobytes) => kilobytes.ToDictionary(entry => entry.Key, entry => Math.Round(entry.Value, 1));
+    /// <summary>The traces' folder: <c>traces</c> in the dev folder.</summary>
+    public static string TraceFolder => Path.Combine(Folder, "traces");
+
+    /// <summary>
+    /// The performance trace's level changed in the settings menu (decision #258): it starts or stops now, on its own thread. Nothing
+    /// outside a developer's game (the recorder only exists there).
+    /// </summary>
+    public static void Trace(TracingLevel level) => _tracer?.Apply(level);
+
+    /// <summary>What the settings row says about the trace: recording (its file), or why not (dotnet-trace missing); null outside dev mode.</summary>
+    public static string? TraceStatus()
+    {
+        if (_tracer is not { } tracer) return null;
+        if (tracer.Problem is { } problem) return problem;
+        return tracer.Path is { } path ? $"Recording {Path.GetFileName(path)}." : null;
+    }
 
     /// <summary>
     /// The dev folder: <c>SpireQoL-dev</c> in the user's folder, or the hidden setting DevFolder. Not under AppData (beside the game's
@@ -145,12 +158,13 @@ public static class DevDashboard
     };
 
     /// <param name="featureNames">Each feature's id and display name: the dashboard shows the names (decision #185).</param>
-    public static void Start(OverlayHost host, string? folder, IReadOnlyDictionary<string, string> featureNames)
+    /// <param name="settings">The dev folder (DevFolder), the performance trace's level and its disk budget (TraceLevel, TraceBudgetMb).</param>
+    public static void Start(OverlayHost host, QolSettings settings, IReadOnlyDictionary<string, string> featureNames)
     {
         if (!ModEntry.DevMode || _sink != null) return;
         try
         {
-            if (!string.IsNullOrWhiteSpace(folder)) Folder = Environment.ExpandEnvironmentVariables(folder);
+            if (!string.IsNullOrWhiteSpace(settings.DevFolder)) Folder = Environment.ExpandEnvironmentVariables(settings.DevFolder);
             var sink = new DevSink(Folder, () => Clock.Elapsed.TotalSeconds, DateTime.UtcNow, warn: text => ModEntry.Log.Warn("[dev] " + text));
             var tags = ErrorReporter.Instance?.Tags;
             sink.Post(new StreamStarted(DevEvents.Version, tags?.GetValueOrDefault("mod_version") ?? "?", tags?.GetValueOrDefault("game_version") ?? "?", DateTime.UtcNow, BuildInfo.Label));
@@ -165,9 +179,11 @@ public static class DevDashboard
                 if (_framesToSkip > 0) _framesToSkip--; // the first frame back in front is the switch's (decision #238)
                 else Window.Add(modMs, gapMs, host.FeatureMs, host.FeatureKb);
             };
-            // What the garbage is made of: the runtime's allocation ticks, by type (dev mode only).
-            try { _sampler = new AllocationSampler(AllocationSampler.CurrentOsThread()); }
-            catch (Exception ex) { ModEntry.Log.Warn($"[dev] the allocation sampler couldn't start: {ex.Message}"); }
+            // Who allocates and who uses the CPU, with stacks: dotnet-trace attached to the game, at the setting's level (decision #258).
+            var tracer = new TraceRecorder(TraceFolder, Environment.ProcessId, TraceTool.Find(), TraceProcess.Start, sink.Post,
+                text => ModEntry.Log.Warn(text), id => TraceStopSource.Instance.Finish(id), () => DateTime.Now, settings.TraceBudgetMb);
+            tracer.Apply(settings.TraceLevel);
+            _tracer = tracer;
             host.StallNote = () => _compilesLastFrame > 0 ? $"{_compilesLastFrame} shader compiles" : null;
             if (ErrorReporter.Instance is { } reporter)
             {
@@ -184,7 +200,12 @@ public static class DevDashboard
             CountCompiles();
             _compilesInWindow = 0;
             host.AddLateFrame("dev-dashboard", Tick);
-            AppDomain.CurrentDomain.ProcessExit += (_, _) => sink.Dispose();
+            AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+            {
+                // The trace first: it ends with its file's rundown, and its stop goes to the stream before the stream closes.
+                tracer.Close(ExitTraceWait);
+                sink.Dispose();
+            };
             _sink = sink;
             ModEntry.Log.Info($"[dev] dashboard stream: {sink.StreamPath} (open tools/dashboard/index.html and pick {Folder})");
         }
@@ -205,7 +226,7 @@ public static class DevDashboard
 
     /// <summary>
     /// The game's window went to the background or came back (decision #179). In the background the game runs at 30 fps and nobody is
-    /// playing: its frames would only blur the charts, so no rollups or samples are written, and the sampler stops listening. The frames on
+    /// playing: its frames would only blur the charts, so no rollups or samples are written (the performance trace keeps recording). The frames on
     /// either side of the switch are the switch's (decision #238): the ones since the last rollup are dropped as it goes, and the first one
     /// back is left out. Back in front, every running count starts from now, so the first rollup isn't the whole time away in one.
     /// </summary>
@@ -214,11 +235,7 @@ public static class DevDashboard
         _focused = focused;
         sink.Post(new FocusChanged(focused));
         Window.Clear();
-        if (!focused)
-        {
-            _sampler?.Stop();
-            return;
-        }
+        if (!focused) return;
         _framesToSkip = 1;
         _lastRollup = now;
         _gc = (GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2), GC.GetTotalAllocatedBytes(), GC.GetTotalPauseDuration());
@@ -226,8 +243,6 @@ public static class DevDashboard
         _compilesInWindow = 0;
         _checksAtRollup = ReuseCheck.ChecksRun;
         _quietAllWindow = true;
-        _sampler?.Take();
-        _sampledSecondsInSample = _quietSecondsInSample = 0;
         _lastSample = now;
     }
 
@@ -250,22 +265,13 @@ public static class DevDashboard
             _checksAtRollup = ReuseCheck.ChecksRun;
             _gc = collections;
             _simAllocated = SimJob.AllocatedBytes;
-            _sampler?.Cycle(now);
             if (now - _lastSample >= SampleSeconds)
             {
                 // What allocated while nothing changed: every feature, however little; each one the first time in the log too.
                 var (steady, firstSeen) = Steady.Take();
                 sink.Post(steady);
                 foreach (var garbage in firstSeen) ModEntry.Log.Detail(SteadyWatch.Describe(garbage, steady.Steady.GetValueOrDefault(garbage.Where)?.Frames ?? 0));
-                if (_sampler != null)
-                {
-                    // Seconds: those sampled (the bursts), so the rates are over the time listened.
-                    var (quietKb, activeKb) = _sampler.Take();
-                    sink.Post(new AllocationSample(Math.Round(_sampledSecondsInSample, 2), Math.Round(_quietSecondsInSample, 2), Rounded(quietKb), Rounded(activeKb)));
-                }
                 _lastSample = now;
-                _quietSecondsInSample = 0;
-                _sampledSecondsInSample = 0;
             }
             _compilesInWindow = 0;
         }
@@ -292,6 +298,9 @@ public static class DevDashboard
             where = SessionWatch.Where,
             session = SessionWatch.Live(),
             forecast = Forecast(),
+            trace = _tracer is { } tracer
+                ? new { level = TraceCommand.Name(tracer.Recording), file = tracer.Path is { } path ? Path.GetFileName(path) : null, problem = tracer.Problem }
+                : null,
         };
     }
 

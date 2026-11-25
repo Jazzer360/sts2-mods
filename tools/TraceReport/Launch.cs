@@ -5,7 +5,7 @@ namespace TraceReport;
 /// <summary>A stretch of the launch at one tracing level (seconds since launch, the dev stream's clock).</summary>
 internal sealed record Stretch(string Level, double From, double To);
 
-/// <summary>The frames of the launch at one tracing level, from the dev stream's frame rollups (decision #256: what each level costs).</summary>
+/// <summary>The frames of the launch at one tracing level, from the dev stream's frame rollups (decision #258: what each level costs).</summary>
 internal sealed class LevelFrames
 {
     public double Seconds;

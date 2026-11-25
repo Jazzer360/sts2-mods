@@ -99,6 +99,17 @@ public class SettingsOptionTests
     }
 
     [Fact]
+    public void ThePerformanceTraceIsADevModeRowRecordingMemoryByDefault()
+    {
+        // Decision #258: under Dev mode on the General page (only shown in a developer's game), Memory unless set; 2 GB of traces kept.
+        Assert.True(NeedsAll(SettingsMenu.PerformanceTrace, SettingsMenu.DevMode.Id));
+        Assert.Null(SettingsMenu.PerformanceTrace.Value); // three levels, not a switch
+        var settings = new QolSettings();
+        Assert.Equal(Telemetry.TracingLevel.Memory, settings.TraceLevel);
+        Assert.Equal(2048, settings.TraceBudgetMb);
+    }
+
+    [Fact]
     public void EveryKindOfTagNeedsWhatShowsIt()
     {
         foreach (var tabEntry in SettingsCatalog.CardTabs.Concat(SettingsCatalog.TabGroups))

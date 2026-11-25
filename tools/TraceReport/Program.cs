@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using TraceReport;
 
-// Reads a dev-mode performance trace (decision #256; docs/DEVELOPMENT.md "Performance traces") and writes beside it:
+// Reads a dev-mode performance trace (decision #258; docs/DEVELOPMENT.md "Performance traces") and writes beside it:
 //   trace-....txt   the summary (also printed),
 //   trace-....json  the same for the dev dashboard's Traces page,
 //   trace-....speedscope.json  with --speedscope, a Full trace's CPU samples for https://www.speedscope.app.

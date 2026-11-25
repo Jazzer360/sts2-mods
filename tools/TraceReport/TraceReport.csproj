@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Reads a dev-mode trace offline (decision #256; docs/DEVELOPMENT.md "Performance traces"): CPU by method, allocations by type
+  <!-- Reads a dev-mode trace offline (decision #258; docs/DEVELOPMENT.md "Performance traces"): CPU by method, allocations by type
        and by call site, the collections. A developer's tool: not part of the mod, never shipped, not built by scripts/check.ps1.
        `scripts/trace-report.ps1` runs it on the newest trace. -->
   <PropertyGroup>

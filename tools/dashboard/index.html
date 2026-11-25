@@ -356,13 +356,56 @@ dialog#noteDialog h3 { margin: 0 0 4px; font-size: 14px; }
       <p class="hint">Every feature that allocated on a <b>steady</b> frame, however little. A frame is steady once nothing the mod reads has changed for a second: the board, the screen, the control under the mouse, anything held, the settings, searches running (the mouse moving over nothing doesn't count), with the game's window in front. The mod works things out when something changes and only draws them after that, so on a steady frame every feature should allocate nothing. Dev mode's own work is left out (the dashboard, and its once-a-second reuse checks, counted as dev-checks). <b>Apart</b> is the commonest gap between the frames it allocated on: 1 is every frame, 15 a poll every 15th frame. steady-watch is this check's own work. Each one is in the game's log too, the first time it's seen ([steady] lines).</p>
       <div class="row" style="margin:6px 0"><span class="dim" id="steadyNote"></span></div>
       <div class="scroll"><table id="steadyTable"></table></div></div>
-    <div class="card" style="margin-top:12px"><h3>What is the garbage made of?</h3>
-      <p class="hint">A sample of every allocation by type (the .NET runtime names the type about every 100 KB allocated, so each row's rate is an estimate), split by whether the moment was <b>quiet</b>: steady, as above. On a quiet board nothing of the mod's should allocate, so a quiet row of the mod's own types (bold), or of strings and lists while the game's thread is the one allocating, is garbage to find and stop. "game" is the game's thread (the mod's frame work and the game's own code), "other" every other thread (the mod's searches among them). The feature table below has each feature's memory while quiet too, and the table above every feature that allocated then, however little.</p>
-      <div class="row" style="margin:6px 0"><span class="dim" id="allocQuietNote"></span></div>
-      <div class="scroll"><table id="allocTable"></table></div></div>
+    <div class="card" style="margin-top:12px"><h3>What does tracing cost?</h3>
+      <p class="hint">The performance trace (decision #258: Record a performance trace, on the settings menu's General page in dev mode) records in the background while you play. Its stretches are shaded on every chart above: violet for Memory (the collections and who allocates, with stacks), amber for Full (Memory and CPU samples, which stop every thread about every millisecond). This table is the window's frames at each level, so what each costs can be read off your own play: compare the frame rate and the mod's time per frame with tracing off. The Traces page has the same across every launch a trace was read from. What the garbage is made of, and who allocates it with the call site, is on the Traces page now (read from a trace with stacks), not sampled here.</p>
+      <div class="row" style="margin:6px 0"><span class="dim" id="traceNote"></span></div>
+      <div class="scroll"><table id="traceCostTable"></table></div></div>
     <div class="card" style="margin-top:12px"><h3>Each feature over this window</h3>
       <p class="hint">Average: what the feature costs every frame. Largest: its single worst frame (amber over 8 ms, red over 16.7 ms, a frame's whole budget). Share: its part of the mod's total time.</p>
       <div class="scroll"><table id="featureTable"></table></div></div>
+  </section>
+
+  <section class="page" id="p-traces">
+    <div class="row" style="margin-bottom:10px"><span class="dim">Trace</span><select id="traceSelect" style="max-width:520px"></select><span class="dim" id="traceListNote"></span></div>
+    <div class="grid" id="traceTiles"></div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="card"><h3>Who allocates?</h3>
+        <p class="hint">Every allocation the trace sampled (the runtime names one about every 100 KB, with its type and the stack that made it), charged to whose code asked for it: <b>the mod</b> when any of its frames (SpireQoL, Sts2Mods.Core) is on the stack, even when the memory was allocated inside the game's, Godot's or the runtime's code it called; else the game (sts2, MegaCrit.*), else Godot (its C# bindings), else others (Harmony, other mods), else the runtime alone. Each sample stands for about 100 KB, so a small share is an estimate.</p>
+        <canvas id="trOwners" height="70"></canvas><div class="legend" id="trOwnersLegend"></div></div>
+      <div class="card"><h3>Who uses the CPU?</h3>
+        <p class="hint">Full traces only: every thread's stack about every millisecond, a thread waiting (a wait, a sleep, a read) left out. Charged as allocations are (the mod when any of its frames is on the stack); the second bar is where the time was spent, the frame itself. A Memory trace has no CPU samples: set Record a performance trace to Full for them.</p>
+        <canvas id="trCpu" height="70"></canvas><div class="legend" id="trCpuLegend"></div></div>
+      <div class="card"><h3>Do the collections pause the game?</h3>
+        <p class="hint">Each garbage collection in the trace: its pause (dots, left scale; blue a quick gen 0, amber gen 1, red a full gen 2) and the heap after it (teal, right scale). On the launch's played time (decision #238: time with the game's window in the background takes no room), with the tracing levels shaded. A frame at 60 fps is 16.7 ms: a pause near it is a hitch you can see. A heap that keeps climbing between full collections is memory held on to.</p>
+        <canvas id="trGc" height="170"></canvas>
+        <div class="legend"><span><i style="background:var(--accent)"></i>gen 0 pause</span><span><i style="background:var(--warn)"></i>gen 1 pause</span><span><i style="background:var(--bad)"></i>gen 2 pause</span><span><i style="background:var(--teal)"></i>heap after (MB, right)</span></div></div>
+      <div class="card"><h3>What does tracing cost, across your sessions?</h3>
+        <p class="hint">The mod's frames at each tracing level, added up over every launch a trace here was read from (each trace's report carries its launch's frames by level, from the dev stream). Off against Memory and Full on your own play: the frame rate, the mod's time in its typical and its busy frame, and the whole game's new memory and collection pauses per second. Similar play makes the comparison fair; a launch with tracing on throughout has no Off row of its own.</p>
+        <div class="scroll"><table id="trLevels"></table></div></div>
+    </div>
+    <div class="card" style="margin-top:12px"><h3>Where does the mod allocate?</h3>
+      <p class="hint">The mod's call sites: the mod's own frame nearest each allocation (its method that made it, or called the code that did), with the type allocated. Sorted by amount; each row's MB is the samples it got times about 100 KB. These are what to cut first, the ones on every frame above all (the Performance page's steady table says which features allocate while nothing changes).</p>
+      <div class="scroll"><table id="trModSites"></table></div></div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="card"><h3>Which of the mod's methods allocate most?</h3>
+        <p class="hint">The call sites above, by method: everything a method of the mod's allocated (its own allocations and those of what it called that isn't the mod's), with its three largest types.</p>
+        <div class="scroll"><table id="trModMethods"></table></div></div>
+      <div class="card"><h3>How much of each type is the mod's?</h3>
+        <p class="hint">Every type allocated, with the mod's share of it: Godot.Collections.Dictionary, WeakReference, StringName[], strings… A type the game makes most of isn't the mod's to fix; a type the mod makes most of is, and its call sites are in the table above.</p>
+        <div class="scroll"><table id="trTypes"></table></div></div>
+      <div class="card"><h3>What does the game allocate?</h3>
+        <p class="hint">For context: the game's own top call sites (stacks with no frame of the mod's), its frame nearest each allocation.</p>
+        <div class="scroll"><table id="trGameSites"></table></div></div>
+      <div class="card"><h3>What does Godot allocate?</h3>
+        <p class="hint">For context: Godot's C# bindings (stacks with neither the mod's nor the game's frames: the engine's own callbacks).</p>
+        <div class="scroll"><table id="trGodotSites"></table></div></div>
+      <div class="card"><h3>Which of the mod's methods use the CPU?</h3>
+        <p class="hint">Full traces: the mod's methods by the samples they were on the stack for (inclusive: the method and what it calls) and as the frame itself (exclusive), as a share of every busy sample.</p>
+        <div class="scroll"><table id="trModCpu"></table></div></div>
+      <div class="card"><h3>Where does all the CPU go?</h3>
+        <p class="hint">Full traces: every method by its own samples (exclusive), whoever's it is, for context.</p>
+        <div class="scroll"><table id="trCpuTop"></table></div></div>
+    </div>
   </section>
 
   <section class="page" id="p-reports">
@@ -502,7 +545,7 @@ const isHitch = (r) => r.gapMax > 50 && r.modMax < 30;
 const warmupWarning = (l) => l.level === "WARN" && /^\[perf\] slow frame/.test(l.text) && warmingUp(l.t);
 const MAX = { rollups: 4 * 60 * 60, searches: 5000, logs: 3000, waits: 5000 };
 const M = {
-  rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], allocSamples: [], steadySamples: [], away: 0, awayFrom: null,
+  rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], steadySamples: [], traces: [], away: 0, awayFrom: null,
   combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, state: null, stateAt: 0, file: null, launches: [0],
   searchTotals: newSearchTotals(), searchCards: new Map(), names: {},
 };
@@ -541,7 +584,7 @@ function countSearch(e) {
   M.searchCards.set(key, c);
 }
 function reset() {
-  Object.assign(M, { rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], allocSamples: [], steadySamples: [], away: 0, awayFrom: null, combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, launches: [0],
+  Object.assign(M, { rollups: [], searches: [], checks: [], others: [], logs: [], waits: [], unsettled: [], saved: [], steadySamples: [], traces: [], away: 0, awayFrom: null, combats: [], turns: new Map(), combat: 0, lastT: 0, started: null, launches: [0],
     searchTotals: newSearchTotals(), searchCards: new Map(), names: {} });
   FS.base = 0;
 }
@@ -567,7 +610,10 @@ function ingest(e) {
     case "stream-started": M.started = e; break;
     case "feature-names": Object.assign(M.names, e.names); break;
     case "frame-rollup": push(M.rollups, e, MAX.rollups); break;
-    case "allocation-sample": push(M.allocSamples, e, MAX.rollups); break;
+    // The performance trace's stretches (decision #258): shaded on the charts, each level's frames apart in "What does tracing cost?".
+    // (An older stream's allocation-sample lines, from before the traces took their place, are left unread.)
+    case "trace-started": M.traces.push({ level: e.level, file: String(e.path || "").split(/[\\/]/).pop(), from: e.t, to: null }); break;
+    case "trace-stopped": { const open = M.traces.findLast((x) => x.to == null); if (open) { open.to = e.t; open.why = e.why; open.mb = e.mb; } break; }
     case "steady-sample": push(M.steadySamples, e, MAX.rollups); break;
     // The game's window in the background (decision #179): left out of the timeline above.
     case "focus-changed": break;
@@ -1056,8 +1102,30 @@ function smoothed(points, seconds) {
   }
   return out;
 }
-function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = false, mini = false, rightUnit = "", logFloor = 0.1 } = {}) {
-  if (!mini && smoothSeconds() > 0) series = series.map((s) => (s.dots ? s : { ...s, points: smoothed(s.points, smoothSeconds()) }));
+/**
+ * The performance trace's stretches to shade on a page's time charts (decision #258): [{ level, from, to }] on the page's timeline. The
+ * Performance page sets this launch's while it draws (CHART_BANDS); the Traces page passes a trace's own.
+ */
+let CHART_BANDS = [];
+const liveBands = () => M.traces.map((x) => ({ level: x.level, from: x.from, to: x.to ?? M.lastT }));
+const bandColor = (level) => (level === "full" ? css("--warn") : css("--violet"));
+/** Shades each stretch of tracing on a chart: a faint band behind the data and a strip along the top, violet for Memory, amber for Full. */
+function drawBands(g, bands, X, t0, t1, pad, w, h) {
+  for (const band of bands || []) {
+    if (band.level === "off" || band.to < t0 || band.from > t1) continue;
+    const x0 = Math.max(pad.l, X(Math.max(band.from, t0))), x1 = Math.min(w - pad.r, X(Math.min(band.to, t1)));
+    if (x1 <= x0) continue;
+    g.fillStyle = bandColor(band.level);
+    g.globalAlpha = 0.07; g.fillRect(x0, pad.t, x1 - x0, h - pad.t - pad.b);
+    g.globalAlpha = 0.7; g.fillRect(x0, pad.t - 3, x1 - x0, 3);
+    g.globalAlpha = 1;
+    if (x1 - x0 > 90) { g.font = "10px system-ui"; g.fillStyle = bandColor(band.level); g.fillText(`${band.level} trace`, x0 + 3, pad.t + 9); }
+  }
+}
+/** Lines over time; with raw, drawn as measured (no smoothing); with scaleAll, every point sets the scale (another launch's times: the Traces page). */
+function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = false, mini = false, rightUnit = "", logFloor = 0.1, bands, raw = false, scaleAll = false } = {}) {
+  if (!mini && !raw && smoothSeconds() > 0) series = series.map((s) => (s.dots ? s : { ...s, points: smoothed(s.points, smoothSeconds()) }));
+  const scales = scaleAll ? () => true : scalesAt;
   // mini: a trend in a small space (the Overview's checks): no axis labels, tight margins, the same hover readout.
   const rightSeries = series.filter((s) => s.right), hasRight = !mini && rightSeries.some((s) => s.points.length);
   const { g, w, h } = canvas(id), pad = mini ? { l: 2, r: 2, t: 4, b: 4 } : { l: 44, r: hasRight ? 44 : 8, t: 8, b: 16 };
@@ -1067,10 +1135,10 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
   // refs: numbers, or { v, label, color, below } (frame-rate lines): each drawn only once the data nears it (nearRefs), the axis
   // then reaching it.
   const left = series.filter((s) => !s.right).flatMap((s) => s.points), leftAll = left.length ? left : all;
-  const leftScaled = leftAll.filter((p) => scalesAt(p[0])), leftValues = (leftScaled.length ? leftScaled : leftAll).map((p) => p[1]);
+  const leftScaled = leftAll.filter((p) => scales(p[0])), leftValues = (leftScaled.length ? leftScaled : leftAll).map((p) => p[1]);
   const refv = nearRefs(refs.map((r) => (typeof r === "number" ? { v: r } : r)), leftValues);
   const yMax = fixedMax ?? Math.max(...leftValues, ...refv.map((r) => r.v), 1) * (log ? 1.5 : 1.08);
-  const rightAll = rightSeries.flatMap((s) => s.points), rightScaled = rightAll.filter((p) => scalesAt(p[0]));
+  const rightAll = rightSeries.flatMap((s) => s.points), rightScaled = rightAll.filter((p) => scales(p[0]));
   const rightMax = hasRight ? Math.max(...(rightScaled.length ? rightScaled : rightAll).map((p) => p[1]), 1) * 1.08 : 1;
   const X = (t) => pad.l + ((t - t0) / (t1 - t0)) * (w - pad.l - pad.r);
   let Y;
@@ -1097,6 +1165,7 @@ function lines(id, series, { refs = [], unit = "", yMin = 0, fixedMax, log = fal
       g.fillText(label, w - g.measureText(label).width - 2, pad.t + (h - pad.t - pad.b) * (1 - i / 4) + 4);
     }
   }
+  if (!mini) drawBands(g, bands ?? CHART_BANDS, X, t0, t1, pad, w, h);
   drawRefLines(g, refv, yMax, Y, pad, w);
   const refLabels = () => { if (!mini) drawRefLabels(g, refv, yMax, Y, pad, w); };
   // Clipped to the plot: a launch spike that doesn't set the scale runs off its top.
@@ -1180,6 +1249,7 @@ function stacked(id, layers, { refs = [], unit = " ms", log = false } = {}) {
     axes(g, w, h, yMax, unit, pad);
     Y = (v) => pad.t + (h - pad.t - pad.b) * (1 - v / yMax);
   }
+  drawBands(g, CHART_BANDS, X, t0, t1, pad, w, h);
   const base = new Array(n).fill(0);
   // One area over the played time (time away takes no room: decision #238).
   const runs = [Array.from({ length: n }, (_, i) => i)];
@@ -1315,7 +1385,7 @@ function groupBars(id, labels, groups) {
 }
 
 // ============================================================== pages
-const PAGES = [["overview", "Overview"], ["turn", "Turn"], ["searches", "Searches"], ["perf", "Performance"], ["reports", "Reports"], ["feedback", "Feedback"], ["log", "Log"], ["compare", "Compare"]];
+const PAGES = [["overview", "Overview"], ["turn", "Turn"], ["searches", "Searches"], ["perf", "Performance"], ["traces", "Traces"], ["reports", "Reports"], ["feedback", "Feedback"], ["log", "Log"], ["compare", "Compare"]];
 let page = "overview";
 function nav() {
   const openN = REP.list.filter((r) => fbStatus[r.id] !== "handled").length;
@@ -1642,6 +1712,7 @@ function renderSearches() {
 }
 
 function renderPerf() {
+  CHART_BANDS = liveBands(); // the trace's stretches shaded on every chart here (cleared at the end)
   const win = perfWindow(), rc = since(M.rollups, win), r = afterLaunch(rc), colors = seriesColors();
   const p95s = r.map((x) => x.modP95), frames = r.reduce((a, x) => a + x.frames, 0), secs = r.reduce((a, x) => a + x.seconds, 0);
   const waits = since(M.waits, win), uns = since(M.unsettled, win);
@@ -1722,21 +1793,156 @@ function renderPerf() {
   setHTML($("steadyNote"), steadyS.length ? `Steady for ${fmt(steadyTotal, 0)} s in this window (${Object.entries(steadyTime).map(([w, s]) => `${esc(w)} ${fmt(s.seconds, 0)} s`).join(", ") || "none"}). ${steadyList.length ? "" : "Nothing allocated on a steady frame."}` : "No samples yet: the game writes one every 10 s in dev mode.");
   setHTML($("steadyTable"), `<tr><th>Feature</th><th>Where</th><th class="n">KB/s while steady</th><th class="n">Steady frames it allocated on</th><th class="n">Apart</th><th class="n">KB each</th><th class="n">Largest</th></tr>` +
     (steadyList.length ? steadyList.map((x) => `<tr><td>${featHtml(x.id)}</td><td>${esc(x.where)}</td><td class="n ${x.perSec > 50 ? "bad" : x.perSec > 5 ? "warn" : ""}">${fmt(x.perSec, 2)}</td><td class="n">${fmt(x.frames, 0)} (${pct(x.frames, steadyTime[x.where]?.frames || 0)})</td><td class="n">${x.period ? (x.period >= 120 ? "120+" : x.period) : "once"}</td><td class="n">${fmt(x.kb / x.frames, 2)}</td><td class="n">${fmt(x.maxKb, 2)}</td></tr>`).join("") : `<tr><td colspan="7" class="empty">None</td></tr>`));
-  // What the garbage is made of: the samples in the window, each type's rate while quiet and while active.
-  const samples = since(M.allocSamples, win);
-  const quietS = samples.reduce((a, x) => a + (x.quietSeconds || 0), 0), activeS = samples.reduce((a, x) => a + Math.max(0, x.seconds - (x.quietSeconds || 0)), 0);
-  const byType = {};
-  for (const x of samples) {
-    for (const [k, v] of Object.entries(x.quietKb || {})) (byType[k] ??= { quiet: 0, active: 0 }).quiet += v;
-    for (const [k, v] of Object.entries(x.activeKb || {})) (byType[k] ??= { quiet: 0, active: 0 }).active += v;
-  }
-  const ours = (type) => /SpireQoL|Sts2Mods/.test(type);
-  const typeRows = Object.entries(byType).map(([k, v]) => ({ thread: k.split("|")[0], type: k.slice(k.indexOf("|") + 1), quiet: quietS ? v.quiet / quietS : 0, active: activeS ? v.active / activeS : 0 }))
-    .sort((a, b) => b.quiet - a.quiet || b.active - a.active).slice(0, 30);
-  setHTML($("allocQuietNote"), samples.length ? `Quiet for ${fmt(quietS, 0)} s of the ${fmt(quietS + activeS, 0)} s sampled in this window.` : "No samples yet: the game writes one every 10 s in dev mode.");
-  setHTML($("allocTable"), `<tr><th>Type</th><th>Thread</th><th class="n">Quiet (KB/s)</th><th class="n">Active (KB/s)</th></tr>` +
-    (typeRows.length ? typeRows.map((x) => `<tr><td>${ours(x.type) ? `<b>${esc(x.type)}</b>` : esc(x.type)}</td><td>${esc(x.thread)}</td><td class="n ${x.quiet > 50 ? "bad" : x.quiet > 5 ? "warn" : ""}">${fmt(x.quiet, 1)}</td><td class="n">${fmt(x.active, 1)}</td></tr>`).join("") : `<tr><td colspan="4" class="empty">None</td></tr>`));
+  // What tracing costs (decision #258): the window's frames at each level, and what's recording now.
+  const trace = M.state?.trace;
+  setHTML($("traceNote"), !trace ? "The game says nothing about a trace (a build from before them, or the game is closed)."
+    : trace.problem ? `<span class="warn">Not recording: ${esc(trace.problem)}</span>`
+    : trace.level === "off" ? "Not recording. Turn <b>Record a performance trace</b> to Memory (the settings menu's General page) to see who allocates, with stacks, on the Traces page."
+    : `Recording a <b>${esc(trace.level)}</b> trace: <code>${esc(trace.file)}</code>. Turn it off (or close the game), then run <code>scripts/trace-report.ps1</code> and open the Traces page.`);
+  setHTML($("traceCostTable"), levelTable(levelFrames(rc)));
+  CHART_BANDS = [];
 }
+/** The tracing level at a moment of this launch (decision #258): the stretch it falls in, off outside them. */
+const traceLevelAt = (t) => M.traces.find((x) => t >= x.from && t < (x.to ?? Infinity))?.level ?? "off";
+/** Rollups added up by the tracing level they fell in: seconds, frames, the mod's medians, p95s, new memory and pauses. */
+function levelFrames(rollups) {
+  const levels = {};
+  for (const x of rollups) {
+    const level = (levels[traceLevelAt(x.t)] ??= { seconds: 0, frames: 0, medians: [], p95: 0, rollups: 0, mb: 0, pause: 0 });
+    level.seconds += x.seconds; level.frames += x.frames; level.medians.push(x.modP50); level.p95 += x.modP95; level.rollups++; level.mb += x.allocatedMb || 0; level.pause += x.gcPauseMs || 0;
+  }
+  return Object.fromEntries(Object.entries(levels).map(([name, l]) => [name, { seconds: l.seconds, fps: l.seconds ? l.frames / l.seconds : 0, modP50: quant(l.medians, 0.5), modP95: l.rollups ? l.p95 / l.rollups : 0,
+    allocatedMbPerSecond: l.seconds ? l.mb / l.seconds : 0, gcPauseMsPerSecond: l.seconds ? l.pause / l.seconds : 0 }]));
+}
+/** A table of frames by tracing level (off, memory, full), each against off where there is one. */
+function levelTable(levels) {
+  const order = ["off", "memory", "full"].filter((name) => levels[name]);
+  if (!order.length) return `<tr><td class="empty">No frames yet</td></tr>`;
+  const off = levels.off, against = (v, base, worseIfHigher, digits) => (off && base ? `<span class="${(worseIfHigher ? v > base * 1.1 : v < base * 0.9) ? "warn" : "dim"}"> (${v >= base ? "+" : ""}${fmt(100 * (v - base) / base, 0)}%)</span>` : "");
+  return `<tr><th>Tracing</th><th class="n">Played</th><th class="n">Frames per second</th><th class="n">The mod: typical frame</th><th class="n">The mod: busy frame (p95)</th><th class="n">New memory</th><th class="n">Collection pauses</th></tr>` +
+    order.map((name) => { const l = levels[name]; return `<tr><td><span class="pill" style="border-color:${name === "off" ? "var(--line)" : bandColor(name)}">${esc(name)}</span></td><td class="n">${clock(l.seconds)}</td>`
+      + `<td class="n">${fmt(l.fps, 0)}${name !== "off" ? against(l.fps, off?.fps, false) : ""}</td><td class="n">${fmt(l.modP50, 2)} ms${name !== "off" ? against(l.modP50, off?.modP50, true) : ""}</td>`
+      + `<td class="n">${fmt(l.modP95, 2)} ms${name !== "off" ? against(l.modP95, off?.modP95, true) : ""}</td><td class="n">${fmt(l.allocatedMbPerSecond, 1)} MB/s</td><td class="n">${fmt(l.gcPauseMsPerSecond, 2)} ms/s</td></tr>`; }).join("");
+}
+
+// ============================================================== the Traces page (decision #258): reports read from dev-mode traces
+/**
+ * scripts/trace-report.ps1 reads each trace (traces/trace-*.nettrace, recorded by dotnet-trace while you play) and writes its report
+ * beside it (trace-*.json): allocations by type and call site charged to whose code asked for them, CPU by method (Full traces), the
+ * collections, and its launch's stretches at each tracing level with their frames. Read when the page opens, not streamed.
+ */
+const TR = { cache: new Map(), names: [], pending: 0, listedAt: 0, chosen: null };
+const OWNERS = () => [["mod", "the mod", css("--accent")], ["game", "the game", css("--good")], ["godot", "Godot", css("--violet")], ["other", "others (Harmony, other mods)", css("--warn")], ["runtime", "the runtime alone", css("--faint")]];
+async function loadTraces(force) {
+  if (!force && Date.now() - TR.listedAt < 5000) return;
+  TR.listedAt = Date.now();
+  const names = [], traces = new Set();
+  if (FS.demo) for (const n of Object.keys(DEMO.files)) { if (/^traces\/trace-.*\.json$/.test(n) && !n.endsWith(".speedscope.json")) names.push(n.slice(7)); }
+  else {
+    try {
+      for await (const [name, h] of (await FS.dir.getDirectoryHandle("traces")).entries()) {
+        if (h.kind !== "file") continue;
+        if (/^trace-.*\.json$/.test(name) && !name.endsWith(".speedscope.json")) names.push(name);
+        else if (name.endsWith(".nettrace")) traces.add(name.slice(0, -".nettrace".length));
+      }
+    } catch { /* no traces yet */ }
+  }
+  for (const n of names) {
+    if (TR.cache.has(n)) continue;
+    try { TR.cache.set(n, JSON.parse(FS.demo ? DEMO.files["traces/" + n] : await (await (await (await FS.dir.getDirectoryHandle("traces")).getFileHandle(n)).getFile()).text())); }
+    catch { /* being written: next time */ }
+  }
+  TR.names = names.filter((n) => TR.cache.has(n)).sort().reverse();
+  TR.pending = [...traces].filter((stem) => !names.includes(stem + ".json")).length;
+}
+/** A time on the trace's launch, as played time (decision #238): time away takes no room; a moment while away sits where it began. */
+function playedAt(t, away) {
+  let off = 0;
+  for (const x of away || []) { if (x.from >= t) break; off += Math.min(x.to, t) - x.from; }
+  return t - off;
+}
+/** Horizontal 100% bars split by owner: rows [{ label, values: { mod, game, ... } }]. */
+function ownerBars(id, rows) {
+  const { g, w, h } = canvas(id), pad = { l: 110, r: 8, t: 4, b: 4 }, owners = OWNERS();
+  const bh = Math.min(22, (h - pad.t - pad.b) / Math.max(rows.length, 1) - 6);
+  rows.forEach((row, i) => {
+    const total = owners.reduce((a, [key]) => a + (row.values?.[key] || 0), 0), y = pad.t + i * (bh + 8);
+    g.fillStyle = css("--dim"); g.font = "11px system-ui"; g.fillText(row.label, 2, y + bh / 2 + 4);
+    if (!total) { g.fillStyle = css("--faint"); g.fillText("none in this trace", pad.l, y + bh / 2 + 4); return; }
+    let x = pad.l;
+    for (const [key, , color] of owners) {
+      const width = ((row.values[key] || 0) / total) * (w - pad.l - pad.r);
+      g.fillStyle = color; g.fillRect(x, y, width, bh);
+      if (key === "mod" && width > 34) { g.fillStyle = "#fff"; g.fillText(pct(row.values[key], total), x + 4, y + bh / 2 + 4); }
+      x += width;
+    }
+  });
+}
+const ownerLegend = (values, unit) => {
+  const total = OWNERS().reduce((a, [key]) => a + (values?.[key] || 0), 0);
+  return OWNERS().map(([key, name, color]) => `<span><i style="background:${color}"></i>${esc(name)} ${total ? pct(values[key] || 0, total) : "–"}${unit ? ` (${fmt(values[key] || 0, 1)}${unit})` : ""}</span>`).join("");
+};
+/** A method's name without its argument list, the full name on hover. */
+const methodHtml = (method) => { const s = String(method ?? "?"), short = s.replace(/\(.*$/, ""); return `<span class="mono" title="${esc(s)}">${esc(short)}</span>`; };
+const typeHtml = (type) => `<span class="mono">${/SpireQoL|Sts2Mods/.test(type) ? `<b>${esc(type)}</b>` : esc(type)}</span>`;
+const siteRows = (sites, empty) => (sites?.length ? sites.map((x) => `<tr><td class="n">${fmt(x.mb, 2)} MB</td><td class="n">${fmt(x.ticks, 0)}</td><td>${typeHtml(x.type)}</td><td>${methodHtml(x.site)}</td></tr>`).join("") : `<tr><td colspan="4" class="empty">${empty}</td></tr>`);
+const siteHead = `<tr><th class="n">Allocated</th><th class="n">Samples</th><th>Type</th><th>Call site</th></tr>`;
+async function renderTraces() {
+  await loadTraces();
+  const select = $("traceSelect");
+  if (!TR.chosen || !TR.names.includes(TR.chosen)) TR.chosen = TR.names[0] ?? null;
+  setHTML(select, TR.names.map((n) => { const x = TR.cache.get(n); return `<option value="${esc(n)}"${n === TR.chosen ? " selected" : ""}>${esc(n.replace(/\.json$/, ""))} · ${esc(x.level)} · ${fmt(x.seconds / 60, 1)} min · ${fmt(x.mb, 0)} MB</option>`; }).join(""));
+  const off = M.state?.trace?.level === "off";
+  setHTML($("traceListNote"), (TR.pending ? `${TR.pending} trace(s) not read yet: run <code>scripts/trace-report.ps1 -All</code>. ` : "")
+    + (!TR.names.length ? (off ? "Tracing is off: turn <b>Record a performance trace</b> to Memory (General page, dev mode), play, then run <code>scripts/trace-report.ps1</code>." : "No trace reports yet: play with <b>Record a performance trace</b> on (Memory by default in dev mode), turn it off or close the game, then run <code>scripts/trace-report.ps1</code>.") : off ? `<span class="warn">Tracing is off now: turn it to Memory to keep recording.</span>` : ""));
+  const report = TR.chosen ? TR.cache.get(TR.chosen) : null;
+  if (!report) { setHTML($("traceTiles"), ""); return; }
+  const alloc = report.allocations || {}, cpu = report.cpu, gc = report.gc || {};
+  const modAlloc = alloc.owners?.mod || 0, cpuBusy = cpu ? OWNERS().reduce((a, [key]) => a + (cpu.owners?.[key] || 0), 0) : 0;
+  setHTML($("traceTiles"), [
+    tile("The trace", esc(report.level), `${fmt(report.seconds / 60, 1)} minutes, ${fmt(report.mb, 0)} MB · ${when(report.startedUtc)}${report.launch ? ` · ${esc(report.launch.stream)}` : " · no launch found for it"}`),
+    tile("The mod's share of allocations", pct(modAlloc, alloc.mb), `${fmt(modAlloc / Math.max(report.seconds, 0.01), 2)} MB/s of the game's ${fmt(alloc.mbPerSecond, 1)} MB/s (${fmt(alloc.ticks, 0)} samples)`, modAlloc / Math.max(report.seconds, 0.01) > 20 ? "bad" : modAlloc / Math.max(report.seconds, 0.01) > 5 ? "warn" : "good"),
+    tile("The mod's share of the CPU", cpu ? pct(cpu.owners?.mod || 0, cpuBusy) : "–", cpu ? `of ${fmt(cpu.busy, 0)} busy samples (about 1 ms each per thread); the frame itself: ${pct(cpu.leafOwners?.mod || 0, cpuBusy)}` : "a Memory trace has no CPU samples: record a Full one for them"),
+    tile("Collections", fmt(Object.values(gc.count || {}).reduce((a, v) => a + v, 0), 0), `${Object.entries(gc.count || {}).map(([gen, n]) => `gen ${gen}: ${n}`).join(", ") || "none"} · pauses p95 ${fmt(gc.pauseMs?.p95, 1)} ms, longest ${fmt(gc.pauseMs?.max, 1)} ms`, (gc.pauseMs?.max || 0) > 16.7 ? "warn" : "good"),
+    tile("Heap", `${fmt(gc.heapMb?.max, 0)} MB`, `at most; ${fmt(gc.heapMb?.min, 0)} MB at least`),
+  ].join(""));
+  ownerBars("trOwners", [{ label: "allocations", values: alloc.owners }]);
+  setHTML($("trOwnersLegend"), ownerLegend(alloc.owners, " MB"));
+  ownerBars("trCpu", cpu ? [{ label: "charged to", values: cpu.owners }, { label: "spent in", values: cpu.leafOwners }] : [{ label: "CPU", values: null }]);
+  setHTML($("trCpuLegend"), cpu ? ownerLegend(cpu.owners) : `<span class="faint">No CPU samples in a Memory trace.</span>`);
+  // The collections on the launch's played time, the tracing levels shaded.
+  const away = report.away || [], at = (t) => playedAt(t, away), colls = gc.collections || [];
+  const genPoints = (gen) => colls.filter((x) => (gen === 2 ? x.gen >= 2 : x.gen === gen)).map((x) => [at(x.t), x.pauseMs]);
+  const bands = (report.stretches || []).filter((x) => x.level !== "off").map((x) => ({ level: x.level, from: at(x.from), to: at(x.to) }));
+  lines("trGc", [{ name: "gen 0 pause", color: css("--accent"), dots: true, points: genPoints(0) }, { name: "gen 1 pause", color: css("--warn"), dots: true, points: genPoints(1) }, { name: "gen 2 pause", color: css("--bad"), dots: true, points: genPoints(2) },
+    { name: "heap after", color: css("--teal"), right: true, points: colls.map((x) => [at(x.t), x.heapAfterMb]) }], { unit: " ms", rightUnit: " MB", raw: true, scaleAll: true, bands, refs: [{ v: 1000 / 60, label: "60 fps frame" }] });
+  // Every launch a trace was read from: its frames by level, added up (seconds-weighted). A launch can have several traces (each level
+  // change starts one): its levels are counted once, by its stream.
+  setHTML($("trLevels"), levelTable(Object.fromEntries(Object.entries(launchLevels()).map(([name, s]) => [name, { seconds: s.seconds, fps: s.frames / Math.max(s.seconds, 0.01), modP50: s.p50 / Math.max(s.seconds, 0.01), modP95: s.p95 / Math.max(s.seconds, 0.01), allocatedMbPerSecond: s.mb / Math.max(s.seconds, 0.01), gcPauseMsPerSecond: s.pause / Math.max(s.seconds, 0.01) }]))));
+  setHTML($("trModSites"), siteHead + siteRows(alloc.modSites, "Nothing of the mod's in this trace's samples"));
+  setHTML($("trModMethods"), `<tr><th class="n">Allocated</th><th>Method</th><th>Largest types</th></tr>` + ((alloc.modMethods || []).length ? alloc.modMethods.map((x) => `<tr><td class="n">${fmt(x.mb, 2)} MB</td><td>${methodHtml(x.site)}</td><td>${(x.types || []).map(typeHtml).join(", ")}</td></tr>`).join("") : `<tr><td colspan="3" class="empty">None</td></tr>`));
+  setHTML($("trTypes"), `<tr><th>Type</th><th class="n">Allocated</th><th class="n">The mod's</th><th class="n">The mod's share</th></tr>` + (alloc.types || []).map((x) => `<tr><td>${typeHtml(x.type)}</td><td class="n">${fmt(x.mb, 2)} MB</td><td class="n">${fmt(x.owners?.mod, 2)} MB</td><td class="n ${(x.owners?.mod || 0) / Math.max(x.mb, 1e-9) > 0.5 ? "warn" : ""}">${pct(x.owners?.mod || 0, x.mb)}</td></tr>`).join(""));
+  setHTML($("trGameSites"), siteHead + siteRows(alloc.sites?.game, "None"));
+  setHTML($("trGodotSites"), siteHead + siteRows(alloc.sites?.godot, "None"));
+  const exclusive = new Map((cpu?.modExclusive || []).map((x) => [x.method, x.samples]));
+  setHTML($("trModCpu"), `<tr><th>Method</th><th class="n">Inclusive</th><th class="n">Exclusive</th></tr>` + (cpu ? (cpu.modInclusive || []).map((x) => `<tr><td>${methodHtml(x.method)}</td><td class="n">${pct(x.samples, cpu.busy)}</td><td class="n">${pct(exclusive.get(x.method) || 0, cpu.busy)}</td></tr>`).join("") : `<tr><td colspan="3" class="empty">No CPU samples in a Memory trace</td></tr>`));
+  setHTML($("trCpuTop"), `<tr><th>Method</th><th>Whose</th><th class="n">Exclusive</th></tr>` + (cpu ? (cpu.exclusive || []).map((x) => `<tr><td>${methodHtml(x.method)}</td><td>${esc(x.owner)}</td><td class="n">${pct(x.samples, cpu.busy)}</td></tr>`).join("") : `<tr><td colspan="3" class="empty">No CPU samples in a Memory trace</td></tr>`));
+}
+/** Each launch's frames by tracing level (from its traces' reports, once per launch), added up seconds-weighted. */
+function launchLevels() {
+  const seen = new Set(), sum = {};
+  for (const n of TR.names) {
+    const x = TR.cache.get(n), key = x.launch?.stream ?? n;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    for (const [name, l] of Object.entries(x.levels || {})) {
+      const s = (sum[name] ??= { seconds: 0, frames: 0, p50: 0, p95: 0, mb: 0, pause: 0 });
+      s.seconds += l.seconds; s.frames += l.fps * l.seconds; s.p50 += l.modP50 * l.seconds; s.p95 += l.modP95 * l.seconds; s.mb += l.allocatedMbPerSecond * l.seconds; s.pause += l.gcPauseMsPerSecond * l.seconds;
+    }
+  }
+  return sum;
+}
+$("traceSelect").addEventListener("change", (e) => { TR.chosen = e.target.value; render(true); });
 
 const repOpen = new Set();
 async function renderReports() {
@@ -2129,7 +2335,7 @@ function render(force) {
   setStatus(`${FS.demo ? "Demo data" : esc(FS.dir.name)} · ${M.file ? esc(M.file) : "no stream yet"} · ${M.state ? `mod ${esc(M.state.build ?? M.state.mod)} · ${live ? "live" : `last update ${age < 3600 ? Math.round(age) + " s" : Math.round(age / 3600) + " h"} ago (game closed?)`}` : "no state yet"}`, live ? "live" : "stale");
   if (!force && Date.now() - lastFull < 900) { if (page === "log") renderLog(); return; }
   lastFull = Date.now();
-  ({ overview: renderOverview, turn: renderTurn, searches: renderSearches, perf: renderPerf, reports: renderReports, feedback: renderFeedback, log: () => renderLog(force), compare: renderCompareList })[page]();
+  ({ overview: renderOverview, turn: renderTurn, searches: renderSearches, perf: renderPerf, traces: renderTraces, reports: renderReports, feedback: renderFeedback, log: () => renderLog(force), compare: renderCompareList })[page]();
   if (page === "feedback" && force) loadFeedback();
 }
 let timer = null;
@@ -2137,7 +2343,7 @@ function start() {
   reset(); M.state = null; logShown = -1;
   if (FS.demo) demoInit();
   if (timer) clearInterval(timer);
-  fbNotes = []; fbStatus = {}; FB.seen = ""; FB.checkedAt = 0; REP.cache.clear(); REP.list = []; REP.listedAt = 0;
+  fbNotes = []; fbStatus = {}; FB.seen = ""; FB.checkedAt = 0; REP.cache.clear(); REP.list = []; REP.listedAt = 0; TR.cache.clear(); TR.names = []; TR.listedAt = 0;
   loadFeedback();
   const tick = async () => { if (FS.demo) demoTick(); else await poll(); loadReports(); refreshFeedback(); render(false); };
   tick().then(() => render(true));
@@ -2176,7 +2382,10 @@ window.addEventListener("resize", () => render(true));
 const DEMO = { files: {}, t: 0, combat: 0, turn: 0, rnd: 1 };
 const rand = () => ((DEMO.rnd = (DEMO.rnd * 16807) % 2147483647) / 2147483647);
 function demoInit() {
-  Object.assign(DEMO, { files: {}, t: 0, combat: 0, turn: 0, rnd: 7 });
+  Object.assign(DEMO, { files: {}, t: 0, combat: 0, turn: 0, rnd: 7, trace: null });
+  // Trace reports as scripts/trace-report.ps1 writes them (tools/TraceReport): a Memory one and a Full one.
+  DEMO.files["traces/trace-20261119-190000-memory.json"] = JSON.stringify(demoTraceReport("memory", 0, 120));
+  DEMO.files["traces/trace-20261119-190200-full.json"] = JSON.stringify(demoTraceReport("full", 120, 200));
   DEMO.files["feedback.jsonl"] = JSON.stringify({ id: "demo1", at: new Date(Date.now() - 864e5).toISOString(), kind: "idea", text: "Incoming Damage's ? felt late on the Beacon board.", mod: "1.21.0", encounter: "Byrdonis", combat: 2, turn: 3 }) + "\n";
   const old = [];
   for (let i = 0; i < 400; i++) old.push(JSON.stringify({ t: i * 0.25, kind: "frame-rollup", seconds: 0.25, frames: 30, modP50: 0.9, modP95: 2.6 + rand(), modMax: 4 + rand() * 6, gapMax: 18, slow: 0, featureMean: { "proc-indicators": 0.6, "incoming-damage": 0.3 }, featureMax: {}, heapMb: 500, allocatedMb: 1, gen0: 0, gen1: 0, gen2: 0, gcPauseMs: 0, heldStates: 0, searching: 0, simMb: 0, compiles: 0, nodes: 2400, orphanNodes: 12 }));
@@ -2194,6 +2403,14 @@ function demoTick(fast) {
       "dev-dashboard": "Dev dashboard", "dev-checks": "Dev checks", "steady-watch": "Steady watch" } });
   }
   DEMO.t += 0.5;
+  // The performance trace (decision #258): Memory from the start, Full for a stretch, then off, then Memory again.
+  const traceLevel = DEMO.t < 120 ? "memory" : DEMO.t < 200 ? "full" : DEMO.t < 240 ? "off" : "memory";
+  if (traceLevel !== DEMO.trace) {
+    const path = (level) => `C:\\Users\\dev\\SpireQoL-dev\\traces\\trace-20261119-19${String(Math.floor(DEMO.t / 60)).padStart(2, "0")}00-${level}.nettrace`;
+    if (DEMO.trace && DEMO.trace !== "off") demoEmit({ kind: "trace-stopped", level: DEMO.trace, path: path(DEMO.trace), why: "setting", mb: 40 });
+    if (traceLevel !== "off") demoEmit({ kind: "trace-started", level: traceLevel, path: path(traceLevel) });
+    DEMO.trace = traceLevel;
+  }
   const busy = rand() < 0.15, feat = { "proc-indicators": 0.8 + rand() * (busy ? 6 : 1), "incoming-damage": 0.3 + rand() * 0.4, "forecast-audit": 0.1 + rand() * 0.2, "proc-audit": 0.2 + rand() * 0.3, widgets: 0.2, "card-tabs": 0.3, "settings-menu": 0.05, "dev-dashboard": 0.05, "rest-preview:read": 0.02, "hook:proc-audit": 0.04 };
   const sum = Object.values(feat).reduce((a, b) => a + b, 0);
   // Tabbed out for 20 s of every 90 (decision #179): no frame data, the window's changes marked.
@@ -2204,7 +2421,6 @@ function demoTick(fast) {
   if (Math.floor(DEMO.t) % 10 === 0 && Math.floor(DEMO.t) !== DEMO.lastSample) {
     DEMO.lastSample = Math.floor(DEMO.t);
     demoEmit({ kind: "steady-sample", steady: { fight: { frames: 900, seconds: 6 } }, garbage: [{ where: "fight", id: "ethereal-fade", frames: 60, kb: 480, maxKb: 8.1, period: 15 }, { where: "fight", id: "card-tabs", frames: 900, kb: 90, maxKb: 0.1, period: 1 }] });
-    demoEmit({ kind: "allocation-sample", seconds: 10, quietSeconds: 4, quietKb: { "game|System.String": 40 + rand() * 20, "game|SpireQoL.Cards.TabSpec": 12, "game|System.Collections.Generic.List`1[SpireQoL.Cards.TabSpec]": 6 }, activeKb: { "game|System.String": 900, "other|SpireQoL.Sim.SimState": 4000, "game|MegaCrit.Sts2.Core.Combat.History.CombatHistoryEntry": 300 } });
   }
   if (DEMO.turn === 0 || rand() < 0.05) {
     if (DEMO.turn === 0 || DEMO.turn > 4 + rand() * 4) { if (DEMO.combat) demoEmit({ kind: "combat-ended" }); DEMO.combat++; DEMO.turn = 0; demoEmit({ kind: "combat-started", encounter: ["Jaw Worm", "Byrdonis", "Fuzzy Wurm Crawler", "The Kin"][DEMO.combat % 4], players: 1, characters: "Defect" }); }
@@ -2233,7 +2449,45 @@ function demoTick(fast) {
     v: 1, at: new Date().toISOString(), seconds: DEMO.t, mod: "1.21.0", game: "v0.113.1", streamFile: M.file, reportsOn: true,
     where: { inRun: true, inCombat: true, encounter: M.combats.at(-1)?.encounter, combat: DEMO.combat, turn: DEMO.turn, playerTurn: true },
     session: { ...streamSession(), combats: DEMO.combat },
+    trace: { level: DEMO.trace, file: DEMO.trace === "off" ? null : `trace-20261119-190000-${DEMO.trace}.nettrace`, problem: null },
     forecast: { taken: 24, takenMin: 4, dies: false, dieChance: 0.031, blockGain: 6, branches: 66, truncated: false, capHit: null, steps: 41, copies: 1820, peakHeld: 230, unmodelled: [], spread },
+  };
+}
+/** A made-up trace report in tools/TraceReport's format (its ReportJson). */
+function demoTraceReport(level, from, to) {
+  const site = (type, method, mb) => ({ type, site: method, mb, ticks: Math.round(mb * 10) });
+  const owners = (mod, game, godot, runtime, other = 0.2) => ({ mod, game, godot, runtime, other });
+  const collections = [];
+  for (let t = from + 0.5; t < to; t += 0.7 + rand() * 0.8) {
+    const gen = rand() < 0.03 ? 2 : rand() < 0.15 ? 1 : 0;
+    collections.push({ t, gen, pauseMs: gen === 2 ? 20 + rand() * 30 : gen === 1 ? 4 + rand() * 6 : 1 + rand() * 3, heapBeforeMb: 520 + rand() * 40, heapAfterMb: 480 + 30 * Math.sin(t / 30) + rand() * 5, reason: "AllocSmall", type: "NonConcurrentGC" });
+  }
+  const cpu = level !== "full" ? null : {
+    samples: 160000, busy: 52000, owners: owners(9100, 30500, 6200, 5800, 400), leafOwners: owners(4100, 18000, 12900, 16600, 400),
+    exclusive: [{ method: "Godot.NativeCalls.godot_icall_0_3(int,int)", owner: "godot", samples: 6100 }, { method: "MegaCrit.Sts2.Core.Nodes.Combat.NCombatRoom._Process(float64)", owner: "game", samples: 4200 }, { method: "SpireQoL.Sim.SimEngine.Step(class SpireQoL.Sim.SimState)", owner: "mod", samples: 1900 }],
+    inclusive: [{ method: "MegaCrit.Sts2.Core.Nodes.NGame._Process(float64)", owner: "game", samples: 30100 }, { method: "Sts2Mods.Core.Ui.OverlayHost._Process(float64)", owner: "mod", samples: 7800 }],
+    modExclusive: [{ method: "SpireQoL.Sim.SimEngine.Step(class SpireQoL.Sim.SimState)", owner: "mod", samples: 1900 }, { method: "SpireQoL.Cards.CardDecor.Layout()", owner: "mod", samples: 700 }],
+    modInclusive: [{ method: "Sts2Mods.Core.Ui.OverlayHost._Process(float64)", owner: "mod", samples: 7800 }, { method: "SpireQoL.Sim.SimJob.Run()", owner: "mod", samples: 3900 }, { method: "SpireQoL.Cards.CardDecor.Layout()", owner: "mod", samples: 1500 }],
+    waiting: [],
+  };
+  return {
+    format: 1, trace: `trace-20261119-19${String(Math.floor(from / 60)).padStart(2, "0")}00-${level}.nettrace`, level, mb: level === "full" ? 420 : 38, startedUtc: new Date(Date.now() - 3600e3 + from * 1000).toISOString(),
+    seconds: to - from, timeBase: "launch", from, to, launch: { stream: "stream-20261119-190000.jsonl", startedUtc: new Date(Date.now() - 3600e3).toISOString(), end: 300 },
+    stretches: [{ level: "memory", from: 0, to: 120 }, { level: "full", from: 120, to: 200 }, { level: "off", from: 200, to: 240 }, { level: "memory", from: 240, to: 300 }], away: [{ from: 60, to: 80 }],
+    levels: { off: { seconds: 40, fps: 143, modP50: 0.82, modP95: 2.1, allocatedMbPerSecond: 6.1, gcPauseMsPerSecond: 3.2 }, memory: { seconds: 160, fps: 141, modP50: 0.84, modP95: 2.2, allocatedMbPerSecond: 6.3, gcPauseMsPerSecond: 3.4 }, full: { seconds: 80, fps: 118, modP50: 1.05, modP95: 3.1, allocatedMbPerSecond: 6.4, gcPauseMsPerSecond: 3.9 } },
+    allocations: {
+      ticks: 9000, mb: 880, mbPerSecond: 880 / (to - from), owners: owners(210, 470, 160, 38, 2),
+      types: [{ type: "System.String", mb: 210, owners: owners(60, 120, 20, 10) }, { type: "Godot.Collections.Dictionary", mb: 140, owners: owners(52, 70, 18, 0) }, { type: "System.WeakReference`1[System.IDisposable]", mb: 90, owners: owners(30, 20, 40, 0) },
+        { type: "Godot.StringName[]", mb: 60, owners: owners(25, 15, 20, 0) }, { type: "SpireQoL.Sim.SimState", mb: 40, owners: owners(40, 0, 0, 0) }],
+      modSites: [site("Godot.Collections.Dictionary", "SpireQoL.Cards.CardDecor.AddTab(class Godot.Control,class SpireQoL.Cards.TabSpec)", 48), site("System.String", "SpireQoL.Features.IncomingDamageFeature.Text(int32)", 31),
+        site("System.WeakReference`1[System.IDisposable]", "Sts2Mods.Core.Ui.UiKit.Label(class System.String,int32)", 22), site("Godot.StringName[]", "SpireQoL.Cards.TinyCardIcon.Make(class MegaCrit.Sts2.Core.Models.CardModel)", 18), site("SpireQoL.Sim.SimState", "SpireQoL.Sim.SimState.Copy()", 40)],
+      modMethods: [{ site: "SpireQoL.Cards.CardDecor.AddTab(class Godot.Control,class SpireQoL.Cards.TabSpec)", mb: 61, types: ["Godot.Collections.Dictionary", "System.String"] }, { site: "SpireQoL.Sim.SimState.Copy()", mb: 40, types: ["SpireQoL.Sim.SimState"] }],
+      sites: { game: [site("System.String", "MegaCrit.Sts2.Core.Localization.LocString.GetFormattedText()", 90), site("Godot.Collections.Dictionary", "MegaCrit.Sts2.Core.Nodes.Cards.NCard.Reload()", 60)],
+        godot: [site("System.WeakReference`1[System.IDisposable]", "Godot.GodotObject..ctor()", 40), site("Godot.StringName[]", "Godot.Bridge.ScriptManagerBridge.GetPropertyInfoList(int,int)", 20)], runtime: [], other: [] },
+    },
+    cpu,
+    gc: { count: { 0: collections.filter((x) => x.gen === 0).length, 1: collections.filter((x) => x.gen === 1).length, 2: collections.filter((x) => x.gen === 2).length },
+      pauseMs: { p50: 2.1, p95: 8.4, max: Math.max(...collections.map((x) => x.pauseMs)), total: collections.reduce((a, x) => a + x.pauseMs, 0) }, heapMb: { min: 470, max: 565 }, collections },
   };
 }
 function demoWrite(name, text, append) {
