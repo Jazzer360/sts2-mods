@@ -181,6 +181,7 @@ public static partial class ReadModels
         PowerId.SerpentForm.Name,
         PowerId.SerratedArrows.Name,
         PowerId.ShadowStep.Name,
+        PowerId.Shadowmeld.Name,
         PowerId.Shriek.Name,
         PowerId.Shroud.Name,
         RelicId.Shuriken.Name,

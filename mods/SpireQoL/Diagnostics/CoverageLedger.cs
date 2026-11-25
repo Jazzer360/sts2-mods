@@ -255,7 +255,7 @@ internal static partial class CoverageLedger
         ["SandpitPower"] = "ignore: these hooks only move creatures and change the music",
         ["SelfFormingClayPower"] = "ignore: AfterBlockCleared block next turn",
         ["SerpentFormPower"] = "covered: read from its code (ReadModel, decision #268): BeforeCardPlayed binds its amount to its owner's play, AfterCardPlayed deals it (unpowered) to a random hittable enemy (a branch per enemy; proc damage)",
-        ["ShadowmeldPower"] = "ignore: AfterSideTurnEnd removes itself",
+        ["ShadowmeldPower"] = "covered: read from its code (ReadModel, decision #280): ModifyBlockMultiplicative multiplies its owner's block by (decimal)Math.Pow(2.0, Amount); AfterSideTurnEnd removes it as its owner's side's turn ends",
         ["ShriekPower"] = "covered: read from its code (ReadModel, decision #251): AfterDamageReceived stuns its owner when HP through its block leaves it at or below its amount, and goes; its tab is the stun outcome rule",
         ["ShrinkPower"] = "ignore: ticks down (damage math)",
         ["ShroudPower"] = "covered: read from its code (ReadModel, decision #195): AfterPowerAmountChanged block when you apply Doom (proc block)",

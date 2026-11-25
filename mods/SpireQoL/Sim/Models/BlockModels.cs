@@ -23,9 +23,4 @@ public sealed class UnmovablePower : SimModel
     }
 }
 
-/// <summary>ShadowmeldPower.ModifyBlockMultiplicative: 2^amount on its owner's block.</summary>
-public sealed class ShadowmeldPower : SimModel
-{
-    public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block) =>
-        block.Target == owner ? (decimal)Math.Pow(2.0, SimEngine.PowerOn(state, owner, ThisPower)) : 1m;
-}
+// Shadowmeld is read from its code (ReadModel, decision #280).

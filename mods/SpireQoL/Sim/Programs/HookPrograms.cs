@@ -438,9 +438,9 @@ public sealed record HookCreature(HookWho Who)
 
 /// <summary>
 /// An operation of the code on two values (decimal throughout; a true-or-false is 1 or 0). Min and Max are Math.Min and Math.Max
-/// (PoisonPower.TriggerCount's Min(Amount, 1 + Accelerant)).
+/// (PoisonPower.TriggerCount's Min(Amount, 1 + Accelerant)); Power is Math.Pow, in doubles (Shadowmeld's 2^Amount).
 /// </summary>
-public enum HookOperation { Add, Subtract, Multiply, Divide, Remainder, Equal, NotEqual, Less, LessOrEqual, Greater, GreaterOrEqual, And, Or, Min, Max }
+public enum HookOperation { Add, Subtract, Multiply, Divide, Remainder, Equal, NotEqual, Less, LessOrEqual, Greater, GreaterOrEqual, And, Or, Min, Max, Power }
 
 /// <summary>A value a hook's code works out (an amount, a test), read from its instructions: decimal, a true-or-false is 1 or 0.</summary>
 public abstract record HookValue;

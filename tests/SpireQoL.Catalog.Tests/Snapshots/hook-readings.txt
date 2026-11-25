@@ -135,7 +135,7 @@ power RupturePower: AfterCardPlayed: read | AfterDamageReceived: read | BeforeCa
 power SandpitPower: AfterApplied: gap: uses its own field (_initialTargetPosition) directly: what a call on it changes isn't read | AfterCreatureAddedToCombat: gap: the simulator runs no read model's AfterCreatureAddedToCombat | AfterOstyRevived: gap: the simulator runs no read model's AfterOstyRevived | AfterPowerAmountChanged: read | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | AfterSideTurnStartLate: read | BeforeSideTurnEnd: read
 power SelfFormingClayPower: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
 power SerpentFormPower: AfterApplied: read | AfterCardPlayed: read | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
-power ShadowmeldPower: AfterSideTurnEnd: read | ModifyBlockMultiplicative: gap: the value ?Pow
+power ShadowmeldPower: AfterSideTurnEnd: read | ModifyBlockMultiplicative: read
 power ShowOffPower: AfterDeath: gap: changes a game object outside a command (ShowOff.IncreaseAim) | AfterSideTurnEnd: read
 power ShriekPower: AfterDamageReceived: read
 power ShrinkPower: AfterApplied: gap: changes a game object outside a command (Vantom.ScaleTo) | AfterDeath: read | AfterRemoved: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | AfterSideTurnEnd: read | ModifyDamageMultiplicative: read

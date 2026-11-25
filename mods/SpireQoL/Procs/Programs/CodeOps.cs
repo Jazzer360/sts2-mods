@@ -120,8 +120,13 @@ public static class CodeDecoder
                     position += 8;
                     break;
                 case OperandType.InlineR:
+                {
+                    // A double constant that's a whole number (Shadowmeld's Math.Pow(2.0, ...)) is that number; any other isn't read.
+                    var real = BitConverter.ToDouble(code, position);
+                    if (Math.Abs(real) < 1e15 && Math.Floor(real) == real) instruction = instruction with { Integer = (long)real };
                     position += 8;
                     break;
+                }
                 case OperandType.ShortInlineR:
                 case OperandType.InlineSig:
                     position += 4;

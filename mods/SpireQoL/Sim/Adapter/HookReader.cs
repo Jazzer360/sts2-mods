@@ -2993,6 +2993,9 @@ public static class HookReader
                 // Math.Min and Math.Max of two values (PoisonPower.TriggerCount: Min(Amount, 1 + its opponents' Accelerant)).
                 case QueryValue { Type: "Math", Name: "Min" or "Max", Arguments: [var left, var right] } bounded:
                     return new HookMath(bounded.Name == "Min" ? HookOperation.Min : HookOperation.Max, Value(left), Value(right));
+                // A power of a value (Shadowmeld's (decimal)Math.Pow(2.0, base.Amount)): worked out in doubles, as Math.Pow does, then made a decimal.
+                case QueryValue { Type: "Math", Name: "Pow", Arguments: [var basis, var exponent] }:
+                    return new HookMath(HookOperation.Power, Value(basis), Value(exponent));
                 // A power summed over the owner's living opponents (Sum(Where(GetOpponentsOf(base.Owner), c => c.IsAlive), a => a.GetPowerAmount<T>())).
                 case QueryValue { Type: "Enumerable", Name: "Sum", Arguments: [var opponents, LambdaValue each] } when LivingOpponents(opponents) && PowerAmountOf(each) is { } summed:
                     return new HookFactValue(HookFact.OpponentsPowerAmount) { Of = PowerClass(summed) };

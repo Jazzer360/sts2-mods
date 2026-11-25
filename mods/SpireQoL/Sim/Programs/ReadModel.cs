@@ -2029,6 +2029,7 @@ public sealed class ReadModel : SimModel
         HookOperation.And => (in HookArgs args) => left(in args) != 0m && right(in args) != 0m ? 1m : 0m,
         HookOperation.Min => (in HookArgs args) => Math.Min(left(in args), right(in args)),
         HookOperation.Max => (in HookArgs args) => Math.Max(left(in args), right(in args)),
+        HookOperation.Power => (in HookArgs args) => (decimal)Math.Pow((double)left(in args), (double)right(in args)),
         _ => (in HookArgs args) => left(in args) != 0m || right(in args) != 0m ? 1m : 0m,
     };
 

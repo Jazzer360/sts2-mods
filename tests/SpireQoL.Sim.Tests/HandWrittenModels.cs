@@ -2443,3 +2443,12 @@ public sealed class MagicBombPower : TurnEndDebuff
     }
 }
 
+
+// ---- round twenty-five: a value the reader can't follow, Math.Pow (Sim/Models/BlockModels.cs), deleted 2026-11-25
+
+/// <summary>ShadowmeldPower.ModifyBlockMultiplicative: 2^amount on its owner's block.</summary>
+public sealed class ShadowmeldPower : SimModel
+{
+    public override decimal ModifyBlockMultiplicative(SimState state, int owner, BlockCtx block) =>
+        block.Target == owner ? (decimal)Math.Pow(2.0, SimEngine.PowerOn(state, owner, ThisPower)) : 1m;
+}

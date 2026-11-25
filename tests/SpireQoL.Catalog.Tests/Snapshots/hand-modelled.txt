@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 156 game methods; 3 adapter rules; 41 hand-written models.
+# 20 engine rules naming 156 game methods; 3 adapter rules; 40 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -129,8 +129,6 @@ Regret: no game class by its name (the simulator's own)
   model: BeforeSideTurnEnd
 SeekingEdgePower: no hooks of its own
   model: nothing it overrides
-ShadowmeldPower: ShadowmeldPower.AfterSideTurnEnd, ShadowmeldPower.ModifyBlockMultiplicative
-  model: ModifyBlockMultiplicative
 SkittishPower: SkittishPower.AfterAttack, SkittishPower.AfterSideTurnEnd, SkittishPower.GetScaledAmountForMultiplayer, SkittishPower.InitInternalData
   model: AfterAttack, AfterDamageReceived, BeforeAttack
 SlumberPower: SlumberPower.AfterDamageReceived, SlumberPower.AfterRemoved, SlumberPower.AfterSideTurnEnd

@@ -113,6 +113,21 @@ public class EndOfTurnModelTests
     }
 
     [Fact]
+    public void ShadowmeldMultipliesTheBlockAsYourTurnEndsThenGoes()
+    {
+        // ShadowmeldPower.ModifyBlockMultiplicative: 2^Amount on its owner's block, any block (PlatingPower.BeforeSideTurnEndEarly's 3, unpowered, as
+        // your turn ends: 3 x 2^2 = 12, 9 more of the 20 blocked); its AfterSideTurnEnd, after it, takes it off (PowerCmd.Remove when its owner takes part).
+        var state = new SimState { Enemies = { Attacker(id: 0, hp: 50, hit: 20) } };
+        state.You.HandCount = 0;
+        state.You.Powers = state.You.Powers.With(PowerId.Shadowmeld, amount: 2).With(PowerId.Plating, amount: 3);
+        var outcome = SimEngine.Run(state);
+        Assert.All(outcome.Branches, branch => Assert.False(branch.You.Powers.Has(PowerId.Shadowmeld)));
+        var unmultiplied = state.Clone();
+        unmultiplied.You.Powers = unmultiplied.You.Powers.Without(PowerId.Shadowmeld);
+        Assert.Equal(SimEngine.Run(unmultiplied).TakenMax - 9, outcome.TakenMax);
+    }
+
+    [Fact]
     public void ConstrictAndMagicBombGoWithTheirApplier()
     {
         // ConstrictPower.AfterDeath and MagicBombPower.AfterSideTurnEnd: once the enemy that applied them is dead (here Screaming
@@ -124,6 +139,7 @@ public class EndOfTurnModelTests
         var applierDead = SimEngine.Run(state);
         Assert.Equal(0, applierDead.TakenMax);
         Assert.False(applierDead.Worst.You.Powers.Has(PowerId.Constrict)); // its AfterDeath: PowerCmd.Remove(this) as its applier dies
+        Assert.False(applierDead.Worst.You.Powers.Has(PowerId.MagicBomb)); // MagicBombPower.AfterDeath too (read from its code, decision #279)
 
         // Applied by the enemy that lives: 4 + 6.
         state.You.Powers = state.You.Powers.With(PowerId.Constrict, amount: 4, data: 101).With(PowerId.MagicBomb, amount: 6, data: 101);
