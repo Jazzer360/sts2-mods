@@ -101,21 +101,7 @@ public sealed class PlowPower : SimModel
 
 // Shriek is read from its code (ReadModel, decision #251).
 
-/// <summary>TheGambitPower.AfterDamageReceived: a powered attack that gets HP through kills its owner.</summary>
-public sealed class TheGambitPower : SimModel
-{
-    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
-        Who.IsEnemy(owner) && !now.GambitInAll(owner) ? new(Harmful: false, outcome => outcome.GambitInAll(owner)) : null;
-
-    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
-    {
-        if (hit.Target != owner || !hit.Props.IsPoweredAttack() || hit.Unblocked <= 0 || state.Enemy(owner) is not { } enemy) return;
-        enemy.Powers = enemy.Powers.Without(ThisPower);
-        state.LogFired(Name, amount: 0, owner);
-        enemy.GambitTriggered = true;
-        enemy.Hp = 0;
-    }
-}
+// The Gambit is read from its code (ReadModel, decision #256).
 
 /// <summary>
 /// CurlUpPower: a powered hit from a card on its owner binds that card (Data 1: the play in progress); AfterCardPlayed of that

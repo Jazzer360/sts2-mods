@@ -49,6 +49,7 @@ public static class HookReader
         ["CreatureCmd.Damage"] = "DamageStep: damage to every hittable enemy, a random one (a branch each), the creature a power landed on or the owner, from the owner or no one",
         ["CreatureCmd.Heal"] = "HealStep: the owner heals, up to its max HP",
         ["CreatureCmd.Stun"] = "StunStep: the owner (an enemy) stunned, when the stunned move it's given calls no command",
+        ["CreatureCmd.Kill"] = "KillStep: the owner killed: an enemy marked killed by its power, a player losing all their HP unless a death prevention holds it back",
         ["CardPileCmd.Draw"] = "DrawStep: cards drawn by the owner, each a card event",
         ["PlayerCmd.GainEnergy"] = "GainEnergyStep: energy for the owner, each a card event",
         ["PlayerCmd.GainStars"] = "GainStarsStep: stars for the owner, one stars-gained event (as a card's)",
@@ -456,6 +457,9 @@ public static class HookReader
         // A stun of its owner (an enemy's) in a hook a play sets off: the play that stuns it.
         if (programs.Where(program => program.Hook != HookName.AfterDeath).Any(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps().Any(step => step is StunStep)))
             return HookOutcome.Stuns;
+        // A kill of its owner (an enemy's) in a hook a play sets off: the play that kills it so.
+        if (programs.Where(program => program.Hook != HookName.AfterDeath).Any(program => new ModelSpec("", ModelKind.Power, new[] { program }).Steps().Any(step => step is KillStep)))
+            return HookOutcome.KillsItself;
         return ReactsToHpLoss(programs) ? HookOutcome.ReactsToHpLoss : null;
     }
 
@@ -1621,6 +1625,15 @@ public static class HookReader
                     if (IndexOf(types, "Func`2") is var moveAt and >= 0 && (moveAt >= values.Count || values[moveAt] is not LambdaValue))
                         throw new Gap(ReaderCapability.MonsterStateSet, $"gap: a stunned move the reader doesn't read ({(moveAt < values.Count ? values[moveAt] : "none")})");
                     return new StunStep();
+                // Its owner killed (CreatureCmd.Kill(base.Owner, force): The Gambit's). Force a constant (false: a death prevention may hold it back).
+                case "CreatureCmd.Kill":
+                {
+                    if (values.Count == 0 || !IsOwner(values[0])) throw new Gap(Other(values.Count > 0 ? values[0] : NullValue.Instance), $"gap: kills {(values.Count > 0 ? values[0] : "nothing")}");
+                    var forceAt = IndexOf(types, "Boolean");
+                    if (forceAt >= 0 && (forceAt >= values.Count || values[forceAt] is not ConstantValue)) throw new Gap(ReaderCapability.StunOrKill, $"gap: a kill's force the reader can't follow ({(forceAt < values.Count ? values[forceAt] : "none")})");
+                    if (IndexOf(types, "CardModel") >= 0) throw new Gap(ReaderCapability.StunOrKill, "gap: a kill by a card");
+                    return new KillStep(Forced: forceAt >= 0 && values[forceAt] is ConstantValue { Value: not 0 });
+                }
                 case "PlayerCmd.GainEnergy":
                     if (!IsOwner(values[1])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, "gap: energy for someone else");
                     return new GainEnergyStep(Value(values[0]));

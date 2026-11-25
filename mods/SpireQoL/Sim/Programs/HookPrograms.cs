@@ -629,6 +629,13 @@ public sealed record DestroyArrowStep : HookStep;
 public sealed record StunStep : HookStep;
 
 /// <summary>
+/// CreatureCmd.Kill of its owner: an enemy dies (its HP 0, its death told once the hit it's in is over, as every death the engine follows) and is
+/// marked killed by its power (SimEnemy.KilledByItsPower: The Gambit's tab); a player loses all their HP (Creature.LoseHpInternal) and dies unless
+/// Hook.ShouldDie holds it back (Fairy in a Bottle, Lizard Tail), which <paramref name="Forced"/> (the command's force) skips: SimEngine.KillPlayer.
+/// </summary>
+public sealed record KillStep(bool Forced = false) : HookStep;
+
+/// <summary>
 /// More on what the model bound to the play in progress (its own data's playedCards[cardSource] += Value, under the damage's card, the bound one:
 /// Rupture's Strength from a card's own HP cost, given as the card is played): taken back with it (HookFact.TakeBound, BoundTaken).
 /// </summary>
@@ -694,6 +701,11 @@ public enum HookOutcome
     /// leaves it stunned and alive for its turn in every outcome where ending the turn now wouldn't (OutcomeRules.Stuns: Shriek, Flutter).
     /// </summary>
     Stuns,
+    /// <summary>
+    /// It kills its owner (a KillStep in a hook a play sets off): on an enemy, a bonus on a play that makes it die so in every outcome where ending
+    /// the turn now wouldn't (The Gambit's, as a powered attack gets HP through).
+    /// </summary>
+    KillsItself,
 }
 
 /// <summary>

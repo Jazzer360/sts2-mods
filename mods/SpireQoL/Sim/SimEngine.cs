@@ -126,7 +126,8 @@ public sealed class SimOutcome
 
     /// <summary>Stunned during your turn (Burrowed, Flutter, Plow, Shriek) and alive when its turn comes, in every branch.</summary>
     public bool StunnedInAll(int enemyId) => InEvery(branch => branch.Enemy(enemyId) is { StunnedThisTurn: true, DiedBeforeActing: false });
-    public bool GambitInAll(int enemyId) => InEvery(branch => branch.Enemy(enemyId) is { GambitTriggered: true });
+    /// <summary>A power on it killed it during your turn (KillStep: The Gambit) in every branch.</summary>
+    public bool KilledByItsPowerInAll(int enemyId) => InEvery(branch => branch.Enemy(enemyId) is { KilledByItsPower: true });
     /// <summary>A model acted (its acting log or its code's flash: SimState.FiredAny, FlashedAny) in some branch, over the whole turn (its owner: SimKeys.Logged).</summary>
     public bool ActedInAny(string model, int? owner) => InSome(branch => Acted(branch, model, owner));
 
@@ -773,7 +774,32 @@ public static partial class SimEngine
         if (lost <= 0 || simPlayer.Hp == int.MaxValue || simPlayer.Died) return;
         simPlayer.Hp -= lost;
         if (simPlayer.Hp > 0) return;
-        if (simPlayer.Fairies > 0)
+        AtZero(simPlayer, forced: false);
+    }
+
+    /// <summary>
+    /// CreatureCmd.Kill of a player (The Gambit's): Creature.LoseHpInternal of all their HP (Taken counts it, as any HP they lose), then
+    /// Hook.ShouldDie unless <paramref name="forced"/> (Fairy in a Bottle, then Lizard Tail, healing them from 0), else they die. Nothing on a
+    /// player already dead. HP not tracked (int.MaxValue, a test's board): they die, nothing counted.
+    /// </summary>
+    internal static void KillPlayer(SimState state, int player, bool forced)
+    {
+        var simPlayer = state.MutablePlayer(player);
+        if (simPlayer.Died) return;
+        if (simPlayer.Hp != int.MaxValue) simPlayer.Taken += Math.Max(0, simPlayer.Hp);
+        simPlayer.Hp = 0;
+        AtZero(simPlayer, forced);
+    }
+
+    /// <summary>A player at 0 HP: what prevents their death if it can (Fairy in a Bottle, then Lizard Tail), unless forced; else they die.</summary>
+    private static void AtZero(SimPlayer simPlayer, bool forced)
+    {
+        if (forced)
+        {
+            simPlayer.Hp = 0;
+            simPlayer.Died = true;
+        }
+        else if (simPlayer.Fairies > 0)
         {
             simPlayer.Fairies--;
             simPlayer.FairiesUsed++;

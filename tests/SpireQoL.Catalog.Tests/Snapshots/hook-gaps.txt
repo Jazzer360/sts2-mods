@@ -1,5 +1,5 @@
 # The hand-written models' gaps (HookGapTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Beta. Each hook body's first gap, by the capability the reader names.
-# 63 hand-written models.
+# 62 hand-written models.
 
 ## Capabilities, by the classes each blocks (alone: the classes it's the last one for)
 
@@ -24,7 +24,6 @@ a pick: 1 classes, 1 alone: StratagemPower*
 commands: AutoPlayFromDrawPile: 1 classes, 1 alone: LostLutePower*
 hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*
 hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
-outcomes: a stun or a kill (outcome tabs): 1 classes, 1 alone: TheGambitPower*
 read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 1 classes, 1 alone: MagicBombPower*
 the fight's log (the history ledger, decision #191): 1 classes, 1 alone: UnmovablePower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*
@@ -95,7 +94,6 @@ SurprisePower: [another model's value set (PowerModel.Target, DynamicVar.BaseVal
 SurroundedPower: [a model's own method (its body read where it's called)] AfterDeath: gap: the value direction | [a model's own method (its body read where it's called)] BeforeCardPlayed: gap: the value direction | [hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...)] BeforePotionUsed: gap: the simulator runs no read model's BeforePotionUsed
 SwordSagePower: [hooks: AfterCardEnteredCombat] AfterCardEnteredCombat: gap: the simulator runs no read model's AfterCardEnteredCombat
 TagTeamPower: [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyCardPlayCount: gap: the value card.Owner.Creature
-TheGambitPower: [outcomes: a stun or a kill (outcome tabs)] AfterDamageReceived: gap: CreatureCmd.Kill isn't translated
 TrashToTreasurePower: [orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first)] AfterCardGeneratedForCombat: gap: an orb made first
 UnceasingTop: [hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...)] AfterHandEmptied: gap: the simulator runs no read model's AfterHandEmptied
 UnmovablePower: [the fight's log (the history ledger, decision #191)] ModifyBlockMultiplicative: gap: the fight's log (one card play: e.CardPlay != cardPlay): Count(OfType(Instance.History.Entries), e => e.HappenedThisTurn(this.CombatState) and e.CardPla...

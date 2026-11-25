@@ -173,7 +173,7 @@ power TangledPower: AfterApplied: gap: a loop | AfterCardEnteredCombat: not run:
 power TenderPower: AfterCardPlayed: read | AfterSideTurnEnd: read
 power TerritorialPower: AfterSideTurnEnd: read
 power TheBombPower: BeforeSideTurnEnd: read
-power TheGambitPower: AfterDamageReceived: gap: CreatureCmd.Kill isn't translated
+power TheGambitPower: AfterDamageReceived: read
 power TheSealedThronePower: BeforeCardPlayed: read
 power ThornsPower: BeforeDamageReceived: read
 power ThunderPower: AfterOrbEvoked: read

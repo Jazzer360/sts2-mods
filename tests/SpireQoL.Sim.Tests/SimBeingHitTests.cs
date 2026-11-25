@@ -87,9 +87,9 @@ public class SimBeingHitTests
     {
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 60, block: 5, hits: 20) } };
         state.Enemies[0].Gambit = true;
-        Assert.False(SimEngine.Run(state, Strike(target: 1, damage: 5)).GambitInAll(enemyId: 1)); // blocked
+        Assert.False(SimEngine.Run(state, Strike(target: 1, damage: 5)).KilledByItsPowerInAll(enemyId: 1)); // blocked
         var outcome = SimEngine.Run(state, Strike(target: 1, damage: 6));
-        Assert.True(outcome.GambitInAll(enemyId: 1));
+        Assert.True(outcome.KilledByItsPowerInAll(enemyId: 1));
         Assert.True(outcome.DeadInAll(enemyId: 1));
         Assert.Equal(0, outcome.TakenMax);
     }

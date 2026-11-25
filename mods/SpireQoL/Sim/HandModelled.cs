@@ -31,7 +31,7 @@ public static class HandModelled
             new[] { "CardModel.SetToFreeThisTurn", "CardModel.CostsEnergyOrStars" }),
         new("Damage to a creature: the damage math, block, the HP-loss pipeline, a death held back, the hit's reactions; on a player the same landing for every damage (an enemy's attack, a card's HP cost, a hook's): Wuppy before block, Osty past it for a powered attack",
             new[] { "SimEngine.Damage", "SimEngine.ModifiedDamage", "SimEngine.CalcDamage", "SimEngine.PlainDamage", "SimEngine.AnyListensToDamage", "SimEngine.HpLossPipeline", "SimEngine.HpLoss",
-                "SimEngine.PlayerDamaged", "SimEngine.Lands", "SimEngine.LandBlockable", "SimEngine.LoseHp", "SimEngine.Lose", "SimEngine.PlayHp", "SimEngine.BiggestHit",
+                "SimEngine.PlayerDamaged", "SimEngine.Lands", "SimEngine.LandBlockable", "SimEngine.LoseHp", "SimEngine.Lose", "SimEngine.AtZero", "SimEngine.PlayHp", "SimEngine.BiggestHit",
                 "SimEngine.HitOnce", "SimEngine.HitAll", "SimEngine.HitRandom", "SimEngine.RandomTarget", "SimEngine.ProcHitOn", "SimEngine.ProcDamageAll", "SimEngine.ProcDamageRandom",
                 "SimEngine.ProcDamageOn", "SimEngine.ProcDamagePlayer", "SimEngine.ProcDamageOsty", "SimEngine.DamagePlayer", "SimEngine.RunDamage", "SimEngine.IntentDamage", "SimEngine.WithoutEnchantment", "SimEngine.DamageAllEnemies" },
             new[] { "CreatureCmd.Damage", "Hook.ModifyDamage", "Hook.AfterModifyingDamageAmount", "Hook.BeforeDamageReceived", "Hook.ModifyHpLost", "Hook.AfterModifyingHpLostBeforeOsty",
@@ -78,8 +78,8 @@ public static class HandModelled
             new[] { "SimEngine.RunModelCommand", "SimEngine.PoisonTick" },
             new[] { "PoisonPower.Trigger", "PoisonPower.CalculateTotalDamageNextTurn" }),
         new("Deaths: the hooks told as each happens (an end-of-turn step's, and what they raise, before the next), a dead enemy's powers gone, the creatures a death adds, a kill, a stun",
-            new[] { "SimEngine.AllyDeaths", "SimEngine.DeathCheck", "SimEngine.Spawn", "SimEngine.SpawnPowers", "SimEngine.Stun", "SimEngine.RunExecute" },
-            new[] { "CreatureCmd.Kill", "Hook.AfterDeath", "Creature.RemoveAllPowersAfterDeath", "Hook.ShouldPowerBeRemovedOnDeath", "CreatureCmd.Add", "CreatureCmd.Stun" }),
+            new[] { "SimEngine.AllyDeaths", "SimEngine.DeathCheck", "SimEngine.Spawn", "SimEngine.SpawnPowers", "SimEngine.Stun", "SimEngine.RunExecute", "SimEngine.KillPlayer" },
+            new[] { "CreatureCmd.Kill", "CreatureCmd.KillWithoutCheckingWinCondition", "Hook.AfterDeath", "Creature.RemoveAllPowersAfterDeath", "Hook.ShouldPowerBeRemovedOnDeath", "CreatureCmd.Add", "CreatureCmd.Stun" }),
         new("The players' turn's end: its hooks in their places, Ethereal cards, the cards that act in hand, the hand flushed",
             new[] { "SimEngine.EndOfTurn", "SimEngine.Exhausting", "SimEngine.CardsActInHand" },
             new[] { "CombatManager.EndPlayerTurnPhaseOneInternal", "CombatManager.EndPlayerTurnPhaseTwoInternal", "CombatManager.DoTurnEnd", "CombatManager.FlushPlayerHand", "Hook.BeforeSideTurnEnd",
@@ -111,7 +111,7 @@ public static class HandModelled
             new[] { "SimAdapter.EtherealOnlyFromHex", "SimEngine.Exhausting" },
             new[] { "HexPower.TryModifyKeywordsInCombat", "HexPower.AfterDeath" }),
         new("Fairy in a Bottle and Lizard Tail: a death held back, healed from 0",
-            new[] { "SimEngine.Lose" },
+            new[] { "SimEngine.Lose", "SimEngine.AtZero" },
             new[] { "FairyInABottle.ShouldDie", "FairyInABottle.AfterPreventingDeath", "LizardTail.ShouldDieLate", "LizardTail.AfterPreventingDeath" }),
     };
 

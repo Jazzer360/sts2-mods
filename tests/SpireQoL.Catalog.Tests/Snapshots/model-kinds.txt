@@ -3,9 +3,9 @@
 
 ## Powers and relics
 
-beta powers: 304 classes, 273 with hooks; read from code 124, hand-written 47, neither 104 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 304 classes, 273 with hooks; read from code 125, hand-written 46, neither 104 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 59, hand-written 13, neither 238 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 104, hand-written 42, neither 91 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 105, hand-written 41, neither 91 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 51, hand-written 13, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 6, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 2
@@ -216,7 +216,6 @@ queries: a creature's side or presence: 3 classes, 1 alone: PlatingPower, Essenc
 commands: GainStars: 1 classes, 1 alone: StarPotion (potion)*
 hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*
 hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
-outcomes: a stun or a kill (outcome tabs): 1 classes, 1 alone: TheGambitPower*
 read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 1 classes, 1 alone: MagicBombPower*
 the fight's log (the history ledger, decision #191): 1 classes, 1 alone: UnmovablePower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*

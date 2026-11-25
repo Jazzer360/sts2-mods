@@ -171,7 +171,8 @@ public sealed class SimEnemy
     [JsonIgnore] public int StunAtHp { get => Math.Max(Powers[PowerId.Plow], Powers[PowerId.Shriek]); set => Set(PowerId.Plow, value); }
     /// <summary>The Gambit: dies when a powered attack gets damage through.</summary>
     [JsonIgnore] public bool Gambit { get => Powers.Has(PowerId.TheGambit); set => Set(PowerId.TheGambit, value ? 1 : 0); }
-    public bool GambitTriggered;
+    /// <summary>A power on it killed it during your turn (CreatureCmd.Kill of its owner: The Gambit's, as a powered attack gets HP through).</summary>
+    public bool KilledByItsPower;
     /// <summary>Slippery: hits that lose it at most 1 HP each, left (0 = none).</summary>
     [JsonIgnore] public int Slippery { get => Powers[PowerId.Slippery]; set => Set(PowerId.Slippery, value); }
     /// <summary>Alive when the simulation starts (deaths after that set off Crab Rage and Ravenous).</summary>
@@ -243,7 +244,7 @@ public sealed class SimEnemy
     internal void Hash(ref BranchKey key)
     {
         key.Add(Id); key.Add(Hp); key.Add(Block); key.Add(UnblockedInstances); key.Add(FirstHitFullyBlocked ? 1 : 0); key.Add(Poison); key.Add(DiedBeforeActing ? 1 : 0);
-        key.Add(Stunned ? 1 : 0); key.Add(IntendsToAttack ? 1 : 0); key.Add(BlockBroken ? 1 : 0); key.Add(GambitTriggered ? 1 : 0);
+        key.Add(Stunned ? 1 : 0); key.Add(IntendsToAttack ? 1 : 0); key.Add(BlockBroken ? 1 : 0); key.Add(KilledByItsPower ? 1 : 0);
         key.Add(MoveBlock);
         Powers.Hash(ref key); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         Fields.Hash(ref key);

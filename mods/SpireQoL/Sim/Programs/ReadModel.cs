@@ -443,7 +443,7 @@ public sealed class ReadModel : SimModel
         {
             // A power an attack spends (its AfterAttack takes its own stacks: Gigantification's Decrement) acts on that play too (decision #228).
             // A play that changes the state its damage term reads (Slow's SlowAmount++ on every card) acts on that play too (decision #229).
-            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or StunStep
+            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or StunStep or KillStep
                 || hook == HookName.AfterAttack && step is DecrementPowerStep or RemovePowerStep
                 || hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed && step is StoreFieldStep { Field: var termField } && _termFields.Contains(termField);
             // An enchantment's effects are its card's (no tab of its own, nothing in the play log: its card's play shows them).
@@ -674,6 +674,7 @@ public sealed class ReadModel : SimModel
         HookOutcome.KillsOne => owner == Who.You ? Models.OutcomeRules.KillsOne : null,
         HookOutcome.ReactsToHpLoss => ReactsToHpLoss(now, owner),
         HookOutcome.Stuns => Models.OutcomeRules.Stuns(now, owner),
+        HookOutcome.KillsItself => Who.IsEnemy(owner) && !now.KilledByItsPowerInAll(owner) ? new(Harmful: false, outcome => outcome.KilledByItsPowerInAll(owner)) : null,
         _ => _paidWhere.Count > 0 ? PaidWhere(now, owner) : null,
     };
 
@@ -1234,7 +1235,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or DestroyArrowStep or StunStep
+            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or DestroyArrowStep or StunStep or KillStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1501,6 +1502,24 @@ public sealed class ReadModel : SimModel
                     }
                     if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
                     SimEngine.Stun(enemy);
+                    return One(args.State);
+                };
+            case KillStep kill:
+                return args =>
+                {
+                    // CreatureCmd.Kill of a player: all their HP, then a death prevention unless forced (SimEngine.KillPlayer).
+                    if (Who.IsPlayer(args.Owner))
+                    {
+                        if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                        SimEngine.KillPlayer(args.State, args.Owner, kill.Forced);
+                        return One(args.State);
+                    }
+                    // Of an enemy: it dies (its death told once the hit is over, as every death the engine follows), marked killed by its power even on
+                    // the hit that already killed it, as the hand-written model had it (its tab).
+                    if (args.State.Enemy(args.Owner) is not { } enemy) return One(args.State);
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                    enemy.KilledByItsPower = true;
+                    enemy.Hp = 0;
                     return One(args.State);
                 };
             case FreeInHandStep:

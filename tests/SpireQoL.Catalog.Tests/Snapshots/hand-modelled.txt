@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 20 engine rules naming 137 game methods; 3 adapter rules; 63 hand-written models.
+# 20 engine rules naming 138 game methods; 3 adapter rules; 62 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -15,7 +15,7 @@ A card in a hand made free this turn: the game's random pick among the cards tha
   simulator: SimEngine.FreeInHand
 Damage to a creature: the damage math, block, the HP-loss pipeline, a death held back, the hit's reactions; on a player the same landing for every damage (an enemy's attack, a card's HP cost, a hook's): Wuppy before block, Osty past it for a powered attack
   game: CreatureCmd.Damage, Hook.ModifyDamage, Hook.AfterModifyingDamageAmount, Hook.BeforeDamageReceived, Hook.ModifyHpLost, Hook.AfterModifyingHpLostBeforeOsty, Hook.AfterModifyingHpLostAfterOsty, Hook.ModifyPreBlockDamageTarget (beta only), Hook.ModifyUnblockedDamageTarget, Hook.AfterBlockBroken, Hook.AfterDamageGiven, Hook.AfterDamageReceived, Hook.ShouldDie, Hook.AfterPreventingDeath, Creature.DamageBlockInternal, Creature.LoseHpInternal
-  simulator: SimEngine.Damage, SimEngine.ModifiedDamage, SimEngine.CalcDamage, SimEngine.PlainDamage, SimEngine.AnyListensToDamage, SimEngine.HpLossPipeline, SimEngine.HpLoss, SimEngine.PlayerDamaged, SimEngine.Lands, SimEngine.LandBlockable, SimEngine.LoseHp, SimEngine.Lose, SimEngine.PlayHp, SimEngine.BiggestHit, SimEngine.HitOnce, SimEngine.HitAll, SimEngine.HitRandom, SimEngine.RandomTarget, SimEngine.ProcHitOn, SimEngine.ProcDamageAll, SimEngine.ProcDamageRandom, SimEngine.ProcDamageOn, SimEngine.ProcDamagePlayer, SimEngine.ProcDamageOsty, SimEngine.DamagePlayer, SimEngine.RunDamage, SimEngine.IntentDamage, SimEngine.WithoutEnchantment, SimEngine.DamageAllEnemies
+  simulator: SimEngine.Damage, SimEngine.ModifiedDamage, SimEngine.CalcDamage, SimEngine.PlainDamage, SimEngine.AnyListensToDamage, SimEngine.HpLossPipeline, SimEngine.HpLoss, SimEngine.PlayerDamaged, SimEngine.Lands, SimEngine.LandBlockable, SimEngine.LoseHp, SimEngine.Lose, SimEngine.AtZero, SimEngine.PlayHp, SimEngine.BiggestHit, SimEngine.HitOnce, SimEngine.HitAll, SimEngine.HitRandom, SimEngine.RandomTarget, SimEngine.ProcHitOn, SimEngine.ProcDamageAll, SimEngine.ProcDamageRandom, SimEngine.ProcDamageOn, SimEngine.ProcDamagePlayer, SimEngine.ProcDamageOsty, SimEngine.DamagePlayer, SimEngine.RunDamage, SimEngine.IntentDamage, SimEngine.WithoutEnchantment, SimEngine.DamageAllEnemies
 An attack: its hits, their targets (a random one a branch each), the attack's hooks
   game: AttackCommand.Execute, DamageCmd.Attack, Hook.BeforeAttack, Hook.AfterAttack, Hook.ModifyAttackHitCount
   simulator: SimEngine.RunAttack, SimEngine.HitCount, SimEngine.EnemyAttackHook
@@ -47,8 +47,8 @@ Poison: Outbreak's trigger of every enemy's poison, and the game's preview of th
   game: PoisonPower.Trigger, PoisonPower.CalculateTotalDamageNextTurn
   simulator: SimEngine.RunModelCommand, SimEngine.PoisonTick
 Deaths: the hooks told as each happens (an end-of-turn step's, and what they raise, before the next), a dead enemy's powers gone, the creatures a death adds, a kill, a stun
-  game: CreatureCmd.Kill, Hook.AfterDeath, Creature.RemoveAllPowersAfterDeath, Hook.ShouldPowerBeRemovedOnDeath, CreatureCmd.Add, CreatureCmd.Stun
-  simulator: SimEngine.AllyDeaths, SimEngine.DeathCheck, SimEngine.Spawn, SimEngine.SpawnPowers, SimEngine.Stun, SimEngine.RunExecute
+  game: CreatureCmd.Kill, CreatureCmd.KillWithoutCheckingWinCondition, Hook.AfterDeath, Creature.RemoveAllPowersAfterDeath, Hook.ShouldPowerBeRemovedOnDeath, CreatureCmd.Add, CreatureCmd.Stun
+  simulator: SimEngine.AllyDeaths, SimEngine.DeathCheck, SimEngine.Spawn, SimEngine.SpawnPowers, SimEngine.Stun, SimEngine.RunExecute, SimEngine.KillPlayer
 The players' turn's end: its hooks in their places, Ethereal cards, the cards that act in hand, the hand flushed
   game: CombatManager.EndPlayerTurnPhaseOneInternal, CombatManager.EndPlayerTurnPhaseTwoInternal, CombatManager.DoTurnEnd, CombatManager.FlushPlayerHand, Hook.BeforeSideTurnEnd, Hook.AfterSideTurnEnd, Hook.ShouldEtherealTrigger, Hook.ShouldFlush, Hook.BeforeFlush
   simulator: SimEngine.EndOfTurn, SimEngine.Exhausting, SimEngine.CardsActInHand
@@ -75,7 +75,7 @@ Hexed's Ethereal, granted by Hex while it lasts and gone when its applier dies, 
   simulator: SimAdapter.EtherealOnlyFromHex, SimEngine.Exhausting
 Fairy in a Bottle and Lizard Tail: a death held back, healed from 0
   game: FairyInABottle.ShouldDie, FairyInABottle.AfterPreventingDeath, LizardTail.ShouldDieLate, LizardTail.AfterPreventingDeath
-  simulator: SimEngine.Lose
+  simulator: SimEngine.Lose, SimEngine.AtZero
 
 ## The hand-written models (Sim/Models): each game class's hooks, and what its model answers
 
@@ -189,8 +189,6 @@ SwordSagePower: SwordSagePower.AfterCardEnteredCombat, SwordSagePower.AfterPower
   model: nothing it overrides
 TagTeamPower: TagTeamPower.AfterModifyingCardPlayCount, TagTeamPower.ModifyCardPlayCount
   model: AfterApplied, AfterModifyingCardPlayCount, ModifyCardPlayCount
-TheGambitPower: TheGambitPower.AfterDamageReceived
-  model: AfterDamageReceived, OutcomeTab
 TrashToTreasurePower: TrashToTreasurePower.AfterCardGeneratedForCombat
   model: AfterCardEvent
 UnceasingTop: UnceasingTop.AfterHandEmptied

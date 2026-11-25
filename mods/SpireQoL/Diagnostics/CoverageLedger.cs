@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Models;
 using SpireQoL.Combat;
@@ -291,7 +291,7 @@ internal static partial class CoverageLedger
         ["TenderPower"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed Strength and Dexterity down per card, applied by its applier (crossed proc tab: it hurts you; a replay's later plays hit and block 1 less each in the simulator)",
         ["TerritorialPower"] = "ignore: read from its code (ReadModel, decision #195): AfterSideTurnEnd Strength as its owner's side's turn ends, which no simulation reaches for an enemy (later attacks)",
         ["TheBombPower"] = "covered: read from its code (ReadModel, decision #195): BeforeSideTurnEnd ticks each copy down, then a copy on its last tick damages all enemies by its own Damage (each copy its own: decision #196) and goes; a Relic Counters row for each copy (the turns left from its count and its last tick, read from its code, and its Damage: decision #248), no tab (the owner's call)",
-        ["TheGambitPower"] = "covered: AfterDamageReceived dies to an attack through block (simulator)",
+        ["TheGambitPower"] = "covered: read from its code (ReadModel, decision #256): AfterDamageReceived kills its owner (CreatureCmd.Kill) as a powered attack gets HP through its block, and goes: a player (The Gambit card's own) dies unless a Fairy in a Bottle or Lizard Tail holds it back; on an enemy, the kill-itself outcome tab",
         ["TheSealedThronePower"] = "covered: read from its code (ReadModel, decision #195): BeforeCardPlayed stars per card (proc tab, Black Hole second pass)",
         ["ThornsPower"] = "covered: read from its code (ReadModel, decision #241): BeforeDamageReceived damages the dealer of a powered attack on its owner (main's also of Omnislice's splash): an enemy's on your attacks (its crossed damage tab), yours on an enemy's attack in the enemy turn",
         ["ThunderPower"] = "covered: read from its code (ReadModel, decision #214): AfterOrbEvoked flashes and damages a Lightning evoke's living targets again, its amount, from its owner (proc tab on cards that evoke Lightning)",

@@ -192,6 +192,7 @@ public static partial class ReadModels
         RelicId.TheAbacus.Name,
         PowerId.TheBomb.Name,
         RelicId.TheBoot.Name,
+        PowerId.TheGambit.Name,
         PowerId.TheSealedThrone.Name,
         PowerId.Thorns.Name,
         RelicId.ThrowingAxe.Name,

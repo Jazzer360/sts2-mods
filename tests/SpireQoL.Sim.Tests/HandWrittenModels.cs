@@ -2054,3 +2054,21 @@ public sealed class SongPathPower : ProcModel
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
         Mine(play, owner) && Melodies.First(state, play, SimCardTag.Cho) ? Block(state, owner, Amount(state, owner)) : One(state);
 }
+
+// ---- a kill of its owner (round eighteen: Sim/Models/ReactionModels.cs, deleted 2026-11-24)
+
+/// <summary>TheGambitPower.AfterDamageReceived: a powered attack that gets HP through kills its owner.</summary>
+public sealed class TheGambitPower : SimModel
+{
+    public override OutcomeRule? OutcomeTab(SimState start, SimOutcome now, int owner) =>
+        Who.IsEnemy(owner) && !now.KilledByItsPowerInAll(owner) ? new(Harmful: false, outcome => outcome.KilledByItsPowerInAll(owner)) : null;
+
+    public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
+    {
+        if (hit.Target != owner || !hit.Props.IsPoweredAttack() || hit.Unblocked <= 0 || state.Enemy(owner) is not { } enemy) return;
+        enemy.Powers = enemy.Powers.Without(ThisPower);
+        state.LogFired(Name, amount: 0, owner);
+        enemy.KilledByItsPower = true;
+        enemy.Hp = 0;
+    }
+}
