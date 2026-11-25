@@ -200,7 +200,7 @@ relic BoneFlute: AfterAttack: read
 relic BookOfFiveRings: AfterCardChangedPiles: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic BookRepairKnife: AfterDiedToDoom: gap: the simulator runs no read model's AfterDiedToDoom
 relic BrilliantScarf: AfterCardPlayed: gap: tests cardPlay.IsAutoPlay | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: not run: it acts as its owner's next turn starts, past the turns a simulation covers | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate | TryModifyStarCost: gap: the simulator runs no read model's TryModifyStarCost
-relic BurningSticks: AfterCardExhausted: gap: makes card.CreateClone() | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns
+relic BurningSticks: AfterCardExhausted: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns
 relic Byrdpip: AfterCardPlayed: read | AfterObtained: not run: when the relic is obtained: outside the fight's turns | BeforeCombatStart: not run: before the fight: the state is read after it | TryModifyRestSiteOptions: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic CaptainsWheel: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
 relic CentennialPuzzle: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterDamageReceived: read

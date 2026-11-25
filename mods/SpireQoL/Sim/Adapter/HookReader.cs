@@ -1591,12 +1591,14 @@ public static class HookReader
                 {
                     var pileAt = IndexOf(types, "PileType");
                     var creatorAt = IndexOf(types, "Player");
-                    if (values.Count == 0 || !IsCopyOfPlayCard(values[0])) throw new Gap(ReaderCapability.CardMade, $"gap: makes {(values.Count > 0 ? values[0] : "nothing")}");
+                    // A copy of a card event's card (AfterCardExhausted's card.CreateClone(): Burning Sticks'), the keywords it has kept.
+                    var ofEventCard = values.Count > 0 && Unstored(values[0]) is QueryValue { Name: "CreateClone", Of: { } eventCloned } && IsEventCard(eventCloned) && _hook != "AfterCardPlayed";
+                    if (values.Count == 0 || !IsCopyOfPlayCard(values[0]) && !ofEventCard) throw new Gap(ReaderCapability.CardMade, $"gap: makes {(values.Count > 0 ? values[0] : "nothing")}");
                     if (pileAt < 0 || values[pileAt] is not ConstantValue pile || EnumName(_type.Assembly, "PileType", pile.Value) != "Hand") throw new Gap(ReaderCapability.CardMade, "gap: a card made into another pile");
                     if (creatorAt < 0 || !IsOwner(values[creatorAt])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, "gap: a card made for someone else");
                     var keywords = _copyKeywords.TryGetValue(values[0].ToString(), out var applied) ? applied : new List<string>();
                     if (keywords.Any(keyword => keyword != "Ethereal")) throw new Gap(ReaderCapability.CardChanged, $"gap: the keywords {string.Join(", ", keywords)} on a card made");
-                    return new MakeCopyStep(Ethereal: keywords.Contains("Ethereal"));
+                    return new MakeCopyStep(Ethereal: keywords.Contains("Ethereal"), OfEventCard: ofEventCard);
                 }
                 case "CardPileCmd.Draw":
                 {

@@ -49,7 +49,7 @@ internal static partial class CoverageLedger
         ["BookOfFiveRings"] = "ignore: AfterCardChangedPiles heals when cards are added to your deck (deck, not combat)",
         ["BookRepairKnife"] = "ignore: AfterDiedToDoom heals you (predictions are about HP lost)",
         ["BrilliantScarf"] = "covered: AfterCardPlayed counts cards this turn (tracker row)",
-        ["BurningSticks"] = "covered: AfterCardExhausted clones the first exhausted Skill (proc tab, created card)",
+        ["BurningSticks"] = "covered: read from its code (ReadModel, decision #246): AfterCardExhausted makes a copy of its owner's first exhausted Skill this combat (card.CreateClone() into the hand, its own WasUsedThisCombat) (proc tab, created card)",
         ["CaptainsWheel"] = "covered: AfterBlockCleared gains block on turn 3, at the start of your turn (tracker turn timer)",
         ["CentennialPuzzle"] = "covered: read from its code (ReadModel, decision #214): AfterDamageReceived draws its Cards, one at a time (a counter loop to a decimal bound), on its owner's first HP loss of the combat (UsedThisCombat its own field), queued until the hit is over; draw tab with the cards drawn",
         ["CharonsAshes"] = "covered: read from its code (ReadModel, decision #195): AfterCardExhausted damages all enemies (model CharonsAshes: every exhaust, Ethereal ones at end of turn included)",

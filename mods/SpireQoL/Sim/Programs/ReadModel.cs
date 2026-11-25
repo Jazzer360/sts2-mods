@@ -1465,6 +1465,15 @@ public sealed class ReadModel : SimModel
             case MakeCopyStep copy:
             {
                 var ethereal = copy.Ethereal;
+                if (copy.OfEventCard)
+                    return args =>
+                    {
+                        // A copy of the event's card (the card exhausted), as it is: its facts when the event knows them.
+                        if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                        SimEngine.AddToHand(args.State, args.Owner, count: 1, ethereal);
+                        var copied = args.State.EventCard is { } eventCard && ethereal && !eventCard.Ethereal ? eventCard with { Ethereal = true } : args.State.EventCard;
+                        return SimEngine.ProcCardEvent(args.State, CardEvent.Generated, count: 1, args.Owner, onEach: SimEngine.TallyFor(Name, Tab, CardEvent.Generated, args.Owner), card: copied);
+                    };
                 return args =>
                 {
                     if (args.Play is not { } played) return One(args.State);

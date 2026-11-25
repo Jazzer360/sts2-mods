@@ -1,0 +1,300 @@
+0 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 10/18/4 hand 0
+1 proc:BlackHolePower plain Damage 5 amount 5 5-5; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 18 hand 4
+2 proc:BlackHolePower plain Damage 12 amount 12 12-12; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 30/-3/9 hand 3
+3 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 7/9 hand 2
+4 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 19/5/31 hand 1
+5 proc:BlackHolePower plain Damage 4 amount 4 4-4; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 28/21 hand 4
+6 proc:BlackHolePower plain Damage 3 amount 3 3-3; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 2/1/18 hand 4
+7 proc:BlackHolePower plain Damage 4 amount 4 4-4; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 14/26 hand 0
+8 proc:BlackHolePower plain Damage 3 amount 3 3-3; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 25/36/18 hand 2
+9 proc:BlackHolePower plain Damage 16 amount 16 16-16; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 29/7 hand 4
+10 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 9/13/21 hand 0
+11 proc:BlackHolePower plain Damage 4 amount 4 4-4; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 19/12 hand 2
+12 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 32 hand 3
+13 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 5/38 hand 1
+14 proc:BlackHolePower plain Damage 4 amount 4 4-4; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 12 hand 2
+15 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 28/4 hand 4
+16 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 30 hand 2
+17 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 12/18 hand 3
+18 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 23 hand 2
+19 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 34/36/25 hand 0
+20 proc:BlackHolePower plain Damage 3 amount 3 3-3; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 7 hand 0
+21 proc:BlackHolePower plain Damage 15 amount 15 15-15; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 6/26/32 hand 3
+22 proc:BlackHolePower plain Damage 2 amount 2 2-2; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 28 hand 0
+23 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 2/27/6 hand 0
+24 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 9 hand 0
+25 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 25/24/39 hand 2
+26 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 36/13 hand 4
+27 proc:BlackHolePower plain Damage 15 amount 15 15-15; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 5/3/20 hand 2
+28 proc:BlackHolePower plain Damage 10 amount 10 10-10; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 15/38 hand 3
+29 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 23/11/35 hand 2
+30 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 4/32 hand 4
+31 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 14/5/39 hand 1
+32 | checked | seen | hp 27/30 hand 1
+33 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 39 hand 2
+34 proc:BlackHolePower plain Damage 4 amount 4 4-4; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 9/27 hand 2
+35 | checked | seen | hp 21 hand 0
+36 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 34/2 hand 3
+37 | checked | seen | hp 6 hand 4
+38 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 15/16 hand 2
+39 proc:BlackHolePower plain Damage 5 amount 5 5-5; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 22 hand 4
+40 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 2/22 hand 0
+41 proc:BlackHolePower plain Damage 5 amount 5 5-5; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 8 hand 3
+42 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 17/9/14 hand 0
+43 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 36 hand 0
+44 proc:BlackHolePower plain Damage 12 amount 12 12-12; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 4/6/25 hand 3
+45 proc:BlackHolePower plain Damage 4 amount 4 4-4; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 16 hand 2
+46 proc:BlackHolePower plain Damage 12 amount 12 12-12; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 25/28/10 hand 3
+47 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 4 hand 2
+48 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 15/39/21 hand 3
+49 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 27/18 hand 0
+50 proc:BlackHolePower plain Damage 15 amount 15 15-15; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 33/4/8 hand 0
+51 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 11/14 hand 2
+52 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 22/32/29 hand 4
+53 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 33/36 hand 4
+54 proc:BlackHolePower plain Damage 9 amount 9 9-9; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 3/25/18 hand 0
+55 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 13/5 hand 0
+56 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 22 hand 2
+57 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp -2/0 hand 0
+58 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 13 hand 2
+59 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 24/38 hand 2
+60 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 36 hand 0
+61 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 8/34 hand 0
+62 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 17 hand 0
+63 proc:BlackHolePower plain Damage 12 amount 12 12-12; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 31/22/0 hand 1
+64 proc:BlackHolePower plain Damage 1 amount 1 1-1; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp -7 hand 0
+65 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 15/27/3 hand 0
+66 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 26 hand 1
+67 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 38/23/23 hand 2
+68 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 10 hand 0
+69 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 19/14/1 hand 0
+70 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 33/30 hand 4
+71 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp -4/10/3 hand 3
+72 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 17/33 hand 2
+73 proc:BlackHolePower plain Damage 9 amount 9 9-9; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 28/13/13 hand 4
+74 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp -7/27 hand 1
+75 proc:BlackHolePower plain Damage 6 amount 6 6-6; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 10/7/23 hand 5
+76 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 24/1 hand 4
+77 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 32/0/-2 hand 4
+78 proc:BlackHolePower plain Damage 1 amount 1 1-1; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp -1/11 hand 2
+79 proc:BlackHolePower plain Damage 5 amount 5 5-5; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 5 hand 4
+80 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 30/20 hand 4
+81 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 2 hand 4
+82 proc:BlackHolePower plain Damage 16 amount 16 16-16; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 6/8 hand 1
+83 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 26 hand 0
+84 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 37/10 hand 2
+85 proc:BlackHolePower plain Damage 3 amount 3 3-3; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 7 hand 3
+86 proc:BlackHolePower plain Damage 15 amount 15 15-15; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 14/22/37 hand 3
+87 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 21 hand 2
+88 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 5/3/24 hand 4
+89 proc:BlackHolePower plain Damage 2 amount 2 2-2; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 12 hand 2
+90 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 28/4/10 hand 2
+91 | checked | seen | hp 30 hand 1
+92 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 8/31/22 hand 0
+93 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 23/34 hand 3
+94 proc:BlackHolePower plain Damage 3 amount 3 3-3; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 34/29/23 hand 2
+95 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 7/9 hand 0
+96 proc:BlackHolePower plain Damage 15 amount 15 15-15; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 19/14/2 hand 0
+97 | checked | seen | hp 30/5 hand 0
+98 proc:BlackHolePower plain Damage 15 amount 15 15-15; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp -3/16/11 hand 3
+99 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 14/1 hand 3
+100 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 25 hand 4
+101 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 37/36 hand 0
+102 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 7 hand 2
+103 proc:BlackHolePower plain Damage 2 amount 2 2-2; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 21/23 hand 0
+104 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 32 hand 0
+105 | checked | seen | hp 5/29 hand 0
+106 proc:BlackHolePower plain Damage 4 amount 4 4-4; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 13 hand 0
+107 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 27/25 hand 3
+108 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 36 hand 0
+109 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 5/18/-4 hand 2
+110 proc:BlackHolePower plain Damage 8 amount 8 8-8; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 17 hand 3
+111 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 34/17/6 hand 4
+112 proc:BlackHolePower plain Damage 4 amount 4 4-4; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 3 hand 4
+113 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 16/13/-4 hand 0
+114 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 30 hand 4
+115 proc:BlackHolePower plain Damage 12 amount 12 12-12; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp -2/10/17 hand 0
+116 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 5/29 hand 2
+117 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 19/3/3 hand 2
+118 proc:BlackHolePower plain Damage 20 amount 20 20-20; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 26/14 hand 2
+119 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 0/-5/3 hand 0
+120 proc:BlackHolePower plain Damage 10 amount 10 10-10; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 20/18 hand 2
+121 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 23/38/8 hand 2
+122 proc:BlackHolePower plain Damage 2 amount 2 2-2; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 3/16 hand 1
+123 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 16 hand 0
+124 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 27/12 hand 2
+125 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 32 hand 3
+126 proc:BlackHolePower plain Damage 2 amount 2 2-2; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 11/27 hand 4
+127 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 22 hand 2
+128 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 33/1 hand 2
+129 | checked | seen | hp 6 hand 0
+130 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 18/8/15 hand 3
+131 | checked | seen | hp 24 hand 1
+132 | checked | seen | hp 1/36/26 hand 1
+133 | checked | seen | hp 13 hand 3
+134 proc:BlackHolePower plain Damage 9 amount 9 9-9; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 21/29/24 hand 4
+135 proc:BlackHolePower plain Damage 5 amount 5 5-5; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 31 hand 0
+136 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 8/18/5 hand 2
+137 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 20/7 hand 0
+138 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 25/18/15 hand 0
+139 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 4/-3 hand 1
+140 proc:BlackHolePower plain Damage 12 amount 12 12-12; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 13/37/-2 hand 2
+141 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 23/36 hand 0
+142 | checked | seen | hp 38/17/27 hand 4
+143 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 10/22 hand 5
+144 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 22/14/27 hand 3
+145 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 26/26 hand 0
+146 proc:BlackHolePower plain Damage 4 amount 4 4-4; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 6 hand 0
+147 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 14/27 hand 1
+148 proc:BlackHolePower plain Damage 4 amount 4 4-4; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 25 hand 0
+149 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 1/32 hand 2
+150 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 12 hand 3
+151 proc:BlackHolePower plain Damage 2 amount 2 2-2; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 17/10 hand 0
+152 proc:BlackHolePower plain Damage 3 amount 3 3-3; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 32 hand 4
+153 proc:BlackHolePower plain Damage 9 amount 9 9-9; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 8/9/6 hand 4
+154 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 19 hand 5
+155 proc:BlackHolePower plain Damage 9 amount 9 9-9; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 28/12/16 hand 0
+156 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 3 hand 4
+157 proc:BlackHolePower plain Damage 12 amount 12 12-12; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 10/3/-1 hand 4
+158 proc:BlackHolePower plain Damage 2 amount 2 2-2; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 24 hand 3
+159 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 33/15/36 hand 3
+160 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 8/20 hand 3
+161 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 21/1/8 hand 5
+162 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 33/18 hand 1
+163 proc:BlackHolePower plain Damage 20 amount 20 20-20; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp -2/-2/10 hand 2
+164 proc:BlackHolePower plain Damage 20 amount 20 20-20; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 0/2 hand 3
+165 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 22/31/8 hand 3
+166 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 1/22 hand 3
+167 proc:BlackHolePower plain Damage 2 amount 2 2-2; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 10 hand 3
+168 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 23/7 hand 3
+169 | checked | seen | hp 31 hand 0
+170 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 3/3 hand 0
+171 | checked | seen | hp 10 hand 2
+172 proc:BlackHolePower plain Damage 10 amount 10 10-10; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 25/34 hand 3
+173 proc:BlackHolePower plain Damage 2 amount 2 2-2; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 3 hand 3
+174 | checked | seen | hp 14/35/29 hand 1
+175 proc:BlackHolePower plain Damage 10 amount 10 10-10; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 16 hand 0
+176 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 37/16/12 hand 1
+177 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 0 hand 0
+178 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 17/21/13 hand 3
+179 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 30 hand 0
+180 proc:BlackHolePower plain Damage 3 amount 3 3-3; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 4/22/29 hand 4
+181 proc:BlackHolePower plain Damage 3 amount 3 3-3; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 13 hand 0
+182 proc:BlackHolePower plain Damage 9 amount 9 9-9; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 25/17/27 hand 0
+183 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 37/12 hand 4
+184 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 12/16/30 hand 5
+185 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 15/33 hand 0
+186 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 34/-3/4 hand 1
+187 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 7/30 hand 1
+188 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 17/1/27 hand 3
+189 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 27/30 hand 0
+190 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 2 hand 0
+191 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 14/22 hand 1
+192 proc:BlackHolePower plain Damage 3 amount 3 3-3; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 14 hand 0
+193 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 37/5 hand 0
+194 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 4 hand 4
+195 proc:BlackHolePower plain Damage 8 amount 8 8-8; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 16/11 hand 1
+196 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 32 hand 4
+197 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 4/11/11 hand 2
+198 proc:BlackHolePower plain Damage 1 amount 1 1-1; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 15 hand 3
+199 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 27/16/34 hand 2
+200 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 32 hand 2
+201 proc:BlackHolePower plain Damage 9 amount 9 9-9; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 8/3/3 hand 1
+202 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 22 hand 3
+203 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 34/39/16 hand 5
+204 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 6/17 hand 4
+205 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 16/32/4 hand 0
+206 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 25/20 hand 3
+207 proc:BlackHolePower plain Damage 20 amount 20 20-20; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp -2/18/2 hand 3
+208 | checked | seen | hp 13/9 hand 3
+209 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 25/10/19 hand 2
+210 proc:BlackHolePower plain Damage 10 amount 10 10-10; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 31/6 hand 0
+211 proc:BlackHolePower plain Damage 9 amount 9 9-9; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 6/20/9 hand 3
+212 proc:BlackHolePower plain Damage 9 amount 9 9-9; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 8/-1 hand 3
+213 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 31 hand 3
+214 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 4/37 hand 3
+215 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 15 hand 1
+216 proc:BlackHolePower plain Damage 10 amount 10 10-10; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 26/14 hand 0
+217 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 32 hand 0
+218 proc:BlackHolePower plain Damage 20 amount 20 20-20; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp -1/21 hand 0
+219 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 22 hand 4
+220 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 34/26/32 hand 1
+221 proc:BlackHolePower plain Damage 3 amount 3 3-3; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 3 hand 0
+222 proc:BlackHolePower plain Damage 3 amount 3 3-3; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 17/23/30 hand 0
+223 proc:BlackHolePower plain Damage 2 amount 2 2-2; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 29 hand 2
+224 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 1/18/33 hand 0
+225 | checked | seen | hp 12 hand 4
+226 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 20/-3/3 hand 3
+227 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 36/32 hand 0
+228 | checked | seen | hp 8/11/33 hand 0
+229 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 17/26 hand 4
+230 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 31/7/33 hand 4
+231 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 0/20 hand 0
+232 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 15/13/39 hand 1
+233 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 26/9 hand 0
+234 | checked | seen | hp 38 hand 4
+235 proc:BlackHolePower plain Damage 4 amount 4 4-4; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 8/15 hand 2
+236 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 22 hand 3
+237 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 33/13 hand 1
+238 proc:BlackHolePower plain Damage 1 amount 1 1-1; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp -2 hand 3
+239 proc:BlackHolePower plain Damage 8 amount 8 8-8; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 13/6 hand 4
+240 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 28 hand 4
+241 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 1/6/4 hand 0
+242 proc:BlackHolePower plain Damage 10 amount 10 10-10; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 11 hand 0
+243 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 24/37/1 hand 1
+244 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 35 hand 2
+245 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 8/37/14 hand 3
+246 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 19 hand 2
+247 | checked | seen | hp 30/33/15 hand 0
+248 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 3 hand 0
+249 proc:BlackHolePower plain Damage 3 amount 3 3-3; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 14/8/8 hand 2
+250 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 23/8 hand 0
+251 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 37/26/15 hand 0
+252 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 10/32 hand 2
+253 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 21/22/15 hand 2
+254 proc:BlackHolePower plain Damage 2 amount 2 2-2; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 27/31 hand 4
+255 proc:BlackHolePower plain Damage 12 amount 12 12-12; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 0/8/2 hand 0
+256 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 16/12 hand 3
+257 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 22 hand 1
+258 proc:BlackHolePower plain Damage 4 amount 4 4-4; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 31/27 hand 0
+259 proc:BlackHolePower plain Damage 2 amount 2 2-2; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 12 hand 4
+260 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 21/20 hand 4
+261 proc:BlackHolePower plain Damage 2 amount 2 2-2; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 33 hand 0
+262 | checked | seen | hp 7/22 hand 3
+263 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 19 hand 0
+264 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 27/20/36 hand 1
+265 | checked | seen | hp 2 hand 4
+266 | checked | seen | hp 14/2/8 hand 4
+267 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 25 hand 4
+268 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 32/6/32 hand 3
+269 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 9 hand 2
+270 | checked | seen | hp 21/9/36 hand 0
+271 proc:BlackHolePower plain Damage 4 amount 4 4-4; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 30/25 hand 2
+272 proc:BlackHolePower plain Damage 3 amount 3 3-3; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 5/12/27 hand 2
+273 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 13/23 hand 0
+274 proc:BlackHolePower plain Damage 9 amount 9 9-9; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 24/1/5 hand 0
+275 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 39/19 hand 2
+276 proc:BlackHolePower plain Damage 15 amount 15 15-15; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 6/31/-5 hand 0
+277 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 20/12 hand 1
+278 proc:BlackHolePower plain Damage 1 amount 1 1-1; proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 1/1; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 33 hand 5
+279 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 7/8 hand 3
+280 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 18 hand 3
+281 | checked | seen | hp 30/8 hand 0
+282 proc:BlackHolePower plain Damage 5 amount 5 5-5; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 2 hand 0
+283 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 8/-1 hand 1
+284 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 20 hand 2
+285 proc:BlackHolePower plain Damage 6 amount 6 6-6; | checked BlackHolePower 1/1; | seen BlackHolePower Flash plain; | hp 33/36 hand 1
+286 proc:BlackHolePower plain Damage 5 amount 5 5-5; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 7 hand 2
+287 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 20/35/17 hand 3
+288 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 32 hand 2
+289 | checked | seen | hp 4/1/-3 hand 4
+290 proc:BurningSticks plain amount 0 0-0; | checked BurningSticks 1/1; | seen BurningSticks Flash plain; | hp 9 hand 1
+291 proc:BurningSticks plain amount 0 0-0; | checked BlackHolePower 0/0; BurningSticks 1/1; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 27/28/17 hand 2
+292 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 38 hand 3
+293 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 11/24/18 hand 0
+294 proc:BlackHolePower plain Damage 10 amount 10 10-10; | checked BlackHolePower 1/1; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 17/-2 hand 4
+295 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 31/11/14 hand 2
+296 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 6/11 hand 2
+297 | checked BlackHolePower 0/0; BurningSticks 0/0; | seen BlackHolePower Flash plain; BurningSticks Flash plain; | hp 14/15/-4 hand 0
+298 | checked BurningSticks 0/0; | seen BurningSticks Flash plain; | hp 20/34 hand 0
+299 | checked BlackHolePower 0/0; | seen BlackHolePower Flash plain; | hp 2/35/11 hand 3

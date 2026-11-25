@@ -26,6 +26,7 @@ public static partial class ReadModels
         RelicId.BoneFlute.Name,
         nameof(MegaCrit.Sts2.Core.Models.Afflictions.Bound),
         PowerId.Buffer.Name,
+        RelicId.BurningSticks.Name,
         PowerId.Burst.Name,
         RelicId.Byrdpip.Name,
         PowerId.Cacophony.Name,

@@ -1405,3 +1405,10 @@ Read so, the hand-written models frozen in the tests first: Shriek, Flutter (par
 *Why:* by classes unlocked: a monster's own state set (Flutter, Ravenous) and a stun (Shriek, the last gap each waited on).
 *Replaced:* the hand-written ShriekPower, FlutterPower and RavenousPower; `SimReaders`' Flutter rule.
 *What changed:* nothing shown; the single-player golden and the card snapshots are unchanged.
+
+### 246. A copy of a card event's card made into the hand is read from the code; Burning Sticks is read from its code — active (2026-11-24)
+`CardPileCmd.AddGeneratedCardToCombat` of a copy of the card a card event is about (`card.CreateClone()` in AfterCardExhausted) into its owner's hand is a card made (`MakeCopyStep.OfEventCard`): it joins the hand, and AfterCardGeneratedForCombat's listeners hear it with the event's card's facts (the card exhausted, as the event knows it), as a copy of the card played is (decision #226). Its own `WasUsedThisCombat` is its state, seeded from the game, where the hand-written model read the relic's armed flag.
+Read so, the hand-written model frozen in the tests first: Burning Sticks (parity). Its tab and Black Hole's (decision #244), recorded with the hand-written models on 300 generated fights (a card that spends or gains stars, plays twice, exhausts itself or another card), are unchanged (`ProcTabParityTests`).
+*Why:* by classes unlocked: a card made (Burning Sticks' last gap).
+*Replaced:* the hand-written BurningSticks.
+*What changed:* nothing shown; the single-player golden and the card snapshots are unchanged.

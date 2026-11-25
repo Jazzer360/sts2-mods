@@ -2023,3 +2023,16 @@ public sealed class RavenousPower : SimModel
         SimEngine.Stun(enemy);
     }
 }
+
+// ---- a copy of a card event's card (round seventeen: Sim/Models/ProcRelicModels.cs, deleted 2026-11-24)
+
+/// <summary>BurningSticks.AfterCardExhausted: once a combat, a Skill you exhaust is copied into your hand.</summary>
+public sealed class BurningSticks : RelicProc
+{
+    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
+    {
+        if (cardEvent != CardEvent.Exhausted || player != owner || !Armed(state, owner) || state.EventCard?.Type != SimCardType.Skill) return One(state);
+        Disarm(state, owner);
+        return MakeInHand(Fire(state, owner), state.EventCard, count: 1, owner); // a clone of the card exhausted
+    }
+}

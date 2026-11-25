@@ -90,16 +90,7 @@ public sealed class BiiigHug : RelicProc
 
 // ---- used up by a play
 
-/// <summary>BurningSticks.AfterCardExhausted: once a combat, a Skill you exhaust is copied into your hand.</summary>
-public sealed class BurningSticks : RelicProc
-{
-    public override IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player)
-    {
-        if (cardEvent != CardEvent.Exhausted || player != owner || !Armed(state, owner) || state.EventCard?.Type != SimCardType.Skill) return One(state);
-        Disarm(state, owner);
-        return MakeInHand(Fire(state, owner), state.EventCard, count: 1, owner); // a clone of the card exhausted
-    }
-}
+// Burning Sticks is read from its code (ReadModel, decision #246).
 
 /// <summary>
 /// UnsettlingLamp: while armed, the first card of yours that applies a debuff to an enemy without Artifact (BeforePowerAmountChanged)

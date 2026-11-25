@@ -653,7 +653,8 @@ public sealed record FreeInHandStep : HookStep;
 /// CardPileCmd.AddGeneratedCardToCombat of a copy of the card played into its owner's hand (cardPlay.Card.CreateClone(), Ethereal when its code
 /// applies it to the copy first: Music Box's): a card made, joining the hand, its event's card the card played's facts with those keywords.
 /// </summary>
-public sealed record MakeCopyStep(bool Ethereal) : HookStep;
+/// <param name="OfEventCard">A copy of the card event's card instead (AfterCardExhausted's card.CreateClone(): Burning Sticks').</param>
+public sealed record MakeCopyStep(bool Ethereal, bool OfEventCard = false) : HookStep;
 
 /// <summary>PowerCmd.Remove(this): the power itself goes from its owner.</summary>
 public sealed record RemovePowerStep : HookStep;
