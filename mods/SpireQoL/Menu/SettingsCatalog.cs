@@ -316,6 +316,7 @@ public static class SettingsCatalog
         new(nameof(PaleBlueDotPower), SourceGroup.YourPower, "Your 5th card this turn", "Cards this turn, toward 5 (\"done\" once it fired)"),
         new(nameof(DarkEmbracePower), SourceGroup.YourPower, "Cards that exhaust: draw"),
         new(nameof(OrbitPower), SourceGroup.YourPower, "Cards whose energy finishes its count", "Energy spent, toward the next energy"),
+        new(nameof(TheBombPower), SourceGroup.YourPower, null, "Turns until it explodes, and its damage to all (a row for each one)"),
         new(nameof(AutomationPower), SourceGroup.YourPower, "Cards whose draws finish its count", "Cards drawn, toward the next energy"),
         new(nameof(CorrosiveWavePower), SourceGroup.YourPower, "Cards that draw"),
         new(nameof(NoDrawPower), SourceGroup.YourPower, "Cards whose draws it stops (Battle Trance)"),

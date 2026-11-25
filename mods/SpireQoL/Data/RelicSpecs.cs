@@ -22,7 +22,11 @@ public enum CounterKind
 /// <param name="Threshold">Steps per cycle (from the decompile; the game shows "left" via DisplayAmount).</param>
 /// <param name="Unit">Short noun for the label ("cards", "energy"...).</param>
 /// <param name="OnEnemy">Lives on an enemy but counts your plays (Withering Presence).</param>
-public sealed record PowerCounterSpec(string TypeName, int Threshold, string Unit, bool CrossTurn = false, bool OnEnemy = false);
+/// <param name="Countdown">
+/// Counts its own amount down to a payout (The Bomb: decision #254): the turns left from its amount and its last tick, read from its code
+/// (ReadModel.CountdownAt), and its own Damage; Threshold is the bar's length when the card that makes it can't be read.
+/// </param>
+public sealed record PowerCounterSpec(string TypeName, int Threshold, string Unit, bool CrossTurn = false, bool OnEnemy = false, bool Countdown = false);
 
 /// <summary>
 /// Powers that count down to an effect. The game exposes "steps left" as PowerModel.DisplayAmount.
@@ -39,6 +43,7 @@ public static class PowerSpecs
         // Counts every card played this turn, despite the game's property being named "AttacksPlayedThisTurn".
         new PowerCounterSpec(nameof(PaleBlueDotPower), Threshold: 5, "cards"),                   // 5 cards this turn: draw next turn (once)
         new PowerCounterSpec(nameof(WitheringPresencePower), Threshold: 6, "cards", CrossTurn: true, OnEnemy: true), // every 6 cards: Wither in hand
+        new PowerCounterSpec(nameof(TheBombPower), Threshold: 3, "turns", CrossTurn: true, Countdown: true),   // each copy: its Damage to all as its count ends
     };
 
     private static readonly Dictionary<string, PowerCounterSpec> ByName = All.ToDictionary(powerCounterSpec => powerCounterSpec.TypeName);

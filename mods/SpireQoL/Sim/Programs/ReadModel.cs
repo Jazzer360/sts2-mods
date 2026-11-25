@@ -164,6 +164,26 @@ public sealed class ReadModel : SimModel
         else SetUp(state, owner, wasOn);
     }
 
+    /// <summary>
+    /// The amount its payout waits for, a countdown's last tick (decision #254: The Bomb's BeforeSideTurnEnd deals its Damage at Amount &lt;= 1, and
+    /// decrements before): the constant its code's first giving command's condition holds its amount at or under; null when it has none.
+    /// </summary>
+    public int? CountdownAt { get; }
+
+    private static int? CountdownOf(ModelSpec spec)
+    {
+        static int? AtMost(HookValue? value) => value switch
+        {
+            HookMath { Operation: HookOperation.LessOrEqual, Left: HookFactValue { Fact: HookFact.Amount }, Right: HookConstant constant } => (int)constant.Value,
+            HookMath math => AtMost(math.Left) ?? AtMost(math.Right),
+            HookTest test => AtMost(test.Test),
+            _ => null,
+        };
+        foreach (var step in spec.Steps())
+            if (step is DamageStep or GainBlockStep or GainEnergyStep or DrawStep && AtMost(step.When) is { } at) return at;
+        return null;
+    }
+
     /// <summary>The key its payouts are kept under in a branch (SimState.Payouts): its source's log key.</summary>
     private string PaidKey(int owner) => SimKeys.Logged(Name, Who.KindOf(owner) == CreatureKind.You ? null : owner);
 
@@ -191,6 +211,7 @@ public sealed class ReadModel : SimModel
         HasCopies = spec.Kind == ModelKind.Power && spec.Copies != PowerCopies.One;
         _copyPrefix = spec.Name + "@";
         _upgradesCardInPlay = spec.Steps().Any(step => step is UpgradeCardStep);
+        CountdownAt = CountdownOf(spec);
         _termFields = spec.Hooks.Where(program => program.Returns != null && program.Hook is HookName.ModifyDamageAdditive or HookName.ModifyDamageMultiplicative or HookName.ModifyDamageMultiplicativeLate or HookName.ModifyDamageCap)
             .SelectMany(program => new ModelSpec(spec.Name, spec.Kind, new[] { program }).Values()).OfType<HookField>().Select(field => field.Field).ToHashSet(StringComparer.Ordinal);
         foreach (var test in spec.Values().OfType<HookTest>()) _testSlots.TryAdd(test.At, _testSlots.Count);

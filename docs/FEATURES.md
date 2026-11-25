@@ -233,6 +233,7 @@ Every indicator about a specific card in your hand uses the **same form**: a **t
   - Across turns: Orbit (every 4 energy spent), Automation (every 10 cards drawn), Cacophony (every 33 cards drawn, number only).
   - Per turn: Panache (every 5 cards played), Pale Blue Dot (5 cards played, any type; shows `done` once it has fired this turn).
   - Enemy powers that count *your* plays, in red: Withering Presence (every 6 cards you play adds a Wither to your hand).
+  - Turns until a payout: The Bomb, a row for each one (`40 to all in 3 turns`, `40 to all this turn`): its own damage, and the turns until it explodes from its count and the last tick its code waits for (`TheBombPower.BeforeSideTurnEnd`: it ticks down while its amount is above 1, then deals its damage to every enemy; decision #254). The bar's length is The Bomb card's Turns; it flashes on its last turn.
 - **Not in the tray:** Pael's Tears and Pael's Eye (crossed tags on the cards that would give them up), and one-shot relics (Vambrace, Pael's Legion, Throwing Axe, Burning Sticks, Unsettling Lamp, Permafrost, Music Box: tags on the cards that would use them; the game shows Pael's Legion's cooldown on the relic).
 
 Thresholds are read live from each relic, so balance patches are picked up automatically.

@@ -248,6 +248,7 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
 
     private static RowState EvaluatePower(PowerModel power, PowerCounterSpec spec)
     {
+        if (spec.Countdown) return EvaluateCountdown(power, spec);
         var left = Math.Clamp(power.DisplayAmount, 0, spec.Threshold);
         var filled = spec.Threshold - left;
         if (left == 0)
@@ -258,6 +259,33 @@ public sealed class RelicCountersFeature : IFeature, IFrameFeature
         var color = spec.OnEnemy ? Warn : PowerFill;
         return new RowState(filled, spec.Threshold, left == 1, color, $"{left} {spec.Unit} left");
     }
+
+    /// <summary>
+    /// A power counting its amount down to a payout (The Bomb, decision #254), each copy its own row: the turns left (its amount against its last
+    /// tick, read from its code: ReadModel.CountdownAt; 1 until the models are read) and its own Damage, the bar filling toward it (its length the
+    /// Turns of the card that makes it, or the spec's), flashing on its last turn.
+    /// </summary>
+    private static RowState EvaluateCountdown(PowerModel power, PowerCounterSpec spec)
+    {
+        var lastTick = Sim.SimModels.Loaded && Sim.SimModels.Get(spec.TypeName) is Sim.ReadModel { CountdownAt: { } at } ? at : 1;
+        var left = Sim.PowerCountdown.TurnsLeft(power.Amount, lastTick);
+        var total = Math.Max(left, BombTurns(spec));
+        var damage = Sts2State.Var(power, "Damage");
+        return new RowState(total - left, total, left == 1, PowerFill, Sim.PowerCountdown.Label(left, damage));
+    }
+
+    /// <summary>The Bomb card's Turns (the count its power starts at), read once; the spec's when it can't be read.</summary>
+    private static int BombTurns(PowerCounterSpec spec)
+    {
+        if (_bombTurns == 0)
+        {
+            try { _bombTurns = Math.Max(1, Sts2State.Var(ModelDb.Card<MegaCrit.Sts2.Core.Models.Cards.TheBomb>(), "Turns", spec.Threshold)); }
+            catch (Exception) { _bombTurns = spec.Threshold; }
+        }
+        return _bombTurns;
+    }
+
+    private static int _bombTurns;
 
     /// <summary>
     /// Make It So in your fight's piles (an Attack Potion's copy too): Skills played this turn toward the next multiple

@@ -23,9 +23,9 @@ public class BonusRuleTests
     /// <summary>The classes whose code pays out on a condition a play changes, or reacts to its owner losing HP, but that have no settings row: no tab.</summary>
     private static readonly Dictionary<string, string> WithoutARow = new(StringComparer.Ordinal)
     {
-        ["RegenPower"] = "its heal as your turn ends, while its owner lives: a play would give it up only by your death",
-        ["RitualPower"] = "its Strength as its owner's turn ends, an enemy's (not one it got on its own turn): the rule shows yours only",
-        ["TheBombPower"] = "its damage as your turn ends once its countdown is over: decided by its count as your turn ends",
+        ["RegenPower"] = "its heal as your turn ends, while its owner lives: a play would give it up only by your death; no tab, the owner's call (decision #251)",
+        ["RitualPower"] = "its Strength as its owner's turn ends, an enemy's (not one it got on its own turn): the rule shows yours only; no tab, the owner's call (decision #251)",
+        ["TheBombPower"] = "its damage as your turn ends once its countdown is over: no tab (the owner's call), a Relic Counters row instead (decision #254: the turns left and its damage)",
     };
 
     public static TheoryData<string> Branches() => new() { "beta", "main" };
