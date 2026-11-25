@@ -1173,6 +1173,9 @@ public static partial class SimEngine
             case TakeFromHandAction takeFromHandAction: RunTakeFromHand(branches, takeFromHandAction); break;
             case NotModelledAction notModelledAction: branches.Do(branch => branch.Unmodelled ??= notModelledAction.Reason); break;
             case KeepTargetDebuffsAction: branches.Do(KeepTargetDebuffs); break;
+            case StunTargetAction:
+                branches.Do(branch => { if (branch.CurrentPlay?.Target is { } aimed && Who.IsEnemy(aimed) && branch.Enemy(aimed) is { Alive: true } enemy) Stun(enemy); });
+                break;
             case SpreadKeptDebuffsAction: branches.Each(SpreadKeptDebuffs); break;
             case UnreadAction unreadAction: branches.Do(branch => branch.Unmodelled ??= SimState.Unread(unreadAction.Member)); break;
             case GainEnergyAsHeldAction:

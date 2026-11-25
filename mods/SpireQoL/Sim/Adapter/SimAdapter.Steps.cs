@@ -36,6 +36,7 @@ public static partial class SimAdapter
         ["OstyCmd.Summon"] = "SummonAction: its amount for the player its second argument names (you, or each player its loop goes over), as OstyCmd.Summon runs (SimEngine.Summon)",
         ["CreatureCmd.Heal"] = "HealAction: its amount on you or your Osty, up to max HP",
         ["CreatureCmd.SetCurrentHp"] = "ExecuteAction (the target, on its condition)",
+        ["CreatureCmd.Stun"] = "StunTargetAction (the target: its next move the stunned move)",
         ["CreatureCmd.LoseBlock"] = "StripBlockAction (the target's block, and its Artifact when the play removes it)",
         ["PowerCmd.Apply"] = "ApplyPowerAction (or FocusAction) to whom its second argument names, its amount its third",
         ["PowerCmd.Remove"] = "the target's Artifact, folded into StripBlockAction; a shot's own powers removed: not modelled",
@@ -82,7 +83,6 @@ public static partial class SimAdapter
         ["CardCmd.Enchant"] = "an enchantment given to a card: not followed",
         ["OrbCmd.Passive"] = "an orb's passive set off by a card: not followed",
         ["PowerCmd.ModifyAmount"] = "a power's amount changed in place: not followed",
-        ["CreatureCmd.Stun"] = "an enemy stunned by a card: not followed",
         ["CreatureCmd.GainMaxHp"] = "max HP gained: not followed",
         ["CreatureCmd.LoseMaxHp"] = "max HP lost: not followed",
         ["ArrowCmd.GainArrowSlot"] = "an arrow slot gained: not followed",
@@ -234,6 +234,8 @@ public static partial class SimAdapter
                 return (HealsFrom(found, play), null);
             case ("CreatureCmd", "SetCurrentHp") when Argument(command, 0) == "cardPlay.Target":
                 return (new List<SimAction> { new ExecuteAction(ThresholdOf(found, play)) }, null);
+            case ("CreatureCmd", "Stun") when Argument(command, 0) == "cardPlay.Target":
+                return (new List<SimAction> { new StunTargetAction() }, null);
             case ("CreatureCmd", "LoseBlock") when Argument(command, 1) == "cardPlay.Target":
                 return (new List<SimAction> { new StripBlockAction(RemoveArtifact: play.Program.Commands.Any(other => other.Command is { DeclaringType: "PowerCmd", Name: "Remove" } && Argument(other, 0) == "cardPlay.Target")) }, null);
             case ("PowerCmd", "Apply"):

@@ -201,6 +201,12 @@ public sealed record MoveBlockAction(int Amount, IReadOnlyList<int> To) : SimAct
 public sealed record MoveStunAction : SimAction;
 
 /// <summary>
+/// A card's stun of the enemy it's played at (CreatureCmd.Stun(cardPlay.Target), decision #299: Whistle): its next move the stunned move
+/// (Creature.StunInternal), so it doesn't act this enemy turn; nothing on one that's dead (StunInternal's IsDead test).
+/// </summary>
+public sealed record StunTargetAction : SimAction;
+
+/// <summary>
 /// HP the card costs its owner (CreatureCmd.Damage of its owner with the props every card's HP cost passes, SimEngine.HpCostProps), dealt by them
 /// from the card in play, through the one path for damage to a player (SimEngine.DamagePlayer, decision #219).
 /// </summary>

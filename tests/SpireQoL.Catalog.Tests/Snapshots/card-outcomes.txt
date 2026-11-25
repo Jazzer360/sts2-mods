@@ -4222,12 +4222,12 @@ Whirlwind [Crowded] 1 you=80/0 e0 h9 d0/3 enemy0=185/0 enemy1=15/0 []
 Whirlwind [Replayed] 1 you=80/0 e0 h3 d6/3 enemy0=170/0 []
 Whirlwind [Teammate] 1 you=80/0 e0 h3 d6/3 mate0=70/0 e3 h2 enemy0=185/0 []
 Whirlwind [Alone] 1 you=80/0 e0 h0 d6/3 enemy0=185/0 []
-Whistle [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=167/0 [Exhausted1] ?CreatureCmd.Stun: an enemy stunned by a card: not followed
-Whistle [Upgraded] 1 you=80/0 e1 h3 d6/3 enemy0=156/0 [Exhausted1] ?CreatureCmd.Stun: an enemy stunned by a card: not followed
-Whistle [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=167/0 enemy1=30/0 [Exhausted1] ?CreatureCmd.Stun: an enemy stunned by a card: not followed
-Whistle [Replayed] 1 you=80/0 e1 h3 d6/3 enemy0=134/0 [Exhausted1] ?CreatureCmd.Stun: an enemy stunned by a card: not followed
-Whistle [Teammate] 1 you=80/0 e1 h3 d6/3 mate0=70/0 e3 h2 enemy0=167/0 [Exhausted1] ?CreatureCmd.Stun: an enemy stunned by a card: not followed
-Whistle [Alone] 1 you=80/0 e1 h0 d6/3 enemy0=167/0 [Exhausted1] ?CreatureCmd.Stun: an enemy stunned by a card: not followed
+Whistle [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=167/0 [Exhausted1]
+Whistle [Upgraded] 1 you=80/0 e1 h3 d6/3 enemy0=156/0 [Exhausted1]
+Whistle [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=167/0 enemy1=30/0 [Exhausted1]
+Whistle [Replayed] 1 you=80/0 e1 h3 d6/3 enemy0=134/0 [Exhausted1]
+Whistle [Teammate] 1 you=80/0 e1 h3 d6/3 mate0=70/0 e3 h2 enemy0=167/0 [Exhausted1]
+Whistle [Alone] 1 you=80/0 e1 h0 d6/3 enemy0=167/0 [Exhausted1]
 WhistlingArrows [Standard] 1 you=80/3 e3 h3 d6/3 enemy0=200/0 []
 WhistlingArrows [Upgraded] 1 you=80/4 e3 h3 d6/3 enemy0=200/0 []
 WhistlingArrows [Crowded] 1 you=80/3 e3 h9 d0/3 enemy0=200/0 enemy1=30/0 []

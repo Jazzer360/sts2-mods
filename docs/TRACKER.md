@@ -529,7 +529,7 @@ Decompiled and diffed against v0.111.0 (`~/git/sts2-decompiled`, one commit per 
 - [ ] `CardCmd.Enchant` (Blade of Ink): an enchantment given to a card. Needs the enchantment's read model on that card.
 - [ ] `OrbCmd.Passive` (Darkness, Tesla Coil): an orb's passive set off by a card. Needs the engine's orb passive (the turn's end runs it) callable from a play.
 - [ ] `PowerCmd.ModifyAmount` (Frantic Escape's Sandpit, Imitation Learning's own power already there): a power's amount changed in place. Needs the power found as the code finds it (a loop's `FirstOrDefault` of the owner's powers) and the engine's ModifyAmount path (PowerCmd.Apply's without Artifact's BeforeApplied).
-- [ ] `CreatureCmd.Stun` (Whistle): an enemy stunned by a card. Needs the enemy's intent replaced by its stunned move in the enemy turn (the engine's own stun of a monster's move, decision #271, is the enemy's own).
+- [x] `CreatureCmd.Stun` (Whistle): the enemy it's played at stunned (StunTargetAction, decision #299).
 - [ ] `CreatureCmd.GainMaxHp` (Feed) and `CreatureCmd.LoseMaxHp` (Brightest Flame): max HP changed. Needs your max HP in the simulator's player (heals are capped at it) and CreatureCmd's HP change with it.
 - [ ] `ArrowCmd.GainArrowSlot` (Quiver): an arrow slot gained. Needs the arrow slots in the simulator's state (it reads your arrows from the board).
 - [ ] `PotionCmd.TryToProcure` (Alchemize) and `PlayerCmd.GainGold` (Hand of Greed's kill): what reacts to a potion procured (Belt Buckle's AfterPotionProcured) or gold gained (Dragon Fruit's AfterGoldGained) isn't followed. Needs their hooks as read steps; with no listener, nothing to follow (a reviewed reason then, per listener).
