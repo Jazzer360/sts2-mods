@@ -35,6 +35,51 @@ public class SimOstyAttackTests
     }
 
     [Fact]
+    public void ThornsOnOstyMeetsYourBlockFirst()
+    {
+        // CreatureCmd.GetDamageResults (v0.114.0; main's Damage the same): a pet's damage is blocked by its owner's block
+        // (target.PetOwner?.Creature ?? target), the blockRedirect result. Thorns 3 on Osty's hit with your 2 block: your block goes, Osty loses 1.
+        var state = new SimState { Enemies = { E(id: 1, hp: 30) } };
+        state.Enemies[0].Thorns = 3;
+        state.You.OstyHp = 10;
+        state.You.Block = 2;
+        SimEngine.ApplyPlayTo(state, Poke(target: 1, damage: 6, byOsty: true), out var branches, out _);
+        Assert.All(branches, branch =>
+        {
+            Assert.Equal(9, branch.You.OstyHp);
+            Assert.Equal(0, branch.You.Block);
+            Assert.Equal(0, branch.Taken);
+        });
+    }
+
+    [Fact]
+    public void OstysTakenHitIsToldToTheDamageHooksAndTheLog()
+    {
+        // CreatureCmd.Damage's results loop: Osty's result (the unblocked redirect) is in the fight's log (DamageReceivedEntry: its receiver Osty)
+        // and told to AfterDamageGiven and AfterDamageReceived. The player's own entry is there too, with nothing lost.
+        var ostys = new HistoryQuery(HistoryKind.DamageReceived, HistoryScope.ThisTurn, HistoryWhose.OwnersOsty);
+        var yours = new HistoryQuery(HistoryKind.DamageReceived, HistoryScope.ThisTurn, HistoryWhose.Owner) { Details = HistoryDetail.Unblocked };
+        var state = new SimState { Enemies = { new SimEnemy { Id = 1, Name = "E1", Hp = 30, Hits = { 4 } } }, History = new[] { ostys, yours } };
+        state.You.OstyHp = 10;
+        var branch = SimEngine.Run(state).Worst;
+        Assert.Equal(4, branch.OstyTaken);
+        Assert.Equal(1, branch.You.Turn[ostys.Key]);
+        Assert.Equal(0, branch.You.Turn[yours.Key]);
+    }
+
+    [Fact]
+    public void APowerOnOstyLandsNowhere()
+    {
+        // A hook told of Osty's result may act on its hit target (MonarchsGazePower.AfterDamageGiven: PowerCmd.Apply on him): his powers aren't
+        // kept, so nothing lands, on you or on an enemy (Who.YourOsty is no one's power set).
+        var state = new SimState { Enemies = { E(id: 1, hp: 30) } };
+        state.You.OstyHp = 5;
+        Assert.False(SimEngine.ApplyPower(state, applier: 1, target: Who.YourOsty, PowerId.Weak, amount: 1, debuff: true));
+        Assert.False(state.You.Powers.Has(PowerId.Weak));
+        Assert.Null(state.Unmodelled);
+    }
+
+    [Fact]
     public void YourEnvenomDoesntApply()
     {
         var state = new SimState { Enemies = { E(id: 1, hp: 30) } };

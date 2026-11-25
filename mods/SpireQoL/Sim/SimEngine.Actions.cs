@@ -690,6 +690,9 @@ public static partial class SimEngine
     {
         landed = 0;
         if (amount == 0) return false;
+        // A power on Osty (a hook told of his result acting on its hit target: Monarch's Gaze's Strength down as an enemy's hit lands on him): his
+        // powers aren't kept (TRACKER). Today's only such power acts on his attacks, which come after the enemy turn every simulation ends with.
+        if (target == Who.YourOsty) return false;
         foreach (var (model, o) in Listeners(state)) amount = model.ModifyPowerAmountGiven(state, o, power, amount, applier, target, debuff);
         if (amount == 0) return false;
         var powers = PowersOf(state, target);

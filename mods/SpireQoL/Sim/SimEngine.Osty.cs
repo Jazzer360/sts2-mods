@@ -9,14 +9,52 @@ public static partial class SimEngine
     /// </summary>
     internal static int OstyLoses(SimState state, int player, int amount)
     {
+        var lost = OstyDrops(state, player, amount);
+        if (lost <= 0) return 0;
+        foreach (var (model, o) in Listeners(state)) model.AfterOstyHpLost(state, o, player, lost);
+        AllyDeaths(state);
+        return lost;
+    }
+
+    /// <summary>A player's Osty's HP goes down by up to <paramref name="amount"/> (Creature.LoseHpInternal), nothing told yet. Returns the HP he lost.</summary>
+    private static int OstyDrops(SimState state, int player, int amount)
+    {
         var simPlayer = state.Player(player);
         if (simPlayer == null || amount <= 0 || simPlayer.OstyHp <= 0) return 0;
         if (player != Who.You) simPlayer = state.MutableTeammate(Who.TeammateIndex(player));
         var lost = Math.Min(amount, simPlayer.OstyHp);
         simPlayer.OstyHp -= lost;
-        foreach (var (model, o) in Listeners(state)) model.AfterOstyHpLost(state, o, player, lost);
-        AllyDeaths(state);
         return lost;
+    }
+
+    /// <summary>Osty's id as a damage's target or a hit's receiver: your Osty's (Who.YourOsty); a teammate's Osty has none the simulator keeps.</summary>
+    private static int OstyId(int player) => player == Who.You ? Who.YourOsty : Who.None;
+
+    /// <summary>
+    /// What CreatureCmd.Damage tells of Osty's result once a damage's results are applied (its results loop): the fight's log has it first
+    /// (CombatHistory.DamageReceived, with the player's: <see cref="RecordOstyHit"/>), then Hook.AfterCurrentHpChanged with his loss (Necro Mastery),
+    /// Hook.AfterDamageGiven and, unless it killed him, Hook.AfterDamageReceived, each told of his result; then a death it caused. Your Osty's: a
+    /// teammate's Osty has no id the hooks could be told (his loss is told to Necro Mastery as before).
+    /// </summary>
+    private static void TellOstyHit(SimState state, int player, int? dealer, SimProps props, SimCard? card, int lost, bool killed)
+    {
+        if (lost > 0) foreach (var (model, o) in Listeners(state)) model.AfterOstyHpLost(state, o, player, lost);
+        if (player == Who.You && Listeners(state).Count > 0)
+        {
+            var hit = new DamageEvent(dealer, Who.YourOsty, props, card, lost, Blocked: 0, Unblocked: lost, Killed: killed);
+            foreach (var (model, o) in Listeners(state)) model.AfterDamageGiven(state, o, hit);
+            if (!killed) foreach (var (model, o) in Listeners(state)) model.AfterDamageReceived(state, o, hit);
+        }
+        AllyDeaths(state);
+    }
+
+    /// <summary>Your Osty's DamageReceivedEntry (CombatHistory.DamageReceived of his result: its receiver Osty, the HP he lost).</summary>
+    private static void RecordOstyHit(SimState state, int player, SimProps props, int lost)
+    {
+        if (state.History.Count == 0 || player != Who.You) return;
+        var details = lost > 0 ? HistoryDetail.Unblocked : HistoryDetail.None;
+        if (props.IsPoweredAttack()) details |= HistoryDetail.PoweredAttack;
+        Record(state, new HistoryEvent(HistoryKind.DamageReceived, Who.YourOsty) { Details = details });
     }
 
     /// <summary>

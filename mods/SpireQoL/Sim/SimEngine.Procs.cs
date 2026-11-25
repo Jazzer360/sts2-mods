@@ -139,8 +139,11 @@ public static partial class SimEngine
 
     /// <summary>
     /// Damage to <paramref name="player"/>'s Osty from a creature's proc (an enemy's Thorns as Osty attacks it), while he lives: CreatureCmd.Damage of
-    /// him, so the damage math with him as its target, the HP-loss pipeline on him (he keeps no block), BeforeDamageReceived, his HP
-    /// (SimEngine.OstyLoses: Necro Mastery hears it). Logged with the damage, as every proc's is.
+    /// him, so the damage math with him as its target; his player's block takes it first unless it's Unblockable (a pet's damage is blocked by its
+    /// owner's block: GetDamageResults' target.PetOwner?.Creature, the blockRedirect result), the HP-loss pipeline on him, BeforeDamageReceived, his HP;
+    /// then his result in the fight's log and told to the hooks (Necro Mastery's AfterCurrentHpChanged, AfterDamageGiven, AfterDamageReceived), and
+    /// on beta the player's block result after it (DamageResults.AllResults: Reflect hits back what their block took); main has none. Logged with
+    /// the damage, as every proc's is.
     /// </summary>
     public static IEnumerable<SimState> ProcDamageOsty(SimState state, int owner, string name, int player, decimal baseDamage, SimProps props, bool noDealer = false)
     {
@@ -156,11 +159,23 @@ public static partial class SimEngine
         // first (MainRule.ReceivedBeforeTheResults).
         var receivedFirst = (state.MainRules & MainRule.ReceivedBeforeTheResults) != 0;
         if (receivedFirst) foreach (var (model, listener) in Listeners(state)) model.BeforeDamageReceived(state, listener, damage, amount);
+        var blocked = props.HasFlag(SimProps.Unblockable) ? 0 : Math.Min(state.Player(player)!.Block, amount);
         var notes = default(HpLossNotes);
-        var lost = Listeners(state).Count == 0 ? amount : Math.Max(0, (int)HpLossFor(state, damage, amount, out notes));
+        var rest = amount - blocked;
+        var lost = rest <= 0 ? 0 : Listeners(state).Count == 0 ? rest : Math.Max(0, (int)HpLossFor(state, damage, rest, out notes));
         if (!receivedFirst) foreach (var (model, listener) in Listeners(state)) model.BeforeDamageReceived(state, listener, damage, amount);
+        if (blocked > 0)
+        {
+            var petOwner = state.MutablePlayer(player);
+            petOwner.Block -= Math.Min(petOwner.Block, blocked);
+        }
         TellHpLoss(state, notes);
-        OstyLoses(state, player, lost);
+        var hpBefore = state.Player(player)!.OstyHp;
+        var ostyLost = OstyDrops(state, player, lost);
+        RecordOstyHit(state, player, props, ostyLost);
+        if (!receivedFirst && blocked > 0) RecordDamageReceived(state, player, props, lost: 0);
+        TellOstyHit(state, player, dealer, props, card: null, ostyLost, killed: hpBefore > 0 && lost >= hpBefore);
+        if (!receivedFirst && blocked > 0) PlayerDamaged(state, player, dealer, props, blocked, lost: 0, card: null);
         return new[] { state };
     }
 

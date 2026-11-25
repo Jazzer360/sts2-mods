@@ -39,16 +39,16 @@ public static class SimPipelines
         {
             "ModifyDamage",                     // IntentDamage, or the game's final numbers
             "ModifyPreBlockDamageTarget",       // worked out first (beta): Wuppy takes it before block...
-            "ModifyUnblockedDamageTarget",      // ...Osty what gets through (Die For You)...
-            "ModifyHpLost",                     // ...HpLoss for the rest
+            "ModifyHpLost",                     // ...the BeforeOsty phase on the player (HpLossOnPlayer)...
+            "ModifyUnblockedDamageTarget",      // ...Osty what gets past it (Die For You), the AfterOsty phase on him, his overkill's on the player
             "BeforeDamageReceived",             // every listener's (the player's Thorns, read from its code; main: first, BranchRules.DamageWorkedOutFirst)
             "AfterModifyingHpLostBeforeOsty",   // the results applied: the HP-loss changes told (TellHpLoss)...
             "AfterModifyingHpLostAfterOsty",
-            "AfterCurrentHpChanged",            // ...Osty loses his HP (OstyLoses: Necro Mastery)
             "ShouldDie",                        // Lose: Fairy in a Bottle, Lizard Tail...
             "AfterPreventingDeath",             // ...heal from 0
-            "AfterDamageGiven",                 // PlayerDamaged
+            "AfterDamageGiven",                 // the results loop: the player's (PlayerDamaged), then Osty's (TellOstyHit; main: Osty's first)...
             "AfterDamageReceived",              // every listener's in order (Flame Barrier and Reflect, read from their code)
+            "AfterCurrentHpChanged",            // ...Osty's HP loss (TellOstyHit: Necro Mastery)
         }),
         new("AttackCommand.Execute", "AttackCommand.Execute", "SimEngine.RunAttack", new[]
         {

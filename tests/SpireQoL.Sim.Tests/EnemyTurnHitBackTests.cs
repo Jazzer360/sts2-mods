@@ -97,6 +97,25 @@ public class EnemyTurnHitBackTests
     }
 
     [Fact]
+    public void YourResultIsToldBeforeOstysOnBetaAndAfterItOnMain()
+    {
+        // CreatureCmd.Damage's results loop, in DamageResults.AllResults' order on beta (v0.114.0): your result (Flame Barrier hits back its 3), then
+        // Osty's (Hook.AfterCurrentHpChanged: Necro Mastery's 2 × the 5 he lost to every enemy). A 10-HP attacker: 3, then 10, ends at -3. Main's
+        // CreatureCmd.Damage lists Osty's result first (MainRule.ReceivedBeforeTheResults): Necro Mastery's 10 kills it, Flame Barrier finds it dead: 0.
+        SimState Board(MainRule rules)
+        {
+            var state = new SimState { Enemies = { Enemy(id: 0, hp: 10, hits: [12]) }, MainRules = rules };
+            state.You.Hp = 50;
+            state.You.OstyHp = 5;
+            state.You.FlameBarrier = 3;
+            state.You.Powers = state.You.Powers.With(PowerId.NecroMastery, amount: 2);
+            return state;
+        }
+        Assert.Equal(-3, HpAfter(Board(MainRule.None)));
+        Assert.Equal(0, HpAfter(Board(MainRule.ReceivedBeforeTheResults)));
+    }
+
+    [Fact]
     public void FlameBarrierHitsBackWhenWuppyTakesTheWholeHit()
     {
         // WuppysLoyaltyPower.ModifyPreBlockDamageTarget: Wuppy takes the 6 before your block. CreatureCmd.Damage still tells Hook.AfterDamageReceived

@@ -699,15 +699,54 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// HP a player loses from <paramref name="amount"/> past their block: the HP-loss pipeline (Tungsten Rod, Beating Remnant,
-    /// Buffer, Intangible...). Apply it, then call PlayerDamaged.
+    /// What a damage past a player's block does to their HP and their Osty's, as CreatureCmd.GetDamageResults works it out (decompile v0.114.0; main's
+    /// CreatureCmd.Damage the same, each phase told as it's made): Hook.ModifyHpLost's BeforeOsty phase on the player; then, for a powered attack while
+    /// their Osty lives with Die For You (Hook.ModifyUnblockedDamageTarget: DieForYouPower), the AfterOsty phase with Osty as the target and his HP
+    /// taking it (Creature.LoseHpInternal), what he can't take (his overkill) through the AfterOsty phase again on the player; otherwise the AfterOsty
+    /// phase on the player. The models whose phase changed the amount are kept to be told as the results are applied (Hook.AfterModifyingHpLostBeforeOsty,
+    /// then AfterOsty for the first AfterOsty phase, before the player's HP, and for the overkill's, after it), or told at once on main.
     /// </summary>
-    private static int HpLoss(SimState state, int player, int amount, int? dealer, SimProps props, SimCard? card, out HpLossNotes notes)
+    private readonly record struct PlayerHpLoss(int ToOsty, bool OstyKilled, int Lost, List<(SimModel Model, int Owner)>? BeforeOsty,
+        List<(SimModel Model, int Owner)>? FirstAfterOsty, List<(SimModel Model, int Owner)>? OverkillAfterOsty);
+
+    private static PlayerHpLoss HpLossOnPlayer(SimState state, List<(SimModel Model, int Owner)> listeners, int player, int through, bool redirect, int ostyHp,
+        int? dealer, SimProps props, SimCard? card, bool tellNow)
     {
-        notes = default;
-        if (amount <= 0) return 0;
-        if (Listeners(state).Count == 0) return amount;
-        return Math.Max(0, (int)HpLossFor(state, new DamageCtx(dealer, player, props, card, card == null ? null : state.CurrentPlay), amount, out notes));
+        if (through <= 0) return default;
+        if (listeners.Count == 0)
+        {
+            var taken = redirect ? Math.Min(ostyHp, through) : 0;
+            return new PlayerHpLoss(taken, redirect && through >= ostyHp, through - taken, null, null, null);
+        }
+        var play = card == null ? null : state.CurrentPlay;
+        var onPlayer = new DamageCtx(dealer, player, props, card, play);
+        List<(SimModel Model, int Owner)>? beforeOsty = null, firstAfter = null, overkillAfter = null;
+        void Tell(ref List<(SimModel Model, int Owner)>? changed, bool afterOsty)
+        {
+            if (!tellNow || changed == null) return;
+            TellHpLoss(state, afterOsty ? new HpLossNotes(null, changed) : new HpLossNotes(changed, null));
+            changed = null;
+        }
+        var amount = HpLossPhase(state, onPlayer, through, listeners, afterOsty: false, ref beforeOsty);
+        Tell(ref beforeOsty, afterOsty: false);
+        if (!redirect)
+        {
+            amount = HpLossPhase(state, onPlayer, amount, listeners, afterOsty: true, ref firstAfter);
+            Tell(ref firstAfter, afterOsty: true);
+            return new PlayerHpLoss(0, false, Math.Max(0, (int)amount), beforeOsty, firstAfter, null);
+        }
+        var onOsty = onPlayer with { Target = OstyId(player) };
+        var toOsty = (int)Math.Clamp(HpLossPhase(state, onOsty, amount, listeners, afterOsty: true, ref firstAfter), 0m, 999999999m);
+        Tell(ref firstAfter, afterOsty: true);
+        var killed = toOsty >= ostyHp;
+        var overkill = killed ? toOsty - ostyHp : 0;
+        var lost = 0;
+        if (overkill > 0)
+        {
+            lost = Math.Max(0, (int)HpLossPhase(state, onPlayer, overkill, listeners, afterOsty: true, ref overkillAfter));
+            Tell(ref overkillAfter, afterOsty: true);
+        }
+        return new PlayerHpLoss(Math.Min(toOsty, ostyHp), killed, lost, beforeOsty, firstAfter, overkillAfter);
     }
 
     /// <summary>Hook.BeforeDamageReceived of a damage to a player (Thorns hits the dealer back, read from its code; the damage still lands).</summary>
@@ -720,12 +759,11 @@ public static partial class SimEngine
 
     /// <summary>
     /// After a damage landed on a player (their HP already lower): AfterDamageGiven and AfterDamageReceived (Beating Remnant counts, Flame Barrier and
-    /// Reflect hit back...), told of the player's result whatever it came to: CreatureCmd.Damage records and tells every result, one Wuppy, Osty or the
-    /// HP-loss pipeline left at 0 included (its results loop).
+    /// Reflect hit back...), told of the player's result whatever it came to: CreatureCmd.Damage tells every result, one Wuppy, Osty or the HP-loss
+    /// pipeline left at 0 included (its results loop). The fight's log has it already (RecordDamageReceived).
     /// </summary>
     private static void PlayerDamaged(SimState state, int player, int? dealer, SimProps props, int blocked, int lost, SimCard? card)
     {
-        RecordDamageReceived(state, player, props, lost); // DamageReceivedEntry, before the damage hooks (decision #191)
         var listeners = Listeners(state);
         if (listeners.Count == 0) return;
         var hit = new DamageEvent(dealer, player, props, card, blocked + lost, blocked, lost, Killed: false);
@@ -772,8 +810,9 @@ public static partial class SimEngine
         var past = amount - toWuppy;
         var blocked = unblockable ? 0 : Math.Min(before.Block, past);
         var through = past - blocked;
-        var toOsty = powered && before.OstyShields && before.OstyHp > 0 ? Math.Min(before.OstyHp, through) : 0;
-        var lost = HpLoss(state, player, through - toOsty, dealer, props, card, out var notes);
+        var redirect = powered && before.OstyShields && before.OstyHp > 0;
+        var hpLoss = HpLossOnPlayer(state, Listeners(state), player, through, redirect, before.OstyHp, dealer, props, card, tellNow: receivedFirst);
+        var lost = hpLoss.Lost;
         if (!receivedFirst) TellReceived(state, listeners, player, amount, props, dealer, card);
         var simPlayer = state.MutablePlayer(player);
         if (toWuppy > 0)
@@ -795,15 +834,27 @@ public static partial class SimEngine
             }
         }
         simPlayer.Block -= Math.Min(simPlayer.Block, blocked);
-        TellHpLoss(state, notes);
-        toOsty = toOsty > 0 ? OstyLoses(state, player, toOsty) : 0;
+        // The results applied (beta's ApplyDamageResults): the BeforeOsty phase's changes told, Osty's HP, the first AfterOsty phase's, the player's HP,
+        // the overkill's AfterOsty phase's (main told each as it was made).
+        TellHpLoss(state, new HpLossNotes(hpLoss.BeforeOsty, null));
+        var toOsty = OstyDrops(state, player, hpLoss.ToOsty);
+        TellHpLoss(state, new HpLossNotes(null, hpLoss.FirstAfterOsty));
         simPlayer = state.MutablePlayer(player);
         simPlayer.OstyTaken += toOsty;
         if (!unblockable) simPlayer.Through += through - toOsty;
         Lose(state, player, lost);
+        TellHpLoss(state, new HpLossNotes(null, hpLoss.OverkillAfterOsty));
         if (unblockable) state.MutablePlayer(player).UnblockableTaken += lost;
         if (yours && label != null) PlayHp(state, through - toOsty, lost);
+        // Each result in the fight's log, then each told to the hooks (the results loop): beta's results are the player's, then Osty's
+        // (DamageResults.AllResults: the original, then the unblocked redirect); main's Osty's, then the player's.
+        var ostyFirst = receivedFirst && redirect;
+        if (ostyFirst) RecordOstyHit(state, player, props, toOsty);
+        RecordDamageReceived(state, player, props, lost);
+        if (redirect && !ostyFirst) RecordOstyHit(state, player, props, toOsty);
+        if (ostyFirst) TellOstyHit(state, player, dealer, props, card, toOsty, hpLoss.OstyKilled);
         PlayerDamaged(state, player, dealer, props, blocked, lost, card);
+        if (redirect && !ostyFirst) TellOstyHit(state, player, dealer, props, card, toOsty, hpLoss.OstyKilled);
         return new PlayerHit(past, blocked, toOsty, lost);
     }
 
