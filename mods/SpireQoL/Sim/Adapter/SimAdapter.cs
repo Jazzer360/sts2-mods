@@ -116,17 +116,27 @@ public static partial class SimAdapter
         catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException) { return null; }
     }
 
+    /// <summary>
+    /// Any creature's simulator id (Who), as BuildFromGame gives them: an enemy's (its id in <paramref name="enemyIds"/>, read as each is asked), you,
+    /// teammate k (<paramref name="mates"/>' order), or one of a player's pets the simulator keeps; null for any other.
+    /// </summary>
+    private static Func<Creature, int?> CreatureIds(Player me, List<Player> mates, IReadOnlyDictionary<Creature, int> enemyIds)
+    {
+        int? PlayerIdOf(Creature creature) => creature == me.Creature ? Who.You
+            : mates.FindIndex(player => player.Creature == creature) is var teammateIndex and >= 0 ? Who.Teammate(teammateIndex) : null;
+        return creature => enemyIds.TryGetValue(creature, out var enemyId) ? enemyId : PlayerIdOf(creature)
+            ?? (creature.PetOwner is { } petOwner && PetKindOf(petOwner, creature) is { } kind && PlayerIdOf(petOwner.Creature) is { } ownerId ? Who.PetOf(ownerId, kind) : null);
+    }
+
     private static SimState BuildFromGame(Player me, ICombatState combat, out Dictionary<Creature, int> ids)
     {
         var idMap = new Dictionary<Creature, int>();
         ids = idMap;
         var state = new SimState { MainRules = BranchRules.MainRulesNow(), TurnNumber = me.PlayerCombatState?.TurnNumber ?? 0, RoundNumber = combat.RoundNumber, Dread = MoveBranches.DreadRun, EncounterScaling = EncounterScaling(combat) };
         var mates = Teammates(me, combat);
-        // Any creature's simulator id (Who): an enemy's, you, teammate k, or one of a player's pets the simulator keeps.
-        int? PlayerIdOf(Creature creature) => creature == me.Creature ? Who.You
-            : mates.FindIndex(player => player.Creature == creature) is var teammateIndex and >= 0 ? Who.Teammate(teammateIndex) : null;
-        int? IdOf(Creature creature) => idMap.TryGetValue(creature, out var enemyId) ? enemyId : PlayerIdOf(creature)
-            ?? (creature.PetOwner is { } petOwner && PetKindOf(petOwner, creature) is { } kind && PlayerIdOf(petOwner.Creature) is { } ownerId ? Who.PetOf(ownerId, kind) : null);
+        // Any creature's simulator id: the enemies' as they're given below (the map read as each is asked).
+        var creatureIds = CreatureIds(me, mates, idMap);
+        int? IdOf(Creature creature) => creatureIds(creature);
         var targets = combat.Players.Select(player => player.Creature).ToList();
 
         var nextEnemyId = 0;

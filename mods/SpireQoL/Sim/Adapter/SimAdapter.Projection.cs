@@ -119,12 +119,5 @@ public static partial class SimAdapter
     }
 
     /// <summary>A creature's simulator id, as BuildFromGame gives them: an enemy's (<paramref name="ids"/>), you, teammate k, or a player's pet.</summary>
-    private static Func<Creature, int?> IdOfFor(Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids)
-    {
-        var mates = Teammates(me, combat);
-        int? PlayerIdOf(Creature creature) => creature == me.Creature ? Who.You
-            : mates.FindIndex(player => player.Creature == creature) is var teammateIndex and >= 0 ? Who.Teammate(teammateIndex) : null;
-        return creature => ids.TryGetValue(creature, out var enemyId) ? enemyId : PlayerIdOf(creature)
-            ?? (creature.PetOwner is { } petOwner && PetKindOf(petOwner, creature) is { } kind && PlayerIdOf(petOwner.Creature) is { } ownerId ? Who.PetOf(ownerId, kind) : null);
-    }
+    private static Func<Creature, int?> IdOfFor(Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids) => CreatureIds(me, Teammates(me, combat), ids);
 }
