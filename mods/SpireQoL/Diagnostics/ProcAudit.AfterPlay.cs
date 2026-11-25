@@ -1,3 +1,4 @@
+using MegaCrit.Sts2.Core.Entities.Creatures;
 using SpireQoL.Combat;
 using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Combat.History;
@@ -181,81 +182,89 @@ public sealed partial class ProcAudit
         var me = window.Card.Owner;
         int? drawn = startP.Draw == null ? null : entries.OfType<CardDrawnEntry>().Count(cardDrawnEntry => cardDrawnEntry.Actor == me.Creature && !cardDrawnEntry.FromHandDraw);
 
-        List<string> Diff(SimState pred)
-        {
-            var differences = new List<string>();
-            foreach (var (creature, id) in sim.Ids)
-            {
-                var enemy = pred.Enemy(id);
-                if (enemy == null || !afterIds.TryGetValue(creature, out var aid) || after.Enemy(aid) is not { } simEnemy) continue;
-                var name = enemy.Name;
-                static int Hp(SimEnemy nextEnemy) => Math.Max(0, nextEnemy.Hp);
-                // The Waterfall Giant doesn't leave at 0 HP: Steam Eruption puts it about to blow at 999999999 HP (WaterfallGiant.
-                // TriggerAboutToBlowState), stunned this turn, as good as dead until it explodes.
-                var aboutToBlow = enemy.Hp <= 0 && IsBlowing(creature);
-                if (Hp(enemy) != Hp(simEnemy) && !aboutToBlow) differences.Add($"after play enemy HP: {name} predicted {Hp(enemy)}, actual {Hp(simEnemy)}");
-                if (simEnemy.Hp <= 0 || enemy.Hp <= 0) continue;
-                if (enemy.Block != simEnemy.Block) differences.Add($"after play enemy block: {name} predicted {enemy.Block}, actual {simEnemy.Block}");
-                if (enemy.Poison != simEnemy.Poison) differences.Add($"after play enemy poison: {name} predicted {enemy.Poison}, actual {simEnemy.Poison}");
-                // FlutterPower.AfterDamageReceived: one stack per powered hit that gets through (no flash until it stuns).
-                if (enemy.Flutter != simEnemy.Flutter) differences.Add($"after play enemy Flutter: {name} predicted {enemy.Flutter}, actual {simEnemy.Flutter}");
-                if (enemy.Stunned != simEnemy.Stunned) differences.Add($"after play enemy stunned: {name} predicted {(enemy.Stunned ? "stunned" : "not stunned")}, actual {(simEnemy.Stunned ? "stunned" : "not stunned")}");
-                // A stunned enemy's intent becomes the stun move; the simulator keeps its hits and skips them. The predicted intent is
-                // its hits as they'd land on you in the predicted state (what the play gave or took: Weak, Tainted, Conductor's
-                // Baton...); Hits is only the intent as it was read before the play.
-                var predHits = enemy.Intent is { Count: > 0 } intent
-                    ? Enumerable.Range(0, intent.Count).Select(hitIndex => SimEngine.IntentDamage(pred, enemy, hitIndex, Who.You)).ToList()
-                    : enemy.Hits;
-                if (!enemy.Stunned && !simEnemy.Stunned && !predHits.SequenceEqual(simEnemy.Hits)) differences.Add($"after play enemy intent: {name} predicted [{string.Join(", ", predHits)}], actual [{string.Join(", ", simEnemy.Hits)}]");
-            }
-            var player = pred.You;
-            var simPlayer = after.You;
-            void Cmp(string what, int predicted, int actual)
-            {
-                if (predicted != actual) differences.Add($"after play {what}: predicted {predicted}, actual {actual}");
-            }
-            Cmp("your block", player.Block, simPlayer.Block);
-            // What it took from your hand and gave it (the room later draws have; Cloak Clasp, Regret at the end of the turn).
-            Cmp("cards in hand", player.HandCount, simPlayer.HandCount);
-            if (drawn is { } drawnCount) Cmp("cards drawn", player.Drawn - startP.Drawn, drawnCount);
-            // Energy (decision #117): what the play spends and gives back, the card's own included (Pael's Tears reads it).
-            Cmp("your energy", player.Energy, simPlayer.Energy);
-            Cmp("Plating", player.Plating, simPlayer.Plating);
-            Cmp(nameof(Juggernaut), player.Juggernaut, simPlayer.Juggernaut);
-            Cmp("Thorns", player.Thorns, simPlayer.Thorns);
-            Cmp("Flame Barrier", player.FlameBarrier, simPlayer.FlameBarrier);
-            Cmp("Feel No Pain", player.FeelNoPain, simPlayer.FeelNoPain);
-            // A summon is simulated as OstyCmd.Summon runs (SimEngine.Summon): Osty is held to it like any other number.
-            Cmp("Osty HP", player.OstyHp, simPlayer.OstyHp);
-            // An orb the simulator doesn't know (another mod's) is Unknown: any orb matches it. A random one (Chaos) is a branch per orb.
-            static string Orb(SimOrb orb) => $"{orb.Kind} {orb.Passive}/{orb.Evoke}";
-            var orbsMatch = player.Orbs.Count == simPlayer.Orbs.Count
-                            && player.Orbs.Zip(simPlayer.Orbs).All(orbs => orbs.First.Kind == OrbKind.Unknown || Orb(orbs.First) == Orb(orbs.Second));
-            if (!orbsMatch) differences.Add($"after play orbs: predicted [{string.Join(", ", player.Orbs.Select(Orb))}], actual [{string.Join(", ", simPlayer.Orbs.Select(Orb))}]");
-            // Teammates (multiplayer): the block and HP your play leaves them (Beacon of Hope's share, hits).
-            // The state after is read from the living ones only (SimAdapter.IsTeammate), in player order.
-            var living = pred.Teammates.Where(teammate => teammate.Hp > 0).ToList();
-            if (living.Count == after.Teammates.Count)
-            {
-                for (var enemyIndex = 0; enemyIndex < living.Count; enemyIndex++)
-                {
-                    var (nextPlayer, at) = (living[enemyIndex], after.Teammates[enemyIndex]);
-                    Cmp($"teammate {enemyIndex + 1} block", nextPlayer.Block, at.Block);
-                    Cmp($"teammate {enemyIndex + 1} HP", nextPlayer.Hp, at.Hp);
-                    Cmp($"teammate {enemyIndex + 1} energy", nextPlayer.Energy, at.Energy);
-                    // Their orbs (Ignition channels into them; full slots evoke their front orb): kinds, front first.
-                    if (!nextPlayer.Orbs.Select(orb => orb.Kind).SequenceEqual(at.Orbs.Select(orb => orb.Kind))
-                        && !nextPlayer.Orbs.Any(orb => orb.Kind == OrbKind.Unknown))
-                        differences.Add($"after play teammate {enemyIndex + 1} orbs: predicted [{string.Join(", ", nextPlayer.Orbs.Select(orb => orb.Kind))}], actual [{string.Join(", ", at.Orbs.Select(orb => orb.Kind))}]");
-                }
-            }
-            else differences.Add($"after play teammates alive: predicted {living.Count}, actual {after.Teammates.Count}");
-            return differences;
-        }
+        List<string> Diff(SimState pred) => StateDifferences(pred, after, sim.Ids, afterIds, startP, drawn, "after play");
 
         var best = branches.Select(Diff).OrderBy(differences => differences.Count).First();
         if (best.Count == 0) return;
         var note = branches.Count > 1 ? $" (closest of {branches.Count} branches)" : "";
         foreach (var difference in best) issues.Add(difference + note);
+    }
+
+    /// <summary>
+    /// What differs between a predicted state and the one the game left ('<paramref name="what"/>': "after play", "after potion"), each a line: the enemies' HP,
+    /// block, poison, Flutter, stun and intent, your block, hand, draws, energy, the powers the simulator keeps as numbers, Osty, your orbs, and each
+    /// living teammate's block, HP, energy and orbs.
+    /// </summary>
+    private static List<string> StateDifferences(SimState pred, SimState after, IReadOnlyDictionary<Creature, int> ids, IReadOnlyDictionary<Creature, int> afterIds,
+        SimPlayer startP, int? drawn, string what)
+    {
+        var differences = new List<string>();
+        foreach (var (creature, id) in ids)
+        {
+            var enemy = pred.Enemy(id);
+            if (enemy == null || !afterIds.TryGetValue(creature, out var aid) || after.Enemy(aid) is not { } simEnemy) continue;
+            var name = enemy.Name;
+            static int Hp(SimEnemy nextEnemy) => Math.Max(0, nextEnemy.Hp);
+            // The Waterfall Giant doesn't leave at 0 HP: Steam Eruption puts it about to blow at 999999999 HP (WaterfallGiant.
+            // TriggerAboutToBlowState), stunned this turn, as good as dead until it explodes.
+            var aboutToBlow = enemy.Hp <= 0 && IsBlowing(creature);
+            if (Hp(enemy) != Hp(simEnemy) && !aboutToBlow) differences.Add($"{what} enemy HP: {name} predicted {Hp(enemy)}, actual {Hp(simEnemy)}");
+            if (simEnemy.Hp <= 0 || enemy.Hp <= 0) continue;
+            if (enemy.Block != simEnemy.Block) differences.Add($"{what} enemy block: {name} predicted {enemy.Block}, actual {simEnemy.Block}");
+            if (enemy.Poison != simEnemy.Poison) differences.Add($"{what} enemy poison: {name} predicted {enemy.Poison}, actual {simEnemy.Poison}");
+            // FlutterPower.AfterDamageReceived: one stack per powered hit that gets through (no flash until it stuns).
+            if (enemy.Flutter != simEnemy.Flutter) differences.Add($"{what} enemy Flutter: {name} predicted {enemy.Flutter}, actual {simEnemy.Flutter}");
+            if (enemy.Stunned != simEnemy.Stunned) differences.Add($"{what} enemy stunned: {name} predicted {(enemy.Stunned ? "stunned" : "not stunned")}, actual {(simEnemy.Stunned ? "stunned" : "not stunned")}");
+            // A stunned enemy's intent becomes the stun move; the simulator keeps its hits and skips them. The predicted intent is
+            // its hits as they'd land on you in the predicted state (what the play gave or took: Weak, Tainted, Conductor's
+            // Baton...); Hits is only the intent as it was read before the play.
+            var predHits = enemy.Intent is { Count: > 0 } intent
+                ? Enumerable.Range(0, intent.Count).Select(hitIndex => SimEngine.IntentDamage(pred, enemy, hitIndex, Who.You)).ToList()
+                : enemy.Hits;
+            if (!enemy.Stunned && !simEnemy.Stunned && !predHits.SequenceEqual(simEnemy.Hits)) differences.Add($"{what} enemy intent: {name} predicted [{string.Join(", ", predHits)}], actual [{string.Join(", ", simEnemy.Hits)}]");
+        }
+        var player = pred.You;
+        var simPlayer = after.You;
+        void Cmp(string what, int predicted, int actual)
+        {
+            if (predicted != actual) differences.Add($"{what} {what}: predicted {predicted}, actual {actual}");
+        }
+        Cmp("your block", player.Block, simPlayer.Block);
+        // What it took from your hand and gave it (the room later draws have; Cloak Clasp, Regret at the end of the turn).
+        Cmp("cards in hand", player.HandCount, simPlayer.HandCount);
+        if (drawn is { } drawnCount) Cmp("cards drawn", player.Drawn - startP.Drawn, drawnCount);
+        // Energy (decision #117): what the play spends and gives back, the card's own included (Pael's Tears reads it).
+        Cmp("your energy", player.Energy, simPlayer.Energy);
+        Cmp("Plating", player.Plating, simPlayer.Plating);
+        Cmp(nameof(Juggernaut), player.Juggernaut, simPlayer.Juggernaut);
+        Cmp("Thorns", player.Thorns, simPlayer.Thorns);
+        Cmp("Flame Barrier", player.FlameBarrier, simPlayer.FlameBarrier);
+        Cmp("Feel No Pain", player.FeelNoPain, simPlayer.FeelNoPain);
+        // A summon is simulated as OstyCmd.Summon runs (SimEngine.Summon): Osty is held to it like any other number.
+        Cmp("Osty HP", player.OstyHp, simPlayer.OstyHp);
+        // An orb the simulator doesn't know (another mod's) is Unknown: any orb matches it. A random one (Chaos) is a branch per orb.
+        static string Orb(SimOrb orb) => $"{orb.Kind} {orb.Passive}/{orb.Evoke}";
+        var orbsMatch = player.Orbs.Count == simPlayer.Orbs.Count
+                        && player.Orbs.Zip(simPlayer.Orbs).All(orbs => orbs.First.Kind == OrbKind.Unknown || Orb(orbs.First) == Orb(orbs.Second));
+        if (!orbsMatch) differences.Add($"{what} orbs: predicted [{string.Join(", ", player.Orbs.Select(Orb))}], actual [{string.Join(", ", simPlayer.Orbs.Select(Orb))}]");
+        // Teammates (multiplayer): the block and HP your play leaves them (Beacon of Hope's share, hits).
+        // The state after is read from the living ones only (SimAdapter.IsTeammate), in player order.
+        var living = pred.Teammates.Where(teammate => teammate.Hp > 0).ToList();
+        if (living.Count == after.Teammates.Count)
+        {
+            for (var enemyIndex = 0; enemyIndex < living.Count; enemyIndex++)
+            {
+                var (nextPlayer, at) = (living[enemyIndex], after.Teammates[enemyIndex]);
+                Cmp($"teammate {enemyIndex + 1} block", nextPlayer.Block, at.Block);
+                Cmp($"teammate {enemyIndex + 1} HP", nextPlayer.Hp, at.Hp);
+                Cmp($"teammate {enemyIndex + 1} energy", nextPlayer.Energy, at.Energy);
+                // Their orbs (Ignition channels into them; full slots evoke their front orb): kinds, front first.
+                if (!nextPlayer.Orbs.Select(orb => orb.Kind).SequenceEqual(at.Orbs.Select(orb => orb.Kind))
+                    && !nextPlayer.Orbs.Any(orb => orb.Kind == OrbKind.Unknown))
+                    differences.Add($"{what} teammate {enemyIndex + 1} orbs: predicted [{string.Join(", ", nextPlayer.Orbs.Select(orb => orb.Kind))}], actual [{string.Join(", ", at.Orbs.Select(orb => orb.Kind))}]");
+            }
+        }
+        else differences.Add($"{what} teammates alive: predicted {living.Count}, actual {after.Teammates.Count}");
+        return differences;
     }
 }
