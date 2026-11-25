@@ -668,7 +668,7 @@ public static partial class SimAdapter
         }
         if (to == ApplyPowerAction.Where.You && FocusSignOf(type) is var focusSign && focusSign != 0)
             return read == null ? unread : amount != 0 ? new FocusAction(focusSign * amount) : null;
-        var simulated = SimModels.Has(simPowerName) || SelfPowers.Contains(simPowerName) || simPowerName == nameof(PoisonPower) || simPowerName == nameof(ArtifactPower);
+        var simulated = Simulated(simPowerName);
         var debuff = SimReaders.IsDebuffType(type);
         if (debuff ? !toEnemies && !simulated : !simulated) return null;
         if (simPowerName == nameof(StretchPower) && to == ApplyPowerAction.Where.You && CardEffects.KeepsStretchForReplays(card.GetType()))
@@ -687,6 +687,15 @@ public static partial class SimAdapter
     private static Type? PowerType(Type cardType, string name) =>
         Diagnostics.CardCoverage.PowersApplied(cardType).FirstOrDefault(type => type.Name == name)
         ?? typeof(PowerModel).Assembly.GetTypes().FirstOrDefault(type => type.Name == name && typeof(PowerModel).IsAssignableFrom(type));
+
+    /// <summary>
+    /// The simulator runs the power a card applies (decision #284): a model of it (hand-written, or read from its code now), a class read from
+    /// its code at the reviewed builds (ReadModels.ReadWholeAtReview: Poison) that a game update left unread, whose application makes the
+    /// simulation unknown (SimEngine.ApplyPower) rather than being dropped, a power it keeps as a number (SelfPowers), or Artifact (the engine's
+    /// own rule for a debuff landing).
+    /// </summary>
+    private static bool Simulated(string simPowerName) =>
+        SimModels.Has(simPowerName) || ReadModels.ReadWholeAtReview.Contains(simPowerName) || SelfPowers.Contains(simPowerName) || simPowerName == nameof(ArtifactPower);
 
     /// <summary>What an unknown power amount says: the step's amount isn't one the adapter reads (the card scan and PowerAmountTests hold every card to none).</summary>
     internal const string PowerAmountUnread = "a power's amount its code gives that isn't read";
@@ -712,7 +721,7 @@ public static partial class SimAdapter
             var type = typeof(PowerModel).Assembly.GetTypes().FirstOrDefault(each => each.Name == powerName && typeof(PowerModel).IsAssignableFrom(each));
             var simPowerName = type == null ? powerName : SimPowerName(type);
             var actedOn = type == null || type == typeof(StrengthPower) || typeof(TemporaryStrengthPower).IsAssignableFrom(type) || FocusSignOf(type) != 0 || SimReaders.IsDebuffType(type)
-                          || SimModels.Has(simPowerName) || SelfPowers.Contains(simPowerName) || simPowerName == nameof(PoisonPower) || simPowerName == nameof(ArtifactPower);
+                          || Simulated(simPowerName);
             if (!actedOn || simPowerName == nameof(StretchPower) && CardEffects.KeepsStretchForReplays(program)) continue;
             var amount = ValueAt(command, 2);
             if (amount != null && (ConditionReader.TargetPowerAmountOf(amount) != null
