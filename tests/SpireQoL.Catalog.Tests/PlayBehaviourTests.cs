@@ -164,14 +164,19 @@ public class PlayBehaviourTests
     [Fact]
     public void SunderGivesItsEnergyOnlyWhenItKills()
     {
-        // Sunder.OnPlay: Attack, then GainEnergy only if a hit killed its target.
+        // Sunder.OnPlay: Attack, then GainEnergy only if a hit killed its target, with another enemy keeping the fight going.
         var killed = Fight();
         var weak = Enemy(killed, hp: 5);
+        Enemy(killed);
         var killedAfter = Only(PlayOut(killed, killed.Add<Sunder>(), weak));
         var survived = Fight();
         var strong = Enemy(survived, hp: 200);
         var survivedAfter = Only(PlayOut(survived, survived.Add<Sunder>(), strong));
         Assert.Equal(survivedAfter.You.Energy + 3, killedAfter.You.Energy);
+        // The last enemy's death ends the fight: PlayerCmd.GainEnergy gives nothing once CombatManager.IsEnding (decision #301).
+        var won = Fight();
+        var last = Enemy(won, hp: 5);
+        Assert.Equal(survivedAfter.You.Energy, Only(PlayOut(won, won.Add<Sunder>(), last)).You.Energy);
     }
 
     [Fact]

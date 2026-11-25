@@ -13,6 +13,20 @@ public class SimExplosiveTests
 
     private static void Explosive(SimEnemy enemy, int amount) => enemy.Powers = enemy.Powers.With(PowerId.Explosive, amount);
 
+    /// <summary>An enemy that doesn't attack and isn't hit, so the explosive one's death doesn't end the fight (decision #301).</summary>
+    private static SimEnemy Bystander() => Enemy(id: 9, hp: 100);
+
+    [Fact]
+    public void TheLastEnemysExplosionHitsNoOne()
+    {
+        // Its death ends the fight: CreatureCmd.Damage returns at its start once CombatManager.IsOverOrEnding (decision #301).
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5) } };
+        Explosive(state.Enemies[0], amount: 6);
+        var outcome = SimEngine.Run(state, Strike(target: 1, damage: 5));
+        Assert.True(outcome.DeadInAll(enemyId: 1));
+        Assert.Equal(0, outcome.TakenMax);
+    }
+
     private static SimPlay Strike(int target, int damage)
         => new() { Name = "Strike", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = target, HitDamage = { [target] = damage }, Hits = 1 };
 
@@ -35,7 +49,7 @@ public class SimExplosiveTests
     public void ItGoesOffOnce()
     {
         // Killed by the card, then the end of turn and the enemy turn check deaths again: still one explosion.
-        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5), Bystander() } };
         Explosive(state.Enemies[0], amount: 6);
         Assert.Equal(6, SimEngine.Run(state, Strike(target: 1, damage: 5)).TakenMax);
     }
@@ -74,7 +88,7 @@ public class SimExplosiveTests
     [Fact]
     public void ItHitsEveryLivingPlayerThroughTheirOwnBlock()
     {
-        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5), Bystander() } };
         Explosive(state.Enemies[0], amount: 6);
         state.Teammates.Add(new SimPlayer { Hp = 40, Block = 2 });
         var outcome = SimEngine.Run(state, Strike(target: 1, damage: 5));
@@ -86,7 +100,7 @@ public class SimExplosiveTests
     [Fact]
     public void ADeadTeammateIsNotHit()
     {
-        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5), Bystander() } };
         Explosive(state.Enemies[0], amount: 6);
         state.Teammates.Add(new SimPlayer { Hp = 0 });
         var outcome = SimEngine.Run(state, Strike(target: 1, damage: 5));
@@ -98,7 +112,7 @@ public class SimExplosiveTests
     {
         // CreatureCmd.Damage: Hook.ModifyDamage (Intangible's ModifyDamageCap: 1) before Creature.DamageBlockInternal, so 1 of your 5 block goes
         // and you lose nothing; the hand-coded rule took 10 against your block (all 5 gone) and capped only the HP lost.
-        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5) } };
+        var state = new SimState { Enemies = { Enemy(id: 1, hp: 5), Bystander() } };
         Explosive(state.Enemies[0], amount: 10);
         state.You.Block = 5;
         state.You.Powers = PowerSet.Empty.With(PowerId.Intangible, amount: 1);

@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 21 engine rules naming 158 game methods; 3 adapter rules; 32 hand-written models.
+# 22 engine rules naming 159 game methods; 3 adapter rules; 32 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -52,9 +52,12 @@ Poison: Outbreak's trigger of every enemy's poison, and the game's preview of th
 Deaths: the hooks told as each happens (an end-of-turn step's, and what they raise, before the next), a dead enemy's powers gone, the creatures a death adds (each made as the game makes it: its HP none an earlier one of the same death joined with), a dead enemy its death's code brings back, a kill, a stun, a move set; the fight ending with no primary enemy alive unless a listener holds it back
   game: CreatureCmd.Kill, CreatureCmd.KillWithoutCheckingWinCondition, Hook.AfterDeath, Creature.RemoveAllPowersAfterDeath, Hook.ShouldPowerBeRemovedOnDeath, CreatureCmd.Add, CreatureCmd.Stun, CombatState.CreateCreature, Creature.SetUniqueMonsterHpValue, CreatureCmd.SetMaxAndCurrentHp, CreatureCmd.SetCurrentHp, MonsterModel.SetMoveImmediate, CombatManager.IsCombatEnding, Hook.ShouldStopCombatFromEnding
   simulator: SimEngine.AllyDeaths, SimEngine.DeathCheck, SimEngine.Spawn, SimEngine.SpawnPowers, SimEngine.Stun, SimEngine.SetMove, SimEngine.Revive, SimEngine.FightEnding, SimEngine.RunExecute, SimEngine.KillPlayer
+The fight's end inside a turn (decision #301): once no primary enemy is alive and nothing holds it back, a branch's later commands, its combat hooks, a card's later plays and the turn's end don't run
+  game: Hook.IterateCombatHookListeners, CardModel.OnPlayWrapper
+  simulator: SimEngine.FightOver, SimEngine.AnyEnding, SimEngine.Fighting, SimEngine.WhileFighting, SimEngine.RunWhileFighting
 The players' turn's end: its hooks in their places, Ethereal cards, the cards that act in hand, the hand flushed
   game: CombatManager.EndPlayerTurnPhaseOneInternal, CombatManager.EndPlayerTurnPhaseTwoInternal, CombatManager.DoTurnEnd, CombatManager.FlushPlayerHand, Hook.BeforeSideTurnEnd, Hook.AfterSideTurnEnd, Hook.ShouldEtherealTrigger, Hook.ShouldFlush, Hook.BeforeFlush
-  simulator: SimEngine.EndOfTurn, SimEngine.Exhausting, SimEngine.CardsActInHand
+  simulator: SimEngine.EndOfTurn, SimEngine.EndOfTurnSteps, SimEngine.Exhausting, SimEngine.CardsActInHand
 The enemies' turn: its start's hooks, block cleared, each move in turn order, the intents read after a play
   game: CombatManager.StartTurn, CombatManager.ExecuteEnemyTurn, MonsterModel.PerformMove, Hook.BeforeSideTurnStart, Hook.AfterSideTurnStart, Hook.ShouldClearBlock, Creature.ClearBlock
   simulator: SimEngine.EnemyTurnStart, SimEngine.StartTheEnemiesTurn, SimEngine.EnemyTurn, SimEngine.ClearsBlock, SimEngine.IntentsAfter

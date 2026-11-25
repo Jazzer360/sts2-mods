@@ -468,10 +468,40 @@ public sealed class ReadModel : SimModel
             // An enchantment's effects are its card's (no tab of its own, nothing in the play log: its card's play shows them).
             var fires = firstRound && acts && Spec.Kind != ModelKind.Enchantment && !firing.Any(earlier => Equals(earlier.When, step.When));
             if (acts) firing.Add(step);
-            compiled.Add(new CompiledStep(step.When == null ? null : Compile(step.When), Runner(step, fires, firing)));
+            var runner = Runner(step, fires, firing);
+            // The game's command returns at its start once the fight is ending (decision #301): a listener the game still tells then (AfterCardPlayed,
+            // the death's hooks) flashes, and its command does nothing.
+            if (StoppedOnceTheFightEnds.ContainsKey(step.GetType().Name))
+            {
+                var guarded = runner;
+                runner = args => SimEngine.FightOver(args.State) ? One(args.State) : guarded(args);
+            }
+            compiled.Add(new CompiledStep(step.When == null ? null : Compile(step.When), runner));
         }
         return compiled.ToArray();
     }
+
+    /// <summary>
+    /// The read steps whose game command returns at its start once the fight is ending (its IsEnding or IsOverOrEnding guard, decision #301), each
+    /// with that command: FightEndTests read its guard on both branches.
+    /// </summary>
+    internal static readonly IReadOnlyDictionary<string, string> StoppedOnceTheFightEnds = new Dictionary<string, string>
+    {
+        [nameof(GainBlockStep)] = "CreatureCmd.GainBlock",
+        [nameof(DamageStep)] = "CreatureCmd.Damage",
+        [nameof(LoseBlockStep)] = "CreatureCmd.LoseBlock",
+        [nameof(HealStep)] = "CreatureCmd.Heal",
+        [nameof(DrawStep)] = "CardPileCmd.Draw",
+        [nameof(GainEnergyStep)] = "PlayerCmd.GainEnergy",
+        [nameof(GainStarsStep)] = "PlayerCmd.GainStars",
+        [nameof(ApplyPowerStep)] = "PowerCmd.Apply",
+        [nameof(ChannelStep)] = "OrbCmd.Channel",
+        [nameof(SummonStep)] = "OstyCmd.Summon",
+        [nameof(MakeCopyStep)] = "CardPileCmd.AddGeneratedCardToCombat",
+        [nameof(MakeRandomInHandStep)] = "CardPileCmd.AddGeneratedCardToCombat",
+        [nameof(MakeIntoDrawStep)] = "CardPileCmd.AddGeneratedCardToCombat",
+        [nameof(UpgradeCardStep)] = "CardCmd.Upgrade",
+    };
 
     /// <summary>The SimModel method a game hook is answered in (the card events' in AfterCardEvent, a power landing in AfterPowerApplied).</summary>
     public static string SimHookOf(HookName hook) => hook switch

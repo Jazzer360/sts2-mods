@@ -237,9 +237,11 @@ public static partial class SimEngine
                 if (play != null) RunScript(branches, play);
                 // The play is over in every branch: its own results are exact from here, even if the end of turn hits the cap.
                 outcome = PlayResults(branches.States, start, aliveAtStart, complete: true);
-                AutoPostPlay(branches);
+                // A play that won the fight has no end of turn after it, nor an enemy turn (decision #301).
+                Fighting(branches, () => AutoPostPlay(branches));
                 EndOfTurn(branches);
-                EnemyTurnStart(branches);
+                Fighting(branches, () => EnemyTurnStart(branches));
+                // The enemy turn of a branch whose fight is over moves no one (each move asks FightEnding first): it only marks the dead.
                 branches.Do(EnemyTurn);
             }
             catch (SimCapped)
@@ -1121,7 +1123,20 @@ public static partial class SimEngine
         foreach (var action in script.Actions) Run(branches, action);
     }
 
+    /// <summary>
+    /// An action on every branch whose fight goes on (decision #301: the game's command returns at its start once the fight is ending); the card
+    /// resolving is the simulator's own bookkeeping and runs on all.
+    /// </summary>
     private static void Run(BranchSet branches, SimAction action)
+    {
+        if (action is CardResolvedAction || !AnyEnding(branches)) RunAction(branches, action);
+        else RunWhileFighting(branches, action);
+    }
+
+    /// <summary>The action on the branches whose fight goes on (its own method: the fast path above captures nothing).</summary>
+    private static void RunWhileFighting(BranchSet branches, SimAction action) => WhileFighting(branches, () => RunAction(branches, action));
+
+    private static void RunAction(BranchSet branches, SimAction action)
     {
         switch (action)
         {
@@ -1364,6 +1379,19 @@ public static partial class SimEngine
     /// </summary>
     private static void EndOfTurn(BranchSet branches)
     {
+        // No end of turn follows a fight that's over (decision #301: the turn loop ends the combat instead); one that ends during it stops there.
+        if (AnyEnding(branches)) WhileFighting(branches, () => EndOfTurnSteps(branches));
+        else EndOfTurnSteps(branches);
+        branches.Do(branch =>
+        {
+            branch.EndOfTurnNow = false;
+            branch.BlockAtEnemyTurn = branch.You.Block;
+            foreach (var enemy in branch.Enemies) { enemy.HpAtTurnEnd = Math.Max(0, enemy.Hp); enemy.UnblockedAtTurnEnd = enemy.UnblockedInstances; }
+        });
+    }
+
+    private static void EndOfTurnSteps(BranchSet branches)
+    {
         branches.Do(branch => branch.EndOfTurnNow = true);
         HookStep(branches, nameof(SimModel.BeforeSideTurnEndVeryEarly), (model, owner, branch) => Who.IsPlayer(owner) ? model.BeforeSideTurnEndVeryEarly(branch, owner) : new[] { branch });
         HookStep(branches, nameof(SimModel.BeforeSideTurnEndEarly), (model, owner, branch) => Who.IsPlayer(owner) ? model.BeforeSideTurnEndEarly(branch, owner) : new[] { branch });
@@ -1372,12 +1400,13 @@ public static partial class SimEngine
         DeathCheck(branches);
 
         // 2. Each player's DoTurnEnd, in player order.
+        // A kill there ends the fight: what's left of the turn's end doesn't run (decision #301).
         foreach (var player in branches.States[0].PlayerIds)
         {
-            OrbPassives(branches, player);
+            Fighting(branches, () => OrbPassives(branches, player));
             DeathCheck(branches); // kills by orb passives
-            branches.Each(branch => branch.Player(player) is { } simPlayer && Exhausting(branch, simPlayer) is > 0 and var exhausting && branch.TakesPart(player) ? ProcCardEvent(branch, CardEvent.Exhausted, exhausting, player, indirect: false, causedByEthereal: true) : new[] { branch });
-            branches.Do(branch => CardsActInHand(branch, player));
+            Fighting(branches, () => branches.Each(branch => branch.Player(player) is { } simPlayer && Exhausting(branch, simPlayer) is > 0 and var exhausting && branch.TakesPart(player) ? ProcCardEvent(branch, CardEvent.Exhausted, exhausting, player, indirect: false, causedByEthereal: true) : new[] { branch }));
+            Fighting(branches, () => branches.Do(branch => CardsActInHand(branch, player)));
             DeathCheck(branches);
         }
 
@@ -1390,12 +1419,6 @@ public static partial class SimEngine
         // Deaths at the end of your turn run their hooks before the enemies act (arrows coming back: Twine's block).
         branches.Do(AllyDeaths);
         if (branches.States.Any(branch => branch.HasPending)) branches.Each(DrainPending);
-        branches.Do(branch =>
-        {
-            branch.EndOfTurnNow = false;
-            branch.BlockAtEnemyTurn = branch.You.Block;
-            foreach (var enemy in branch.Enemies) { enemy.HpAtTurnEnd = Math.Max(0, enemy.Hp); enemy.UnblockedAtTurnEnd = enemy.UnblockedInstances; }
-        });
     }
 
     // ------------------------------------------------------------------ enemy turn

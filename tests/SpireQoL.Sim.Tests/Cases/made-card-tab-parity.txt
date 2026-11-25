@@ -17,7 +17,7 @@
 16 proc:PersonalHivePower crossed chance 88% amount 12 0-12; | checked PersonalHivePower 0/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; | piles 3d0s,5d0s,7d0s,9d0s; 
 17 | checked | seen | piles 0d0s; 
 18 proc:PersonalHivePower crossed CardsMade 6 amount 6 0-6; | checked BiiigHug 00/00; PersonalHivePower 11/11; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; BiiigHug@-1 Flash crossed; | piles 3d0s; 3d0s; 
-19 proc:PersonalHivePower crossed CardsMade 6 amount 6 6-6; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 6d0s; 
+19 proc:PersonalHivePower crossed CardsMade 4 amount 4 4-4; | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 4d0s; 
 20 proc:PersonalHivePower crossed CardsMade 9 amount 9 0-9; | checked BiiigHug 000/000; PersonalHivePower 111/111; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; BiiigHug@-1 Flash crossed; | piles 6d0s; 1d0s; 2d0s; 
 21 | checked BiiigHug 1/1; | seen BiiigHug@-1 Flash crossed; | piles 0d1s,0d0s; 
 22 proc:PersonalHivePower crossed CardsMade 7 amount 7 0-7; | checked PersonalHivePower 111/111; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; | piles 3d0s; 2d0s; 2d0s; 
@@ -63,11 +63,11 @@
 62 proc:PersonalHivePower crossed CardsMade 6 amount 6 6-6; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; | piles 6d0s; 
 63 | checked BiiigHug 0/0; | seen BiiigHug@-1 Flash crossed; | piles 0d0s; 
 64 proc:PersonalHivePower crossed CardsMade 7 amount 7 0-7; | checked PersonalHivePower 111/111; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; | piles 1d0s; 3d0s; 3d0s; 
-65 proc:PersonalHivePower crossed CardsMade 1 amount 1 1-1; | checked BiiigHug 1/1; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 1d0s; 
+65 | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 0d0s; 
 66 proc:PersonalHivePower crossed CardsMade 3 amount 3 3-3; | checked PersonalHivePower 1/1; | seen PersonalHivePower@1 Flash crossed; | piles 3d0s; 
-67 proc:PersonalHivePower crossed CardsMade 9 amount 9 9-9; | checked BiiigHug 1/1; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 9d1s,9d0s; 
+67 proc:PersonalHivePower crossed CardsMade 6 amount 6 6-6; | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 6d1s,6d0s; 
 68 proc:PersonalHivePower crossed CardsMade 2 amount 2 0-2 aimed; | checked BiiigHug 000/000; PersonalHivePower 010/010; | seen PersonalHivePower@1 Flash crossed; BiiigHug@-1 Flash crossed; | piles 0d0s; 2d0s; 0d0s; 
-69 proc:PersonalHivePower crossed CardsMade 6 amount 6 6-6; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; | piles 6d0s; 
+69 proc:PersonalHivePower crossed CardsMade 3 amount 3 3-3; | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; | piles 3d0s; 
 70 proc:PersonalHivePower crossed chance 70% amount 15 0-15; proc:BiiigHug crossed amount 0 0-0; | checked BiiigHug 1/1; PersonalHivePower 0/1; | seen PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; BiiigHug@-1 Flash crossed; | piles 0d1s,3d1s,2d1s,6d1s,5d1s,4d1s,9d1s,8d1s,7d1s,0d0s,3d0s,2d0s,6d0s,5d0s,4d0s,9d0s,8d0s,7d0s; 
 71 proc:PersonalHivePower crossed CardsMade 5 amount 5 0-5; | checked PersonalHivePower 11/11; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; | piles 2d0s; 3d0s; 
 72 proc:PersonalHivePower crossed CardsMade 2 amount 2 0-2 aimed; | checked PersonalHivePower 010/010; | seen PersonalHivePower@1 Flash crossed; | piles 0d0s; 2d0s; 0d0s; 
@@ -77,8 +77,8 @@
 76 proc:PersonalHivePower crossed CardsMade 5 amount 5 0-5; proc:BiiigHug crossed amount 0 0-0; | checked BiiigHug 111/111; PersonalHivePower 111/111; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; BiiigHug@-1 Flash crossed; | piles 1d1s,1d0s; 3d1s,3d0s; 1d1s,1d0s; 
 77 proc:PersonalHivePower crossed chance 88% amount 9 0-9; | checked PersonalHivePower 0/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; | piles 6d0s,5d0s,4d0s,3d0s; 
 78 proc:PersonalHivePower crossed CardsMade 2 amount 2 2-2; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; | piles 2d0s; 
-79 proc:PersonalHivePower crossed CardsMade 8 amount 8 8-8; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; BiiigHug@-1 Flash crossed; | piles 8d0s; 
-80 proc:PersonalHivePower crossed CardsMade 2 amount 2 2-2; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; | piles 2d0s; 
+79 proc:PersonalHivePower crossed CardsMade 6 amount 6 6-6; | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; BiiigHug@-1 Flash crossed; | piles 6d0s; 
+80 proc:PersonalHivePower crossed CardsMade 1 amount 1 1-1; | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; | piles 1d0s; 
 81 | checked BiiigHug 00/00; | seen BiiigHug@-1 Flash crossed; | piles 0d0s; 0d0s; 
 82 | checked | seen | piles 0d0s; 
 83 proc:PersonalHivePower crossed chance 50% amount 3 0-3; | checked PersonalHivePower 0/1; | seen PersonalHivePower@1 Flash crossed; | piles 0d0s,3d0s; 
@@ -94,7 +94,7 @@
 93 proc:PersonalHivePower crossed CardsMade 9 amount 9 0-9; | checked PersonalHivePower 111/111; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; | piles 4d0s; 2d0s; 3d0s; 
 94 proc:PersonalHivePower crossed CardsMade 9 amount 9 9-9; | checked PersonalHivePower 1/1; | seen PersonalHivePower@1 Flash crossed; | piles 9d0s; 
 95 proc:PersonalHivePower crossed chance 33% amount 3 0-3; | checked BiiigHug 0/0; PersonalHivePower 0/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@2 Flash crossed; BiiigHug@-1 Flash crossed; | piles 2d0s,0d0s,1d0s; 
-96 proc:PersonalHivePower crossed CardsMade 1 amount 1 1-1; | checked PersonalHivePower 1/1; | seen PersonalHivePower@1 Flash crossed; | piles 1d0s; 
+96 proc:PersonalHivePower crossed chance 75% amount 1 0-1; | checked PersonalHivePower 0/0; | seen PersonalHivePower@1 Flash crossed; | piles 0d0s,1d0s; 
 97 proc:PersonalHivePower crossed CardsMade 6 amount 6 6-6; | checked BiiigHug 1/1; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; BiiigHug@-1 Flash crossed; | piles 6d1s,6d0s; 
 98 proc:PersonalHivePower crossed CardsMade 1 amount 1 0-1 aimed; | checked PersonalHivePower 10/10; | seen PersonalHivePower@0 Flash crossed; | piles 1d0s; 0d0s; 
 99 proc:PersonalHivePower crossed CardsMade 8 amount 8 0-8; | checked PersonalHivePower 111/111; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; | piles 2d0s; 3d0s; 3d0s; 
@@ -105,13 +105,13 @@
 104 proc:PersonalHivePower crossed chance 50% amount 2 0-2; proc:BiiigHug crossed amount 0 0-0; | checked BiiigHug 1/1; PersonalHivePower 0/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; BiiigHug@-1 Flash crossed; | piles 1d1s,1d0s; 
 105 | checked BiiigHug 0/0; | seen BiiigHug@-1 Flash crossed; | piles 0d0s; 
 106 | checked BiiigHug 0/0; | seen BiiigHug@-1 Flash crossed; | piles 0d0s; 
-107 proc:PersonalHivePower crossed CardsMade 9 amount 9 9-9; | checked BiiigHug 1/1; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 9d1s,9d0s; 
+107 proc:PersonalHivePower crossed CardsMade 6 amount 6 6-6; | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 6d1s,6d0s; 
 108 proc:PersonalHivePower crossed CardsMade 4 amount 4 0-4 aimed; | checked PersonalHivePower 110/110; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; | piles 3d0s; 1d0s; 0d0s; 
 109 proc:PersonalHivePower crossed CardsMade 9 amount 9 9-9; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; | piles 9d0s; 
 110 proc:PersonalHivePower crossed CardsMade 10 amount 10 0-10 aimed; | checked BiiigHug 000/000; PersonalHivePower 011/011; | seen PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; BiiigHug@-1 Flash crossed; | piles 0d0s; 6d0s; 4d0s; 
 111 proc:PersonalHivePower crossed CardsMade 2 amount 2 2-2; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 2d0s; 
 112 proc:PersonalHivePower crossed CardsMade 2 amount 2 2-2; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@1 Flash crossed; BiiigHug@-1 Flash crossed; | piles 2d0s; 
-113 proc:PersonalHivePower crossed CardsMade 1 amount 1 1-1; | checked BiiigHug 1/1; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 1d1s,1d0s; 
+113 | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 0d1s,0d0s; 
 114 proc:BiiigHug crossed amount 0 0-0; | checked BiiigHug 1/1; | seen BiiigHug@-1 Flash crossed; | piles 0d1s,0d0s; 
 115 proc:PersonalHivePower crossed CardsMade 3 amount 3 3-3; | checked BiiigHug 1/1; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 3d0s; 
 116 proc:PersonalHivePower crossed CardsMade 2 amount 2 0-2 aimed; | checked PersonalHivePower 101/101; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@2 Flash crossed; | piles 1d0s; 0d0s; 1d0s; 
@@ -145,7 +145,7 @@
 144 proc:PersonalHivePower crossed chance 50% amount 4 0-4; | checked PersonalHivePower 0/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; | piles 1d0s,3d0s; 
 145 | checked | seen | piles 0d0s; 
 146 proc:PersonalHivePower crossed CardsMade 3 amount 3 3-3; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; | piles 3d0s; 
-147 proc:PersonalHivePower crossed CardsMade 3 amount 3 3-3; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; | piles 3d0s; 
+147 | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; | piles 0d0s; 
 148 proc:PersonalHivePower crossed CardsMade 18 amount 18 18-18; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; | piles 18d0s; 
 149 proc:PersonalHivePower crossed CardsMade 6 amount 6 6-6; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 6d0s; 
 150 proc:PersonalHivePower crossed CardsMade 4 amount 4 4-4; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 4d0s; 
@@ -155,7 +155,7 @@
 154 proc:PersonalHivePower crossed CardsMade 4 amount 4 0-4 aimed; | checked BiiigHug 000/000; PersonalHivePower 011/011; | seen PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; BiiigHug@-1 Flash crossed; | piles 0d0s; 2d0s; 2d0s; 
 155 proc:PersonalHivePower crossed CardsMade 4 amount 4 4-4; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 4d0s; 
 156 | checked | seen | piles 0d0s; 
-157 proc:PersonalHivePower crossed CardsMade 2 amount 2 2-2; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; | piles 2d0s; 
+157 | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; | piles 0d0s; 
 158 proc:PersonalHivePower crossed CardsMade 22 amount 22 0-22; proc:BiiigHug crossed amount 0 0-0; | checked BiiigHug 111/111; PersonalHivePower 111/111; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; BiiigHug@-1 Flash crossed; | piles 4d1s,4d0s; 9d1s,9d0s; 9d1s,9d0s; 
 159 | checked | seen | piles 0d0s; 
 160 proc:PersonalHivePower crossed CardsMade 6 amount 6 6-6; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; BiiigHug@-1 Flash crossed; | piles 6d0s; 
@@ -189,11 +189,11 @@
 188 proc:PersonalHivePower crossed CardsMade 2 amount 2 0-2 aimed; proc:BiiigHug crossed amount 0 0-0; | checked BiiigHug 11/11; PersonalHivePower 10/10; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 2d1s,2d0s; 0d1s,0d0s; 
 189 proc:PersonalHivePower crossed CardsMade 18 amount 18 0-18; | checked BiiigHug 111/111; PersonalHivePower 111/111; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; BiiigHug@-1 Flash crossed; | piles 6d1s,6d0s; 9d1s,9d0s; 3d1s,3d0s; 
 190 proc:PersonalHivePower crossed CardsMade 12 amount 12 0-12; | checked PersonalHivePower 11/11; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; | piles 6d0s; 6d0s; 
-191 proc:PersonalHivePower crossed CardsMade 1 amount 1 1-1; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; | piles 1d0s; 
+191 | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; | piles 0d0s; 
 192 | checked | seen | piles 0d0s; 
 193 proc:PersonalHivePower crossed CardsMade 1 amount 1 1-1; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; | piles 1d0s; 
 194 | checked | seen | piles 0d0s; 
-195 proc:PersonalHivePower crossed CardsMade 6 amount 6 6-6; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 6d0s; 
+195 proc:PersonalHivePower crossed CardsMade 4 amount 4 4-4; | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 4d0s; 
 196 | checked | seen | piles 0d0s; 
 197 proc:PersonalHivePower crossed CardsMade 2 amount 2 2-2; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; | piles 2d0s; 
 198 proc:PersonalHivePower crossed chance 81% amount 4 0-4; | checked PersonalHivePower 0/1; | seen PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; | piles 2d0s,3d0s; 
@@ -220,7 +220,7 @@
 219 proc:PersonalHivePower crossed chance 50% amount 3 0-3; | checked BiiigHug 0/0; PersonalHivePower 0/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; BiiigHug@-1 Flash crossed; | piles 1d0s,2d0s; 
 220 proc:PersonalHivePower crossed CardsMade 2 amount 2 2-2; proc:BiiigHug crossed amount 0 0-0; | checked BiiigHug 1/1; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 2d1s,2d0s; 
 221 proc:PersonalHivePower crossed CardsMade 17 amount 17 0-17; | checked BiiigHug 111/111; PersonalHivePower 111/111; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; BiiigHug@-1 Flash crossed; | piles 6d1s,6d0s; 2d1s,2d0s; 9d1s,9d0s; 
-222 proc:PersonalHivePower crossed CardsMade 4 amount 4 4-4; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 4d0s; 
+222 proc:PersonalHivePower crossed CardsMade 2 amount 2 2-2; | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 2d0s; 
 223 proc:PersonalHivePower crossed CardsMade 5 amount 5 5-5; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; BiiigHug@-1 Flash crossed; | piles 5d0s; 
 224 proc:PersonalHivePower crossed CardsMade 1 amount 1 1-1; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 1d0s; 
 225 proc:PersonalHivePower crossed CardsMade 6 amount 6 6-6; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; BiiigHug@-1 Flash crossed; | piles 6d0s; 
@@ -264,7 +264,7 @@
 263 proc:PersonalHivePower crossed chance 50% amount 1 0-1; | checked PersonalHivePower 0/1; | seen PersonalHivePower@0 Flash crossed; | piles 1d0s,0d0s; 
 264 proc:PersonalHivePower crossed CardsMade 2 amount 2 2-2; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 2d0s; 
 265 proc:PersonalHivePower crossed CardsMade 7 amount 7 7-7; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; PersonalHivePower@2 Flash crossed; BiiigHug@-1 Flash crossed; | piles 7d0s; 
-266 proc:PersonalHivePower crossed CardsMade 3 amount 3 3-3; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 3d0s; 
+266 | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 0d0s; 
 267 proc:PersonalHivePower crossed CardsMade 2 amount 2 2-2; | checked PersonalHivePower 1/1; | seen PersonalHivePower@2 Flash crossed; | piles 2d0s; 
 268 proc:PersonalHivePower crossed CardsMade 1 amount 1 1-1; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 1d0s; 
 269 proc:PersonalHivePower crossed CardsMade 6 amount 6 6-6; | checked PersonalHivePower 1/1; | seen PersonalHivePower@2 Flash crossed; | piles 6d0s; 
@@ -281,7 +281,7 @@
 280 proc:PersonalHivePower crossed chance 88% amount 2 0-2; | checked PersonalHivePower 0/1; | seen PersonalHivePower@1 Flash crossed; | piles 0d0s,2d0s; 
 281 proc:PersonalHivePower crossed CardsMade 9 amount 9 9-9; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; | piles 9d0s; 
 282 proc:PersonalHivePower crossed chance 88% amount 10 2-10; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; | piles 6d0s; 
-283 proc:PersonalHivePower crossed CardsMade 3 amount 3 3-3; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; | piles 3d0s; 
+283 | checked PersonalHivePower 0/0; | seen PersonalHivePower@0 Flash crossed; | piles 0d0s; 
 284 proc:PersonalHivePower crossed chance 50% amount 3 0-3; | checked PersonalHivePower 0/1; | seen PersonalHivePower@0 Flash crossed; PersonalHivePower@1 Flash crossed; | piles 2d0s,1d0s; 
 285 proc:PersonalHivePower crossed CardsMade 9 amount 9 9-9; | checked BiiigHug 0/0; PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; BiiigHug@-1 Flash crossed; | piles 9d0s; 
 286 proc:PersonalHivePower crossed CardsMade 2 amount 2 2-2; | checked PersonalHivePower 1/1; | seen PersonalHivePower@0 Flash crossed; | piles 2d0s; 

@@ -80,9 +80,14 @@ public class SimModelEffectTests
     [Fact]
     public void CompostGivesEnergyWhenAnEnemyDies()
     {
+        // Another enemy keeps the fight going: the last one's death ends it, and PlayerCmd.GainEnergy gives nothing then (decision #301).
         var state = Power(State(enemyHp: 5), PowerId.Compost, amount: 1);
+        state.Enemies.Add(Enemy(id: 1, hp: 100, block: 0));
         state.You.Energy = 0;
         Assert.Equal(1, After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 10))).You.Energy);
+        var last = Power(State(enemyHp: 5), PowerId.Compost, amount: 1);
+        last.You.Energy = 0;
+        Assert.Equal(0, After(last, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 10))).You.Energy);
     }
 
     [Fact]
@@ -90,6 +95,7 @@ public class SimModelEffectTests
     {
         // CompostPower.AfterDeath (read from its code, decision #277): its amount for each living player on its owner's side, you included.
         var state = State(enemyHp: 5);
+        state.Enemies.Add(Enemy(id: 1, hp: 100, block: 0)); // the fight goes on (decision #301)
         state.You.Energy = 0;
         state.Teammates.Add(new SimPlayer { Hp = 40, MaxHp = 60, Powers = PowerSet.Empty.With(PowerId.Compost, amount: 2) });
         Assert.Equal(2, After(state, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 10))).You.Energy);

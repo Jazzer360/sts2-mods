@@ -76,7 +76,7 @@ public sealed partial class ProcAudit
 
         // ---- Cards that come back to your hand (Procs.ReturnToHand): what moved back during the play against the return
         // tabs. A card moving itself always explains its own move, so this is the only check on those tabs.
-        if (window.FullBefore != null && window.FullAfter != null && !window.FightEnded)
+        if (window.FullBefore != null && window.FullAfter != null)
         {
             var drawnNow = entries.OfType<CardDrawnEntry>().Select(cardDrawnEntry => cardDrawnEntry.Card).ToHashSet(ReferenceEqualityComparer.Instance);
             var cameBack = window.FullAfter.Cards

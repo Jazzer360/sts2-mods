@@ -25,7 +25,8 @@ public class EnchantmentParityTests
         "Corrupted" => (new(), new() { new LoseHpAction(2) }),
         "Inky" => (new(), new() { new ApplyPowerAction(PowerId.Weak, 1) { To = targets == SimPlay.Target.All ? ApplyPowerAction.Where.AllEnemies : ApplyPowerAction.Where.Target, Debuff = true } }),
         "Swift" => (new(), normal ? new() { new FirstPlayOnly(new SimAction[] { new CardEventAction(CardEvent.Drawn, amount) { Indirect = true, JoinsHand = true } }) } : new()),
-        "Sown" => (normal ? new() { new CardEventAction(CardEvent.EnergyGained, amount) } : new(), new()),
+        // After the card's own, as the game gives it (and as the read one runs): nothing once the card's own ended the fight (decision #301).
+        "Sown" => (new(), normal ? new() { new FirstPlayOnly(new SimAction[] { new CardEventAction(CardEvent.EnergyGained, amount) }) } : new()),
         _ => throw new ArgumentException(enchantment),
     };
 

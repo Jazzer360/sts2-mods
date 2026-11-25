@@ -20,6 +20,13 @@ public class SimConditionTests
         return state;
     }
 
+    /// <summary>Another enemy, out of the play's way, so a kill of the first doesn't end the fight (decision #301).</summary>
+    private static SimState WithBystander(SimState state)
+    {
+        state.Enemies.Add(new SimEnemy { Id = 1, Name = "E1", Hp = 100 });
+        return state;
+    }
+
     private static AttackAction Hit(int damage, SimPlay.Target target = SimPlay.Target.Single) =>
         new(Hits: 1, target, new DamageSpec(Base: 0m, SimProps.Move) { BaseOn = new Dictionary<int, decimal> { [0] = damage, [1] = damage }, Fixed = true });
 
@@ -43,7 +50,9 @@ public class SimConditionTests
     {
         // The attack's kill (DamageResult.WasTargetKilled) guards Sunder's energy and Timber's second attack alike: one condition, two effects.
         var sunder = Card("Sunder", plays: 1, Hit(damage: 24), new WhenAction(Killed, new SimAction[] { Energy(amount: 3) }));
-        Assert.Equal(3, Assert.Single(SimEngine.Run(Board(enemyHp: 20), sunder).Branches).You.Energy);
+        // Another enemy keeps the fight going: with the last one dead, the fight is over and the energy never comes (PlayerCmd.GainEnergy: !IsEnding).
+        Assert.Equal(3, Assert.Single(SimEngine.Run(WithBystander(Board(enemyHp: 20)), sunder).Branches).You.Energy);
+        Assert.Equal(0, Assert.Single(SimEngine.Run(Board(enemyHp: 20), sunder).Branches).You.Energy);
         Assert.Equal(0, Assert.Single(SimEngine.Run(Board(enemyHp: 30), sunder).Branches).You.Energy);
 
         var timber = Card("Timber", plays: 1, Hit(damage: 24), new WhenAction(Killed, new SimAction[] { Hit(damage: 10, SimPlay.Target.All) }));
@@ -61,7 +70,7 @@ public class SimConditionTests
         // A draw on a kill, and the same draw while your hand is empty (Restlessness' test): each asks its own test of the state.
         var pile = new SimDrawPile { Rest = { new SimDrawGroup(Plain, 10) } };
         var onKill = Card("OnKill", plays: 1, Hit(damage: 24), new WhenAction(Killed, new SimAction[] { Draw(cards: 2) }));
-        var killed = Board(enemyHp: 20);
+        var killed = WithBystander(Board(enemyHp: 20));
         killed.You.Draw = pile;
         Assert.Equal(2, Assert.Single(SimEngine.Run(killed, onKill).Branches).You.HandCount);
 

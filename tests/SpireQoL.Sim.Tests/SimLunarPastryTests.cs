@@ -62,15 +62,23 @@ public class SimLunarPastryTests
     public void InsatiableDominionLandsAfterParryingShield()
     {
         // Its damage is an AfterSideTurnEndLate hit on you (its model): Parrying Shield still sees your block.
-        var state = new SimState { Enemies = { Enemy(id: 1, hp: 6, hits: 0) } };
-        state.You.Block = 5;
-        state.WithRelic(Who.You, RelicId.ParryingShield, "Block", value: 5);
-        state.WithRelic(Who.You, RelicId.ParryingShield, "Damage", value: 6);
-        state.You.Powers = state.You.Powers.With(PowerId.InsatiableDominion, amount: 1);
-        state.Vars["-1:InsatiableDominionPower:Damage"] = 7;
-        state.You.Fields = state.You.Fields.With(PowerId.InsatiableDominion.Name + ".Var.Damage", 7); // its own value, its code storing it (decision #283)
-        var outcome = SimEngine.Run(state);
-        Assert.True(outcome.DeadInAll(enemyId: 1));
-        Assert.Equal(2, outcome.TakenMax);
+        static SimOutcome Run(int enemyHp)
+        {
+            var state = new SimState { Enemies = { Enemy(id: 1, hp: enemyHp, hits: 0) } };
+            state.You.Block = 5;
+            state.WithRelic(Who.You, RelicId.ParryingShield, "Block", value: 5);
+            state.WithRelic(Who.You, RelicId.ParryingShield, "Damage", value: 6);
+            state.You.Powers = state.You.Powers.With(PowerId.InsatiableDominion, amount: 1);
+            state.Vars["-1:InsatiableDominionPower:Damage"] = 7;
+            state.You.Fields = state.You.Fields.With(PowerId.InsatiableDominion.Name + ".Var.Damage", 7); // its own value, its code storing it (decision #283)
+            return SimEngine.Run(state);
+        }
+        var survives = Run(enemyHp: 20);
+        Assert.Equal(14, survives.Worst.Enemy(id: 1)!.Hp);
+        Assert.Equal(2, survives.TakenMax);
+        // Parrying Shield killing the last enemy ends the fight: Hook.AfterSideTurnEnd's Late loop starts after it and reaches no one (decision #301).
+        var killed = Run(enemyHp: 6);
+        Assert.True(killed.DeadInAll(enemyId: 1));
+        Assert.Equal(0, killed.TakenMax);
     }
 }

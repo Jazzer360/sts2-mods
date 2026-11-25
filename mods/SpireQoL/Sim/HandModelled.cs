@@ -86,8 +86,11 @@ public static class HandModelled
             new[] { "SimEngine.AllyDeaths", "SimEngine.DeathCheck", "SimEngine.Spawn", "SimEngine.SpawnPowers", "SimEngine.Stun", "SimEngine.SetMove", "SimEngine.Revive", "SimEngine.FightEnding", "SimEngine.RunExecute", "SimEngine.KillPlayer" },
             new[] { "CreatureCmd.Kill", "CreatureCmd.KillWithoutCheckingWinCondition", "Hook.AfterDeath", "Creature.RemoveAllPowersAfterDeath", "Hook.ShouldPowerBeRemovedOnDeath", "CreatureCmd.Add", "CreatureCmd.Stun",
                 "CombatState.CreateCreature", "Creature.SetUniqueMonsterHpValue", "CreatureCmd.SetMaxAndCurrentHp", "CreatureCmd.SetCurrentHp", "MonsterModel.SetMoveImmediate", "CombatManager.IsCombatEnding", "Hook.ShouldStopCombatFromEnding" }),
+        new("The fight's end inside a turn (decision #301): once no primary enemy is alive and nothing holds it back, a branch's later commands, its combat hooks, a card's later plays and the turn's end don't run",
+            new[] { "SimEngine.FightOver", "SimEngine.AnyEnding", "SimEngine.Fighting", "SimEngine.WhileFighting", "SimEngine.RunWhileFighting" },
+            new[] { "Hook.IterateCombatHookListeners", "CardModel.OnPlayWrapper" }),
         new("The players' turn's end: its hooks in their places, Ethereal cards, the cards that act in hand, the hand flushed",
-            new[] { "SimEngine.EndOfTurn", "SimEngine.Exhausting", "SimEngine.CardsActInHand" },
+            new[] { "SimEngine.EndOfTurn", "SimEngine.EndOfTurnSteps", "SimEngine.Exhausting", "SimEngine.CardsActInHand" },
             new[] { "CombatManager.EndPlayerTurnPhaseOneInternal", "CombatManager.EndPlayerTurnPhaseTwoInternal", "CombatManager.DoTurnEnd", "CombatManager.FlushPlayerHand", "Hook.BeforeSideTurnEnd",
                 "Hook.AfterSideTurnEnd", "Hook.ShouldEtherealTrigger", "Hook.ShouldFlush", "Hook.BeforeFlush" }),
         new("The enemies' turn: its start's hooks, block cleared, each move in turn order, the intents read after a play",
@@ -127,7 +130,7 @@ public static class HandModelled
     /// </summary>
     public static readonly IReadOnlyList<string> Plumbing = new[]
     {
-        "SimEngine.Run", "SimEngine.Then", "SimEngine.AnyListens", "SimEngine.OrbLabel", "SimEngine.Merge", "SimEngine.Detached", "SimEngine.Scratch", "SimEngine.Capped", "SimEngine.MarkUnread", "SimEngine.PlayResults", "SimEngine.Breakdown",
+        "SimEngine.Run", "SimEngine.RunAction", "SimEngine.Then", "SimEngine.AnyListens", "SimEngine.OrbLabel", "SimEngine.Merge", "SimEngine.Detached", "SimEngine.Scratch", "SimEngine.Capped", "SimEngine.MarkUnread", "SimEngine.PlayResults", "SimEngine.Breakdown",
         "SimEngine.Title", "SimEngine.Var", "SimEngine.VarValue", "SimEngine.VarTotal", "SimEngine.PowersOf", "SimEngine.SetPowers", "SimEngine.RelicsOf", "SimEngine.SetRelics", "SimEngine.PowerOn",
         "SimEngine.HasPower", "SimEngine.FieldsOf", "SimEngine.SetField", "SimEngine.SetFields", "SimEngine.TurnOf", "SimEngine.TallyFor", "SimEngine.CountOf", "SimEngine.MostOf", "SimEngine.RunWhen",
         "SimEngine.RunAsk", "SimEngine.Holds", "SimEngine.HoldsNow", "SimEngine.Compares", "SimEngine.IsConditionFilter", "SimEngine.HandFilters", "SimEngine.Flattened", "SimEngine.ConditionParts",

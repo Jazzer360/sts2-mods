@@ -145,7 +145,7 @@
 144 proc:ViolentChordPower plain Damage 10 amount 10 10-10; | checked ViolentChordPower 1/1; | seen ViolentChordPower Flash plain; | hp 4/25 block 0
 145 | checked ViolentChordPower 0/0; | seen ViolentChordPower Flash plain; | hp 21 block 0
 146 proc:SongPathPower plain Block 1 amount 1 1-1; | checked SongPathPower 1/1; ViolentChordPower 0/0; | seen SongPathPower Flash plain; ViolentChordPower Flash plain; | hp 27/37 block 0
-147 proc:SongPathPower plain Block 5 amount 5 5-5; | checked SongPathPower 1/1; ViolentChordPower 0/0; | seen SongPathPower Flash plain; ViolentChordPower Flash plain; | hp -2 block 5
+147 | checked SongPathPower 1/1; ViolentChordPower 1/1; | seen SongPathPower Flash plain; ViolentChordPower Flash plain; | hp -2 block 0
 148 proc:ViolentChordPower plain Damage 10 amount 10 10-10; | checked SongPathPower 0/0; ViolentChordPower 1/1; | seen SongPathPower Flash plain; ViolentChordPower Flash plain; | hp 8/8 block 0
 149 proc:ViolentChordPower plain Damage 1 amount 1 1-1; | checked SongPathPower 0/0; ViolentChordPower 1/1; | seen SongPathPower Flash plain; ViolentChordPower Flash plain; | hp 28 block 0
 150 | checked SongPathPower 0/0; | seen SongPathPower Flash plain; | hp 39/14 block 0

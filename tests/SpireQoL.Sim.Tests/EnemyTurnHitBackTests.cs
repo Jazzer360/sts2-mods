@@ -88,7 +88,8 @@ public class EnemyTurnHitBackTests
     {
         // Main (MainRule.ReceivedBeforeTheResults, BranchRules.DamageWorkedOutFirst): CreatureCmd.Damage tells BeforeDamageReceived first, so your Thorns
         // kills the attacker and its explosion (6) spends your Buffer before the hit (5) is worked out: you take 5.
-        var state = new SimState { Enemies = { Enemy(id: 0, hp: 2, hits: [5]) }, MainRules = MainRule.ReceivedBeforeTheResults };
+        // Another enemy keeps the fight going: the last one's death would end it, and its explosion with it (decision #301).
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 2, hits: [5]), Enemy(id: 1, hp: 100) }, MainRules = MainRule.ReceivedBeforeTheResults };
         state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.Explosive, amount: 6);
         state.You.Hp = 50;
         state.You.Thorns = 3;

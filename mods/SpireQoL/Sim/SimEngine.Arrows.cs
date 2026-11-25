@@ -188,6 +188,10 @@ public static partial class SimEngine
         state.PendingPowers = ImmutableArray<PendingPower>.Empty;
         IEnumerable<SimState> states = new[] { state };
         foreach (var spawn in spawns) states = Then(states.ToList(), branch => Spawn(branch, spawn));
+        // A hit that ended the fight: what it raised reaches no one (each is a combat hook's dispatch or a command that returns once the fight is
+        // ending: AfterArrowDislodged, AfterPowerAmountChanged, a card made; decision #301). The creatures a death brings in come first: they can
+        // keep it going.
+        if (states.All(FightOver)) return states;
         // The powers that landed: each one's listeners told in the order they landed (Hook.AfterPowerAmountChanged).
         foreach (var (power, amount, applier, target, debuff) in powers) states = Then(states.ToList(), branch => Tell(branch, power, amount, applier, target, debuff));
         foreach (var made in intoDraw) states = Then(states.ToList(), branch => MadeIntoDrawPile(branch, made));

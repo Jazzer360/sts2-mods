@@ -50,7 +50,10 @@ public class CardEnergyTests
     {
         // Your last 3 energy on Sunder: the kill gives 3 back (no Pael's Tears warning); no kill, none back (the warning stands).
         var sunder = new SimCard("Sunder", SimCardType.Attack) { Energy = 3 };
-        var kills = One(WithTears(State(hp: 10)), Spending(sunder, cost: 3, Attack(baseDamage: 24), new WhenAction(new AttackKilledCondition(), new SimAction[] { new CardEventAction(CardEvent.EnergyGained, Count: 3) })));
+        // Another enemy keeps the fight going (decision #301: with the last one dead, PlayerCmd.GainEnergy gives nothing).
+        var board = WithTears(State(hp: 10));
+        board.Enemies.Add(Enemy(id: 1, hp: 100));
+        var kills = One(board, Spending(sunder, cost: 3, Attack(baseDamage: 24), new WhenAction(new AttackKilledCondition(), new SimAction[] { new CardEventAction(CardEvent.EnergyGained, Count: 3) })));
         Assert.False(kills.Enemy(id: 0)!.Alive);
         Assert.Equal(3, kills.You.Energy);
         Assert.False(kills.Fired.Has("PaelsTears"));
@@ -76,6 +79,7 @@ public class CardEnergyTests
         // Two of your arrows in an enemy it kills: both come loose (ImpaledPower.AfterDeath), 3 energy each.
         var state = State(hp: 5, energy: 2);
         state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Impaled, amount: 2, data: 3);
+        state.Enemies.Add(Enemy(id: 1, hp: 100)); // the fight goes on: the last enemy's death would end it, and its energy with it (decision #301)
         var card = new SimCard("EpicRetrieval", SimCardType.Attack) { Energy = 2 };
         var script = new SimScript
         {

@@ -337,16 +337,17 @@ public sealed partial class ProcAudit
             // The play has fully resolved and nothing else has run: the state it left.
             var me = Sts2State.Me;
             var combat = Sts2State.Combat;
-            if (CombatManager.Instance.IsOverOrEnding)
+            var ending = CombatManager.Instance.IsOverOrEnding;
+            if (ending)
             {
-                // The fight is ending: its cleanup (temporary powers expiring, Focus back) changes the
-                // state, so the state the play left can't be compared. The history checks still run.
-                rec.AfterSkipped = FightEndedSkip;
+                // The fight is ending (decision #301): the game logs no damage from the killing hit on, so the history's shortfalls aren't
+                // checked; but its cleanup comes after this (ActionExecutor runs CheckWinCondition, then EndCombatInternal, once the action is
+                // over), so the state the play left is still here to compare, as the simulator stops at the fight's end too.
                 rec.FightEnded = true;
-                // Who it killed is still known (the lethal check reads it): the creatures are there, dead or not.
+                // Who it killed (the lethal and preview checks read it): the creatures are there, dead or not.
                 rec.DeadAtFightEnd = rec.Prediction?.Sim?.Ids.Keys.Where(creature => creature.IsDead).ToHashSet();
             }
-            else if (me != null && combat != null && combat.CurrentSide != MegaCrit.Sts2.Core.Combat.CombatSide.Player)
+            if (!ending && me != null && combat != null && combat.CurrentSide != MegaCrit.Sts2.Core.Combat.CombatSide.Player)
             {
                 // The play ended your turn (decision #126): what the end of the turn did is in the state, not the play's.
                 rec.AfterSkipped = TurnEndedSkip;
@@ -367,6 +368,7 @@ public sealed partial class ProcAudit
                     rec.AfterSkipped = "couldn't read the state";
                 }
             }
+            else if (ending) rec.AfterSkipped = FightEndedSkip;
             _finished.Enqueue(rec);
         }
         catch (Exception ex)

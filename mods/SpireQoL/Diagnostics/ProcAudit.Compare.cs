@@ -158,9 +158,8 @@ public sealed partial class ProcAudit
                 modelLines.Skip("didn't fire", "a payout the play sets up, paid after the play", name);
                 continue;
             }
-            // The play ended the fight: the game stops at the killing hit, so a relic that acts after it (Bone Flute after
-            // Osty's attack) never gets to.
-            if (window.FightEnded) continue;
+            // A play that ended the fight is held to it too (decision #301): the simulator stops at the fight's end as the game does, so a
+            // relic that would act after the killing hit (Bone Flute after Osty's attack) has no tab there.
             // An aimed tab (The Boot: only at a target whose block leaves a small hit) is held to the target played at: a flash where
             // every outcome there sets it off, none where no outcome does.
             if (otherTab.Aimed)
@@ -205,7 +204,7 @@ public sealed partial class ProcAudit
 
         // ---- Tabbed sources every outcome of the play sets off (decision #95): powers included, crossed or not, when their code
         // flashes. Relics are checked above (their plain tabs); a source that changes nothing visible doesn't flash.
-        if (!window.FightEnded && CheckedAim(window) is { } everyAim && window.Prediction?.FiresEveryByAim?.TryGetValue(everyAim, out var every) == true)
+        if (CheckedAim(window) is { } everyAim && window.Prediction?.FiresEveryByAim?.TryGetValue(everyAim, out var every) == true)
         {
             foreach (var type in every!)
             {
@@ -222,7 +221,7 @@ public sealed partial class ProcAudit
         // ---- Powers a play spends without flashing, so their tabs are checked against the amount: Stretch (block cards,
         // StretchPower.AfterCardPlayed), Vigor and Gigantification (attacks, AfterAttack). Cards the play auto-played (Lost
         // Lute) can spend them too; a card that gives you the same power itself can leave it where it was.
-        if (window.PowersBefore != null && window.PowersAfter != null && !window.FightEnded
+        if (window.PowersBefore != null && window.PowersAfter != null
             && !entries.OfType<CardPlayStartedEntry>().Any(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay))
         {
             var ownTypes = OwnPowerTypes(window.Card).Select(type => type.Name).ToHashSet();

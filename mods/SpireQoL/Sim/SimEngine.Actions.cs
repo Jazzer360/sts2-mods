@@ -35,11 +35,13 @@ public static partial class SimEngine
         for (var i = 0; i < most; i++)
         {
             var index = i;
-            // Branches whose card play has fewer plays are over (each its own count: a branch's ledger can differ).
-            var over = branches.States.Where(branch => branch.PlayCountNow <= index).ToList();
+            // Branches whose card play has fewer plays are over (each its own count: a branch's ledger can differ), and so are those whose fight
+            // is ending (OnPlayWrapper's loop breaks once CombatManager.IsOverOrEnding: decision #301).
+            bool Over(SimState branch) => branch.PlayCountNow <= index || index > 0 && FightOver(branch);
+            var over = branches.States.Where(Over).ToList();
             if (over.Count > 0)
             {
-                branches.States = branches.States.Where(branch => branch.PlayCountNow > index).ToList();
+                branches.States = branches.States.Where(branch => !Over(branch)).ToList();
                 branches.Aside += over.Count;
             }
             try
@@ -119,8 +121,9 @@ public static partial class SimEngine
         HookStep(branches, nameof(SimModel.BeforeCardPlayed), (model, owner, branch) => model.BeforeCardPlayed(branch, owner, branch.CurrentPlay!));
         branches.Do(branch => Count(branch, branch.CurrentPlay!, PlayStage.Started));
         foreach (var action in body) Run(branches, action);
-        // Its enchantment's OnPlay, after the card's own (CardModel.OnPlayWrapper), read from its code (decision #217).
-        RunEnchantment(branches, play.Card, HookName.OnPlay);
+        // Its enchantment's OnPlay, after the card's own (CardModel.OnPlayWrapper), read from its code (decision #217): its commands do nothing once
+        // the card's own ended the fight (decision #301).
+        Fighting(branches, () => RunEnchantment(branches, play.Card, HookName.OnPlay));
         // Then its affliction's (CardModel.OnPlayWrapper: Affliction.OnPlay after the enchantment's): none has one to run (decision #225); one whose
         // code a game update made unreadable makes the play unknown.
         if (play.Card.Affliction is not (SimAffliction.None or SimAffliction.Other) && SimModels.UnreadReason(play.Card.Affliction.ToString()) is { } afflictionUnread)

@@ -146,7 +146,7 @@
 145 proc:DevourLifePower plain Summon 2 amount 2 2-2; | checked DevourLifePower 1/1; SicEmPower 0/0; | seen SicEmPower@1 Flash plain; DevourLifePower@-1 Flash plain; 
 146 | checked DevourLifePower 0/0; | seen DevourLifePower@-1 Flash plain; 
 147 | checked DevourLifePower 00/00; SicEmPower 00/00; | seen SicEmPower@0 Flash plain; SicEmPower@1 Flash plain; DevourLifePower@-1 Flash plain; 
-148 proc:SicEmPower plain Summon 8 amount 8 8-8; | checked DevourLifePower 0/0; SicEmPower 1/1; | seen SicEmPower@0 Flash plain; DevourLifePower@-1 Flash plain; 
+148 proc:SicEmPower plain Summon 4 amount 4 4-4; | checked DevourLifePower 0/0; SicEmPower 0/0; | seen SicEmPower@0 Flash plain; DevourLifePower@-1 Flash plain; 
 149 | checked SicEmPower 0/0; | seen SicEmPower@0 Flash plain; 
 150 | checked | seen 
 151 proc:SicEmPower plain Summon 8 amount 8 8-8; | checked SicEmPower 1/1; | seen SicEmPower@0 Flash plain; SicEmPower@1 Flash plain; 
@@ -167,7 +167,7 @@
 166 | checked SicEmPower 00/00; | seen SicEmPower@1 Flash plain; 
 167 | checked DevourLifePower 000/000; SicEmPower 000/000; | seen SicEmPower@0 Flash plain; SicEmPower@1 Flash plain; SicEmPower@2 Flash plain; DevourLifePower@-1 Flash plain; 
 168 | checked | seen 
-169 proc:SicEmPower plain Summon 8 amount 8 8-8; | checked SicEmPower 1/1; | seen SicEmPower@0 Flash plain; 
+169 proc:SicEmPower plain Summon 4 amount 4 4-4; | checked SicEmPower 0/0; | seen SicEmPower@0 Flash plain; 
 170 proc:DevourLifePower plain Summon 1 amount 1 1-1; | checked DevourLifePower 1/1; | seen DevourLifePower@-1 Flash plain; 
 171 | checked | seen 
 172 proc:SicEmPower plain Summon 2 amount 2 0-2 aimed; | checked SicEmPower 01/01; | seen SicEmPower@1 Flash plain; 
@@ -191,7 +191,7 @@
 190 | checked DevourLifePower 000/000; SicEmPower 000/000; | seen SicEmPower@1 Flash plain; DevourLifePower@-1 Flash plain; 
 191 proc:SicEmPower plain Summon 3 amount 3 0-3 aimed; | checked SicEmPower 10/10; | seen SicEmPower@0 Flash plain; 
 192 | checked | seen 
-193 proc:SicEmPower plain Summon 10 amount 10 10-10; | checked DevourLifePower 0/0; SicEmPower 1/1; | seen SicEmPower@0 Flash plain; SicEmPower@1 Flash plain; DevourLifePower@-1 Flash plain; 
+193 proc:SicEmPower plain Summon 9 amount 9 9-9; | checked DevourLifePower 0/0; SicEmPower 0/0; | seen SicEmPower@0 Flash plain; SicEmPower@1 Flash plain; DevourLifePower@-1 Flash plain; 
 194 | checked | seen 
 195 | checked | seen 
 196 proc:DevourLifePower plain Summon 1 amount 1 1-1; | checked DevourLifePower 1/1; SicEmPower 0/0; | seen SicEmPower@0 Flash plain; DevourLifePower@-1 Flash plain; 
@@ -238,7 +238,7 @@
 237 | checked SicEmPower 0/0; | seen SicEmPower@1 Flash plain; 
 238 proc:DevourLifePower plain Summon 3 amount 3 3-3; | checked DevourLifePower 1/1; SicEmPower 0/0; | seen SicEmPower@0 Flash plain; DevourLifePower@-1 Flash plain; 
 239 | checked DevourLifePower 00/00; SicEmPower 00/00; | seen SicEmPower@1 Flash plain; DevourLifePower@-1 Flash plain; 
-240 proc:SicEmPower plain Summon 4 amount 4 4-4; | checked SicEmPower 1/1; | seen SicEmPower@0 Flash plain; 
+240 | checked SicEmPower 0/0; | seen SicEmPower@0 Flash plain; 
 241 proc:DevourLifePower plain Summon 2 amount 2 2-2; | checked DevourLifePower 1/1; SicEmPower 0/0; | seen SicEmPower@1 Flash plain; DevourLifePower@-1 Flash plain; 
 242 proc:SicEmPower plain Summon 6 amount 6 6-6; | checked SicEmPower 1/1; | seen SicEmPower@0 Flash plain; 
 243 | checked SicEmPower 000/000; | seen SicEmPower@2 Flash plain; 

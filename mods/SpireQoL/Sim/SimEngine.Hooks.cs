@@ -368,7 +368,10 @@ public static partial class SimEngine
     private static void HookStep(BranchSet branches, string hook, Func<SimModel, int, SimState, IEnumerable<SimState>> call)
     {
         if (!branches.States.Any(branch => Listens(branch, hook))) return;
-        branches.Each(branch => Hook(branch, hook, call));
+        // A combat hook reaches no one once the fight is ending (Hook.IterateCombatHookListeners, decision #301); the few the game dispatches to
+        // every listener whatever the fight's state still run.
+        if (!HooksAfterTheFightEnds.ContainsKey(hook) && AnyEnding(branches)) WhileFighting(branches, () => branches.Each(branch => Hook(branch, hook, call)));
+        else branches.Each(branch => Hook(branch, hook, call));
     }
 
     /// <summary>Some listener in this state overrides the hook.</summary>
