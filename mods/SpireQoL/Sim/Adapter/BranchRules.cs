@@ -37,9 +37,15 @@ internal static class BranchRules
         new CodeFact(typeof(CeremonialBeast), "PlowMove", nameof(PlowPower)), OnBeta: true, MainRule.None,
         "beta's CeremonialBeast.PlowMove gives its Strength only while it still has Plow (MoveBranches); main's always does");
 
+    public static readonly BranchRule DamageWorkedOutFirst = new(nameof(DamageWorkedOutFirst),
+        new CodeFact(typeof(MegaCrit.Sts2.Core.Commands.CreatureCmd), "GetDamageResults", Mentions: null), OnBeta: true, MainRule.ReceivedBeforeTheResults,
+        "beta's CreatureCmd.Damage works out what a damage does first (GetDamageResults: its redirects, block and HP loss, a dry run), then tells " +
+        "Hook.BeforeDamageReceived, then applies the results and tells the HP-loss changes (ApplyDamageResults); main's tells BeforeDamageReceived first and " +
+        "each HP-loss change as it's made: a Thorns kill whose death hits back (Explosive) meets the hit's Buffer and block before it, or after it");
+
     public static IReadOnlyList<BranchRule> All { get; } = new[]
     {
-        OmnisliceSplashIsPowered, JugglingCopiesAfterThePlay, PlowStrengthNeedsPlow,
+        OmnisliceSplashIsPowered, JugglingCopiesAfterThePlay, PlowStrengthNeedsPlow, DamageWorkedOutFirst,
     };
 
     private static readonly ConcurrentDictionary<BranchRule, bool> Beta = new();

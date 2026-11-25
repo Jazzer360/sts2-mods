@@ -164,9 +164,11 @@ public static class ConditionReader
         ConditionReading Simulated(SimCondition condition) => new(ConditionWay.Simulated) { Condition = condition with { At = at } };
         ConditionReading NotRead(string why) => new(ConditionWay.NotRead) { Reason = why, Unread = test };
 
-        // The attack's kill: Any over the results of AttackCommand.Execute of WasTargetKilled (Sunder, Knockout Blow, Timber).
+        // The attack's kill: Any over the results of AttackCommand.Execute of WasTargetKilled (Sunder, Knockout Blow), or of a card's CreatureCmd.Damage
+        // (Timber, v0.114.0: its damage inside its attack context, simulated as its attack; any other card's, a DamageAction): both record the kill.
         if (test is QueryValue { Name: "Any" } any && any.Parts().Any(part => part is QueryValue { Name: "WasTargetKilled" })
-            && any.Parts().Any(part => part is ResultValue result && result.Command.StartsWith("AttackCommand.", StringComparison.Ordinal)))
+            && any.Parts().Any(part => part is ResultValue result && (result.Command.StartsWith("AttackCommand.", StringComparison.Ordinal)
+                || result.Command == "CreatureCmd.Damage")))
             return Simulated(new AttackKilledCondition());
         // Osty: missing (CheckMissingWithAnim of the card's owner), alive (its owner's IsOstyAlive).
         if (test is QueryValue { Name: "CheckMissingWithAnim", Of: null, Arguments: [var player] } && IsOwner(player))

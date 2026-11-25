@@ -576,9 +576,7 @@ public static partial class SimAdapter
         if (!card.IsUpgradable) return FromPile(card, card, me, combat, ids, out _);
         try
         {
-            var copy = (CardModel)card.MutableClone();
-            copy.UpgradeInternal();
-            copy.FinalizeUpgradeInternal();
+            var copy = SpireQoL.Cards.UpgradedCopy.Of(card);
             return FromPile(copy, card, me, combat, ids, out _);
         }
         catch
@@ -670,6 +668,7 @@ public static partial class SimAdapter
         player.Energy = pcs.Energy;
         player.Arrows = SpireQoL.Procs.Fool.ArrowsAvailable(me);
         player.Fading = hand.Count(card => IsFading(card, combat));
+        player.UpgradableAtTurnEnd = hand.Count(card => !SafeBool(() => !card.IsUpgradable) && (IsFading(card, combat) || TurnEndOf(card) != null));
         player.ExhaustingInHand = hand.Where(card => CardEnergy.WhenExhausted(card) > 0)
             .Select(card => new ExhaustingCard(HandId(card), CardEnergy.WhenExhausted(card), SimReaders.TypeOf(card))).ToList();
         // Hex (decision #85): its cards' Ethereal goes when its caster dies.

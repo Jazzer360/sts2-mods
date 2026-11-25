@@ -37,7 +37,6 @@ public static partial class SimEngine
         {
             var target = branch.CurrentPlay?.Target ?? Who.None;
             branch.ArrowAwayAt = Who.None;
-            branch.ArrowDestroyedOnImpale = false; // a new arrow (RetrieveArrow clears DestroyAfterImpaled)
             var hasArrow = branch.You.Arrows > 0 && branch.Enemy(target) is { Alive: true };
             if (hasArrow)
             {
@@ -60,20 +59,8 @@ public static partial class SimEngine
             var powers = enemy.Powers;
             enemy.Powers = powers.Has(Impaled) ? powers.With(Impaled, powers[Impaled] + 1) : powers.With(Impaled, amount: 1, data: 3);
             var states = Hook(branch, nameof(SimModel.AfterArrowImpaled), (model, owner, copy) => model.AfterArrowImpaled(copy, owner, target, Who.You));
-            // An arrow destroyed once it impales (Quietus': ArrowCmd.DestroyArrow) is taken out of a living target (ImpaledPower.ForceRemoveArrow: the
-            // power goes with its last arrow) and never comes back to you; one in a dead target is simply gone. Else, killed by the shot's own
-            // attack: the arrow comes straight out.
-            return Then(states.ToList(), copy =>
-            {
-                var destroyed = copy.ArrowDestroyedOnImpale;
-                copy.ArrowDestroyedOnImpale = false;
-                if (destroyed)
-                {
-                    if (copy.Enemy(target) is { Alive: true }) LoseArrow(copy, target);
-                    return new[] { copy };
-                }
-                return copy.Enemy(target) is { Alive: false } ? Dislodge(copy, target, count: 1) : new[] { copy };
-            });
+            // Killed by the shot's own attack: the arrow comes straight out.
+            return Then(states.ToList(), copy => copy.Enemy(target) is { Alive: false } ? Dislodge(copy, target, count: 1) : new[] { copy });
         });
     }
 
@@ -112,14 +99,6 @@ public static partial class SimEngine
             }
         }
         return plays;
-    }
-
-    /// <summary>One of your arrows out of an enemy's Impaled for good (ImpaledPower.ForceRemoveArrow, then RemoveIfNoArrows): not given back.</summary>
-    private static void LoseArrow(SimState state, int enemy)
-    {
-        var powers = PowersOf(state, enemy);
-        var left = powers[Impaled] - 1;
-        SetPowers(state, enemy, left > 0 ? powers.With(Impaled, left) : powers.Without(Impaled));
     }
 
     /// <summary>Takes arrows out of an enemy's Impaled (gone with the last) and gives them back to you.</summary>

@@ -371,11 +371,11 @@ internal sealed class InspectScreen
             if (block)
             {
                 nHotkeyManager.AddBlockingScreen(_root);
-                foreach (var closeKey in closeKeys) SettingsMenu.PushHotkey(nHotkeyManager, closeKey, _closeAction);
+                foreach (var closeKey in closeKeys) SettingsMenu.PushHotkey(nHotkeyManager, closeKey, _root, _closeAction);
             }
             else
             {
-                foreach (var closeKey in closeKeys) nHotkeyManager.RemoveHotkeyPressedBinding(closeKey, _closeAction);
+                foreach (var closeKey in closeKeys) SettingsMenu.RemoveHotkey(nHotkeyManager, closeKey, _root, _closeAction);
                 nHotkeyManager.RemoveBlockingScreen(_root);
             }
             _blocking = block;

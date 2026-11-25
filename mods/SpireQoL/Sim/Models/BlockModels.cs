@@ -4,7 +4,7 @@ namespace SpireQoL.Sim.Models;
 
 /// <summary>
 /// StretchPower: BeforeCardPlayed binds the first play of its owner's that gains block (Data 1: bound to the play in progress);
-/// that play's powered block gets its amount (ModifyBlockAdditive); AfterCardPlayed of that play spends the amount it had when
+/// that play's powered block gets the amount it had when the play started (ModifyBlockAdditive, v0.114.0: amountWhenCardStarted); AfterCardPlayed of that play spends the amount it had when
 /// the play started, if the bonus was given (Data 2: bound and given). The amount at the start lives in the high bits.
 /// </summary>
 public sealed class StretchPower : SimModel
@@ -24,7 +24,9 @@ public sealed class StretchPower : SimModel
     {
         if (block.Card == null || block.Play?.Owner != owner || !block.Props.IsPoweredBlock()) return 0m;
         var powers = SimEngine.PowersOf(state, owner);
-        return (powers.DataOf(ThisPower) & Bound) != 0 ? powers[ThisPower] : 0m;
+        // v0.114.0: the amount it had when the play started (internalData.amountWhenCardStarted), whatever the play gave it since.
+        var data = powers.DataOf(ThisPower);
+        return (data & Bound) != 0 ? data >> 4 : 0m;
     }
 
     public override void AfterModifyingBlockAmount(SimState state, int owner, int amount, SimCardPlay? play)
@@ -113,8 +115,8 @@ public sealed class Vambrace : SimModel
 }
 
 /// <summary>
-/// UnmovablePower.ModifyBlockMultiplicative: doubles its owner's block from cards (Move) while their block gains from card
-/// plays this turn, other than the play in progress, are fewer than its amount.
+/// UnmovablePower.ModifyBlockMultiplicative: doubles its owner's block from cards (Move) while their card plays this turn that gained block, other
+/// than the play in progress, are fewer than its amount (v0.114.0: DistinctBy the entries' CardPlay, so a play gaining block twice counts once).
 /// </summary>
 public sealed class UnmovablePower : SimModel
 {
@@ -123,7 +125,7 @@ public sealed class UnmovablePower : SimModel
         if (block.Target >= 0 || !block.Props.IsCardOrMonsterMove()) return 1m;
         if (block.Play != null && block.Play.Owner != owner) return 1m;
         var turn = SimEngine.TurnOf(state, owner);
-        var earlier = turn[SimKeys.CardBlock] - (block.Play != null ? state.PlayCardBlockGains : 0);
+        var earlier = turn[SimKeys.CardBlock] - (block.Play != null && state.PlayCardBlockGains > 0 ? 1 : 0);
         return earlier >= SimEngine.PowerOn(state, owner, ThisPower) ? 1m : 2m;
     }
 }

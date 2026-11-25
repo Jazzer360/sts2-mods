@@ -149,7 +149,7 @@ public sealed class ReadModel : SimModel
     }
 
     /// <summary>
-    /// A payout that was off is on now: the play set the bonus up (Tune's free card on the turn's first Ki: its plain tab's firing, decision #244),
+    /// A payout that was off is on now: the play set the bonus up (Parrying Shield's block reaching its threshold: its plain tab's firing, decision #244),
     /// logged under its set-up name (SimKeys.SetUp), apart from its own firings.
     /// </summary>
     public void SetUp(SimState state, int owner, bool wasOn)
@@ -443,7 +443,7 @@ public sealed class ReadModel : SimModel
         {
             // A power an attack spends (its AfterAttack takes its own stacks: Gigantification's Decrement) acts on that play too (decision #228).
             // A play that changes the state its damage term reads (Slow's SlowAmount++ on every card) acts on that play too (decision #229).
-            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeIntoDrawStep or StunStep or KillStep
+            var acts = step is DrawStep or GainEnergyStep or GainStarsStep or ApplyPowerStep or ChannelStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeIntoDrawStep or StunStep or KillStep
                 || hook == HookName.AfterAttack && step is DecrementPowerStep or RemovePowerStep
                 || hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed && step is StoreFieldStep { Field: var termField } && _termFields.Contains(termField);
             // An enchantment's effects are its card's (no tab of its own, nothing in the play log: its card's play shows them).
@@ -1239,7 +1239,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeIntoDrawStep or DestroyArrowStep or StunStep or KillStep
+            case FlashStep or GainStarsStep or HealStep or ChannelStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeIntoDrawStep or StunStep or KillStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1463,6 +1463,20 @@ public sealed class ReadModel : SimModel
                     if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
                     return One(args.State);
                 };
+            // Random cards in its owner's hand upgraded (Tune's, on the turn's first Ki): fired (its plain tab); followed only when none of that hand acts as
+            // the turn ends and could be upgraded.
+            case UpgradeRandomInHandStep upgradeRandom:
+            {
+                var count = Compile(upgradeRandom.Count);
+                return args =>
+                {
+                    if ((int)count(in args) <= 0) return One(args.State);
+                    if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
+                    if (args.State.Player(args.Owner) is { UpgradableAtTurnEnd: > 0 })
+                        args.State.Unmodelled ??= $"{Name} upgrades random cards in hand, and one that acts as the turn ends could be one";
+                    return One(args.State);
+                };
+            }
             // A card in its owner's hand made free this turn (Mummified Hand's pick): it acts when another card in that hand costs something (the
             // card played's fact, read as it was played), on a card the game picks at random (SimEngine.FreeInHand).
             // A copy of the card played made into its owner's hand (Music Box's): it joins the hand (SimEngine.AddToHand, Ethereal: it exhausts as the
@@ -1488,13 +1502,6 @@ public sealed class ReadModel : SimModel
                     return SimEngine.ProcCardEvent(args.State, CardEvent.Generated, count: 1, args.Owner, onEach: SimEngine.TallyFor(Name, Tab, CardEvent.Generated, args.Owner), card: made);
                 };
             }
-            // The shot's arrow destroyed once it impales (Quietus'): the engine takes it out as it impales (SimEngine.RunImpale).
-            case DestroyArrowStep:
-                return args =>
-                {
-                    args.State.ArrowDestroyedOnImpale = true;
-                    return One(args.State);
-                };
             case StunStep:
                 return args =>
                 {
@@ -1938,7 +1945,6 @@ public sealed class ReadModel : SimModel
             case HookFact.BoundHeld: return (in HookArgs args) => args.State.Bound.Has(BoundKey(in args)) ? 1m : 0m;
             case HookFact.HitUnblocked: return (in HookArgs args) => args.Hit?.Unblocked ?? 0;
             case HookFact.HitBlocked: return (in HookArgs args) => args.Hit?.Blocked ?? 0;
-            case HookFact.ShotHadArrow: return (in HookArgs args) => args.State.ArrowAwayAt != Who.None ? 1m : 0m;
             // The damage's card is the card in play, bound (what its BeforeCardPlayed added for the play, still there).
             case HookFact.SourceBound: return (in HookArgs args) => (args.Hit?.Card ?? args.Damage?.Card) is { } source && args.State.CurrentPlay is { } inPlay && source == inPlay.Card
                 && args.State.Bound.Has(BoundKey(in args)) ? 1m : 0m;

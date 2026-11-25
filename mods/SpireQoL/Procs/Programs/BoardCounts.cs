@@ -117,7 +117,7 @@ public static class BoardCounts
     /// (Taken): a pick takes one card a play (a pick's first: Brand, Burning Pact) or the selector's most (Purity), from your hand or your
     /// draw pile (Cleanse), of the cards its test on the picked card lets through (The Hermit: a Curse); a roll takes one card a play from
     /// what it rolls over (Thrash: your Attacks); a loop takes each card of what it goes over once (Fiend Fire your hand, Second Wind its
-    /// non-Attacks, Growth its Sadness, Flak Cannon your statuses: a later play finds them gone). Only the exhausts whose condition holds
+    /// non-Attacks, Optimism its Sadness, Flak Cannon your statuses: a later play finds them gone). Only the exhausts whose condition holds
     /// (True Grit's pick when upgraded, its roll when not). A collection that can't be told on the board (the game's template card) is
     /// <paramref name="others"/>.
     /// </summary>
@@ -195,7 +195,7 @@ public static class BoardCounts
         return Collection(take, others, board, program, fromHandOnly: !everyPile, _ => true);
     }
 
-    /// <summary>The take's collection holds cards outside your hand (Flak Cannon's, Florescence's: every pile), on the board.</summary>
+    /// <summary>The take's collection holds cards outside your hand (Flak Cannon's: every pile), on the board.</summary>
     internal static bool TakesFromEveryPile(CardModel card, Programs.CardEffects.CardsTaken take)
     {
         if (take.Items == null || Programs.ProgramEvaluator.Items(take.Items, new Programs.ProgramBoard(card), Programs.CardPrograms.Of(card.GetType())) is not { } items) return false;

@@ -259,8 +259,9 @@ public static class SimReaders
                 if (!cardPlayFinishedEntry.HappenedThisTurn(combat) || cardPlayFinishedEntry.CardPlay.Player != player) continue;
                 counts = SimKeys.CountPlay(counts, PlayStage.Finished, TypeOf(cardPlayFinishedEntry.CardPlay.Card), TagsOf(cardPlayFinishedEntry.CardPlay.Card));
             }
+            // Each card play that gained block once (UnmovablePower, v0.114.0: DistinctBy the entries' CardPlay).
             var blocks = history.Entries.OfType<BlockGainedEntry>()
-                .Count(blockGainedEntry => blockGainedEntry.HappenedThisTurn(combat) && blockGainedEntry.CardPlay != null && blockGainedEntry.CardPlay.Player == player && blockGainedEntry.Props.IsCardOrMonsterMove());
+                .Where(blockGainedEntry => blockGainedEntry.HappenedThisTurn(combat) && blockGainedEntry.CardPlay != null && blockGainedEntry.CardPlay.Player == player && blockGainedEntry.Props.IsCardOrMonsterMove()).Select(blockGainedEntry => blockGainedEntry.CardPlay).Distinct().Count();
             if (blocks > 0) counts = counts.Add(SimKeys.CardBlock, blocks);
         }
         catch

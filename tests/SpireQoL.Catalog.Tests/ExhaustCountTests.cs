@@ -20,14 +20,25 @@ public class ExhaustCountTests
     }
 
     [Fact]
-    public void GrowthExhaustsEverySadnessInYourHand()
+    public void OptimismExhaustsEverySadnessInYourHand()
     {
+        // Optimism.OnPlay (v0.114.0): each Sadness in your hand exhausted, then that many drawn. Growth did this before v0.114.0, and now
+        // transforms one Sadness instead (GrowthExhaustsNone).
         var gameFight = new GameFight();
-        var card = gameFight.Add<Growth>();
+        var card = gameFight.Add<Optimism>();
         gameFight.Add<Sadness>();
         gameFight.Add<Sadness>();
         gameFight.Add<StrikeIronclad>();
         Assert.Equal(2, Exhausts(gameFight, card));
+    }
+
+    [Fact]
+    public void GrowthExhaustsNone()
+    {
+        var gameFight = new GameFight();
+        var card = gameFight.Add<Growth>();
+        gameFight.Add<Sadness>();
+        Assert.Equal(0, Exhausts(gameFight, card));
     }
 
     [Fact]

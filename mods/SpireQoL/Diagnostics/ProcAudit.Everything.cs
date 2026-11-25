@@ -63,7 +63,7 @@ public sealed partial class ProcAudit
             // Orbs the play may have evoked (channelling into full slots, evoke cards): Plasma's energy.
             .Concat(entries.OfType<OrbChanneledEntry>().Any() || CodeIndex.Does(window.Card.GetType(), new[] { "OrbCmd.Evoke*" }, Array.Empty<string>()) ? window.FullBefore.Orbs : Enumerable.Empty<Type>())
             .Concat(deathReactors)
-            // Your powers a play uses up (Free Card): the costs they lowered go back up.
+            // Your powers a play uses up (Free Attack, Free Skill, Free Power): the costs they lowered go back up.
             .Concat(window.PowersBefore?.Keys.Where(key => key.Item1 == me.Creature && SpentByAnyPlay.Contains(key.Item2)).Select(key => PowerTypeNamed(key.Item2)).OfType<Type>() ?? Enumerable.Empty<Type>())
             .Distinct().ToList();
         var tracked = new HashSet<string>(tabbed);

@@ -102,7 +102,7 @@ public sealed partial class SettingsMenu
             Tab("proc:PenNib", Relic<PenNib>()), Tab("proc:OrnamentalFan", Relic<OrnamentalFan>(), number: 4),
             Tab("proc:CurlUpPower", Power<CurlUpPower>(), crossed: true, aimed: true));
         GuideCardCell(flow, Card<SuckerPunch>(), "Free cards: the energy saved",
-            "A free card (Free Attack here; also Free Skill, Free Power, Free Card) is used up by this play. The number is the energy it saves. "
+            "A free card (Free Attack here; also Free Skill and Free Power) is used up by this play. The number is the energy it saves. "
             + "Crossed on a card that costs 0 or X: the free card would be wasted.",
             Tab("free:FreeAttackPower", Power<FreeAttackPower>(), number: 1));
         ShowLastCardFree();

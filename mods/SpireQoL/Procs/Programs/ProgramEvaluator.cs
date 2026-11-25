@@ -137,7 +137,20 @@ public static class ProgramEvaluator
     /// itself gives): the card scan flags a draw on a condition that isn't.
     /// </summary>
     public static bool CanEvaluate(ProgramCondition condition) =>
-        condition.Literals.All(literal => literal.Test.Parts().All(part => part is not (UnknownValue or ResultValue)));
+        condition.Literals.All(literal => literal.Test.Parts().All(part => part is not UnknownValue && (part is not ResultValue result || IsShot(result))));
+
+    /// <summary>A shot's result (ArrowCmd.ShootArrowAtTarget, TryShootArrow: true when it had an arrow to shoot at a living target): read on the board.</summary>
+    private static bool IsShot(ResultValue result) => result.Command is "ArrowCmd.ShootArrowAtTarget" or "ArrowCmd.TryShootArrow";
+
+    /// <summary>
+    /// A shot's result on the board (Trick Shot's draw, v0.114.0: only when its shot had an arrow): an arrow of yours to shoot (your available
+    /// arrows, on screen) and its target alive. Unknown for the game's template card, which has no owner.
+    /// </summary>
+    private static object? Shot(ProgramBoard board)
+    {
+        if (board.Card.Owner is not { } owner) return Unknown;
+        return Fool.ArrowsAvailable(owner) > 0 && board.Target is not { IsDead: true };
+    }
 
     private static bool? Holds(ProgramCondition condition, Context context)
     {
@@ -205,6 +218,7 @@ public static class ProgramEvaluator
                 ArrayValue array => array.Items.Select(item => Evaluate(item, context)).ToList() is var items && items.Any(item => item == Unknown) ? Unknown : items,
                 LambdaValue lambda => new Closure(lambda, context),
                 QueryValue query => Query(query, context),
+                ResultValue result when IsShot(result) => Shot(context.Board),
                 _ => Unknown,
             };
         }
@@ -432,6 +446,17 @@ public static class ProgramEvaluator
     private static bool ReadsFinishedPlays(ProgramCondition getter) =>
         getter.Literals.Any(literal => literal.Test.Parts().Any(part => part is QueryValue { Name: "CardPlaysFinished" }));
 
+    /// <summary>The LINQ queries over a collection the evaluator follows (Linq); any other is unknown.</summary>
+    private static readonly HashSet<string> LinqKnown = new(StringComparer.Ordinal)
+        { "ToList", "ToArray", "AsEnumerable", "Distinct", "Any", "All", "Count", "Where", "FirstOrDefault", "Except", "Contains", "OfType", "Take" };
+
+    /// <summary>
+    /// The LINQ queries in <paramref name="value"/> the evaluator doesn't follow (none: it can count the collection on the board). The card scan
+    /// holds a take of cards to them, so a collection the code builds a new way fails the release instead of being counted as your whole hand.
+    /// </summary>
+    public static IReadOnlyList<string> UnknownQueries(ProgramValue value) =>
+        value.Parts().OfType<QueryValue>().Where(query => query is { Of: null, Type: "Enumerable" } && !LinqKnown.Contains(query.Name)).Select(query => query.Name).Distinct().ToList();
+
     private static object? Linq(QueryValue query, object?[] arguments, Context context)
     {
         if (arguments.Length == 0 || arguments[0] is not IEnumerable source) return Unknown;
@@ -478,9 +503,25 @@ public static class ProgramEvaluator
                                          || ToNumber(item) is { } number && number == ToNumber(arguments[1]));
             case "OfType" when query.GenericArguments.Count == 1:
                 return items.Where(item => item != null && IsOfType(item.GetType(), query.GenericArguments[0])).ToList();
+            // The first n (Punch of Joy: Take(its shuffled Sadness, Cards)): all of them when there are no more than n; else n of them when
+            // they're all alike (which n a shuffle put first is a roll, never read; which of identical cards doesn't matter), unknown otherwise,
+            // and unknown when the order is a draw pile's hidden one.
+            // Never your draw pile's (Ki Chant: Take(its top cards, Cards)): its order is hidden, and the play may shuffle it first.
+            case "Take" when arguments.Length > 1 && ToNumber(arguments[1]) is { } count && !OfDrawPile(query):
+                if (count >= items.Count) return items;
+                if (count <= 0) return new List<object?>();
+                return items.Select(item => item?.GetType()).Distinct().Count() == 1 && !OrderHidden(items) ? items.Take((int)count).ToList() : Unknown;
             default:
                 return Unknown;
         }
+    }
+
+    /// <summary>The query goes over a draw pile (GetPile of PileType.Draw anywhere in its source).</summary>
+    private static bool OfDrawPile(QueryValue query)
+    {
+        var drawPile = ((int)PileType.Draw).ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return query.Arguments.Count > 0 && query.Arguments[0].Parts().Any(part => part is QueryValue { Name: "GetPile" } pile && pile.Parts().Any(inner => inner is ConstantValue constant && constant.ToString() == drawPile))
+            || query.Arguments.Count > 0 && query.Arguments[0].Parts().Any(part => part is QueryValue { Name: "DrawPile" });
     }
 
     /// <summary>Two or more of these are in a draw pile: which comes first is the pile's hidden order.</summary>

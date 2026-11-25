@@ -195,7 +195,7 @@ public sealed partial class ProcAudit : IFeature, IFrameFeature
     private static readonly HashSet<string> LaterPlayOnly = new() { nameof(ShowOffPower) };
 
     /// <summary>
-    /// Your powers a card play uses up whatever the card costs (BeforeCardPlayed): Free Card, Free Attack, Free Skill and Free Power make
+    /// Your powers a card play uses up whatever the card costs (BeforeCardPlayed): Free Attack, Free Skill and Free Power make
     /// your next card (Attack, Skill, Power) from hand free and go, and the costs they lowered go back up. The free-card check
     /// compares their charges with the "free:" tabs.
     /// </summary>

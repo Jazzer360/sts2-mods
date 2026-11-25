@@ -157,7 +157,7 @@ public sealed class CardTabs
     }
 
     /// <summary>
-    /// A payout the play decides, set up by the play (decision #244: Tune's free card on the turn's first Ki), as its row shows it: a plain trigger
+    /// A payout the play decides, set up by the play (decision #244: Parrying Shield's block reaching its threshold), as its row shows it: a plain trigger
     /// where every branch of some aim turns it on (its set-up log, SimKeys.SetUp), with the aim marker where not every aim does. A warning the same
     /// source already has (it gives the payout up in some outcome) stays.
     /// </summary>

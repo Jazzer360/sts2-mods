@@ -118,8 +118,10 @@ public class CardsTakenTests
     // ---- transforms
 
     [Fact]
-    public void PunchOfJoyTransformsOneSadness()
+    public void PunchOfJoyTransformsItsCardsOfYourSadness()
     {
+        // PunchOfJoy.OnPlay (v0.114.0): your Sadness shuffled, then Take(Cards) of them transformed into Joy together: 1, 2 upgraded, at
+        // most what you hold.
         var gameFight = new GameFight();
         var card = gameFight.Add<PunchOfJoy>();
         gameFight.Add<StrikeIronclad>();
@@ -127,6 +129,9 @@ public class CardsTakenTests
         gameFight.Add<Sadness>();
         gameFight.Add<Sadness>();
         Assert.Equal(1, BoardCounts.TransformCount(card, Others(gameFight, card), drawPile: 0));
+        gameFight.Add<Sadness>();
+        var upgraded = gameFight.Add<PunchOfJoy>(upgraded: true);
+        Assert.Equal(2, BoardCounts.TransformCount(upgraded, Others(gameFight, upgraded), drawPile: 0));
     }
 
     [Fact]

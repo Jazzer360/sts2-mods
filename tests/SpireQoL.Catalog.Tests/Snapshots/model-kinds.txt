@@ -3,15 +3,15 @@
 
 ## Powers and relics
 
-beta powers: 304 classes, 273 with hooks; read from code 126, hand-written 45, neither 104 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 303 classes, 272 with hooks; read from code 126, hand-written 45, neither 103 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 60, hand-written 12, neither 238 (each by its first gap: Snapshots/hook-readings.txt)
 main powers: 265 classes, 235 with hooks; read from code 106, hand-written 40, neither 91 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 52, hand-written 12, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
 
-## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 6, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 2
+## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 7, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 1
 
 Adroit (both; read from its code (ReadModel); not modelled by name; ledger: covered): OnPlay: read | RecalculateValues: read
-Clone (both; not modelled by name; ledger: no review): no hooks
+Clone (both; not modelled by name; ledger: no review): TryModifyRestSiteOptions: [the engine runs no read enchantment (its bodies read whole but for that)] gap: the engine runs no read EnchantmentModel's TryModifyRestSiteOptions
 Corrupted (both; read from its code (ReadModel); not modelled by name; ledger: covered): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageMultiplicative: called live (the adapter runs the game's own code) | OnPlay: read
 DeprecatedEnchantment (both; not modelled by name; ledger: no review): no hooks
 Glam (both; not modelled by name; ledger: ignore): AfterCardPlayed: read | EnchantPlayCount: [the engine runs no read enchantment (its bodies read whole but for that)] gap: the engine runs no read EnchantmentModel's EnchantPlayCount
@@ -158,7 +158,6 @@ name gate: DampenPower in Sim/Adapter/MoveBranches.cs: not modelled from code: a
 name gate: FeelNoPainPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
 name gate: FlameBarrierPower in Sim/Adapter/SimAdapter.cs: read from code: a gate its reading could replace
 name gate: FreeAttackPower in Procs/FreeCards.cs: not modelled from code: a gate to replace by a rule
-name gate: FreeCardPower in Procs/FreeCards.cs: not modelled from code: a gate to replace by a rule
 name gate: FreePowerPower in Procs/FreeCards.cs: not modelled from code: a gate to replace by a rule
 name gate: FreeSkillPower in Procs/FreeCards.cs: not modelled from code: a gate to replace by a rule
 name gate: HellraiserPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a gate to replace by a rule
@@ -191,11 +190,11 @@ a potion's chosen target (OnUse's target, as a card play's): 28 classes, 27 alon
 commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn): 10 classes, 10 alone: AttackPotion (potion)*, BottledSong (potion)*, ColorlessPotion (potion)*, LiquidMemories (potion)*, OrobicAcid (potion)*, PowerPotion (potion)*, SkillPotion (potion)*, SneckoOil (potion)*, SoldiersStew (potion)*, TouchOfInsanity (potion)*
 a command on another creature (the players, a card's owner, a roll's list): 9 classes, 9 alone: CompostPower*, Clarity (potion)*, CureAll (potion)*, Duplicator (potion)*, EnergyPotion (potion)*, ExplosiveAmpoule (potion)*, FocusPotion (potion)*, RadiantTincture (potion)*, SwiftPotion (potion)*
 its own data: a card or a play kept, a field used directly: 9 classes, 7 alone: CalamityPower*, ImitationLearningPower*, InterceptPower, JugglingPower*, PaelsLegion, SerpentFormPower*, StretchPower*, WitheringPresencePower*, Ashwater (potion)*
+the engine runs no read enchantment (its bodies read whole but for that): 5 classes, 5 alone: Clone (enchantment)*, Glam (enchantment)*, Imbued (enchantment)*, Slither (enchantment)*, Spiral (enchantment)*
 a loop over items (creatures, cards): 7 classes, 4 alone: ImpaledPower, PaelsEye, SmoggyPower, BlessingOfTheForge (potion)*, CosmicConcoction (potion)*, EntropicBrew (potion)*, GlowwaterPotion (potion)*
-the engine runs no read enchantment (its bodies read whole but for that): 4 classes, 4 alone: Glam (enchantment)*, Imbued (enchantment)*, Slither (enchantment)*, Spiral (enchantment)*
 a monster's own state set (its flag, its next move): 8 classes, 3 alone: AsleepPower, CurlUpPower, ImbalancedPower*, InfestedPower, PlowPower*, SlumberPower*, SteamEruptionPower, StockPower
+a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 5 classes, 3 alone: ImpaledPower, InsatiableDominionPower*, PlatingPower, ShadowmeldPower*, SkittishPower*
 another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 5 classes, 3 alone: CoveredPower, HardenedShellPower*, SurprisePower, Goopy (enchantment)*, FoulPotion (potion)*
-a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 4 classes, 3 alone: InsatiableDominionPower*, PlatingPower, ShadowmeldPower*, SkittishPower*
 a pick: 3 classes, 3 alone: StratagemPower*, DropletOfPrecognition (potion)*, GamblersBrew (potion)*
 commands: OstyCmd.Summon: 3 classes, 3 alone: DevourLifePower*, SicEmPower*, BoneBrew (potion)*
 commands: a card made (AddGeneratedCardToCombat, a made card): 3 classes, 3 alone: CrystallineEuphoria (potion)*, CunningPotion (potion)*, PotOfGhouls (potion)*
@@ -224,5 +223,4 @@ a model's own method (its body read where it's called): 3 classes, 0 alone: Fera
 queries: the owner's powers: 2 classes, 0 alone: CoveredPower, InterceptPower
 a command on another power (PowerCmd.Remove of another): 1 classes, 0 alone: AsleepPower
 a turn's start (an extra turn): 1 classes, 0 alone: PaelsEye
-arrows (AfterArrowShot, AfterArrowImpaled, an arrow's owner, ArrowCmd): 1 classes, 0 alone: ImpaledPower
 multiplayer scaling (GetScaledAmountForMultiplayer, the players' count): 1 classes, 0 alone: PlatingPower

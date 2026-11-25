@@ -438,8 +438,9 @@ public static partial class SimEngine
     /// <summary>
     /// Damage to an enemy (CreatureCmd.Damage, its hooks in SimPipelines), in the game's order: the damage caps (Hard to Kill,
     /// Intangible: the damage math applies them, amounts given as final numbers get them here, the cap flashing when it changes
-    /// one), BeforeDamageReceived (Thorns hits the dealer back), its block, the HP-loss pipeline (Hardened Shell, Slippery, The
-    /// Boot...), its HP, AfterBlockBroken when its block broke (Burrowed, Hand Drill), then AfterDamageGiven and AfterDamageReceived
+    /// one), what the hit does worked out (its block's share, the HP-loss pipeline: Hardened Shell, Slippery, The Boot...), BeforeDamageReceived
+    /// (Thorns hits the dealer back; v0.114.0 tells it once the results are worked out, as CreatureCmd.GetDamageResults does), the results applied: its
+    /// block, its HP, AfterBlockBroken when its block broke (Burrowed, Hand Drill), then AfterDamageGiven and AfterDamageReceived
     /// (Envenom, Mighty Wings, Asleep, Slumber, Plow, Shriek, Flutter, The Gambit...), even when its block took it all. Returns the HP
     /// it lost (overkill included).
     /// </summary>
@@ -464,23 +465,33 @@ public static partial class SimEngine
             amount = (int)cap;
             capper!.Value.Model.AfterModifyingDamageAmount(state, capper.Value.Owner, card);
         }
-        foreach (var (simModel, o) in listeners) simModel.BeforeDamageReceived(state, o, ctx, amount);
-        if (!enemy.Alive) return 0;
+        // What the hit does, worked out first (beta, v0.114.0: CreatureCmd.GetDamageResults, a dry run): its block's share and the HP the pipeline
+        // leaves; then Hook.BeforeDamageReceived (Thorns hits the dealer back), then the results applied as worked out (ApplyDamageResults). Main
+        // (MainRule.ReceivedBeforeTheResults): BeforeDamageReceived first, then the same worked out on what it left.
+        var receivedFirst = ReceivedFirst(state);
+        if (receivedFirst)
+        {
+            foreach (var (simModel, o) in listeners) simModel.BeforeDamageReceived(state, o, ctx, amount);
+            if (!enemy.Alive) return 0;
+        }
         var hadBlock = enemy.Block > 0;
         var absorbed = props.HasFlag(SimProps.Unblockable) ? 0 : Math.Min(enemy.Block, amount);
-        enemy.Block -= absorbed;
-        var blockBroken = hadBlock && enemy.Block == 0;
-        if (blockBroken) enemy.BlockBroken = true;
-        var hpBefore = enemy.Hp;
-        var toHp = 0;
-        if (amount - absorbed > 0)
+        var notes = default(HpLossNotes);
+        var toHp = amount - absorbed > 0 ? Math.Max(0, (int)HpLossFor(state, ctx, amount - absorbed, out notes)) : 0;
+        if (!receivedFirst)
         {
-            toHp = Math.Max(0, (int)HpLossPipeline(state, ctx, amount - absorbed));
+            foreach (var (simModel, o) in listeners) simModel.BeforeDamageReceived(state, o, ctx, amount);
+            if (!enemy.Alive) return 0;
+        }
+        enemy.Block -= Math.Min(enemy.Block, absorbed);
+        var blockBroken = hadBlock && absorbed > 0 && enemy.Block == 0;
+        if (blockBroken) enemy.BlockBroken = true;
+        TellHpLoss(state, notes);
+        var hpBefore = enemy.Hp;
+        if (toHp > 0)
+        {
             enemy.Hp -= toHp;
-            if (toHp > 0)
-            {
-                enemy.UnblockedInstances++; // UnblockedDamage is 0 when Hardened Shell stops it
-            }
+            enemy.UnblockedInstances++; // UnblockedDamage is 0 when Hardened Shell stops it
         }
         state.AttackDealt += absorbed + toHp;
         // After the HP loss, before the damage hooks (the game's results loop in CreatureCmd.Damage). A hit that killed it is told to its
@@ -520,36 +531,81 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// Hook.ModifyHpLost*, as CreatureCmd.Damage runs it: every listener's BeforeOsty then BeforeOstyLate term, AfterModifyingHpLost
-    /// for the listeners that changed the (whole-number) amount there (the game's AfterModifyingHpLostBeforeOsty: Hardened Shell), then
-    /// every AfterOsty and AfterOstyLate term and AfterModifyingHpLost for theirs (AfterModifyingHpLostAfterOsty: most flash, Buffer
-    /// loses a stack).
+    /// The models whose HP-loss terms changed a damage's (whole-number) amount, to be told as its results are applied (CreatureCmd.ApplyDamageResults,
+    /// v0.114.0: after Hook.BeforeDamageReceived): BeforeOsty's (Hook.AfterModifyingHpLostBeforeOsty: Hardened Shell) and AfterOsty's
+    /// (AfterModifyingHpLostAfterOsty: most flash, Buffer loses a stack). Null: none.
+    /// </summary>
+    internal readonly record struct HpLossNotes(List<(SimModel Model, int Owner)>? BeforeOsty, List<(SimModel Model, int Owner)>? AfterOsty);
+
+    /// <summary>
+    /// Hook.ModifyHpLost* as main's CreatureCmd.Damage runs it (MainRule.ReceivedBeforeTheResults), each change told as it's made: every listener's
+    /// BeforeOsty then BeforeOstyLate term, the models that changed it there told (AfterModifyingHpLostBeforeOsty: Hardened Shell), then every AfterOsty
+    /// and AfterOstyLate term and theirs (AfterModifyingHpLostAfterOsty: most flash, Buffer loses a stack).
     /// </summary>
     internal static decimal HpLossPipeline(SimState state, DamageCtx ctx, decimal amount)
     {
         var listeners = Listeners(state);
-        var changed = new List<(SimModel Model, int Owner)>();
-        void Phase(Func<SimModel, int, decimal, decimal> term)
-        {
+        List<(SimModel Model, int Owner)>? changed = null;
+        amount = HpLossPhase(state, ctx, amount, listeners, afterOsty: false, ref changed);
+        TellHpLoss(state, new HpLossNotes(changed, null));
+        changed = null;
+        amount = HpLossPhase(state, ctx, amount, listeners, afterOsty: true, ref changed);
+        TellHpLoss(state, new HpLossNotes(null, changed));
+        return amount;
+    }
+
+    /// <summary>
+    /// The HP a damage's <paramref name="amount"/> past block comes to (Hook.ModifyHpLost*, every listener's BeforeOsty, BeforeOstyLate, AfterOsty and
+    /// AfterOstyLate terms in order), with nothing told: beta's CreatureCmd.GetDamageResults dry run (v0.114.0), the models that changed it in
+    /// <paramref name="notes"/> for when the results are applied (<see cref="TellHpLoss"/>).
+    /// </summary>
+    internal static decimal HpLossAmount(SimState state, DamageCtx ctx, decimal amount, out HpLossNotes notes)
+    {
+        var listeners = Listeners(state);
+        List<(SimModel Model, int Owner)>? beforeOsty = null, afterOsty = null;
+        amount = HpLossPhase(state, ctx, amount, listeners, afterOsty: false, ref beforeOsty);
+        amount = HpLossPhase(state, ctx, amount, listeners, afterOsty: true, ref afterOsty);
+        notes = new HpLossNotes(beforeOsty, afterOsty);
+        return amount;
+    }
+
+    /// <summary>One half of the HP-loss terms (BeforeOsty and BeforeOstyLate, or AfterOsty and AfterOstyLate), the models that changed the amount kept.</summary>
+    private static decimal HpLossPhase(SimState state, DamageCtx ctx, decimal amount, List<(SimModel Model, int Owner)> listeners, bool afterOsty, ref List<(SimModel Model, int Owner)>? changed)
+    {
+        for (var late = 0; late < 2; late++)
             foreach (var (model, o) in listeners)
             {
                 var before = amount;
-                amount = term(model, o, amount);
-                if (decimal.Truncate(before) != decimal.Truncate(amount)) changed.Add((model, o));
+                amount = (afterOsty, late) switch
+                {
+                    (false, 0) => model.ModifyHpLostBeforeOsty(state, o, ctx, amount),
+                    (false, _) => model.ModifyHpLostBeforeOstyLate(state, o, ctx, amount),
+                    (true, 0) => model.ModifyHpLostAfterOsty(state, o, ctx, amount),
+                    _ => model.ModifyHpLostAfterOstyLate(state, o, ctx, amount),
+                };
+                if (decimal.Truncate(before) != decimal.Truncate(amount)) (changed ??= new()).Add((model, o));
             }
-        }
-        void AfterModifying(bool afterOsty)
-        {
-            foreach (var (simModel, o) in changed) simModel.AfterModifyingHpLost(state, o, afterOsty);
-            changed.Clear();
-        }
-        Phase((model, owner, running) => model.ModifyHpLostBeforeOsty(state, owner, ctx, running));
-        Phase((model, owner, running) => model.ModifyHpLostBeforeOstyLate(state, owner, ctx, running));
-        AfterModifying(afterOsty: false);
-        Phase((model, owner, running) => model.ModifyHpLostAfterOsty(state, owner, ctx, running));
-        Phase((model, owner, running) => model.ModifyHpLostAfterOstyLate(state, owner, ctx, running));
-        AfterModifying(afterOsty: true);
         return amount;
+    }
+
+    /// <summary>Main's CreatureCmd.Damage tells BeforeDamageReceived and each HP-loss change before working out the results (MainRule.ReceivedBeforeTheResults).</summary>
+    private static bool ReceivedFirst(SimState state) => (state.MainRules & MainRule.ReceivedBeforeTheResults) != 0;
+
+    /// <summary>
+    /// The HP a damage past block comes to as the running game's CreatureCmd.Damage works it out: beta's dry run, its changes in <paramref name="notes"/>
+    /// to tell as the results are applied; main's pipeline, its changes told as they're made (<paramref name="notes"/> empty).
+    /// </summary>
+    internal static decimal HpLossFor(SimState state, DamageCtx ctx, decimal amount, out HpLossNotes notes)
+    {
+        notes = default;
+        return ReceivedFirst(state) ? HpLossPipeline(state, ctx, amount) : HpLossAmount(state, ctx, amount, out notes);
+    }
+
+    /// <summary>The models that changed a damage's HP loss told, as its results are applied (Hook.AfterModifyingHpLostBeforeOsty, then AfterOsty).</summary>
+    internal static void TellHpLoss(SimState state, HpLossNotes notes)
+    {
+        if (notes.BeforeOsty != null) foreach (var (simModel, o) in notes.BeforeOsty) simModel.AfterModifyingHpLost(state, o, afterOsty: false);
+        if (notes.AfterOsty != null) foreach (var (simModel, o) in notes.AfterOsty) simModel.AfterModifyingHpLost(state, o, afterOsty: true);
     }
 
     internal static void Stun(SimEnemy enemy)
@@ -646,11 +702,20 @@ public static partial class SimEngine
     /// HP a player loses from <paramref name="amount"/> past their block: the HP-loss pipeline (Tungsten Rod, Beating Remnant,
     /// Buffer, Intangible...). Apply it, then call PlayerDamaged.
     /// </summary>
-    private static int HpLoss(SimState state, int player, int amount, int? dealer, SimProps props, SimCard? card)
+    private static int HpLoss(SimState state, int player, int amount, int? dealer, SimProps props, SimCard? card, out HpLossNotes notes)
     {
+        notes = default;
         if (amount <= 0) return 0;
         if (Listeners(state).Count == 0) return amount;
-        return Math.Max(0, (int)HpLossPipeline(state, new DamageCtx(dealer, player, props, card, card == null ? null : state.CurrentPlay), amount));
+        return Math.Max(0, (int)HpLossFor(state, new DamageCtx(dealer, player, props, card, card == null ? null : state.CurrentPlay), amount, out notes));
+    }
+
+    /// <summary>Hook.BeforeDamageReceived of a damage to a player (Thorns hits the dealer back, read from its code; the damage still lands).</summary>
+    private static void TellReceived(SimState state, List<(SimModel Model, int Owner)> listeners, int player, int amount, SimProps props, int? dealer, SimCard? card)
+    {
+        if (listeners.Count == 0) return;
+        var damage = new DamageCtx(dealer, player, props, card, card == null ? null : state.CurrentPlay);
+        foreach (var (model, owner) in listeners) model.BeforeDamageReceived(state, owner, damage, amount);
     }
 
     /// <summary>
@@ -683,7 +748,8 @@ public static partial class SimEngine
 
     /// <summary>
     /// CreatureCmd.Damage landing on a player once its amount is worked out, for every damage to a player (decision #219), in the game's order:
-    /// Hook.BeforeDamageReceived (Thorns hits the dealer back, read from its code; the damage still lands), Wuppy first for a powered attack while it
+    /// what it does worked out first (v0.114.0: CreatureCmd.GetDamageResults), then Hook.BeforeDamageReceived (Thorns hits the dealer back, read from its
+    /// code; the damage still lands as worked out), then the results applied: Wuppy first for a powered attack while it
     /// lives (WuppysLoyaltyPower.ModifyPreBlockDamageTarget: only what it doesn't take goes on), their block unless it's Unblockable
     /// (Creature.DamageBlockInternal), Osty for what a powered attack gets past it while he lives (DieForYouPower.ModifyUnblockedDamageTarget), the
     /// HP-loss pipeline, their HP, then the hit's reactions (Flame Barrier and Reflect hit back, read from their code). The same for every player
@@ -693,48 +759,52 @@ public static partial class SimEngine
     internal static PlayerHit Lands(SimState state, string? label, int player, int amount, SimProps props, int? dealer, SimCard? card)
     {
         var listeners = Listeners(state);
-        if (listeners.Count > 0)
-        {
-            var damage = new DamageCtx(dealer, player, props, card, card == null ? null : state.CurrentPlay);
-            foreach (var (model, owner) in listeners) model.BeforeDamageReceived(state, owner, damage, amount);
-        }
-        var simPlayer = state.MutablePlayer(player);
         var yours = player == Who.You;
         var powered = props.IsPoweredAttack();
-        if (powered && simPlayer.WuppyHp > 0 && amount > 0)
-        {
-            var toWuppy = Math.Min(simPlayer.WuppyHp, amount);
-            simPlayer.WuppyHp -= toWuppy;
-            simPlayer.WuppyTaken += toWuppy; // not their Incoming Damage: it never reaches them
-            amount -= toWuppy;
-        }
         var unblockable = props.HasFlag(SimProps.Unblockable);
+        // What the hit does, worked out first (beta, v0.114.0: CreatureCmd.GetDamageResults, a dry run): Wuppy's share, the block's, Osty's, the HP
+        // the pipeline leaves; then Hook.BeforeDamageReceived (Thorns hits the dealer back), then the results applied as worked out
+        // (ApplyDamageResults). Main (MainRule.ReceivedBeforeTheResults): BeforeDamageReceived first, then the same worked out on what it left.
+        var receivedFirst = ReceivedFirst(state);
+        if (receivedFirst) TellReceived(state, listeners, player, amount, props, dealer, card);
+        var before = state.Player(player)!;
+        var toWuppy = powered && before.WuppyHp > 0 && amount > 0 ? Math.Min(before.WuppyHp, amount) : 0;
+        var past = amount - toWuppy;
+        var blocked = unblockable ? 0 : Math.Min(before.Block, past);
+        var through = past - blocked;
+        var toOsty = powered && before.OstyShields && before.OstyHp > 0 ? Math.Min(before.OstyHp, through) : 0;
+        var lost = HpLoss(state, player, through - toOsty, dealer, props, card, out var notes);
+        if (!receivedFirst) TellReceived(state, listeners, player, amount, props, dealer, card);
+        var simPlayer = state.MutablePlayer(player);
+        if (toWuppy > 0)
+        {
+            simPlayer.WuppyHp = Math.Max(0, simPlayer.WuppyHp - toWuppy);
+            simPlayer.WuppyTaken += toWuppy; // not their Incoming Damage: it never reaches them
+        }
         if (unblockable)
         {
-            if (yours && label != null && state.Log) state.Unblockable.Add((label, amount));
+            if (yours && label != null && state.Log) state.Unblockable.Add((label, past));
         }
         else
         {
-            simPlayer.Incoming += amount;
+            simPlayer.Incoming += past;
             if (yours)
             {
-                state.BlockDemand += amount;
-                if (label != null && state.Log) state.Blockable.Add((label, amount));
+                state.BlockDemand += past;
+                if (label != null && state.Log) state.Blockable.Add((label, past));
             }
         }
-        var blocked = unblockable ? 0 : Math.Min(simPlayer.Block, amount);
-        simPlayer.Block -= blocked;
-        var through = amount - blocked;
-        var toOsty = powered && simPlayer.OstyShields ? OstyLoses(state, player, through) : 0;
+        simPlayer.Block -= Math.Min(simPlayer.Block, blocked);
+        TellHpLoss(state, notes);
+        toOsty = toOsty > 0 ? OstyLoses(state, player, toOsty) : 0;
         simPlayer = state.MutablePlayer(player);
         simPlayer.OstyTaken += toOsty;
         if (!unblockable) simPlayer.Through += through - toOsty;
-        var lost = HpLoss(state, player, through - toOsty, dealer, props, card);
         Lose(state, player, lost);
         if (unblockable) state.MutablePlayer(player).UnblockableTaken += lost;
         if (yours && label != null) PlayHp(state, through - toOsty, lost);
         PlayerDamaged(state, player, dealer, props, blocked, lost, card);
-        return new PlayerHit(amount, blocked, toOsty, lost);
+        return new PlayerHit(past, blocked, toOsty, lost);
     }
 
     /// <summary>Blockable damage to a player from no one (a card's damage to you: SimPlay.DamageToYou), Unpowered.</summary>

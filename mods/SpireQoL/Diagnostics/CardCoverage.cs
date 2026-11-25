@@ -131,9 +131,7 @@ internal static class CardCoverage
         try
         {
             if (card.MaxUpgradeLevel < 1) return null;
-            var copy = (CardModel)card.MutableClone();
-            copy.UpgradeInternal();
-            copy.FinalizeUpgradeInternal();
+            var copy = SpireQoL.Cards.UpgradedCopy.Of(card);
             return copy;
         }
         catch
@@ -180,6 +178,13 @@ internal static class CardCoverage
         // Every step on a condition the simulator acts on (decision #190): its condition translated, decided before the play, or a gap of
         // a reviewed kind (ConditionGapKinds).
         issues.AddRange(ConditionGaps(card.GetType()));
+        // The cards a take goes over (an exhaust, discard, transform or take into your hand: a roll's or a loop's collection) are counted on the
+        // board (Procs.Programs.BoardCounts.Taken): a collection built with a query the evaluator doesn't follow would be counted as your whole hand.
+        var cardType = card.GetType();
+        foreach (var take in Procs.Programs.CardEffects.ExhaustsOfOthers(cardType).Concat(Procs.Programs.CardEffects.Discards(cardType))
+                     .Concat(Procs.Programs.CardEffects.Transforms(cardType)).Concat(Procs.Programs.CardEffects.TakesIntoHandOf(cardType)))
+            if (take.Items != null && Procs.Programs.ProgramEvaluator.UnknownQueries(take.Items) is { Count: > 0 } unknown)
+                issues.Add($"takes cards from a collection built with {string.Join(", ", unknown)}, which its program's evaluator doesn't follow (counted as your whole hand: Procs.Programs.BoardCounts.Taken)");
         // A draw on a condition (Impatience: no Attack in hand) is counted when its condition holds on the board (Procs.Programs.BoardCounts.CardsDrawn,
         // evaluated from its program): one the evaluator can't read (a test of something the play itself gives) isn't checked.
         if (Procs.Programs.CardEffects.DrawsForYou(card.GetType()).Any(draw => !Procs.Programs.ProgramEvaluator.CanEvaluate(draw.Condition)))

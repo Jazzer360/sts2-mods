@@ -325,9 +325,8 @@ public static class SettingsCatalog
         new(nameof(ViciousPower), SourceGroup.YourPower, "Cards that apply Vulnerable"),
         new(nameof(ArsenalPower), SourceGroup.YourPower, "Cards that create cards"),
         new(nameof(TrashToTreasurePower), SourceGroup.YourPower, "Cards that create statuses"),
-        new(nameof(TunePower), SourceGroup.YourPower, "Your first Ki this turn: sets up its free card next turn", Shows: Sim.TabShows.SetsUp),
+        new(nameof(TunePower), SourceGroup.YourPower, "Your first Ki this turn: upgrades random cards in your hand"),
         // Free card powers (Procs/FreeCards.cs): playing a card from your hand uses one up, whatever it costs.
-        new(nameof(FreeCardPower), SourceGroup.YourPower, "Your cards (Tune): the energy it saves, ? when you couldn't know its cost (Snecko Eye, Frantic Escape). Crossed on 0-cost and X-cost cards (they use it up for nothing)", TagPrefix: SpireQoL.Procs.FreeCards.Prefix),
         new(nameof(FreeAttackPower), SourceGroup.YourPower, "Your Attacks (Unrelenting): the energy it saves, ? when you couldn't know its cost (Snecko Eye, Frantic Escape). Crossed on 0-cost and X-cost Attacks", TagPrefix: SpireQoL.Procs.FreeCards.Prefix),
         new(nameof(FreeSkillPower), SourceGroup.YourPower, "Your Skills (Pounce): the energy it saves, ? when you couldn't know its cost (Snecko Eye, Frantic Escape). Crossed on 0-cost and X-cost Skills", TagPrefix: SpireQoL.Procs.FreeCards.Prefix),
         new(nameof(FreePowerPower), SourceGroup.YourPower, "Your Powers (Synthesis): the energy it saves, ? when you couldn't know its cost. Crossed on 0-cost Powers", TagPrefix: SpireQoL.Procs.FreeCards.Prefix),

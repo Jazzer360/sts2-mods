@@ -400,7 +400,7 @@ public static class ProgramReader
     /// <summary>The prefix of a store to one of the model's own values ("DynamicVars.Damage", "DynamicVars.\"CardsLeft\"").</summary>
     public const string OwnVarPrefix = "DynamicVars.";
 
-    /// <summary>The prefix of a property set on an object a hook is given ("Given.arrow.DestroyAfterImpaled": AfterArrowShot's arrow), never the model's own state.</summary>
+    /// <summary>The prefix of a property set on an object a hook is given ("Given.arrow.Status": a property set on an object a hook is given), never the model's own state.</summary>
     public const string GivenPrefix = "Given.";
 
     /// <summary>
@@ -649,7 +649,7 @@ public static class ProgramReader
                     into.Add(new StoreStep(instruction.Offset, property, flow.ArgumentValues(i, member)[0]) { Condition = condition });
                     continue;
                 }
-                // A property set on an object the hook is given (AfterArrowShot's arrow.DestroyAfterImpaled = true): a store, "Given.arrow.DestroyAfterImpaled",
+                // A property set on an object the hook is given (an arrow, a card: arrow.Status = ...): a store, "Given.arrow.Status",
                 // which the hook reader translates or names as a gap.
                 if (member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1 } && member.Name.StartsWith("set_", StringComparison.Ordinal) && IsPowerOrRelic
                     && flow.ReceiverValue(i, arguments: 1) switch { ParameterValue givenParameter => givenParameter.Name, NamedValue givenNamed => givenNamed.Name, _ => null } is { } given && given != "this")

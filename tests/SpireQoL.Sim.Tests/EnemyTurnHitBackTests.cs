@@ -69,11 +69,26 @@ public class EnemyTurnHitBackTests
     }
 
     [Fact]
-    public void AnAttackerKilledByThornsExplodesBeforeTheHitLands()
+    public void AnAttackerKilledByThornsExplodesBeforeTheHitLandsAsWorkedOut()
     {
-        // Your Thorns kills the 2-HP attacker in BeforeDamageReceived; its CreatureCmd.Damage ends in CreatureCmd.Kill, so ExplosivePower.AfterDeath
-        // hits you there and then (6, which your Buffer stops), and the hit itself (5) lands after: you take 5, not 6.
+        // v0.114.0 (CreatureCmd.GetDamageResults, then Hook.BeforeDamageReceived, then ApplyDamageResults): the hit (5) is worked out first, your
+        // Buffer taking it to 0 HP (BufferPower.ModifyHpLostAfterOstyLate) with its stack spent only as the hit is applied. Your Thorns then kills the
+        // 2-HP attacker in BeforeDamageReceived; its CreatureCmd.Kill runs ExplosivePower.AfterDeath there and then, whose 6 is worked out with Buffer
+        // still on (0) and spends it. The hit lands as worked out: 0. Before v0.114.0 the explosion spent Buffer first and the hit's 5 got through.
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 2, hits: [5]) } };
+        state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.Explosive, amount: 6);
+        state.You.Hp = 50;
+        state.You.Thorns = 3;
+        state.You.Powers = state.You.Powers.With(PowerId.Buffer, amount: 1);
+        Assert.Equal(0, Assert.Single(SimEngine.Run(state).Branches).Taken);
+    }
+
+    [Fact]
+    public void OnMainTheExplosionSpendsBufferBeforeTheHitIsWorkedOut()
+    {
+        // Main (MainRule.ReceivedBeforeTheResults, BranchRules.DamageWorkedOutFirst): CreatureCmd.Damage tells BeforeDamageReceived first, so your Thorns
+        // kills the attacker and its explosion (6) spends your Buffer before the hit (5) is worked out: you take 5.
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 2, hits: [5]) }, MainRules = MainRule.ReceivedBeforeTheResults };
         state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.Explosive, amount: 6);
         state.You.Hp = 50;
         state.You.Thorns = 3;

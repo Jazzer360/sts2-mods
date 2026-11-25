@@ -19,7 +19,9 @@ public class CoverageVersionTests
     [InlineData("v0.111.2", false)]   // a main build not reviewed yet
     [InlineData("v0.113.01", false)]
     [InlineData("v0.113.10", false)]
-    [InlineData("v0.114.0", false)]
+    [InlineData("v0.114.0", true)]    // beta's supported build (the ledger's)
+    [InlineData("v0.114.1", false)]   // a beta build not reviewed yet
+    [InlineData("v0.113.2", false)]
     public void OnlyUnreviewedVersionsAreReported(string game, bool reviewed)
         => Assert.Equal(reviewed, CoverageLedger.ReviewedVersion(game));
 }

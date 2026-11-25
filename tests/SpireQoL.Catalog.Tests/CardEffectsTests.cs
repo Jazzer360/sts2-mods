@@ -61,7 +61,7 @@ public class CardEffectsTests
         Exactly(nameof(CardEffects.TakesTargetsBlock), CardEffects.TakesTargetsBlock, "Expose");
         // Also Omnislice's and Rain Shot's first hit (CreatureCmd.Damage on the target): attacks, which the adapter and the scan leave
         // out (only a card that isn't an attack is asked), as ExecuteCards' table did.
-        Exactly(nameof(CardEffects.DamagesTargetWithoutAttacking), CardEffects.DamagesTargetWithoutAttacking, "CaptureSpirit", "Omnislice", "RainShot");
+        Exactly(nameof(CardEffects.DamagesTargetWithoutAttacking), CardEffects.DamagesTargetWithoutAttacking, "CaptureSpirit", "Omnislice", "RainShot", "Timber");
         Exactly(nameof(CardEffects.BlocksAnother), CardEffects.BlocksAnother, "Lift", "Constellation", "DemonicShield");
         Exactly(nameof(CardEffects.BlocksEachPlayer), CardEffects.BlocksEachPlayer, "Rally");
         Exactly(nameof(CardEffects.ChannelsForTarget), CardEffects.ChannelsForTarget, "Ignition");
@@ -137,7 +137,7 @@ public class CardEffectsTests
         return string.Join(" ", parts);
     }
 
-    /// <summary>The per-card tables the rules replaced, as they were when they were deleted.</summary>
+    /// <summary>The per-card tables the rules replaced, as they were when they were deleted, kept to the game: v0.114.0 changed Arrow Stab (no longer takes a Shoot card into your hand), Recall (no longer puts a pick from your discard pile on your draw pile; Wah Ki does now), Growth and Florescence (they transform instead of exhausting: Optimism exhausts your Sadness now), Punch of Joy (its Cards of your Sadness) and Timber (CreatureCmd.Damage instead of an attack).</summary>
     private static class Tables
     {
         // Draws and shuffles (PlayFacts.AllyDrawCards, SimAdapter.TeammatesDrawCards, PlayFacts.ShuffleCards and ShuffleWhenShortCards).
@@ -148,11 +148,11 @@ public class CardEffectsTests
         // Cards moved between piles (PlayFacts.TakenToHandCards, PutBackCards, MovedElsewhereCards).
         public static readonly string[] TakenToHandCards =
         {
-            "AllForOne", "Anointed", "ArrowStab", "Dredge", "Graveblast", "Hologram", "KiChant", "LockedIn", "NeowsFury", "SecretTechnique",
+            "AllForOne", "Anointed", "Dredge", "Graveblast", "Hologram", "KiChant", "LockedIn", "NeowsFury", "SecretTechnique",
             "SecretWeapon", "SeekerStrike", "SummonForth", "TheWorld", "Wish",
         };
         public static readonly string[] PutBackCards = { "Glimmer", "PhotonCut", "ThinkingAhead" };
-        public static readonly string[] MovedElsewhereCards = { "CosmicIndifference", "Headbutt", "Recall", "Tutor" };
+        public static readonly string[] MovedElsewhereCards = { "CosmicIndifference", "Headbutt", "Tutor", "WahKi" };
         // Attacks (PlayFacts.XHitCards, SingleHitRepeatCards).
         public static readonly string[] XHitCards = { "Eradicate", "Skewer", "Volley", "Whirlwind", "RepeatShot" };
         public static readonly string[] SingleHitRepeatCards = { "IceLance", "HeirloomHammer" };
@@ -167,8 +167,8 @@ public class CardEffectsTests
         // Other cards exhausted (BoardCounts.ExhaustOthers), and how (ExhaustPickOf: Chosen, Random, All; ExhaustTakesNoActingCard: a filter).
         public static readonly string[] ExhaustOthersCards =
         {
-            "Brand", "BurningPact", "TrueGrit", "Scavenge", "Cinder", "Thrash", "Cleanse", "FiendFire", "Stoke", "SecondWind", "TheDevil", "Growth",
-            "Florescence", "Purity", "TheHermit", "FlakCannon",
+            "Brand", "BurningPact", "TrueGrit", "Scavenge", "Cinder", "Thrash", "Cleanse", "FiendFire", "Stoke", "SecondWind", "TheDevil", "Optimism",
+            "Purity", "TheHermit", "FlakCannon",
         };
         public static readonly Dictionary<string, string> ExhaustWays = new()
         {
@@ -178,8 +178,8 @@ public class CardEffectsTests
             ["Brand"] = "Picked", ["BurningPact"] = "Picked", ["Scavenge"] = "Picked", ["Purity"] = "Picked",
             ["Cleanse"] = "Picked from the draw pile",
             ["FiendFire"] = "Each", ["Stoke"] = "Each", ["TheDevil"] = "Each", ["SecondWind"] = "Each filtered",
-            // ExhaustTakesNoActingCard: only Sadness, only Shoot cards, only status cards, only a Curse.
-            ["Growth"] = "Each filtered", ["Florescence"] = "Each filtered", ["FlakCannon"] = "Each filtered", ["TheHermit"] = "Picked filtered",
+            // ExhaustTakesNoActingCard: only Sadness, only status cards, only a Curse.
+            ["Optimism"] = "Each filtered", ["FlakCannon"] = "Each filtered", ["TheHermit"] = "Picked filtered",
         };
         // Draws on a condition (PlayFacts.ConditionalDrawCards, TargetDrawCards).
         public static readonly string[] ConditionalDrawCards = { "Impatience", "Fetch", "Ftl", "Restlessness", "KiHop", "Wrest" };
@@ -214,14 +214,14 @@ public class CardEffectsTests
         public static readonly Dictionary<string, string> TransformCards = new()
         {
             ["Begone"] = "Picked from Hand", ["Guards"] = "Picked from Hand several how many chosen", ["Charge"] = "Picked from Draw several",
-            ["Seance"] = "Picked from Draw several", ["Compact"] = "Each from Hand filtered", ["PrimalForce"] = "Each from Hand filtered", ["PunchOfJoy"] = "Each from Hand one",
+            ["Seance"] = "Picked from Draw several", ["Compact"] = "Each from Hand filtered", ["PrimalForce"] = "Each from Hand filtered", ["PunchOfJoy"] = "Each from Hand", ["Florescence"] = "Picked from Hand", ["Growth"] = "Each from Hand one",
         };
         // Moved into your hand (BoardCounts.TakenToHandCount, SimAdapter.HandTakes: FromDiscard, Eligible, Random, AllAtOnce).
         public static readonly Dictionary<string, string> HandTakes = new()
         {
             ["Anointed"] = "Random from Draw filtered", ["Wish"] = "Picked from Draw", ["SeekerStrike"] = "Picked from Draw filtered", ["KiChant"] = "Picked from Draw filtered",
             ["SecretWeapon"] = "Picked from Draw filtered", ["SecretTechnique"] = "Picked from Draw filtered",
-            ["LockedIn"] = "Picked from Draw filtered", ["AllForOne"] = "Each from Discard filtered", ["ArrowStab"] = "Picked from Discard filtered",
+            ["LockedIn"] = "Picked from Draw filtered", ["AllForOne"] = "Each from Discard filtered",
             ["Dredge"] = "Picked from Discard several", ["TheWorld"] = "Random from Discard", ["Graveblast"] = "Picked from Discard",
             // Summon Forth: every Sovereign Blade not in your hand, from every pile; Neow's Fury: you choose how many.
             ["Hologram"] = "Picked from Discard", ["SummonForth"] = "Each filtered", ["NeowsFury"] = "Picked from Discard several how many chosen",

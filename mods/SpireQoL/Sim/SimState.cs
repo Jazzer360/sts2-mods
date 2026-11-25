@@ -16,6 +16,12 @@ public enum MainRule
     SplashIsUnpowered = 2,
     /// <summary>Juggling copies the third Attack into your hand as it's played (beta: once it's played).</summary>
     JugglingCopiesBeforeThePlay = 4,
+    /// <summary>
+    /// CreatureCmd.Damage tells Hook.BeforeDamageReceived (Thorns hits the dealer back) before it works out what the damage does, and each HP-loss
+    /// change is told as it's made (beta, v0.114.0: the results are worked out first, CreatureCmd.GetDamageResults, then BeforeDamageReceived, then
+    /// they're applied with the changes told: ApplyDamageResults).
+    /// </summary>
+    ReceivedBeforeTheResults = 8,
 }
 
 /// <summary>
@@ -361,6 +367,12 @@ public sealed class SimPlayer
     /// <summary>Ethereal cards in hand that exhaust at end of turn.</summary>
     public int Fading;
     /// <summary>
+    /// Cards in hand an upgrade could change as the turn ends: upgradable, and Ethereal or acting in hand at end of turn (Burn). A random
+    /// upgrade of cards in hand (TunePower.AfterCardPlayed: TakeRandom of the upgradable ones) can't be followed while there are any
+    /// (UpgradeRandomInHandStep); with none, nothing it upgrades acts before the turn is over.
+    /// </summary>
+    public int UpgradableAtTurnEnd;
+    /// <summary>
     /// Your draw pile and discard pile by profile (decision #90): draws come from it, and what's drawn joins the hand. Null: draws
     /// are only counted (a teammate's; tests that don't set it).
     /// </summary>
@@ -508,7 +520,7 @@ public sealed class SimPlayer
     {
         key.Add(Block); key.Add(Hp); key.Add(MaxHp); key.Add(Taken); key.Add(Through); key.Add(OstyTaken); key.Add(UnblockableTaken); key.Add(Incoming); key.Add(BlockGained);
         key.Add(WuppyHp); key.Add(WuppyTaken); key.Add(OstyHp); key.Add(Died ? 1 : 0); key.Add(LizardTailUsed ? 1 : 0); key.Add(LizardTailHeal); key.Add(FairiesUsed); key.Add(Fairies);
-        key.Add(BlockGains); key.Add(Energy); key.Add(HandCount); key.Add(PlayingFromHand); key.Add(Arrows); key.Add(Fading); key.Add(HexFading); key.Add(HexFrom); key.Add(Drawn); key.Add(ExhaustPile); key.Add(TakenToHand);
+        key.Add(BlockGains); key.Add(Energy); key.Add(HandCount); key.Add(PlayingFromHand); key.Add(Arrows); key.Add(Fading); key.Add(UpgradableAtTurnEnd); key.Add(HexFading); key.Add(HexFrom); key.Add(Drawn); key.Add(ExhaustPile); key.Add(TakenToHand);
         key.Add(OrbCapacity); key.Add(BeaconGiving ? 1 : 0); key.Add(InvincibleBlock); key.Add(InvincibleDrawPile);
         Draw?.Hash(ref key);
         key.Add(TurnEndCards.Count);
@@ -849,8 +861,6 @@ public sealed class SimState
     }
     /// <summary>The enemy a shot's arrow is flying at (spent before the attack, impaling after it); -1 none.</summary>
     internal int ArrowAwayAt = Who.None;
-    /// <summary>The shot's arrow is destroyed once it impales (AfterArrowShot's arrow.DestroyAfterImpaled: Quietus'), until it impales.</summary>
-    internal bool ArrowDestroyedOnImpale;
     /// <summary>The card a card event is about, when known (the played card exhausting itself: Burning Sticks).</summary>
     internal SimCard? EventCard;
     /// <summary>
@@ -939,7 +949,7 @@ public sealed class SimState
             var player = shown.MutableTeammate(teammateIndex);
             player.TurnEndCards = new();
             player.ExhaustingInHand = new();
-            player.Fading = player.HexFading = 0;
+            player.Fading = player.HexFading = player.UpgradableAtTurnEnd = 0;
             player.Draw = null;
             player.MadeCards = null;
             player.Cards = CardSet.Empty;

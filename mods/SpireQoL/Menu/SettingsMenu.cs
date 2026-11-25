@@ -240,11 +240,11 @@ public sealed partial class SettingsMenu
             if (block)
             {
                 nHotkeyManager.AddBlockingScreen(_root);
-                foreach (var closeKey in closeKeys) PushHotkey(nHotkeyManager, closeKey, _closeAction);
+                foreach (var closeKey in closeKeys) PushHotkey(nHotkeyManager, closeKey, _root, _closeAction);
             }
             else
             {
-                foreach (var closeKey in closeKeys) nHotkeyManager.RemoveHotkeyPressedBinding(closeKey, _closeAction);
+                foreach (var closeKey in closeKeys) RemoveHotkey(nHotkeyManager, closeKey, _root, _closeAction);
                 nHotkeyManager.RemoveBlockingScreen(_root);
             }
             _blocking = block;
@@ -255,16 +255,32 @@ public sealed partial class SettingsMenu
         }
     }
 
+    /// <summary>NHotkeyManager.PushHotkeyPressedBinding, on any game version (<see cref="CallHotkey"/>).</summary>
+    internal static void PushHotkey(NHotkeyManager nHotkeyManager, string key, Node owner, Action action) =>
+        CallHotkey(nHotkeyManager, nameof(NHotkeyManager.PushHotkeyPressedBinding), key, owner, action);
+
+    /// <summary>NHotkeyManager.RemoveHotkeyPressedBinding, on any game version (<see cref="CallHotkey"/>).</summary>
+    internal static void RemoveHotkey(NHotkeyManager nHotkeyManager, string key, Node owner, Action action) =>
+        CallHotkey(nHotkeyManager, nameof(NHotkeyManager.RemoveHotkeyPressedBinding), key, owner, action);
+
     /// <summary>
-    /// NHotkeyManager.PushHotkeyPressedBinding by reflection: v0.113.0 added an optional sequence parameter,
-    /// and a direct call compiled against one game version is a missing method on the other (decision #32).
+    /// A hotkey binding call by reflection: its signature changes between game versions, and a direct call compiled against one is a
+    /// missing method on the others (decision #32). Main (v0.111) takes (key, action) and Remove returns nothing; v0.113.0 added an
+    /// optional sequence and Remove returns it; v0.114.0 added the binding's owner (key, owner, action), a node the binding fires only
+    /// while it's visible and inside the top blocking screen. Each parameter is filled by its type: the key, the owner, the action, and
+    /// the defaults for the rest.
     /// </summary>
-    internal static void PushHotkey(NHotkeyManager nHotkeyManager, string key, Action action)
+    private static void CallHotkey(NHotkeyManager nHotkeyManager, string name, string key, Node owner, Action action)
     {
-        var method = typeof(NHotkeyManager).GetMethods().FirstOrDefault(otherMethod => otherMethod.Name == nameof(NHotkeyManager.PushHotkeyPressedBinding)
-            && otherMethod.GetParameters() is { Length: >= 2 } parameterInfos && parameterInfos[0].ParameterType == typeof(string) && parameterInfos[1].ParameterType == typeof(Action))
-            ?? throw new MissingMethodException(nameof(NHotkeyManager), nameof(NHotkeyManager.PushHotkeyPressedBinding));
-        var args = method.GetParameters().Select((parameterInfo, index) => index == 0 ? key : index == 1 ? action : parameterInfo.HasDefaultValue ? parameterInfo.DefaultValue : null).ToArray();
+        var method = typeof(NHotkeyManager).GetMethods().FirstOrDefault(otherMethod => otherMethod.Name == name
+            && otherMethod.GetParameters() is { Length: >= 2 } parameterInfos && parameterInfos[0].ParameterType == typeof(string)
+            && parameterInfos.Skip(1).All(parameterInfo => parameterInfo.ParameterType == typeof(Action) || typeof(Node).IsAssignableFrom(parameterInfo.ParameterType) || parameterInfo.HasDefaultValue))
+            ?? throw new MissingMethodException(nameof(NHotkeyManager), name);
+        var args = method.GetParameters().Select((parameterInfo, index) =>
+            index == 0 ? key
+            : parameterInfo.ParameterType == typeof(Action) ? action
+            : typeof(Node).IsAssignableFrom(parameterInfo.ParameterType) ? owner
+            : parameterInfo.DefaultValue).ToArray();
         method.Invoke(nHotkeyManager, args);
     }
 

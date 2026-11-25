@@ -4,7 +4,7 @@
 
 namespace SpireQoL.Sim;
 
-/// <summary>Every power class the game has (305), named as the simulator names it.</summary>
+/// <summary>Every power class the game has (304), named as the simulator names it.</summary>
 public readonly partial record struct PowerId
 {
     public static readonly PowerId Accelerant = new("AccelerantPower");
@@ -132,8 +132,6 @@ public readonly partial record struct PowerId
     public static readonly PowerId ForegoneConclusion = new("ForegoneConclusionPower");
     public static readonly PowerId Frail = new("FrailPower");
     public static readonly PowerId FreeAttack = new("FreeAttackPower");
-    /// <summary>Beta branch only.</summary>
-    public static readonly PowerId FreeCard = new("FreeCardPower");
     public static readonly PowerId FreePower = new("FreePowerPower");
     public static readonly PowerId FreeSkill = new("FreeSkillPower");
     public static readonly PowerId Friendship = new("FriendshipPower");
@@ -718,7 +716,6 @@ public static class GameBranches
         "ExplosiveArrowsPower",
         "ExplosivePower",
         "ExtraTurnPower",
-        "FreeCardPower",
         "GodByrdPower",
         "HiddenRootsPower",
         "HoningPower",
@@ -821,12 +818,12 @@ public static class GameBranches
         "MythicForm",
         "Nail",
         "Nock",
+        "Optimism",
         "PunchOfJoy",
         "QuickShot",
         "Quietus",
         "Quiver",
         "RainShot",
-        "RapidShot",
         "Recall",
         "RepeatShot",
         "RhythmStrike",
@@ -863,6 +860,7 @@ public static class GameBranches
         "Timber",
         "TrickShot",
         "Tune",
+        "TwinShot",
         "Uproot",
         "ViolentChord",
         "Vitriol",
@@ -887,7 +885,7 @@ public static class GameBranches
     };
 }
 
-/// <summary>Every card class the game has (717), named as the simulator names it.</summary>
+/// <summary>Every card class the game has (718), named as the simulator names it.</summary>
 public readonly partial record struct CardId
 {
     public static readonly CardId Abrasive = new("Abrasive");
@@ -1384,6 +1382,8 @@ public readonly partial record struct CardId
     public static readonly CardId Omnislice = new("Omnislice");
     public static readonly CardId OneForAll = new("OneForAll");
     public static readonly CardId OneTwoPunch = new("OneTwoPunch");
+    /// <summary>Beta branch only.</summary>
+    public static readonly CardId Optimism = new("Optimism");
     public static readonly CardId Orbit = new("Orbit");
     public static readonly CardId Outbreak = new("Outbreak");
     public static readonly CardId Outmaneuver = new("Outmaneuver");
@@ -1444,8 +1444,6 @@ public readonly partial record struct CardId
     public static readonly CardId Rainbow = new("Rainbow");
     public static readonly CardId Rally = new("Rally");
     public static readonly CardId Rampage = new("Rampage");
-    /// <summary>Beta branch only.</summary>
-    public static readonly CardId RapidShot = new("RapidShot");
     public static readonly CardId Rattle = new("Rattle");
     public static readonly CardId Reanimate = new("Reanimate");
     public static readonly CardId Reap = new("Reap");
@@ -1663,6 +1661,8 @@ public readonly partial record struct CardId
     public static readonly CardId Tune = new("Tune");
     public static readonly CardId Turbo = new("Turbo");
     public static readonly CardId Tutor = new("Tutor");
+    /// <summary>Beta branch only.</summary>
+    public static readonly CardId TwinShot = new("TwinShot");
     public static readonly CardId TwinStrike = new("TwinStrike");
     public static readonly CardId Tyranny = new("Tyranny");
     public static readonly CardId UltimateDefend = new("UltimateDefend");

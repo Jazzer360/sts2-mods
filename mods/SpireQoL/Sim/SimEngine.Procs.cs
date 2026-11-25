@@ -139,7 +139,7 @@ public static partial class SimEngine
 
     /// <summary>
     /// Damage to <paramref name="player"/>'s Osty from a creature's proc (an enemy's Thorns as Osty attacks it), while he lives: CreatureCmd.Damage of
-    /// him, so the damage math with him as its target, BeforeDamageReceived, the HP-loss pipeline on him (he keeps no block), his HP
+    /// him, so the damage math with him as its target, the HP-loss pipeline on him (he keeps no block), BeforeDamageReceived, his HP
     /// (SimEngine.OstyLoses: Necro Mastery hears it). Logged with the damage, as every proc's is.
     /// </summary>
     public static IEnumerable<SimState> ProcDamageOsty(SimState state, int owner, string name, int player, decimal baseDamage, SimProps props, bool noDealer = false)
@@ -152,8 +152,14 @@ public static partial class SimEngine
         state.LogFired(name, amount, owner);
         if (modifiers != null) foreach (var (model, listener) in modifiers) model.AfterModifyingDamageAmount(state, listener, card: null);
         if (amount <= 0) return new[] { state };
-        foreach (var (model, listener) in Listeners(state)) model.BeforeDamageReceived(state, listener, damage, amount);
-        var lost = Listeners(state).Count == 0 ? amount : Math.Max(0, (int)HpLossPipeline(state, damage, amount));
+        // Worked out first, then BeforeDamageReceived, then applied (beta, v0.114.0: CreatureCmd.GetDamageResults); main tells BeforeDamageReceived
+        // first (MainRule.ReceivedBeforeTheResults).
+        var receivedFirst = (state.MainRules & MainRule.ReceivedBeforeTheResults) != 0;
+        if (receivedFirst) foreach (var (model, listener) in Listeners(state)) model.BeforeDamageReceived(state, listener, damage, amount);
+        var notes = default(HpLossNotes);
+        var lost = Listeners(state).Count == 0 ? amount : Math.Max(0, (int)HpLossFor(state, damage, amount, out notes));
+        if (!receivedFirst) foreach (var (model, listener) in Listeners(state)) model.BeforeDamageReceived(state, listener, damage, amount);
+        TellHpLoss(state, notes);
         OstyLoses(state, player, lost);
         return new[] { state };
     }

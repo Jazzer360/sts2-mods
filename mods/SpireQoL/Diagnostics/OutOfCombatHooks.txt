@@ -2,6 +2,7 @@
 # rewards, gold, deck changes, run flow. Every other hook can affect a fight. Used by
 # scripts/coverage-ledger.mjs to find the relics that affect fights (goal 2: every one tracked) and,
 # later, the ones that change out-of-combat choices (goal 3).
+BeforeActEntered
 AfterActEntered
 AfterAddToDeckPrevented
 AfterCardChangedPiles

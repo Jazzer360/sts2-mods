@@ -17,6 +17,7 @@ public class SimTeammateHandFieldsTests
     {
         nameof(SimPlayer.Fading),          // Ethereal cards that exhaust (Feel No Pain, Charon's Ashes, Forgotten Soul)
         nameof(SimPlayer.HexFading),       // of those, Ethereal only through Hex
+        nameof(SimPlayer.UpgradableAtTurnEnd), // of their cards, the upgradable ones that act as the turn ends
         nameof(SimPlayer.Draw),            // their draw pile: never filled for a teammate (decision #90), cleared all the same
         nameof(SimPlayer.MadeCards),       // what goes into their draw pile: only with it (never filled for a teammate), cleared all the same
         nameof(SimPlayer.TurnEndCards),    // Burn, Decay, Bad Luck, Regret...

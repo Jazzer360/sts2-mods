@@ -359,15 +359,16 @@ public class ProcModelTests
     [Fact]
     public void LullabyAndConductorsBatonFireOnTheThirdMelody()
     {
+        // v0.114.0: MelodyCmd.PlayedThisTurn counts the turn's plays started (History.CardPlaysStarted), the card being played among them.
         var card = Card("KiStep", SimCardType.Skill, SimCardTag.Ki);
         var state = Power(State(), PowerId.Lullaby, amount: 5);
         Relic(state, RelicId.ConductorsBaton, data: 0);
-        state.You.Turn = state.You.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Wah), delta: 1).Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Cho), delta: 1);
+        state.You.Turn = state.You.Turn.Add(SimKeys.Plays(PlayStage.Started, SimCardTag.Wah), delta: 1).Add(SimKeys.Plays(PlayStage.Started, SimCardTag.Cho), delta: 1);
         var after = One(state, Events(card, plays: 1));
         Assert.Equal(5, after.You.Block);
         Assert.True(after.Fired.Has("ConductorsBaton"));
         // Already complete: Lullaby's own ProccdThisTurn is set (by the play that completed them, or its AfterApplied), as the adapter reads it.
-        state.You.Turn = state.You.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Ki), delta: 1);
+        state.You.Turn = state.You.Turn.Add(SimKeys.Plays(PlayStage.Started, SimCardTag.Ki), delta: 1);
         SimEngine.SetField(state, Who.You, key: "LullabyPower.ProccdThisTurn", value: 1);
         Assert.Equal(0, One(state, Events(card, plays: 1)).You.Block);
     }
@@ -381,7 +382,7 @@ public class ProcModelTests
         var state = State();
         Relic(state, RelicId.ConductorsBaton, data: 0);
         state.Enemies[0].Intent = new List<IntentHit> { new(Base: 22m) };
-        state.You.Turn = state.You.Turn.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Wah), delta: 1).Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Cho), delta: 1);
+        state.You.Turn = state.You.Turn.Add(SimKeys.Plays(PlayStage.Started, SimCardTag.Wah), delta: 1).Add(SimKeys.Plays(PlayStage.Started, SimCardTag.Cho), delta: 1);
         var outcome = SimEngine.Run(state, Events(card, plays: 1));
         Assert.Equal(16, outcome.TakenMax);
         Assert.True(One(state, Events(card, plays: 1)).You.Powers.Has(PowerId.ConductorsBaton));
@@ -394,7 +395,7 @@ public class ProcModelTests
         on.Enemies[0].Intent = new List<IntentHit> { new(Base: 22m) };
         Assert.Equal(16, SimEngine.Run(on, Events(Card("Defend", SimCardType.Skill), plays: 1)).TakenMax);
         // Not yet three melodies: no power, the full intent.
-        state.You.Turn = NamedCounts.Empty.Add(SimKeys.Plays(PlayStage.Finished, SimCardTag.Wah), delta: 1);
+        state.You.Turn = NamedCounts.Empty.Add(SimKeys.Plays(PlayStage.Started, SimCardTag.Wah), delta: 1);
         Assert.Equal(36, SimEngine.Run(state, Events(card, plays: 1)).TakenMax);
     }
 
@@ -437,28 +438,6 @@ public class ProcModelTests
     }
 
     [Fact]
-    public void QuietusDestroysTheShotsArrowOnceItImpales()
-    {
-        // QuietusPower.AfterArrowShot: arrow.DestroyAfterImpaled = true, so ArrowCmd.ImpaleTarget destroys it (DestroyArrow): out of a living target
-        // for good (ImpaledPower.ForceRemoveArrow, the power gone with its last arrow), and never back to you, so nothing hears it come loose.
-        var living = Power(State(hp: 100), PowerId.Quietus, amount: 2);
-        Relic(living, RelicId.Twine, vars: ("Block", 2));
-        living.You.Arrows = 1;
-        var shot = Play(Card("QuickShot"), target: 0, plays: 1, new ShootAction(), Attack(baseDamage: 5, props: SimProps.Move | SimProps.FromArrow), new ImpaleAction());
-        var after = One(living, shot);
-        Assert.Equal(90, after.Enemy(id: 0)!.Hp);
-        Assert.False(after.Enemy(id: 0)!.Powers.Has(PowerId.Impaled));
-        Assert.Equal(0, after.You.Arrows);
-        // A shot that kills: the arrow is gone with it, where any other comes straight back (Twine's block).
-        var dying = Power(State(hp: 5), PowerId.Quietus, amount: 2);
-        Relic(dying, RelicId.Twine, vars: ("Block", 2));
-        dying.You.Arrows = 1;
-        var killed = One(dying, shot);
-        Assert.Equal(0, killed.You.Arrows);
-        Assert.Equal(0, killed.You.Block);
-    }
-
-    [Fact]
     public void EveryThirdPoweredHitKnocksAnArrowOutAndADeathLetsThemAllGo()
     {
         var state = Relic(State(hp: 100), RelicId.Twine, vars: ("Block", 2));
@@ -475,6 +454,19 @@ public class ProcModelTests
         var killed = One(kill, Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 9)));
         Assert.Equal(4, killed.You.Block);
         Assert.Equal(2, killed.You.Arrows);
+    }
+
+    [Fact]
+    public void OstysHitsFromYourCardCountYourImpaledDown()
+    {
+        // v0.114.0: ImpaledPower.AfterDamageReceived counts a powered hit whose source card's owner is its applier, whoever deals it (dealer != null &&
+        // source.Owner.Creature == Applier): Osty's three hits from your card knock an arrow out (before v0.114.0 only its applier's own hits did).
+        var state = State(hp: 100);
+        state.You.OstyHp = 10;
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Impaled, amount: 2, data: 3);
+        var after = One(state, Play(Card("Squeeze"), target: 0, plays: 1, Attack(baseDamage: 1, hits: 3) with { ByOsty = true }));
+        Assert.Equal((1, 3), (after.Enemy(id: 0)!.Powers[PowerId.Impaled], after.Enemy(id: 0)!.Powers.DataOf(PowerId.Impaled)));
+        Assert.Equal(1, after.You.Arrows);
     }
 
     [Fact]

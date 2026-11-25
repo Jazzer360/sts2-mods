@@ -629,7 +629,7 @@ public static class HookReader
             }
         // A pass of the HP-loss pipeline changes the HP a hit takes: it acts (the hand-written models' trigger: Tungsten Rod, The Boot). A power an
         // attack spends (its AfterAttack takes its own stacks: Gigantification's Decrement) acts on that play (decision #228).
-        return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep)
+        return steps.Any(step => step is ApplyPowerStep or ChannelStep or GainStarsStep or UpgradeCardStep or UpgradeRandomInHandStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep)
             || programs.Any(program => program.Returns != null && program.Hook is HookName.ModifyHpLostBeforeOsty or HookName.ModifyHpLostBeforeOstyLate or HookName.ModifyHpLostAfterOsty or HookName.ModifyHpLostAfterOstyLate)
             || programs.Any(SpentByAnAttack)
             // A term that changed a damage, told so (Hook.AfterModifyingDamageAmount: Slow's, Hard to Kill's flash): it acts there (decision #229).
@@ -1230,8 +1230,8 @@ public static class HookReader
         }
 
         /// <summary>
-        /// A shot's arrow and card against null (AfterArrowShot's arrow: the shot had one, HookFact.ShotHadArrow; its source: a card made the shot,
-        /// HookFact.HookCardThere). Null for anything else.
+        /// A shot's card against null (AfterArrowShot's source: a card made the shot, HookFact.HookCardThere). Null for anything else (its arrow
+        /// against null: no game class asks since v0.114.0 took out Quietus' AfterArrowShot, a gap).
         /// </summary>
         private HookValue? ArrowCompare(CompareValue compare)
         {
@@ -1240,8 +1240,7 @@ public static class HookReader
             foreach (var (one, other) in new[] { (compare.Left, compare.Right), (compare.Right, compare.Left) })
             {
                 if (other is not NullValue) continue;
-                if (Unstored(one) is ParameterValue { Name: "arrow" } or NamedValue { Name: "arrow" }) there = new HookFactValue(HookFact.ShotHadArrow);
-                else if (Unstored(one) is ParameterValue { Name: "source" } or NamedValue { Name: "source" }) there = new HookFactValue(HookFact.HookCardThere);
+                if (Unstored(one) is ParameterValue { Name: "source" } or NamedValue { Name: "source" }) there = new HookFactValue(HookFact.HookCardThere);
                 if (there != null) break;
             }
             return there == null ? null : compare.Op == Comparison.NotEqual ? there : Not(there);
@@ -1435,11 +1434,8 @@ public static class HookReader
                     if (attackStore.Value is NullValue) return Kept(new HookConstant(0m), new HookConstant(0m), new HookConstant(0m));
                     throw new Gap(ReaderCapability.AttackHooks, $"gap: keeps {attackStore.Value} in {attackStore.Field}");
                 }
-                // A property set on an object the hook is given: the shot's arrow destroyed once it impales (AfterArrowShot's arrow.DestroyAfterImpaled =
-                // true: Quietus'); any other is a gap.
+                // A property set on an object the hook is given (an arrow, a card): nothing the simulator keeps, a gap.
                 case StoreStep given when given.Field.StartsWith(ProgramReader.GivenPrefix, StringComparison.Ordinal):
-                    if (_hook == "AfterArrowShot" && given.Field == ProgramReader.GivenPrefix + "arrow.DestroyAfterImpaled" && Value(given.Value) is HookConstant { Value: not 0m })
-                        return new HookStep[] { new DestroyArrowStep { When = Condition(step.Condition) } };
                     throw new Gap(ReaderCapability.OtherModelValueSet, $"gap: sets {given.Field[ProgramReader.GivenPrefix.Length..]}");
                 // A property set on its owner's monster (((CorpseSlug)base.Owner.Monster).IsRavenous = true): its monster's own state, which its moves and
                 // its next move's choice read. Read where the hook stuns its owner on the same test (StoresWithAStun): the monster's move this turn is then
@@ -1473,6 +1469,10 @@ public static class HookReader
                         var where = Condition(filter.Body.Map(part => part is ParameterValue { Name: var name } && name == filter.Parameter ? new NamedValue("each") : null));
                         return each.Count == 0 ? Array.Empty<HookStep>() : new[] { new ForEachStep(HookItems.Teammates, each) { When = Condition(step.Condition), Where = where } };
                     }
+                    // A loop upgrading random cards of its owner's hand (foreach over TakeRandom(hand.Cards.Where(c => c.IsUpgradable), n): TunePower's,
+                    // v0.114.0): UpgradeRandomInHandStep, n its count. Which cards is a roll, never read.
+                    if (loop.Items is { } rolled && UpgradesRandomHandCards(rolled, loop.Body) is { } upgradeCount)
+                        return new HookStep[] { new UpgradeRandomInHandStep(Value(upgradeCount)) { When = Condition(step.Condition) } };
                     // A counter loop (for i < n): its body n times, n worked out as the loop starts (the card programs read it the same way:
                     // ProgramEvaluator.Rounds). Any other loop is a gap.
                     // Its bound compared as an int (i < n) or as a decimal ((decimal)i < DynamicVars.Cards.BaseValue: Centennial Puzzle's).
@@ -2198,9 +2198,7 @@ public static class HookReader
                     // An int tested as true or false (not (count rem Cards): its remainder is 0).
                     return new HookMath(HookOperation.NotEqual, Value(test), new HookConstant(0m));
                 // The Impaled AfterArrowImpaled is given has an arrow: the shot's, added before the hook (ArrowCmd.ImpaleTarget).
-                // A shot's arrow and card tested as there (AfterArrowShot's arrow: the shot had one; its source: a card made the shot).
-                case ParameterValue { Name: "arrow" } or NamedValue { Name: "arrow" } when _hook == "AfterArrowShot":
-                    return new HookFactValue(HookFact.ShotHadArrow);
+                // A shot's card tested as there (AfterArrowShot's source: a card made the shot).
                 case ParameterValue { Name: "source" } or NamedValue { Name: "source" } when _hook == "AfterArrowShot":
                     return new HookFactValue(HookFact.HookCardThere);
                 // The damage's card is the play its model bound (its own data's ContainsKey(cardSource): Rupture's, the card in play its BeforeCardPlayed added).
@@ -3073,6 +3071,24 @@ public static class HookReader
         /// <summary>The owner's front orb (base.Owner.PlayerCombatState.OrbQueue.Orbs[0]).</summary>
         private static bool IsOwnersFrontOrb(ProgramValue value) =>
             Unstored(value) is QueryValue { Name: "Item" or "get_Item", Of: { } orbs, Arguments: [ConstantValue { Value: 0 }] } && IsOwnersOrbs(orbs);
+
+        /// <summary>
+        /// The count of a loop that upgrades each of a random few of its owner's hand's upgradable cards and does nothing else: its items a
+        /// TakeRandom (of the hand's cards filtered on IsUpgradable, then how many), its body one CardCmd.Upgrade of the item. Null otherwise.
+        /// </summary>
+        private static ProgramValue? UpgradesRandomHandCards(ProgramValue items, IReadOnlyList<ProgramStep> body)
+        {
+            if (Unstored(items) is not QueryValue { Name: "TakeRandom", Arguments: [var from, var count, ..] }) return null;
+            if (body is not [CommandStep { Command.FullName: "CardCmd.Upgrade", Values: [var upgraded, ..] }] || Unstored(upgraded) is not NamedValue { Name: "each" }) return null;
+            var source = Unstored(from);
+            if (source is QueryValue { Name: "ToList", Arguments: [var listed] }) source = Unstored(listed);
+            if (source is not QueryValue { Name: "Where", Arguments: [var cards, LambdaValue filter] }) return null;
+            var handPile = ((int)MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            var ofTheHand = cards.Parts().Any(part => part is QueryValue { Name: "GetPile" } pile && pile.Parts().Any(inner => inner is ConstantValue constant && constant.ToString() == handPile))
+                            && cards.Parts().Any(part => part is QueryValue { Name: "Owner" });
+            var upgradable = filter.Body.Literals.Any(literal => literal.Holds && literal.Test.Parts().Any(part => part is QueryValue { Name: "IsUpgradable" }));
+            return ofTheHand && upgradable ? count : null;
+        }
 
         /// <summary>What a foreach of the code goes over: the fight's players (CombatState.Players), its hittable enemies; null for anything else.</summary>
         private HookItems? ItemsOf(ProgramValue items) =>

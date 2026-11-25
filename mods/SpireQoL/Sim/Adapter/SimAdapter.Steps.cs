@@ -1009,7 +1009,7 @@ public static partial class SimAdapter
     /// How a card that exhausts others takes them (ExhaustFromHandAction: what a card that acts when exhausted, Drum of Battle, does
     /// then), read from its program: a pick is Chosen (from your draw pile for Cleanse), a roll Random, a loop over a collection All;
     /// a filter by type (Second Wind's non-Attacks, Thrash's Attacks, The Hermit's Curse) is its Only or Except. A filter that isn't a
-    /// type (Growth's Sadness, Florescence's Shoot cards, Flak Cannon's statuses outside the exhaust pile) takes no card in your hand
+    /// type (Optimism's Sadness, Flak Cannon's statuses outside the exhaust pile) takes no card in your hand
     /// that acts when exhausted unless one passes it, evaluated on the board: then none is followed. Null for a card that exhausts no
     /// other card.
     /// </summary>

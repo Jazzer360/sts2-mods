@@ -318,8 +318,7 @@ internal static partial class CoverageLedger
         ["ExplosiveArrowsPower"] = "covered: read from its code (ReadModel, decision #242): AfterArrowImpaled deals its amount to every hittable enemy when its owner's arrow impales (the Impaled's first arrow is its applier's: the shooter)",
         ["ExplosivePower"] = "covered: read from its code (ReadModel, decision #195): AfterDeath damages every living player (unpowered, blockable), wherever it dies (your card, end of turn, its poison tick), through the damage math on each player (decision #220); crossed kill tab",
         ["ExtraTurnPower"] = "covered: ShouldTakeExtraTurn gives you another turn before the enemies act: Incoming Damage shows its icon (+1 turn) from the game's own query (Hook.ShouldTakeExtraTurn); the forecast stays the enemies' next turn, by choice (decision #40)",
-        ["FreeCardPower"] = "covered: TryModifyEnergyCostInCombatLate makes your next card free; BeforeCardPlayed uses it up on any card from hand (free: tab with the energy saved, ? under Snecko Eye; crossed when wasted)",
-        ["ImpaledPower"] = "covered: AfterDamageReceived counts the applier's powered hits and dislodges an arrow every third; AfterDeath dislodges them all (model ImpaledPower: your arrows in it and its counter; a teammate's arrows come back to them at its death, TeammatesImpaledPower; their hit counter isn't kept, as their only powered hits in your turn are a Howl from Beyond auto-play)",
+        ["ImpaledPower"] = "covered: AfterDamageReceived counts the powered hits from its applier's cards (v0.114.0: source.Owner.Creature == Applier, Osty's included) and dislodges an arrow every third; AfterDeath dislodges them all (model ImpaledPower: your arrows in it and its counter; a teammate's arrows come back to them at its death, TeammatesImpaledPower; their hit counter isn't kept, as their only powered hits in your turn are a Howl from Beyond auto-play)",
         ["InsatiableDominionPower"] = "covered: model on AfterSideTurnEndLate (its Damage var, 2 + its owner's turn number, unpowered, to its owner)",
         ["KiVersePower"] = "covered: read from its code (ReadModel, decision #195): ModifyCardPlayCount replays your Wah, Cho and Ki cards, AfterModifyingCardPlayCount a stack used (the replay tab from the game's play count; decision #192); AfterSideTurnEnd removes it",
         ["LagavulinMatriarchDominionPower"] = "covered: read from its code (ReadModel, decision #195): AfterSideTurnEnd lowers its owner's Strength and Dexterity after your end of turn (block already gained) and goes: nothing predicted after it reads them",
@@ -332,7 +331,7 @@ internal static partial class CoverageLedger
         ["SongPathPower"] = "covered: read from its code (ReadModel, decision #253): AfterCardPlayed gains its amount of block (unpowered) when the card its owner plays is their first Cho this turn (MelodyCmd.IsFirstPlayThisTurn: the play itself, HookFact.PlayIsFirst) (proc block)",
         ["StretchPower"] = "covered: ModifyBlockAdditive adds to your next powered block card's block (or its Adroit block: GainsBlock counts the enchantment, v0.113.1) (read through the game's block hooks; a replay's later plays without it in the simulator); BeforeCardPlayed/AfterCardPlayed spend it (Stretch tab on block cards that spend it, checked against the amount after the play)",
         ["TemporaryThornsPower"] = "covered: BeforeApplied/AfterPowerAmountChanged apply Thorns (read as Thorns: simulator); AfterSideTurnEnd removes it after the other side's turn",
-        ["TunePower"] = "covered: read from its code (ReadModel, decision #195): AfterSideTurnEnd gives a free card next turn when you played a Ki (the fight's log: MelodyCmd.PlayedKiThisTurn); its tab, plain on the play that sets that up (a payout the play decides, decision #244)",
+        ["TunePower"] = "covered: read from its code (ReadModel, decision #195; v0.114.0): AfterCardPlayed, when the card its owner plays is their first Ki this turn (MelodyCmd.IsFirstPlayThisTurn), upgrades its amount of random upgradable cards in their hand (UpgradeRandomInHandStep: followed while no upgradable card in that hand acts as the turn ends, else unknown) (proc tab)",
         ["ViolentChordPower"] = "covered: read from its code (ReadModel, decision #253): AfterCardPlayed damages every hittable enemy its amount (unpowered) when the card its owner plays is their first Wah this turn (MelodyCmd.IsFirstPlayThisTurn: the play itself, HookFact.PlayIsFirst) (proc damage)",
         ["WuppysLoyaltyPower"] = "covered: ModifyPreBlockDamageTarget sends powered attacks on its pet owner to Wuppy while it lives, whole, before block (simulator: SimPlayer.WuppyHp, yours and each teammate's; their Thorns still hits back first)",
         ["YahPower"] = "covered: read from its code (ReadModel, decision #236): AfterArrowDislodged gives its amount of energy when the arrow knocked loose is its owner's, once a turn (its own data's triggeredThisTurn, reset by BeforeSideTurnStart as its owner's turn starts)",
@@ -456,10 +455,11 @@ internal static partial class CoverageLedger
 
     /// <summary>
     /// Earlier game versions players still run whose coverage was reviewed before the ledger moved on (decision #125): not
-    /// reported as a version the coverage wasn't checked against. v0.113.0, the first beta build (patched to v0.113.1), was reviewed in 0.31.29.
+    /// reported as a version the coverage wasn't checked against. v0.113.0, the first beta build (patched to v0.113.1), was reviewed in 0.31.29, and
+    /// v0.113.1 until beta moved to v0.114.0 (the rules that changed there are told from the running game's code: BranchRules, read models).
     /// Main's (SupportedVersions.Main) and the one before it, v0.111.0 (code-identical to v0.111.1), too.
     /// </summary>
-    internal static readonly string[] ReviewedGameVersions = { "v0.113.0", "v0.111.0", SupportedVersions.Main };
+    internal static readonly string[] ReviewedGameVersions = { "v0.113.1", "v0.113.0", "v0.111.0", SupportedVersions.Main };
 
     /// <summary>Whether the coverage was checked against this game version: the ledger's, or one reviewed before it.</summary>
     internal static bool ReviewedVersion(string game) =>

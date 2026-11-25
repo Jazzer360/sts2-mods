@@ -37,21 +37,23 @@ public class PipelineParityTests
         [("CreatureCmd.Damage", Difference.Missing, "ShouldDie")] = "no model: its listeners save a player (Fairy in a Bottle; Lizard Tail's ShouldDieLate), never an enemy: the player pipeline runs it",
         [("CreatureCmd.Damage", Difference.Missing, "ShouldCreatureBeRemovedFromCombatAfterDeath")] = "no model: it keeps a dead creature in the fight (Adaptable, Illusion and Reattach revive it on a later turn, so its kill holds for the turn: CoverageLedger), which changes nothing the turn's simulation follows",
         [("CreatureCmd.Damage", Difference.Missing, "AfterPreventingDeath")] = "no model: its listeners heal a player whose death was prevented (Fairy in a Bottle, Lizard Tail): the player pipeline runs it",
+        [("CreatureCmd.Damage", Difference.Order, "ModifyHpLost")] = "branch rule: DamageWorkedOutFirst (main tells BeforeDamageReceived before working out the HP loss, and each change as it's made; the simulator follows the running game's order, MainRule.ReceivedBeforeTheResults)",
 
         // ---- CreatureCmd.Damage on a player (an enemy's hit)
         [("CreatureCmd.Damage on a player", Difference.Missing, "AfterModifyingDamageAmount")] = "gap: an enemy's hit on a player doesn't run it, so the flash of what capped it (the player's Intangible) isn't logged",
+        [("CreatureCmd.Damage on a player", Difference.Order, "ModifyHpLost")] = "branch rule: DamageWorkedOutFirst (main tells BeforeDamageReceived before working out the hit, and each HP-loss change as it's made; the simulator follows the running game's order, MainRule.ReceivedBeforeTheResults)",
         [("CreatureCmd.Damage on a player", Difference.Missing, "AfterBlockBroken")] = "no model: its listeners (Burrowed, Hand Drill) act on an enemy's block; no game class acts on a player's",
         [("CreatureCmd.Damage on a player", Difference.Missing, "BeforeDeath")] = "no model: its listeners act on their own enemy's death (Crusher, Rocket, Heist, Swipe), never a player's",
         [("CreatureCmd.Damage on a player", Difference.Missing, "ShouldCreatureBeRemovedFromCombatAfterDeath")] = "no model: its listeners keep their own enemy or pet in the fight (Adaptable, Illusion, Reattach, Die For You, Wuppy's Loyalty...), never a player",
         [("CreatureCmd.Damage on a player", Difference.Missing, "AfterDeath")] = "gap: a player's death runs no AfterDeath, so what reacts to it isn't simulated (Covered and Guarded go when the teammate who gave them dies)",
         [("CreatureCmd.Damage on a player", Difference.Extra, "ModifyPreBlockDamageTarget")] = "no model: main has no such step and no Wuppy (beta only), so a player's Wuppy HP is always 0 there and the step does nothing",
         [("CreatureCmd.Damage on a player", Difference.Order, "ModifyUnblockedDamageTarget")] = "no model: Osty takes what gets through before the HP-loss modifiers here, after their BeforeOsty phase in the game; the only BeforeOsty modifier, Hardened Shell, is an enemy's, so he takes the same",
-        [("CreatureCmd.Damage on a player", Difference.Order, "AfterCurrentHpChanged")] = "no model: Osty's HP loss (Necro Mastery's hits on every enemy) comes before the player's HP-loss modifiers here, after them in the game; they read nothing it changes",
         [("CreatureCmd.Damage on a player", Difference.Order, "ShouldDie")] = "gap: a player's death (Fairy in a Bottle, Lizard Tail) is settled as their HP drops (Lose), before AfterDamageGiven and AfterDamageReceived; the game settles it after them (CreatureCmd.Kill) and skips AfterDamageReceived for a hit that killed",
         [("CreatureCmd.Damage on a player", Difference.Order, "AfterPreventingDeath")] = "gap: the heal from 0 comes with the death check (Lose), before AfterDamageGiven and AfterDamageReceived; the game heals after them",
 
         // ---- AttackCommand.Execute
         [("AttackCommand.Execute", Difference.Missing, "ModifyAttackHitCount")] = "no model: the adapter's hit count already went through the game's own Hook.ModifyAttackHitCount (BoardCounts.HitsPerPlay: Thumbscrew)",
+        [("AttackCommand.Execute", Difference.Missing, "ShouldCreatureBeRemovedFromCombatAfterDeath")] = "no model: v0.114.0 asks it for an attacker killed during its own attack, once the attack is over (its death waits: Creature.IsAttacking); its listeners keep their own creature in the fight (Adaptable, Illusion, Reattach revive it on a later turn), which changes nothing the turn's simulation follows",
 
         // ---- PowerCmd.Apply
         [("PowerCmd.Apply", Difference.Missing, "BeforePowerAmountChanged")] = "no model: Unsettling Lamp's binding (its BeforePowerAmountChanged) is in its ModifyPowerAmountGiven, the step after; Void Form's only hides a cost visual",
@@ -110,7 +112,10 @@ public class PipelineParityTests
     [Fact]
     public void EveryReviewSaysWhy()
     {
-        var bad = Reviewed.Where(entry => !entry.Value.StartsWith("no model: ", StringComparison.Ordinal) && !entry.Value.StartsWith("gap: ", StringComparison.Ordinal))
+        // "branch rule: X": the simulator follows each branch's order by a rule told from the running game's code (decision #169), X its name.
+        static bool NamesABranchRule(string review) => review.StartsWith("branch rule: ", StringComparison.Ordinal)
+            && SpireQoL.Sim.BranchRules.All.Any(rule => review.StartsWith("branch rule: " + rule.Name + " ", StringComparison.Ordinal));
+        var bad = Reviewed.Where(entry => !entry.Value.StartsWith("no model: ", StringComparison.Ordinal) && !entry.Value.StartsWith("gap: ", StringComparison.Ordinal) && !NamesABranchRule(entry.Value))
             .Select(entry => $"{entry.Key.Pipeline}: {entry.Key.Kind} {entry.Key.Hook}").ToList();
         Assert.True(bad.Count == 0, "Reviews that don't start with \"no model: \" or \"gap: \":\n" + string.Join("\n", bad));
         var unknown = Reviewed.Keys.Select(key => key.Pipeline).Where(name => SimPipelines.All.All(pipeline => pipeline.Name != name)).ToList();

@@ -34,7 +34,8 @@ public static class HistoryQueryReader
     {
         ["the last turn"] = "HappenedLastPlayerTurn: asked as the player's next turn starts (Bolas, Bounce, Thrumming Hatchet, Emotion Chip, History Course), outside the simulated turn; each hook is reviewed in the CoverageLedger",
         ["this card's plays"] = "a test of the card itself (e.CardPlay.Card == this): Fetch's is SimCounted.CardPlaysFinished (this card's plays before the card play, then each play of a replay); Helix Drill's energy is read before the play",
-        ["one card play"] = "a test of one card play (e.CardPlay == cardPlay or !=): Unmovable's block counts the earlier plays' gains apart from its own play's (SimKeys.CardBlock less PlayCardBlockGains); Helix Drill's energy is read before the play",
+        ["one card play"] = "a test of one card play (e.CardPlay == cardPlay or !=): Helix Drill's energy is read before the play",
+        ["plays counted once"] = "entries counted once per card play (DistinctBy(..., e => e.CardPlay): Unmovable's card plays this turn that gained block, v0.114.0, the play in progress apart): its model reads its own counter, SimKeys.CardBlock (one for each play that gained block, less the play in progress when it has)",
         ["the target's"] = "the damage the card's target took (e.Receiver == target: Gang Up, Beat Into Shape): a calculated value on the target, worked out by the adapter for each target before the play",
         ["an affliction"] = "cards afflicted (CardAfflictedEntry: Chains of Binding): the simulator doesn't afflict cards; the power's hook is reviewed in the CoverageLedger",
         ["not a count"] = "a value that isn't a count of entries (Sum of an amount, LastOrDefault: Helix Drill's energy spent, Radiate's stars, History Course's card): read before the play",
@@ -54,6 +55,10 @@ public static class HistoryQueryReader
         HistoryReading Gap(string kind, string why) => new(code) { Gap = kind, Why = why };
         if (code.Name is not ("Count" or "Any")) return Gap("not a count", code.Name);
         if (code.Arguments.Count == 0) return Gap("unknown", "no source");
+        // Entries counted once per card play (Unmovable: DistinctBy(Where(the entries, its tests), e => e.CardPlay)).
+        if (code.Arguments[0] is QueryValue { Name: "DistinctBy", Arguments: [QueryValue { Name: "Where" } kept, LambdaValue { Body: var key }] } && Source(kept.Arguments[0]) != null
+            && key.Literals.Any(literal => literal.Test.Parts().Any(part => part is QueryValue { Name: "CardPlay" })))
+            return Gap("plays counted once", code.ToString());
         if (Source(code.Arguments[0]) is not { } kind) return Gap("unknown", "source " + code.Arguments[0]);
         var lambda = code.Arguments.Count > 1 ? code.Arguments[1] as LambdaValue : null;
         if (code.Arguments.Count > 1 && lambda == null) return Gap("unknown", "a predicate that isn't a lambda");

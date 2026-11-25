@@ -25,11 +25,11 @@ public static class SimPipelines
         new("CreatureCmd.Damage", "CreatureCmd.Damage", "SimEngine.Damage, after its caller's ModifiedDamage (HitOnce, ProcHitOn, RunDamage)", new[]
         {
             "ModifyDamage",                     // CalcDamage in the caller; the caps again in Damage for amounts given as final numbers
-            "AfterModifyingDamageAmount",       // Slow, Hard to Kill, Intangible flash
-            "BeforeDamageReceived",             // Thorns hits the dealer back
-            "ModifyHpLost",                     // HpLossPipeline: BeforeOsty, BeforeOstyLate...
-            "AfterModifyingHpLostBeforeOsty",   // ...the sources that changed it there...
-            "AfterModifyingHpLostAfterOsty",    // ...then AfterOsty, AfterOstyLate and theirs
+            "AfterModifyingDamageAmount",       // Slow, Intangible flash
+            "ModifyHpLost",                     // HpLossFor: BeforeOsty, BeforeOstyLate, AfterOsty, AfterOstyLate, worked out first (beta)...
+            "BeforeDamageReceived",             // ...then Thorns hits the dealer back (main: first, BranchRules.DamageWorkedOutFirst)...
+            "AfterModifyingHpLostBeforeOsty",   // ...then the results applied, the sources that changed it told (TellHpLoss)...
+            "AfterModifyingHpLostAfterOsty",    // ...BeforeOsty's, then AfterOsty's
             "AfterBlockBroken",                 // Burrowed, Hand Drill
             "AfterDamageGiven",
             "AfterDamageReceived",
@@ -38,13 +38,13 @@ public static class SimPipelines
         new("CreatureCmd.Damage on a player", "CreatureCmd.Damage", "SimEngine.Lands (every damage to a player: DamagePlayer, an enemy's hit in SimEngine.EnemyTurn)", new[]
         {
             "ModifyDamage",                     // IntentDamage, or the game's final numbers
-            "BeforeDamageReceived",             // every listener's (the player's Thorns, read from its code)
-            "ModifyPreBlockDamageTarget",       // Wuppy takes it before block
-            "ModifyUnblockedDamageTarget",      // Osty takes what gets through (Die For You)...
-            "AfterCurrentHpChanged",            // ...and loses that HP (OstyLoses: Necro Mastery)
-            "ModifyHpLost",                     // HpLoss
-            "AfterModifyingHpLostBeforeOsty",
+            "ModifyPreBlockDamageTarget",       // worked out first (beta): Wuppy takes it before block...
+            "ModifyUnblockedDamageTarget",      // ...Osty what gets through (Die For You)...
+            "ModifyHpLost",                     // ...HpLoss for the rest
+            "BeforeDamageReceived",             // every listener's (the player's Thorns, read from its code; main: first, BranchRules.DamageWorkedOutFirst)
+            "AfterModifyingHpLostBeforeOsty",   // the results applied: the HP-loss changes told (TellHpLoss)...
             "AfterModifyingHpLostAfterOsty",
+            "AfterCurrentHpChanged",            // ...Osty loses his HP (OstyLoses: Necro Mastery)
             "ShouldDie",                        // Lose: Fairy in a Bottle, Lizard Tail...
             "AfterPreventingDeath",             // ...heal from 0
             "AfterDamageGiven",                 // PlayerDamaged

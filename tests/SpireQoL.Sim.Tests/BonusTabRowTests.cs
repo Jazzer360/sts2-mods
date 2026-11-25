@@ -186,8 +186,8 @@ public class BonusTabRowTests
         Assert.Null(Tab(TabsOf(empty, Channel(OrbKind.Random), chances: false), "HailstormPower"));
     }
 
-    // ---- Tune (AfterSideTurnEnd: a free card next turn, FreeCardPower, when its owner played a Ki this turn: MelodyCmd.PlayedKiThisTurn, the
-    // fight's log of the turn's finished plays): decided by the play, a plain tab on the play that sets it up.
+    // ---- Tune (v0.114.0: AfterCardPlayed upgrades its amount of random upgradable cards in your hand when the card played is your first Ki this
+    // turn, MelodyCmd.IsFirstPlayThisTurn): a plain tab on that play.
 
     private static SimPlay Ki(string name = "Ki Card") => new() { Name = name, Card = new SimCardPlay(new SimCard(name, SimCardType.Skill) { Tags = { SimCardTag.Ki } }, Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: false) };
 
@@ -199,7 +199,7 @@ public class BonusTabRowTests
     }
 
     [Fact]
-    public void TuneShowsThePlayThatSetsUpItsFreeCard()
+    public void TuneShowsTheTurnsFirstKi()
     {
         Assert.Equal(new SourceTab("proc:TunePower", Crossed: false), Tab(TabsOf(Tuned(), Ki()), "TunePower"));
         // A card that isn't a Ki: no tab.
@@ -215,10 +215,10 @@ public class BonusTabRowTests
     }
 
     [Fact]
-    public void OnGeneratedBoardsTunesTabIsWhatItsCodeDidAsTheTurnEnded()
+    public void OnGeneratedBoardsTunesTabIsWhatItsCodeDidOnThePlay()
     {
-        // TunePower.AfterSideTurnEnd flashes and gives its free card where a Ki was played this turn: its tab is plain where ending the turn now
-        // wouldn't and after the play it does, in every outcome.
+        // TunePower.AfterCardPlayed (v0.114.0) flashes and upgrades random cards in your hand when the card played is your first Ki this turn: its tab
+        // is plain where the play flashes it in every outcome, and ending the turn now never does.
         var seen = new HashSet<bool>();
         for (var scenario = 0; scenario < 120; scenario++)
         {
@@ -231,7 +231,8 @@ public class BonusTabRowTests
             var tag = random.Next(3) switch { 0 => SimCardTag.Ki, 1 => SimCardTag.Wah, _ => SimCardTag.Shiv };
             var play = new SimPlay { Name = "Card", Card = new SimCardPlay(new SimCard("Card", SimCardType.Attack) { Tags = { tag } }, Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: false) };
             bool Flashed(SimState branch) => branch.FlashedAny.Has(PowerId.Tune.Name);
-            var expected = !SimEngine.Run(state).InEvery(Flashed) && SimEngine.Run(state, play).InEvery(Flashed);
+            Assert.False(SimEngine.Run(state).InEvery(Flashed));
+            var expected = SimEngine.Run(state, play).InEvery(Flashed);
             var tab = Tab(TabsOf(state, play), "TunePower");
             Assert.True(expected == (tab != null), $"scenario {scenario}: expected {(expected ? "a plain tab" : "none")}, shown {tab}");
             if (tab != null) Assert.False(tab.Crossed);

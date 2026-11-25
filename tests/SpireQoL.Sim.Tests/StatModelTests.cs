@@ -246,4 +246,17 @@ public class ChoKiTests
         var other = Assert.Single(ScriptBuilder.After(state, ScriptBuilder.Play(new SimCard("Defend", SimCardType.Skill) { GainsBlock = true }, target: Who.None, plays: 1, ScriptBuilder.Block(baseBlock: 5))));
         Assert.False(other.You.Powers.Has(PowerId.Stretch));
     }
+
+    [Fact]
+    public void StretchGivesTheAmountItHadWhenThePlayStarted()
+    {
+        // v0.114.0: StretchPower.ModifyBlockAdditive gives amountWhenCardStarted (its BeforeCardPlayed's), not its amount now: a card that adds 5
+        // Stretch before its block gets the 3 it started with (before v0.114.0 it got all 8).
+        var state = new SimState { Enemies = { ScriptBuilder.Enemy(id: 0, hp: 100) } };
+        state.You.Powers = state.You.Powers.With(PowerId.Stretch, amount: 3);
+        var card = new SimCard("Stretchy", SimCardType.Skill) { GainsBlock = true };
+        var after = Assert.Single(ScriptBuilder.After(state, ScriptBuilder.Play(card, target: Who.None, plays: 1,
+            new ApplyPowerAction(PowerId.Stretch, Amount: 5) { To = ApplyPowerAction.Where.You }, ScriptBuilder.Block(baseBlock: 5))));
+        Assert.Equal(8, after.You.Block);
+    }
 }

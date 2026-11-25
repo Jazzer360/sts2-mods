@@ -272,8 +272,8 @@ public sealed class LostLutePower : ProcModel
 // Explosive Arrows and Covering Fire are read from their code (ReadModel, decision #242).
 
 /// <summary>
-/// ImpaledPower (yours, on an enemy: Amount = your arrows in it, Data = its HitCounter): every third powered hit of yours knocks an
-/// arrow out (AfterDamageReceived: the counter starts over at 3), and its death lets all of them go (AfterDeath). Each comes back to
+/// ImpaledPower (yours, on an enemy: Amount = your arrows in it, Data = its HitCounter): every third powered hit from a card of yours knocks an
+/// arrow out (v0.114.0: source.Owner.Creature == Applier, whoever deals it: Osty's hits from your cards count, a hit from no card doesn't) (AfterDamageReceived: the counter starts over at 3), and its death lets all of them go (AfterDeath). Each comes back to
 /// you and sets off AfterArrowDislodged, once the hit is over.
 /// </summary>
 public sealed class ImpaledPower : SimModel
@@ -282,7 +282,7 @@ public sealed class ImpaledPower : SimModel
     private const int HitsPerArrow = 3;
     public override void AfterDamageReceived(SimState state, int owner, DamageEvent hit)
     {
-        if (hit.Target != owner || hit.Dealer != Who.You || !hit.Props.IsPoweredAttack()) return;
+        if (hit.Target != owner || hit.Dealer == null || hit.Card == null || state.CurrentPlay is not { Owner: Who.You } || !hit.Props.IsPoweredAttack()) return;
         var powers = SimEngine.PowersOf(state, owner);
         if (powers[ThisPower] <= 0) return;
         var counter = powers.DataOf(ThisPower) - 1;

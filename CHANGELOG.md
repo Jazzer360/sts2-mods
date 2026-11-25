@@ -16,6 +16,9 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Play Preview: while you hold a card where letting go would play it (aimed at its target, for one that needs one; above the hand's play line, or once selected with a controller or the keyboard, for one that doesn't), Incoming Damage, Teammate Incoming Damage and the Death Skull show the turn as it would go after you play it, tinted lavender, and an enemy intent the play changes gets a line through its damage and the new number above it in the same font (Weak lowering it, Strength raising it; the line alone for an enemy the play kills in every outcome). Every outcome of the play was already worked out for each card and target, so it shows at once; the card tabs don't change. A new check holds it to the board the play leaves.
 
 #### Changed
+- Game v0.114.0 (beta) coverage. Every card's new numbers, Optimism, Twin Shot (Rapid Shot's new name) and the reworked Fool cards (Arrow Stab, Florescence, Growth, Punch of Joy, Recall, Trick Shot, Timber, Wah Ki) are worked out from their own code. v0.111.1 (main) is still supported, and what its code does differently is followed there.
+- Tune's tag shows on your first Ki card each turn, which now upgrades random cards in your hand (v0.114.0): no longer the free card it gave next turn. The turn's forecast is uncertain (`?`) when an upgradable card in your hand acts as your turn ends (an Ethereal card, Burn).
+- Hard to Kill caps the HP a hit takes past block, as v0.114.0 does, instead of the damage before block.
 - Hailstorm's tag shows on a card that might channel your first Frost orb too, with its chance (Chaos with no Frost: 20%), with Show chances on.
 - Dev mode checks a reused result every 5 seconds in a fight instead of every second, so an idle fight makes a fifth of the dev checks' garbage.
 - Thorns, Flame Barrier and Reflect are worked out from their own code, and every damage to a player (an enemy's attack, a card's HP cost, a power's) lands the same way. What's shown is unchanged but for the fixes below.
@@ -65,6 +68,14 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Settings menu, clearer: All proc tags, All double-play tags, All return tags, All free-card tags and All potion tags are at the top of their sources on Tags by source (a family over several lists, like proc tags, heads each of them), with each source indented under it and greyed out while it's off. Plain tags ("something extra happens") and Crossed tags ("warnings") say they choose which kinds of tag show everywhere, cards and potions alike, and sit under Tags on cards with Target marker. Every option that only means something while another switch is on sits under it and greys out while it's off (Draw chance under Show chances too; a source's Tracker box while Relic Counters is off; a reminder column while its feature is off). Each row has its own icon: the tag art on the tag rows, each kind of tag drawn as cards show it, a teammate's portrait for Teammate Incoming Damage, a % on each chance. A note under Tags on cards opens Tags by source. Your settings are kept.
 
 #### Fixed
+- Esc and back close the settings menu and the inspect screen on game v0.114.0 (its hotkeys now name the screen they belong to), and the game's hotkeys come back when they close on every game version.
+- Upgraded copies of cards (what The Devil+ and a replayed upgrade play) are worked out on game v0.114.0, and on main, whose upgrade takes no arguments.
+- An enemy's damage on game v0.114.0 is worked out before its Thorns hits back, then lands as worked out: a Thorns kill whose death explodes no longer spends your Buffer before the hit.
+- Unmovable counts each card play that gained block once (v0.114.0), not each block gain.
+- Stretch gives the block it had when the card started (v0.114.0), not what the card added to it during its play.
+- Impaled counts down on Osty's powered hits from your cards too, and not on a hit from no card (v0.114.0).
+- Melodies played this turn count the card being played (v0.114.0: Lullaby, Conductor's Baton, Harmonic Shield), and Ki Verse no longer replays Ki cards.
+- Punch of Joy's transform counts only its Cards' worth of your Sadness (1, 2 upgraded), not every card in your hand; Trick Shot's draw is checked only when it has an arrow to shoot; Timber's second hit follows its first one's kill.
 - Biiig Hug's Soot is a card you made, as the game has it: a shuffle during a card's play now sets off what reacts to the cards you make (Pillar of Creation's block, Smokestack's damage on a Status, Arsenal's Strength, Regalite, Supermassive's count), where it was left out. Your Osty's attacks on an enemy with Personal Hive put its Dazed in your draw pile, and its tag counts them. Both are worked out from their own code.
 - The Gambit kills you when an enemy's attack gets HP through your block, as the game does: Incoming Damage, Teammate Incoming Damage and the Death Skull show the death (a Fairy in a Bottle or Lizard Tail still saves you), where they showed only the damage. It's worked out from its own code.
 - The session summary no longer counts a fight's winning turn as unchecked: the preview's check, skipped because the play ended the fight, now counts as the expected skip the other checks' are.
@@ -160,6 +171,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Tag Team (multiplayer): your own Tag Team doesn't replay your next Attack at its target in the predictions, and a teammate's and yours on one enemy each replay only the other player's Attack, as in the game.
 - Malaise takes its X in Strength from its target as well as giving it Weak: its Strength loss wasn't predicted.
 - Voltaic channels a Lightning for each Lightning channeled this fight as it plays, so replayed it channels again for the ones its first play channeled.
+
+#### Removed
+- The Free Card tag and its settings row (Tune's free card): game v0.114.0 took the power out. Free Attack, Free Skill and Free Power keep theirs.
+- Quietus' arrow no longer breaks as it impales: game v0.114.0 took that out, and the prediction follows.
 
 ### Main Saves 1.0.27
 #### Changed

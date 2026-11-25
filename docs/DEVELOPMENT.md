@@ -19,7 +19,7 @@ Things rot while nobody looks. Work through this list before changing anything, 
 
 | What | Why | Version used |
 | --- | --- | --- |
-| Slay the Spire 2 (Steam) | the build compiles against the game's own assemblies and installs into its `mods` folder | game v0.111.0 (stable) or v0.113.1 (beta) |
+| Slay the Spire 2 (Steam) | the build compiles against the game's own assemblies and installs into its `mods` folder | game v0.111.1 (stable) or v0.114.0 (beta) |
 | .NET SDK 9 | `dotnet build` (net9.0) | 9.0.3xx |
 | Git | | |
 | GitHub CLI, logged in with push rights (`gh auth login`) | releases, issues, workflow runs | 2.10x |
@@ -74,6 +74,9 @@ The Steam branches workflow opens a `steam-update` issue when main (or beta) get
 3. Check `docs/MODDING_NOTES.md` (mod loader facts) and the classes the mod reads (`docs/FEATURES.md` lists every one).
 4. The method list (decision #209): diff the game methods `Snapshots/hand-modelled.txt` names (as in "When main updates", step 7); a changed one is a hand-kept rule to update, with a test. `HandModelledTests` fails a game method neither branch has any more.
 5. Rebuild (missing classes the rules name are build errors), fix what breaks, and update the "v0.111.0" references in the docs. While players are split between game versions (decision #32), compare the game members the new build calls with the last release's DLL (`ilspycmd --ilcode` on both, then diff the `[sts2]...::` references): a call whose signature changed (a new optional parameter) binds to the new one and is a missing method on the older game; call those by reflection. In game, the `[coverage]` summary line at load should show no new, changed or unreviewed classes.
+6. Run both test suites and regenerate the snapshots (`SPIREQOL_UPDATE_SNAPSHOT=1`): what the game changed in a class read from its code shows as a moved snapshot line (a card's numbers, a power's new hook), never a hand edit; a new way of writing an old effect shows as a reader gap or a wrong count, which is a pattern to teach the reader (v0.114.0: Punch of Joy's `Take(n)`, Tune's random upgrades, Timber's kill test). A class whose hook bodies changed but not its hooks isn't flagged by the ledger: diff every class the simulator still follows by hand (its hand-written models, `Snapshots/hand-modelled.txt`) and every simulator test that fails. The golden fights (`SinglePlayerGoldenTests`) are regenerated only once every changed fight is traced to a game change.
+7. `ProducedKindsTests` (decision #260): every step, value, fact, condition and action the simulator handles must still be produced by the game's code on a branch, and every table keyed by a game class (the ledger, the relic and card reasons) must name a class a branch has. A failure is a mechanic the game took out: remove its handler (and its tests), or say what still produces it.
+8. A rule the update changed that main (or the other branch) still does the old way is a `BranchRule` (decision #169), told from the running game's code: v0.114.0's damage order (`DamageWorkedOutFirst`). Then set the ledger's reviewed versions (`CoverageLedger.ReviewedGameVersions`: the beta build before keeps its place) and `CoverageVersionTests`.
 
 ## Day-to-day loop
 

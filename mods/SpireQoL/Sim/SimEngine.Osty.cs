@@ -28,6 +28,8 @@ public static partial class SimEngine
         var amount = spec.Fixed ? Math.Max(0, (int)spec.BaseFor(target))
             : ModifiedDamage(branch, spec.BaseFor(target), new DamageCtx(Who.You, target, spec.Props, card, branch.CurrentPlay), spec.TermsFor(target));
         if (amount > 0) Damage(branch, enemy, amount, Who.You, spec.Props, card);
+        // Its DamageResult's WasTargetKilled, as an attack's hit records it (SimTest.AttackKilled: the play's last damage killed).
+        branch.AttackKilled = enemy.Hp <= 0;
         AllyDeaths(branch);
         return DrainPending(branch);
     });

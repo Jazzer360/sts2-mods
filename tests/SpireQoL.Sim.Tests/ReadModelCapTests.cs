@@ -17,20 +17,24 @@ public class ReadModelCapTests
     }
 
     [Fact]
-    public void HardToKillAndIntangibleCapADamageToTheirOwner()
+    public void HardToKillCapsTheHpLostAndIntangibleTheDamage()
     {
-        // HardToKillPower.ModifyDamageCap: target == base.Owner ? Amount : decimal.MaxValue; IntangiblePower's: 1.
+        // v0.114.0: HardToKillPower.ModifyHpLostBeforeOstyLate: target == base.Owner and amount > 0 ? Math.Min(amount, Amount) : amount, the HP a hit takes
+        // past block (before v0.114.0 it capped the damage before block, ModifyDamageCap); AfterModifyingHpLostBeforeOsty flashes. IntangiblePower's
+        // ModifyDamageCap: 1.
         var hardToKill = Assert.IsType<ReadModel>(SimModels.Get(PowerId.HardToKill.Name));
         var intangible = Assert.IsType<ReadModel>(SimModels.Get(PowerId.Intangible.Name));
         var state = Board();
         state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.HardToKill, amount: 7).With(PowerId.Intangible, amount: 1);
         var onIt = new DamageCtx(Who.You, Target: 0, SimProps.Move, Card: null, Play: null);
         var onYou = new DamageCtx(0, Target: Who.You, SimProps.Move, Card: null, Play: null);
-        Assert.Equal(7m, hardToKill.ModifyDamageCap(state, owner: 0, onIt));
-        Assert.Equal(decimal.MaxValue, hardToKill.ModifyDamageCap(state, owner: 0, onYou));
+        Assert.Equal(7m, hardToKill.ModifyHpLostBeforeOstyLate(state, owner: 0, onIt, amount: 12m));
+        Assert.Equal(5m, hardToKill.ModifyHpLostBeforeOstyLate(state, owner: 0, onIt, amount: 5m));
+        Assert.Equal(12m, hardToKill.ModifyHpLostBeforeOstyLate(state, owner: 0, onYou, amount: 12m));
+        Assert.Equal(decimal.MaxValue, hardToKill.ModifyDamageCap(state, owner: 0, onIt));
         Assert.Equal(1m, intangible.ModifyDamageCap(state, owner: 0, onIt));
-        // Its term changed a damage: it acts there (its AfterModifyingDamageAmount flashes).
-        hardToKill.AfterModifyingDamageAmount(state, owner: 0, card: null);
+        // Its term changed the HP lost: it acts there (its AfterModifyingHpLostBeforeOsty flashes).
+        hardToKill.AfterModifyingHpLost(state, owner: 0, afterOsty: false);
         Assert.True(state.Fired.Has(PowerId.HardToKill.Name));
     }
 

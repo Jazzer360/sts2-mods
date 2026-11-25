@@ -201,8 +201,6 @@ public enum HookFact
     HitUnblocked,
     /// <summary>What a hit's block took (AfterDamageGiven's and AfterDamageReceived's result.BlockedDamage: Reflect's damage back).</summary>
     HitBlocked,
-    /// <summary>The shot had an arrow (AfterArrowShot's arrow isn't null: its player had one to shoot).</summary>
-    ShotHadArrow,
     /// <summary>
     /// The damage's card is the play the model bound (its own data's ContainsKey(cardSource): Rupture's, the card in play its BeforeCardPlayed bound),
     /// what it bound still there.
@@ -616,12 +614,6 @@ public sealed record ForEachStep(HookItems Over, IReadOnlyList<HookStep> Steps) 
 }
 
 /// <summary>
-/// The shot's arrow is destroyed once it impales (AfterArrowShot's arrow.DestroyAfterImpaled = true: Quietus'): ArrowCmd.ImpaleTarget takes it out of
-/// the creature it impaled (ImpaledPower.ForceRemoveArrow, while that creature lives) and it never comes back to its player.
-/// </summary>
-public sealed record DestroyArrowStep : HookStep;
-
-/// <summary>
 /// CreatureCmd.Stun of its owner (an enemy: Creature.StunInternal does nothing on a dead creature, and the game throws on a player): it's stunned
 /// (SimEngine.Stun), so its move this turn is the stunned move, which does nothing a simulation follows (its code is read: the Stun is given no
 /// delegate that calls a command). What its code then stores on its monster for later (its flag) waits for a turn past every simulation.
@@ -649,6 +641,13 @@ public sealed record ChannelStep(OrbKind Orb) : HookStep;
 /// upgraded copy's (SimEngine.UpgradeCardInPlay, decision #218).
 /// </summary>
 public sealed record UpgradeCardStep : HookStep;
+
+/// <summary>
+/// CardCmd.Upgrade of <paramref name="Count"/> random upgradable cards in its owner's hand (foreach over TakeRandom(the hand's upgradable cards,
+/// Count): TunePower.AfterCardPlayed, v0.114.0). Within the turn only a card acting as it ends could change (SimPlayer.UpgradableAtTurnEnd): with
+/// none, nothing; with any, which ones a roll picks isn't followed (SimState.Unmodelled).
+/// </summary>
+public sealed record UpgradeRandomInHandStep(HookValue Count) : HookStep;
 
 /// <summary>
 /// CardCmd.ApplyKeyword of the card played (cardPlay.Card), with the keyword named (the game's CardKeyword): it has it for its later plays in
@@ -896,6 +895,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             ForEachStep each => Inside(each.Where).Concat(each.Steps.SelectMany(OfStep)),
             LetStep let => Inside(let.Value),
             MakeIntoDrawStep make => Inside(make.For),
+            UpgradeRandomInHandStep upgrade => Inside(upgrade.Count),
             _ => Array.Empty<HookValue>(),
         });
         return Hooks.SelectMany(program => Inside(program.Returns).Concat(program.Steps.SelectMany(OfStep)))

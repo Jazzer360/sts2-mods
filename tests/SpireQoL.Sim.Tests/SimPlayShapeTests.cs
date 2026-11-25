@@ -137,7 +137,7 @@ public class SimPlayShapeTests
     [Fact]
     public void DuplicationOneTwoPunchSignalBoostAndKiVerseEachReplayTheirKind()
     {
-        // Duplication: any card. One-Two Punch: Attacks. Signal Boost: Powers. Ki Verse: Wah, Cho or Ki cards. Each a stack a play.
+        // Duplication: any card. One-Two Punch: Attacks. Signal Boost: Powers. Ki Verse: Wah or Cho cards (v0.114.0: no longer Ki). Each a stack a play.
         var duplication = Board();
         duplication.You.Powers = duplication.You.Powers.With(PowerId.Duplication, amount: 2);
         Assert.Equal(20, After(duplication, BlockSkill(), BlockSkill()).You.Block);
@@ -152,8 +152,11 @@ public class SimPlayShapeTests
         var verse = Board();
         verse.You.Powers = verse.You.Powers.With(PowerId.KiVerse, amount: 1);
         var melody = BlockSkill();
-        melody.Card = melody.Card! with { Card = melody.Card.Card with { Tags = new HashSet<SimCardTag> { SimCardTag.Ki } } };
+        melody.Card = melody.Card! with { Card = melody.Card.Card with { Tags = new HashSet<SimCardTag> { SimCardTag.Cho } } };
         Assert.Equal(15, After(verse, BlockSkill(), melody).You.Block);
+        var kiCard = BlockSkill();
+        kiCard.Card = kiCard.Card! with { Card = kiCard.Card.Card with { Tags = new HashSet<SimCardTag> { SimCardTag.Ki } } };
+        Assert.Equal(10, After(verse, BlockSkill(), kiCard).You.Block);
     }
 
     [Fact]

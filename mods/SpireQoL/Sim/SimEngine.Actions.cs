@@ -644,9 +644,10 @@ public static partial class SimEngine
         // Before the gain (CreatureCmd.GainBlock): what changed the amount hears it first, then the block lands.
         if (mods != null && amount > 0) foreach (var (model, o) in mods) model.AfterModifyingBlockAmount(state, o, amount, state.CurrentPlay);
         var states = GainBlock(state, amount, state.EndOfTurnNow && gainBlockAction.To == Who.You && state.Log ? state.CurrentPlay?.Card.Name ?? "block" : null, gainBlockAction.To);
-        // Block from a card play this turn (Unmovable counts the ones from earlier plays).
+        // Block from a card play this turn: the turn counts each play that gained any once (Unmovable counts the earlier plays, v0.114.0: DistinctBy
+        // their card play).
         if (amount > 0 && state.CurrentPlay != null && gainBlockAction.Props.IsCardOrMonsterMove())
-            states = states.Select(branch => { branch.PlayCardBlockGains++; if (branch.CurrentPlay!.Owner == Who.You) branch.You.Turn = branch.You.Turn.Add(SimKeys.CardBlock, delta: 1); return branch; }).ToList();
+            states = states.Select(branch => { if (branch.PlayCardBlockGains++ == 0 && branch.CurrentPlay!.Owner == Who.You) branch.You.Turn = branch.You.Turn.Add(SimKeys.CardBlock, delta: 1); return branch; }).ToList();
         return Then(states, branch => Hook(branch, nameof(SimModel.AfterBlockGained), (model, owner, copy) => model.AfterBlockGained(copy, owner, gainBlockAction.To, amount, copy.CurrentPlay?.Card)));
     }
 

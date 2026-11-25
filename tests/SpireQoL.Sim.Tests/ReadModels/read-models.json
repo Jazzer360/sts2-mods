@@ -4669,7 +4669,7 @@
                           "Left": {
                             "$kind": "HookHistory",
                             "Query": {
-                              "Kind": "CardPlayFinished",
+                              "Kind": "CardPlayStarted",
                               "Scope": "ThisTurn",
                               "Whose": "Owner",
                               "Details": "None",
@@ -4690,7 +4690,7 @@
                         "Left": {
                           "$kind": "HookHistory",
                           "Query": {
-                            "Kind": "CardPlayFinished",
+                            "Kind": "CardPlayStarted",
                             "Scope": "ThisTurn",
                             "Whose": "Owner",
                             "Details": "None",
@@ -4711,7 +4711,7 @@
                       "Left": {
                         "$kind": "HookHistory",
                         "Query": {
-                          "Kind": "CardPlayFinished",
+                          "Kind": "CardPlayStarted",
                           "Scope": "ThisTurn",
                           "Whose": "Owner",
                           "Details": "None",
@@ -4795,7 +4795,7 @@
                           "Left": {
                             "$kind": "HookHistory",
                             "Query": {
-                              "Kind": "CardPlayFinished",
+                              "Kind": "CardPlayStarted",
                               "Scope": "ThisTurn",
                               "Whose": "Owner",
                               "Details": "None",
@@ -4816,7 +4816,7 @@
                         "Left": {
                           "$kind": "HookHistory",
                           "Query": {
-                            "Kind": "CardPlayFinished",
+                            "Kind": "CardPlayStarted",
                             "Scope": "ThisTurn",
                             "Whose": "Owner",
                             "Details": "None",
@@ -4837,7 +4837,7 @@
                       "Left": {
                         "$kind": "HookHistory",
                         "Query": {
-                          "Kind": "CardPlayFinished",
+                          "Kind": "CardPlayStarted",
                           "Scope": "ThisTurn",
                           "Whose": "Owner",
                           "Details": "None",
@@ -4929,7 +4929,7 @@
                           "Left": {
                             "$kind": "HookHistory",
                             "Query": {
-                              "Kind": "CardPlayFinished",
+                              "Kind": "CardPlayStarted",
                               "Scope": "ThisTurn",
                               "Whose": "Owner",
                               "Details": "None",
@@ -4950,7 +4950,7 @@
                         "Left": {
                           "$kind": "HookHistory",
                           "Query": {
-                            "Kind": "CardPlayFinished",
+                            "Kind": "CardPlayStarted",
                             "Scope": "ThisTurn",
                             "Whose": "Owner",
                             "Details": "None",
@@ -4971,7 +4971,7 @@
                       "Left": {
                         "$kind": "HookHistory",
                         "Query": {
-                          "Kind": "CardPlayFinished",
+                          "Kind": "CardPlayStarted",
                           "Scope": "ThisTurn",
                           "Whose": "Owner",
                           "Details": "None",
@@ -10022,7 +10022,7 @@
     "Kind": "Power",
     "Hooks": [
       {
-        "Hook": "AfterModifyingDamageAmount",
+        "Hook": "AfterModifyingHpLostBeforeOsty",
         "Steps": [
           {
             "$kind": "FlashStep"
@@ -10030,7 +10030,7 @@
         ]
       },
       {
-        "Hook": "ModifyDamageCap",
+        "Hook": "ModifyHpLostBeforeOstyLate",
         "Steps": [],
         "Returns": {
           "$kind": "HookWays",
@@ -10040,7 +10040,7 @@
                 "$kind": "HookNot",
                 "Inner": {
                   "$kind": "HookTest",
-                  "At": "HardToKillPower.ModifyDamageCap:0007",
+                  "At": "HardToKillPower.ModifyHpLostBeforeOstyLate:0007",
                   "Test": {
                     "$kind": "HookFactValue",
                     "Fact": "TargetIsOwner"
@@ -10048,18 +10048,63 @@
                 }
               },
               "Value": {
-                "$kind": "HookConstant",
-                "Value": 79228162514264337593543950335
+                "$kind": "HookFactValue",
+                "Fact": "HpLostSoFar"
               }
             },
             {
               "When": {
-                "$kind": "HookConstant",
-                "Value": 1
+                "$kind": "HookTest",
+                "At": "HardToKillPower.ModifyHpLostBeforeOstyLate:0016",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "HpLostSoFar"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
               },
               "Value": {
                 "$kind": "HookFactValue",
-                "Fact": "Amount"
+                "Fact": "HpLostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "HardToKillPower.ModifyHpLostBeforeOstyLate:0016",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "HpLostSoFar"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Min",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "HpLostSoFar"
+                },
+                "Right": {
+                  "$kind": "HookFactValue",
+                  "Fact": "Amount"
+                }
               }
             }
           ]
@@ -11717,30 +11762,14 @@
                 "$kind": "HookMath",
                 "Operation": "And",
                 "Left": {
-                  "$kind": "HookMath",
-                  "Operation": "And",
-                  "Left": {
-                    "$kind": "HookNot",
-                    "Inner": {
-                      "$kind": "HookTest",
-                      "At": "KiVersePower.ModifyCardPlayCount:0021",
-                      "Test": {
-                        "$kind": "HookFactValue",
-                        "Fact": "CardTag",
-                        "Of": "Wah"
-                      }
-                    }
-                  },
-                  "Right": {
-                    "$kind": "HookNot",
-                    "Inner": {
-                      "$kind": "HookTest",
-                      "At": "KiVersePower.ModifyCardPlayCount:002F",
-                      "Test": {
-                        "$kind": "HookFactValue",
-                        "Fact": "CardTag",
-                        "Of": "Cho"
-                      }
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "KiVersePower.ModifyCardPlayCount:0021",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardTag",
+                      "Of": "Wah"
                     }
                   }
                 },
@@ -11748,11 +11777,11 @@
                   "$kind": "HookNot",
                   "Inner": {
                     "$kind": "HookTest",
-                    "At": "KiVersePower.ModifyCardPlayCount:003D",
+                    "At": "KiVersePower.ModifyCardPlayCount:002F",
                     "Test": {
                       "$kind": "HookFactValue",
                       "Fact": "CardTag",
-                      "Of": "Ki"
+                      "Of": "Cho"
                     }
                   }
                 }
@@ -11767,34 +11796,21 @@
                 "$kind": "HookMath",
                 "Operation": "Or",
                 "Left": {
-                  "$kind": "HookMath",
-                  "Operation": "Or",
-                  "Left": {
-                    "$kind": "HookTest",
-                    "At": "KiVersePower.ModifyCardPlayCount:0021",
-                    "Test": {
-                      "$kind": "HookFactValue",
-                      "Fact": "CardTag",
-                      "Of": "Wah"
-                    }
-                  },
-                  "Right": {
-                    "$kind": "HookTest",
-                    "At": "KiVersePower.ModifyCardPlayCount:002F",
-                    "Test": {
-                      "$kind": "HookFactValue",
-                      "Fact": "CardTag",
-                      "Of": "Cho"
-                    }
+                  "$kind": "HookTest",
+                  "At": "KiVersePower.ModifyCardPlayCount:0021",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardTag",
+                    "Of": "Wah"
                   }
                 },
                 "Right": {
                   "$kind": "HookTest",
-                  "At": "KiVersePower.ModifyCardPlayCount:003D",
+                  "At": "KiVersePower.ModifyCardPlayCount:002F",
                   "Test": {
                     "$kind": "HookFactValue",
                     "Fact": "CardTag",
-                    "Of": "Ki"
+                    "Of": "Cho"
                   }
                 }
               },
@@ -13316,7 +13332,7 @@
                   "Test": {
                     "$kind": "HookHistory",
                     "Query": {
-                      "Kind": "CardPlayFinished",
+                      "Kind": "CardPlayStarted",
                       "Scope": "ThisTurn",
                       "Whose": "Owner",
                       "Details": "None",
@@ -13332,7 +13348,7 @@
                   "Test": {
                     "$kind": "HookHistory",
                     "Query": {
-                      "Kind": "CardPlayFinished",
+                      "Kind": "CardPlayStarted",
                       "Scope": "ThisTurn",
                       "Whose": "Owner",
                       "Details": "None",
@@ -13349,7 +13365,7 @@
                 "Test": {
                   "$kind": "HookHistory",
                   "Query": {
-                    "Kind": "CardPlayFinished",
+                    "Kind": "CardPlayStarted",
                     "Scope": "ThisTurn",
                     "Whose": "Owner",
                     "Details": "None",
@@ -13414,7 +13430,7 @@
                     "Test": {
                       "$kind": "HookHistory",
                       "Query": {
-                        "Kind": "CardPlayFinished",
+                        "Kind": "CardPlayStarted",
                         "Scope": "ThisTurn",
                         "Whose": "Owner",
                         "Details": "None",
@@ -13431,7 +13447,7 @@
                   "Test": {
                     "$kind": "HookHistory",
                     "Query": {
-                      "Kind": "CardPlayFinished",
+                      "Kind": "CardPlayStarted",
                       "Scope": "ThisTurn",
                       "Whose": "Owner",
                       "Details": "None",
@@ -13448,7 +13464,7 @@
                 "Test": {
                   "$kind": "HookHistory",
                   "Query": {
-                    "Kind": "CardPlayFinished",
+                    "Kind": "CardPlayStarted",
                     "Scope": "ThisTurn",
                     "Whose": "Owner",
                     "Details": "None",
@@ -13513,7 +13529,7 @@
                     "Test": {
                       "$kind": "HookHistory",
                       "Query": {
-                        "Kind": "CardPlayFinished",
+                        "Kind": "CardPlayStarted",
                         "Scope": "ThisTurn",
                         "Whose": "Owner",
                         "Details": "None",
@@ -13530,7 +13546,7 @@
                   "Test": {
                     "$kind": "HookHistory",
                     "Query": {
-                      "Kind": "CardPlayFinished",
+                      "Kind": "CardPlayStarted",
                       "Scope": "ThisTurn",
                       "Whose": "Owner",
                       "Details": "None",
@@ -13547,7 +13563,7 @@
                 "Test": {
                   "$kind": "HookHistory",
                   "Query": {
-                    "Kind": "CardPlayFinished",
+                    "Kind": "CardPlayStarted",
                     "Scope": "ThisTurn",
                     "Whose": "Owner",
                     "Details": "None",
@@ -13615,7 +13631,7 @@
                     "Test": {
                       "$kind": "HookHistory",
                       "Query": {
-                        "Kind": "CardPlayFinished",
+                        "Kind": "CardPlayStarted",
                         "Scope": "ThisTurn",
                         "Whose": "Owner",
                         "Details": "None",
@@ -13632,7 +13648,7 @@
                   "Test": {
                     "$kind": "HookHistory",
                     "Query": {
-                      "Kind": "CardPlayFinished",
+                      "Kind": "CardPlayStarted",
                       "Scope": "ThisTurn",
                       "Whose": "Owner",
                       "Details": "None",
@@ -13649,7 +13665,7 @@
                 "Test": {
                   "$kind": "HookHistory",
                   "Query": {
-                    "Kind": "CardPlayFinished",
+                    "Kind": "CardPlayStarted",
                     "Scope": "ThisTurn",
                     "Whose": "Owner",
                     "Details": "None",
@@ -20019,53 +20035,13 @@
     "Kind": "Power",
     "Hooks": [
       {
-        "Hook": "AfterArrowShot",
-        "Steps": [
-          {
-            "$kind": "DestroyArrowStep",
-            "When": {
-              "$kind": "HookMath",
-              "Operation": "And",
-              "Left": {
-                "$kind": "HookMath",
-                "Operation": "And",
-                "Left": {
-                  "$kind": "HookTest",
-                  "At": "QuietusPower.AfterArrowShot:0001",
-                  "Test": {
-                    "$kind": "HookFactValue",
-                    "Fact": "ShotHadArrow"
-                  }
-                },
-                "Right": {
-                  "$kind": "HookTest",
-                  "At": "QuietusPower.AfterArrowShot:000B",
-                  "Test": {
-                    "$kind": "HookFactValue",
-                    "Fact": "HookCardThere"
-                  }
-                }
-              },
-              "Right": {
-                "$kind": "HookTest",
-                "At": "QuietusPower.AfterArrowShot:001F",
-                "Test": {
-                  "$kind": "HookFactValue",
-                  "Fact": "EventIsOwners"
-                }
-              }
-            }
-          }
-        ]
-      },
-      {
         "Hook": "AfterAttack",
         "Steps": [
           {
             "$kind": "RemovePowerStep",
             "When": {
               "$kind": "HookTest",
-              "At": "\u003CAfterAttack\u003Ed__9.MoveNext:0024",
+              "At": "\u003CAfterAttack\u003Ed__8.MoveNext:0024",
               "Test": {
                 "$kind": "HookMath",
                 "Operation": "Equal",
@@ -20089,7 +20065,7 @@
             "$kind": "RemovePowerStep",
             "When": {
               "$kind": "HookTest",
-              "At": "\u003CAfterSideTurnEnd\u003Ed__10.MoveNext:0022",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__9.MoveNext:0022",
               "Test": {
                 "$kind": "HookFactValue",
                 "Fact": "TakesPart"
@@ -27627,51 +27603,83 @@
     "Kind": "Power",
     "Hooks": [
       {
-        "Hook": "AfterSideTurnEnd",
+        "Hook": "AfterCardPlayed",
         "Steps": [
           {
             "$kind": "FlashStep",
             "When": {
-              "$kind": "HookTest",
-              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:002F",
-              "Test": {
-                "$kind": "HookHistory",
-                "Query": {
-                  "Kind": "CardPlayFinished",
-                  "Scope": "ThisTurn",
-                  "Whose": "Owner",
-                  "Details": "None",
-                  "CardType": "None",
-                  "CardTag": "Ki"
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "TunePower.AfterCardPlayed:0016",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
                 },
-                "Any": true
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "TunePower.AfterCardPlayed:002F",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardTag",
+                    "Of": "Ki"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "TunePower.AfterCardPlayed:003E",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsFirst",
+                  "Of": "Tag:Ki"
+                }
               }
             }
           },
           {
-            "$kind": "ApplyPowerStep",
-            "Power": "FreeCardPower",
-            "Target": "Owner",
-            "Amount": {
+            "$kind": "UpgradeRandomInHandStep",
+            "Count": {
               "$kind": "HookFactValue",
               "Fact": "Amount"
             },
-            "GoesAtZero": false,
-            "Debuff": false,
             "When": {
-              "$kind": "HookTest",
-              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:002F",
-              "Test": {
-                "$kind": "HookHistory",
-                "Query": {
-                  "Kind": "CardPlayFinished",
-                  "Scope": "ThisTurn",
-                  "Whose": "Owner",
-                  "Details": "None",
-                  "CardType": "None",
-                  "CardTag": "Ki"
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "TunePower.AfterCardPlayed:0016",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
                 },
-                "Any": true
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "TunePower.AfterCardPlayed:002F",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardTag",
+                    "Of": "Ki"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "TunePower.AfterCardPlayed:003E",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsFirst",
+                  "Of": "Tag:Ki"
+                }
               }
             }
           }
@@ -27679,44 +27687,7 @@
       }
     ],
     "Tab": "Trigger",
-    "HelpsOwner": false,
-    "Payouts": [
-      {
-        "Hook": "AfterSideTurnEnd",
-        "Condition": {
-          "$kind": "HookTest",
-          "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:002F",
-          "Test": {
-            "$kind": "HookHistory",
-            "Query": {
-              "Kind": "CardPlayFinished",
-              "Scope": "ThisTurn",
-              "Whose": "Owner",
-              "Details": "None",
-              "CardType": "None",
-              "CardTag": "Ki"
-            },
-            "Any": true
-          }
-        },
-        "DuringTheTurn": {
-          "$kind": "HookTest",
-          "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:002F",
-          "Test": {
-            "$kind": "HookHistory",
-            "Query": {
-              "Kind": "CardPlayFinished",
-              "Scope": "ThisTurn",
-              "Whose": "Owner",
-              "Details": "None",
-              "CardType": "None",
-              "CardTag": "Ki"
-            },
-            "Any": true
-          }
-        }
-      }
-    ]
+    "HelpsOwner": false
   },
   {
     "Name": "TungstenRod",

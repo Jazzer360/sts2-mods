@@ -101,9 +101,7 @@ public static partial class SimAdapter
         if (play.Card is not { Card: var original }) return null;
         try
         {
-            var copy = (CardModel)card.MutableClone();
-            copy.UpgradeInternal();
-            copy.FinalizeUpgradeInternal();
+            var copy = SpireQoL.Cards.UpgradedCopy.Of(card);
             var upgraded = PlayFromGame(copy, me, combat, ids, targetId, owner, playCount, withUpgraded: false);
             if (upgraded.Card is not { Card: var upgradedCard }) return null;
             return new CardVersion(original with

@@ -22,7 +22,7 @@ public class ConditionTranslationTests
     {
         ("Sunder", "PlayerCmd.GainEnergy", 0, "AttackKilled", false),
         ("KnockoutBlow", "PlayerCmd.GainStars", 0, "AttackKilled", false),
-        ("Timber", "DamageCmd.Attack", 1, "AttackKilled", false),
+        ("Timber", "CreatureCmd.Damage", 1, "AttackKilled", false), // v0.114.0: CreatureCmd.Damage of every enemy when its own damage killed
         ("Impatience", "CardPileCmd.Draw", 0, "not HandMatching>0", false),
         ("KiHop", "CardPileCmd.Draw", 0, "TargetImpaled", true),
         ("BowSmack", "PlayerCmd.GainEnergy", 0, "TargetImpaled", true),
@@ -40,7 +40,7 @@ public class ConditionTranslationTests
         // The fight's log (decision #191): an exhaust this turn, a Cho played this turn (MelodyCmd's helper, its tag bound from the caller).
         ("ForgottenRitual", "PlayerCmd.GainEnergy", 0, "History>0", false),
         ("KiRest", "PowerCmd.Apply", 1, "any(History>0, History>0)", false),
-        ("ArrowStab", "CardPileCmd.Add", 0, "all(ArrowsAvailable>0, HandCards<)", false),
+        ("TrickShot", "CardPileCmd.Draw", 0, "ShotHadArrowCondition", false), // v0.114.0: draws when its shot had an arrow
         // The board the simulator keeps: the target's powers and intent, your exhaust pile.
         ("BubbleBubble", "PowerCmd.Apply", 0, "TargetPower>0", false),
         ("GoForTheEyes", "PowerCmd.Apply", 0, "TargetIntendsToAttackCondition", false),

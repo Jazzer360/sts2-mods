@@ -36,7 +36,7 @@ public static class SimKeys
     private static readonly ConcurrentDictionary<string, string> SetUpNames = new();
 
     /// <summary>
-    /// The play log's name for a payout the play decides being set up by it (decision #244: Tune's free card on the turn's first Ki): "+" before
+    /// The play log's name for a payout the play decides being set up by it (decision #244: Parrying Shield's block reaching its threshold): "+" before
     /// the source's name, logged as the source's own firings are (SimState.LogFired: "+Name", "+Name@id").
     /// </summary>
     public static string SetUp(string name) => SetUpNames.GetOrAdd(name, plain => "+" + plain);
@@ -56,7 +56,7 @@ public static class SimKeys
     /// <summary>The turn's plays of cards with this tag: "Finished#Shiv", "Started#Wah".</summary>
     public static string Plays(PlayStage stage, SimCardTag tag) => TagNames[(int)stage][(int)tag];
 
-    /// <summary>Block gains from card plays this turn (Unmovable counts the earlier ones).</summary>
+    /// <summary>Card plays this turn that gained block, each once (Unmovable counts the earlier ones).</summary>
     public const string CardBlock = "CardBlock";
 
     /// <summary>Block a play gave its player from evoking orbs (Frost's: the log's amount), for the play audit's block check.</summary>

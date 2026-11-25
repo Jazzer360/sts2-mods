@@ -106,7 +106,6 @@
   "ForegoneConclusionPower": ["Player"],
   "FrailPower": ["Player"],
   "FreeAttackPower": ["Player"],
-  "FreeCardPower": ["Player"],
   "FreePowerPower": ["Player"],
   "FreeSkillPower": ["Player"],
   "FriendshipPower": ["Player"],

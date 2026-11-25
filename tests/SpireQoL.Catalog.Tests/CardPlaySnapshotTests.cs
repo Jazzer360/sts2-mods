@@ -106,7 +106,7 @@ public class CardPlaySnapshotTests
     /// <summary>"Card [Board]": what a line is about.</summary>
     private static string KeyOf(string line) => line[..(line.IndexOf(']') + 1)];
 
-    private static string SourceFolder()
+    internal static string SourceFolder()
     {
         var folder = new DirectoryInfo(AppContext.BaseDirectory);
         while (folder != null && !File.Exists(Path.Combine(folder.FullName, "SpireQoL.Catalog.Tests.csproj"))) folder = folder.Parent;
