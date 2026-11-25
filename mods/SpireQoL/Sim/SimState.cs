@@ -865,6 +865,9 @@ public sealed class SimState
     internal int AttackDealt;
     /// <summary>The card play in progress': how many times it plays, and where the card goes after (SimEngine.DecideCardPlay); 0 and Default outside one.</summary>
     internal int PlayCountNow;
+
+    /// <summary>The card plays started in this simulation: the next one's SimCardPlay.Serial is one more (decision #267).</summary>
+    internal int CardPlaysStarted;
     internal SimResultLocation PlayResultLocation;
     /// <summary>
     /// What the card play in progress changed of its card (decision #218): the upgrades so far (SimEngine.UpgradeCardInPlay), its upgraded copy (the

@@ -23,6 +23,7 @@ public class SimKeyCoverageTests
         ["SimState.Weight"] = "the branch's share of the rolls: identical branches add theirs when they merge",
         ["SimState.Log"] = Bookkeeping, ["SimState.Work"] = Bookkeeping, ["SimState.ListenerCache"] = Bookkeeping, ["SimState.ListenerSets"] = Bookkeeping, ["SimState.ListenerDead"] = Bookkeeping,
         ["SimState._teammatesShared"] = Bookkeeping, ["SimPlayer._orbsShared"] = Bookkeeping,
+        ["SimState.CardPlaysStarted"] = "a card play's identity within the run (SimCardPlay.Serial): what a model binds is keyed by it, and every bound entry is scratch",
         // Read from the game once and never changed.
         ["SimState.Vars"] = Constant, ["SimState.Fractions"] = Constant, ["SimState.TurnNumber"] = Constant, ["SimState.MainRules"] = Constant, ["SimState.History"] = Constant, ["SimState.Titles"] = Constant, ["SimState.TeammatesBeforeMe"] = Constant,
         ["SimEnemy.Name"] = Constant, ["SimEnemy.Hittable"] = Constant, ["SimEnemy.Imbalanced"] = Constant, ["SimEnemy.Intent"] = Constant,

@@ -17720,7 +17720,7 @@
               "At": "\u003CAfterCardPlayed\u003Ed__13.MoveNext:0022",
               "Test": {
                 "$kind": "HookFactValue",
-                "Fact": "BoundHeld"
+                "Fact": "BoundToPlay"
               }
             }
           },
@@ -17733,7 +17733,7 @@
               "At": "\u003CAfterCardPlayed\u003Ed__13.MoveNext:0022",
               "Test": {
                 "$kind": "HookFactValue",
-                "Fact": "BoundHeld"
+                "Fact": "BoundToPlay"
               }
             }
           },
@@ -17749,7 +17749,7 @@
               "At": "\u003CAfterCardPlayed\u003Ed__13.MoveNext:0022",
               "Test": {
                 "$kind": "HookFactValue",
-                "Fact": "BoundHeld"
+                "Fact": "BoundToPlay"
               }
             }
           },
@@ -17760,7 +17760,7 @@
               "At": "\u003CAfterCardPlayed\u003Ed__13.MoveNext:0022",
               "Test": {
                 "$kind": "HookFactValue",
-                "Fact": "BoundHeld"
+                "Fact": "BoundToPlay"
               }
             }
           }

@@ -204,10 +204,14 @@ public enum HookFact
     /// <summary>The amount this hook run took from what the model bound to the play (Remove's out value; 0 when none was).</summary>
     BoundTaken,
     /// <summary>
-    /// The model has a play bound, left there (a card its code keeps in a field of its own: MusicBox's CardBeingPlayed != null, or ==
-    /// cardPlay.Card: the one in progress).
+    /// The model has a card play bound, left there, whichever (a card its code keeps in a field of its own: MusicBox's CardBeingPlayed != null).
     /// </summary>
     BoundHeld,
+    /// <summary>
+    /// The card the model keeps is the card played (MusicBox's cardPlay.Card == CardBeingPlayed): something is bound to this card play, not to one
+    /// it's played inside (decision #267).
+    /// </summary>
+    BoundToPlay,
     /// <summary>The card play's count as the listeners before it left it (ModifyCardPlayCount's playCount).</summary>
     PlayCountSoFar,
     /// <summary>The HP a hit took past block (AfterDamageGiven's and AfterDamageReceived's result.UnblockedDamage).</summary>

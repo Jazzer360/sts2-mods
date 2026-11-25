@@ -150,6 +150,13 @@ public sealed record SimCardPlay(SimCard Card, int Owner, [property: JsonConvert
 
     /// <summary>What this play is the first of this turn among its player's plays, set as it starts (SimKeys.FirstThisTurn's bits).</summary>
     public int FirstThisTurn { get; init; }
+
+    /// <summary>
+    /// Which card play of the simulation it is (the game's CardPlay: every play of a replay shares it, a card played inside it has its own), set as
+    /// its first play starts: what a model binds to the card played (its own data keyed by cardPlay.Card) is this card play's (decision #267).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int Serial { get; init; }
 }
 
 /// <summary>A damage calculation's inputs (Hook.ModifyDamage): who deals it to whom, its props, and the card it's from.</summary>

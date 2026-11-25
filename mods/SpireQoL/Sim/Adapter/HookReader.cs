@@ -2390,12 +2390,12 @@ public static class HookReader
             if (ArrowCompare(compare) is { } arrows) return arrows;
             if (compare.Op is Comparison.Equal or Comparison.NotEqual)
             {
-                // Its kept card is there (CardBeingPlayed != null), or is the card played (cardPlay.Card == CardBeingPlayed): a play is bound to it,
-                // the one in progress (the simulator's plays don't overlap but for one inside another, as the hand-written models took it).
+                // Its kept card is there (CardBeingPlayed != null: any card play's), or is the card played (cardPlay.Card == CardBeingPlayed: this card
+                // play's, not one it's played inside: decision #267).
                 if (IsKeptCard(compare.Left) && (compare.Right is NullValue || IsPlayCard(compare.Right)) || IsKeptCard(compare.Right) && (compare.Left is NullValue || IsPlayCard(compare.Left)))
                 {
-                    var held = new HookFactValue(HookFact.BoundHeld);
                     var isNull = compare.Left is NullValue || compare.Right is NullValue;
+                    var held = new HookFactValue(isNull ? HookFact.BoundHeld : HookFact.BoundToPlay);
                     return (compare.Op == Comparison.Equal) != isNull ? held : Not(held);
                 }
                 // The orb a hook is given is its owner's (orb.Owner == base.Owner, base.Owner.Player).

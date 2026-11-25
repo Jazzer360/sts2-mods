@@ -113,7 +113,9 @@ public static partial class SimEngine
     /// </summary>
     private static void PlayOnce(BranchSet branches, SimCardPlay play, IReadOnlyList<SimAction> body, int index)
     {
-        branches.Do(branch => { branch.CurrentPlay = play with { Card = WithKeywords(play.Card, branch.PlayChanges.Keywords), PlayIndex = index, PlayCount = branch.PlayCountNow }; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; branch.PlayTaken = 0; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty; });
+        // The card play's serial: its first play's, kept by its later ones (a card play inside it has its own, and the frame gives this one back).
+        branches.Do(branch => { branch.CurrentPlay = play with { Card = WithKeywords(play.Card, branch.PlayChanges.Keywords), PlayIndex = index, PlayCount = branch.PlayCountNow,
+            Serial = index > 0 && branch.CurrentPlay is { Serial: > 0 } earlier ? earlier.Serial : ++branch.CardPlaysStarted }; branch.PlayCardBlockGains = 0; branch.PlayEvents = CardEventCounts.None; branch.PlayTaken = 0; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty; });
         HookStep(branches, nameof(SimModel.BeforeCardPlayed), (model, owner, branch) => model.BeforeCardPlayed(branch, owner, branch.CurrentPlay!));
         branches.Do(branch => Count(branch, branch.CurrentPlay!, PlayStage.Started));
         foreach (var action in body) Run(branches, action);
