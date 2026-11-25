@@ -186,8 +186,18 @@ public static class HookReader
             Copies = kind == ModelKind.Power ? reader.Copies() : PowerCopies.One,
             Commands = commands.Count > 0 ? commands : null,
         };
+        // Nothing else gives it a tab, and its damage term changing a damage is it acting (decision #253: Conqueror on a Sovereign Blade's hit).
+        if (spec.Tab == null && outcome == null && payouts.Count == 0 && TermActsOf(programs)) spec = spec with { Tab = TabKind.Trigger, TermActs = true };
         return new ModelReading(spec, readings);
     }
+
+    /// <summary>
+    /// A Modify damage hook of its code returns a term (ModifyDamageAdditive, Multiplicative, MultiplicativeLate, Cap) and it answers nothing where
+    /// the game tells it the term changed a damage (no AfterModifyingDamageAmount of its own): the term changing a damage is what it does there.
+    /// </summary>
+    internal static bool TermActsOf(IReadOnlyList<HookProgram> programs) =>
+        programs.Any(program => program.Returns != null && program.Hook is HookName.ModifyDamageAdditive or HookName.ModifyDamageMultiplicative or HookName.ModifyDamageMultiplicativeLate or HookName.ModifyDamageCap)
+        && programs.All(program => program.Hook != HookName.AfterModifyingDamageAmount);
 
     /// <summary>
     /// A model of a kind the engine runs no read program for (an enchantment, an affliction, a potion, an orb: decision #195's last kinds): each of

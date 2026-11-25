@@ -754,6 +754,14 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
     public bool DarkensOnPlay { get; init; }
 
     /// <summary>
+    /// Its damage term changing a damage is it acting (decision #253: Conqueror's ×2 on a Sovereign Blade's hit on its owner): a class whose own
+    /// commands give it no tab but whose Modify damage hook returns a term, which the game tells it changed a damage (Hook.AfterModifyingDamageAmount
+    /// on the modifiers) where its code answers nothing there. Its trigger tab is logged then. False with no settings row (ReadModels.Specs).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool TermActs { get; init; }
+
+    /// <summary>
     /// An enchantment whose ModifyShuffleOrder moves its card to the front of the cards a shuffle puts into the draw pile (Perfect Fit's
     /// Remove(base.Card), Insert(0, base.Card), on a shuffle that isn't the fight's first): its card is on top after a shuffle (SimDrawCard.OnTopWhenShuffled).
     /// </summary>

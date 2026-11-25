@@ -32,8 +32,8 @@ public class BonusTabParityTests
             File.WriteAllLines(recordTo, actual);
             return;
         }
-        var expected = File.ReadAllLines(ParityPath).Select(line => ReviewedTabs.Values.Aggregate(line, (rewritten, reviewed) => reviewed.Recorded(rewritten))).ToArray();
-        var changed = actual.Zip(expected).Where(pair => Compared(pair.First) != Compared(pair.Second)).Select(pair => $"{pair.Second}\n  now: {pair.First}").ToList();
+        var expected = File.ReadAllLines(ParityPath).Select(Rewritten).ToArray();
+        var changed = actual.Zip(expected).Where(pair => Compared(Rewritten(pair.First)) != Compared(pair.Second)).Select(pair => $"{pair.Second}\n  now: {pair.First}").ToList();
         Assert.True(expected.Length == actual.Count && changed.Count == 0, $"the tabs changed in {changed.Count} of {actual.Count} scenarios:\n{string.Join("\n", changed.Take(6))}");
     }
 
@@ -46,18 +46,24 @@ public class BonusTabParityTests
         ["MonarchsGazePower"] = "its code never flashes (MonarchsGazePower.AfterDamageGiven: PowerCmd.Apply alone), so the play check no longer expects a flash where its tab shows",
         ["ArtOfWar"] = "its crossed tab is held to the relic going dark (ActedSeen.StatusCleared: GivenUpIssues), never to a flash; a read model's entry here is its code's flashes during the play, of which it has none (ArtOfWar.AfterCardPlayed sets its Status alone)",
         ["RippleBasin"] = "its crossed tab is held to the relic going dark (ActedSeen.StatusCleared: GivenUpIssues), never to a flash; a read model's entry here is its code's flashes during the play, of which it has none (RippleBasin.AfterCardPlayed sets its Status alone)",
+        ["ConquerorPower"] = "its code never flashes (ModifyDamageMultiplicative returns its term, AfterSideTurnEnd decrements): a read model is held to its code's flashes, so the play check expects none; the damage check holds the Blade's doubled hit",
     };
 
     /// <summary>
-    /// The tabs the owner changed on purpose since the recording (decision #250: what each source's settings row shows), each class's tabs as the
-    /// recording had them, rewritten to what the row shows now: the class, why, and the rewrite of a recorded line. Every other tab of every
-    /// scenario stays as recorded, and each class's new tabs are held to the game's code on boards of their own (BonusTabRowTests).
+    /// The tabs the owner changed on purpose since the recording (decisions #250, #253), each class's changed tabs rewritten out of a line, the
+    /// recorded one and the one now alike: the class, why, and the rewrite. Every other tab of every scenario stays as recorded, and each class's
+    /// new tabs are held to the game's code on boards of their own (BonusTabRowTests, ConquerorTabTests).
     /// </summary>
     private static readonly Dictionary<string, (string Why, Func<string, string> Recorded)> ReviewedTabs = new(StringComparer.Ordinal)
     {
         ["ParryingShield"] = ("its row shows the play that sets it up only (TabShows.SetsUp): no crossed tab on a play that stops it",
             line => System.Text.RegularExpressions.Regex.Replace(line, @"proc:ParryingShield crossed[^;]*; ", "")),
+        ["ConquerorPower"] = ("read from its code (decision #253): its tab where its term doubles the Blade's hit on its owner, with the aim marker where some target has none, where the hand-written model's was on every Sovereign Blade played",
+            line => System.Text.RegularExpressions.Regex.Replace(line, @"proc:ConquerorPower [^;]*; ", "")),
     };
+
+    /// <summary>A scenario's line with every reviewed class's changed tabs rewritten out (ReviewedTabs).</summary>
+    private static string Rewritten(string line) => ReviewedTabs.Values.Aggregate(line, (rewritten, reviewed) => reviewed.Recorded(rewritten));
 
     /// <summary>
     /// A scenario's line as compared: the play check's entry for a reviewed class left out, and every entry no aim sets off (the play check reads
@@ -77,7 +83,9 @@ public class BonusTabParityTests
     {
         // The recording is only a proof where the tabs show: every source has a tab in some scenario, crossed or plain where it can be either.
         var lines = Enumerable.Range(0, Scenarios).Select(Tabs).ToList();
-        foreach (var name in new[] { "ArtOfWar", "RippleBasin", "ParryingShield", "EmotionChip", "DemonTongue", "SelfFormingClay", "MonarchsGazePower", "ConquerorPower", "SlipperyPower", "RupturePower" })
+        // Conqueror's tab now shows where its term changes the Blade's damage (decision #253), which the scenarios' hits, final numbers, never
+        // go through: ConquerorTabTests holds it on boards of its own.
+        foreach (var name in new[] { "ArtOfWar", "RippleBasin", "ParryingShield", "EmotionChip", "DemonTongue", "SelfFormingClay", "MonarchsGazePower", "SlipperyPower", "RupturePower" })
             Assert.True(lines.Any(line => line.Contains($"proc:{name} ", StringComparison.Ordinal)), $"no scenario shows {name}'s tab");
         Assert.Contains(lines, line => line.Contains("proc:ParryingShield plain", StringComparison.Ordinal));
         // Each reviewed change took something the recording showed (the rewrite isn't idle).

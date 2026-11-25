@@ -343,7 +343,7 @@ public static class SettingsCatalog
         new(nameof(StranglePower), SourceGroup.EnemyPower, "Yours, on an enemy. Every card: damage to it", TagDefault: false),
         new(nameof(SicEmPower), SourceGroup.EnemyPower, "Yours, on an enemy. Cards whose Osty hit damages it: summon"),
         new(nameof(OblivionPower), SourceGroup.EnemyPower, "Yours, on an enemy. Every card", TagDefault: false),
-        new(nameof(ConquerorPower), SourceGroup.EnemyPower, "On an enemy (from anyone's Conqueror). Sovereign Blade: double damage to it"),
+        new(nameof(ConquerorPower), SourceGroup.EnemyPower, "On an enemy (from anyone's Conqueror). Sovereign Blade hitting it: double damage to it (the aim marker when another target has none)"),
         new(nameof(SlowPower), SourceGroup.EnemyPower, "Every card: it takes more damage", TagDefault: false),
         new(nameof(BurrowedPower), SourceGroup.EnemyPower, "Attacks that break its block: stuns it"),
         new(nameof(FlutterPower), SourceGroup.EnemyPower, "Attacks that hit it enough times: stuns it"),

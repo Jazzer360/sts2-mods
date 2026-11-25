@@ -37,6 +37,7 @@ public static partial class ReadModels
         PowerId.Concoct.Name,
         RelicId.ConductorsBaton.Name,
         PowerId.ConductorsBaton.Name,
+        PowerId.Conqueror.Name,
         PowerId.Constrict.Name,
         PowerId.CorrosiveWave.Name,
         nameof(MegaCrit.Sts2.Core.Models.Enchantments.Corrupted),

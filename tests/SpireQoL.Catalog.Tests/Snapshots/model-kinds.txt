@@ -3,9 +3,9 @@
 
 ## Powers and relics
 
-beta powers: 304 classes, 273 with hooks; read from code 117, hand-written 54, neither 104 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 304 classes, 273 with hooks; read from code 118, hand-written 53, neither 104 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 58, hand-written 14, neither 238 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 99, hand-written 47, neither 91 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 100, hand-written 46, neither 91 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 50, hand-written 14, neither 229 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 6, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 2
@@ -211,7 +211,6 @@ commands: AutoPlayFromDrawPile: 2 classes, 2 alone: LostLutePower*, DistilledCha
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
 hooks: the power amount given: 2 classes, 2 alone: SneckoSkull*, UnsettlingLamp*
 outcomes: a stun or a kill (outcome tabs): 2 classes, 2 alone: ShriekPower*, TheGambitPower*
-read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 2 classes, 2 alone: ConquerorPower*, MagicBombPower*
 the engine runs no read potion (its bodies read whole but for that): 2 classes, 2 alone: PotionOfBinding (potion)*, ShacklingPotion (potion)*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*
 card costs and keywords (cards' own hooks, Part B3): 3 classes, 1 alone: ChemicalX*, CorruptionPower, PhantomBladesPower
@@ -220,6 +219,7 @@ queries: a creature's side or presence: 3 classes, 1 alone: PlatingPower, Essenc
 commands: GainStars: 1 classes, 1 alone: StarPotion (potion)*
 hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*
 hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
+read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 1 classes, 1 alone: MagicBombPower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*
 a death the game holds back (ShouldStopCombatFromEnding, ShouldDie and the like): 4 classes, 0 alone: InfestedPower, SteamEruptionPower, StockPower, SurprisePower
 a model's own method (its body read where it's called): 3 classes, 0 alone: FeralPower, SurroundedPower, FairyInABottle (potion)

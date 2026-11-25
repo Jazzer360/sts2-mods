@@ -749,7 +749,12 @@ public sealed class ReadModel : SimModel
     /// </summary>
     public override void AfterModifyingDamageAmount(SimState state, int owner, SimCard? card)
     {
-        if (_steps[(int)HookName.AfterModifyingDamageAmount] == null) return;
+        if (_steps[(int)HookName.AfterModifyingDamageAmount] == null)
+        {
+            // Its code answers nothing here; its term changing the damage is what it does (ModelSpec.TermActs, decision #253: Conqueror).
+            if (Spec.TermActs) state.LogFired(Name, amount: 0, owner);
+            return;
+        }
         if (Spec.Outcome == null) state.LogFired(Name, amount: 0, owner); // its acting log is its play tab's: one judged on the outcome has none
         foreach (var branch in Run(HookName.AfterModifyingDamageAmount, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay }))
             if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingDamageAmount branched inside a damage");

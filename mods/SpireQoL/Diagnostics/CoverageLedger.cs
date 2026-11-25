@@ -159,7 +159,7 @@ internal static partial class CoverageLedger
         ["ColossusPower"] = "covered: read from its code (ReadModel, decision #195): ModifyDamageMultiplicative halves powered attacks on it from a Vulnerable dealer; AfterSideTurnEnd ticks down as the enemies' turn ends (never simulated)",
         ["ConcoctPower"] = "covered: read from its code (ReadModel, decision #195): AfterDamageGiven poison on attack hits through block (proc tab); AfterSideTurnEnd goes as the other side's turn ends",
         ["ConfusedPower"] = "ignore: AfterCardDrawn random costs (costs read live; draws are random)",
-        ["ConquerorPower"] = "covered: ModifyDamageMultiplicative doubles a Sovereign Blade's powered attack on its owner (model ConquerorPower, its code read whole: the model stays for its tab on a Sovereign Blade played); AfterSideTurnEnd ticks down",
+        ["ConquerorPower"] = "covered: read from its code (ReadModel, decision #253): ModifyDamageMultiplicative doubles a Sovereign Blade's powered attack on its owner, its tab where that term changes the play's damage (the aim marker where another target has none); AfterSideTurnEnd ticks down",
         ["ConstrictPower"] = "covered: read from its code (ReadModel, decision #195): AfterSideTurnEnd deals its amount to its owner, blockable, dealt by its owner; AfterDeath of its applier removes it",
         ["ConsumingShadowPower"] = "covered: AfterSideTurnEnd evokes your last orb (model ConsumingShadowPower)",
         ["CorrosiveWavePower"] = "covered: read from its code (ReadModel, decision #195): AfterCardDrawn poisons all enemies per draw (proc tab)",
