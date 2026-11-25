@@ -43,7 +43,7 @@ public class KeptCardTabParityTests
     }
 
     /// <summary>
-    /// Scenarios whose simulation ends otherwise, each a fix, its tabs as recorded: VambraceRelic.ModifyBlockMultiplicative's `TriggeringCard != null &&
+    /// Scenarios whose simulation ends otherwise, each a fix, its tabs as recorded: Vambrace.ModifyBlockMultiplicative's `TriggeringCard != null &amp;&amp;
     /// TriggeringCard != cardSource` → 1: with the card the game is playing kept (its block doubled, its play not over as the state was read), a card
     /// simulated here isn't it and its block isn't doubled, where the hand-written model doubled any card's block until the bonus was spent.
     /// </summary>

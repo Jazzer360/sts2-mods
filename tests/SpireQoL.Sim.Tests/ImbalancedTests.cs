@@ -3,7 +3,7 @@ using Xunit;
 namespace SpireQoL.Sim.Tests;
 
 /// <summary>
-/// ImbalancedPower read from its code (decision #271): AfterDamageGiven, `dealer == base.Owner && result.WasFullyBlocked`: Flash(), then
+/// ImbalancedPower read from its code (decision #271): AfterDamageGiven, `dealer == base.Owner &amp;&amp; result.WasFullyBlocked`: Flash(), then
 /// `base.Owner.Monster is BowlbugRock bowlbugRock` ? bowlbugRock.IsOffBalance = true : CreatureCmd.Stun(base.Owner). Any hit its owner deals that a
 /// block takes whole sets it off (a teammate's too, a later hit of its attack too), never one that gets HP through; on Bowlbug Rock it's its own state,
 /// which its Headbutt reads after its attack (`if (IsOffBalance) await Stun()`: its next move the stunned one).
