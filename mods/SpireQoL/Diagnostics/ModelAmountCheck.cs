@@ -30,9 +30,17 @@ internal static class ModelAmountCheck
     /// <summary>
     /// What the check found: how many models it compared (an effect both sides have), the differences, the effects it couldn't
     /// decide (a source on one side it can't read back, so the other side's could be it), and reviewed entries nothing differs on
-    /// any more.
+    /// any more. Beside them, what shows the check read the game's hooks at all, whatever number of hand-written models is left: the
+    /// models read from their code whose hook programs have an effect step the check compares, and those whose game class's hooks the
+    /// game's side found no effect in.
     /// </summary>
-    internal sealed record Report(int Compared, List<Mismatch> Differences, List<Mismatch> Unread, List<string> StaleReviews);
+    internal sealed record Report(int Compared, List<Mismatch> Differences, List<Mismatch> Unread, List<string> StaleReviews)
+    {
+        /// <summary>The models read from their code whose hook programs have an effect step the check compares (a draw, energy, block, damage, another power applied).</summary>
+        public int ReadClassesWithEffectSteps { get; init; }
+        /// <summary>The models read from their code with an effect step whose game class's hook bodies the game's side found none in (the effect in a method they call).</summary>
+        public List<string> ReadClassesMissed { get; init; } = new();
+    }
 
     /// <summary>
     /// Reviewed: a model's amounts that read differently from its game class's (the mismatch exactly as reported), and why they
@@ -57,11 +65,23 @@ internal static class ModelAmountCheck
         var differences = new List<Mismatch>();
         var unread = new List<Mismatch>();
         var stale = Reviewed.Keys.ToHashSet();
+        var readWithEffectSteps = 0;
+        var readMissed = new List<string>();
         foreach (var name in SimModels.Names.OrderBy(modelName => modelName, StringComparer.Ordinal))
         {
-            // A model read from its code (decision #195) takes its amounts where its code does, by construction.
-            if (!byName.TryGetValue(name, out var types) || SimModels.Get(name) is not { } model || model is ReadModel) continue;
+            if (!byName.TryGetValue(name, out var types) || SimModels.Get(name) is not { } model) continue;
             var game = types.SelectMany(type => GameAmounts(ModelEffectCheck.HookMethods(type), readGame)).ToList();
+            // A model read from its code (decision #195) takes its amounts where its code does, by construction: not compared, but its game
+            // class's hooks are read here too, so the game's side is held to finding the effects its program has.
+            if (model is ReadModel readModel)
+            {
+                if (!readModel.Spec.Hooks.SelectMany(program => new ModelSpec(name, readModel.Spec.Kind, new[] { program }).Steps()).Any(step => IsComparedEffect(step, name))) continue;
+                readWithEffectSteps++;
+                if (game.Count == 0) readMissed.Add(name);
+                continue;
+            }
+
+
             // A relic whose amount the adapter reads from one of its values (SimReaders.RelicAmountVars): its Amount is that value.
             var amountVar = types.Any(type => type.Namespace == "MegaCrit.Sts2.Core.Models.Relics") && SimReaders.RelicAmountVars.TryGetValue(name, out var read) ? "Var " + read.Var : null;
             var simulated = ModelAmounts(model).Select(amount => amountVar == null ? amount : amount with { Source = AmountWord.Replace(amount.Source, amountVar) }).ToList();
@@ -86,8 +106,14 @@ internal static class ModelAmountCheck
                 (certain ? differences : unread).Add(mismatch);
             }
         }
-        return new Report(compared, differences, unread, stale.OrderBy(key => key, StringComparer.Ordinal).ToList());
+        return new Report(compared, differences, unread, stale.OrderBy(key => key, StringComparer.Ordinal).ToList())
+        {
+            ReadClassesWithEffectSteps = readWithEffectSteps, ReadClassesMissed = readMissed,
+        };
     }
+
+    /// <summary>A read program's step of an effect the check compares on the game's side (CardPileCmd.Draw, PlayerCmd.GainEnergy, CreatureCmd.GainBlock and Damage, PowerCmd.Apply of another power: a change to its own amount is PowerCmd.ModifyAmount, which the check doesn't compare).</summary>
+    private static bool IsComparedEffect(HookStep step, string model) => step is DrawStep or GainEnergyStep or GainBlockStep or DamageStep || step is ApplyPowerStep apply && apply.Power != model;
 
     private static readonly System.Text.RegularExpressions.Regex AmountWord = new(@"\bAmount\b", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 

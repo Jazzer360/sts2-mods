@@ -30,8 +30,7 @@ public class ModelEffectTests
     {
         GameModels.EnsureLoaded();
         var report = ModelAmountCheck.Run();
-        // Fewer each round: a model read from its code (decision #195) takes its amounts where its code does, and isn't compared.
-        Assert.True(report.Compared > 2, $"only {report.Compared} models compared: the check stopped reading the game's hooks or the models");
+        HoldsToBothSides(report);
         Assert.True(report.Differences.Count + report.Unread.Count + report.StaleReviews.Count == 0, Describe(report));
     }
 
@@ -48,9 +47,21 @@ public class ModelEffectTests
         var models = code.Assembly.GetTypes().Where(type => type is { IsClass: true, IsAbstract: false, IsNested: false }
             && type.Namespace is "MegaCrit.Sts2.Core.Models.Powers" or "MegaCrit.Sts2.Core.Models.Relics");
         var report = ModelAmountCheck.Run(models, code.Read);
-        // Fewer each round: a model read from its code (decision #195) takes its amounts where its code does, and isn't compared.
-        Assert.True(report.Compared > 2, $"only {report.Compared} models compared on {branch}");
+        HoldsToBothSides(report, branch);
         Assert.True(report.Differences.Count + report.Unread.Count == 0, Describe(report));
+    }
+
+    /// <summary>
+    /// The check still reads the game's hooks, whatever number of hand-written models is left to compare (a model read from its code, decision #195,
+    /// takes its amounts where its code does and isn't compared): the classes read from their code are a hundred and more, and the game's side finds
+    /// an effect in the hooks of all but a few of those whose programs have one (those few call a method that has it: Black Hole's own, Plow's
+    /// monster's; the check reads hook bodies only). It replaces a floor of compared hand-written models, which fell as each was read.
+    /// </summary>
+    private static void HoldsToBothSides(ModelAmountCheck.Report report, string branch = "beta")
+    {
+        Assert.True(report.ReadClassesWithEffectSteps > 0, $"{branch}: no model read from its code has an effect step: the check stopped reading the models");
+        Assert.True(report.ReadClassesMissed.Count * 10 < report.ReadClassesWithEffectSteps,
+            $"{branch}: the game's side found no effect in the hooks of {report.ReadClassesMissed.Count} of the {report.ReadClassesWithEffectSteps} classes read from their code with an effect step: {string.Join(", ", report.ReadClassesMissed)}");
     }
 
     private static string Describe(ModelAmountCheck.Report report) =>
