@@ -39,7 +39,7 @@ public class TurnEndGapTests
         }
         Assert.True(unseen.Count == 0, $"{branch}: acts as a side's turn ends, neither followed nor marked: {string.Join(", ", unseen)}");
         // A listed class isn't followed: no read model, no hand-written one.
-        Assert.Empty(gaps.Keys.Where(name => read.Contains(name) || SimModels.IsHandWritten(name)));
+        Assert.DoesNotContain(gaps.Keys, name => read.Contains(name) || SimModels.IsHandWritten(name));
         // Every gap that acts says why it isn't followed.
         Assert.All(gaps.Values.Where(gap => gap.ActsForAnEnemy || gap.ActsForAPlayer), gap => Assert.Contains("isn't simulated there", gap.Why, StringComparison.Ordinal));
     }
