@@ -24,10 +24,11 @@ internal static class BoardProbe
     public static ulong ChangedAtMs { get; private set; }
 
     /// <summary>
-    /// How often dev mode works a kept result out anyway on unchanged frames, to check the probe: once a second for each (decision
-    /// #173; every 30th frame before, which at a high frame rate was about half the mod's garbage in a quiet fight).
+    /// How often dev mode works a kept result out anyway on unchanged frames, to check the probe: every 5 seconds in a fight, where a check
+    /// rebuilds the board and every card's prediction, and once a second elsewhere (decision #240; #173 made it once a second everywhere,
+    /// every 30th frame before that).
     /// </summary>
-    public const double CheckSeconds = 1;
+    public static double CheckSeconds => Sts2State.InCombat ? 5 : 1;
 
     /// <summary>
     /// This frame's probe (worked out on the first call of the frame). A result is reused only when this equals the probe it was
