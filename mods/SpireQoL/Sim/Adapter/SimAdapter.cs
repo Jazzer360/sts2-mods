@@ -199,6 +199,13 @@ public static partial class SimAdapter
             teamCreatures.Add(creature);
             if (i < myIndex) state.TeammatesBeforeMe++;
         }
+        // The powers on the players' side whose next duration tick is skipped (PowerModel.SkipNextDurationTick: a debuff that came during the
+        // enemies' turn keeps its stack through that turn's end, PowerCmd.TickDownDuration).
+        foreach (var player in players)
+            foreach (var creature in player.Creature.Pets.Prepend(player.Creature))
+                if (IdOf(creature) is { } creatureId)
+                    foreach (var power in creature.Powers)
+                        if (power.SkipNextDurationTick) state.TickSkips = state.TickSkips.With(SimKeys.Owned(SimPowerName(power.GetType()), creatureId), amount: 1);
         if (teamCreatures.Count > 0)
         {
             foreach (var (creature, id) in ids)

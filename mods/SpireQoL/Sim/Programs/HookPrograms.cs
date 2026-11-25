@@ -231,7 +231,10 @@ public enum HookFact
     FromCard,
     /// <summary>The damage's or block's card is the owner's (cardSource.Owner.Creature == base.Owner).</summary>
     CardIsOwners,
-    /// <summary>The owner takes part in the side's turn ending or starting (participants.Contains(base.Owner)): a living player as the players' turn ends, a living enemy as the enemies' starts.</summary>
+    /// <summary>
+    /// The owner takes part in the side's turn ending or starting (participants.Contains(base.Owner)): a living player as the players' turn ends, a
+    /// living enemy as the enemies' starts and as it ends (CombatManager.EndEnemyTurnInternal: CreaturesOnCurrentSide).
+    /// </summary>
     TakesPart,
     /// <summary>
     /// The amount the model bound to the play in progress is taken (its own data's Remove(cardPlay.Card, out amount), asked once a hook run):
@@ -301,9 +304,17 @@ public enum HookFact
     SameCreature,
     /// <summary>The creatures named in Creature and Other are on the same side (creature.Side == base.Owner.Side).</summary>
     SameSide,
-    /// <summary>The creature named in Creature is on the players' side (its Side is the side whose turn ends: the simulator ends the players').</summary>
+    /// <summary>The creature named in Creature is on the players' side (its Side is CombatSide.Player, a side named).</summary>
     CreatureOnPlayersSide,
-    /// <summary>It's the enemies' turn (CombatState.CurrentSide == CombatSide.Enemy): from the enemy turn's start.</summary>
+    /// <summary>
+    /// The creature named in Creature is on the side whose turn is ending (a SideTurnEnd hook's side: CombatState.CurrentSide, the players' as your
+    /// turn ends, the enemies' as theirs does).
+    /// </summary>
+    CreatureOnEndingSide,
+    /// <summary>
+    /// It's the enemies' turn (CombatState.CurrentSide == CombatSide.Enemy): from the enemy turn's start, through its end (a SideTurnEnd hook's
+    /// side == CombatSide.Enemy: the enemies' side's turn is the one ending).
+    /// </summary>
     EnemiesTurn,
     /// <summary>
     /// The power named in Of summed over the owner's living opponents (Sum(Where(CombatState.GetOpponentsOf(base.Owner), c =&gt; c.IsAlive),
@@ -860,7 +871,15 @@ public sealed record RemovePowerStep : HookStep
 }
 
 /// <summary>PowerCmd.Decrement(this), PowerCmd.TickDownDuration(this): the power itself goes down by one, gone at 0.</summary>
-public sealed record DecrementPowerStep : HookStep;
+public sealed record DecrementPowerStep : HookStep
+{
+    /// <summary>
+    /// PowerCmd.TickDownDuration(this): a duration's tick, skipped once (and the skip spent) when the power's SkipNextDurationTick is set
+    /// (SimState.TickSkips: a debuff new on a player's side as PowerCmd.Apply lands it, BranchRules.DebuffTickSkippedOnTheEnemiesTurnOnly).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool TicksDuration { get; init; }
+}
 
 /// <summary>
 /// One hook of a model, as its code runs it: its commands in order, or for a Modify hook the value it returns, with the stores its code makes as it

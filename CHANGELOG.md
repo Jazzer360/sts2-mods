@@ -26,6 +26,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Hailstorm's tag shows on a card that might channel your first Frost orb too, with its chance (Chaos with no Frost: 20%), with Show chances on.
 - Dev mode checks a reused result every 5 seconds in a fight instead of every second, so an idle fight makes a fifth of the dev checks' garbage.
 - Thorns, Flame Barrier and Reflect are worked out from their own code, and every damage to a player (an enemy's attack, a card's HP cost, a power's) lands the same way. What's shown is unchanged but for the fixes below.
+- The predictions follow the enemies' turn to its end, from each power's own code: Weak, Vulnerable and Frail tick down (a debuff an enemy gave you during its turn keeps its stack, as the game skips its first tick), Flame Barrier and Intercept go, an enemy's Ritual gives its Strength. What's shown is unchanged: it's the board the later turns will start from.
 - Explosive Arrows, Covering Fire and Quietus are worked out from their own code. What's shown is unchanged but for the fix below.
 - Rupture is worked out from its own code. Its tab is unchanged.
 - Parrying Shield's tag shows only on a card that makes it fire as your turn ends; a card that stops it no longer gets a crossed tag.

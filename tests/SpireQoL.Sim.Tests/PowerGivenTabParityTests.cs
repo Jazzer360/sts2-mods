@@ -9,8 +9,8 @@ namespace SpireQoL.Sim.Tests;
 /// Artifact or poisoned; a card that poisons one enemy, every enemy or a random one (some more than once), or puts Weak or Vulnerable on its target,
 /// yours or a teammate's, each simulated against ending the turn now and read into its tabs by the rules the game shows them by (CardTabs: every
 /// tab's key, crossing, number, chance and aim marker, in order, and what the play check holds the play to), with each enemy's HP and poison and
-/// its Weak and Vulnerable at the end of the turn, over the outcomes. Recorded with the hand-written models (Cases/power-given-tab-parity.txt,
-/// SPIREQOL_RECORD_POWER_GIVEN_TABS=path writes it): read from their code, they show the same, but where their code places it otherwise
+/// its Weak and Vulnerable once the enemies' turn has ended (their tick there: decision #302), over the outcomes. Recorded with the hand-written
+/// models (Cases/power-given-tab-parity.txt, SPIREQOL_RECORD_POWER_GIVEN_TABS=path writes it): read from their code, they show the same, but where their code places it otherwise
 /// (ReviewedTabs: each a fix, with the game's line).
 /// </summary>
 public class PowerGivenTabParityTests
@@ -119,7 +119,7 @@ public class PowerGivenTabParityTests
         return (state, play);
     }
 
-    /// <summary>One generated fight and play: its tabs, and each enemy's HP, poison, Weak and Vulnerable at the end of the turn, as text.</summary>
+    /// <summary>One generated fight and play: its tabs, and each enemy's HP and poison as the enemy turn ends and its Weak and Vulnerable after that turn's end, as text.</summary>
     internal static string Tabs(int index)
     {
         var (state, play) = Scenario(index);

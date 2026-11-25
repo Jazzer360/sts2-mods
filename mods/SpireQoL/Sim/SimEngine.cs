@@ -243,9 +243,13 @@ public static partial class SimEngine
                 Fighting(branches, () => EnemyTurnStart(branches));
                 // The enemy turn of a branch whose fight is over moves no one (each move asks FightEnding first): it only marks the dead.
                 branches.Do(EnemyTurn);
+                // Then the enemies' side's turn ends, while the fight goes on (CombatManager.ExecuteEnemyTurn: EndEnemyTurn after the last move).
+                Fighting(branches, () => EnemyTurnEnd(branches));
+                foreach (var branch in branches.States) TurnEndBlockBack(branch); // not a step of the search: no work counted
             }
             catch (SimCapped)
             {
+                foreach (var branch in branches.States) { TurnEndBlockBack(branch); TheirTurnEndUnknownApart(branch); }
                 // Stopped at a cap: the branches where it stopped, each part-way through (BranchSet keeps them whole).
                 outcome ??= PlayResults(branches.States, start, aliveAtStart, complete: false);
                 outcome.Truncated = true;
@@ -1393,10 +1397,10 @@ public static partial class SimEngine
     private static void EndOfTurnSteps(BranchSet branches)
     {
         branches.Do(branch => branch.EndOfTurnNow = true);
-        HookStep(branches, nameof(SimModel.BeforeSideTurnEndVeryEarly), (model, owner, branch) => Who.IsPlayer(owner) ? model.BeforeSideTurnEndVeryEarly(branch, owner) : new[] { branch });
-        HookStep(branches, nameof(SimModel.BeforeSideTurnEndEarly), (model, owner, branch) => Who.IsPlayer(owner) ? model.BeforeSideTurnEndEarly(branch, owner) : new[] { branch });
+        HookStep(branches, nameof(SimModel.BeforeSideTurnEndVeryEarly), (model, owner, branch) => model.BeforeSideTurnEndVeryEarly(branch, owner));
+        HookStep(branches, nameof(SimModel.BeforeSideTurnEndEarly), (model, owner, branch) => model.BeforeSideTurnEndEarly(branch, owner));
         DeathCheck(branches);
-        HookStep(branches, nameof(SimModel.BeforeSideTurnEnd), (model, owner, branch) => Who.IsPlayer(owner) ? model.BeforeSideTurnEnd(branch, owner) : new[] { branch });
+        HookStep(branches, nameof(SimModel.BeforeSideTurnEnd), (model, owner, branch) => model.BeforeSideTurnEnd(branch, owner));
         DeathCheck(branches);
 
         // 2. Each player's DoTurnEnd, in player order.
@@ -1412,9 +1416,9 @@ public static partial class SimEngine
 
         // 3. AfterSideTurnEnd (Constrict, Magic Bomb, Demise, Consuming Shadow, Parrying Shield, Lunar Pastry), then
         // AfterSideTurnEndLate (Disintegration, Insatiable Dominion).
-        HookStep(branches, nameof(SimModel.AfterSideTurnEnd), (model, owner, branch) => Who.IsPlayer(owner) ? model.AfterSideTurnEnd(branch, owner) : new[] { branch });
+        HookStep(branches, nameof(SimModel.AfterSideTurnEnd), (model, owner, branch) => model.AfterSideTurnEnd(branch, owner));
         DeathCheck(branches); // kills by Consuming Shadow's evokes, Parrying Shield, Black Hole
-        HookStep(branches, nameof(SimModel.AfterSideTurnEndLate), (model, owner, branch) => Who.IsPlayer(owner) ? model.AfterSideTurnEndLate(branch, owner) : new[] { branch });
+        HookStep(branches, nameof(SimModel.AfterSideTurnEndLate), (model, owner, branch) => model.AfterSideTurnEndLate(branch, owner));
 
         // Deaths at the end of your turn run their hooks before the enemies act (arrows coming back: Twine's block).
         branches.Do(AllyDeaths);
@@ -1621,12 +1625,10 @@ public static partial class SimEngine
         // Each enemy's block this turn (CombatManager.StartTurn clears it unless a listener's ShouldClearBlock says no: Creature.ClearBlock, Barricade's
         // and Burrowed's read from their code; its moves' block adds to it): what the damage hitting it back during the turn meets. What your turn left
         // them (the outcome reads it) comes back once the turn is over; its count of hits through block goes on through the turn, as the wake rules
-        // want (SimEnemy.UnblockedInstances).
-        var turnEnd = new (int Block, bool BlockBroken)[state.Enemies.Count];
-        for (var i = 0; i < state.Enemies.Count; i++)
+        // want (SimEnemy.UnblockedInstances). It's held through the enemies' turn's end too, which runs on their block of this turn (Plating's).
+        foreach (var enemy in state.Enemies)
         {
-            var enemy = state.Enemies[i];
-            turnEnd[i] = (enemy.Block, enemy.BlockBroken);
+            (enemy.TurnEndBlock, enemy.TurnEndBlockBroken) = (enemy.Block, enemy.BlockBroken);
             enemy.Block = (ClearsBlock(state, enemy.Id) ? 0 : enemy.Block) + enemy.MoveBlock;
         }
         foreach (var enemy in state.Enemies)
@@ -1737,7 +1739,74 @@ public static partial class SimEngine
             // turn's start, above.
             if (state.Enemies.Any(simEnemy => simEnemy.StartedAlive && !simEnemy.Alive && !simEnemy.DeathHandled)) AllyDeaths(state);
         }
-        for (var i = 0; i < state.Enemies.Count && i < turnEnd.Length; i++)
-            (state.Enemies[i].Block, state.Enemies[i].BlockBroken) = turnEnd[i];
+    }
+
+    /// <summary>The block your turn left each enemy, put back once the enemies' turn and its end are over (SimEnemy.TurnEndBlock): the outcome reads it.</summary>
+    private static void TurnEndBlockBack(SimState state)
+    {
+        foreach (var enemy in state.Enemies)
+        {
+            if (enemy.TurnEndBlock < 0) continue;
+            (enemy.Block, enemy.BlockBroken) = (enemy.TurnEndBlock, enemy.TurnEndBlockBroken);
+            (enemy.TurnEndBlock, enemy.TurnEndBlockBroken) = (-1, false);
+        }
+    }
+
+    /// <summary>
+    /// The enemies' side's turn ends (CombatManager.EndEnemyTurn after the last enemy's move, EndEnemyTurnInternal), while the fight goes on:
+    ///  1. Hook.BeforeSideTurnEnd: every listener's VeryEarly, then Early (Plating's block, Regen's heal on an enemy), then BeforeSideTurnEnd, in
+    ///     listener order, its side the enemies' (CombatState.CurrentSide) and its participants the enemies in the fight (CreaturesOnCurrentSide).
+    ///  2. Each player's PlayerCombatState.EndOfTurnCleanup: their cards' single-turn flags and costs, which nothing a simulation covers reads.
+    ///  3. Hook.AfterSideTurnEnd (Weak, Vulnerable and Frail ticking down, Flame Barrier and the other powers of the players' side that last
+    ///     through the enemies' turn going, Ritual's and High Voltage's Strength), then AfterSideTurnEndLate.
+    /// Every listener hears it, as the game's do: a read model's code tests the side and the participants itself (the facts EnemiesTurn,
+    /// CreatureOnEndingSide, TakesPart); the hand-written ones that answer a turn's end (Regret, Pael's Eye) act only for their player taking part.
+    /// </summary>
+    private static void EnemyTurnEnd(BranchSet branches)
+    {
+        // An unknown met here is the state after it's (SimState.UnmodelledAtTheirTurnEnd, decision #302), not what's read through the enemy turn.
+        foreach (var branch in branches.States) branch.TheirTurnEndKeptApart = branch.Unmodelled == null;
+        EnemyTurnEndSteps(branches);
+        foreach (var branch in branches.States) TheirTurnEndUnknownApart(branch);
+    }
+
+    /// <summary>A branch known until the enemies' turn's end: what that end left unknown is the state after it's (SimState.UnmodelledAtTheirTurnEnd).</summary>
+    private static void TheirTurnEndUnknownApart(SimState state)
+    {
+        if (!state.TheirTurnEndKeptApart) return;
+        state.TheirTurnEndKeptApart = false;
+        state.UnmodelledAtTheirTurnEnd = state.Unmodelled;
+        state.Unmodelled = null;
+    }
+
+    private static void EnemyTurnEndSteps(BranchSet branches)
+    {
+        TheirTurnEndStep(branches, nameof(SimModel.BeforeSideTurnEndVeryEarly), (model, owner, branch) => model.BeforeSideTurnEndVeryEarly(branch, owner));
+        TheirTurnEndStep(branches, nameof(SimModel.BeforeSideTurnEndEarly), (model, owner, branch) => model.BeforeSideTurnEndEarly(branch, owner));
+        DeathCheck(branches);
+        TheirTurnEndStep(branches, nameof(SimModel.BeforeSideTurnEnd), (model, owner, branch) => model.BeforeSideTurnEnd(branch, owner));
+        DeathCheck(branches);
+        TheirTurnEndStep(branches, nameof(SimModel.AfterSideTurnEnd), (model, owner, branch) => model.AfterSideTurnEnd(branch, owner));
+        DeathCheck(branches);
+        TheirTurnEndStep(branches, nameof(SimModel.AfterSideTurnEndLate), (model, owner, branch) => model.AfterSideTurnEndLate(branch, owner));
+        DeathCheck(branches);
+    }
+
+    /// <summary>
+    /// A turn's-end hook as the enemies' side's turn ends: every listener that may act there (SimModel.MayActAtTheEnemiesTurnEnd), as one step, or
+    /// nothing when none may in any branch (a player's relic that acts only for its owner taking part never does then).
+    /// </summary>
+    private static void TheirTurnEndStep(BranchSet branches, string hook, Func<SimModel, int, SimState, IEnumerable<SimState>> call)
+    {
+        static bool AnyMayAct(SimState branch, string hook)
+        {
+            foreach (var (model, owner) in Listeners(branch))
+                if (model.MayActAtTheEnemiesTurnEnd(hook, owner)) return true;
+            return false;
+        }
+        var any = false;
+        foreach (var branch in branches.States) any |= AnyMayAct(branch, hook);
+        if (!any) return;
+        HookStep(branches, hook, (model, owner, branch) => model.MayActAtTheEnemiesTurnEnd(hook, owner) ? call(model, owner, branch) : new[] { branch });
     }
 }

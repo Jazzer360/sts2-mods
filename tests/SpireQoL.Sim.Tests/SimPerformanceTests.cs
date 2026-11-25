@@ -142,13 +142,17 @@ public class SimPerformanceTests
         // Measured (2026-11-19, decision #107: one merged search, nothing cut off): copies, stepped, steps, bytes, ms.
         // branch-heavy hand's stepped: 6,000 from 4,200 (2026-11-25, decision #289): Plating, read from its code, listens to the enemies' turn start (an
         // enemy's Plating comes down there), so every branch steps through that hook too: 4,767 measured.
-        new object[] { "branch-heavy hand", 3_600, 6_000, 32, 290_000_000L, 60 },                // 2,874, 4,767, 32, 256.6 MB, 26 ms (was cut off at 128 branches: 926 copies)
+        // branch-heavy hand's steps 34 from 32 and bytes 330 MB from 290, Beacon of Hope and Juggernaut's stepped 420 from 350 (2026-11-25, decision #302):
+        // the enemies' side's turn end runs its hooks (an enemy's Plating gains its block there; Orichalcum's BeforeSideTurnEnd waits on its own field,
+        // which the engine can't tell is unset there), a step each: branch-heavy 33 steps, 5,234 stepped, 289.7 MB (32, 4,767, 266.1 MB with that turn end
+        // switched off); Beacon of Hope and Juggernaut 28 steps, 356 stepped, 15.6 MB (27, 331, 15.2 MB switched off); copies unchanged.
+        new object[] { "branch-heavy hand", 3_600, 6_000, 34, 330_000_000L, 60 },                // 2,874, 5,234, 33, 289.7 MB, 26 ms (was cut off at 128 branches: 926 copies)
         // four Defects' bytes: 1,170 MB from 1,140 (2026-11-24, decision #195): each SimPlayer and SimEnemy holds its models' fields (a reference more
         // in each copy), 1,144.6 MB measured, 1.3% more.
         // Bytes measured 2026-11-24 (decision #216: the branch key made by reference, nothing sorted that has no order to choose): branch-heavy
         // 264.3 MB to 204.4, four Defects 1,167.7 to 652.1, Beacon of Hope and Juggernaut 22.80 to 13.56, typical 552 KB to 436; copies and steps unchanged.
         new object[] { "four Defects", 88_000, 45_000, 55, 1_170_000_000L, 1_500 },          // 70,192, 35,901, 44, 758.5 MB, 294 ms (six orbs each; ten: 460,000 copies, 2 s)
-        new object[] { "Beacon of Hope and Juggernaut", 1_510, 350, 29, 23_000_000L, 60 },       // 1,208, 281, 23, 15.4 MB, 7 ms (two players, two enemies)
+        new object[] { "Beacon of Hope and Juggernaut", 1_510, 420, 29, 23_000_000L, 60 },       // 1,208, 356, 28, 15.6 MB, 14 ms (two players, two enemies)
         new object[] { "typical fight", 10, 48, 27, 610_000L, 10 },                             // 6, 30, 17, 0.41 MB, 0.05 ms
     };
 

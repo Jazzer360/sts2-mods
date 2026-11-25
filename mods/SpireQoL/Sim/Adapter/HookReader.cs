@@ -64,7 +64,7 @@ public static class HookReader
         ["PowerCmd.Apply"] = "ApplyPowerStep: the power on the owner, every hittable enemy or the creature a power landed on, applied by the owner",
         ["PowerCmd.Remove"] = "RemovePowerStep: the power itself goes (PowerCmd.Remove(this))",
         ["PowerCmd.Decrement"] = "DecrementPowerStep: the power itself goes down by one (PowerCmd.Decrement(this))",
-        ["PowerCmd.TickDownDuration"] = "DecrementPowerStep: the power itself goes down by one (PowerCmd.TickDownDuration(this))",
+        ["PowerCmd.TickDownDuration"] = "DecrementPowerStep: the power itself goes down by one, unless its SkipNextDurationTick spends the tick (PowerCmd.TickDownDuration(this))",
         ["OrbCmd.Channel"] = "ChannelStep: an orb of the kind named channeled for the owner",
         ["OrbCmd.EvokeLast"] = "EvokeLastStep: the owner's last orb evoked and dequeued",
         ["CardCmd.Upgrade"] = "UpgradeCardStep: the card played upgraded, its later plays its upgraded copy's",
@@ -116,6 +116,18 @@ public static class HookReader
 
     /// <summary>The hook runs as a side's turn starts (the side the simulator starts is the enemies').</summary>
     private static bool StartsATurn(string hook) => SideTurnStartHooks.Contains(hook);
+
+    /// <summary>
+    /// The hooks that run as either side's turn ends (Hook.BeforeSideTurnEnd: VeryEarly, Early, then its own; Hook.AfterSideTurnEnd, then Late): a
+    /// simulation reaches both, the players' as your turn ends and the enemies' after their turn (CombatManager.EndEnemyTurnInternal).
+    /// </summary>
+    private static readonly HashSet<string> SideTurnEndHooks = new(StringComparer.Ordinal)
+    {
+        "BeforeSideTurnEndVeryEarly", "BeforeSideTurnEndEarly", "BeforeSideTurnEnd", "AfterSideTurnEnd", "AfterSideTurnEndLate",
+    };
+
+    /// <summary>The hook runs as a side's turn ends (the players' or the enemies': the side ending is a fact of the turn's end it runs at).</summary>
+    private static bool EndsATurn(string? hook) => hook != null && SideTurnEndHooks.Contains(hook);
 
     /// <summary>A collection's methods that only ask (they change nothing of the model's own data).</summary>
     private static readonly HashSet<string> CollectionQueries = new(StringComparer.Ordinal)
@@ -546,6 +558,8 @@ public static class HookReader
             foreach (var step in steps)
             {
                 if (!Gives(step) || step.When is not { } when || OnlyTakesPart(when) || payouts.Any(payout => payout.Hook == hook && Equals(payout.Condition, when))) continue;
+                // A step its code runs only as the enemies' side's turn ends (side == CombatSide.Enemy) pays nothing as yours does.
+                if (Requires(when, fact => fact.Fact == HookFact.EnemiesTurn, holds: true)) continue;
                 var during = DuringTheTurn(when, programs, turnEndHooksBefore, next);
                 // Decided during the turn by nothing a play changes (Stone Calendar's turn number): no play gives it up or sets it up.
                 if (during != null && !PlayChanges(during, programs)) continue;
@@ -568,11 +582,15 @@ public static class HookReader
         _ => false,
     };
 
-    /// <summary>A condition that only asks its owner takes part (or that the hook's player is its owner): no condition of the payout's own.</summary>
+    /// <summary>
+    /// A condition that only asks its owner takes part (or that the hook's player is its owner, or that the side ending is the players':
+    /// side == CombatSide.Player, the players' turn's end the payouts are about): no condition of the payout's own.
+    /// </summary>
     private static bool OnlyTakesPart(HookValue when) => when switch
     {
         HookTest test => OnlyTakesPart(test.Test),
         HookFactValue { Fact: HookFact.TakesPart or HookFact.EventIsOwners } => true,
+        HookNot { Inner: HookFactValue { Fact: HookFact.EnemiesTurn } } => true,
         HookMath { Operation: HookOperation.And } both => OnlyTakesPart(both.Left) && OnlyTakesPart(both.Right),
         _ => false,
     };
@@ -600,7 +618,7 @@ public static class HookReader
         bool Allowed(HookValue value) => value switch
         {
             HookConstant or HookVar => true,
-            HookFactValue fact => fact.Fact is HookFact.TakesPart or HookFact.EventIsOwners or HookFact.TurnNumber,
+            HookFactValue fact => fact.Fact is HookFact.TakesPart or HookFact.EventIsOwners or HookFact.TurnNumber or HookFact.EnemiesTurn,
             HookField field => storedBy.Where(stored => stored.Field == field.Field)
                 .All(stored => stored.Hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed || TurnEndHooks.Contains(stored.Hook)),
             HookHistory history => !nextTurn && history.Query.Kind is HistoryKind.CardPlayStarted or HistoryKind.CardPlayFinished,
@@ -1048,9 +1066,9 @@ public static class HookReader
                 var body = BodySteps(hook);
                 if (body.Gap is { } bodyGap) return (null, bodyGap, null);
                 var steps = body.Steps!;
-                // A step its code runs on a side the simulator never ends (AfterSideTurnEnd of the enemies' side) never runs: left out.
+                // A step its code runs on a side whose turn the simulator never starts (the players' side's next turn) never runs: left out.
                 var never = steps.RemoveAll(step => step.When is HookConstant { Value: 0m });
-                if (steps.Count == 0) return (null, null, never == 0 ? null : StartsATurn(hook.Name) ? "its commands wait on the players' side's turn starting, past the turns a simulation covers" : "its commands wait on the enemies' side's turn ending, which no simulation reaches");
+                if (steps.Count == 0) return (null, null, never == 0 ? null : StartsATurn(hook.Name) ? "its commands wait on the players' side's turn starting, past the turns a simulation covers" : "its commands' conditions never hold in a fight");
                 return (new HookProgram(name, steps), null, null);
             }
             catch (Gap gap)
@@ -2111,7 +2129,7 @@ public static class HookReader
                     return new RemovePowerStep { Powers = Removable(new[] { removedClass }) };
                 case "PowerCmd.Remove" or "PowerCmd.Decrement" or "PowerCmd.TickDownDuration":
                     if (values[0] is not NamedValue { Name: "this" }) throw new Gap(ReaderCapability.CommandOnAnotherPower, $"gap: {member.FullName} of another power");
-                    return member.Name == "Remove" ? new RemovePowerStep() : new DecrementPowerStep();
+                    return member.Name == "Remove" ? new RemovePowerStep() : new DecrementPowerStep { TicksDuration = member.Name == "TickDownDuration" };
                 // A change to the card played (decision #218): an upgrade, or a keyword added. Another card (one in the hand, a pick) is a gap.
                 case "CardCmd.Upgrade":
                     if (values.Count == 0 || !IsPlayCard(values[0])) throw new Gap(ReaderCapability.CardChanged, $"gap: upgrades {(values.Count > 0 ? values[0] : "nothing")}, not the card played");
@@ -2728,9 +2746,10 @@ public static class HookReader
             {
                 if (compare.Right is QueryValue { Name: "Side", Of: { } rightOf } && CreatureOf(rightOf) is { } rightSide)
                     holds = CreatureFact(HookFact.SameSide, leftSide) with { Other = rightSide };
-                // The side whose turn ends (AfterSideTurnEnd's side): the simulator ends the players'; the side whose turn starts, the enemies'.
-                else if (compare.Right is ParameterValue { Name: "side" } or NamedValue { Name: "side" } && _hook.Contains("SideTurnEnd", StringComparison.Ordinal))
-                    holds = CreatureFact(HookFact.CreatureOnPlayersSide, leftSide);
+                // The side whose turn ends (AfterSideTurnEnd's side): the players' as your turn ends, the enemies' as theirs does, a fact of the
+                // turn's end it runs at; the side whose turn starts, the enemies'.
+                else if (compare.Right is ParameterValue { Name: "side" } or NamedValue { Name: "side" } && EndsATurn(_hook))
+                    holds = CreatureFact(HookFact.CreatureOnEndingSide, leftSide);
                 else if (compare.Right is ParameterValue { Name: "side" } or NamedValue { Name: "side" } && StartsATurn(_hook))
                     holds = Not(CreatureFact(HookFact.CreatureOnPlayersSide, leftSide));
                 else if (compare.Right is ConstantValue side && EnumName(_type.Assembly, "CombatSide", side.Value) is { } sideName)
@@ -2866,11 +2885,20 @@ public static class HookReader
                 };
                 return compare.Op == Comparison.Equal ? debuff : Not(debuff);
             }
-            // The side whose turn is ending or starting: the simulator ends the players' side's turn and starts the enemies'.
+            // The side whose turn is ending against a side named (Weak's side == CombatSide.Enemy): the side whose turn it is (CombatManager passes
+            // CurrentSide), the enemies' as their turn ends, a fact of the turn's end it runs at. The side whose turn is starting: the simulator starts
+            // the enemies' side's turn only.
             if (compare.Left is NamedValue { Name: "side" } or ParameterValue { Name: "side" } && compare.Right is ConstantValue side)
             {
-                var isSide = StartsATurn(_hook) ? EnumName(_type.Assembly, "CombatSide", side.Value) == "Enemy" : EnumName(_type.Assembly, "CombatSide", side.Value) == "Player";
-                return new HookConstant((compare.Op == Comparison.Equal) == isSide ? 1m : 0m);
+                var named = EnumName(_type.Assembly, "CombatSide", side.Value);
+                if (EndsATurn(_hook) && named is "Player" or "Enemy")
+                {
+                    var enemies = new HookFactValue(HookFact.EnemiesTurn);
+                    var isSide = named == "Enemy" ? (HookValue)enemies : Not(enemies);
+                    return compare.Op == Comparison.Equal ? isSide : Not(isSide);
+                }
+                var starts = StartsATurn(_hook) ? named == "Enemy" : named == "Player";
+                return new HookConstant((compare.Op == Comparison.Equal) == starts ? 1m : 0m);
             }
             if (CreatureCompare(compare) is { } creatures) return creatures;
             // The side whose turn it is against a side named (CombatState.CurrentSide == CombatSide.Enemy): the enemies' turn, or not.

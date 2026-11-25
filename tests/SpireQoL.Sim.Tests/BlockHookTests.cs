@@ -21,7 +21,9 @@ public class BlockHookTests
         // 5 block, a hit of 6 breaks it: Hand Drill's 2 Vulnerable lands inside the hit (SimModelEffectTests: the rest of the attack hits harder).
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 30, block: 5) } };
         state.You.Relics = state.You.Relics.With(RelicId.HandDrill, 0);
-        var after = SimEngine.Run(state, Strike(target: 0, damage: 6)).Branches.Single();
+        // Right after the play (the enemies' turn's end ticks it down: VulnerablePower.AfterSideTurnEnd).
+        SimEngine.ApplyPlayTo(state, Strike(target: 0, damage: 6), out var afterThePlay, out _);
+        var after = afterThePlay.Single();
         Assert.Equal(2, after.Enemy(0)!.Powers[PowerId.Vulnerable]);
         // No block broken: no Vulnerable.
         var unbroken = SimEngine.Run(state, Strike(target: 0, damage: 4)).Branches.Single();

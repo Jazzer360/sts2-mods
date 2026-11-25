@@ -39,9 +39,15 @@ internal static class BranchRules
         "Hook.BeforeDamageReceived, then applies the results and tells the HP-loss changes (ApplyDamageResults); main's tells BeforeDamageReceived first and " +
         "each HP-loss change as it's made: a Thorns kill whose death hits back (Explosive) meets the hit's Buffer and block before it, or after it");
 
+    public static readonly BranchRule DebuffTickSkippedOnTheEnemiesTurnOnly = new(nameof(DebuffTickSkippedOnTheEnemiesTurnOnly),
+        new CodeFact(typeof(MegaCrit.Sts2.Core.Commands.PowerCmd), nameof(MegaCrit.Sts2.Core.Commands.PowerCmd.Apply), "get_CurrentSide"), OnBeta: true, MainRule.DebuffSkipsTickOnAnyTurn,
+        "beta's PowerCmd.Apply sets a new debuff's SkipNextDurationTick on a creature of the players' side only during the enemies' turn " +
+        "(combatState.CurrentSide == CombatSide.Enemy); main's sets it whenever one lands there, so a Weak, Vulnerable or Frail landing on you during " +
+        "your own turn keeps its stack through the enemies' turn end on main and ticks down there on beta");
+
     public static IReadOnlyList<BranchRule> All { get; } = new[]
     {
-        OmnisliceSplashIsPowered, PlowStrengthNeedsPlow, DamageWorkedOutFirst,
+        OmnisliceSplashIsPowered, PlowStrengthNeedsPlow, DamageWorkedOutFirst, DebuffTickSkippedOnTheEnemiesTurnOnly,
     };
 
     private static readonly ConcurrentDictionary<BranchRule, bool> Beta = new();
@@ -65,6 +71,8 @@ internal static class BranchRules
         if (fact.Mentions == null) return methods.Count > 0;
         foreach (var method in methods)
         {
+            // A generic method's body (PowerCmd.Apply<T>'s state machine, a generic type) can't be read here: a fact names what a plain overload says.
+            if (method.IsGenericMethodDefinition) continue;
             var body = method.GetCustomAttribute<AsyncStateMachineAttribute>()?.StateMachineType.GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
                        ?? (MethodBase)method;
             if (Diagnostics.GameCode.Instructions(body).Any(instruction => Names(instruction.operand, fact.Mentions))) return true;

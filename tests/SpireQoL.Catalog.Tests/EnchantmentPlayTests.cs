@@ -41,8 +41,9 @@ public class EnchantmentPlayTests
         var gameFight = new GameFight();
         var card = gameFight.Add<StrikeIronclad>();
         CardCmd.Enchant<Inky>(card, amount: 1);
-        var outcome = SimEngine.Run(Board(), PlayOf(gameFight, card, targetId: 0));
-        Assert.True(outcome.InEvery(branch => branch.Enemy(0)!.Powers[PowerId.Weak] == 1));
+        // Right after the play: the enemies' turn's end ticks it down (WeakPower.AfterSideTurnEnd).
+        SimEngine.ApplyPlayTo(Board(), PlayOf(gameFight, card, targetId: 0), out var afterThePlay, out _);
+        Assert.All(afterThePlay, branch => Assert.Equal(1, branch.Enemy(0)!.Powers[PowerId.Weak]));
     }
 
     [Fact]

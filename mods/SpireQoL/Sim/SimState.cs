@@ -20,6 +20,11 @@ public enum MainRule
     /// they're applied with the changes told: ApplyDamageResults).
     /// </summary>
     ReceivedBeforeTheResults = 8,
+    /// <summary>
+    /// A debuff new on a creature of the players' side skips its next duration tick whenever it lands (PowerCmd.Apply sets SkipNextDurationTick on
+    /// any side's turn; beta, v0.114.0: only during the enemies' turn, CombatState.CurrentSide == CombatSide.Enemy).
+    /// </summary>
+    DebuffSkipsTickOnAnyTurn = 16,
 }
 
 /// <summary>
@@ -232,6 +237,13 @@ public sealed class SimEnemy
     /// </summary>
     public int UnblockedAtTurnEnd;
 
+    /// <summary>
+    /// Its block and whether it was broken as your turn ended, held through the enemies' turn (which clears it and gives its moves' block) and
+    /// their turn's end, then put back: what the outcome reads (SimEngine.EnemyTurn, TurnEndBlockBack). -1 outside the enemies' turn.
+    /// </summary>
+    [JsonIgnore] internal int TurnEndBlock = -1;
+    [JsonIgnore] internal bool TurnEndBlockBroken;
+
     [JsonIgnore]
     public bool Alive => Hp > 0;
 
@@ -254,6 +266,7 @@ public sealed class SimEnemy
         key.Add(Id); key.Add(Hp); key.Add(Block); key.Add(UnblockedInstances); key.Add(Poison); key.Add(DiedBeforeActing ? 1 : 0);
         key.Add(Stunned ? 1 : 0); key.Add(IntendsToAttack ? 1 : 0); key.Add(BlockBroken ? 1 : 0); key.Add(KilledByItsPower ? 1 : 0);
         key.Add(MoveBlock); key.Add(Revived ? 1 : 0); key.Add(RevivedBeforeActing ? 1 : 0);
+        key.Add(TurnEndBlock); key.Add(TurnEndBlockBroken ? 1 : 0);
         Powers.Hash(ref key); // Hardened Shell, Curl Up, Skittish, Burrowed, Asleep, Slumber, Flutter, Plow, The Gambit, Slippery...
         Fields.Hash(ref key);
         key.Add(Hits.Count); foreach (var hit in Hits) key.Add(hit);
@@ -703,6 +716,16 @@ public sealed class SimState
     /// in every chance and guarantee (a range and a ?), and the reason is counted by the audits as a gap to model.
     /// </summary>
     public string? Unmodelled;
+
+    /// <summary>
+    /// What the enemies' side's turn end did in this branch that the simulator doesn't model (decision #302): why, or null. The state after that
+    /// turn's end is unknown for it; what a prediction reads through the enemy turn (its hits, the kills and deaths before it, your turn's end)
+    /// isn't, so it's kept apart from <see cref="Unmodelled"/>, which a branch unknown before then still carries.
+    /// </summary>
+    public string? UnmodelledAtTheirTurnEnd;
+
+    /// <summary>The enemies' turn's end is running on a branch known until then: an unknown it meets is <see cref="UnmodelledAtTheirTurnEnd"/>'s.</summary>
+    [JsonIgnore] internal bool TheirTurnEndKeptApart;
     /// <summary>
     /// The cards a draw gave, while a card that acts on them draws (SimEngine.RunDrawnCard, decision #118); null otherwise. Set
     /// and cleared inside one step; in the key while set, as a set (decision #120): branches that drew the same cards in another
@@ -760,6 +783,14 @@ public sealed class SimState
     /// ends, decision #239), each under its source's log key (SimKeys.Logged): what a tab judged on how the turn ends compares with ending it now.
     /// </summary>
     public NamedCounts Payouts = NamedCounts.Empty;
+
+    /// <summary>
+    /// The powers whose SkipNextDurationTick is set (PowerModel: their next PowerCmd.TickDownDuration is skipped, and the skip spent), each under
+    /// SimKeys.Owned(power, creature): a debuff new on a creature of the players' side, as PowerCmd.Apply lands it during the enemies' turn (on main's
+    /// code, any time: BranchRules.DebuffTickSkippedOnTheEnemiesTurnOnly), read from the game's powers by the adapter. What a player knows: the debuff
+    /// came this enemy turn.
+    /// </summary>
+    public NamedCounts TickSkips = NamedCounts.Empty;
     public List<(string Name, int Amount)> EndOfTurnBlock = new();
     public List<(string Name, int Amount)> Blockable = new();
     public List<(string Name, int Amount)> Unblockable = new();
@@ -988,6 +1019,12 @@ public sealed class SimState
     /// <summary>The player takes part in what their side does (you always; a teammate while alive).</summary>
     public bool TakesPart(int id) => id == Who.You || Player(id) is { Hp: > 0 };
 
+    /// <summary>
+    /// The creature is among the participants of the side's turn now ending (a SideTurnEnd hook's participants.Contains): a player taking part as
+    /// your turn ends, a living enemy as the enemies' turn does (CombatManager.EndEnemyTurnInternal: CreaturesOnCurrentSide).
+    /// </summary>
+    public bool EndsTheirTurn(int id) => EnemyTurnNow ? Enemy(id) is { Alive: true } : TakesPart(id);
+
     /// <summary>Every player's id in player order (Who.InPlayerOrder).</summary>
     [JsonIgnore] public int[] PlayerIds => Who.InPlayerOrder(Teammates.Count, TeammatesBeforeMe);
 
@@ -1138,6 +1175,7 @@ public sealed class SimState
         var key = new BranchKey();
 
         if (Payouts.Count > 0) Payouts.Hash(ref key);
+        if (TickSkips.Count > 0) { key.Add(-77); TickSkips.Hash(ref key); }
         key.Add(SkippedPoisoned); key.Add(SkippedEndOfTurn); key.Add(CancelledHits);
         if (DrawRecord != null)
         {
@@ -1158,6 +1196,7 @@ public sealed class SimState
         if (PlayChanges.Upgrades != 0) key.Add(-1000 - PlayChanges.Upgrades);
         if (PlayChanges.Keywords.Count > 0) PlayChanges.Keywords.Hash(ref key);
         key.Add(AutoPlaysUnknown ? 1 : 0); key.Add(AutoPlayed); key.Add(DrawnTally); key.Add(Unmodelled == null ? 0 : Unmodelled.GetHashCode());
+        if (UnmodelledAtTheirTurnEnd != null || TheirTurnEndKeptApart) { key.Add(UnmodelledAtTheirTurnEnd == null ? -3 : UnmodelledAtTheirTurnEnd.GetHashCode()); key.Add(TheirTurnEndKeptApart ? 1 : 0); }
         foreach (var pick in AutoPicks) { key.Add(pick.Card.GetHashCode()); key.Add(pick.Target); } // branches that picked different cards stay apart (the check tells them apart)
         foreach (var enemy in Enemies) enemy.Hash(ref key);
         You.Hash(ref key);

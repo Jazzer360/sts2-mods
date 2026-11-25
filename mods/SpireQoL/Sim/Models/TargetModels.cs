@@ -75,6 +75,13 @@ public sealed class CoveredPower : SimModel
         SimEngine.SetField(state, applier, CoveredCount, SimEngine.FieldsOf(state, applier)[CoveredCount] + 1);
     }
 
+    /// <summary>AfterSideTurnEnd: the enemies' side's turn ending (side == CombatSide.Enemy), every copy on its owner goes (PowerCmd.Remove).</summary>
+    public override IEnumerable<SimState> AfterSideTurnEnd(SimState state, int owner)
+    {
+        if (state.EnemyTurnNow) SimEngine.RemovePower(state, owner, ThisPower);
+        return One(state);
+    }
+
     /// <summary>Intercept's count of the creatures it covers (its own data's coveredCreatures.Count, its read model's state).</summary>
     public static readonly string CoveredCount = PowerId.Intercept.Name + ".Data.coveredCreatures.Count";
 }

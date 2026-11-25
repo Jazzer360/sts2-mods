@@ -368,6 +368,13 @@ public abstract class SimModel
     /// <summary>It overrides this hook (by name): the engine skips models that don't listen to a hook.</summary>
     public bool Overrides(string hook) => _overrides.Contains(hook);
 
+    /// <summary>
+    /// It may act in this turn's-end hook as the enemies' side's turn ends (SimEngine.EnemyTurnEnd), for this owner. A hook whose code acts only for
+    /// its owner taking part (participants.Contains(base.Owner)) can't for a creature of the players' side, which isn't among the enemies ending
+    /// their turn: the engine skips a hook no listener may act in there, as it skips one no listener overrides.
+    /// </summary>
+    public virtual bool MayActAtTheEnemiesTurnEnd(string hook, int owner) => Overrides(hook);
+
     /// <summary>It acts inside damage (SimEngine.Damage): without such a model, damage takes the plain path.</summary>
     public bool ListensToDamage { get; }
 
@@ -457,8 +464,9 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> AfterBlockGained(SimState state, int owner, int gainer, int amount, SimCard? card) => One(state);
     /// <summary>A card event (one per card or star): draws, exhausts, discards, created cards, stars, shuffles. Player: who it happened to.</summary>
     public virtual IEnumerable<SimState> AfterCardEvent(SimState state, int owner, CardEvent cardEvent, int player) => One(state);
-    // ---- end of your side's turn (Hook.BeforeSideTurnEnd: every listener's VeryEarly, then Early, then BeforeSideTurnEnd;
-    // Hook.AfterSideTurnEnd: AfterSideTurnEnd, then Late). Only for players' models whose owner takes part (SimEngine.TakesPart).
+    // ---- end of a side's turn (Hook.BeforeSideTurnEnd: every listener's VeryEarly, then Early, then BeforeSideTurnEnd;
+    // Hook.AfterSideTurnEnd: AfterSideTurnEnd, then Late): the players' as your turn ends, then the enemies' after their turn
+    // (SimState.EnemyTurnNow). Every listener; the participants are SimState.EndsTheirTurn's.
 
     public virtual IEnumerable<SimState> BeforeSideTurnEndVeryEarly(SimState state, int owner) => One(state);
     public virtual IEnumerable<SimState> BeforeSideTurnEndEarly(SimState state, int owner) => One(state);

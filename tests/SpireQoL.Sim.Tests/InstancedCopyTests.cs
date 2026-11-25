@@ -13,6 +13,13 @@ public class InstancedCopyTests
 {
     private static SimEnemy Attacker(int id, int hp, int hit = 0) => new() { Id = id, Name = $"E{id}", Hp = hp, Hits = hit > 0 ? new() { hit } : new() };
 
+    /// <summary>Your Intercept right after the play: the enemies' turn's end takes it off (InterceptPower.AfterSideTurnEnd, side == CombatSide.Enemy).</summary>
+    private static int InterceptAfterThePlay(SimState state, SimScript play)
+    {
+        SimEngine.RunScriptTo(state, play, out var branches, out _);
+        return Assert.Single(branches).You.Powers[PowerId.Intercept];
+    }
+
     // ---- Monologue: each copy binds and gives its own Strength
 
     [Fact]
@@ -134,7 +141,7 @@ public class InstancedCopyTests
         var outcome = SimEngine.Run(state, play);
         Assert.Equal(20, outcome.TakenMax);
         Assert.Equal(0, outcome.TeammateTakenMax(teammateIndex: 0));
-        Assert.Equal(1, outcome.Worst.You.Powers[PowerId.Intercept]);
+        Assert.Equal(1, InterceptAfterThePlay(state, play));
     }
 
     [Fact]
@@ -155,6 +162,6 @@ public class InstancedCopyTests
             new ApplyPowerAction(PowerId.Covered, Amount: 1) { To = ApplyPowerAction.Where.Creature, Creature = Who.Teammate(teammateIndex: 0) });
         var outcome = SimEngine.Run(state, play);
         Assert.Equal(20, outcome.TakenMax);
-        Assert.Equal(1, outcome.Worst.You.Powers[PowerId.Intercept]);
+        Assert.Equal(1, InterceptAfterThePlay(state, play));
     }
 }

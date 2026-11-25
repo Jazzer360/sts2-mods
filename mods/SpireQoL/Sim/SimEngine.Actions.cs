@@ -767,6 +767,7 @@ public static partial class SimEngine
         var left = after[power];
         if (gone) after = after.Without(power);
         SetPowers(state, target, after);
+        if (!had) NewInstanceTickSkip(state, target, power, debuff);
         // Gone, it's PowerCmd.Remove's: its AfterRemoved, told as it goes (the game tells Hook.AfterPowerAmountChanged's listeners first; no read
         // power's AfterRemoved changes what one of them reads: TRACKER, the power removals' order).
         if (gone) TellRemoved(state, target, power, left);
@@ -784,6 +785,32 @@ public static partial class SimEngine
         }
         // Each copy of an instanced power is applied on its own (a second Intercept on a covered teammate: a Covered of its own).
         if (!had || powerModel is { Instanced: true }) powerModel?.AfterApplied(state, target, applier, amount);
+        return true;
+    }
+
+    /// <summary>
+    /// A new instance's SkipNextDurationTick, as PowerCmd.Apply sets it: a debuff landing new on a creature of the players' side during the enemies'
+    /// turn (on main's code, on any turn: MainRule.DebuffSkipsTickOnAnyTurn) skips its next PowerCmd.TickDownDuration; any other new instance starts
+    /// without the skip (a new PowerModel's).
+    /// </summary>
+    private static void NewInstanceTickSkip(SimState state, int target, PowerId power, bool debuff)
+    {
+        var key = SimKeys.Owned(power.Name, target);
+        var skips = debuff && !Who.IsEnemy(target) && (state.EnemyTurnNow || (state.MainRules & MainRule.DebuffSkipsTickOnAnyTurn) != 0);
+        if (skips) state.TickSkips = state.TickSkips.With(key, amount: 1);
+        else if (state.TickSkips.Count > 0) state.TickSkips = state.TickSkips.Without(key);
+    }
+
+    /// <summary>
+    /// PowerCmd.TickDownDuration's skip: the creature's power has SkipNextDurationTick set (SimState.TickSkips), so this tick is spent on it (the
+    /// flag cleared) and the power stays as it is. False: no skip, the power ticks down.
+    /// </summary>
+    internal static bool SpendsTickSkip(SimState state, int creature, PowerId power)
+    {
+        if (state.TickSkips.Count == 0) return false;
+        var key = SimKeys.Owned(power.Name, creature);
+        if (!state.TickSkips.Has(key)) return false;
+        state.TickSkips = state.TickSkips.Without(key);
         return true;
     }
 

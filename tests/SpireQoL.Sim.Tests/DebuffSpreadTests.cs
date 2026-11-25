@@ -12,6 +12,13 @@ public class DebuffSpreadTests
 {
     private static SimEnemy Enemy(int id, int hp = 50) => new() { Id = id, Name = $"E{id}", Hp = hp };
 
+    /// <summary>The state right after the play: the enemies' turn's end ticks their Vulnerable and Weak down (WeakPower.AfterSideTurnEnd).</summary>
+    private static SimState AfterThePlay(SimState state, SimPlay play)
+    {
+        SimEngine.ApplyPlayTo(state, play, out var branches, out _);
+        return Assert.Single(branches);
+    }
+
     private static SimPlay Misery(int damage = 7) => new()
     {
         Name = "Misery", IsAttack = true, HitTarget = SimPlay.Target.Single, TargetId = 0,
@@ -25,7 +32,7 @@ public class DebuffSpreadTests
         var state = new SimState { Enemies = { Enemy(id: 0), Enemy(id: 1), Enemy(id: 2) } };
         state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Vulnerable, amount: 2).With(PowerId.Weak, amount: 1).With(PowerId.Strength, amount: 3);
         state.Enemies[1].Powers = PowerSet.Empty.With(PowerId.Weak, amount: 1);
-        var branch = Assert.Single(SimEngine.Run(state, Misery()).Branches);
+        var branch = AfterThePlay(state, Misery());
         Assert.Null(branch.Unmodelled);
         Assert.Equal(2, branch.Enemy(id: 1)!.Powers[PowerId.Vulnerable]);
         Assert.Equal(2, branch.Enemy(id: 1)!.Powers[PowerId.Weak]);
@@ -56,7 +63,7 @@ public class DebuffSpreadTests
         // The target dies to the attack: its debuffs, taken before it, still spread; an enemy the attack killed isn't hittable and gets none.
         var state = new SimState { Enemies = { Enemy(id: 0, hp: 5), Enemy(id: 1) } };
         state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Vulnerable, amount: 3);
-        var branch = Assert.Single(SimEngine.Run(state, Misery(damage: 10)).Branches);
+        var branch = AfterThePlay(state, Misery(damage: 10));
         Assert.False(branch.Enemy(id: 0)!.Alive);
         Assert.Equal(3, branch.Enemy(id: 1)!.Powers[PowerId.Vulnerable]);
     }

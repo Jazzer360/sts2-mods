@@ -108,6 +108,23 @@ public sealed class ReadModel : SimModel
     /// <summary>A play hook of its code turns it dark (ModelSpec.DarkensOnPlay): the play check holds its crossed tab to that.</summary>
     public override ActedSeen Seen => Spec.DarkensOnPlay ? ActedSeen.StatusCleared : ActedSeen.Flash;
 
+    /// <summary>
+    /// The enemies' turn's end reaches its hook for this owner unless every step there waits on its owner taking part (participants.Contains(base.Owner),
+    /// HookFact.TakesPart) and its owner is of the players' side, or nothing is paid there (decision #239's payouts are asked as the hook starts).
+    /// </summary>
+    public override bool MayActAtTheEnemiesTurnEnd(string hook, int owner) =>
+        Overrides(hook) && (Who.IsEnemy(owner) || !Enum.TryParse<HookName>(hook, out var name) || _paidWhere.ContainsKey(name)
+            || Spec.Of(name) is not { } program || !program.Steps.All(step => WaitsOnTakingPart(step.When)));
+
+    /// <summary>A step's condition holds only while its owner takes part: TakesPart itself, or one side of an And that does.</summary>
+    private static bool WaitsOnTakingPart(HookValue? when) => when switch
+    {
+        HookTest test => WaitsOnTakingPart(test.Test),
+        HookFactValue { Fact: HookFact.TakesPart } => true,
+        HookMath { Operation: HookOperation.And } both => WaitsOnTakingPart(both.Left) || WaitsOnTakingPart(both.Right),
+        _ => false,
+    };
+
     // ---- payouts (decision #239)
 
     /// <summary>Its payouts a play decides (Payout.DuringTheTurn), each compiled once: its condition during the turn, asked of its hook's turn.</summary>
@@ -1717,9 +1734,11 @@ public sealed class ReadModel : SimModel
                     else SimEngine.RemovePower(args.State, args.Owner, ThisPower);
                     return One(args.State);
                 };
-            case DecrementPowerStep:
+            case DecrementPowerStep decrement:
                 return args =>
                 {
+                    // PowerCmd.TickDownDuration: a power whose SkipNextDurationTick is set spends it instead of the tick.
+                    if (decrement.TicksDuration && SimEngine.SpendsTickSkip(args.State, args.Owner, ThisPower)) return One(args.State);
                     if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
                     if (args.Copy > 0) ChangeCopy(args.State, args.Owner, args.Copy, delta: -1);
                     else SimEngine.DecrementPower(args.State, args.Owner, ThisPower);
@@ -2365,9 +2384,10 @@ public sealed class ReadModel : SimModel
                 return (in HookArgs args) => (args.Damage?.Card ?? args.Block?.Card)?.Vars.TryGetValue(key, out var cardValue) == true ? cardValue : 0m;
             }
             case HookFact.CardIsOwners: return (in HookArgs args) => (args.Damage?.Play ?? args.Block?.Play)?.Owner == args.Owner ? 1m : 0m;
-            // The side whose turn ends is the players' (a living player takes part); the side whose turn starts, the enemies' (a living enemy).
+            // The side whose turn ends is the players' as your turn ends (a living player takes part), the enemies' as theirs does (a living enemy:
+            // CombatManager.EndEnemyTurnInternal's CreaturesOnCurrentSide); the side whose turn starts, the enemies' (a living enemy).
             case HookFact.TakesPart: return (in HookArgs args) => (args.Hook is HookName.BeforeSideTurnStart or HookName.AfterSideTurnStart or HookName.AfterSideTurnStartLate
-                ? args.State.Enemy(args.Owner) is { Alive: true } : args.State.TakesPart(args.Owner)) ? 1m : 0m;
+                ? args.State.Enemy(args.Owner) is { Alive: true } : args.State.EndsTheirTurn(args.Owner)) ? 1m : 0m;
             case HookFact.TakeBound: return (in HookArgs args) => Take(in args) ? 1m : 0m;
             case HookFact.BoundTaken: return (in HookArgs args) => args.Taken?[0] ?? 0;
             case HookFact.HitUnblocked: return (in HookArgs args) => args.Hit?.Unblocked ?? 0;
@@ -2475,6 +2495,11 @@ public sealed class ReadModel : SimModel
             {
                 var creature = CreatureNamed(fact);
                 return (in HookArgs args) => CreatureOf(in args, creature) is var id && id != Who.None && !Who.IsEnemy(id) ? 1m : 0m;
+            }
+            case HookFact.CreatureOnEndingSide:
+            {
+                var creature = CreatureNamed(fact);
+                return (in HookArgs args) => CreatureOf(in args, creature) is var id && id != Who.None && Who.IsEnemy(id) == args.State.EnemyTurnNow ? 1m : 0m;
             }
             default: throw new InvalidOperationException($"{Name}: no fact {fact.Fact}");
         }

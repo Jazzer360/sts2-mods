@@ -55,13 +55,16 @@ public sealed class PaelsEye : RelicProc
     public override bool Harmful => true;
     /// <summary>The turn's first card clears its Active status (BeforeCardPlayed: Status = Normal); it doesn't flash.</summary>
     public override ActedSeen Seen => ActedSeen.StatusCleared;
+    /// <summary>Its BeforeSideTurnEndEarly waits on its owner, a player, taking part: never as the enemies' turn ends.</summary>
+    public override bool MayActAtTheEnemiesTurnEnd(string hook, int owner) => false;
+
     /// <summary>
     /// BeforeSideTurnEndEarly: still armed (no card played this turn: SimPlayer.PaelsEyeExhaust), its owner's whole hand is
     /// exhausted (Feel No Pain, Charon's Ashes... react to each card); nothing is left to act in hand or exhaust as Ethereal.
     /// </summary>
     public override IEnumerable<SimState> BeforeSideTurnEndEarly(SimState state, int owner)
     {
-        if (!state.TakesPart(owner) || state.Player(owner) is not { PaelsEyeExhaust: true, HandCount: > 0 } player) return One(state);
+        if (!state.EndsTheirTurn(owner) || state.Player(owner) is not { PaelsEyeExhaust: true, HandCount: > 0 } player) return One(state);
         var cards = player.HandCount;
         return SimEngine.ProcCardEvent(state, CardEvent.Exhausted, cards, owner, indirect: false).Select(branch =>
         {

@@ -91,7 +91,9 @@ Non-goals:
   the enemy turn (poison tick, block cleared, each enemy's move as its code runs it: hit by hit, each attack between its BeforeAttack and
   AfterAttack, each hit on a player the one damage on a player (`SimEngine.Lands`: decision #241), your Thorns, Flame Barrier and Reflect
   hitting back from their code as damage through the engine (decision #233), with the powers and block it
-  gives in their place, a new power on an enemy scaled for the players as PowerCmd.Apply scales it: decision #234).
+  gives in their place, a new power on an enemy scaled for the players as PowerCmd.Apply scales it: decision #234); then the
+  enemies' side's turn end (`CombatManager.EndEnemyTurnInternal`: `BeforeSideTurnEnd` and `AfterSideTurnEnd` with their Early and Late
+  passes, its participants the enemies: decision #302).
 
 ## Architecture
 
@@ -132,10 +134,15 @@ deterministic and run synchronously inside `SimEngine.Damage`, so every source o
 gets them. (The first draft had an explicit per-branch work stack; composing over branch sets did the same with no new
 machinery.)
 
-A run is the play, the end of your turn, the enemies' turn start, then the enemy turn. The enemies' turn start
+A run is the play, the end of your turn, the enemies' turn start, the enemy turn, then the enemies' turn end. The enemies' turn start
 (`SimEngine.EnemyTurnStart`, CombatManager.StartTurn) runs every listener's BeforeSideTurnStart, AfterSideTurnStart and
 AfterSideTurnStartLate, its participants the living enemies, in the game's listener order: Hardened Shell's budget resets, each
 enemy's poison ticks (PoisonPower read from its code: a damage per tick, TriggerCount of them), then the enemies move. The
+enemies' turn end (`SimEngine.EnemyTurnEnd`, decision #302) runs every listener's turn's-end hooks with the enemies' side ending: a read
+model's code tests the side and the participants itself (`HookFact.EnemiesTurn`, `CreatureOnEndingSide`, `TakesPart`: Weak, Vulnerable
+and Frail tick down, a debuff new on the players' side skipping its first tick as PowerCmd.Apply marks it, `SimState.TickSkips`), on the
+enemies' block of their turn (the block your turn left them comes back after it: the outcome reads it). What it can't follow there is
+kept apart from what's read through the enemy turn (`SimState.UnmodelledAtTheirTurnEnd`). The
 players' next turn start (AfterEnergyReset, AfterPlayerTurnStart, BeforeHandDraw) is past every simulation.
 
 ### Pipelines

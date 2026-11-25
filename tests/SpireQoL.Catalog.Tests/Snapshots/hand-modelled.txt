@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 22 engine rules naming 159 game methods; 3 adapter rules; 32 hand-written models.
+# 22 engine rules naming 161 game methods; 3 adapter rules; 32 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -22,9 +22,9 @@ An attack: its hits, their targets (a random one a branch each), the attack's ho
 Block: the block math, its hooks, a power's or relic's block, block lost
   game: CreatureCmd.GainBlock, Hook.ModifyBlock, Hook.AfterModifyingBlockAmount, Hook.BeforeBlockGained, Hook.AfterBlockGained, CreatureCmd.LoseBlock, Creature.GainBlockInternal
   simulator: SimEngine.BlockOnce, SimEngine.BlockBaseNow, SimEngine.CalcBlock, SimEngine.GainBlock, SimEngine.ShareBlock, SimEngine.ProcBlock, SimEngine.ProcBlockFor, SimEngine.EnemyBlock, SimEngine.RunBlock, SimEngine.StripBlock, SimEngine.LoseBlock
-A power lands: the amount given, Artifact, the players' scaling of a new one on an enemy (its class's own scaling read from its code: decision #234), its instances and copies, the listeners told; a power changed, decremented or removed, gone at the amount its class's AllowNegative says, its AfterRemoved told as it goes
+A power lands: the amount given, Artifact, the players' scaling of a new one on an enemy (its class's own scaling read from its code: decision #234), its instances and copies, the listeners told; a power changed, decremented or removed, gone at the amount its class's AllowNegative says, its AfterRemoved told as it goes; a duration tick skipped once for a debuff new on the players' side (SkipNextDurationTick)
   game: PowerCmd.Apply, PowerCmd.ModifyAmount, PowerModel.ShouldRemoveDueToAmount, PowerModel.ApplyInternal, PowerCmd.FindExistingInstanceForStacking, PowerCmd.Decrement, PowerCmd.Remove, PowerModel.AfterRemoved, PowerCmd.TickDownDuration, Hook.ModifyPowerAmountGiven, Hook.AfterModifyingPowerAmountGiven, Hook.BeforePowerAmountChanged, Hook.AfterPowerAmountChanged, Creature.ApplyPowerInternal, Creature.CanReceivePowers, Hook.ShouldAllowHitting
-  simulator: SimEngine.ApplyPower, SimEngine.AmountGiven, SimEngine.ApplyAndTell, SimEngine.ApplyInHit, SimEngine.Tell, SimEngine.RunApplyPower, SimEngine.ApplyPowerOf, SimEngine.AmountOf, SimEngine.MovePowers, SimEngine.DecrementPower, SimEngine.RemovePower, SimEngine.TellRemoved, SimEngine.CanReceivePowers
+  simulator: SimEngine.ApplyPower, SimEngine.AmountGiven, SimEngine.ApplyAndTell, SimEngine.ApplyInHit, SimEngine.Tell, SimEngine.RunApplyPower, SimEngine.ApplyPowerOf, SimEngine.AmountOf, SimEngine.MovePowers, SimEngine.DecrementPower, SimEngine.RemovePower, SimEngine.TellRemoved, SimEngine.CanReceivePowers, SimEngine.NewInstanceTickSkip, SimEngine.SpendsTickSkip
 A play's spread of its target's debuffs onto the other enemies (its loops read from the card's code, decision #293): each power whose amount is a debuff (its class's Type, StackType and AllowNegative read from its code), taken where the code takes them, onto every other hittable enemy as PowerCmd applies it
   game: PowerModel.GetTypeForAmount
   simulator: SimEngine.KeepTargetDebuffs, SimEngine.SpreadKeptDebuffs
@@ -58,9 +58,9 @@ The fight's end inside a turn (decision #301): once no primary enemy is alive an
 The players' turn's end: its hooks in their places, Ethereal cards, the cards that act in hand, the hand flushed
   game: CombatManager.EndPlayerTurnPhaseOneInternal, CombatManager.EndPlayerTurnPhaseTwoInternal, CombatManager.DoTurnEnd, CombatManager.FlushPlayerHand, Hook.BeforeSideTurnEnd, Hook.AfterSideTurnEnd, Hook.ShouldEtherealTrigger, Hook.ShouldFlush, Hook.BeforeFlush
   simulator: SimEngine.EndOfTurn, SimEngine.EndOfTurnSteps, SimEngine.Exhausting, SimEngine.CardsActInHand
-The enemies' turn: its start's hooks, block cleared, each move in turn order, the intents read after a play
-  game: CombatManager.StartTurn, CombatManager.ExecuteEnemyTurn, MonsterModel.PerformMove, Hook.BeforeSideTurnStart, Hook.AfterSideTurnStart, Hook.ShouldClearBlock, Creature.ClearBlock
-  simulator: SimEngine.EnemyTurnStart, SimEngine.StartTheEnemiesTurn, SimEngine.EnemyTurn, SimEngine.ClearsBlock, SimEngine.IntentsAfter
+The enemies' turn: its start's hooks, block cleared, each move in turn order, its end's hooks, the intents read after a play
+  game: CombatManager.StartTurn, CombatManager.ExecuteEnemyTurn, MonsterModel.PerformMove, Hook.BeforeSideTurnStart, Hook.AfterSideTurnStart, Hook.ShouldClearBlock, Creature.ClearBlock, CombatManager.EndEnemyTurn, CombatManager.EndEnemyTurnInternal
+  simulator: SimEngine.EnemyTurnStart, SimEngine.StartTheEnemiesTurn, SimEngine.EnemyTurn, SimEngine.EnemyTurnEnd, SimEngine.EnemyTurnEndSteps, SimEngine.TheirTurnEndStep, SimEngine.TheirTurnEndUnknownApart, SimEngine.TurnEndBlockBack, SimEngine.ClearsBlock, SimEngine.IntentsAfter
 A heal: up to max HP
   game: CreatureCmd.Heal, Creature.HealInternal
   simulator: SimEngine.Heal
@@ -86,13 +86,13 @@ Fairy in a Bottle and Lizard Tail: a death held back, healed from 0
 ## The hand-written models (Sim/Models): each game class's hooks, and what its model answers
 
 AsleepPower: AsleepPower.AfterDamageReceived, AsleepPower.AfterSideTurnEnd, AsleepPower.BeforeSideTurnEndVeryEarly
-  model: AfterDamageReceived, OutcomeTab
+  model: AfterDamageReceived, AfterSideTurnEnd, BeforeSideTurnEndVeryEarly, OutcomeTab
 ChemicalX: ChemicalX.BeforeCardPlayed, ChemicalX.ModifyXValue
   model: BeforeCardPlayed
 CorruptionPower: CorruptionPower.AfterModifyingCardPlayResultLocation, CorruptionPower.ModifyCardPlayResultLocation, CorruptionPower.TryModifyEnergyCostInCombatLate
   model: ModifyCardPlayResultLocation
 CoveredPower: CoveredPower.AfterApplied, CoveredPower.AfterDeath, CoveredPower.AfterRemoved, CoveredPower.AfterSideTurnEnd, CoveredPower.ModifyDamageMultiplicative
-  model: AfterApplied, ModifyDamageMultiplicative
+  model: AfterApplied, AfterSideTurnEnd, ModifyDamageMultiplicative
 FeralPower: FeralPower.AfterApplied, FeralPower.AfterModifyingCardPlayResultLocation, FeralPower.AfterSideTurnStart, FeralPower.InitInternalData, FeralPower.ModifyCardPlayResultLocation
   model: AfterApplied, AfterModifyingCardPlayResultLocation, ModifyCardPlayResultLocation
 ImitationLearningPower: ImitationLearningPower.AfterCardPlayed, ImitationLearningPower.BeforeCardPlayed, ImitationLearningPower.InitInternalData
@@ -106,7 +106,7 @@ LostLutePower: LostLutePower.AfterCardPlayed (beta only)
 NecroMasteryPower: NecroMasteryPower.AfterCurrentHpChanged
   model: AfterOstyHpLost
 PaelsEye: PaelsEye.AfterCombatEnd, PaelsEye.AfterObtained, PaelsEye.AfterSideTurnStart, PaelsEye.AfterTakingExtraTurn, PaelsEye.BeforeCardPlayed, PaelsEye.BeforeSideTurnEndEarly, PaelsEye.ShouldTakeExtraTurnEarly (beta only)
-  model: BeforeCardPlayed, BeforeSideTurnEndEarly
+  model: BeforeCardPlayed, BeforeSideTurnEndEarly, MayActAtTheEnemiesTurnEnd
 PaelsTears: PaelsTears.AfterCombatEnd, PaelsTears.AfterSideTurnStart, PaelsTears.BeforeSideTurnEnd
   model: AfterCardEvent, AfterPlayResolved
 ParryPower: no hooks of its own
@@ -118,13 +118,13 @@ Pocketwatch: Pocketwatch.AfterCardPlayed, Pocketwatch.AfterCombatEnd, Pocketwatc
 RedSkull: RedSkull.AfterCombatEnd, RedSkull.AfterCurrentHpChanged, RedSkull.AfterRoomEntered
   model: AfterDamageReceived, OutcomeTab
 Regret: no game class by its name (the simulator's own)
-  model: BeforeSideTurnEnd
+  model: BeforeSideTurnEnd, MayActAtTheEnemiesTurnEnd
 SeekingEdgePower: no hooks of its own
   model: nothing it overrides
 SkittishPower: SkittishPower.AfterAttack, SkittishPower.AfterSideTurnEnd, SkittishPower.GetScaledAmountForMultiplayer, SkittishPower.InitInternalData
-  model: AfterAttack, AfterDamageReceived, BeforeAttack
+  model: AfterAttack, AfterDamageReceived, AfterSideTurnEnd, BeforeAttack, MayActAtTheEnemiesTurnEnd
 SlumberPower: SlumberPower.AfterDamageReceived, SlumberPower.AfterRemoved, SlumberPower.AfterSideTurnEnd
-  model: AfterDamageReceived, OutcomeTab
+  model: AfterDamageReceived, AfterSideTurnEnd, OutcomeTab
 SmoggyPower: SmoggyPower.AfterCardEnteredCombat, SmoggyPower.AfterCardPlayed, SmoggyPower.AfterSideTurnEnd, SmoggyPower.ShouldPlay
   model: AfterCardPlayed
 StratagemPower: StratagemPower.AfterShuffle

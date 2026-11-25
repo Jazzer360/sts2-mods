@@ -31,6 +31,7 @@ written when checked off: the record of how each was done. What's open stays in 
 - [x] Deterministic next moves (1.12.0).
 - [x] Random branches with odds (1.12.0).
 - [x] Conditional moves, as things stand (1.12.0).
+- [x] The enemies' side's turn end read from code and simulated (decision #302): every listener's BeforeSideTurnEnd and AfterSideTurnEnd (VeryEarly, Early, Late) after the enemy turn, in listener order; the reader's side facts at runtime (the enemies' side's steps no longer dropped: Weak, Vulnerable, Frail, Intangible, No Block, Colossus, Tainted, Underworld, Intercept); the players' turn end heard by every listener; TickDownDuration's skip (BranchRules.DebuffTickSkippedOnTheEnemiesTurnOnly); Covered, Skittish, Asleep and Slumber's hand-written turn's ends. Nothing shown reads it yet.
 
 ## 9. Proc Tags → `proc-indicators` (built in 0.19.0; full source list in FEATURES.md)
 ### Configuration: every indicator can be turned off (defaults: everything on)

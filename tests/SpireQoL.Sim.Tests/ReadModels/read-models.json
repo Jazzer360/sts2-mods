@@ -4670,6 +4670,22 @@
     "Kind": "Power",
     "Hooks": [
       {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__10.MoveNext:0018",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EnemiesTurn"
+              }
+            }
+          }
+        ]
+      },
+      {
         "Hook": "ModifyDamageMultiplicative",
         "Steps": [],
         "Returns": {
@@ -4953,7 +4969,7 @@
                 "$kind": "HookNot",
                 "Inner": {
                   "$kind": "HookFactValue",
-                  "Fact": "CreatureOnPlayersSide",
+                  "Fact": "CreatureOnEndingSide",
                   "Creature": {
                     "Who": "Owner",
                     "PetOwner": false
@@ -7808,8 +7824,15 @@
           {
             "$kind": "RemovePowerStep",
             "When": {
-              "$kind": "HookConstant",
-              "Value": 1
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__5.MoveNext:0018",
+              "Test": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EnemiesTurn"
+                }
+              }
             }
           }
         ]
@@ -9004,7 +9027,7 @@
                 "$kind": "HookNot",
                 "Inner": {
                   "$kind": "HookFactValue",
-                  "Fact": "CreatureOnPlayersSide",
+                  "Fact": "CreatureOnEndingSide",
                   "Creature": {
                     "Who": "Owner",
                     "PetOwner": false
@@ -9484,6 +9507,23 @@
     "Name": "FrailPower",
     "Kind": "Power",
     "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "TicksDuration": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__7.MoveNext:0018",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EnemiesTurn"
+              }
+            }
+          }
+        ]
+      },
       {
         "Hook": "ModifyBlockMultiplicative",
         "Steps": [],
@@ -12747,6 +12787,22 @@
         ]
       },
       {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__8.MoveNext:0018",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EnemiesTurn"
+              }
+            }
+          }
+        ]
+      },
+      {
         "Hook": "ModifyDamageCap",
         "Steps": [],
         "Returns": {
@@ -12868,6 +12924,22 @@
           {
             "$kind": "UnknownStep",
             "Why": "InterceptPower\u0027s AfterRemoved isn\u0027t read (gap: a loop)"
+          }
+        ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__16.MoveNext:0018",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EnemiesTurn"
+              }
+            }
           }
         ]
       },
@@ -14777,11 +14849,26 @@
           {
             "$kind": "FlashStep",
             "When": {
-              "$kind": "HookTest",
-              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003F",
-              "Test": {
-                "$kind": "HookFactValue",
-                "Fact": "TakesPart"
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0027",
+                "Test": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EnemiesTurn"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
               }
             }
           },
@@ -14809,11 +14896,26 @@
               "PetOwner": false
             },
             "When": {
-              "$kind": "HookTest",
-              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003F",
-              "Test": {
-                "$kind": "HookFactValue",
-                "Fact": "TakesPart"
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0027",
+                "Test": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EnemiesTurn"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
               }
             }
           },
@@ -14841,22 +14943,52 @@
               "PetOwner": false
             },
             "When": {
-              "$kind": "HookTest",
-              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003F",
-              "Test": {
-                "$kind": "HookFactValue",
-                "Fact": "TakesPart"
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0027",
+                "Test": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EnemiesTurn"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
               }
             }
           },
           {
             "$kind": "RemovePowerStep",
             "When": {
-              "$kind": "HookTest",
-              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003F",
-              "Test": {
-                "$kind": "HookFactValue",
-                "Fact": "TakesPart"
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0027",
+                "Test": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EnemiesTurn"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:003F",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
               }
             }
           }
@@ -20225,6 +20357,22 @@
     "Kind": "Power",
     "Hooks": [
       {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0018",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EnemiesTurn"
+              }
+            }
+          }
+        ]
+      },
+      {
         "Hook": "ModifyBlockMultiplicative",
         "Steps": [],
         "Returns": {
@@ -21243,8 +21391,15 @@
           {
             "$kind": "RemovePowerStep",
             "When": {
-              "$kind": "HookConstant",
-              "Value": 1
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__10.MoveNext:0018",
+              "Test": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookFactValue",
+                  "Fact": "EnemiesTurn"
+                }
+              }
             }
           }
         ]
@@ -34696,6 +34851,33 @@
     "Kind": "Power",
     "Hooks": [
       {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__5.MoveNext:0018",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EnemiesTurn"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__5.MoveNext:0018",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EnemiesTurn"
+              }
+            }
+          }
+        ]
+      },
+      {
         "Hook": "ModifyDamageAdditive",
         "Steps": [],
         "Returns": {
@@ -37355,6 +37537,22 @@
             }
           }
         ]
+      },
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__7.MoveNext:0018",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EnemiesTurn"
+              }
+            }
+          }
+        ]
       }
     ],
     "HelpsOwner": false
@@ -39721,6 +39919,23 @@
     "Name": "VulnerablePower",
     "Kind": "Power",
     "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "TicksDuration": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__8.MoveNext:0018",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EnemiesTurn"
+              }
+            }
+          }
+        ]
+      },
       {
         "Hook": "ModifyDamageMultiplicative",
         "Steps": [],
@@ -43100,6 +43315,23 @@
     "Name": "WeakPower",
     "Kind": "Power",
     "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "TicksDuration": true,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__8.MoveNext:0018",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EnemiesTurn"
+              }
+            }
+          }
+        ]
+      },
       {
         "Hook": "ModifyDamageMultiplicative",
         "Steps": [],

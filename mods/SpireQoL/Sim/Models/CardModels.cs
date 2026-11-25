@@ -30,9 +30,12 @@ public sealed class RegretCard : CardListener
 {
     public override string Name => CardId.Regret.Name;
 
+    /// <summary>Its BeforeSideTurnEnd waits on its owner, a player, taking part: never as the enemies' turn ends.</summary>
+    public override bool MayActAtTheEnemiesTurnEnd(string hook, int owner) => false;
+
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner)
     {
-        if (!state.TakesPart(owner) || state.Player(owner) is not { } player || !player.TurnEndCards.Any(card => card.Card == Name)) return One(state);
+        if (!state.EndsTheirTurn(owner) || state.Player(owner) is not { } player || !player.TurnEndCards.Any(card => card.Card == Name)) return One(state);
         var hand = Math.Max(0, player.HandCount);
         state.MutablePlayer(owner).TurnEndCards = player.TurnEndCards.Select(card => card.Card == Name ? card with { Amount = hand } : card).ToList();
         return One(state);
