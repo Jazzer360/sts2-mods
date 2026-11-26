@@ -57,6 +57,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Self-Forming Clay, Emotion Chip, Demon Tongue and an enemy's Slippery are worked out from their own code (what each does when its owner loses HP, and the tag that says a card makes it act). What's shown is unchanged.
 - Monarch's Gaze is worked out from its own code (the temporary Strength loss each of your powered hits gives its target). What's shown is unchanged.
 - Every card's program is read from the game's code once a launch, on a background thread as the mod loads, so a fight no longer reads one on the game's thread (a small stutter on a launch's first fight). Dev mode logs how long the reads took.
+- Intent Details: the powers Entomancer's Pheromone Spit and Ceremonial Beast's Plow give are read from their own code (each power's condition asked of the enemy now). What's shown is unchanged.
 - Dev mode leaves out the first frame after the game's window comes back to the front, as it already did the time in the background (the switch's frame, not play's).
 - Twine and Yah are worked out from their own code (what each does when one of your arrows comes loose). What's shown is unchanged.
 - The Play audit tells a damage cap's flash and a power an attack spends from the game's code for them, where it kept their names (Buffer's flash as it stops HP is a cap's too now).

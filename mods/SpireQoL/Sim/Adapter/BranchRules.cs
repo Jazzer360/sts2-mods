@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using MegaCrit.Sts2.Core.Models.Cards;
-using MegaCrit.Sts2.Core.Models.Monsters;
 using MegaCrit.Sts2.Core.Models.Powers;
 
 namespace SpireQoL.Sim;
@@ -29,10 +28,6 @@ internal static class BranchRules
         "beta's Omnislice splashes a powered hit (ValueProp.Move) with only the damage caps; main's splash is unpowered (Unpowered | Move) through " +
         "every damage modifier, and main's ThornsPower answers it anyway (cardSource is Omnislice): told by that Thorns case, made in the same change");
 
-    public static readonly BranchRule PlowStrengthNeedsPlow = new(nameof(PlowStrengthNeedsPlow),
-        new CodeFact(typeof(CeremonialBeast), "PlowMove", nameof(PlowPower)), OnBeta: true, MainRule.None,
-        "beta's CeremonialBeast.PlowMove gives its Strength only while it still has Plow (MoveBranches); main's always does");
-
     public static readonly BranchRule DamageWorkedOutFirst = new(nameof(DamageWorkedOutFirst),
         new CodeFact(typeof(MegaCrit.Sts2.Core.Commands.CreatureCmd), "GetDamageResults", Mentions: null), OnBeta: true, MainRule.ReceivedBeforeTheResults,
         "beta's CreatureCmd.Damage works out what a damage does first (GetDamageResults: its redirects, block and HP loss, a dry run), then tells " +
@@ -47,7 +42,7 @@ internal static class BranchRules
 
     public static IReadOnlyList<BranchRule> All { get; } = new[]
     {
-        OmnisliceSplashIsPowered, PlowStrengthNeedsPlow, DamageWorkedOutFirst, DebuffTickSkippedOnTheEnemiesTurnOnly,
+        OmnisliceSplashIsPowered, DamageWorkedOutFirst, DebuffTickSkippedOnTheEnemiesTurnOnly,
     };
 
     private static readonly ConcurrentDictionary<BranchRule, bool> Beta = new();

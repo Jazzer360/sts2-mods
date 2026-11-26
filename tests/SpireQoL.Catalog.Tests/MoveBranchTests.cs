@@ -62,10 +62,11 @@ public class MoveBranchTests
     public void EveryMoveWithBranchPowersHasARuleOrAReason()
     {
         var missing = Moves().Select(move => (move.Key, Calls: MovePowers.CallsOf(move.Method)))
-            .Where(keyCalls => keyCalls.Calls.Any(call => !call.Certain) && !MoveBranches.Rules.ContainsKey(keyCalls.Key) && !MoveBranches.Reviewed.ContainsKey(keyCalls.Key))
+            .Where(keyCalls => keyCalls.Calls.Any(call => !call.Certain) && !MoveBranches.Rules.ContainsKey(keyCalls.Key) && !MoveBranches.Reviewed.ContainsKey(keyCalls.Key)
+                && !MoveBranches.Readable(Moves().Single(move => move.Key == keyCalls.Key).Method, keyCalls.Calls.Select(call => call.Power.Name).ToList()))
             .Select(keyCalls => $"{keyCalls.Key}: {Describe(keyCalls.Calls)}").ToList();
         Assert.True(missing.Count == 0, "Moves applying powers on only some branches, with no rule in Sim/Adapter/MoveBranches.cs (decision #109): " +
-            "read each move in the decompile and add a rule that picks its branch from what a player sees, or a reviewed reason.\n" + string.Join("\n", missing));
+            "read each move in the decompile: make its code readable (MoveBranches.FromCode), or add a rule that picks its branch from what a player sees, or a reviewed reason.\n" + string.Join("\n", missing));
     }
 
     [Fact]
