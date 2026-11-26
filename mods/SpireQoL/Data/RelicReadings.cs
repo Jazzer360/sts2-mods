@@ -40,6 +40,12 @@ public sealed record RelicReading(string Relic, ChoiceEffect On, ChoiceEffect Cr
 {
     /// <summary>It does something to a choice outside fights.</summary>
     public bool Reacts => On != ChoiceEffect.None || Card != null;
+
+    /// <summary>
+    /// The fields of its own that a choice sets and whose being set ends a bonus of its (Maw Bank's HasItemBeenBought, set by a purchase): what makes
+    /// that choice crossed (and, for the map, what ends its row).
+    /// </summary>
+    public IReadOnlyList<(string Field, ChoiceEffect Effect)> Ends { get; init; } = Array.Empty<(string, ChoiceEffect)>();
 }
 
 /// <summary>
@@ -89,14 +95,19 @@ public static class RelicReadings
     private enum Identity { None, Amount, Zero, One }
 
     /// <param name="Name">The hook (a virtual of AbstractModel's).</param>
-    /// <param name="Effect">The choice it's told about.</param>
+    /// <param name="Effect">The choice it's told about (None: a choice no reminder names, read for its notes and its room: a rest site's smith).</param>
     /// <param name="InCombat">Whether the setting is a fight (CombatManager.IsInProgress).</param>
     /// <param name="Amount">A Modify hook's amount parameter: returned as is, nothing changes.</param>
     /// <param name="Parameters">What each of its parameters is in the setting; one not named is unknown.</param>
-    private sealed record HookSetting(string Name, ChoiceEffect Effect, How How, bool InCombat, Identity Identity, string? Amount, IReadOnlyDictionary<string, Who> Parameters)
+    /// <param name="InDeck">The hook's card is in your deck there (its pile's type is Deck): a card joining it, or one leaving it.</param>
+    private sealed record HookSetting(string Name, ChoiceEffect Effect, How How, bool InCombat, Identity Identity, string? Amount, IReadOnlyDictionary<string, Who> Parameters,
+        bool InDeck = false)
     {
         /// <summary>The card parameter, for a hook about a card.</summary>
         public string? CardParameter => Parameters.FirstOrDefault(parameter => parameter.Value == Who.Card).Key;
+
+        /// <summary>The choices it's told about, a card's and a curse's apart (each judged on the game's cards of its kind).</summary>
+        public ChoiceEffect[] Kinds => Effect == (ChoiceEffect.CardToDeck | ChoiceEffect.CurseToDeck) ? new[] { ChoiceEffect.CardToDeck, ChoiceEffect.CurseToDeck } : new[] { Effect };
     }
 
     private static Dictionary<string, Who> Setting(params (string Parameter, Who Who)[] parameters) => parameters.ToDictionary(entry => entry.Parameter, entry => entry.Who);
@@ -113,7 +124,12 @@ public static class RelicReadings
     /// </summary>
     private static readonly HookSetting[] Hooks =
     {
-        new("AfterCardChangedPiles", ChoiceEffect.CardToDeck | ChoiceEffect.CurseToDeck, How.Steps, InCombat: false, Identity.None, null, CardJoining),
+        new("AfterCardChangedPiles", ChoiceEffect.CardToDeck | ChoiceEffect.CurseToDeck, How.Steps, InCombat: false, Identity.None, null, CardJoining, InDeck: true),
+        // A card about to join your deck (CardPileCmd.Add: Hook.ShouldAddToDeck, then AfterAddToDeckPrevented when one said no): not in a pile yet.
+        new("ShouldAddToDeck", ChoiceEffect.CardToDeck | ChoiceEffect.CurseToDeck, How.Should, InCombat: false, Identity.None, null, Setting(("card", Who.Card))),
+        new("AfterAddToDeckPrevented", ChoiceEffect.CardToDeck | ChoiceEffect.CurseToDeck, How.Steps, InCombat: false, Identity.None, null, Setting(("card", Who.Card))),
+        // A card of your deck about to leave it (CardPileCmd.RemoveFromDeck: a removal, a transform's card).
+        new("BeforeCardRemoved", ChoiceEffect.CardRemoval, How.Steps, InCombat: false, Identity.None, null, Setting(("card", Who.Card)), InDeck: true),
         new("TryModifyCardBeingAddedToDeck", ChoiceEffect.CardToDeck, How.Modifier, InCombat: false, Identity.None, null, Setting(("card", Who.Card))),
         new("TryModifyCardBeingAddedToDeckLate", ChoiceEffect.CardToDeck, How.Modifier, InCombat: false, Identity.None, null, Setting(("card", Who.Card))),
         new("ModifyGoldGained", ChoiceEffect.GoldGain, How.Value, InCombat: false, Identity.Amount, "amount", Gold),
@@ -130,6 +146,8 @@ public static class RelicReadings
         new("AfterRestSiteHeal", ChoiceEffect.RestHeal, How.Steps, InCombat: false, Identity.None, null, Gold),
         new("ModifyRestSiteHealAmount", ChoiceEffect.RestHeal, How.Value, InCombat: false, Identity.Amount, "amount", Setting(("creature", Who.You))),
         new("TryModifyRestSiteHealRewards", ChoiceEffect.RestHeal, How.Steps, InCombat: false, Identity.None, null, Setting(("player", Who.You), ("rewards", Who.Present))),
+        // A rest site's smith (SmithRestSiteOption; no event runs it): no choice a reminder names, read for its notes; its room is the map's (RoomReadings).
+        new("AfterRestSiteSmith", ChoiceEffect.None, How.Steps, InCombat: false, Identity.None, null, Gold),
         new("AfterItemPurchased", ChoiceEffect.Purchase, How.Steps, InCombat: false, Identity.None, null, Setting(("player", Who.You), ("itemPurchased", Who.Present))),
         new("ModifyDamageAdditive", ChoiceEffect.None, How.Boost, InCombat: true, Identity.Zero, "amount", Damage),
         new("ModifyDamageMultiplicative", ChoiceEffect.None, How.Boost, InCombat: true, Identity.One, "amount", Damage),
@@ -139,10 +157,6 @@ public static class RelicReadings
 
     /// <summary>The hooks the reading reads (the coverage check: a relic overriding one has a rule or a reviewed reason).</summary>
     public static IReadOnlyList<string> HookNames { get; } = Hooks.Select(hook => hook.Name).ToList();
-
-    /// <summary>What a reaction does that works against you (the option reader's meaning of its step: a curse joining, HP or max HP lost...).</summary>
-    private const ChoiceEffect Bad = ChoiceEffect.CurseToDeck | ChoiceEffect.HpLoss | ChoiceEffect.MaxHpLoss | ChoiceEffect.GoldLoss | ChoiceEffect.PotionLoss
-                                     | ChoiceEffect.CardRemoval | ChoiceEffect.RelicLoss;
 
     /// <summary>What the event check sees happen (RunReminders.Observed): a flash on anything else isn't expected of an icon.</summary>
     private const ChoiceEffect Observable = ~(ChoiceEffect.RestHeal | ChoiceEffect.Purchase);
@@ -181,7 +195,20 @@ public static class RelicReadings
     }
 
     private static RelicReading? ReadLoaded(string relic, IReadOnlyList<CardModel> cards) =>
-        LoadedTypes.Value.TryGetValue(relic, out var type) ? Read(type, RuntimeCode.Read, () => cards) : null;
+        LoadedTypes.Value.TryGetValue(relic, out var type) ? Read(type, RuntimeCode.Read, () => cards, key => LoadedValue(relic, key)) : null;
+
+    /// <summary>The game's relics (canonical) by class name, taken once by ReadAll with the cards: their values (DynamicVars), for a Modify hook's value.</summary>
+    private static volatile IReadOnlyDictionary<string, RelicModel>? _relics;
+
+    /// <summary>
+    /// A value of a relic of the loaded game (its canonical DynamicVars' BaseValue: Bowler Hat's GoldIncrease); null before the game's models are made,
+    /// or for a value it hasn't.
+    /// </summary>
+    public static decimal? LoadedValue(string relic, string key)
+    {
+        try { return _relics is { } relics && relics.TryGetValue(relic, out var model) && model.DynamicVars.ContainsKey(key) ? model.DynamicVars[key].BaseValue : null; }
+        catch { return null; }
+    }
 
     /// <summary>Whether a relic's reading is kept (the game's cards were known when it was read).</summary>
     public static bool Kept(string relic) => Loaded.ContainsKey(relic);
@@ -204,7 +231,11 @@ public static class RelicReadings
                 try
                 {
                     var cards = ModelDb.AllCards.ToList();
-                    if (cards.Count > 0) _cards = cards;
+                    if (cards.Count > 0)
+                    {
+                        _relics = ModelDb.AllRelics.GroupBy(relic => relic.GetType().Name).ToDictionary(group => group.Key, group => group.First());
+                        _cards = cards;
+                    }
                 }
                 catch { /* the game's models aren't made yet: read without them */ }
             }
@@ -230,13 +261,15 @@ public static class RelicReadings
         public readonly List<string> Notes = new();
         public readonly List<CardReading> Cards = new();
         public readonly List<(string Field, long Value, ChoiceEffect Effect)> Stores = new();
+        public readonly List<(string Field, ChoiceEffect Effect)> Ends = new();
     }
 
     /// <summary>
     /// A relic's reading from its own code: <paramref name="read"/> gives a method's instructions, <paramref name="cards"/> the game's cards (canonical),
-    /// on which a card test is judged for a card or a curse joining your deck.
+    /// on which a card test is judged for a card or a curse joining your deck, <paramref name="values"/> the relic's own values by key (its DynamicVars),
+    /// with which a Modify hook's value is compared with the amount it's given.
     /// </summary>
-    public static RelicReading Read(Type relic, Func<MethodBase, List<CodeOp>> read, Func<IReadOnlyList<CardModel>> cards)
+    public static RelicReading Read(Type relic, Func<MethodBase, List<CodeOp>> read, Func<IReadOnlyList<CardModel>> cards, Func<string, decimal?>? values = null)
     {
         var sink = new Sink();
         var overrides = relic.GetMethods(All).Where(method => method.IsVirtual && !method.IsSpecialName && (method.Attributes & MethodAttributes.NewSlot) == 0).ToList();
@@ -244,7 +277,7 @@ public static class RelicReadings
         foreach (var hook in Hooks)
         {
             if (overrides.FirstOrDefault(method => method.Name == hook.Name) is not { } method) continue;
-            try { ReadHook(relic, method, hook, read, allCards, sink); }
+            try { ReadHook(relic, method, hook, read, allCards, values ?? (_ => null), sink); }
             catch (Exception ex) { sink.Notes.Add($"{hook.Name}: ? not read ({ex.GetType().Name})"); }
         }
         try { ReadNeeds(relic, overrides, read, sink); }
@@ -255,7 +288,8 @@ public static class RelicReadings
         if (card is { Kind: AffinityKind.Modifies }) sink.On |= ChoiceEffect.CardToDeck;
         sink.On |= sink.Crossed;
         var changesShopCards = overrides.Any(method => method.Name == "ModifyMerchantCardCreationResults");
-        return new RelicReading(relic.Name, sink.On, sink.Crossed, sink.Expect & sink.On & ~sink.TakenAway & Observable, sink.Joining, changesShopCards, card, sink.Notes);
+        return new RelicReading(relic.Name, sink.On, sink.Crossed, sink.Expect & sink.On & ~sink.TakenAway & Observable, sink.Joining, changesShopCards, card, sink.Notes)
+            { Ends = sink.Ends.Distinct().ToList() };
     }
 
     /// <summary>A relic's card readings as one (Vitruvian Minion's damage and block): the ways of each, of one kind and change.</summary>
@@ -275,7 +309,8 @@ public static class RelicReadings
         return kept;
     }
 
-    private static void ReadHook(Type relic, MethodInfo method, HookSetting hook, Func<MethodBase, List<CodeOp>> read, Lazy<IReadOnlyList<CardModel>> cards, Sink sink)
+    private static void ReadHook(Type relic, MethodInfo method, HookSetting hook, Func<MethodBase, List<CodeOp>> read, Lazy<IReadOnlyList<CardModel>> cards,
+        Func<string, decimal?> values, Sink sink)
     {
         switch (hook.How)
         {
@@ -284,10 +319,10 @@ public static class RelicReadings
                 ReadSteps(relic, ProgramReader.ReadMethod(relic, method, read), hook, cards, sink);
                 break;
             case How.Value:
-                ReadValue(ProgramReader.ReadReturnedWays(relic, method, read), hook, sink);
+                ReadValue(relic, ProgramReader.ReadReturnedWays(relic, method, read), hook, values, sink);
                 break;
             case How.Should:
-                ReadShould(ProgramReader.ReadReturnedWays(relic, method, read), hook, sink);
+                ReadShould(ProgramReader.ReadReturnedWays(relic, method, read), hook, cards, sink);
                 break;
             case How.Modifier:
                 ReadModifier(ProgramReader.ReadReturnedWays(relic, method, read), ProgramReader.ReadMethod(relic, method, read), hook, sink);
@@ -305,9 +340,7 @@ public static class RelicReadings
     /// </summary>
     private static void ReadSteps(Type relic, ModelProgram program, HookSetting hook, Lazy<IReadOnlyList<CardModel>> cards, Sink sink)
     {
-        var kinds = hook.Effect == (ChoiceEffect.CardToDeck | ChoiceEffect.CurseToDeck)
-            ? new[] { ChoiceEffect.CardToDeck, ChoiceEffect.CurseToDeck }
-            : new[] { hook.Effect };
+        var kinds = hook.Kinds;
         var found = new List<string>();
         foreach (var (step, condition) in Flattened(program.Steps, ProgramCondition.Always))
         {
@@ -316,13 +349,7 @@ public static class RelicReadings
             var runs = false;
             foreach (var kind in kinds)
             {
-                var kindCards = kind switch
-                {
-                    ChoiceEffect.CardToDeck => cards.Value.Where(card => card.Type != CardType.Curse).ToList(),
-                    ChoiceEffect.CurseToDeck => cards.Value.Where(card => card.Type == CardType.Curse).ToList(),
-                    _ => null,
-                };
-                var holds = Judged(condition, hook, kindCards);
+                var holds = Judged(condition, hook, CardsOf(kind, cards));
                 if (holds == false) continue;
                 runs = true;
                 if (step is FlashCall)
@@ -332,7 +359,7 @@ public static class RelicReadings
                 }
                 sink.On |= kind;
                 if (hook.Name == "AfterCardChangedPiles") sink.Joining |= kind;
-                if (step is CommandStep command && (OptionReader.EffectOf(command.Name) & Bad) != 0) sink.Crossed |= kind;
+                if (step is CommandStep command && (OptionReader.EffectOf(command.Name) & ChoiceEffects.AgainstYou) != 0) sink.Crossed |= kind;
                 if (kind == ChoiceEffect.CurseToDeck && step is CommandStep { Command: { DeclaringType: "CardPileCmd", Name: "Add" } } add
                     && add.Values.Count > 0 && add.Values[0] is { } added && hook.CardParameter is { } parameter && Names(added, parameter))
                     sink.Crossed |= kind;
@@ -343,8 +370,16 @@ public static class RelicReadings
         sink.Notes.Add($"{hook.Name}: {(found.Count == 0 ? "nothing in the setting" : string.Join("; ", found))}");
     }
 
+    /// <summary>The game's cards of a kind that joins your deck (a card, a curse); null for a choice that isn't about a card joining.</summary>
+    private static IReadOnlyList<CardModel>? CardsOf(ChoiceEffect kind, Lazy<IReadOnlyList<CardModel>> cards) => kind switch
+    {
+        ChoiceEffect.CardToDeck => cards.Value.Where(card => card.Type != CardType.Curse).ToList(),
+        ChoiceEffect.CurseToDeck => cards.Value.Where(card => card.Type == CardType.Curse).ToList(),
+        _ => null,
+    };
+
     /// <summary>A step that changes something (a command, a store to the relic's state but its look, a change to a list or a card), or one not read.</summary>
-    private static bool Acts(ProgramStep step) => step switch
+    internal static bool Acts(ProgramStep step) => step switch
     {
         CommandStep or CardActionStep or ParameterListStep or DataStep or UnknownStep or ChoiceStep or CreateStep => true,
         // Status is how the relic looks (RelicModel.Status), not what it does.
@@ -353,7 +388,7 @@ public static class RelicReadings
     };
 
     /// <summary>The steps in order, loops' bodies included, each with the condition it runs on (a loop's own and its step's).</summary>
-    private static IEnumerable<(ProgramStep Step, ProgramCondition Condition)> Flattened(IEnumerable<ProgramStep> steps, ProgramCondition outer)
+    internal static IEnumerable<(ProgramStep Step, ProgramCondition Condition)> Flattened(IEnumerable<ProgramStep> steps, ProgramCondition outer)
     {
         foreach (var step in steps)
         {
@@ -364,10 +399,19 @@ public static class RelicReadings
         }
     }
 
-    /// <summary>A Modify hook's ways: one that can be taken in the setting and returns other than the amount is a reaction; zero takes it away (against you).</summary>
-    private static void ReadValue(WaysValue ways, HookSetting hook, Sink sink)
+    /// <summary>What a Modify hook's value is against the amount it's given.</summary>
+    private enum Change { Unknown, Zero, Less, Same, More }
+
+    /// <summary>
+    /// A Modify hook's ways: one that can be taken in the setting and returns other than the amount is a reaction. Its value is compared with the amount
+    /// (decision #372: worked out by the program evaluator on two amounts, with the relic's own values): more of what works against you (HP lost), or
+    /// less of what's for you (gold, a heal), is against you; zero takes the effect away (Ectoplasm's gold: crossed; HP loss taken away: plain). A value
+    /// that can't be compared is a gap.
+    /// </summary>
+    private static void ReadValue(Type relic, WaysValue ways, HookSetting hook, Func<string, decimal?> values, Sink sink)
     {
         var found = new List<string>();
+        var againstYou = (hook.Effect & ChoiceEffects.AgainstYou) != 0;
         foreach (var (when, value) in ways.Ways)
         {
             var holds = Judged(when, hook, cards: null);
@@ -375,42 +419,93 @@ public static class RelicReadings
             if (!IsIdentity(value, hook))
             {
                 sink.On |= hook.Effect;
-                if (hook.Identity == Identity.Amount && IsZero(value))
+                if (hook.Identity == Identity.Amount)
                 {
-                    sink.Crossed |= hook.Effect;
-                    sink.TakenAway |= hook.Effect;
+                    var change = Compared(relic, value, hook.Amount!, values);
+                    if (change == Change.Zero) sink.TakenAway |= hook.Effect;
+                    if (change is Change.Zero or Change.Less ? !againstYou : change == Change.More && againstYou) sink.Crossed |= hook.Effect;
+                    found.Add(change == Change.Unknown ? $"? {value} against the amount" : $"{value}: {change.ToString().ToLowerInvariant()}");
                 }
-                found.Add(value.ToString()!);
+                else found.Add(value.ToString()!);
             }
             if (holds == true) break; // the first way that holds is the value
         }
         sink.Notes.Add($"{hook.Name}: {(found.Count == 0 ? "unchanged in the setting" : string.Join("; ", found))}");
     }
 
-    /// <summary>A Should hook's ways: false in the setting takes the choice's effect away (against you); one it can't tell is a reaction.</summary>
-    private static void ReadShould(WaysValue ways, HookSetting hook, Sink sink)
+    /// <summary>
+    /// A Modify hook's value against its amount: the value worked out by the program evaluator for two amounts (its amount parameter bound, the relic's own
+    /// values given), zero, less, the same or more for both; unknown when it can't be worked out or the two disagree.
+    /// </summary>
+    private static Change Compared(Type relic, ProgramValue value, string amount, Func<string, decimal?> values)
     {
-        var result = "unchanged in the setting";
-        foreach (var (when, value) in ways.Ways)
+        var parameters = new Dictionary<string, object?>();
+        var bound = value.Map(part => part switch
         {
-            var holds = Judged(when, hook, cards: null);
-            if (holds == false) continue;
-            var returns = value is ConstantValue constant ? constant.Value != 0 : Truth(value, hook);
-            if (returns == false)
+            NamedValue named when named.Name == amount => new ParameterValue(amount),
+            CardValue own when values(own.Key) is { } known => Bind(parameters, "value:" + own.Key, known),
+            _ => null,
+        });
+        var changes = new HashSet<Change>();
+        foreach (var given in new[] { 7m, 100m })
+        {
+            parameters[amount] = given;
+            decimal result;
+            try
             {
-                sink.On |= hook.Effect;
-                sink.Crossed |= hook.Effect;
-                sink.TakenAway |= hook.Effect;
-                result = "takes it away";
+                if (ProgramEvaluator.Value(bound, ProgramBoard.Of(relic), ModelProgram.Empty, parameters) is not { } worked) return Change.Unknown;
+                result = Convert.ToDecimal(worked, System.Globalization.CultureInfo.InvariantCulture);
             }
-            else if (returns == null)
-            {
-                sink.On |= hook.Effect;
-                result = "? " + value;
-            }
-            if (holds == true) break;
+            catch { return Change.Unknown; }
+            changes.Add(result == 0 ? Change.Zero : result < given ? Change.Less : result > given ? Change.More : Change.Same);
         }
-        sink.Notes.Add($"{hook.Name}: {result}");
+        return changes.Count == 1 ? changes.First() : Change.Unknown;
+    }
+
+    private static ParameterValue Bind(Dictionary<string, object?> parameters, string name, decimal value)
+    {
+        parameters[name] = value;
+        return new ParameterValue(name);
+    }
+
+    /// <summary>
+    /// A Should hook's ways: false in the setting takes the choice's effect away, which is against you unless the effect itself is (ChoiceEffects: a curse
+    /// kept out of your deck is for you); one it can't tell is a reaction. A card's and a curse's joining apart, each judged on the game's cards of its kind.
+    /// </summary>
+    private static void ReadShould(WaysValue ways, HookSetting hook, Lazy<IReadOnlyList<CardModel>> cards, Sink sink)
+    {
+        var results = new List<string>();
+        foreach (var kind in hook.Kinds)
+        {
+            var kindCards = CardsOf(kind, cards);
+            var result = "unchanged in the setting";
+            foreach (var (when, value) in ways.Ways)
+            {
+                var holds = Judged(when, hook, kindCards);
+                if (holds == false) continue;
+                var returns = value switch
+                {
+                    ConstantValue constant => constant.Value != 0,
+                    ConditionValue inner => Judged(inner.Condition, hook, kindCards),
+                    _ => Judged(ProgramCondition.Of(new ConditionLiteral("", value, true)), hook, kindCards),
+                };
+                if (returns == false)
+                {
+                    sink.On |= kind;
+                    sink.TakenAway |= kind;
+                    if ((kind & ChoiceEffects.AgainstYou) == 0) sink.Crossed |= kind;
+                    result = "takes it away";
+                }
+                else if (returns == null)
+                {
+                    sink.On |= kind;
+                    result = "? " + value;
+                }
+                if (holds == true) break;
+            }
+            results.Add(hook.Kinds.Length > 1 ? $"{kind} {result}" : result);
+        }
+        sink.Notes.Add($"{hook.Name}: {string.Join("; ", results)}");
     }
 
     /// <summary>
@@ -516,6 +611,7 @@ public static class RelicReadings
                     if (condition.Terms.All(term => term.Any(literal => literal.Test is QueryValue { Of: NamedValue { Name: "this" } } own && own.Name == field && literal.Holds == (value == 0))))
                     {
                         sink.Crossed |= effect;
+                        sink.Ends.Add((field, effect));
                         sink.Notes.Add($"{method.Name}: needs {field} unset, which {effect} sets ({step})");
                     }
             }
@@ -635,7 +731,7 @@ public static class RelicReadings
     {
         if (left is QueryValue { Name: "Type", Of: QueryValue { Name: "Pile" } pile } && hook.CardParameter is { } parameter && IsParameter(pile.Of, parameter)
             && right is ConstantValue pileType)
-            return hook.Name == "AfterCardChangedPiles" ? pileType.Value == (long)PileType.Deck : null;
+            return hook.InDeck ? pileType.Value == (long)PileType.Deck : null;
         var whoLeft = right is NullValue ? Who.Nobody : WhoOf(left, hook);
         var whoRight = right is NullValue ? WhoOf(left, hook) : WhoOf(right, hook);
         if (whoLeft is not { } first || whoRight is not { } second || first == Who.Card || second == Who.Card || first == Who.Present || second == Who.Present) return null;

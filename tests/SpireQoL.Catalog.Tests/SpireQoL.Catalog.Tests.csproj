@@ -6,6 +6,8 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <!-- Compiled as the game is (TestRelics: relics written for the tests are read by the program reader like the game's release code). -->
+    <Optimize>true</Optimize>
   </PropertyGroup>
   <ItemGroup>
     <!-- Built without installing to the game (so it works while the game is running). -->

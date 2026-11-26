@@ -159,42 +159,11 @@ public sealed class OptionReader
     // ------------------------------------------------------------------ what the steps mean
 
     /// <summary>
-    /// The game commands an option's program runs and what they do ("Type.Method", "Type.Prefix*"; a choice is "CardSelectCmd.Method"). A reward's
-    /// effect is read from its own code, not listed here. Events only (combat never shows event options).
+    /// What a game command an option's program runs does ("Type.Method", "Type.Prefix*"; a choice is "CardSelectCmd.Method"): the one table of what each
+    /// effect is (ChoiceEffects, decision #373). A reward's effect is read from its own code, not listed there. Events only (combat never shows event
+    /// options). None when no reminder or check looks at it.
     /// </summary>
-    public static readonly IReadOnlyList<(string Step, ChoiceEffect Effect)> Steps = new[]
-    {
-        ("CardPileCmd.Add", ChoiceEffect.CardToDeck),
-        ("CardCmd.Transform*", ChoiceEffect.CardToDeck | ChoiceEffect.CardRemoval),
-        ("CardPileCmd.AddCurse*", ChoiceEffect.CurseToDeck),
-        ("CreatureCmd.Damage", ChoiceEffect.HpLoss),
-        ("CreatureCmd.Heal", ChoiceEffect.Heal),
-        ("CreatureCmd.GainMaxHp", ChoiceEffect.MaxHpGain | ChoiceEffect.Heal),
-        ("CreatureCmd.LoseMaxHp", ChoiceEffect.MaxHpLoss),
-        ("PlayerCmd.GainGold", ChoiceEffect.GoldGain),
-        ("PlayerCmd.LoseGold", ChoiceEffect.GoldLoss),
-        ("PotionCmd.TryToProcure", ChoiceEffect.Potion),
-        ("PotionCmd.Discard", ChoiceEffect.PotionLoss),
-        ("PlayerCmd.MimicRestSiteHeal", ChoiceEffect.RestHeal | ChoiceEffect.Heal),
-        ("CardCmd.Enchant*", ChoiceEffect.EnchantCard),
-        ("CardSelectCmd.FromDeckForEnchantment", ChoiceEffect.EnchantCard),
-        ("CardCmd.Upgrade*", ChoiceEffect.UpgradeCard),
-        ("CardSelectCmd.FromDeckForUpgrade", ChoiceEffect.UpgradeCard),
-        ("CardPileCmd.RemoveFromDeck", ChoiceEffect.CardRemoval),
-        ("CardSelectCmd.FromDeckForRemoval", ChoiceEffect.CardRemoval),
-        ("RelicCmd.Obtain*", ChoiceEffect.RelicGain),
-        ("RelicCmd.Remove*", ChoiceEffect.RelicLoss),
-        ("EventModel.EnterCombat*", ChoiceEffect.Fight),
-    };
-
-    /// <summary>What a step does (None when no reminder or check looks at it).</summary>
-    public static ChoiceEffect EffectOf(string step)
-    {
-        var effect = ChoiceEffect.None;
-        foreach (var (name, meaning) in Steps)
-            if (name.EndsWith('*') ? step.StartsWith(name[..^1], StringComparison.Ordinal) : step == name) effect |= meaning;
-        return effect;
-    }
+    public static ChoiceEffect EffectOf(string step) => ChoiceEffects.Of(step);
 
     // ------------------------------------------------------------------ the code the reader sees
 

@@ -171,6 +171,53 @@ public class ReminderRulesTests
         Assert.False(CardAffinity.For("VitruvianMinion")!.Applies(Card("StrikeIronclad")));
     }
 
+    /// <summary>
+    /// The choice hooks no relic of the game's overrides yet are read with their setting (decision #371): a curse kept out of your deck is for you
+    /// (plain), a card leaving your deck is a reaction to a removal (flashing on every one); and a Modify hook's value is compared with its amount
+    /// (decision #372): more HP lost is against you (crossed), less gold too, no HP lost at all is for you.
+    /// </summary>
+    [Theory]
+    [InlineData(typeof(TestRelics.CurseWard), ChoiceEffect.CurseToDeck, ChoiceEffect.None, ChoiceEffect.None)]
+    [InlineData(typeof(TestRelics.RemovalRefund), ChoiceEffect.CardRemoval, ChoiceEffect.None, ChoiceEffect.CardRemoval)]
+    [InlineData(typeof(TestRelics.HeavierFall), ChoiceEffect.HpLoss, ChoiceEffect.HpLoss, ChoiceEffect.None)]
+    [InlineData(typeof(TestRelics.ThinPurse), ChoiceEffect.GoldGain, ChoiceEffect.GoldGain, ChoiceEffect.None)]
+    [InlineData(typeof(TestRelics.FeatherFall), ChoiceEffect.HpLoss, ChoiceEffect.None, ChoiceEffect.None)]
+    [InlineData(typeof(TestRelics.SmithsToken), ChoiceEffect.None, ChoiceEffect.None, ChoiceEffect.None)]
+    public void AHookNoGameRelicHasYetIsReadWithItsSetting(Type relic, ChoiceEffect on, ChoiceEffect crossed, ChoiceEffect expect)
+    {
+        var cards = ModelDb.AllCards.ToList();
+        var reading = RelicReadings.Read(relic, SpireQoL.Procs.Programs.RuntimeCode.Read, () => cards);
+        Assert.True((on, crossed, expect) == (reading.On, reading.CrossedOn, reading.Expect), string.Join(" | ", reading.Notes));
+        Assert.NotEmpty(reading.Notes);
+        Assert.DoesNotContain(reading.Notes, note => note.Contains("? ", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// A Modify hook's value against its amount on the game's relics (decision #372), read with each relic's own values: Bowler Hat's more gold and Regal
+    /// Pillow's bigger heal are plain, Tungsten Rod's less HP lost plain, Ectoplasm's no gold crossed.
+    /// </summary>
+    [Theory]
+    [InlineData("BowlerHat", "more")]
+    [InlineData("RegalPillow", "more")]
+    [InlineData("TungstenRod", "less")]
+    [InlineData("Ectoplasm", "zero")]
+    public void AModifyHooksValueIsComparedWithItsAmount(string relic, string change) =>
+        Assert.Contains(RelicReadings.For(relic)!.Notes, note => note.EndsWith(": " + change, StringComparison.Ordinal));
+
+    /// <summary>One table of what each choice effect is (decision #373): every effect in it once; the option reader's meaning of a step read from it.</summary>
+    [Fact]
+    public void EveryChoiceEffectHasOneMeaning()
+    {
+        var effects = Enum.GetValues<ChoiceEffect>().Where(effect => effect != ChoiceEffect.None).Order().ToList();
+        Assert.Equal(effects, ChoiceEffects.Table.Select(meaning => meaning.Effect).Order().ToList());
+        Assert.Equal(ChoiceEffect.CardToDeck | ChoiceEffect.CardRemoval, SpireQoL.Features.OptionReader.EffectOf("CardCmd.TransformToRandom"));
+        Assert.Equal(ChoiceEffect.MaxHpGain | ChoiceEffect.Heal, SpireQoL.Features.OptionReader.EffectOf("CreatureCmd.GainMaxHp"));
+        Assert.Equal(ChoiceEffect.RestHeal | ChoiceEffect.Heal, SpireQoL.Features.OptionReader.EffectOf("PlayerCmd.MimicRestSiteHeal"));
+        Assert.Equal(ChoiceEffect.None, SpireQoL.Features.OptionReader.EffectOf("CardCmd.Preview"));
+        Assert.Equal(ChoiceEffect.CurseToDeck | ChoiceEffect.HpLoss | ChoiceEffect.MaxHpLoss | ChoiceEffect.GoldLoss | ChoiceEffect.PotionLoss | ChoiceEffect.CardRemoval
+                     | ChoiceEffect.RelicLoss, ChoiceEffects.AgainstYou);
+    }
+
     public static TheoryData<string> Branches() => new() { "beta", "main" };
 
     /// <summary>What each relic's hooks read as on a branch's code (decision #359), for every relic that overrides a hook the reading reads.</summary>
@@ -182,7 +229,8 @@ public class ReminderRulesTests
         var lines = new List<string>();
         foreach (var type in RelicReadings.RelicTypes(code.Assembly).OrderBy(type => type.Name, StringComparer.Ordinal))
         {
-            var reading = RelicReadings.Read(type, code.Read, () => cards);
+            // The relic's values are the loaded game's (a Modify hook's value against its amount: decision #372); its code is the branch's.
+            var reading = RelicReadings.Read(type, code.Read, () => cards, key => RelicReadings.LoadedValue(type.Name, key));
             if (!reading.Reacts && reading.Notes.Count == 0) continue;
             var rule = new List<string>();
             if (reading.On != ChoiceEffect.None) rule.Add("on " + reading.On);

@@ -47,6 +47,52 @@ public enum ChoiceEffect
     Fight = 131072,
 }
 
+/// <summary>
+/// What each choice effect is (decision #373), in one table: the game commands an event option's program runs that make it (the option reader's meaning
+/// of a step: OptionReader.EffectOf), and whether it works against you (you lose something by it). A relic's reaction that makes an effect against you
+/// is crossed; one that takes such an effect away, or makes less of it, is plain, and the other way round for the rest (RelicReadings).
+/// </summary>
+public static class ChoiceEffects
+{
+    /// <param name="Steps">The game commands that make it ("Type.Method", "Type.Prefix*"; a choice is "CardSelectCmd.Method"); none for a shop's purchase.</param>
+    public sealed record Meaning(ChoiceEffect Effect, bool AgainstYou, IReadOnlyList<string> Steps);
+
+    public static readonly IReadOnlyList<Meaning> Table = new Meaning[]
+    {
+        new(ChoiceEffect.CardToDeck, AgainstYou: false, new[] { "CardPileCmd.Add", "CardCmd.Transform*" }),
+        new(ChoiceEffect.CurseToDeck, AgainstYou: true, new[] { "CardPileCmd.AddCurse*" }),
+        new(ChoiceEffect.HpLoss, AgainstYou: true, new[] { "CreatureCmd.Damage" }),
+        new(ChoiceEffect.GoldGain, AgainstYou: false, new[] { "PlayerCmd.GainGold" }),
+        new(ChoiceEffect.Potion, AgainstYou: false, new[] { "PotionCmd.TryToProcure" }),
+        new(ChoiceEffect.RestHeal, AgainstYou: false, new[] { "PlayerCmd.MimicRestSiteHeal" }),
+        new(ChoiceEffect.Purchase, AgainstYou: false, Array.Empty<string>()),
+        new(ChoiceEffect.EnchantCard, AgainstYou: false, new[] { "CardCmd.Enchant*", "CardSelectCmd.FromDeckForEnchantment" }),
+        new(ChoiceEffect.UpgradeCard, AgainstYou: false, new[] { "CardCmd.Upgrade*", "CardSelectCmd.FromDeckForUpgrade" }),
+        new(ChoiceEffect.Heal, AgainstYou: false, new[] { "CreatureCmd.Heal", "CreatureCmd.GainMaxHp", "PlayerCmd.MimicRestSiteHeal" }),
+        new(ChoiceEffect.MaxHpGain, AgainstYou: false, new[] { "CreatureCmd.GainMaxHp" }),
+        new(ChoiceEffect.MaxHpLoss, AgainstYou: true, new[] { "CreatureCmd.LoseMaxHp" }),
+        new(ChoiceEffect.GoldLoss, AgainstYou: true, new[] { "PlayerCmd.LoseGold" }),
+        new(ChoiceEffect.PotionLoss, AgainstYou: true, new[] { "PotionCmd.Discard" }),
+        new(ChoiceEffect.CardRemoval, AgainstYou: true, new[] { "CardCmd.Transform*", "CardPileCmd.RemoveFromDeck", "CardSelectCmd.FromDeckForRemoval" }),
+        new(ChoiceEffect.RelicGain, AgainstYou: false, new[] { "RelicCmd.Obtain*" }),
+        new(ChoiceEffect.RelicLoss, AgainstYou: true, new[] { "RelicCmd.Remove*" }),
+        new(ChoiceEffect.Fight, AgainstYou: false, new[] { "EventModel.EnterCombat*" }),
+    };
+
+    /// <summary>The effects that work against you.</summary>
+    public static readonly ChoiceEffect AgainstYou = Table.Where(meaning => meaning.AgainstYou).Aggregate(ChoiceEffect.None, (all, meaning) => all | meaning.Effect);
+
+    /// <summary>What a step does (None when no reminder or check looks at it): every effect whose steps name it.</summary>
+    public static ChoiceEffect Of(string step)
+    {
+        var effect = ChoiceEffect.None;
+        foreach (var meaning in Table)
+            foreach (var name in meaning.Steps)
+                if (name.EndsWith('*') ? step.StartsWith(name[..^1], StringComparison.Ordinal) : step == name) effect |= meaning.Effect;
+        return effect;
+    }
+}
+
 /// <param name="Relic">The relic's class name.</param>
 /// <param name="On">Choices it reacts to: its icon goes next to those event options.</param>
 /// <param name="CrossedOn">Choices where it works against you (red slash).</param>
