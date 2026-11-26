@@ -23,6 +23,11 @@ internal readonly struct HookArgs
     public int Applier { get; init; }
     public int Target { get; init; }
     public bool Debuff { get; init; }
+    /// <summary>
+    /// The power's own Target (PowerModel.Target, what its IsVisible asks) in the received pass: Who.None when it has none; null where it isn't
+    /// known (a copy aimed at a teammate, whose aim may be a player of its class's own).
+    /// </summary>
+    public int? PowerTarget { get; init; }
     /// <summary>The hit a damage-time hook is told of (AfterDamageGiven, AfterDamageReceived).</summary>
     public DamageEvent? Hit { get; init; }
     /// <summary>The card play's count so far (ModifyCardPlayCount).</summary>
@@ -1075,12 +1080,19 @@ public sealed class ReadModel : SimModel
             if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingPowerAmountGiven branched");
     }
 
-    /// <summary>Hook.ModifyPowerAmountReceived's pass: its code's answer (true: its out value is the amount from here on, Ruined Helmet's doubling).</summary>
-    public override bool TryModifyPowerAmountReceived(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff, out int modified)
+    /// <summary>
+    /// Hook.ModifyPowerAmountReceived's pass: its code's answer (true: its out value is the amount from here on: Ruined Helmet's doubling, Artifact's
+    /// 0 for a shown debuff on its owner).
+    /// </summary>
+    public override bool TryModifyPowerAmountReceived(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff, int? powerTarget, out int modified)
     {
         modified = amount;
         if (_modifies is not { } modifies || _returns[(int)HookName.TryModifyPowerAmountReceived] is not { } returns) return false;
-        var args = new HookArgs { State = state, Owner = owner, Hook = HookName.TryModifyPowerAmountReceived, Play = state.CurrentPlay, Power = power, PowerAmount = amount, Applier = applier, Target = target, Debuff = debuff };
+        var args = new HookArgs
+        {
+            State = state, Owner = owner, Hook = HookName.TryModifyPowerAmountReceived, Play = state.CurrentPlay, Power = power, PowerAmount = amount, Applier = applier,
+            Target = target, Debuff = debuff, PowerTarget = powerTarget,
+        };
         if (modifies(in args) == 0m) return false;
         modified = (int)returns(in args);
         return true;
@@ -2618,6 +2630,8 @@ public sealed class ReadModel : SimModel
             }
             case HookFact.PowerAmount: return (in HookArgs args) => args.PowerAmount;
             case HookFact.PowerIsDebuff: return (in HookArgs args) => args.Debuff ? 1m : 0m;
+            case HookFact.PowerDebuffAtAmount: return (in HookArgs args) => SimModels.IsDebuffAt(args.Power, args.PowerAmount) ? 1m : 0m;
+            case HookFact.PowerVisible: return (in HookArgs args) => SimModels.IsVisible(args.State, args.Power, args.Applier, args.PowerTarget) ? 1m : 0m;
             case HookFact.StarsSpent: return (in HookArgs args) => args.Event == CardEvent.StarsSpent ? args.Play?.Card.Stars ?? 0 : 0;
             case HookFact.PowerOnEnemy: return (in HookArgs args) => Who.IsEnemy(args.Target) ? 1m : 0m;
             case HookFact.DealerIsOwner: return (in HookArgs args) => (args.Damage?.Dealer ?? args.Hit?.Dealer) == args.Owner ? 1m : 0m;

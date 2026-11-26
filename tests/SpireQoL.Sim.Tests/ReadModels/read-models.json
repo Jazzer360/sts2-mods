@@ -1987,6 +1987,157 @@
     "DarkensOnPlay": true
   },
   {
+    "Name": "ArtifactPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterModifyingPowerAmountReceived",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep"
+          }
+        ]
+      },
+      {
+        "Hook": "TryModifyPowerAmountReceived",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "ArtifactPower.TryModifyPowerAmountReceived:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "PowerAmount"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "ArtifactPower.TryModifyPowerAmountReceived:001B",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PowerDebuffAtAmount"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "PowerAmount"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "ArtifactPower.TryModifyPowerAmountReceived:002D",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PowerVisible"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "PowerAmount"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "ArtifactPower.TryModifyPowerAmountReceived:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "ArtifactPower.TryModifyPowerAmountReceived:001B",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PowerDebuffAtAmount"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "ArtifactPower.TryModifyPowerAmountReceived:002D",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PowerVisible"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "AsleepPower",
     "Kind": "Power",
     "Hooks": [

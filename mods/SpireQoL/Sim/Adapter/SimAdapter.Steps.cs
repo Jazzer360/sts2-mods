@@ -1129,12 +1129,12 @@ public static partial class SimAdapter
     /// <summary>
     /// The simulator runs the power a card applies (decisions #284, #312): a model of it (hand-written, or read from its code now), a class read from
     /// its code at the reviewed builds (ReadModels.ReadWholeAtReview: Poison) that a game update left unread, whose application makes the
-    /// simulation unknown (SimEngine.ApplyPower) rather than being dropped, a power it keeps as a number (SelfPowers), Artifact (the engine's
-    /// own rule for a debuff landing), or a class another class's code checks for by type (ReadModels.CheckedByOtherCode, decision #312: Cruelty,
+    /// simulation unknown (SimEngine.ApplyPower) rather than being dropped, a power it keeps as a number (SelfPowers), or a class another class's
+    /// code checks for by type (ReadModels.CheckedByOtherCode, decision #312: Cruelty,
     /// which Vulnerable's damage reads), kept as a power with no behaviour of its own where nothing models it, so that code finds it.
     /// </summary>
     private static bool Simulated(string simPowerName) =>
-        SimModels.Has(simPowerName) || ReadModels.ReadWholeAtReview.Contains(simPowerName) || SelfPowers.Contains(simPowerName) || simPowerName == nameof(ArtifactPower)
+        SimModels.Has(simPowerName) || ReadModels.ReadWholeAtReview.Contains(simPowerName) || SelfPowers.Contains(simPowerName)
         || ReadModels.CheckedByOtherCode.Contains(simPowerName);
 
     /// <summary>What an unknown power amount says: the step's amount isn't one the adapter reads (the card scan and PowerAmountTests hold every card to none).</summary>

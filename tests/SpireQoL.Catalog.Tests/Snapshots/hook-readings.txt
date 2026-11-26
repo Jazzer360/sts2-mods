@@ -7,7 +7,7 @@ power AllIsWellPower: AfterCardGeneratedForCombat: read
 power AmnesiaPower: AfterPlayerTurnStart: unknown where it runs: gap: PlayerCmd.LoseEnergy isn't translated | AfterSideTurnEnd: read | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 power ArcheryPower: AfterSideTurnStart: read
 power ArsenalPower: AfterCardGeneratedForCombat: read
-power ArtifactPower: AfterModifyingPowerAmountReceived: read | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply's scaling for the players: read into the class's PowerRule and run by the engine as it lands one (decision #234) | TryModifyPowerAmountReceived: gap: the value canonicalPower.GetTypeForAmount(amount)
+power ArtifactPower: AfterModifyingPowerAmountReceived: read | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply's scaling for the players: read into the class's PowerRule and run by the engine as it lands one (decision #234) | TryModifyPowerAmountReceived: read
 power AsleepPower: AfterDamageReceived: read | AfterSideTurnEnd: read | BeforeSideTurnEndVeryEarly: read
 power AutomationPower: AfterCardDrawn: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power BarricadePower: AfterApplied: read | ShouldClearBlock: read

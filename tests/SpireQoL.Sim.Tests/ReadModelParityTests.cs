@@ -724,7 +724,7 @@ public class ReadModelParityTests
                                     var text = new System.Text.StringBuilder();
                                     for (var time = 0; time < 2; time++)
                                     {
-                                        var modifies = model.TryModifyPowerAmountReceived(state, owner, power, amount, applier, target, debuff: amount < 0, out var received);
+                                        var modifies = model.TryModifyPowerAmountReceived(state, owner, power, amount, applier, target, debuff: amount < 0, powerTarget: Who.None, out var received);
                                         if (modifies) model.AfterModifyingPowerAmountReceived(state, owner, power);
                                         text.Append($"{amount} -> {received} ({modifies}): ").Append(Branches(new[] { state })).Append(" // ");
                                     }

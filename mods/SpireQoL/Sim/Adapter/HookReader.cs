@@ -381,12 +381,16 @@ public static class HookReader
         {
             var (debuff, counter) = reader.Kind();
             var (allowNegative, scaled) = reader.Rule();
-            return new PowerRule(type.Name) { Debuff = debuff, Counter = counter, AllowNegative = allowNegative, ScaledForPlayers = scaled };
+            return new PowerRule(type.Name) { Debuff = debuff, Counter = counter, AllowNegative = allowNegative, ScaledForPlayers = scaled, Visibility = reader.Visibility() };
         }
         catch (Exception exception) when (exception is Gap or InvalidOperationException or NotSupportedException)
         {
             var (unreadDebuff, unreadCounter) = reader.Kind();
-            return new PowerRule(type.Name) { Debuff = unreadDebuff, Counter = unreadCounter, Unread = $"{type.Name}'s scaling for the players couldn't be read from the game's code (a game update?): {exception.Message}" };
+            return new PowerRule(type.Name)
+            {
+                Debuff = unreadDebuff, Counter = unreadCounter, Visibility = reader.Visibility(),
+                Unread = $"{type.Name}'s scaling for the players couldn't be read from the game's code (a game update?): {exception.Message}",
+            };
         }
     }
 
@@ -2552,6 +2556,18 @@ public static class HookReader
             return (allowNegative, Pruned(Ways(ProgramReader.ReadReturnedWays(_type, method, _read))));
         }
 
+        /// <summary>
+        /// The class's IsVisibleInternal (PowerModel.IsVisible's own part, decision #331), read from its getter (its own or PowerModel's true):
+        /// shown, hidden, or shown when you applied it (LocalContext.IsMe(base.Applier)); any other value isn't read.
+        /// </summary>
+        public PowerVisibility Visibility() => Returned(_type, "get_IsVisibleInternal") switch
+        {
+            ConstantValue { Value: 0 } => PowerVisibility.Hidden,
+            ConstantValue => PowerVisibility.Shown,
+            QueryValue { Name: "IsMe", Type: "LocalContext", Arguments: [QueryValue { Name: "Applier", Of: NamedValue { Name: "this" } }] } => PowerVisibility.ShownWhenYouApplied,
+            _ => PowerVisibility.NotRead,
+        };
+
         /// <summary>A temporary Strength or Dexterity power's IsPositive, read from its own class (an override, or its base class's true).</summary>
         private bool IsPositive(string power) =>
             _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + power) is not { } powerType || Returned(powerType, "get_IsPositive") is not ConstantValue { Value: 0 };
@@ -2831,6 +2847,10 @@ public static class HookReader
                     return EnumName(_type.Assembly, "CardKeyword", keyword.Value) == "Ethereal" ? new HookFactValue(HookFact.CardEthereal) : throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's keyword {keyword.Value}");
                 case QueryValue { Name: "is", Of: NamedValue { Name: "power" or "canonicalPower" } or ParameterValue { Name: "power" or "canonicalPower" }, Type: var powerClass }:
                     return PowerIs(powerClass);
+                // The power landing is shown (PowerModel.IsVisible: Artifact's canonicalPower.IsVisible): its class's IsVisibleInternal, read into its
+                // PowerRule (decision #331), unless its Target is a player other than you.
+                case QueryValue { Name: "IsVisible", IsProperty: true, Of: { } visibleOf } when IsPowerTold(visibleOf) && _hook == nameof(HookName.TryModifyPowerAmountReceived):
+                    return new HookFactValue(HookFact.PowerVisible);
                 case QueryValue { Name: "is", Of: { } cardOf, Type: var cardClass } when IsEventCard(cardOf) || IsPlayCard(cardOf):
                     return new HookFactValue(HookFact.CardIs) { Of = cardClass };
                 // The card a damage or block comes from is a class (cardSource is SovereignBlade).
@@ -3123,13 +3143,21 @@ public static class HookReader
                     : throw new Gap(ReaderCapability.CardFacts, $"gap: a card type {cardType.Value}");
                 return new HookMath(OperationOf(compare.Op), new HookFactValue(HookFact.CardType), new HookConstant((int)simType));
             }
-            if (compare.Left is QueryValue { Name: "GetTypeForAmount", Of: NamedValue { Name: "power" } } && compare.Right is ConstantValue powerType
+            if (compare.Left is QueryValue { Name: "GetTypeForAmount", Of: { } typedPower, Arguments: var typeArguments } && IsPowerTold(typedPower) && compare.Right is ConstantValue powerType
                 && compare.Op is Comparison.Equal or Comparison.NotEqual)
             {
+                // In the received pass, at the amount so far (Artifact's canonicalPower.GetTypeForAmount(amount)): the power's type at that amount,
+                // from its class's Type, StackType and AllowNegative (SimModels.IsDebuffAt). Elsewhere, the power as it landed (power: Sleight of Flesh's).
+                HookValue isDebuff = _hook == nameof(HookName.TryModifyPowerAmountReceived)
+                    ? typeArguments is [var amountArgument] && Value(amountArgument) is HookFactValue { Fact: HookFact.PowerAmount }
+                        ? new HookFactValue(HookFact.PowerDebuffAtAmount)
+                        : throw new Gap(ReaderCapability.ValueNotFollowed, "gap: the power's type at an amount other than the one landing")
+                    : typedPower is NamedValue { Name: "power" } ? new HookFactValue(HookFact.PowerIsDebuff)
+                    : throw new Gap(ReaderCapability.ValueNotFollowed, "gap: the type of a power other than the one landing");
                 var debuff = EnumName(_type.Assembly, "PowerType", powerType.Value) switch
                 {
-                    "Debuff" => new HookFactValue(HookFact.PowerIsDebuff),
-                    "Buff" => Not(new HookFactValue(HookFact.PowerIsDebuff)),
+                    "Debuff" => isDebuff,
+                    "Buff" => Not(isDebuff),
                     var other => throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: a power type {other}"),
                 };
                 return compare.Op == Comparison.Equal ? debuff : Not(debuff);
@@ -3200,6 +3228,9 @@ public static class HookReader
             if (CreatureOf(other) != null) return null;
             throw new Gap(ReaderCapabilities.OfValue(other, otherwise: ReaderCapability.CreatureSide), $"gap: compares the owner with {other}");
         }
+
+        /// <summary>The power a hook is told of (its power or canonicalPower parameter, or a local holding it).</summary>
+        private static bool IsPowerTold(ProgramValue value) => value is NamedValue { Name: "power" or "canonicalPower" } or ParameterValue { Name: "power" or "canonicalPower" };
 
         private HookValue PowerIs(string powerClass)
         {

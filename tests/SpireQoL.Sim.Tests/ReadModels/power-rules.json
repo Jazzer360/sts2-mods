@@ -201,6 +201,11 @@
     "Debuff": true
   },
   {
+    "Name": "ImpaledPower",
+    "Counter": true,
+    "Visibility": "ShownWhenYouApplied"
+  },
+  {
     "Name": "InsatiableDominionPower",
     "Debuff": true,
     "Counter": true

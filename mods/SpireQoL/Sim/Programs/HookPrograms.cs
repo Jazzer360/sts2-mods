@@ -263,6 +263,16 @@ public enum HookFact
     PowerAmount,
     /// <summary>The power landing is a debuff for its amount (power.GetTypeForAmount(amount) == Debuff).</summary>
     PowerIsDebuff,
+    /// <summary>
+    /// The power landing is a debuff at the amount it lands with so far (TryModifyPowerAmountReceived's canonicalPower.GetTypeForAmount(amount),
+    /// Artifact's: SimModels.IsDebuffAt, from its class's Type, StackType and AllowNegative).
+    /// </summary>
+    PowerDebuffAtAmount,
+    /// <summary>
+    /// The power landing is shown (PowerModel.IsVisible, Artifact's: its class's IsVisibleInternal, read into its PowerRule, unless its Target is a
+    /// player other than you; unknown where its Target isn't known).
+    /// </summary>
+    PowerVisible,
     /// <summary>The stars a spend took (AfterStarsSpent's amount): the stars of the play spending them, as the simulator spends stars (one event a play).</summary>
     StarsSpent,
     /// <summary>The power landed on an enemy (power.Owner.IsEnemy).</summary>
@@ -1380,6 +1390,23 @@ public sealed record PowerRule(string Name)
     /// <summary>Why its scaling couldn't be read (a game update): a new one on an enemy in multiplayer makes the simulation unknown. Null: read.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Unread { get; init; }
+
+    /// <summary>Whether it's shown (its IsVisibleInternal, read from its code: decision #331): what PowerModel.IsVisible gives with no Target hiding it.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public PowerVisibility Visibility { get; init; }
+}
+
+/// <summary>A power class's IsVisibleInternal (PowerModel.IsVisible's own part), read from its getter (its own or PowerModel's true).</summary>
+public enum PowerVisibility
+{
+    /// <summary>Shown (PowerModel's own: true).</summary>
+    Shown,
+    /// <summary>Hidden (false).</summary>
+    Hidden,
+    /// <summary>Shown when you applied it (LocalContext.IsMe(base.Applier): Impaled's).</summary>
+    ShownWhenYouApplied,
+    /// <summary>Its getter isn't one the reader follows (a game update): whether it's shown isn't known.</summary>
+    NotRead,
 }
 
 /// <summary>

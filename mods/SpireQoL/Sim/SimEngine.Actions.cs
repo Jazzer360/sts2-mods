@@ -703,8 +703,8 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// PowerCmd.Apply: the amount through ModifyPowerAmountGiven (Snecko Skull...), then Artifact takes a debuff (a charge
-    /// each), else the power goes on (poison into the enemy's poison).
+    /// PowerCmd.Apply: the amount through ModifyPowerAmountGiven (Snecko Skull...), then ModifyPowerAmountReceived (Artifact takes a debuff, a
+    /// charge each), else the power goes on (poison into the enemy's poison).
     /// </summary>
     internal static bool ApplyPower(SimState state, int applier, int target, PowerId power, int amount, bool debuff) =>
         ApplyPower(state, applier, target, power, amount, debuff, out _);
@@ -743,17 +743,19 @@ public static partial class SimEngine
 
     /// <summary>
     /// Hook.ModifyPowerAmountReceived (PowerCmd.Apply and ModifyAmount, after the amount given): every listener's TryModifyPowerAmountReceived in
-    /// turn on the amount so far, the amount each that answers true leaves (Ruined Helmet's doubled first Strength), then
-    /// Hook.AfterModifyingPowerAmountReceived told to each of those, in the listeners' order. The amount received. Artifact, which answers here
-    /// too in the game, is the engine's own rule after it (ApplyPower).
+    /// turn on the amount so far, the amount each that answers true leaves (Ruined Helmet's doubled first Strength; Artifact's 0 for a shown
+    /// debuff on its owner, read from its code: decision #331), then Hook.AfterModifyingPowerAmountReceived told to each of those, in the
+    /// listeners' order (Artifact's Decrement of itself). The amount received. <paramref name="powerTarget"/>: the power's own Target
+    /// (PowerModel.Target, what its IsVisible asks): Who.None for none (every power the simulator lands: one made with its Target set first is a
+    /// gap of its step), null where it isn't known.
     /// </summary>
-    internal static int AmountReceived(SimState state, int applier, int target, PowerId power, int amount, bool debuff)
+    internal static int AmountReceived(SimState state, int applier, int target, PowerId power, int amount, bool debuff, int? powerTarget = Who.None)
     {
         var listeners = Listeners(state);
         List<(SimModel Model, int Owner)>? modifiers = null;
         foreach (var (model, owner) in listeners)
         {
-            if (!model.TryModifyPowerAmountReceived(state, owner, power, amount, applier, target, debuff, out var modified)) continue;
+            if (!model.TryModifyPowerAmountReceived(state, owner, power, amount, applier, target, debuff, powerTarget, out var modified)) continue;
             amount = modified;
             (modifiers ??= new()).Add((model, owner));
         }
@@ -780,11 +782,6 @@ public static partial class SimEngine
         amount = AmountReceived(state, applier, target, power, amount, debuff);
         if (amount == 0) return false;
         var powers = PowersOf(state, target);
-        if (debuff && powers[PowerId.Artifact] > 0)
-        {
-            SetPowers(state, target, powers[PowerId.Artifact] > 1 ? powers.Add(PowerId.Artifact, delta: -1) : powers.Without(PowerId.Artifact));
-            return false;
-        }
         if (Who.IsEnemy(target) && state.Teammates.Count > 0 && !powers.Has(power))
         {
             amount = SimModels.ScaledForPlayers(state, power, amount);

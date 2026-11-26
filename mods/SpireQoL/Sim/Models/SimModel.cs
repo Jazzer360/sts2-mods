@@ -409,9 +409,11 @@ public abstract class SimModel
     public virtual void AfterModifyingPowerAmountGiven(SimState state, int owner, PowerId power) { }
     /// <summary>
     /// Hook.ModifyPowerAmountReceived's pass: true when the model changes a power's amount as it lands on <paramref name="target"/>, the amount it
-    /// leaves in <paramref name="modified"/> (Ruined Helmet's doubled first Strength), each listener in turn on the amount so far. Pure.
+    /// leaves in <paramref name="modified"/> (Ruined Helmet's doubled first Strength, Artifact's 0), each listener in turn on the amount so far.
+    /// <paramref name="powerTarget"/>: the power's own Target (what its IsVisible asks), Who.None for none, null where it isn't known. Pure, but
+    /// for the state marked unknown where its code asks what isn't known (SimState.Unmodelled).
     /// </summary>
-    public virtual bool TryModifyPowerAmountReceived(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff, out int modified)
+    public virtual bool TryModifyPowerAmountReceived(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff, int? powerTarget, out int modified)
     {
         modified = amount;
         return false;
@@ -682,7 +684,7 @@ public static class SimModels
         IReadOnlyDictionary<string, TurnStartGap> TurnStartGaps);
 
     /// <summary>A power class's rules as the engine asks them (PowerRule), its scaling compiled once.</summary>
-    private sealed record LoadedRule(bool AllowNegative, Func<SimState, int, decimal>? Scaled, string? Unread, bool Debuff, bool Counter);
+    private sealed record LoadedRule(bool AllowNegative, Func<SimState, int, decimal>? Scaled, string? Unread, bool Debuff, bool Counter, PowerVisibility Visibility);
 
     private static readonly Lazy<LoadedModels> Models = new(() => _reading?.GetAwaiter().GetResult() ?? Load(), LazyThreadSafetyMode.ExecutionAndPublication);
 
@@ -742,7 +744,7 @@ public static class SimModels
             var unreadRule = rule.Unread;
             try { if (rule.ScaledForPlayers is { } value) scaled = ReadModel.CompileScaling(rule.Name, value); }
             catch (InvalidOperationException exception) { unreadRule = $"{rule.Name}'s scaling for the players couldn't be compiled ({exception.Message})"; }
-            rules[rule.Name] = new LoadedRule(rule.AllowNegative, scaled, unreadRule, rule.Debuff, rule.Counter);
+            rules[rule.Name] = new LoadedRule(rule.AllowNegative, scaled, unreadRule, rule.Debuff, rule.Counter, rule.Visibility);
         }
         var turnEndGaps = new Dictionary<string, TurnEndGap>(StringComparer.Ordinal);
         foreach (var gap in ReadTurnEndGaps?.Invoke() ?? Enumerable.Empty<TurnEndGap>())
@@ -767,6 +769,26 @@ public static class SimModels
         if (rule.Counter && rule.AllowNegative && amount < 0) return true;
         if (!rule.AllowNegative && rule.Debuff && amount < 0) return false;
         return rule.Debuff;
+    }
+
+    /// <summary>
+    /// The power landing is shown (PowerModel.IsVisible, decision #331): with a Target that's a player other than you, no; else its class's
+    /// IsVisibleInternal (PowerRule.Visibility, read from its code): shown, hidden, or shown when you applied it. Where its Target or its class's
+    /// getter isn't known, the state is unknown (SimState.Unmodelled) and it counts as shown.
+    /// </summary>
+    public static bool IsVisible(SimState state, PowerId power, int applier, int? powerTarget)
+    {
+        if (powerTarget is not { } aimedAt) state.Unmodelled ??= $"whether {power.Name} is shown (PowerModel.IsVisible: its Target) isn't known for a copy aimed at a teammate";
+        else if (aimedAt != Who.None && aimedAt != Who.You && !Who.IsEnemy(aimedAt)) return false;
+        switch (Models.Value.Rules.GetValueOrDefault(power.Name)?.Visibility ?? PowerVisibility.Shown)
+        {
+            case PowerVisibility.Hidden: return false;
+            case PowerVisibility.ShownWhenYouApplied: return applier == Who.You;
+            case PowerVisibility.NotRead:
+                state.Unmodelled ??= $"whether {power.Name} is shown (its IsVisibleInternal) couldn't be read from the game's code";
+                return true;
+            default: return true;
+        }
     }
 
     /// <summary>

@@ -133,7 +133,7 @@ public static partial class ReadModels
         {
             var rule = HookReader.RuleOf(type, read);
             if (rule.Unread is { } why) unread?.Invoke(type.Name, why);
-            if (rule.Debuff || rule.AllowNegative || rule.ScaledForPlayers != null || rule.Unread != null) rules.Add(rule);
+            if (rule.Debuff || rule.AllowNegative || rule.ScaledForPlayers != null || rule.Unread != null || rule.Visibility != PowerVisibility.Shown) rules.Add(rule);
         }
         return rules;
     }

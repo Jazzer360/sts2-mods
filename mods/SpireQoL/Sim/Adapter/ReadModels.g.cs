@@ -22,6 +22,7 @@ public static partial class ReadModels
         PowerId.Archery.Name,
         PowerId.Arsenal.Name,
         RelicId.ArtOfWar.Name,
+        PowerId.Artifact.Name,
         PowerId.Asleep.Name,
         PowerId.Automation.Name,
         RelicId.BagOfMarbles.Name,

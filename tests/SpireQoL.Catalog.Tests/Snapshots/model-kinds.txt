@@ -3,9 +3,9 @@
 
 ## Powers and relics
 
-beta powers: 303 classes, 272 with hooks; read from code 184, hand-written 24, neither 66 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 303 classes, 272 with hooks; read from code 185, hand-written 24, neither 65 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 123, hand-written 7, neither 180 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 155, hand-written 22, neither 60 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 156, hand-written 22, neither 59 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 110, hand-written 7, neither 176 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: the game's own code, called live 8, read from its code 6, not modelled by name 5, a per-name rule 3, no hooks 1
@@ -139,7 +139,7 @@ SimReaders.Relics: PaelsTears: hand-written; reads nothing named: needs more tha
 SimReaders.Relics: UnsettlingLamp: hand-written; reads its own field TriggeringCard, its own field IsFinishedTriggering, the game's DisplayAmount: needs more than its own fields and values
 name gate: AccelerantPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a gate to replace by a rule
 name gate: AimPower in Procs/Fool.cs: read from code: a gate its reading could replace
-name gate: ArtifactPower in Sim/Adapter/SimAdapter.Steps.cs: not modelled from code: a gate to replace by a rule
+name gate: ArtifactPower in Sim/Adapter/SimAdapter.Steps.cs: read from code: a gate its reading could replace
 name gate: ChainsOfBindingPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a gate to replace by a rule
 name gate: ConfusedPower in Sim/Adapter/SimAdapter.cs: not modelled from code: a gate to replace by a rule
 name gate: DampenPower in Sim/Adapter/MoveBranches.cs: hand-written: goes with its model

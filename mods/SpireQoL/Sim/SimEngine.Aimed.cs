@@ -47,7 +47,8 @@ public static partial class SimEngine
         if (had == 0) return new[] { state };
         var debuff = SimModels.IsDebuffAt(power, had);
         var amount = applier is { } giver ? AmountGiven(state, giver, holder, power, offset, debuff) : offset;
-        amount = AmountReceived(state, applier ?? Who.None, holder, power, amount, debuff);
+        // The copy's own Target (what its IsVisible asks): you, or, aimed at a teammate, not known (its aim may be a player of its class's own).
+        amount = AmountReceived(state, applier ?? Who.None, holder, power, amount, debuff, powerTarget: player == Who.You ? Who.You : null);
         if (state.History.Count > 0) Record(state, new HistoryEvent(HistoryKind.PowerReceived, applier ?? Who.None) { Power = power });
         var left = had + amount;
         var key = SimKeys.Aimed(power.Name, player);

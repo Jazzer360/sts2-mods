@@ -26,6 +26,9 @@ public class SimModelOwnerScanTests
         ["HookOutcome.BreaksBlock => owner == Who.You"] = "Hand Drill's tab judged on the outcome, on your cards: the play's breaks are its own player's (a teammate's Hand Drill isn't set off by your play: decision #285)",
         ["if (owner == Who.You)"] = "a reaction to its owner losing HP, on your cards: the play's HP loss is its own player's (a teammate's tab would be judged on HP your play doesn't cost them)",
         ["query.Whose == HistoryWhose.Anyone ? Who.You : Who.None"] = "an enemy's model asking the fight's log for anyone's entries: every player's ledger holds them, yours among them",
+        // SimModels.IsVisible (decision #331): PowerModel.IsVisible asks LocalContext.IsMe, the local player, who is always you in a simulation.
+        ["else if (aimedAt != Who.None && aimedAt != Who.You && !Who.IsEnemy(aimedAt)) return false;"] = "PowerModel.IsVisible: a power whose Target is a player other than the local one (LocalContext.IsMe: you) is hidden",
+        ["case PowerVisibility.ShownWhenYouApplied: return applier == Who.You;"] = "Impaled's IsVisibleInternal, LocalContext.IsMe(base.Applier): shown when the local player (you) applied it",
     };
 
     /// <summary>The model files the scan reads: the hand-written models (Sim/Models) and the read model every class read from its code runs through.</summary>

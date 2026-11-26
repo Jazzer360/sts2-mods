@@ -1653,14 +1653,23 @@ public static class ProgramReader
             return null;
         }
 
-        /// <summary>A store through an out parameter's address (ldarg slot; a value; stobj or stind.*).</summary>
+        /// <summary>
+        /// A store through an out parameter's address (ldarg slot; a value; stobj or stind.*), or its default set in place (ldarg slot; initobj:
+        /// Artifact's modifiedAmount = default(decimal), read as 0 by <see cref="ParameterSet"/>).
+        /// </summary>
         private bool StoresThrough(int index, int slot, int depth)
         {
             var name = Ops[index].OpCode.Name!;
+            if (DefaultsThrough(index, slot)) return true;
             if (Ops[index].OpCode != OpCodes.Stobj && !name.StartsWith("stind", StringComparison.Ordinal)) return false;
             var value = ReadBack(index, depth + 1);
             return value.Start > 0 && Ops[value.Start - 1].OpCode.Name!.StartsWith("ldarg", StringComparison.Ordinal) && Ops[value.Start - 1].Slot == slot;
         }
+
+        /// <summary>The out parameter's default set in place through its address (ldarg slot, then initobj of a number: a decimal's or an int's 0).</summary>
+        private bool DefaultsThrough(int index, int slot) =>
+            Ops[index].OpCode == OpCodes.Initobj && index > 0 && Ops[index - 1].OpCode.Name!.StartsWith("ldarg", StringComparison.Ordinal) && Ops[index - 1].Slot == slot
+            && Ops[index].Member is { Name: "Decimal" or "Int32" or "Int64", Namespace: "System" };
 
         /// <summary>What the out parameter in <paramref name="slot"/> holds just before <paramref name="at"/>: its last store on each way, or null.</summary>
         private ProgramValue? OutValueAt(int slot, int at, int depth) =>
@@ -2242,7 +2251,8 @@ public static class ProgramReader
             {
                 var store = stores[storeIndex];
                 if (store >= _reached.Length || _reached[store] is not { } reached) return new UnknownValue($"{given} set");
-                var stored = ReadBack(store, depth + 1);
+                // A number's default set in place (initobj through its address: DefaultsThrough) stores 0.
+                var stored = Ops[store].OpCode == OpCodes.Initobj ? (Value: (ProgramValue)new ConstantValue(0), Start: store) : ReadBack(store, depth + 1);
                 if (stored.Start < 0) return new UnknownValue($"{given} set");
                 var last = reached.And(later.Not());
                 later = later.Or(reached);
