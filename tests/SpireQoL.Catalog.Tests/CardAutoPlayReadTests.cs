@@ -25,6 +25,7 @@ public class CardAutoPlayReadTests
     public void EachReadsItsPileWayAndTarget()
     {
         Assert.Equal((SimPile.Draw, AutoPlayWay.Random, false), Facts(Read<Uproar>()));
+        Assert.Equal((SimPile.Draw, AutoPlayWay.Random, false), Facts(Read<Catastrophe>())); // its card a local its loop sets each round (decision #368)
         Assert.Equal((SimPile.Discard, AutoPlayWay.Shuffled, false), Facts(Read<BeatDown>())); // its two AutoPlays (aimed or not): one read
         Assert.Equal((SimPile.Hand, AutoPlayWay.Random, false), Facts(Read<TheFool>()));
         Assert.Equal((SimPile.Hand, AutoPlayWay.Each, false), Facts(Read<ChoChorus>()));
@@ -92,5 +93,33 @@ public class CardAutoPlayReadTests
         Assert.Equal(2, branch.You.Draw!.Count);
         // Uproar's own 2 spent; the Strike it plays costs nothing (CardCmd.AutoPlay spends no resources: decision #361).
         Assert.Equal(1, branch.You.Energy);
+    }
+
+    [Fact]
+    public void CatastrophePlaysARandomCardOfYourDrawPileEachRound()
+    {
+        // The board: Catastrophe in hand (2 cards), a Strike and a Defend to draw. Each round picks again from what's left: both are played, in either
+        // order, so every branch has the enemy at 100 - 6, you at 5 block, and the draw pile empty.
+        GameModels.EnsureLoaded();
+        var gameFight = new GameFight();
+        gameFight.Me.PlayerCombatState!.Energy = 3;
+        var enemy = gameFight.Combat.CreateCreature(MegaCrit.Sts2.Core.Models.ModelDb.Monster<MegaCrit.Sts2.Core.Models.Monsters.Axebot>().ToMutable(), MegaCrit.Sts2.Core.Combat.CombatSide.Enemy, slot: null);
+        gameFight.Combat.AddCreature(enemy);
+        enemy.SetMaxHpInternal(100);
+        enemy.SetCurrentHpInternal(100);
+        var catastrophe = gameFight.Add<Catastrophe>();
+        gameFight.Add<StrikeIronclad>(PileType.Draw);
+        gameFight.Add<DefendIronclad>(PileType.Draw);
+        var start = SimAdapter.Build(gameFight.Me, gameFight.Combat, out var ids);
+        var play = SimAdapter.Play(catastrophe, gameFight.Me, gameFight.Combat, ids, targetId: Who.None);
+        SimEngine.ApplyPlayTo(start, play, out var branches, out _);
+        Assert.NotEmpty(branches);
+        Assert.All(branches, branch =>
+        {
+            Assert.Null(branch.Unmodelled);
+            Assert.Equal(100 - 6, branch.Enemy(ids[enemy])!.Hp);
+            Assert.Equal(5, branch.You.Block);
+            Assert.Equal(0, branch.You.Draw!.Count);
+        });
     }
 }

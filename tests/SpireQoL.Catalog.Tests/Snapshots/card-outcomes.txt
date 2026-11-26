@@ -592,12 +592,12 @@ Cascade [Crowded] 0.0833 you=80/5 e0 h9 d0/3 enemy0=188/0 enemy1=30/0 [Shuffled1
 Cascade [Replayed] 0.5 you=80/15 e0 h3 d0/9 enemy0=182/0 [] | 0.45 you=80/15 e0 h3 d0/9 enemy0=182/0 [] | 0.05 you=80/15 e0 h3 d0/9 enemy0=182/0 []
 Cascade [Teammate] 0.05 you=80/15 e0 h3 d3/6 mate0=70/0 e3 h2 enemy0=200/0 [] | 0.3 you=80/10 e0 h3 d3/6 mate0=70/0 e3 h2 enemy0=194/0 [] | 0.15 you=80/5 e0 h3 d3/6 mate0=70/0 e3 h2 enemy0=188/0 [] | 0.15 you=80/10 e0 h3 d3/6 mate0=70/0 e3 h2 enemy0=194/0 [] | 0.3 you=80/5 e0 h3 d3/6 mate0=70/0 e3 h2 enemy0=188/0 [] | 0.05 you=80/0 e0 h3 d3/6 mate0=70/0 e3 h2 enemy0=182/0 []
 Cascade [Alone] 0.05 you=80/15 e0 h0 d3/6 enemy0=200/0 [] | 0.3 you=80/10 e0 h0 d3/6 enemy0=194/0 [] | 0.15 you=80/5 e0 h0 d3/6 enemy0=188/0 [] | 0.15 you=80/10 e0 h0 d3/6 enemy0=194/0 [] | 0.3 you=80/5 e0 h0 d3/6 enemy0=188/0 [] | 0.05 you=80/0 e0 h0 d3/6 enemy0=182/0 []
-Catastrophe [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [] ?Catastrophe: CardCmd.AutoPlay: a card it plays that its code names in a way the simulator doesn't read (?local)
-Catastrophe [Upgraded] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [] ?Catastrophe: CardCmd.AutoPlay: a card it plays that its code names in a way the simulator doesn't read (?local)
-Catastrophe [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=200/0 enemy1=30/0 [] ?Catastrophe: CardCmd.AutoPlay: a card it plays that its code names in a way the simulator doesn't read (?local)
-Catastrophe [Replayed] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [] ?Catastrophe: CardCmd.AutoPlay: a card it plays that its code names in a way the simulator doesn't read (?local)
-Catastrophe [Teammate] 1 you=80/0 e1 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [] ?Catastrophe: CardCmd.AutoPlay: a card it plays that its code names in a way the simulator doesn't read (?local)
-Catastrophe [Alone] 1 you=80/0 e1 h0 d6/3 enemy0=200/0 [] ?Catastrophe: CardCmd.AutoPlay: a card it plays that its code names in a way the simulator doesn't read (?local)
+Catastrophe [Standard] 0.2 you=80/10 e1 h3 d4/5 enemy0=200/0 [] | 0.3 you=80/5 e1 h3 d4/5 enemy0=194/0 [] | 0.3 you=80/5 e1 h3 d4/5 enemy0=194/0 [] | 0.2 you=80/0 e1 h3 d4/5 enemy0=188/0 []
+Catastrophe [Upgraded] 0.05 you=80/15 e1 h3 d3/6 enemy0=200/0 [] | 0.3 you=80/10 e1 h3 d3/6 enemy0=194/0 [] | 0.15 you=80/5 e1 h3 d3/6 enemy0=188/0 [] | 0.15 you=80/10 e1 h3 d3/6 enemy0=194/0 [] | 0.3 you=80/5 e1 h3 d3/6 enemy0=188/0 [] | 0.05 you=80/0 e1 h3 d3/6 enemy0=182/0 []
+Catastrophe [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=200/0 enemy1=30/0 []
+Catastrophe [Replayed] 0.15 you=80/15 e1 h3 d2/7 enemy0=194/0 [] | 0.3 you=80/10 e1 h3 d2/7 enemy0=188/0 [] | 0.05 you=80/5 e1 h3 d2/7 enemy0=182/0 [] | 0.05 you=80/15 e1 h3 d2/7 enemy0=194/0 [] | 0.2 you=80/10 e1 h3 d2/7 enemy0=188/0 [] | 0.05 you=80/5 e1 h3 d2/7 enemy0=182/0 [] | 0.1 you=80/10 e1 h3 d2/7 enemy0=188/0 [] | 0.1 you=80/5 e1 h3 d2/7 enemy0=182/0 []
+Catastrophe [Teammate] 0.2 you=80/10 e1 h3 d4/5 mate0=70/0 e3 h2 enemy0=200/0 [] | 0.3 you=80/5 e1 h3 d4/5 mate0=70/0 e3 h2 enemy0=194/0 [] | 0.3 you=80/5 e1 h3 d4/5 mate0=70/0 e3 h2 enemy0=194/0 [] | 0.2 you=80/0 e1 h3 d4/5 mate0=70/0 e3 h2 enemy0=188/0 []
+Catastrophe [Alone] 0.2 you=80/10 e1 h0 d4/5 enemy0=200/0 [] | 0.3 you=80/5 e1 h0 d4/5 enemy0=194/0 [] | 0.3 you=80/5 e1 h0 d4/5 enemy0=194/0 [] | 0.2 you=80/0 e1 h0 d4/5 enemy0=188/0 []
 CelestialMight [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=182/0 []
 CelestialMight [Upgraded] 1 you=80/0 e1 h3 d6/3 enemy0=176/0 []
 CelestialMight [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=182/0 enemy1=30/0 []

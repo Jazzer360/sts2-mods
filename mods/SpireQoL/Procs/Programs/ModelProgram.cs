@@ -2282,14 +2282,19 @@ public static class ProgramReader
 
         private ProgramValue? LastStored(Func<int, bool> isStore, int loadAt, int depth)
         {
-            var stores = new List<int>();
+            var all = new List<int>();
             for (var i = 0; i < Ops.Count; i++)
+                if (isStore(i)) all.Add(i);
+            // A store in a loop the read is in can come from an earlier round (a loop's counter): read only when the round itself stores it before the read
+            // on every way (decision #368: Catastrophe's card, picked again each round); the stores before that one are overwritten there.
+            var from = 0;
+            foreach (var (start, end) in _loopEnds)
             {
-                if (!isStore(i)) continue;
-                // A store in a loop the read is in can come from an earlier round (a loop's counter): not read.
-                if (_loopEnds.Any(loop => loop.Key <= loadAt && loadAt <= loop.Value && loop.Key <= i && i <= loop.Value)) return null;
-                if (i < loadAt) stores.Add(i);
+                if (start > loadAt || loadAt > end || !all.Any(store => start <= store && store <= end)) continue;
+                if (RoundStore(all, start, end, loadAt) is not { } round) return null;
+                from = Math.Max(from, round);
             }
+            var stores = all.Where(store => store >= from && store < loadAt).ToList();
             if (stores.Count == 0) return null;
             // The last store, when the code runs straight from it to the read (no jump on the way or into it: a temporary the compiler
             // reuses, an awaited result kept a moment), is the value.
@@ -2317,6 +2322,29 @@ public static class ProgramReader
                 else truths = false;
             }
             return truths ? new ConditionValue(value) : new WaysValue(ways);
+        }
+
+        /// <summary>
+        /// The last of <paramref name="stores"/> in the loop [<paramref name="start"/>, <paramref name="end"/>] that every round makes before the read at
+        /// <paramref name="loadAt"/> (decision #368): reached whenever the loop is (its condition is the loop's entry's), not inside a loop of its own the
+        /// read isn't in, and with no way into the loop landing between it and the read (a for's jump to its test at the bottom reads the value from before
+        /// the round). Null when there's none: the read can see an earlier round's value.
+        /// </summary>
+        private int? RoundStore(List<int> stores, int start, int end, int loadAt)
+        {
+            if (LoopEntry(start) is not { } entry) return null;
+            for (var index = stores.Count - 1; index >= 0; index--)
+            {
+                var store = stores[index];
+                if (store < start || store >= loadAt) continue;
+                if (store >= _reached.Length || _reached[store] is not { } reached || !reached.Without(entry).IsAlways) continue;
+                if (_loopEnds.Any(loop => loop.Key <= store && store <= loop.Value && !(loop.Key <= loadAt && loadAt <= loop.Value))) continue;
+                var enteredBetween = false;
+                for (var landing = store + 1; landing <= loadAt && !enteredBetween; landing++)
+                    enteredBetween = _jumpsTo.TryGetValue(landing, out var jumps) && jumps.Any(jump => jump < start || jump > end);
+                return enteredBetween ? null : store;
+            }
+            return null;
         }
 
         /// <summary>
