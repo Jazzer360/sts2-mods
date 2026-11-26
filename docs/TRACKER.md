@@ -418,7 +418,7 @@ An indicator on a choice outside combat when one of your relics changes what it 
 
 - [x] **Last night's Regent reports** (2026-11-25, build be2bda4): Blood Wall's preview (fixed overnight: the play's own HP cost added back, 35f1ffe); a played Beckon still counted as the turn ends (`SimPlay.TurnEndLeaving`); the Ceremonial Beast's Plow Strength left out of later turns (a move's power or block on a test of its own powers is built: `MoveConditions.OfStep`, power tests only, since TestSubject's Respawns counts up before its test); Personal Hive's Dazed called unexplained beside its own made-cards check; BEGONE! on an Infection (the pick is yours, decision #167: the preview check skips it); Bowlbug Rock stunned by Imbalanced (the projection check skips a stun before the rolled-move check).
 
-- [ ] **Owner's call: a stun that depends on your block** (2026-11-26): Imbalanced stuns the Bowlbug Rock when you block all of its attack, but the Intent Forecast's later turns follow no one's block (decision #308), so they show its next move (Headbutt) as certain. A `?` there, or the forecast stopping at that turn, would say it isn't; either adds to what's on screen.
+- [x] **Owner's call: a stun that depends on your block** (2026-11-26): Imbalanced stuns the Bowlbug Rock when you block all of its attack, but the Intent Forecast's later turns follow no one's block (decision #308), so they show its next move (Headbutt) as certain. Left as is (decision #396).
 
 - [ ] **A card Feral sends back makes Stampede's pick unknown** (2026-11-21): `SimEngine.AddToHand` marks the hand's contents unknown for any card joining it, but the card Feral returns is known (the one just played). Keep it in `AutoHand` instead.
 
