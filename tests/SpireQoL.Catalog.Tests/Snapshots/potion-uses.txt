@@ -5,7 +5,7 @@ Ashwater [teammate]: ? Ashwater: CardCmd.Exhaust on a teammate's cards: not foll
 AttackPotion [you]: Generated 1
 AttackPotion [teammate]: ? AttackPotion: CardPileCmd.AddGeneratedCardToCombat on a teammate's cards: not followed
 BeetleJuice [enemy]: ShrinkPower 4 on enemy
-BlessingOfTheForge [you]: ? CardCmd.Upgrade: a card upgraded mid-play: its numbers after it aren't followed
+BlessingOfTheForge [you]: UpgradeCardsAction { Piles = Hand, Source = BlessingOfTheForge }
 BlessingOfTheForge [teammate]: ? BlessingOfTheForge: CardCmd.Upgrade on a teammate's cards: not followed
 BlockPotion [you]: block 12 Unpowered to you
 BlockPotion [teammate]: block 12 Unpowered to teammate
@@ -21,11 +21,11 @@ Clarity [you]: Drawn 1
 Clarity [teammate]: nothing
 ColorlessPotion [you]: Generated 1
 ColorlessPotion [teammate]: ? ColorlessPotion: CardPileCmd.AddGeneratedCardToCombat on a teammate's cards: not followed
-CosmicConcoction [you]: ? CardCmd.Upgrade: a card upgraded mid-play: its numbers after it aren't followed; Generated 3
+CosmicConcoction [you]: Generated 3
 CosmicConcoction [teammate]: ? CosmicConcoction: CardCmd.Upgrade on a teammate's cards: not followed; ? CosmicConcoction: CardPileCmd.AddGeneratedCardToCombat on a teammate's cards: not followed
 CrystallineEuphoria [you]: Generated 3; Generated 2147483647
 CrystallineEuphoria [teammate]: ? CrystallineEuphoria: CardPileCmd.AddGeneratedCardsToCombat on a teammate's cards: not followed; ? CrystallineEuphoria: CardPileCmd.AddGeneratedCardsToCombat on a teammate's cards: not followed
-CunningPotion [you]: Generated 3; ? CardCmd.Upgrade: a card upgraded mid-play: its numbers after it aren't followed
+CunningPotion [you]: Generated 3
 CunningPotion [teammate]: ? CunningPotion: CardPileCmd.AddGeneratedCardsToCombat on a teammate's cards: not followed; ? CunningPotion: CardCmd.Upgrade on a teammate's cards: not followed
 CureAll [you]: EnergyGained 1 for you; Drawn 2
 CureAll [teammate]: EnergyGained 1 for teammate

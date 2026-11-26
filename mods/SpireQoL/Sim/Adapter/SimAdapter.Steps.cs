@@ -58,6 +58,7 @@ public static partial class SimAdapter
         ["ForgeCmd.Forge"] = "the Sovereign Blade it makes when you have none (the first play's)",
         ["CardCmd.Exhaust"] = "TakeFromHandAction(Exhausted), after ExhaustFromHandAction",
         ["CardCmd.Discard"] = "TakeFromHandAction(Discarded), or the cards it looked at on your draw pile",
+        ["CardCmd.Upgrade"] = "UpgradeCardsAction of your cards in the piles it goes over (an upgrade of a card the play makes, of a pick, or in an auto-play's callback: no action, UpgradeTargetOf)",
         ["CardCmd.DiscardAndDraw"] = "TakeFromHandAction(Discarded), then the draws",
         ["CardCmd.Transform"] = "TakeFromHandAction(Generated) in your hand, or a made card in its pile",
         ["CardCmd.TransformTo"] = "the same as Transform",
@@ -81,7 +82,6 @@ public static partial class SimAdapter
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, string> CommandsNotTranslated = new Dictionary<string, string>
     {
-        ["CardCmd.Upgrade"] = "a card upgraded mid-play: its numbers after it aren't followed",
         ["CardCmd.AutoPlay"] = "a card in hand or a pile played by the card: that play isn't followed",
         ["CardCmd.ApplyKeyword"] = "a keyword given to a card: not followed",
         ["CardCmd.ApplySingleTurnSly"] = "Sly given to a card this turn: not followed",
@@ -450,6 +450,14 @@ public static partial class SimAdapter
                 return ShuffleFrom(found, play);
             case ("CardPileCmd", "AutoPlayFromDrawPile"):
                 return (AutoPlayFrom(found, play), null);
+            // The cards of yours in some piles upgraded: what the simulator reads of them later (UpgradeCardsAction). Its tests of the card its loop
+            // is at (Apotheosis': not the card played, one that can be upgraded) are the command's own: it goes over every card there, and upgrades
+            // only one that can be (its !IsUpgradable skip). A card the play makes, a pick, a card an auto-play's callback upgrades: no action.
+            case ("CardCmd", "Upgrade"):
+                if (UpgradeTargetOf(command, play.Program) is not { Target: UpgradeTarget.Piles, Piles: var piles }) return none;
+                // A card's upgrade of the piles of the teammate it's aimed at: their piles aren't simulated.
+                if (play.Card != null && UpgradesTargetsPiles(command, play.Program)) return (Unknown(play, "CardCmd.Upgrade of a teammate's cards: not followed"), null);
+                return (new List<SimAction> { new UpgradeCardsAction(piles, play.Name) }, Without(found.Condition, literal => literal.Test.Parts().Any(part => part is NamedValue { Name: "each" })));
             case ("CardPileCmd", "AddGeneratedCardToCombat" or "AddGeneratedCardsToCombat" or "AddToCombatAndPreview"):
             case ("ForgeCmd", "Forge"):
                 return (MadeFrom(found, play), null);
@@ -478,6 +486,7 @@ public static partial class SimAdapter
     internal static readonly IReadOnlyDictionary<string, string> ShapesNotFollowed = new Dictionary<string, string>
     {
         ["ArrowCmd.DislodgeArrow"] = "an arrow pulled out of a creature other than the card's target: not followed",
+        ["CardCmd.Upgrade"] = "a card upgraded that's neither one the play makes, a pick, nor one of yours in a pile: not followed",
         ["CreatureCmd.Kill"] = "a creature other than your Osty killed: not followed",
         ["CreatureCmd.SetCurrentHp"] = "the HP of a creature other than the card's target set: not followed",
         ["CreatureCmd.Stun"] = "a creature other than the card's target stunned: not followed",
@@ -498,6 +507,7 @@ public static partial class SimAdapter
             "ArrowCmd.DislodgeArrow" or "CreatureCmd.SetCurrentHp" or "CreatureCmd.Stun" => Argument(command, 0) == "cardPlay.Target",
             "CreatureCmd.Kill" => Argument(command, 0) == "Owner.Osty" || program.All().OfType<LoopStep>().Any(loop => KillsEachItem(loop) && loop.Body.Contains(command)),
             "CreatureCmd.LoseBlock" => Argument(command, 1) == "cardPlay.Target",
+            "CardCmd.Upgrade" => UpgradeTargetOf(command, program) != null,
             "PlayerCmd.GainStars" => Argument(command, 1) is "Owner" or "cardPlay.Target.Player",
             "PowerCmd.Remove" => RemovesTargetsArtifact(command, program) || command.Command.GenericArguments.Count == 1 && IsYou(ValueAt(command, 0)),
             // Its Targeting's creature: one its code picks by an order is read only as the least-HP enemy (SimPlay.Target.LeastHp).
@@ -506,6 +516,87 @@ public static partial class SimAdapter
         };
         return followed ? null : ShapesNotFollowed[command.Command.FullName];
     }
+
+    /// <summary>What a card's CardCmd.Upgrade upgrades (UpgradeTargetOf).</summary>
+    internal enum UpgradeTarget
+    {
+        /// <summary>
+        /// A card the play makes (a CreateCard, a card factory's, a Soul.Create's, Shiv.CreateInHand's, a transform's result): the simulator follows a
+        /// made card by its class, type and tags (CardEventAction.Card), none of which an upgrade changes; its numbers are read when it's played.
+        /// </summary>
+        MadeCard,
+        /// <summary>A card you pick (CardSelectCmd's result): a card, never a particular one (decision #188), so nothing that depends on which.</summary>
+        Picked,
+        /// <summary>The card an auto-play from your draw pile plays, upgraded first in its callback (The Devil+): AutoPlayFromDrawAction.Upgrade.</summary>
+        AutoPlayed,
+        /// <summary>Every card of yours in some piles (UpgradedPiles), or random ones there: UpgradeCardsAction.</summary>
+        Piles,
+    }
+
+    /// <summary>
+    /// The player the play is aimed at (cardPlay.Target.Player; a potion's OnUse target.Player, read as a play: Blessing of the Forge's hand): a card's
+    /// is a teammate, whose piles aren't simulated; a potion's is you, or a teammate it's thrown at, unknown before any translation (ActsOnCards).
+    /// </summary>
+    private static bool IsTargetsPlayer(ProgramValue? whose) => StepValues.Unstored(whose)?.ToString() is "cardPlay.Target.Player" or "target.Player";
+
+    /// <summary>The piles an upgrade goes over are the player its play is aimed at's (IsTargetsPlayer).</summary>
+    private static bool UpgradesTargetsPiles(CommandStep command, ModelProgram program) =>
+        UpgradedValue(command, program)?.Parts().Any(part => part switch
+        {
+            QueryValue { Name: "GetPile", Arguments: [_, var whose] } => IsTargetsPlayer(whose),
+            QueryValue { Name: "AllCards", Of: QueryValue { Name: "PlayerCombatState", Of: var whose } } => IsTargetsPlayer(whose),
+            _ => false,
+        }) == true;
+
+    /// <summary>The card argument of an upgrade: a loop's item read as the collection its loop goes over.</summary>
+    private static ProgramValue? UpgradedValue(CommandStep command, ModelProgram program)
+    {
+        var upgraded = ValueAt(command, 0);
+        return upgraded is NamedValue { Name: "each" }
+            ? program.All().OfType<LoopStep>().LastOrDefault(loop => loop.Items != null && new ModelProgram("", loop.Body).All().Contains(command))?.Items is { } items ? Unstored(items) : null
+            : upgraded;
+    }
+
+    private static readonly HashSet<string> CardMakers = new(StringComparer.Ordinal) { "CreateCard", "CreateClone", "CreateCloneForPlayer", "GetForCombat", "GetDistinctForCombat" };
+
+    private static readonly HashSet<string> MakingCommands = new(StringComparer.Ordinal) { "Shiv.CreateInHand", "CardCmd.Transform", "CardCmd.TransformTo" };
+
+    /// <summary>
+    /// What a CardCmd.Upgrade step upgrades, read from its card argument (a loop's item read as the collection the loop goes over): a pick, the card
+    /// played off your draw pile in an auto-play's callback, your cards in your piles (GetPile of yours: your hand, draw, discard or exhaust pile; your
+    /// PlayerCombatState.AllCards: every one), or a card the play makes. Null for anything else (ShapesNotFollowed). Pure on the step's code.
+    /// </summary>
+    internal static (UpgradeTarget Target, UpgradedPiles Piles)? UpgradeTargetOf(CommandStep command, ModelProgram program)
+    {
+        if (program.All().OfType<CommandStep>().Any(other => other.Command.FullName == "CardPileCmd.AutoPlayFromDrawPile" && other.Inner.Contains(command)))
+            return (UpgradeTarget.AutoPlayed, UpgradedPiles.None);
+        if (UpgradedValue(command, program) is not { } upgraded) return null;
+        var parts = upgraded.Parts().ToList();
+        if (parts.Any(part => part is ResultValue { Command: var picked } && picked.StartsWith("CardSelectCmd.", StringComparison.Ordinal))) return (UpgradeTarget.Picked, UpgradedPiles.None);
+        // A card the play makes, before the piles: a count its maker is given can read one (Stoke's cards for the hand it exhausted).
+        if (MakesCards(parts)) return (UpgradeTarget.MadeCard, UpgradedPiles.None);
+        var piles = UpgradedPiles.None;
+        foreach (var part in parts)
+            piles |= part switch
+            {
+                QueryValue { Name: "AllCards", Of: QueryValue { Name: "PlayerCombatState", Of: var whose } } when IsOwner(whose) || IsTargetsPlayer(whose) => UpgradedPiles.Hand | UpgradedPiles.Draw | UpgradedPiles.Discard | UpgradedPiles.Exhaust,
+                QueryValue { Name: "GetPile", Arguments: [ConstantValue { Value: var pile }, var whose] } when IsOwner(whose) || IsTargetsPlayer(whose) => (PileType)pile switch
+                {
+                    PileType.Hand => UpgradedPiles.Hand,
+                    PileType.Draw => UpgradedPiles.Draw,
+                    PileType.Discard => UpgradedPiles.Discard,
+                    PileType.Exhaust => UpgradedPiles.Exhaust,
+                    _ => UpgradedPiles.None,
+                },
+                _ => UpgradedPiles.None,
+            };
+        if (piles != UpgradedPiles.None) return (UpgradeTarget.Piles, piles);
+        return null;
+    }
+
+    /// <summary>The value names a card the play makes: a maker's query (CreateCard, a card factory, Soul.Create) or a making command's result (Shiv.CreateInHand, a transform).</summary>
+    private static bool MakesCards(List<ProgramValue> parts) => parts.Any(part => part is QueryValue { Name: var maker, Type: var makerType } && (CardMakers.Contains(maker) || maker == "Create" && makerType != "CombatState")
+                                 || part is ResultValue { Command: var making } && MakingCommands.Contains(making));
 
     /// <summary>
     /// A loop over a list its code works out whose body kills its item and does nothing else a fight follows (DoomPower.DoomKill's foreach:

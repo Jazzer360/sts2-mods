@@ -4,6 +4,42 @@ namespace SpireQoL.Sim;
 public static partial class SimEngine
 {
     /// <summary>
+    /// CardCmd.Upgrade of a player's cards in <paramref name="piles"/> (UpgradeCardsAction; <paramref name="source"/> names what upgrades them). The command
+    /// runs no hook (UpgradeInternal, FinalizeUpgradeInternal on each card), so what it changes is what the simulator reads of an upgraded card later:
+    /// in the hand (UpgradeInHand); in the draw and discard piles, a card drawn or taken from there, or played off the top, whose profile an upgrade
+    /// could change (SimDrawCard.Upgradable: SimPlayer.PilesUpgraded makes that unknown); in the exhaust pile, a card that plays itself from there as the
+    /// turn ends (Howl from Beyond: SimPlayer.ExhaustAutoPlays) that can be upgraded. I Am Invincible's block on top of the draw pile is read at the
+    /// board, so an upgrade of that pile with it there is unknown.
+    /// </summary>
+    internal static void UpgradeCards(SimState state, int player, UpgradedPiles piles, string source)
+    {
+        if (state.Player(player) is not { } simPlayer) return;
+        if (piles.HasFlag(UpgradedPiles.Hand)) UpgradeInHand(state, player, source);
+        if ((piles & (UpgradedPiles.Draw | UpgradedPiles.Discard)) != 0)
+        {
+            if (piles.HasFlag(UpgradedPiles.Draw) && simPlayer.InvincibleBlock > 0)
+                state.Unmodelled ??= $"{source} upgrades your draw pile, and I Am Invincible plays from its top as the turn ends";
+            if (simPlayer.Draw != null && !simPlayer.PilesUpgraded) state.MutablePlayer(player).PilesUpgraded = true;
+        }
+        if (piles.HasFlag(UpgradedPiles.Exhaust) && simPlayer.ExhaustAutoPlays.Any(play => play.Card?.Card.Upgradable != false))
+            state.Unmodelled ??= $"{source} upgrades your exhaust pile, and a card there that can be upgraded plays itself as the turn ends";
+    }
+
+    /// <summary>
+    /// CardCmd.Upgrade of cards in a player's hand (every one, or random ones: TunePower's; a card you pick is a card, decision #188): followed while
+    /// no card in that hand that can be upgraded acts later in a way the simulator reads from the board (SimPlayer.UpgradableAtTurnEnd: Ethereal, or
+    /// acting in hand as the turn ends: Burn), and no card Stampede or Simpleton could auto-play from it can be (their plays are built at the
+    /// board: SimState.AutoPlaysUnknown then). Anything else of a hand card's (its numbers) is read when it's played, a later decision.
+    /// </summary>
+    internal static void UpgradeInHand(SimState state, int player, string source)
+    {
+        if (state.Player(player) is not { } simPlayer) return;
+        if (simPlayer.UpgradableAtTurnEnd > 0)
+            state.Unmodelled ??= $"{source} upgrades cards in hand, and one that acts as the turn ends could be one";
+        if (simPlayer.AutoHand?.Any(card => card.Card?.Upgradable != false) == true) state.AutoPlaysUnknown = true;
+    }
+
+    /// <summary>
     /// A hand card's live energy cost (CardEnergyCost.GetWithModifiers(CostModifiers.All), decision #334): its cost before global modifiers
     /// (SimHandCard.LocalCost), then Hook.ModifyEnergyCostInCombat on it: every listener's TryModifyEnergyCostInCombat in the game's order on the
     /// cost so far, then every listener's Late pass (Curious' Powers 1 less, Borrowed Time's 1 more, Corruption's Skills 0), at least 0. A cost

@@ -509,6 +509,19 @@ public sealed record RemoveOwnPowerAction(PowerId Power) : SimAction;
 /// <summary>The play's target dies if it's alive at or below this HP (Judgement: CreatureCmd.SetCurrentHp to 0).</summary>
 public sealed record ExecuteAction(int Threshold) : SimAction;
 
+/// <summary>The piles of a player's cards a CardCmd.Upgrade goes over (UpgradeCardsAction): their hand, draw, discard and exhaust piles.</summary>
+[Flags]
+public enum UpgradedPiles { None = 0, Hand = 1, Draw = 2, Discard = 4, Exhaust = 8 }
+
+/// <summary>
+/// CardCmd.Upgrade of the cards of the play's owner in <paramref name="Piles"/> (Armaments+'s hand, Apotheosis' every pile, Drain Power's random
+/// cards of the discard pile, Knife Trap's Shivs in the exhaust pile), as SimEngine.UpgradeCards follows it: the command runs no hook, so what it
+/// changes is what the simulator reads of those cards later in the simulation. A card of yours you pick (Armaments') isn't one (decision #188),
+/// nor a card the play makes (its class, type and tags are what's followed of it, and an upgrade changes none of them).
+/// </summary>
+/// <param name="Source">The card or potion whose code upgrades them (its class name), for what isn't followed.</param>
+public sealed record UpgradeCardsAction(UpgradedPiles Piles, string Source) : SimAction;
+
 /// <summary>Your Osty dies (CreatureCmd.Kill: Sacrifice, Bone Shards), losing all his HP (Necro Mastery reacts).</summary>
 public sealed record KillOstyAction : SimAction;
 

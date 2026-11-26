@@ -228,6 +228,8 @@ public static partial class SimEngine
     private static void JoinHand(SimState state, SimPlayer simPlayer, SimDrawCard card, int id)
     {
         JoinsTakes(state, card.TakenBy, known: true, intoHand: true, made: false);
+        if (card.Upgradable && simPlayer.PilesUpgraded) state.Unmodelled ??= "a card that could have been upgraded in its pile joined your hand";
+        if (card.Upgradable && (card.TurnEnd != null || card.Fading)) simPlayer.UpgradableAtTurnEnd++;
         if (card.TurnEnd != null) simPlayer.TurnEndCards = new List<TurnEndCard>(simPlayer.TurnEndCards) { card.TurnEnd };
         if (card.Exhausting != null) simPlayer.ExhaustingInHand = new List<ExhaustingCard>(simPlayer.ExhaustingInHand) { card.Exhausting with { HandCard = id } };
         if (card.Fading) simPlayer.Fading++;
@@ -404,6 +406,7 @@ public static partial class SimEngine
     /// <summary>A card off the top of the draw pile plays itself (AutoPlayFromDraw), then goes where it goes.</summary>
     private static IEnumerable<SimState> PlayFromPile(SimState state, int player, SimDrawCard card, bool forceExhaust, bool upgrade)
     {
+        if (card.Upgradable && state.Player(player) is { PilesUpgraded: true }) state.Unmodelled ??= "a card that could have been upgraded in your draw pile played itself from there";
         if ((upgrade ? card.FromPileUpgraded : card.FromPile) is not { } built)
         {
             state.AutoPlaysUnknown = true;

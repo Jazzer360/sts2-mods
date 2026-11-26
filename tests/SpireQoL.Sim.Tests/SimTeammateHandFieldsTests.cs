@@ -54,6 +54,7 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.Turn), // the cards they played this turn: you watch them play
         nameof(SimPlayer.Fight), // the fight's log (decision #191): what happened, on screen
         nameof(SimPlayer.ExhaustPile), // their exhaust pile's count: you can look at it
+        nameof(SimPlayer.PilesUpgraded), // their draw or discard pile upgraded by a card played in the simulation: a play everyone sees
         "_orbsShared",
     };
 

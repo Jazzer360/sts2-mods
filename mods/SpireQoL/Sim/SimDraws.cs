@@ -42,6 +42,12 @@ public sealed record SimDrawCard(string Key)
     /// Perfect Fit's).
     /// </summary>
     public bool OnTopWhenShuffled { get; init; }
+    /// <summary>
+    /// It can be upgraded, and something about it is followed (it isn't <see cref="Plain"/>): an upgrade of its pile (SimPlayer.PilesUpgraded) makes it
+    /// unknown once drawn, taken or played from there, and once in your hand it counts among the cards an upgrade there could change
+    /// (SimPlayer.UpgradableAtTurnEnd) when it acts as the turn ends.
+    /// </summary>
+    public bool Upgradable { get; init; }
     /// <summary>I Am Invincible: its block when it's the top card as your turn ends (it plays itself from there).</summary>
     public int InvincibleBlock { get; init; }
     /// <summary>Its type, while a card in your hand acts on the type of a card it draws (Escape Plan, Pillage: decision #118); else None.</summary>

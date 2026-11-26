@@ -1932,8 +1932,7 @@ public sealed class ReadModel : SimModel
                 {
                     if ((int)count(in args) <= 0) return One(args.State);
                     if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
-                    if (args.State.Player(args.Owner) is { UpgradableAtTurnEnd: > 0 })
-                        args.State.Unmodelled ??= $"{Name} upgrades random cards in hand, and one that acts as the turn ends could be one";
+                    SimEngine.UpgradeInHand(args.State, args.Owner, Name);
                     return One(args.State);
                 };
             }

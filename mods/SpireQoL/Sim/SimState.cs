@@ -519,6 +519,11 @@ public sealed class SimPlayer
     /// </summary>
     public int UpgradableAtTurnEnd;
     /// <summary>
+    /// Cards in their draw or discard pile were upgraded in this simulation (Apotheosis, Drain Power: SimEngine.UpgradeCards): a card drawn, taken or
+    /// played from there whose profile an upgrade could change (SimDrawCard.Upgradable) isn't known then.
+    /// </summary>
+    public bool PilesUpgraded;
+    /// <summary>
     /// Your draw pile and discard pile by profile (decision #90): draws come from it, and what's drawn joins the hand. Null: draws
     /// are only counted (a teammate's; tests that don't set it).
     /// </summary>
@@ -696,7 +701,7 @@ public sealed class SimPlayer
     {
         key.Add(Block); key.Add(Hp); key.Add(MaxHp); key.Add(Taken); key.Add(Through); key.Add(OstyTaken); key.Add(UnblockableTaken); key.Add(Incoming); key.Add(BlockGained);
         key.Add(WuppyHp); key.Add(WuppyTaken); key.Add(OstyHp); key.Add(OstyMaxHp); key.Add(OstyShields ? 1 : 0); key.Add(Died ? 1 : 0); key.Add(LizardTailUsed ? 1 : 0); key.Add(LizardTailHeal); key.Add(FairiesUsed); key.Add(Fairies);
-        key.Add(BlockGains); key.Add(Energy); key.Add(HandCount); key.Add(PlayingFromHand); key.Add(Arrows); key.Add(Fading); key.Add(UpgradableAtTurnEnd); key.Add(HexFading); key.Add(HexFrom); key.Add(Drawn); key.Add(ExhaustPile); key.Add(TakenToHand);
+        key.Add(BlockGains); key.Add(Energy); key.Add(HandCount); key.Add(PlayingFromHand); key.Add(Arrows); key.Add(Fading); key.Add(UpgradableAtTurnEnd); key.Add(PilesUpgraded ? 1 : 0); key.Add(HexFading); key.Add(HexFrom); key.Add(Drawn); key.Add(ExhaustPile); key.Add(TakenToHand);
         key.Add(OrbCapacity); key.Add(BeaconGiving ? 1 : 0); key.Add(InvincibleBlock); key.Add(InvincibleDrawPile);
         if (ExtraTurnFrom != null) key.Add(ExtraTurnFrom.GetHashCode());
         Draw?.Hash(ref key);

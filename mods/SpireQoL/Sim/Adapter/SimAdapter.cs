@@ -520,7 +520,7 @@ public static partial class SimAdapter
                     fromPile = (FromPile(card, card, me, combat, ids, out var exhausts), topUpgrades ? UpgradedFromPile(card, me, combat, ids) : null, exhausts);
                     fromPileByKey[key] = fromPile;
                 }
-                return new SimDrawCard(key)
+                var drawCard = new SimDrawCard(key)
                 {
                     FromPile = fromPile.Plain, FromPileUpgraded = fromPile.Upgraded, ExhaustsWhenPlayed = fromPile.Exhausts,
                     EnergyLostOnDraw = energyLost,
@@ -528,6 +528,8 @@ public static partial class SimAdapter
                     TurnEnd = turnEnd, Fading = fading, HexFading = hexFading, Status = status, Ethereal = ethereal, Strike = strike,
                     Pickable = pickable, Auto = auto, InvincibleBlock = invincible, OnTopWhenShuffled = perfectFit, Type = type, Free = free, Sly = sly, TakenBy = takenBy,
                 };
+                // One an upgrade could change (something about it is followed): an upgrade of its pile or its hand makes what it does unknown.
+                return !drawCard.Plain && Safe(() => card.IsUpgradable) ? drawCard with { Key = key + "|upgradable", Upgradable = true } : drawCard;
             }
             var profiles = new Dictionary<CardModel, SimDrawCard>(ReferenceEqualityComparer.Instance);
             SimDrawCard Remembered(CardModel card)

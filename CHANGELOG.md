@@ -264,6 +264,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Paper Cuts' max HP loss is worked out from its own code: when its hit leaves you above your new max HP, Incoming Damage counts the HP you lose down to it.
 - Killing The Lost during a play gives you back the Strength and Dexterity it took, for the play's later hits and block, as the game does.
 - The later turns' forecast no longer shows `?` for a relic or power whose effect as your next turn starts is only cards, energy or HP (Bellows, Big Hat, Ninja Scroll, Happy Flower...), which that forecast doesn't count, as it already didn't for ones not worked out from their code.
+- Cards that upgrade a card while they're played are predicted instead of showing `?` (Armaments, Apotheosis, Drain Power, Abundance, and the upgraded Begone, Charge, Compact, Dirge, Florescence, Guards, Hidden Daggers, Jackpot, Largesse, Manifest Authority, Primal Force, Quasar, Reave, Splash, Stoke, Storm of Steel, The Lovers and The Moon), and so is Blessing of the Forge: an upgrade of a card they make or one you pick changes nothing this turn, and one of your hand or piles is followed, uncertain only where an upgraded card acts later in the turn (a Burn in your hand, a card drawn after Apotheosis, a card Stampede could pick).
 
 #### Removed
 - Biiig Hug's tag and its settings row: the Soot it adds on a shuffle never makes a shuffle worth avoiding. The Soot is still worked out (a later draw can find it, and your relics and powers that react to a card you make hear it).
