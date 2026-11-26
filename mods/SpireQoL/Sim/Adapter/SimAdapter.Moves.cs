@@ -23,6 +23,7 @@ public static partial class SimAdapter
         ["PowerCmd.Apply"] = "MovePowerAction: the power (its type argument) on each creature its target argument names, its amount its third argument, read on the monster",
         ["CreatureCmd.GainBlock"] = "MoveBlockAction: block on each creature its first argument names, its amount through the game's block math",
         ["CreatureCmd.Stun"] = "MoveStunAction: the monster stunning itself (Bowlbug Rock's Headbutt when off balance), on its condition asked of its own state: its next turn's move",
+        ["CreatureCmd.Add"] = "MoveSpawnAction: the monster its type argument names joins (its HP and its AfterAddedToRoom's powers read as a death's spawn is); one the move picks or makes first, adds in a loop, on a test a play can change, or gives a power once it's joined isn't followed (a reviewed gap: MoveGaps)",
     };
 
     /// <summary>The commands a monster's moves and hooks call that the enemy turn doesn't follow, and why.</summary>
@@ -32,7 +33,6 @@ public static partial class SimAdapter
         ["CardPileCmd.AddToCombatAndPreview"] = "status cards put into your piles (Dazed, Slimed, Burn...): your next turn's, not this enemy turn's",
         ["CardPileCmd.AddGeneratedCardToCombat"] = "cards put into your piles (Dazed, Beckon, Frantic Escape): your next turn's, not this enemy turn's",
         ["CardPileCmd.RemoveFromCombat"] = "cards a move steals from your piles (Thieving Hopper): your next turn's, not this enemy turn's",
-        ["CreatureCmd.Add"] = "a creature a move summons: it joins with a move for its next turn (gap: the summon isn't in the enemy turn's state)",
         ["CreatureCmd.Heal"] = "HP a move heals: not followed in the enemy turn (gap)",
         ["CreatureCmd.SetMaxHp"] = "a move's new max HP (Test Subject's respawn): not followed in the enemy turn (gap)",
         ["CreatureCmd.SetMaxAndCurrentHp"] = "HP set as a monster joins or hatches (Decimillipede, Tough Egg): not followed (gap)",
@@ -53,6 +53,10 @@ public static partial class SimAdapter
         ["on a condition"] = "a step the move runs only on a condition the simulator doesn't ask of it yet (Plow's Strength while it has Plow, Pheromone Spit's by its Personal Hive, Dampen on a target without it; a stun of itself on its own state is asked: decision #271); none of them comes before a later hit this turn",
         ["a power made first"] = "PowerCmd.Apply of a power the move makes and sets up first (Sandpit, Dampen, Swipe, Thievery): its own amounts and targets aren't read",
         ["unread value"] = "a target or an amount the evaluator can't work out on the board",
+        ["a monster picked"] = "CreatureCmd.Add of a monster the move picks or makes first (Fabricator's random bot: a model given, not a type argument): which one isn't read",
+        ["in a loop"] = "CreatureCmd.Add in a loop (Ovicopter's eggs, Living Fog's Gas Bombs): how many join isn't read",
+        ["a test a play can change"] = "CreatureCmd.Add on a test a play can change before the move (a free slot: a kill frees one): it isn't decided on the board",
+        ["used once joined"] = "CreatureCmd.Add whose creature the move goes on to use (a power applied to it: Fabricator's and Ovicopter's Minion): what it does to it isn't read",
     };
 
     /// <summary>
@@ -144,13 +148,19 @@ public static partial class SimAdapter
     /// </summary>
     internal static IEnumerable<(CommandStep Step, string Gap)> MoveGaps(ModelProgram program)
     {
-        IEnumerable<(CommandStep, string)> Of(IEnumerable<ProgramStep> steps, bool conditional)
+        IEnumerable<(CommandStep, string)> Of(IEnumerable<ProgramStep> steps, bool conditional, bool inLoop)
         {
             foreach (var step in steps)
             {
                 if (step is LoopStep loop)
                 {
-                    foreach (var found in Of(loop.Body, conditional || loop.Condition != null)) yield return found;
+                    foreach (var found in Of(loop.Body, conditional || loop.Condition != null, inLoop: true)) yield return found;
+                    continue;
+                }
+                if (step is CommandStep { Command.FullName: "CreatureCmd.Add" } spawn)
+                {
+                    var gap = inLoop ? "in a loop" : conditional ? "a test a play can change" : MoveSpawnGap(spawn, program);
+                    if (gap != null) yield return (spawn, gap);
                     continue;
                 }
                 if (step is not CommandStep { Command.FullName: "PowerCmd.Apply" or "CreatureCmd.GainBlock" } command) continue;
@@ -158,7 +168,47 @@ public static partial class SimAdapter
                 else if (command.Command.FullName == "PowerCmd.Apply" && command.Command.GenericArguments.Count == 0) yield return (command, "a power made first");
             }
         }
-        return Of(program.Steps, conditional: false);
+        return Of(program.Steps, conditional: false, inLoop: false);
+    }
+
+    /// <summary>
+    /// Why a move's CreatureCmd.Add (outside a loop and an if) isn't followed (MoveStepGaps), or null when it is: a monster its type argument names,
+    /// on a condition that's fixed for the fight (its every test a call on the live fight whose code there returns a constant: IsLiveCombat), whose
+    /// creature nothing later in the move uses.
+    /// </summary>
+    internal static string? MoveSpawnGap(CommandStep add, ModelProgram program)
+    {
+        if (add.Command.GenericArguments.Count != 1) return "a monster picked";
+        if (add.Condition != null && add.Condition.Literals.Any(literal => !FixedForTheFight(literal.Test))) return "a test a play can change";
+        if (program.All().Any(step => step != add && StepParts(step).Any(part => part is ResultValue { Command: "CreatureCmd.Add" }))) return "used once joined";
+        return null;
+    }
+
+    /// <summary>The values a step is given (a command's arguments, a store's value), each with its parts.</summary>
+    private static IEnumerable<ProgramValue> StepParts(ProgramStep step) => step switch
+    {
+        CommandStep command => command.Values.SelectMany(value => value.Parts()),
+        StoreStep store => store.Value.Parts(),
+        _ => Array.Empty<ProgramValue>(),
+    };
+
+    /// <summary>
+    /// A test that's the same for the whole fight: a call with no arguments on the fight (this.CombatState.X()) whose code on the live fight's class
+    /// returns a constant (CombatState.IsLiveCombat: true; other combat states, a preview's, answer otherwise).
+    /// </summary>
+    private static bool FixedForTheFight(ProgramValue test)
+    {
+        if (test is not QueryValue { IsProperty: false, Arguments.Count: 0, Of: QueryValue { Name: "CombatState", Of: NamedValue { Name: "this" } } } call) return false;
+        var method = typeof(CombatState).GetMethod(call.Name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public, Type.EmptyTypes);
+        if (method == null) return false;
+        try
+        {
+            return StepValues.Unstored(ProgramReader.ReadReturnedValue(typeof(CombatState), method, RuntimeCode.Read)) is ConstantValue;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException)
+        {
+            return false;
+        }
     }
 
     /// <summary>
@@ -194,6 +244,8 @@ public static partial class SimAdapter
             context.Gaps.Add("on a condition");
             return Array.Empty<SimAction>();
         }
+        // CreatureCmd.Add<T> outside a loop (decision #381): the monster joins, read as a death's spawn is; one it can't read (MoveSpawnGap) isn't followed.
+        if (step is CommandStep { Command.FullName: "CreatureCmd.Add" } add && each == null) return MoveSpawn(add, context);
         if (step.Condition != null)
         {
             if (step is CommandStep { Command.FullName: "PowerCmd.Apply" or "CreatureCmd.GainBlock" } or LoopStep) context.Gaps.Add("on a condition");
@@ -340,6 +392,32 @@ public static partial class SimAdapter
         var ids = targets.Select(context.IdOf).OfType<int>().ToList();
         return ids.Count == 0 ? Array.Empty<SimAction>()
             : new[] { new MovePowerAction(PowerId.Of(SimPowerName(powerType)), (int)amount, ids, SimReaders.IsDebuffType(powerType)) };
+    }
+
+    /// <summary>
+    /// CreatureCmd.Add&lt;T&gt;(combatState, slot): the monster T joins (MoveSpawnAction), with every HP it can start with that no enemy in the fight has
+    /// and the powers its AfterAddedToRoom gives it, as a death's spawn (Spawn); its condition, fixed for the fight (MoveSpawnGap), holding on the
+    /// board. One it can't read adds its gap and nothing, as before it was read.
+    /// </summary>
+    private static IEnumerable<SimAction> MoveSpawn(CommandStep add, MoveContext context)
+    {
+        var gap = MoveSpawnGap(add, context.Program);
+        if (gap == null && add.Condition != null)
+        {
+            var holds = ProgramEvaluator.Holds(add.Condition, context.Board, context.Program);
+            if (holds == false) return Array.Empty<SimAction>(); // fixed for the fight, and false: it adds none
+            if (holds == null) gap = "unread value";
+        }
+        var type = gap == null ? MonsterType(add.Command.GenericArguments[0]) : null;
+        var monster = type != null ? CanonicalMonster(type) : null;
+        if (gap != null || type == null || monster == null)
+        {
+            context.Gaps.Add(gap ?? "unread value");
+            return Array.Empty<SimAction>();
+        }
+        var taken = context.Combat.Enemies.Select(enemy => enemy.MaxHp).ToHashSet();
+        var spawn = Spawn(type, monster, context.Combat, taken) with { Monster = type.Name, UniqueFromEarlier = true, JoinUnread = JoinUnread(context.Combat) };
+        return new SimAction[] { new MoveSpawnAction(spawn) };
     }
 
     /// <summary>CreatureCmd.GainBlock(creature, amount, props, card): block on each enemy named, through the game's block math now.</summary>

@@ -1792,8 +1792,12 @@ public static partial class SimEngine
             (enemy.TurnEndBlock, enemy.TurnEndBlockBroken) = (enemy.Block, enemy.BlockBroken);
             enemy.Block = (ClearsBlock(state, enemy.Id) ? 0 : enemy.Block) + enemy.MoveBlock;
         }
-        foreach (var enemy in state.Enemies)
+        // The enemies that act are the ones in the fight as the turn starts (CombatManager.ExecuteEnemyTurn's Enemies.ToList()): one a move adds
+        // (MoveSpawnAction) joins after them and makes no move this turn.
+        var acting = state.Enemies.Count;
+        for (var index = 0; index < acting; index++)
         {
+            var enemy = state.Enemies[index];
             if (poisoned?.Contains(enemy.Id) == true) continue;
             if (!enemy.Alive)
             {
@@ -1902,6 +1906,8 @@ public static partial class SimEngine
                                 break;
                             // CreatureCmd.Stun of itself (Creature.StunInternal: nothing once it's dead): its next move is the stunned move.
                             case MoveStunAction when enemy.Alive: Stun(enemy); break;
+                            // CreatureCmd.Add of a creature its code names (decision #381): it joins now, after the turn's list of who acts.
+                            case MoveSpawnAction moveSpawnAction: MoveSpawn(state, enemy, moveSpawnAction.Spawn); break;
                             // A property of its own its attack's damage reads (decision #337): only a projection has a later turn to read it.
                             case MoveStoreAction moveStoreAction when state.Forecasting: MoveStore(state, enemy, moveStoreAction); break;
                             // A step on its own state (Bowlbug Rock's IsOffBalance: decision #271), asked of it as the step runs.
@@ -1921,6 +1927,29 @@ public static partial class SimEngine
             // turn's start, above.
             if (state.Enemies.Any(simEnemy => simEnemy.StartedAlive && !simEnemy.Alive && !simEnemy.DeathHandled)) AllyDeaths(state);
         }
+    }
+
+    /// <summary>
+    /// A creature an enemy's move adds (CreatureCmd.Add, decision #381): the next id, its HP, the powers its AfterAddedToRoom gives it (scaled for the
+    /// players as PowerCmd.Apply scales a new one on an enemy), then Hook.AfterCreatureAddedToCombat's listeners, on the one state the enemy turn runs
+    /// on. An HP it could start with among several (a roll), or a listener that branches there, leaves the turn unknown from here: never a pick.
+    /// </summary>
+    private static void MoveSpawn(SimState state, SimEnemy summoner, SimSpawn spawn)
+    {
+        if (spawn.Unread != null || spawn.Hp.Count != 1)
+        {
+            state.Unmodelled ??= spawn.Hp.Count > 1 ? $"the HP of the {spawn.Name} {summoner.Name}'s move adds is a roll, which the enemy turn doesn't branch on"
+                : $"the creature {summoner.Name}'s move adds isn't read ({spawn.Unread ?? "no HP"})";
+            return;
+        }
+        var id = 0;
+        foreach (var enemy in state.Enemies) id = Math.Max(id, enemy.Id + 1);
+        state.Enemies.Add(new SimEnemy
+        {
+            Id = id, Name = spawn.Name, Monster = spawn.Monster ?? "", Hp = spawn.Hp[0], Powers = SpawnPowers(state, spawn.Powers), AddedBy = summoner.Id,
+        });
+        foreach (var branch in AddedToCombat(state, id, spawn.JoinUnread))
+            if (!ReferenceEquals(branch, state)) state.Unmodelled ??= $"a creature joining the fight in the enemy turn ({spawn.Name}) branches, which the enemy turn doesn't follow";
     }
 
     /// <summary>The block your turn left each enemy, put back once the enemies' turn and its end are over (SimEnemy.TurnEndBlock): the outcome reads it.</summary>

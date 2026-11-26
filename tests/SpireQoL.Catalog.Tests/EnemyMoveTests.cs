@@ -59,6 +59,39 @@ public class EnemyMoveTests
     }
 
     [Fact]
+    public void FogmogsIllusionAddsAnEyeWithTeethToTheEnemyTurn()
+    {
+        // Fogmog's Illusion: CreatureCmd.Add<EyeWithTeeth> while the fight is live (CombatState.IsLiveCombat: true on a live fight), read as a death's
+        // spawn is (decision #381): its HP (6) and its AfterAddedToRoom's Illusion, with the Minion Illusion's AfterApplied gives it. It joins in the
+        // enemy turn, after Fogmog, and makes no move then; Byrdonis' Swoop after it lands as shown.
+        var fight = new GameFight();
+        var fogmog = Enemy<Fogmog>(fight, "ILLUSION_MOVE");
+        var byrdonis = Enemy<Byrdonis>(fight, "SWOOP_MOVE");
+        var state = Read(fight, out var ids);
+        var spawn = Assert.IsType<MoveSpawnAction>(Assert.Single(state.Enemy(ids[fogmog])!.Move!)).Spawn;
+        Assert.Equal("EyeWithTeeth", spawn.Monster);
+        Assert.Equal(new[] { ModelDb.Monster<EyeWithTeeth>().MinInitialHp }, spawn.Hp);
+        Assert.Equal(1, spawn.Powers[PowerId.Illusion]);
+        Assert.Equal(1, spawn.Powers[PowerId.Minion]);
+        var outcome = SimEngine.Run(state);
+        var branch = Assert.Single(outcome.Branches);
+        Assert.Null(branch.Unmodelled);
+        Assert.Contains(branch.Enemies, enemy => enemy.Monster == "EyeWithTeeth" && enemy.AddedBy == ids[fogmog]);
+        Assert.Equal(Hit(byrdonis, fight), outcome.TakenMax);
+    }
+
+    [Fact]
+    public void FabricatorsRandomBotIsNotFollowed()
+    {
+        // Fabricator's bots are a random one of a set other than the last it made (RunRng.MonsterAi.NextItem of a model, not a type argument): not read,
+        // so its move adds nothing to the enemy turn (a reviewed gap: TRACKER), as before.
+        var fight = new GameFight();
+        var fabricator = Enemy<Fabricator>(fight, "FABRICATE_MOVE");
+        var state = Read(fight, out var ids);
+        Assert.DoesNotContain(state.Enemy(ids[fabricator])!.Move!, action => action is MoveSpawnAction);
+    }
+
+    [Fact]
     public void AHiddenIntentKeepsItsMoveHidden()
     {
         // The same Roar behind a hidden intent: what it does isn't known, so it isn't followed (the enemy is its intent alone).
@@ -179,6 +212,11 @@ public class EnemyMoveTests
         ["CeremonialBeast.PlowMove: PowerCmd.Apply<StrengthPower> (on a condition)"] = "its own Strength while it has Plow, after its own attack: no later hit of its this turn",
         ["Entomancer.SpitMove: PowerCmd.Apply<PersonalHivePower> (on a condition)"] = "its own Personal Hive below 3: a move with no attack",
         ["Entomancer.SpitMove: PowerCmd.Apply<StrengthPower> (on a condition)"] = "its own Strength by its Personal Hive: a move with no attack",
+        ["Fabricator.FabricateMove: CreatureCmd.Add (a monster picked)"] = "its two bots, each a random one of a set (RunRng.MonsterAi.NextItem) other than the last it made: not in the enemy turn's state (TRACKER: summons in a move); they make no move this turn",
+        ["Fabricator.FabricatingStrikeMove: CreatureCmd.Add (a monster picked)"] = "its bot after its attack, a random one of a set other than the last it made: not in the enemy turn's state (TRACKER: summons in a move); it makes no move this turn",
+        ["LivingFog.BloatMove: CreatureCmd.Add<GasBomb> (in a loop)"] = "its Gas Bombs, BloatAmount of them while a slot is free (a kill frees one), before its attack: not in the enemy turn's state (TRACKER: summons in a move); they make no move this turn",
+        ["Ovicopter.LayEggsMove: CreatureCmd.Add<ToughEgg> (in a loop)"] = "three Tough Eggs while a slot is free (a kill frees one): not in the enemy turn's state (TRACKER: summons in a move); they make no move this turn",
+        ["TwoTailedRat.CallForBackup: CreatureCmd.Add<TwoTailedRat> (a test a play can change)"] = "a rat while a slot is free (a kill frees one): not in the enemy turn's state (TRACKER: summons in a move); it makes no move this turn",
         ["Fabricator.FabricateMove: PowerCmd.Apply<MinionPower> (on a condition)"] = "Minion on the bot it summons (CreatureCmd.Add), which joins for its next turn",
         ["Fabricator.FabricatingStrikeMove: PowerCmd.Apply<MinionPower> (on a condition)"] = "Minion on the bot it summons after its attack, which joins for its next turn",
         ["MagiKnight.DampenMove: PowerCmd.Apply (on a condition)"] = "Dampen on a target without it: no damage hook (DampenPower only reacts to its applier's death)",

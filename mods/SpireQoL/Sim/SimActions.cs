@@ -248,6 +248,14 @@ public sealed record MoveStoreAction(string Field, int Amount, bool Adds = false
 public sealed record MoveStunAction : SimAction;
 
 /// <summary>
+/// A creature an enemy's move adds to the fight (CreatureCmd.Add&lt;T&gt;: Fogmog's Eye with Teeth, The Obscura's Parafright), read from its code
+/// as a death's are (SimSpawn: every HP it can start with, the powers its AfterAddedToRoom gives it). It joins as the step runs, after the
+/// enemies' turn has listed who acts (CombatManager.ExecuteEnemyTurn's Enemies.ToList()), so it makes no move this turn; it's in the fight for
+/// the rest of it (the later moves, the turn's end) and the forecast's later turns.
+/// </summary>
+public sealed record MoveSpawnAction(SimSpawn Spawn) : SimAction;
+
+/// <summary>
 /// A card's stun of the enemy it's played at (CreatureCmd.Stun(cardPlay.Target), decision #299: Whistle): its next move the stunned move
 /// (Creature.StunInternal), so it doesn't act this enemy turn; nothing on one that's dead (StunInternal's IsDead test).
 /// </summary>

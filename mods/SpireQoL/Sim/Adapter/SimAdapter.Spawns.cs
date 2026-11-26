@@ -370,7 +370,51 @@ public static partial class SimAdapter
                 continue;
             }
             powers = powers.Add(PowerId.Of(SimPowerName(powerType)), delta: (int)amount);
+            powers = AfterAppliedOnItsOwner(powerType, powers, gaps);
         }
         return powers;
+    }
+
+    /// <summary>
+    /// What a starting power's own AfterApplied gives its owner as it lands (Illusion's Minion, when its owner has none), for a power the simulator runs
+    /// no model for (a modelled one's AfterApplied is the engine's): each PowerCmd.Apply&lt;T&gt;(base.Owner, amount), unconditional or on its owner
+    /// having (or not having) a power, asked of the powers given so far. Any other of its steps that applies a power is a gap the spawn scan lists.
+    /// </summary>
+    private static PowerSet AfterAppliedOnItsOwner(Type powerType, PowerSet powers, List<string>? gaps)
+    {
+        if (SimModels.Has(SimPowerName(powerType))) return powers;
+        var program = ModelPrograms.Of(powerType, "AfterApplied");
+        foreach (var apply in program.All().OfType<CommandStep>().Where(command => command.Command.FullName == "PowerCmd.Apply"))
+        {
+            bool? holds = apply.Condition == null ? true : OwnerHas(apply.Condition, powers);
+            if (holds == false) continue;
+            if (holds == null || apply.Command.GenericArguments is not [var power] || apply.Values.Count < 3
+                || apply.Values[1] is not QueryValue { Name: nameof(PowerModel.Owner), Of: NamedValue { Name: "this" } }
+                || Number(ProgramEvaluator.Value(apply.Values[2], ProgramBoard.Of(Canonical(powerType)!), program)) is not { } amount || PowerType(power) is not { } given)
+            {
+                gaps?.Add($"{powerType.Name}.AfterApplied: {apply.Name}");
+                continue;
+            }
+            powers = powers.Add(PowerId.Of(SimPowerName(given)), delta: (int)amount);
+        }
+        return powers;
+    }
+
+    /// <summary>A condition whose every test is its owner having a power (this.Owner.HasPower&lt;T&gt;()), asked of <paramref name="powers"/>; null for any other.</summary>
+    private static bool? OwnerHas(ProgramCondition condition, PowerSet powers)
+    {
+        var any = false;
+        foreach (var conjunction in condition.Terms)
+        {
+            var all = true;
+            foreach (var literal in conjunction)
+            {
+                if (literal.Test is not QueryValue { Name: "HasPower", GenericArguments: [var power], Of: QueryValue { Name: nameof(PowerModel.Owner), Of: NamedValue { Name: "this" } } }
+                    || PowerType(power) is not { } type) return null;
+                all &= powers.Has(PowerId.Of(SimPowerName(type))) == literal.Holds;
+            }
+            any |= all;
+        }
+        return any;
     }
 }

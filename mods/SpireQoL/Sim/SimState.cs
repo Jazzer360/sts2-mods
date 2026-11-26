@@ -129,7 +129,9 @@ public sealed class SimEnemy
     /// stays the one its intent shows. Fixed during a run.
     /// </summary>
     public Dictionary<string, SimMove?>? SetMoves;
-    /// <summary>The enemy whose death added it to the fight during the simulation (SimEngine.Spawn); null for one there from the start.</summary>
+    /// <summary>
+    /// The enemy whose death (SimEngine.Spawn) or move (SimEngine.MoveSpawn) added it to the fight during the simulation; null for one there from the start.
+    /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? AddedBy;
     /// <summary>
