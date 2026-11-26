@@ -26,6 +26,22 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// A card of a player's hand they pick made Ethereal (EtherealInHandAction; decision #348): one there that isn't Ethereal on its own (the pick's filter,
+    /// Sculpting Strike's), none when there's none (the pick finds nothing). It exhausts as the turn ends (SimPlayer.Fading); a Hexed card, already fading
+    /// through Hex, is picked only when no other is left, and then fades on its own (Hex's caster dying no longer keeps it: SimPlayer.HexFading). What
+    /// depends on which card it is (one acting in hand as the turn ends, which doesn't exhaust) isn't simulated (decision #188).
+    /// </summary>
+    internal static void EtherealInHand(SimState state, int player)
+    {
+        if (state.Player(player) is not { } simPlayer) return;
+        var inHand = simPlayer.HandCount - simPlayer.PlayingFromHand;
+        if (inHand - (simPlayer.Fading - simPlayer.HexFading) <= 0) return;
+        var changed = state.MutablePlayer(player);
+        if (inHand - simPlayer.Fading > 0) changed.Fading++;
+        else changed.HexFading--;
+    }
+
+    /// <summary>
     /// CardCmd.Upgrade of cards in a player's hand (every one, or random ones: TunePower's; a card you pick is a card, decision #188): followed while
     /// no card in that hand that can be upgraded acts later in a way the simulator reads from the board (SimPlayer.UpgradableAtTurnEnd: Ethereal, or
     /// acting in hand as the turn ends: Burn), and no card Stampede or Simpleton could auto-play from it can be (their plays are built at the

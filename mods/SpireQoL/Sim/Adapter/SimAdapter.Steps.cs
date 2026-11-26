@@ -59,6 +59,9 @@ public static partial class SimAdapter
         ["CardCmd.Exhaust"] = "TakeFromHandAction(Exhausted), after ExhaustFromHandAction",
         ["CardCmd.Discard"] = "TakeFromHandAction(Discarded), or the cards it looked at on your draw pile",
         ["CardCmd.Upgrade"] = "UpgradeCardsAction of your cards in the piles it goes over (an upgrade of a card the play makes, of a pick, or in an auto-play's callback: no action, UpgradeTargetOf)",
+        ["CardCmd.ApplyKeyword"] = "EtherealInHandAction for a picked card made Ethereal; Retain, Sly, Exhaust or Innate given to a pick or a drawn card: no action (KeywordGivenOf)",
+        ["CardCmd.ApplySingleTurnSly"] = "no action: Sly for the turn on a picked card (KeywordGivenOf)",
+        ["CardCmd.ApplySingleTurnRetain"] = "no action: Retain for the turn on a picked or drawn card (KeywordGivenOf)",
         ["CardCmd.DiscardAndDraw"] = "TakeFromHandAction(Discarded), then the draws",
         ["CardCmd.Transform"] = "TakeFromHandAction(Generated) in your hand, or a made card in its pile",
         ["CardCmd.TransformTo"] = "the same as Transform",
@@ -83,9 +86,6 @@ public static partial class SimAdapter
     internal static readonly IReadOnlyDictionary<string, string> CommandsNotTranslated = new Dictionary<string, string>
     {
         ["CardCmd.AutoPlay"] = "a card in hand or a pile played by the card: that play isn't followed",
-        ["CardCmd.ApplyKeyword"] = "a keyword given to a card: not followed",
-        ["CardCmd.ApplySingleTurnSly"] = "Sly given to a card this turn: not followed",
-        ["CardCmd.ApplySingleTurnRetain"] = "Retain given to a card this turn: not followed",
         ["CardCmd.Enchant"] = "an enchantment given to a card: not followed",
         ["OrbCmd.Passive"] = "an orb's passive set off by a card: not followed",
         ["ArrowCmd.GainArrowSlot"] = "an arrow slot gained: not followed",
@@ -453,6 +453,12 @@ public static partial class SimAdapter
             // The cards of yours in some piles upgraded: what the simulator reads of them later (UpgradeCardsAction). Its tests of the card its loop
             // is at (Apotheosis': not the card played, one that can be upgraded) are the command's own: it goes over every card there, and upgrades
             // only one that can be (its !IsUpgradable skip). A card the play makes, a pick, a card an auto-play's callback upgrades: no action.
+            // A keyword given to a pick or to a card the play drew: Ethereal on a pick exhausts it as the turn ends; the rest change nothing this turn
+            // (KeywordGivenOf). Its test that the pick found a card is the action's own.
+            case ("CardCmd", "ApplyKeyword" or "ApplySingleTurnSly" or "ApplySingleTurnRetain"):
+                return KeywordGivenOf(command, play.Program) == CardKeyword.Ethereal
+                    ? (new List<SimAction> { new EtherealInHandAction() }, Without(found.Condition, literal => literal.Test.Parts().Any(part => part is ResultValue { Command: var picked } && picked.StartsWith("CardSelectCmd.", StringComparison.Ordinal))))
+                    : none;
             case ("CardCmd", "Upgrade"):
                 if (UpgradeTargetOf(command, play.Program) is not { Target: UpgradeTarget.Piles, Piles: var piles }) return none;
                 // A card's upgrade of the piles of the teammate it's aimed at: their piles aren't simulated.
@@ -487,6 +493,9 @@ public static partial class SimAdapter
     {
         ["ArrowCmd.DislodgeArrow"] = "an arrow pulled out of a creature other than the card's target: not followed",
         ["CardCmd.Upgrade"] = "a card upgraded that's neither one the play makes, a pick, nor one of yours in a pile: not followed",
+        ["CardCmd.ApplyKeyword"] = "a keyword given to a card other than one you pick or the play drew, or one other than Ethereal, Retain, Sly, Exhaust or Innate: not followed",
+        ["CardCmd.ApplySingleTurnSly"] = "Sly given for the turn to a card other than one you pick: not followed",
+        ["CardCmd.ApplySingleTurnRetain"] = "Retain given for the turn to a card other than one you pick or the play drew: not followed",
         ["CreatureCmd.Kill"] = "a creature other than your Osty killed: not followed",
         ["CreatureCmd.SetCurrentHp"] = "the HP of a creature other than the card's target set: not followed",
         ["CreatureCmd.Stun"] = "a creature other than the card's target stunned: not followed",
@@ -508,6 +517,7 @@ public static partial class SimAdapter
             "CreatureCmd.Kill" => Argument(command, 0) == "Owner.Osty" || program.All().OfType<LoopStep>().Any(loop => KillsEachItem(loop) && loop.Body.Contains(command)),
             "CreatureCmd.LoseBlock" => Argument(command, 1) == "cardPlay.Target",
             "CardCmd.Upgrade" => UpgradeTargetOf(command, program) != null,
+            "CardCmd.ApplyKeyword" or "CardCmd.ApplySingleTurnSly" or "CardCmd.ApplySingleTurnRetain" => KeywordGivenOf(command, program) != null,
             "PlayerCmd.GainStars" => Argument(command, 1) is "Owner" or "cardPlay.Target.Player",
             "PowerCmd.Remove" => RemovesTargetsArtifact(command, program) || command.Command.GenericArguments.Count == 1 && IsYou(ValueAt(command, 0)),
             // Its Targeting's creature: one its code picks by an order is read only as the least-HP enemy (SimPlay.Target.LeastHp).
@@ -515,6 +525,39 @@ public static partial class SimAdapter
             _ => true,
         };
         return followed ? null : ShapesNotFollowed[command.Command.FullName];
+    }
+
+    /// <summary>
+    /// The keyword a CardCmd.ApplyKeyword, ApplySingleTurnSly or ApplySingleTurnRetain step gives, when the simulator follows it (decision #348): to a card you
+    /// pick (a CardSelectCmd's result) or one the play drew (CardPileCmd.Draw's result: Expertise's). Ethereal on a pick makes it exhaust as the turn ends
+    /// (EtherealInHandAction). The others change nothing this turn: Retain keeps a card from the flush as the turn ends, which only moves cards to the discard
+    /// pile (CardPileCmd.Add: no discard hooks; an Ethereal card exhausts whether retained or not); Sly acts as its card is discarded (CardCmd.Discard), which
+    /// the flush isn't, and which card is Sly is a pick (decision #188); Exhaust and Innate act when the card is played or drawn next. Null for any other
+    /// keyword or card. Pure on the step's code.
+    /// </summary>
+    internal static CardKeyword? KeywordGivenOf(CommandStep command, ModelProgram program)
+    {
+        var keyword = command.Command.Name switch
+        {
+            "ApplySingleTurnSly" => CardKeyword.Sly,
+            "ApplySingleTurnRetain" => CardKeyword.Retain,
+            _ => ValueAt(command, 1) switch
+            {
+                ConstantValue { Value: var given } => (CardKeyword?)given,
+                ArrayValue { Items: [ConstantValue { Value: var given }] } => (CardKeyword)given,
+                _ => null,
+            },
+        };
+        if (keyword is not { } known || UpgradedValue(command, program) is not { } card) return null;
+        var parts = card.Parts().ToList();
+        var picked = parts.Any(part => part is ResultValue { Command: var pick } && pick.StartsWith("CardSelectCmd.", StringComparison.Ordinal));
+        var drawn = parts.Any(part => part is ResultValue { Command: "CardPileCmd.Draw" });
+        return known switch
+        {
+            CardKeyword.Ethereal or CardKeyword.Sly when picked => known,
+            CardKeyword.Retain or CardKeyword.Exhaust or CardKeyword.Innate when picked || drawn => known,
+            _ => null,
+        };
     }
 
     /// <summary>What a card's CardCmd.Upgrade upgrades (UpgradeTargetOf).</summary>
@@ -548,7 +591,7 @@ public static partial class SimAdapter
             _ => false,
         }) == true;
 
-    /// <summary>The card argument of an upgrade: a loop's item read as the collection its loop goes over.</summary>
+    /// <summary>The card argument of a command on a card (an upgrade, a keyword): a loop's item read as the collection its loop goes over.</summary>
     private static ProgramValue? UpgradedValue(CommandStep command, ModelProgram program)
     {
         var upgraded = ValueAt(command, 0);

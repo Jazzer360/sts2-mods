@@ -1768,12 +1768,12 @@ HandOfGreed [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=180/0 enemy1=30/0 []
 HandOfGreed [Replayed] 1 you=80/0 e1 h3 d6/3 enemy0=160/0 []
 HandOfGreed [Teammate] 1 you=80/0 e1 h3 d6/3 mate0=70/0 e3 h2 enemy0=180/0 []
 HandOfGreed [Alone] 1 you=80/0 e1 h0 d6/3 enemy0=180/0 []
-HandTrick [Standard] 1 you=80/7 e2 h3 d6/3 enemy0=200/0 [] ?CardCmd.ApplySingleTurnSly: Sly given to a card this turn: not followed
-HandTrick [Upgraded] 1 you=80/10 e2 h3 d6/3 enemy0=200/0 [] ?CardCmd.ApplySingleTurnSly: Sly given to a card this turn: not followed
-HandTrick [Crowded] 1 you=80/7 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 [] ?CardCmd.ApplySingleTurnSly: Sly given to a card this turn: not followed
-HandTrick [Replayed] 1 you=80/14 e2 h3 d6/3 enemy0=200/0 [] ?CardCmd.ApplySingleTurnSly: Sly given to a card this turn: not followed
-HandTrick [Teammate] 1 you=80/7 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [] ?CardCmd.ApplySingleTurnSly: Sly given to a card this turn: not followed
-HandTrick [Alone] 1 you=80/7 e2 h0 d6/3 enemy0=200/0 [] ?CardCmd.ApplySingleTurnSly: Sly given to a card this turn: not followed
+HandTrick [Standard] 1 you=80/7 e2 h3 d6/3 enemy0=200/0 []
+HandTrick [Upgraded] 1 you=80/10 e2 h3 d6/3 enemy0=200/0 []
+HandTrick [Crowded] 1 you=80/7 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 []
+HandTrick [Replayed] 1 you=80/14 e2 h3 d6/3 enemy0=200/0 []
+HandTrick [Teammate] 1 you=80/7 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 []
+HandTrick [Alone] 1 you=80/7 e2 h0 d6/3 enemy0=200/0 []
 Hang [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=190/0 []
 Hang [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=187/0 []
 Hang [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=190/0 enemy1=30/0 []
@@ -3130,12 +3130,12 @@ Scrawl [Crowded] 1 you=80/0 e2 h10 d2/0 enemy0=200/0 enemy1=30/0 [Drawn1 Exhaust
 Scrawl [Replayed] 1 you=80/0 e2 h10 d2/0 enemy0=200/0 [Exhausted1]
 Scrawl [Teammate] 1 you=80/0 e2 h10 d2/0 mate0=70/0 e3 h2 enemy0=200/0 [Drawn7 Exhausted1 Shuffled1]
 Scrawl [Alone] 1 you=80/0 e2 h9 d0/0 enemy0=200/0 [Drawn9 Exhausted1 Shuffled1]
-SculptingStrike [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=191/0 [] ?CardCmd.ApplyKeyword: a keyword given to a card: not followed
-SculptingStrike [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=188/0 [] ?CardCmd.ApplyKeyword: a keyword given to a card: not followed
-SculptingStrike [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=191/0 enemy1=30/0 [] ?CardCmd.ApplyKeyword: a keyword given to a card: not followed
-SculptingStrike [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=182/0 [] ?CardCmd.ApplyKeyword: a keyword given to a card: not followed
-SculptingStrike [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=191/0 [] ?CardCmd.ApplyKeyword: a keyword given to a card: not followed
-SculptingStrike [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=191/0 [] ?CardCmd.ApplyKeyword: a keyword given to a card: not followed
+SculptingStrike [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=191/0 []
+SculptingStrike [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=188/0 []
+SculptingStrike [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=191/0 enemy1=30/0 []
+SculptingStrike [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=182/0 []
+SculptingStrike [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=191/0 []
+SculptingStrike [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=191/0 []
 Seance [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Generated1]
 Seance [Upgraded] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 [Generated1]
 Seance [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 []
@@ -3364,12 +3364,12 @@ Snakebite [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=200/0 enemy1=30/0 []
 Snakebite [Replayed] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 []
 Snakebite [Teammate] 1 you=80/0 e1 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 []
 Snakebite [Alone] 1 you=80/0 e1 h0 d6/3 enemy0=200/0 []
-Snap [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [] ?CardCmd.ApplyKeyword: a keyword given to a card: not followed
-Snap [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [] ?CardCmd.ApplyKeyword: a keyword given to a card: not followed
-Snap [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 [] ?CardCmd.ApplyKeyword: a keyword given to a card: not followed
-Snap [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [] ?CardCmd.ApplyKeyword: a keyword given to a card: not followed
-Snap [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [] ?CardCmd.ApplyKeyword: a keyword given to a card: not followed
-Snap [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 [] ?CardCmd.ApplyKeyword: a keyword given to a card: not followed
+Snap [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
+Snap [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
+Snap [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 []
+Snap [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
+Snap [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 []
+Snap [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 []
 Sneaky [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 []
 Sneaky [Upgraded] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 []
 Sneaky [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=200/0 enemy1=30/0 []

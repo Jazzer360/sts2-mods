@@ -522,6 +522,13 @@ public enum UpgradedPiles { None = 0, Hand = 1, Draw = 2, Discard = 4, Exhaust =
 /// <param name="Source">The card or potion whose code upgrades them (its class name), for what isn't followed.</param>
 public sealed record UpgradeCardsAction(UpgradedPiles Piles, string Source) : SimAction;
 
+/// <summary>
+/// A card of the play's owner's hand you pick made Ethereal (CardCmd.ApplyKeyword of CardKeyword.Ethereal: Sculpting Strike's, on a card not Ethereal on its
+/// own), as SimEngine.EtherealInHand follows it: it exhausts as the turn ends (CombatManager's Ethereal exhaust, before the turn-end cards). A pick is a
+/// card, never a particular one (decision #188).
+/// </summary>
+public sealed record EtherealInHandAction : SimAction;
+
 /// <summary>Your Osty dies (CreatureCmd.Kill: Sacrifice, Bone Shards), losing all his HP (Necro Mastery reacts).</summary>
 public sealed record KillOstyAction : SimAction;
 

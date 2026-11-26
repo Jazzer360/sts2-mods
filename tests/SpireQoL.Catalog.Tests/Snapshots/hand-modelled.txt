@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 32 engine rules naming 190 game methods; 3 adapter rules; 34 hand-written models.
+# 33 engine rules naming 190 game methods; 3 adapter rules; 34 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -16,6 +16,9 @@ A card changed during its play: an upgrade of the card in play makes its later p
 Cards in a player's piles upgraded (decision #347): no hook runs, so what changes is what a later step reads of them: a hand card acting as the turn ends or auto-played, a card of an upgraded pile drawn or played from it, a card playing itself from the exhaust pile
   game: CardCmd.Upgrade, CardModel.UpgradeInternal, CardModel.FinalizeUpgradeInternal
   simulator: SimEngine.UpgradeCards, SimEngine.UpgradeInHand
+A card in a hand you pick made Ethereal (decision #348): one there not Ethereal on its own, which then exhausts as the turn ends
+  game: CardCmd.ApplyKeyword, CardModel.AddKeyword, CombatManager.DoTurnEnd
+  simulator: SimEngine.EtherealInHand
 A hand card's live energy cost (decision #334): its cost before global modifiers, then every listener's cost pass, then every Late pass, at least 0; Simpleton's cheapest by it
   game: CardEnergyCost.GetWithModifiers, CardEnergyCost.GetResolved, Hook.ModifyEnergyCostInCombat, SimpletonPower.AfterAutoPostPlayPhaseEntered (beta only)
   simulator: SimEngine.HandCost, SimEngine.Cheapest

@@ -1279,6 +1279,7 @@ public static partial class SimEngine
             case KillEachAction killEachAction: branches.Each(branch => RunKillEach(branch, killEachAction)); break;
             case TriggerPoisonAction: branches.Each(branch => RunModelCommand(branch, PowerId.Poison.Name, "Trigger")); break;
             case KillOstyAction: branches.Do(branch => OstyLoses(branch, Who.You, branch.You.OstyHp)); break;
+            case EtherealInHandAction: branches.Do(branch => EtherealInHand(branch, branch.CurrentPlay?.Owner ?? Who.You)); break;
             case UpgradeCardsAction upgradeCardsAction: branches.Do(branch => UpgradeCards(branch, branch.CurrentPlay?.Owner ?? Who.You, upgradeCardsAction.Piles, upgradeCardsAction.Source)); break;
             case SummonAction summonAction: RunSummon(branches, summonAction); break;
             case HealAction healAction: RunHeal(branches, healAction); break;
