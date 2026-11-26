@@ -20,6 +20,8 @@ public static partial class SimEngine
         [nameof(SimModel.AfterPlayResolved)] = "not a game hook: the simulator's own, for a tab judged on what the play leaves",
         [nameof(SimModel.BeforePotionUsed)] = "Hook.BeforePotionUsed loops over the run's listeners (RunState.IterateHookListeners) whatever the fight's state",
         [nameof(SimModel.AfterPotionUsed)] = "Hook.AfterPotionUsed loops over the run's listeners (RunState.IterateHookListeners) whatever the fight's state",
+        [nameof(SimModel.AfterPotionProcured)] = "Hook.AfterPotionProcured loops over the run's listeners (RunState.IterateHookListeners) whatever the fight's state",
+        [nameof(SimModel.AfterGoldGained)] = "Hook.AfterGoldGained loops over the run's listeners (RunState.IterateHookListeners) whatever the fight's state",
     };
 
     /// <summary>
@@ -43,6 +45,8 @@ public static partial class SimEngine
         [nameof(SimModel.AfterSideTurnStartLate)] = new[] { "AfterSideTurnStart" },
         [nameof(SimModel.BeforePotionUsed)] = new[] { "BeforePotionUsed" },
         [nameof(SimModel.AfterPotionUsed)] = new[] { "AfterPotionUsed" },
+        [nameof(SimModel.AfterPotionProcured)] = new[] { "AfterPotionProcured" },
+        [nameof(SimModel.AfterGoldGained)] = new[] { "AfterGoldGained" },
     };
 
     /// <summary>

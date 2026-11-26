@@ -109,6 +109,9 @@ AfterFlush
 BeforePotionUsed
 AfterPotionUsed
 AfterPotionDiscarded
+AfterPotionProcured
+# Gold (decision #362: a card's PlayerCmd.GainGold, Hand of Greed's).
+AfterGoldGained
 # A power's own (PowerModel: PowerCmd and a death call them).
 BeforeApplied
 AfterApplied

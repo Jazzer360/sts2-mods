@@ -97,6 +97,7 @@ public static partial class ReadModels
         RelicId.DivineDestiny.Name,
         PowerId.Doom.Name,
         PowerId.DoubleDamage.Name,
+        RelicId.DragonFruit.Name,
         PowerId.Duplication.Name,
         PowerId.EchoForm.Name,
         PowerId.Ecstasy.Name,

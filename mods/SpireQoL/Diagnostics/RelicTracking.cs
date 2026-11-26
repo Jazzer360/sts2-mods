@@ -16,6 +16,7 @@ internal static class RelicTracking
         ["FakeAnchor"] = "none: BeforeCombatStart block",
         ["Byrdpip"] = "none: BeforeCombatStart pet; counts Byrd Swoop plays toward its rest-site Evolve option (its counter shows them; CountsForLater)",
         ["DelicateFrond"] = "none: BeforeCombatStart potion",
+        ["DragonFruit"] = "none: AfterGoldGained gains its owner max HP, read from its code (decision #362): followed in a play that gains gold (Hand of Greed's kill), its max HP on the board at the next decision",
         ["FakeSneckoEye"] = "none: BeforeCombatStart Confused",
         ["SneckoEye"] = "none: BeforeCombatStart Confused, bigger hand draw",
         ["FurCoat"] = "none: enemies in marked rooms start at 1 HP",

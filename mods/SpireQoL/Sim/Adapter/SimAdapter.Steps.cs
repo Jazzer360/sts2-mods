@@ -52,6 +52,8 @@ public static partial class SimAdapter
         ["CardPileCmd.Shuffle"] = "ShuffleDrawPileAction (with the hand the play put into your draw pile)",
         ["CardPileCmd.ShuffleIfNecessary"] = "ShuffleDrawPileAction when the draw pile is empty",
         ["CardPileCmd.AutoPlayFromDrawPile"] = "AutoPlayFromDrawAction: its count, exhaust and upgrading callback",
+        ["PotionCmd.TryToProcure"] = "ProcurePotionAction: a potion into the card's owner's belt while it has room, then AfterPotionProcured, when Hook.ShouldProcurePotion lets every potion it could be through on the board and none is a Fairy in a Bottle (ProcureFrom)",
+        ["PlayerCmd.GainGold"] = "GainGoldAction: AfterGoldGained for the card's owner, when Hook.ModifyGoldGained leaves some of its amount on the board (GoldFrom)",
         ["CardCmd.AutoPlay"] = "AutoPlayCardsAction: the cards of your pile its card argument names (each of a list, one at random, a shuffled list's first so many), filtered as its code filters them, at a random enemy or the play's target (CardAutoPlayOf); a card you pick, then played, is unknown (decision #188)",
         ["CardPileCmd.AddGeneratedCardToCombat"] = "CardEventAction(Generated), about the card it makes when its code names it (its class and type), for its creator, one, into the pile it names (MadeCards)",
         ["CardPileCmd.AddGeneratedCardsToCombat"] = "the same, as many as its list holds: a Create's count, a card factory's count, the rounds of the loop that filled it",
@@ -89,8 +91,6 @@ public static partial class SimAdapter
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, string> CommandsNotTranslated = new Dictionary<string, string>
     {
-        ["PotionCmd.TryToProcure"] = "a potion procured: what reacts to it (AfterPotionProcured) isn't followed",
-        ["PlayerCmd.GainGold"] = "gold gained: what reacts to it (AfterGoldGained) isn't followed",
     };
 
     /// <summary>
@@ -450,6 +450,10 @@ public static partial class SimAdapter
                 return AddsFrom(found, play);
             case ("CardPileCmd", "Shuffle" or "ShuffleIfNecessary"):
                 return ShuffleFrom(found, play);
+            case ("PotionCmd", "TryToProcure"):
+                return ProcureFrom(found, play);
+            case ("PlayerCmd", "GainGold"):
+                return GoldFrom(found, play);
             case ("CardCmd", "AutoPlay"):
                 return AutoPlayCardsFrom(found, play);
             case ("CardPileCmd", "AutoPlayFromDrawPile"):
@@ -485,9 +489,7 @@ public static partial class SimAdapter
             case ("ForgeCmd", "Forge"):
                 return (MadeFrom(found, play), null);
         }
-        // A command the simulator can't follow yet: the play's outcome is unknown where it runs (decision #292), never left out. One whose only
-        // effect on the fight is the hook it runs (gold, a potion) has nothing to follow when no listener's class overrides that hook.
-        if (HookOnlyCommands.TryGetValue(command.Command.FullName, out var hook) && !AnyListenerOverrides(play, hook)) return none;
+        // A command the simulator can't follow yet: the play's outcome is unknown where it runs (decision #292), never left out.
         return Untranslated(command.Command.FullName) is { } unknown ? (new List<SimAction> { unknown }, null) : none;
     }
 
@@ -941,14 +943,40 @@ public static partial class SimAdapter
         && program.Commands.Any(other => other.Command is { DeclaringType: "CreatureCmd", Name: "LoseBlock" } && Argument(other, 1) == "cardPlay.Target");
 
     /// <summary>
-    /// The commands not followed whose only effect on the fight is the hook they run (PlayerCmd.GainGold runs Hook.AfterGoldGained;
-    /// PotionCmd.TryToProcure, Hook.AfterPotionProcured): the hook's name on AbstractModel.
+    /// PotionCmd.TryToProcure (decision #362): ProcurePotionAction for a potion of the card's owner's (its player argument the owner) that can't be a Fairy in
+    /// a Bottle (a random one CreateRandomPotionInCombat makes: none of those is; or one of a class that isn't), when the game's Hook.ShouldProcurePotion lets
+    /// you procure it on the board (Sozu doesn't): asked of every potion it could be, nothing when none is let through. Unknown, with why, for any other
+    /// shape (another player's, a potion that could be a Fairy in a Bottle, Sozu's answer depending on which potion).
     /// </summary>
-    private static readonly IReadOnlyDictionary<string, string> HookOnlyCommands = new Dictionary<string, string>
+    private static (List<SimAction> Actions, ProgramCondition? Guard) ProcureFrom(CardEffects.Found found, StepPlay play)
     {
-        ["PlayerCmd.GainGold"] = nameof(AbstractModel.AfterGoldGained),
-        ["PotionCmd.TryToProcure"] = nameof(AbstractModel.AfterPotionProcured),
-    };
+        var command = found.Command;
+        var none = (new List<SimAction>(), (ProgramCondition?)null);
+        // A shape not read (another player's belt, Entropic Brew's target; a potion its code names otherwise, its out-of-combat random ones): as before
+        // (decision #313), nothing where no listener's class overrides AfterPotionProcured, unknown where one does.
+        (List<SimAction>, ProgramCondition?) NotRead(string why) => AnyListenerOverrides(play, nameof(AbstractModel.AfterPotionProcured)) ? (Unknown(play, why), null) : none;
+        if (!StepValues.IsOwner(ValueAt(command, 1))) return NotRead("PotionCmd.TryToProcure for a player other than the card's owner: not followed");
+        List<PotionModel> could;
+        if (ValueAt(command, 0)?.Parts().Any(part => part is QueryValue { Name: "CreateRandomPotionInCombat" }) == true)
+            could = ModelDb.AllPotions.Where(potion => potion.CanBeGeneratedInCombat).ToList();
+        else if (command.Command.GenericArguments is [var potionClass] && ModelDb.AllPotions.FirstOrDefault(potion => potion.GetType().Name == potionClass) is { } named)
+            could = new List<PotionModel> { named };
+        else return NotRead($"PotionCmd.TryToProcure of a potion its code names in a way the simulator doesn't read ({ValueAt(command, 0)})");
+        if (could.Any(CountsAsFairy)) return (Unknown(play, "PotionCmd.TryToProcure of a potion that could be a Fairy in a Bottle: what it saves you from isn't followed"), null);
+        bool? allowed;
+        try
+        {
+            var answers = could.Select(potion => MegaCrit.Sts2.Core.Hooks.Hook.ShouldProcurePotion(play.Me.RunState, play.Combat, potion, play.Me)).Distinct().ToList();
+            allowed = answers.Count == 1 ? answers[0] : null;
+        }
+        catch { allowed = null; }
+        return allowed switch
+        {
+            true => (new List<SimAction> { new ProcurePotionAction() }, null),
+            false => none,
+            null => (Unknown(play, "PotionCmd.TryToProcure: whether you may procure it depends on which potion it is (Hook.ShouldProcurePotion)"), null),
+        };
+    }
 
     /// <summary>A hook listener of the run (RunState.IterateHookListeners, the hooks' own loop) whose class overrides <paramref name="hook"/>.</summary>
     private static bool AnyListenerOverrides(StepPlay play, string hook)
@@ -962,6 +990,25 @@ public static partial class SimAdapter
         {
             return true;
         }
+    }
+
+    /// <summary>
+    /// PlayerCmd.GainGold (decision #362): GainGoldAction for the card's owner's gold, when the game's Hook.ModifyGoldGained leaves some of its amount on the
+    /// board (Ectoplasm leaves none: nothing then). Unknown, with why, for another player's, or an amount not read.
+    /// </summary>
+    private static (List<SimAction> Actions, ProgramCondition? Guard) GoldFrom(CardEffects.Found found, StepPlay play)
+    {
+        var command = found.Command;
+        // A shape not read: as before (decision #313), nothing where no listener's class overrides AfterGoldGained, unknown where one does.
+        (List<SimAction>, ProgramCondition?) NotRead(string why) =>
+            AnyListenerOverrides(play, nameof(AbstractModel.AfterGoldGained)) ? (Unknown(play, why), null) : (new List<SimAction>(), null);
+        if (!StepValues.IsOwner(ValueAt(command, 1))) return NotRead("PlayerCmd.GainGold for a player other than the card's owner: not followed");
+        if (ValueAt(command, 0) is not { } amount || ProgramEvaluator.Number(amount, play.Board, play.Program) is not { } gold)
+            return NotRead($"PlayerCmd.GainGold: its amount ({ValueAt(command, 0)}) isn't read on this board");
+        decimal gained;
+        try { gained = MegaCrit.Sts2.Core.Hooks.Hook.ModifyGoldGained(play.Me.RunState, play.Combat, gold, play.Me, out _); }
+        catch { return NotRead("PlayerCmd.GainGold: Hook.ModifyGoldGained couldn't be asked on this board"); }
+        return gained > 0 ? (new List<SimAction> { new GainGoldAction() }, null) : (new List<SimAction>(), null);
     }
 
     // ---------------------------------------------------------------- the play's context

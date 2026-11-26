@@ -280,6 +280,7 @@ public static partial class SimAdapter
         simPlayer.Fairies = SafeInt(() => player.Potions.Count(CountsAsFairy));
         // The potions in their belt (on screen): a potion's use takes one (decision #313), which Belt Buckle's code counts.
         simPlayer.Potions = SafeInt(() => player.Potions.Count());
+        simPlayer.PotionSlots = SafeInt(() => player.MaxPotionCount);
         simPlayer.FairyHeal = Math.Max(1, (int)(maxHp * 0.3m));
         simPlayer.LizardTailHeal = player.Relics.FirstOrDefault(relic => relic is LizardTail) is { IsUsedUp: false } tail
             ? Math.Max(1, (int)(maxHp * (Sts2State.Var(tail, "Heal", fallback: 50) / 100m)))

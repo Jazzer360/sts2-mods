@@ -27,6 +27,8 @@ public class FightEndTests
         ["ArrowCmd.ShootArrowAtTarget"] = "its effects are an attack, CreatureCmd.Damage and PowerCmd.Apply (each guarded) and Hook.AfterArrowShot and AfterArrowImpaled (combat hooks: no one once the fight is ending); the arrow it spends matters to nothing after the fight",
         ["ArrowCmd.TryShootArrow"] = "the same as ShootArrowAtTarget, when you have an arrow",
         ["ArrowCmd.ImpaleTarget"] = "PowerCmd.Apply of Impaled (guarded) and Hook.AfterArrowImpaled (a combat hook)",
+        ["PlayerCmd.GainGold"] = "its effects are your gold and Hook.AfterGoldGained (the run's listeners, whatever the fight's state: Dragon Fruit's max HP), which a fight that's over has no prediction left to show",
+        ["PotionCmd.TryToProcure"] = "its effects are a potion in your belt and Hook.AfterPotionProcured (the run's listeners, whatever the fight's state: Belt Buckle's Dexterity), which a fight that's over has no prediction left to show",
         ["ArrowCmd.DislodgeArrow"] = "Hook.AfterArrowDislodged (a combat hook: Twine and Yah hear nothing once the fight is ending) and the arrow back to you, which matters to nothing after the fight",
         ["CardCmd.ApplyKeyword"] = "a keyword on a card in hand (Ethereal: it exhausts as the turn ends): no turn end follows a fight that's over",
         ["ArrowCmd.GainArrowSlot"] = "an arrow slot for the fight: nothing reads it once the fight is over",

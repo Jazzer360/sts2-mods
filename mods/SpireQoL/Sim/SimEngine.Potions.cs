@@ -26,22 +26,46 @@ public static partial class SimEngine
         // The wrapper goes on only while its owner lives: the log and AfterPotionUsed are skipped for a potion whose owner died during it.
         bool OwnerDead(SimState branch) => branch.Player(use.Owner) is not { Died: false, Hp: > 0 };
         branches.Do(branch => { if (!OwnerDead(branch) && branch.History.Count > 0) Record(branch, new HistoryEvent(HistoryKind.PotionUsed, use.Owner)); });
-        if (!branches.States.Any(OwnerDead))
+        RunWithout(branches, OwnerDead,() => HookStep(branches, nameof(SimModel.AfterPotionUsed), (model, owner, branch) => model.AfterPotionUsed(branch, owner, use)));
+    }
+
+    /// <summary>
+    /// PotionCmd.TryToProcure for the play's owner (ProcurePotionAction, decision #362): a potion into their belt where it has room (AddPotionInternal fails
+    /// on a full one), then Hook.AfterPotionProcured there; a branch with a full belt has nothing happen.
+    /// </summary>
+    private static void RunProcurePotion(BranchSet branches)
+    {
+        static int Owner(SimState branch) => branch.CurrentPlay?.Owner ?? Who.You;
+        var procured = new HashSet<SimState>(ReferenceEqualityComparer.Instance);
+        branches.Do(branch =>
         {
-            HookStep(branches, nameof(SimModel.AfterPotionUsed), (model, owner, branch) => model.AfterPotionUsed(branch, owner, use));
+            if (branch.Player(Owner(branch)) is not { } player || player.Potions >= player.PotionSlots) return;
+            branch.MutablePlayer(Owner(branch)).Potions++;
+            procured.Add(branch);
+        });
+        // The hook runs for the branches that procured; the others are set aside meanwhile.
+        RunWithout(branches, branch => !procured.Contains(branch), () => HookStep(branches, nameof(SimModel.AfterPotionProcured), (model, owner, branch) => model.AfterPotionProcured(branch, owner, Owner(branch))));
+    }
+
+    /// <summary>Runs <paramref name="step"/> on the branches <paramref name="aside"/> doesn't hold, the others set aside meanwhile (their share still counted).</summary>
+    private static void RunWithout(BranchSet branches, Func<SimState, bool> aside, Action step)
+    {
+        if (!branches.States.Any(aside))
+        {
+            step();
             return;
         }
-        var dead = branches.States.Where(OwnerDead).ToList();
-        branches.States = branches.States.Where(branch => !OwnerDead(branch)).ToList();
-        branches.Aside += dead.Count;
+        var setAside = branches.States.Where(aside).ToList();
+        branches.States = branches.States.Where(branch => !aside(branch)).ToList();
+        branches.Aside += setAside.Count;
         try
         {
-            HookStep(branches, nameof(SimModel.AfterPotionUsed), (model, owner, branch) => model.AfterPotionUsed(branch, owner, use));
+            step();
         }
         finally
         {
-            branches.Aside -= dead.Count;
-            branches.States.AddRange(dead);
+            branches.Aside -= setAside.Count;
+            branches.States.AddRange(setAside);
         }
     }
 }

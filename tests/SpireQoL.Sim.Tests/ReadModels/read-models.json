@@ -2840,6 +2840,154 @@
     "Kind": "Relic",
     "Hooks": [
       {
+        "Hook": "AfterPotionProcured",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "DexterityApplied",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterPotionProcured\u003Ed__13.MoveNext:0038",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerPotionCount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CRemoveDexterity\u003Ed__18.MoveNext:0017",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "DexterityApplied"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterPotionProcured\u003Ed__13.MoveNext:0038",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerPotionCount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CRemoveDexterity\u003Ed__18.MoveNext:0017",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "DexterityApplied"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DexterityPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookVar",
+                "Key": "DexterityPower",
+                "Canonical": 2
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": -1
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "By": {
+              "Who": "NoOne",
+              "PetOwner": false
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterPotionProcured\u003Ed__13.MoveNext:0038",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "OwnerPotionCount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CRemoveDexterity\u003Ed__18.MoveNext:0017",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "NotEqual",
+                  "Left": {
+                    "$kind": "HookField",
+                    "Field": "DexterityApplied"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
         "Hook": "AfterPotionUsed",
         "Steps": [
           {
@@ -11327,6 +11475,45 @@
             }
           ]
         }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "DragonFruit",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterGoldGained",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterGoldGained\u003Ed__4.MoveNext:001D",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          },
+          {
+            "$kind": "GainMaxHpStep",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "MaxHp",
+              "Canonical": 1
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterGoldGained\u003Ed__4.MoveNext:001D",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "EventIsOwners"
+              }
+            }
+          }
+        ]
       }
     ],
     "HelpsOwner": false

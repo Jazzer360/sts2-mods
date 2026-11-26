@@ -54,6 +54,7 @@ public static class HookReader
         ["CreatureCmd.GainBlock"] = "GainBlockStep: block for the owner through the block pipeline (its amount and props, or its BlockVar's)",
         ["CreatureCmd.Damage"] = "DamageStep: damage to every hittable enemy, a random one (a branch each), the creature a power landed on or the owner, from the owner or no one",
         ["CreatureCmd.Heal"] = "HealStep: the owner heals, up to its max HP",
+        ["CreatureCmd.GainMaxHp"] = "GainMaxHpStep: the owner's max HP raised by its amount, then healed by it",
         ["CreatureCmd.LoseMaxHp"] = "LoseMaxHpStep: a player the hook's code names (a hit's target, the owner) loses max HP, HP above the new max lost first as damage",
         ["CreatureCmd.LoseBlock"] = "LoseBlockStep: the owner loses up to that much block, AfterBlockBroken told when it breaks, its remover the owner or no one",
         ["OstyCmd.Summon"] = "SummonStep: a summon for its owner, the player who played the card or the hit's dealer's player, as OstyCmd.Summon runs (SimEngine.Summon)",
@@ -88,9 +89,7 @@ public static class HookReader
         ["AfterRoomEntered"] = "entering a room: outside the fight's turns",
         ["BeforeRoomEntered"] = "entering a room: outside the fight's turns",
         ["AfterObtained"] = "when the relic is obtained: outside the fight's turns",
-        // Decision #313: a potion procured or discarded is no decision the simulator follows; a card's or a potion's PotionCmd.TryToProcure is unknown
-        // where a listener's class overrides AfterPotionProcured (SimAdapter.HookOnlyCommands).
-        ["AfterPotionProcured"] = "a potion procured: no simulated decision procures one without its outcome being unknown where this hook is overridden",
+        // Decision #313: a potion discarded is no decision the simulator follows (a procure is: decision #362, AfterPotionProcured read).
         ["AfterPotionDiscarded"] = "a potion discarded: no simulated decision discards one",
         // CombatManager.SwitchFromPlayerToEnemySide tells the source as the extra turn it gave begins: past every simulation's horizon, whose players'
         // turn ends where Hook.ShouldTakeExtraTurn is asked (SimEngine.ExtraTurns).
@@ -550,6 +549,7 @@ public static class HookReader
             GainEnergyStep energy => energy with { Amount = Map(energy.Amount)! },
             GainStarsStep stars => stars with { Amount = Map(stars.Amount)! },
             HealStep heal => heal with { Amount = Map(heal.Amount)! },
+            GainMaxHpStep maxHp => maxHp with { Amount = Map(maxHp.Amount)! },
             LoseBlockStep loss => loss with { Amount = Map(loss.Amount)! },
             SummonStep summon => summon with { Amount = Map(summon.Amount)! },
             SetHpStep setHp => setHp with { Amount = Map(setHp.Amount)! },
@@ -652,7 +652,7 @@ public static class HookReader
     /// <summary>A command that gives its owner's side something (a payout's command).</summary>
     private static bool Gives(HookStep step) => step switch
     {
-        GainBlockStep { To: null } or GainEnergyStep or DrawStep or ChannelStep or HealStep or GainStarsStep or SummonStep => true,
+        GainBlockStep { To: null } or GainEnergyStep or DrawStep or ChannelStep or HealStep or GainMaxHpStep or GainStarsStep or SummonStep => true,
         DamageStep damage => damage.Target is not (HookTarget.Owner or HookTarget.PlayOwner or HookTarget.LivingPlayers),
         ApplyPowerStep apply => apply.Target == HookTarget.Owner ? !apply.Debuff : apply.Target is HookTarget.AllEnemies or HookTarget.LivingOpponents && apply.Debuff,
         _ => false,
@@ -2231,6 +2231,9 @@ public static class HookReader
                 case "CreatureCmd.Heal":
                     if (!IsOwner(values[0])) throw new Gap(Other(values[0]), $"gap: a heal for {values[0]}");
                     return new HealStep(Value(values[1]));
+                case "CreatureCmd.GainMaxHp":
+                    if (!IsOwner(values[0])) throw new Gap(Other(values[0]), $"gap: max HP for {values[0]}");
+                    return new GainMaxHpStep(Value(values[1]));
                 // OstyCmd.Summon(choiceContext, summoner, amount, source) for its owner, the player who played the card, or the hit's dealer's player.
                 case "OstyCmd.Summon":
                 {
@@ -3240,11 +3243,11 @@ public static class HookReader
             // A power's giver (ModifyPowerAmountGiven's passes: the creature applying it).
             if (other is NamedValue { Name: "giver" } or ParameterValue { Name: "giver" } && _hook.StartsWith("ModifyPowerAmountGiven", StringComparison.Ordinal)) return new HookFactValue(HookFact.ApplierIsOwner);
             // The player an event happened to (AfterOrbChanneled's player, AfterShuffle's, AfterStarsGained's gainer): the event's player is its owner.
-            if (other is NamedValue { Name: "player" or "shuffler" } or ParameterValue { Name: "player" or "shuffler" } && _hook is "AfterOrbChanneled" or "AfterShuffle"
+            if (other is NamedValue { Name: "player" or "shuffler" } or ParameterValue { Name: "player" or "shuffler" } && _hook is "AfterOrbChanneled" or "AfterShuffle" or "AfterGoldGained"
                 || other is NamedValue { Name: "gainer" } or ParameterValue { Name: "gainer" } && _hook == "AfterStarsGained")
                 return new HookFactValue(HookFact.EventIsOwners);
             // The potion's owner (BeforePotionUsed's and AfterPotionUsed's potion.Owner, a player, or its Creature): the hook's player (decision #313).
-            if (_hook is "BeforePotionUsed" or "AfterPotionUsed" && IsPotionOwner(other)) return new HookFactValue(HookFact.EventIsOwners);
+            if (_hook is "BeforePotionUsed" or "AfterPotionUsed" or "AfterPotionProcured" && IsPotionOwner(other)) return new HookFactValue(HookFact.EventIsOwners);
             // The player whose next turn starts (AfterEnergyReset's, AfterPlayerTurnStart's player: a payout's hook, decision #239): asked of its owner's.
             if (other is NamedValue { Name: "player" } or ParameterValue { Name: "player" } && PlayersTurnStartHooks.Contains(_hook))
                 return new HookFactValue(HookFact.EventIsOwners);

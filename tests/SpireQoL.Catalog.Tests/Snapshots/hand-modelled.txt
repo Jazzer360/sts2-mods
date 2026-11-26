@@ -1,12 +1,12 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 33 engine rules naming 190 game methods; 3 adapter rules; 34 hand-written models.
+# 33 engine rules naming 192 game methods; 3 adapter rules; 34 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
-A potion's use (decision #313): it leaves its owner's belt, BeforePotionUsed, its body (its OnUse read from its code), the log, AfterPotionUsed while its owner lives
-  game: PotionModel.OnUseWrapper, PotionModel.RemoveBeforeUse, Hook.BeforePotionUsed, Hook.AfterPotionUsed
-  simulator: SimEngine.RunPotionUse
+A potion's use (decision #313): it leaves its owner's belt, BeforePotionUsed, its body (its OnUse read from its code), the log, AfterPotionUsed while its owner lives; a potion procured into a belt with room, AfterPotionProcured (decision #362)
+  game: PotionModel.OnUseWrapper, PotionModel.RemoveBeforeUse, Hook.BeforePotionUsed, Hook.AfterPotionUsed, PotionCmd.TryToProcure, Hook.AfterPotionProcured
+  simulator: SimEngine.RunPotionUse, SimEngine.RunProcurePotion
 A card play: its shape (play count, result location), each play's hooks and its body in its program's order
   game: CardModel.OnPlayWrapper, EnchantmentModel.OnPlay, Hook.ModifyCardPlayCount, Hook.AfterModifyingCardPlayCount, Hook.ModifyCardPlayResultLocation, Hook.BeforeCardPlayed, Hook.AfterCardPlayed, CardCmd.AutoPlay
   simulator: SimEngine.RunCardPlay, SimEngine.PlayOnce, SimEngine.RunEnchantment, SimEngine.DecideCardPlay, SimEngine.ApplyPlay, SimEngine.ApplyPlayTo, SimEngine.RunScript, SimEngine.RunScriptTo, SimEngine.Count, SimEngine.CardResolved, SimEngine.RunFixedHits

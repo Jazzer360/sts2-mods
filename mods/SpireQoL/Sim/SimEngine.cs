@@ -1297,6 +1297,8 @@ public static partial class SimEngine
             case CardEventAction cardEventAction: RunCardEvent(branches, cardEventAction); break;
             case DrawnCardAction drawnCardAction: branches.Each(branch => RunDrawnCard(branch, drawnCardAction)); break;
             case AutoPlayCardsAction autoPlayCardsAction: RunAutoPlayCards(branches, autoPlayCardsAction); break;
+            case ProcurePotionAction: RunProcurePotion(branches); break;
+            case GainGoldAction: HookStep(branches, nameof(SimModel.AfterGoldGained), (model, owner, branch) => model.AfterGoldGained(branch, owner, branch.CurrentPlay?.Owner ?? Who.You)); break;
             case AutoPlayFromDrawAction autoPlayFromDrawAction:
                 branches.Each(branch => AutoPlayFromDraw(branch, branch.CurrentPlay?.Owner ?? Who.You, CountOf(branch, autoPlayFromDrawAction.CountFrom, autoPlayFromDrawAction.Count), autoPlayFromDrawAction.ForceExhaust, autoPlayFromDrawAction.Upgrade));
                 break;

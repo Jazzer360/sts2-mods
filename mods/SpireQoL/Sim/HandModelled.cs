@@ -20,9 +20,9 @@ public static class HandModelled
     /// <summary>The engine's rules, each with the game's methods it stands in for.</summary>
     public static readonly IReadOnlyList<HandModelledRule> Engine = new HandModelledRule[]
     {
-        new("A potion's use (decision #313): it leaves its owner's belt, BeforePotionUsed, its body (its OnUse read from its code), the log, AfterPotionUsed while its owner lives",
-            new[] { "SimEngine.RunPotionUse" },
-            new[] { "PotionModel.OnUseWrapper", "PotionModel.RemoveBeforeUse", "Hook.BeforePotionUsed", "Hook.AfterPotionUsed" }),
+        new("A potion's use (decision #313): it leaves its owner's belt, BeforePotionUsed, its body (its OnUse read from its code), the log, AfterPotionUsed while its owner lives; a potion procured into a belt with room, AfterPotionProcured (decision #362)",
+            new[] { "SimEngine.RunPotionUse", "SimEngine.RunProcurePotion" },
+            new[] { "PotionModel.OnUseWrapper", "PotionModel.RemoveBeforeUse", "Hook.BeforePotionUsed", "Hook.AfterPotionUsed", "PotionCmd.TryToProcure", "Hook.AfterPotionProcured" }),
         new("A card play: its shape (play count, result location), each play's hooks and its body in its program's order",
             new[] { "SimEngine.RunCardPlay", "SimEngine.PlayOnce", "SimEngine.RunEnchantment", "SimEngine.DecideCardPlay", "SimEngine.ApplyPlay", "SimEngine.ApplyPlayTo", "SimEngine.RunScript", "SimEngine.RunScriptTo", "SimEngine.Count", "SimEngine.CardResolved", "SimEngine.RunFixedHits" },
             new[] { "CardModel.OnPlayWrapper", "EnchantmentModel.OnPlay", "Hook.ModifyCardPlayCount", "Hook.AfterModifyingCardPlayCount", "Hook.ModifyCardPlayResultLocation", "Hook.BeforeCardPlayed", "Hook.AfterCardPlayed", "CardCmd.AutoPlay" }),
@@ -165,7 +165,7 @@ public static class HandModelled
     /// </summary>
     public static readonly IReadOnlyList<string> Plumbing = new[]
     {
-        "SimEngine.Run", "SimEngine.RunAction", "SimEngine.Owner", "SimEngine.Lists", "SimEngine.ReadFor", "SimEngine.Candidates", "SimEngine.Listed", "SimEngine.AnyMayActOnTheEnemiesSide", "SimEngine.Then", "SimEngine.AnyListens", "SimEngine.OrbLabel", "SimEngine.Merge", "SimEngine.Detached", "SimEngine.Scratch", "SimEngine.Capped", "SimEngine.MarkUnread", "SimEngine.PlayResults", "SimEngine.Breakdown",
+        "SimEngine.Run", "SimEngine.RunAction", "SimEngine.RunWithout", "SimEngine.Owner", "SimEngine.Lists", "SimEngine.ReadFor", "SimEngine.Candidates", "SimEngine.Listed", "SimEngine.AnyMayActOnTheEnemiesSide", "SimEngine.Then", "SimEngine.AnyListens", "SimEngine.OrbLabel", "SimEngine.Merge", "SimEngine.Detached", "SimEngine.Scratch", "SimEngine.Capped", "SimEngine.MarkUnread", "SimEngine.PlayResults", "SimEngine.Breakdown",
         "SimEngine.Title", "SimEngine.Var", "SimEngine.VarValue", "SimEngine.VarTotal", "SimEngine.PowersOf", "SimEngine.SetPowers", "SimEngine.RelicsOf", "SimEngine.SetRelics", "SimEngine.PowerOn",
         "SimEngine.HasPower", "SimEngine.FieldsOf", "SimEngine.SetField", "SimEngine.SetFields", "SimEngine.TurnOf", "SimEngine.TallyFor", "SimEngine.CountOf", "SimEngine.MostOf", "SimEngine.RunWhen",
         "SimEngine.RunAsk", "SimEngine.Holds", "SimEngine.HoldsNow", "SimEngine.Compares", "SimEngine.IsConditionFilter", "SimEngine.HandFilters", "SimEngine.Flattened", "SimEngine.ConditionParts",

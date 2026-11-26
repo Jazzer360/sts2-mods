@@ -558,6 +558,10 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> BeforePotionUsed(SimState state, int owner, SimPotionUse use) => One(state);
     /// <summary>Hook.AfterPotionUsed: a potion acted and was logged (Reptile Trinket's Strength, Belt Buckle's Dexterity with none left).</summary>
     public virtual IEnumerable<SimState> AfterPotionUsed(SimState state, int owner, SimPotionUse use) => One(state);
+    /// <summary>Hook.AfterPotionProcured: a potion joined <paramref name="player"/>'s belt (PotionCmd.TryToProcure: Alchemize's; Belt Buckle takes its Dexterity off).</summary>
+    public virtual IEnumerable<SimState> AfterPotionProcured(SimState state, int owner, int player) => One(state);
+    /// <summary>Hook.AfterGoldGained: <paramref name="player"/> gained gold (PlayerCmd.GainGold: Hand of Greed's kill; Dragon Fruit's max HP).</summary>
+    public virtual IEnumerable<SimState> AfterGoldGained(SimState state, int owner, int player) => One(state);
     /// <summary>
     /// Hook.AfterCreatureAddedToCombat: a creature joined the fight mid-fight (CreatureCmd.Add, after its own set-up: SimEngine.Spawn), told to every
     /// listener (Philosopher's Stone's Strength on an enemy).

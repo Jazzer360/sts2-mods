@@ -343,7 +343,7 @@ public class ReadModelParityTests
         nameof(SimModel.AfterRemoved),
         nameof(SimModel.AfterEnergyReset), nameof(SimModel.AfterEnergyResetLate), nameof(SimModel.BeforeHandDraw), nameof(SimModel.BeforeHandDrawLate),
         nameof(SimModel.AfterPlayerTurnStartEarly), nameof(SimModel.AfterPlayerTurnStart), nameof(SimModel.AfterPlayerTurnStartLate),
-        nameof(SimModel.AfterDiedToDoom), nameof(SimModel.BeforePotionUsed), nameof(SimModel.AfterPotionUsed),
+        nameof(SimModel.AfterDiedToDoom), nameof(SimModel.BeforePotionUsed), nameof(SimModel.AfterPotionUsed), nameof(SimModel.AfterPotionProcured), nameof(SimModel.AfterGoldGained),
     };
 
     [Fact]
@@ -882,6 +882,17 @@ public class ReadModelParityTests
                                 var use = new SimPotionUse("Potion", user, target);
                                 return Branches(hook == nameof(SimModel.BeforePotionUsed) ? model.BeforePotionUsed(state, owner, use) : model.AfterPotionUsed(state, owner, use));
                             });
+                break;
+            case nameof(SimModel.AfterPotionProcured) or nameof(SimModel.AfterGoldGained):
+                // A potion procured by (gold gained by) each player, with none in their belt before it and with some (decision #362).
+                foreach (var player in others.Where(Who.IsPlayer))
+                    foreach (var held in new[] { 1, 3 })
+                        yield return ($"{(hook == nameof(SimModel.AfterGoldGained) ? "gold" : "a potion")} for {player}, {held} in the belt", (model, state) =>
+                        {
+                            if (state.Player(player) is null) return "no such player";
+                            state.MutablePlayer(player).Potions = held;
+                            return Branches(hook == nameof(SimModel.AfterGoldGained) ? model.AfterGoldGained(state, owner, player) : model.AfterPotionProcured(state, owner, player));
+                        });
                 break;
             case nameof(SimModel.AfterOrbChanneled):
                 // Twelve orbs channeled for its owner in turn (a counter's count), and one for each other player.

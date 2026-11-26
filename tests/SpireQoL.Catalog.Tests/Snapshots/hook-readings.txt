@@ -260,7 +260,7 @@ relic BagOfPreparation: ModifyHandDraw: gap: the simulator runs no read model's 
 relic BathTowel: AfterPlayerTurnStartLate: read
 relic BeatingRemnant: AfterDamageReceived: read | AfterModifyingHpLostAfterOsty: read | BeforeSideTurnStart: read | ModifyHpLostAfterOsty: read
 relic Bellows: AfterPlayerTurnStart: unknown where it runs: gap: upgrades GetPile(2, this.Owner).Cards, not the card played
-relic BeltBuckle: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterCombatVictory: not run: after the fight: no prediction reaches it | AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterPotionDiscarded: not run: a potion discarded: no simulated decision discards one | AfterPotionProcured: not run: a potion procured: no simulated decision procures one without its outcome being unknown where this hook is overridden | AfterPotionUsed: read | BeforeCombatStart: not run: before the fight: the state is read after it
+relic BeltBuckle: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterCombatVictory: not run: after the fight: no prediction reaches it | AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterPotionDiscarded: not run: a potion discarded: no simulated decision discards one | AfterPotionProcured: read | AfterPotionUsed: read | BeforeCombatStart: not run: before the fight: the state is read after it
 relic BigHat: AfterSideTurnStart: unknown where it runs: gap: CardPileCmd.AddGeneratedCardsToCombat isn't translated
 relic BigMushroom: AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterRoomEntered: not run: entering a room: outside the fight's turns | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 relic BiiigHug: AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterShuffle: read
@@ -297,6 +297,7 @@ relic DaughterOfTheWind: AfterCardPlayed: read
 relic DemonTongue: AfterDamageReceived: read | BeforeSideTurnStart: read
 relic DiamondDiadem: AfterSideTurnStart: read
 relic DivineDestiny: AfterSideTurnStart: read
+relic DragonFruit: AfterGoldGained: read
 relic Ectoplasm: AfterModifyingGoldGained: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | ModifyGoldGained: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy
 relic EmotionChip: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterDamageReceived: read | AfterPlayerTurnStart: unknown where it runs: gap: a loop
 relic ExerciseMat: AfterSideTurnStart: read

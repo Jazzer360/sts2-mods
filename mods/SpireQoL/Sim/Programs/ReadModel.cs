@@ -526,6 +526,7 @@ public sealed class ReadModel : SimModel
         [nameof(DamageStep)] = "CreatureCmd.Damage",
         [nameof(LoseBlockStep)] = "CreatureCmd.LoseBlock",
         [nameof(HealStep)] = "CreatureCmd.Heal",
+        [nameof(GainMaxHpStep)] = "CreatureCmd.GainMaxHp",
         [nameof(DrawStep)] = "CardPileCmd.Draw",
         [nameof(GainEnergyStep)] = "PlayerCmd.GainEnergy",
         [nameof(GainStarsStep)] = "PlayerCmd.GainStars",
@@ -575,6 +576,8 @@ public sealed class ReadModel : SimModel
         HookName.AfterOrbChanneled => nameof(AfterOrbChanneled),
         HookName.BeforePotionUsed => nameof(BeforePotionUsed),
         HookName.AfterPotionUsed => nameof(AfterPotionUsed),
+        HookName.AfterPotionProcured => nameof(AfterPotionProcured),
+        HookName.AfterGoldGained => nameof(AfterGoldGained),
         HookName.AfterCreatureAddedToCombat => nameof(AfterCreatureAddedToCombat),
         HookName.ModifyHpLostBeforeOsty => nameof(ModifyHpLostBeforeOsty),
         HookName.ModifyHpLostBeforeOstyLate => nameof(ModifyHpLostBeforeOstyLate),
@@ -691,6 +694,14 @@ public sealed class ReadModel : SimModel
     /// <summary>Hook.AfterPotionUsed (decision #313): a potion of <see cref="SimPotionUse.Owner"/>'s acted (Reptile Trinket, Belt Buckle).</summary>
     public override IEnumerable<SimState> AfterPotionUsed(SimState state, int owner, SimPotionUse use) =>
         Run(HookName.AfterPotionUsed, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Player = use.Owner, Target = use.Target });
+
+    /// <summary>Hook.AfterPotionProcured (decision #362): a potion joined <paramref name="player"/>'s belt (the hook's player its owner, EventIsOwners: Belt Buckle).</summary>
+    public override IEnumerable<SimState> AfterPotionProcured(SimState state, int owner, int player) =>
+        Run(HookName.AfterPotionProcured, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Player = player });
+
+    /// <summary>Hook.AfterGoldGained (decision #362): <paramref name="player"/> gained gold (the hook's player, EventIsOwners: Dragon Fruit).</summary>
+    public override IEnumerable<SimState> AfterGoldGained(SimState state, int owner, int player) =>
+        Run(HookName.AfterGoldGained, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Player = player });
 
     /// <summary>Hook.AfterCreatureAddedToCombat: the creature added is the one its code is told (HookWho.Asked, HookTarget.Added).</summary>
     public override IEnumerable<SimState> AfterCreatureAddedToCombat(SimState state, int owner, int creature) =>
@@ -941,6 +952,7 @@ public sealed class ReadModel : SimModel
                 case GainEnergyStep energy: return energy.Amount;
                 case DrawStep draw: return draw.Count;
                 case HealStep heal: return heal.Amount;
+                case GainMaxHpStep maxHp: return maxHp.Amount;
                 case SummonStep summon: return summon.Amount;
                 case GainStarsStep stars: return stars.Amount;
                 case ApplyPowerStep apply: return apply.Amount;
@@ -1625,7 +1637,7 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
-            case FlashStep or GainStarsStep or HealStep or LoseBlockStep or UnknownStep or SummonStep or ChannelStep or EvokeLastStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep or KillEachStep or SpawnStep or SetHpStep or SetMoveStep
+            case FlashStep or GainStarsStep or HealStep or GainMaxHpStep or LoseBlockStep or UnknownStep or SummonStep or ChannelStep or EvokeLastStep or RepeatStep or ForEachStep or LetStep or BindStep or BindAddStep or UnbindStep or RemovePowerStep or DecrementPowerStep or UpgradeCardStep or ApplyKeywordStep or FreeInHandStep or MakeCopyStep or MakeRandomInHandStep or MakeIntoDrawStep or StunStep or MonsterStateStep or KillStep or KillEachStep or SpawnStep or SetHpStep or SetMoveStep
                 when Spec.Kind == ModelKind.Enchantment:
                 throw new InvalidOperationException($"{Name}: no enchantment command for {step.GetType().Name}");
             case GainBlockStep gain when gain.To == HookTarget.Each:
@@ -1741,6 +1753,15 @@ public sealed class ReadModel : SimModel
                 return args =>
                 {
                     SimEngine.Heal(args.State, args.Owner, (int)amount(in args));
+                    return One(args.State);
+                };
+            }
+            case GainMaxHpStep maxHp:
+            {
+                var amount = Compile(maxHp.Amount);
+                return args =>
+                {
+                    SimEngine.GainMaxHp(args.State, args.Owner, (int)amount(in args));
                     return One(args.State);
                 };
             }

@@ -10,14 +10,12 @@ AfterCombatEnd
 AfterCombatVictory
 AfterCombatVictoryEarly
 AfterForge
-AfterGoldGained
 AfterItemPurchased
 AfterMapGenerated
 AfterModifyingCardRewardOptions
 AfterModifyingGoldGained
 AfterModifyingRewards
 AfterObtained
-AfterPotionProcured
 AfterRemoved
 AfterRestSiteHeal
 AfterRestSiteSmith

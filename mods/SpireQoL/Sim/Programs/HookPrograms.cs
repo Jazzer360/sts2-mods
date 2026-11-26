@@ -182,6 +182,10 @@ public enum HookName
     /// </summary>
     BeforePotionUsed,
     AfterPotionUsed,
+    /// <summary>Hook.AfterPotionProcured (PotionCmd.TryToProcure, decision #362): a potion joined its owner's belt; the hook's player its owner (potion.Owner: HookFact.EventIsOwners).</summary>
+    AfterPotionProcured,
+    /// <summary>Hook.AfterGoldGained (PlayerCmd.GainGold, decision #362): a player gained gold, more than none after ModifyGoldGained; the hook's player theirs.</summary>
+    AfterGoldGained,
     /// <summary>
     /// Hook.ShouldTakeExtraTurn's two passes (CombatManager.SwitchFromPlayerToEnemySide, as the players' turn is over): whether the hook's player
     /// takes another turn before the enemies act, every listener's Early first; 1 they do. The hook's player is the one asked (HookFact.EventIsOwners).
@@ -775,6 +779,9 @@ public sealed record UnknownStep(string Why) : HookStep
 /// <summary>CreatureCmd.Heal of the owner: its amount, up to its max HP (no modifiers: the game's heal has none).</summary>
 public sealed record HealStep(HookValue Amount) : HookStep;
 
+/// <summary>CreatureCmd.GainMaxHp for the owner (decision #362: Dragon Fruit's): its max HP raised by the amount, then healed by it (SimEngine.GainMaxHp).</summary>
+public sealed record GainMaxHpStep(HookValue Amount) : HookStep;
+
 /// <summary>CardPileCmd.Draw for the owner: its count of cards, each a card event.</summary>
 public sealed record DrawStep(HookValue Count) : HookStep;
 
@@ -1313,6 +1320,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             GainEnergyStep energy => Inside(energy.Amount),
             GainStarsStep stars => Inside(stars.Amount),
             HealStep heal => Inside(heal.Amount),
+            GainMaxHpStep maxHp => Inside(maxHp.Amount),
             LoseBlockStep loss => Inside(loss.Amount),
             SummonStep summon => Inside(summon.Amount),
             SetHpStep setHp => Inside(setHp.Amount),

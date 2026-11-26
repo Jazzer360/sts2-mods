@@ -25,7 +25,7 @@ public class SimKeyCoverageTests
         ["SimState.Log"] = Bookkeeping, ["SimState.Work"] = Bookkeeping, ["SimState.ListenerCache"] = Bookkeeping, ["SimState.ListenerSets"] = Bookkeeping, ["SimState.ListenerDead"] = Bookkeeping,
         ["SimState._teammatesShared"] = Bookkeeping, ["SimPlayer._orbsShared"] = Bookkeeping,
         // Decision #313: only a potion's use changes it, on every branch at once as the use starts (RemoveBeforeUse), so no two branches differ in it.
-        ["SimPlayer.Potions"] = "the same in every branch: a potion's use takes one on every branch at once, before anything branches",
+        ["SimPlayer.PotionSlots"] = "the same in every branch: the belt's slots are read from the board and nothing in a fight changes them",
         ["SimState.CardPlaysStarted"] = "a card play's identity within the run (SimCardPlay.Serial): what a model binds is keyed by it, and every bound entry is scratch",
         // Read from the game once and never changed.
         ["SimState.Vars"] = Constant, ["SimState.Fractions"] = Constant, ["SimState.TurnNumber"] = Constant, ["SimState.RoundNumber"] = Constant, ["SimState.Dread"] = Constant, ["SimState.MainRules"] = Constant, ["SimState.History"] = Constant, ["SimState.Titles"] = Constant, ["SimState.TeammatesBeforeMe"] = Constant, ["SimState.CostsUnknown"] = Constant,

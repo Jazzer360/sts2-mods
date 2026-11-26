@@ -380,4 +380,52 @@ public class PotionUseTests
         Assert.Equal(4, branch.You.HandCount);
         Assert.Null(branch.Unmodelled);
     }
+
+    // ---- a potion procured, gold gained (decision #362)
+
+    /// <summary>A card of yours whose play is <paramref name="body"/>.</summary>
+    private static SimPlay Card(string name, params SimAction[] body)
+    {
+        var play = new SimPlay
+        {
+            Name = name, HandCard = 9, HandDelta = -1, TargetId = Who.None,
+            Card = new SimCardPlay(new SimCard(name, SimCardType.Skill) { HandId = 9 }, Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: false),
+        };
+        play.Body.AddRange(body);
+        return play;
+    }
+
+    [Theory]
+    [InlineData(3, 0)] // room in your belt: the potion goes in, and Belt Buckle takes its Dexterity off (BeltBuckle.AfterPotionProcured, read from its code)
+    [InlineData(1, 2)] // a full belt: nothing is procured (PotionCmd.TryToProcure: AddPotionInternal fails), so the Dexterity stays
+    public void AlchemizesPotionGoesIntoYourBeltWhileItHasRoom(int slots, int dexterity)
+    {
+        // Your last potion drunk gives Belt Buckle's Dexterity (its DexterityApplied set); then Alchemize procures one.
+        var state = Fight().WithRelic(Who.You, RelicId.BeltBuckle, key: "DexterityPower", value: 2);
+        state.You.Potions = 1;
+        state.You.PotionSlots = 3;
+        SimEngine.ApplyPlayTo(state, FirePotion(target: 0), out var drunk, out _);
+        var start = Assert.Single(drunk);
+        Assert.Equal(2, start.You.Powers[PowerId.Dexterity]);
+        start.You.PotionSlots = slots;
+        if (slots == 1) start.You.Potions = 1; // full
+        SimEngine.ApplyPlayTo(start, Card("Alchemize", new ProcurePotionAction()), out var after, out _);
+        var branch = Assert.Single(after);
+        Assert.Equal(dexterity, branch.You.Powers[PowerId.Dexterity]);
+        Assert.Equal(1, branch.You.Potions); // one in, or the one already filling it
+        Assert.Null(branch.Unmodelled);
+    }
+
+    [Fact]
+    public void GoldGainedGivesDragonFruitsMaxHp()
+    {
+        // DragonFruit.AfterGoldGained, read from its code: gold for its owner gains them its max HP (CreatureCmd.GainMaxHp: max HP up, healed as much).
+        var state = Fight().WithRelic(Who.You, RelicId.DragonFruit, key: "MaxHp", value: 1);
+        state.You.Hp = 40;
+        SimEngine.ApplyPlayTo(state, Card("HandOfGreed", new GainGoldAction()), out var after, out _);
+        var branch = Assert.Single(after);
+        Assert.Equal(51, branch.You.MaxHp);
+        Assert.Equal(41, branch.You.Hp);
+        Assert.Null(branch.Unmodelled);
+    }
 }

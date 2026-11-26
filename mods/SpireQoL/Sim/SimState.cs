@@ -628,9 +628,11 @@ public sealed class SimPlayer
     public int Fairies, FairyHeal, LizardTailHeal;
     /// <summary>
     /// The potions in their belt (Player.Potions: on screen), which a potion's use takes one from as it starts (PotionModel.RemoveBeforeUse) and
-    /// Belt Buckle's code counts (decision #313). Constant otherwise.
+    /// Belt Buckle's code counts (decision #313), and a procure adds one to while there's room (decision #362).
     /// </summary>
     public int Potions;
+    /// <summary>The slots in their belt (Player.MaxPotionCount: on screen): a potion procured with every one full goes nowhere (PotionCmd.TryToProcure).</summary>
+    public int PotionSlots;
 
     // ---- results, for every player (decision #93: one engine; yours are read through SimState too: Taken, Died...)
     /// <summary>HP lost (after block and the HP-loss modifiers, overkill included), damage through block, and lost by Osty.</summary>
@@ -705,7 +707,7 @@ public sealed class SimPlayer
     internal void Hash(ref BranchKey key)
     {
         key.Add(Block); key.Add(Hp); key.Add(MaxHp); key.Add(Taken); key.Add(Through); key.Add(OstyTaken); key.Add(UnblockableTaken); key.Add(Incoming); key.Add(BlockGained);
-        key.Add(WuppyHp); key.Add(WuppyTaken); key.Add(OstyHp); key.Add(OstyMaxHp); key.Add(OstyShields ? 1 : 0); key.Add(Died ? 1 : 0); key.Add(LizardTailUsed ? 1 : 0); key.Add(LizardTailHeal); key.Add(FairiesUsed); key.Add(Fairies);
+        key.Add(WuppyHp); key.Add(WuppyTaken); key.Add(OstyHp); key.Add(OstyMaxHp); key.Add(OstyShields ? 1 : 0); key.Add(Died ? 1 : 0); key.Add(LizardTailUsed ? 1 : 0); key.Add(LizardTailHeal); key.Add(FairiesUsed); key.Add(Fairies); key.Add(Potions);
         key.Add(BlockGains); key.Add(Energy); key.Add(HandCount); key.Add(PlayingFromHand); key.Add(Arrows); key.Add(Fading); key.Add(UpgradableAtTurnEnd); key.Add(PilesUpgraded ? 1 : 0); key.Add(HexFading); key.Add(HexFrom); key.Add(Drawn); key.Add(ExhaustPile); key.Add(TakenToHand);
         key.Add(OrbCapacity); key.Add(BeaconGiving ? 1 : 0); key.Add(InvincibleBlock); key.Add(InvincibleDrawPile);
         if (ExtraTurnFrom != null) key.Add(ExtraTurnFrom.GetHashCode());

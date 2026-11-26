@@ -390,6 +390,19 @@ public sealed record AutoPlayFromDrawAction(int Count) : SimAction
     public SimCount CountFrom { get; init; }
 }
 
+/// <summary>
+/// PotionCmd.TryToProcure of a potion for the play's owner (decision #362: Alchemize's random potion, which CreateRandomPotionInCombat never makes a Fairy
+/// in a Bottle): into their belt when it has room (Player.AddPotionInternal: SimPlayer.Potions below SimPlayer.PotionSlots), then Hook.AfterPotionProcured
+/// (Belt Buckle takes its Dexterity off); nothing with a full belt.
+/// </summary>
+public sealed record ProcurePotionAction() : SimAction;
+
+/// <summary>
+/// PlayerCmd.GainGold for the play's owner, once Hook.ModifyGoldGained left some (decision #362: Hand of Greed's kill; the adapter asks the game's hook on
+/// the board): Hook.AfterGoldGained (Dragon Fruit's max HP). The gold itself isn't followed: nothing in a fight reads it.
+/// </summary>
+public sealed record GainGoldAction() : SimAction;
+
 /// <summary>A player's pile a card's auto-play takes the cards it plays from (CardCmd.AutoPlay of cards there).</summary>
 public enum SimPile { Hand, Draw, Discard, Exhaust }
 
