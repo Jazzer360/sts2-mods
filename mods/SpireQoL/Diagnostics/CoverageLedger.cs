@@ -38,6 +38,13 @@ internal static partial class CoverageLedger
     /// </summary>
     internal static IReadOnlyDictionary<string, string> ReviewedEntries => Reviewed;
 
+    /// <summary>The ledger's data for the tests: the hooks reviewed per class, beta's (the decompile's) and main's where they differ.</summary>
+    internal static IReadOnlyList<(string Folder, string Type, string Hooks)> BetaHooks => Generated;
+
+    internal static IReadOnlyList<(string Folder, string Type, string Hooks)> MainHooks => GeneratedMain;
+
+    internal static IReadOnlyList<string> ReviewedHooks => Hooks;
+
     private static readonly Dictionary<string, string> Reviewed = new()
     {
         // ======== relics
@@ -565,6 +572,8 @@ internal static partial class CoverageLedger
         var hookSet = Hooks.ToHashSet();
         var onCardSet = hookSet.Concat(OnCardHooks).ToHashSet();
         var ledger = Generated.ToDictionary(folderType => (folderType.Folder, folderType.Type), folderType => folderType);
+        // Main's hooks where they differ from beta's (one DLL serves both branches, decision #163): either set is the reviewed one.
+        var onMain = GeneratedMain.ToDictionary(folderType => (folderType.Folder, folderType.Type), folderType => folderType.Hooks);
         var result = new Dictionary<Type, Entry>();
         foreach (var type in ModelTypes())
         {
@@ -579,11 +588,13 @@ internal static partial class CoverageLedger
             {
                 continue;
             }
-            var known = ledger.TryGetValue((type.Namespace?.Split('.').Last() ?? "", type.Name), out var folderType);
+            var key = (type.Namespace?.Split('.').Last() ?? "", type.Name);
+            var known = ledger.TryGetValue(key, out var folderType);
             if (!known && hooks.Length == 0) continue;
             Entry entry;
             if (!known) entry = new Entry(type.Name, Status.New, "not in the ledger (new in this game version?)", hooks);
-            else if (folderType.Hooks != hooks) entry = new Entry(type.Name, Status.Changed, $"hooks were {folderType.Hooks}, now {hooks}", hooks);
+            else if (folderType.Hooks != hooks && !(onMain.TryGetValue(key, out var mainHooks) && mainHooks == hooks))
+                entry = new Entry(type.Name, Status.Changed, $"hooks were {folderType.Hooks}, now {hooks}", hooks);
             else if (Reviewed.TryGetValue(type.Name, out var why))
                 entry = new Entry(type.Name, why.StartsWith("gap:", StringComparison.Ordinal) ? Status.Gap : why.StartsWith("covered:", StringComparison.Ordinal) ? Status.Covered : Status.Ignored, why, hooks);
             else entry = new Entry(type.Name, Status.Unreviewed, "not reviewed", hooks);

@@ -35,15 +35,30 @@ const rows = [];
 // reviewed like a hook. A card's own OnPlay is what PlayFacts reads, so it isn't one. Kept in step with CoverageLedger.OnCardHooks.
 const onCardHooks = { Enchantments: ["OnPlay"], Afflictions: ["OnPlay"] };
 const hookRe = new RegExp(`public override [^(=]*\\b(${hooks.join("|")})\\(`, "g");
+const combatHooksOf = (src, folder) => {
+  const onCard = (onCardHooks[folder] || []).filter(h => new RegExp("public override [^(=]*\\b" + h + "\\(").test(src));
+  return [...new Set([...src.matchAll(hookRe)].map(m => m[1]).concat(onCard))].sort();
+};
 for (const folder of folders) {
   const dir = modelsDir(folder);
   if (!fs.existsSync(dir)) continue;
   for (const f of fs.readdirSync(dir)) {
     if (!f.endsWith(".cs")) continue;
-    const src = fs.readFileSync(path.join(dir, f), "utf8");
-    const onCard = (onCardHooks[folder] || []).filter(h => new RegExp("public override [^(=]*\\b" + h + "\\(").test(src));
-    const found = [...new Set([...src.matchAll(hookRe)].map(m => m[1]).concat(onCard))].sort();
+    const found = combatHooksOf(fs.readFileSync(path.join(dir, f), "utf8"), folder);
     if (found.length) rows.push({ folder, type: f.slice(0, -3), hooks: found });
+  }
+}
+
+// Main's combat hooks for the ledger's classes whose hooks differ there (decision #163: one DLL serves both branches), so a main player's game
+// doesn't report a reviewed class as changed. Each is reviewed for main too: the script lists them.
+const decompMain = path.join(os.homedir(), "git", "sts2-decompiled-main");
+const mainRows = [];
+if (fs.existsSync(decompMain)) {
+  for (const r of rows) {
+    const file = path.join(decompMain, "MegaCrit.Sts2.Core.Models." + r.folder, r.type + ".cs");
+    if (!fs.existsSync(file)) continue;
+    const found = combatHooksOf(fs.readFileSync(file, "utf8"), r.folder);
+    if (found.join(",") !== r.hooks.join(",")) mainRows.push({ folder: r.folder, type: r.type, hooks: found });
   }
 }
 
@@ -76,6 +91,12 @@ out.push("    {");
 for (const r of rows) out.push(`        ("${r.folder}", "${r.type}", "${r.hooks.join(",")}"),`);
 out.push("    };");
 out.push("");
+out.push("    /// <summary>Main's combat hooks for the classes whose hooks differ there (one DLL serves both branches: decision #163): the coverage check takes either set.</summary>");
+out.push("    private static readonly (string Folder, string Type, string Hooks)[] GeneratedMain =");
+out.push("    {");
+for (const r of mainRows) out.push(`        ("${r.folder}", "${r.type}", "${r.hooks.join(",")}"),`);
+out.push("    };");
+out.push("");
 out.push("    /// <summary>Relics that can affect a fight (any hook outside Diagnostics/OutOfCombatHooks.txt), with those hooks: each needs a tab, a tracker row or a reviewed reason (RelicTracking).</summary>");
 out.push("    public static readonly (string Type, string Hooks)[] RelicFightHooks =");
 out.push("    {");
@@ -97,6 +118,7 @@ const stale = [...reviewed].filter(t => !rows.some(r => r.type === t));
 console.log(`game ${version}: ${rows.length} classes with combat hooks; ${reviewed.size} reviewed entries`);
 console.log(missing.length ? `no reviewed entry (review their hooks, add to CoverageLedger.Reviewed): ${missing.join(", ")}` : "every class has a reviewed entry");
 if (stale.length) console.log(`entries for classes without combat hooks now (remove): ${stale.join(", ")}`);
+if (mainRows.length) console.log(`combat hooks that differ on main (review each entry for main's bodies too):\n${mainRows.map(r => `  ${r.type}: beta ${rows.find(b => b.type === r.type && b.folder === r.folder).hooks.join(",")} | main ${r.hooks.join(",") || "none"}`).join("\n")}`);
 
 const catalog = fs.readFileSync(path.join(root, "mods", "SpireQoL", "Menu", "SettingsCatalog.cs"), "utf8");
 const specs = fs.readFileSync(path.join(root, "mods", "SpireQoL", "Data", "RelicSpecs.cs"), "utf8");

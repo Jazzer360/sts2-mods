@@ -494,6 +494,27 @@ internal static partial class CoverageLedger
         ("Afflictions", "Hexed", "AfterCardEnteredCombat"),
     };
 
+    /// <summary>Main's combat hooks for the classes whose hooks differ there (one DLL serves both branches: decision #163): the coverage check takes either set.</summary>
+    private static readonly (string Folder, string Type, string Hooks)[] GeneratedMain =
+    {
+        ("Relics", "Byrdpip", ""),
+        ("Relics", "FakeHappyFlower", "AfterSideTurnStart"),
+        ("Relics", "HappyFlower", "AfterSideTurnStart"),
+        ("Relics", "PaelsEye", "AfterSideTurnStart,AfterTakingExtraTurn,BeforeCardPlayed,BeforeSideTurnEndEarly,ShouldTakeExtraTurn"),
+        ("Powers", "CoveredPower", "AfterApplied,AfterDeath,AfterSideTurnEnd"),
+        ("Powers", "DrawCardsNextTurnPower", "AfterSideTurnStart,ModifyHandDraw"),
+        ("Powers", "HardToKillPower", "AfterModifyingDamageAmount"),
+        ("Powers", "InterceptPower", "AfterSideTurnEnd"),
+        ("Powers", "JugglingPower", "AfterApplied,AfterSideTurnEnd,BeforeCardPlayed"),
+        ("Powers", "PainfulStabsPower", "AfterAttack,ShouldCreatureBeRemovedFromCombatAfterDeath,ShouldPowerBeRemovedAfterOwnerDeath"),
+        ("Powers", "PaleBlueDotPower", "AfterCardPlayed,AfterSideTurnEnd"),
+        ("Powers", "PhantomBladesPower", "AfterApplied,AfterCardEnteredCombat"),
+        ("Powers", "TankPower", "AfterApplied"),
+        ("Cards", "SpoilsMap", ""),
+        ("Enchantments", "Sown", "OnPlay"),
+        ("Enchantments", "Swift", "OnPlay"),
+    };
+
     /// <summary>Relics that can affect a fight (any hook outside Diagnostics/OutOfCombatHooks.txt), with those hooks: each needs a tab, a tracker row or a reviewed reason (RelicTracking).</summary>
     public static readonly (string Type, string Hooks)[] RelicFightHooks =
     {
