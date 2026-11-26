@@ -300,6 +300,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - A card played from your hand under Rebound or Nostalgia goes on top of your draw pile in the predictions: a draw after it in the same play (Unceasing Top's, when it was your last card) draws it, where the predictions drew another card, or none.
 - Mummified Hand's free card is picked as the game picks it: first among the cards that cost something before any modifier, so a 0-cost card that costs only through Borrowed Time no longer shares the chance with them (Simpleton's end-of-turn card).
 - With Void Form up, what your cards cost is predicted (its first cards each turn free, none in the turn it's played): Simpleton's end-of-turn card and Mummified Hand's free card showed `?`.
+- Reading the game's code as the mod loads can no longer fail when two readings start at the same moment (a card's predictions or an event's reminders would then have read as unknown).
 
 #### Removed
 - Biiig Hug's tag and its settings row: the Soot it adds on a shuffle never makes a shuffle worth avoiding. The Soot is still worked out (a later draw can find it, and your relics and powers that react to a card you make hear it).

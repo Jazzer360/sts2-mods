@@ -37,6 +37,8 @@ public static class ModEntry
     public static void Initialize()
     {
         Log.Info($"loading v{typeof(ModEntry).Assembly.GetName().Version}");
+        // Harmony's emit helpers made ready on the game's thread before any worker reads the game's code (decision #391).
+        if (!Diagnostics.GameCode.MakeEmitReady()) Log.Warn("Harmony's code reading couldn't be made ready at load; each read tries again");
 
         var settingsPath = JsonSettingsFile<QolSettings>.DefaultPathFor(typeof(ModEntry), Id);
         // A settings file there already: a player from before (the first-run setup is for new ones: MigrateSettings).
