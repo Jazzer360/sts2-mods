@@ -40,6 +40,13 @@ public sealed record OptionCode(MethodBase Body, Type? Relic);
 public sealed record OptionPick(ChoiceEffect Kind, IReadOnlyList<string> Enchantments, LambdaValue? Filter, string? Via);
 
 /// <summary>
+/// A step of an option's program as the reading read it: the step with its values, whose code it is (the model its values are read on: the event, one
+/// of its parts, a relic whose obtaining it is), when it runs (the tests on the way to it), and what it runs through. The card reading reads which
+/// cards an option gives from these (a reward's pools, filter, odds and count; a card it makes; a transform; an upgrade), as the program has them.
+/// </summary>
+public sealed record OptionStep(ProgramStep Step, Type Owner, Type? Relic, ProgramCondition? Condition, string? Via);
+
+/// <summary>
 /// What the reading reads off an option once it's shown, on the game's thread (decisions #74, #354, #355): the delegates the event and the option hold
 /// then (by where a call gets one), the relics the option's hover tips show that you don't hold (the Museum's relic, the Relic Trader's new one), and the
 /// types of the run's hook listeners (your relics: the alternatives they add to a card reward). Nothing that isn't on screen or yours.
@@ -66,6 +73,9 @@ public sealed record OptionReading(IReadOnlyList<OptionEffect> Effects, IReadOnl
 
     /// <summary>The cards its code makes by class (CreateCard&lt;T&gt;: Bugslayer's, read with the class its generic helper is called with).</summary>
     public IReadOnlyList<string> Made { get; init; } = Array.Empty<string>();
+
+    /// <summary>Its program's steps, in the order the reading read them (a reward's own code left out), each with its values: what the card reading reads.</summary>
+    public IReadOnlyList<OptionStep> Steps { get; init; } = Array.Empty<OptionStep>();
 
     /// <summary>Something in it is read only once the option is shown (a delegate the event holds, the relic it shows, your relics' card reward alternatives).</summary>
     public bool NeedsShown => Gaps.Any(gap => gap.WhenShown);
@@ -227,7 +237,9 @@ public sealed class OptionReader
                 && next.OpCode == OpCodes.Newobj && IsDelegate(made.DeclaringType) && Consumer(ops, i + 2) is { } at)
             {
                 var consumer = ops[at];
-                if (Keeps(consumer))
+                // An object that keeps a delegate that acts runs it later, not here (an option's handler, the Conveyor's dish); one that only asks (a card
+                // reward's filter, given to CardCreationOptions' constructor) is a value of the step that makes the object, read as a lambda.
+                if (Keeps(consumer) && (IsPage(consumer) || Acts(target)))
                 {
                     // Only a Func<Task> is an option's handler (an option also keeps a WillKillPlayer test).
                     if (IsPage(consumer) && made.TypeArguments is ["Task"]) pages.Add(target);
@@ -419,6 +431,7 @@ public sealed class OptionReader
         public readonly List<OptionPick> Picks = new();
         public readonly List<string> Made = new();
         public readonly List<OptionCode> Code = new();
+        public readonly List<OptionStep> Steps = new();
         private readonly HashSet<(MethodBase, Type?)> _code = new();
         public readonly HashSet<MethodBase> Seen = new();
         public bool RelicUsed;
@@ -448,7 +461,7 @@ public sealed class OptionReader
             if (_code.Add((body, relic))) Code.Add(new OptionCode(body, relic));
         }
 
-        public OptionReading Reading() => new(Effects.ToList(), Gaps.ToList(), Others.ToList()) { Code = Code.ToList(), Picks = Picks.ToList(), Made = Made.ToList() };
+        public OptionReading Reading() => new(Effects.ToList(), Gaps.ToList(), Others.ToList()) { Code = Code.ToList(), Picks = Picks.ToList(), Made = Made.ToList(), Steps = Steps.ToList() };
     }
 
     /// <summary>The loaded game's readings wait for its models (a curse is told by its card) before they're kept.</summary>
@@ -552,6 +565,8 @@ public sealed class OptionReader
         {
             var condition = And(outer, step.Condition);
             if (CantHold(condition)) continue;
+            // A reward's own code (how taking it works) isn't the option's cards: its steps aren't recorded, as its code isn't.
+            if (!_quiet && step is not UnknownStep) sink.Steps.Add(new OptionStep(step, owner, _obtaining, condition, via));
             switch (step)
             {
                 case LoopStep loop:
@@ -849,6 +864,7 @@ public sealed class OptionReader
         foreach (var gap in obtained.Gaps) sink.Gap(gap with { Via = gap.Via == null ? via : via + ", " + gap.Via });
         foreach (var other in obtained.Others) sink.Other(other);
         foreach (var code in obtained.Code) sink.Read(code.Body, code.Relic);
+        foreach (var step in obtained.Steps) sink.Steps.Add(step with { Condition = And(condition, step.Condition), Via = step.Via == null ? via : via + ", " + step.Via });
         foreach (var pick in obtained.Picks) sink.Pick(pick with { Via = pick.Via == null ? via : via + ", " + pick.Via });
         foreach (var card in obtained.Made)
             if (!sink.Made.Contains(card)) sink.Made.Add(card);

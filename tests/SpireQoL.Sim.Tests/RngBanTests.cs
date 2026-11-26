@@ -13,7 +13,7 @@ public class RngBanTests
     private static readonly Regex ByName = new(@"""(_?[Rr]ng|PlayerRng|Seed|StringSeed|_seed|CombatTargets|CombatCardSelection)""");
 
     /// <summary>Lines that name it to read the game's code, not its state: telling apart a method's overloads by an Rng parameter.</summary>
-    private static readonly string[] Reviewed = { "ParameterType.Name == \"Rng\"" };
+    private static readonly string[] Reviewed = { "ParameterTypes.Contains(\"Rng\")" };
 
     [Fact]
     public void NoSourceReachesTheRngByName()

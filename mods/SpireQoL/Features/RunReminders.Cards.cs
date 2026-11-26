@@ -10,7 +10,7 @@ using MegaCrit.Sts2.Core.Factories;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Runs;
 using SpireQoL.Data;
-using LocalBuilder = System.Reflection.Emit.LocalBuilder;
+using SpireQoL.Procs.Programs;
 using OpCodes = System.Reflection.Emit.OpCodes;
 
 namespace SpireQoL.Features;
@@ -37,11 +37,13 @@ public sealed partial class RunReminders
     private static readonly MethodInfo? FilterForRun = AccessTools.Method(typeof(CardFactory), "FilterForRun");
 
     /// <summary>
-    /// The card reading of an option's reading (decision #353): every body of the game's models' code the reading read (the event's, its parts', the
-    /// relics it gives, a modifier's, a game mode's: not the game's library helpers, CardCreationOptions' factories, whose calls the card reading
-    /// reads itself), in the order the reading read them, each with the calls it makes into its own model's code (a property that lists the cards it
-    /// picks from: the Trash Heap's Cards, Archaic Tooth's TranscendenceUpgrades), read for the cards it makes; the relics whose obtaining it read; the
-    /// cards its program makes by class; and the picks it names. Code only: no game state, any thread.
+    /// The card reading of an option's reading (decisions #353, #357). Its card rewards (pools, filter, odds, flags, count) and what it changes in your
+    /// cards (an enchantment, an upgrade of your cards or of the cards it gives, a transform, and the cards an upgrade can take) are read from the
+    /// program's steps and their values (<see cref="OptionReading.Steps"/>). The cards its code names by class (a ModelDb.Card&lt;T&gt;, a TransformTo&lt;T&gt;,
+    /// the cards a property of its model lists: the Trash Heap's Cards, Archaic Tooth's TranscendenceUpgrades), a pool it uses without a reward
+    /// (the Museum's curses) and a constant array a reward's filter takes its value from in a loop (Glass Eye's rarities) are still read from the
+    /// code its reading read: every body of the game's models' code, each with the calls it makes into its own model's code. Also the relics whose
+    /// obtaining it read and the cards its program makes by class. Code only: no game state, any thread.
     /// </summary>
     internal static OptionCards CardsFrom(OptionReading reading)
     {
@@ -53,6 +55,7 @@ public sealed partial class RunReminders
         foreach (var code in reading.Code)
             if (code.Relic != null) cards.Obtains(code.Relic);
         foreach (var card in reading.Made) cards.Makes(card);
+        cards.ReadSteps(reading.Steps);
         return cards;
     }
 
@@ -208,29 +211,29 @@ public sealed partial class RunReminders
             return copy;
         }
 
-        /// <summary>A card pool in the code, and the call that gave the character whose pool it is (null: not a character's).</summary>
+        /// <summary>A card pool the code names without a reward, and the call that gave the character whose pool it is (null: not a character's).</summary>
         private sealed record PoolSource(MethodBase Method, MethodBase? Character);
 
         /// <summary>
-        /// A number in the code: a constant, a dynamic var of the object running it (<c>DynamicVars.Cards.IntValue</c>), or one
-        /// divided by a constant (Sea Glass's <c>Cards / 3</c>).
+        /// A card reward or random card, as the program's values build it (decision #357): the CardCreationOptions its step is given (a factory's or the
+        /// constructor's, its pools, filter, odds and flags), how many cards it offers, and whose code it is (the model its values are read on).
         /// </summary>
-        private sealed record IntExpr(int? Const, string? Var, int Divisor = 1);
-
-        /// <summary>A card reward or random card, as its code builds it.</summary>
         private sealed class RewardSource
         {
-            public required List<PoolSource> Pools;
-            /// <summary>The CardCreationOptions factory or constructor the code calls.</summary>
-            public required MethodBase Maker;
-            public MethodInfo? Filter;
+            /// <summary>The pools' value (new ReadOnlySingleElementList(Owner.Character.CardPool), [a, b], Array.Empty).</summary>
+            public required ProgramValue Pools;
+            /// <summary>The CardCreationOptions factory's name, or ".ctor" for its constructor.</summary>
+            public required string Maker;
+            /// <summary>Its filter (c => c.Rarity == Common); null when it has none. One the reading couldn't read keeps every card.</summary>
+            public LambdaValue? Filter;
             /// <summary>The constructor's source and odds (CardCreationSource, CardRarityOddsType), read as numbers.</summary>
             public int? Source, Odds;
             /// <summary>Flags added with WithFlags; IsCardReward when a CardReward takes it.</summary>
             public int Flags;
-            public IntExpr? Count;
-            /// <summary>A filter closure's captured value set per pass of a loop over a constant array (Glass Eye's rarities).</summary>
-            public FieldInfo? LoopField;
+            public ProgramValue? Count;
+            public required Type Owner;
+            /// <summary>A filter's value taken per pass of a loop over a constant array (Glass Eye's rarities), by the name the filter reads it by.</summary>
+            public string? LoopName;
             public object[]? LoopValues;
         }
 
@@ -238,61 +241,82 @@ public sealed partial class RunReminders
         private readonly HashSet<Type> _enchantments = new();
         private readonly List<RewardSource> _rewards = new();
         private readonly List<PoolSource> _loosePools = new();
+        /// <summary>Constant arrays of an enum the code builds (Glass Eye's rarities), by the enum.</summary>
+        private readonly Dictionary<Type, object[]> _arrays = new();
+        /// <summary>
+        /// The CardCreationOptions the code makes (its factory or constructor calls), the check on the program's rewards: more of them than the program
+        /// has rewards (Kaleidoscope's, made in a loop into a list no step is given) leaves the option's cards unknown, never a list that misses some.
+        /// </summary>
+        private int _optionsMade;
+        /// <summary>The program's card rewards and the options it is given besides (a CardReward's reroll options): what the code's options should be.</summary>
+        private int _optionsRead;
+
+        /// <summary>The cards the program makes from a value (RunState.CreateCard(card, owner)), each with whose code it is: read on the objects the code runs on.</summary>
+        private readonly List<(ProgramValue Card, Type Owner)> _madeFrom = new();
+
+        /// <summary>
+        /// The cards the program makes from a value that the objects its code runs on tell (Dusty Tome's card, by its id: the card its hover tip shows);
+        /// one they can't (a roll's: the Trash Heap's) is the code's own list of cards, read with the cards it names.
+        /// </summary>
+        private List<CardModel> MadeFromValues()
+        {
+            var cards = new List<CardModel>();
+            foreach (var (card, owner) in _madeFrom)
+            {
+                if (HolderOf(owner) is not { } holder) continue;
+                try
+                {
+                    if (ProgramEvaluator.Value(card, ProgramBoard.Of(holder), ModelProgram.Empty) is CardModel made && !cards.Contains(made.IsCanonical ? made : made.CanonicalInstance))
+                        cards.Add(made.IsCanonical ? made : made.CanonicalInstance);
+                }
+                catch { /* not told */ }
+            }
+            return cards;
+        }
+
+        /// <summary>The code makes a reward the program doesn't hold: the option's cards can't be told.</summary>
+        internal bool RewardsUnread => _optionsMade > _optionsRead;
         private bool _transformRandom;
         /// <summary>You pick the card to transform (CardSelectCmd.FromDeckForTransformation), rather than all of a kind or one at random.</summary>
         private bool _picksTransform;
         private bool _upgradesDeck;
         private bool _enchantsDeck;
+        /// <summary>
+        /// What an upgrade of your cards can take: a pick from your deck (FromDeckForUpgrade: any upgradable card, null), or the test the
+        /// code puts on your deck's cards before it upgrades them (War Paint's c.Type == Skill). Empty with an upgrade of your cards: any upgradable card.
+        /// </summary>
+        private readonly List<LambdaValue?> _upgradeTakes = new();
 
         /// <summary>The option upgrades the cards it gives (Astrolabe: CardCmd.Upgrade on its new cards, not a pick from your deck).</summary>
         public bool GivesUpgraded { get; private set; }
 
-        /// <summary>One method body: pools and a filter are paired with the CardCreationOptions call that follows them.</summary>
+        /// <summary>
+        /// One method body's code, for what the program doesn't hold: the cards it names by class (ModelDb.Card&lt;T&gt;, CreateCard&lt;T&gt;,
+        /// TransformTo&lt;T&gt;), a pool it uses without a reward (one a CardCreationOptions call takes is the reward's, read from the program), and
+        /// the constant arrays of an enum it builds (a loop over them gives a reward's filter its value: Glass Eye's rarities).
+        /// </summary>
         public void Read(List<CodeInstruction> code)
         {
             var pools = new List<PoolSource>();
-            MethodInfo? filter = null;
             MethodBase? character = null;
-            // The last number pushed (for a reward's count, flags and a constructor's odds), the one before it (a division, the
-            // constructor's source), the dynamic var named last, and numbers stored in locals or fields (an async method's
-            // locals are fields).
-            IntExpr? last = null, before = null;
-            string? lastString = null, varName = null;
-            var stored = new Dictionary<string, IntExpr>();
-            CodeInstruction? previous = null;
-            // Constant arrays of an enum (Glass Eye's rarities): built element by element, or from a data field.
-            var arrays = new Dictionary<Type, object[]>();
+            int? last = null;
             (Type Element, int Length, List<object> Values)? building = null;
             FieldInfo? arrayData = null;
-            var upgrades = false;
-            var picksUpgrade = false;
-            void Push(IntExpr intExpr) { before = last; last = intExpr; }
             foreach (var ins in code)
             {
-                var producedInt = previous != null && ProducesInt(previous);
-                previous = ins;
-                if (ins.opcode == OpCodes.Newarr && ins.operand is Type { IsEnum: true } element && last is { Const: { } length })
+                if (ins.opcode == OpCodes.Newarr && ins.operand is Type { IsEnum: true } element && last is { } length)
                 {
                     building = (element, length, new List<object>());
                     continue;
                 }
                 if (ins.opcode == OpCodes.Ldtoken && ins.operand is FieldInfo data) { arrayData = data; continue; }
-                if (building is { } elementLength && ins.opcode.Name?.StartsWith("stelem", StringComparison.Ordinal) == true && last is { Const: { } value })
+                if (building is { } elementLength && ins.opcode.Name?.StartsWith("stelem", StringComparison.Ordinal) == true && last is { } value)
                 {
                     elementLength.Values.Add(Enum.ToObject(elementLength.Element, value));
-                    if (elementLength.Values.Count == elementLength.Length) { arrays[elementLength.Element] = elementLength.Values.ToArray(); building = null; }
+                    if (elementLength.Values.Count == elementLength.Length) { _arrays[elementLength.Element] = elementLength.Values.ToArray(); building = null; }
                     continue;
                 }
-                if (ins.LoadsConstant() && ins.operand is not string && TryConst(ins, out var constant)) { Push(new IntExpr(constant, Var: null)); continue; }
-                if (ins.opcode == OpCodes.Ldstr) { lastString = ins.operand as string; continue; }
-                if (ins.opcode == OpCodes.Div && last is { Const: { } divisor } && before is { Var: not null } && divisor != 0) { last = before with { Divisor = before.Divisor * divisor }; continue; }
-                if (SlotKey(ins, store: true) is { } slotKey) { if (producedInt && last != null) stored[slotKey] = last; continue; }
-                if (SlotKey(ins, store: false) is { } otherSlotKey) { if (stored.TryGetValue(otherSlotKey, out var val)) Push(val); continue; }
-                if (ins.opcode == OpCodes.Ldftn && ins.operand is MethodInfo method && IsCardFilter(method))
-                {
-                    filter = method;
-                    continue;
-                }
+                if (ins.LoadsConstant() && ins.operand is not string && TryConst(ins, out var constant)) { last = constant; continue; }
                 if (ins.operand is not MethodBase otherMethod || otherMethod.DeclaringType == null) continue;
                 if (ins.opcode != OpCodes.Call && ins.opcode != OpCodes.Callvirt && ins.opcode != OpCodes.Newobj) continue;
                 var type = otherMethod.DeclaringType;
@@ -302,88 +326,257 @@ public sealed partial class RunReminders
                     {
                         var array = Array.CreateInstance(init.Element, init.Length);
                         RuntimeHelpers.InitializeArray(array, arrayData.FieldHandle);
-                        arrays[init.Element] = array.Cast<object>().ToArray();
+                        _arrays[init.Element] = array.Cast<object>().ToArray();
                     }
                     catch { /* not a constant array we can read */ }
                     building = null;
                     continue;
                 }
-                if (type.Name == "DynamicVarSet" && otherMethod.Name.StartsWith("get_", StringComparison.Ordinal)) varName = otherMethod.Name == "get_Item" ? lastString : otherMethod.Name[4..];
-                else if (otherMethod.Name == "get_IntValue" && type.Name.EndsWith("Var", StringComparison.Ordinal) && varName != null) Push(new IntExpr(Const: null, varName));
-                else if (IsRewardMaker(otherMethod))
-                {
-                    // CardReward(options, count, player) / CardFactory.CreateForReward(player, count, options): the count is the
-                    // last number pushed; it goes to the first reward still without one.
-                    if (_rewards.FirstOrDefault(rewardSource => rewardSource.Count == null) is { } open)
-                    {
-                        open.Count = last;
-                        if (otherMethod.IsConstructor) open.Flags |= (int)CardCreationFlags.IsCardReward;
-                    }
-                }
-                else if (type == typeof(CardCreationOptions) && otherMethod.Name == nameof(CardCreationOptions.WithFlags) && _rewards.Count > 0 && last is { Const: { } flags })
-                    _rewards[^1].Flags |= flags;
                 if (otherMethod.Name == "get_CardPool" && typeof(CharacterModel).IsAssignableFrom(type)) pools.Add(new PoolSource(otherMethod, character));
                 else if (type == typeof(ModelDb) && otherMethod is MethodInfo { IsGenericMethod: true } nextMethod && nextMethod.Name == nameof(ModelDb.CardPool)) pools.Add(new PoolSource(otherMethod, Character: null));
                 else if (otherMethod is MethodInfo { IsGenericMethod: true } gc && (gc.Name is "Card" or "CreateCard" or "TransformTo")
                     && gc.GetGenericArguments()[0] is { } otherType && typeof(CardModel).IsAssignableFrom(otherType) && !otherType.IsAbstract && !otherType.IsGenericParameter)
                     _fixed.Add(otherType);
-                else if (otherMethod is MethodInfo { IsGenericMethod: true } ge && (ge.Name is "Enchantment" or "Enchant")
-                    && ge.GetGenericArguments()[0] is { } nextType && typeof(EnchantmentModel).IsAssignableFrom(nextType) && !nextType.IsAbstract && !nextType.IsGenericParameter)
-                    _enchantments.Add(nextType);
+                // A reward's pools: the program's (ReadSteps), which is checked to hold every reward the code makes.
                 else if (type == typeof(CardCreationOptions) && (otherMethod.IsConstructor || (otherMethod is MethodInfo f && f.IsStatic && f.ReturnType == typeof(CardCreationOptions))))
                 {
-                    var reward = new RewardSource
-                    {
-                        // No pool loaded here: it's passed in (Colorful Philosophers' option for one character's pool), so it's
-                        // the CardPoolModel the option's delegate holds.
-                        Pools = pools.Count == 0 ? new List<PoolSource> { FromOption } : pools.ToList(),
-                        Maker = otherMethod,
-                        Filter = filter,
-                        // The constructor takes (pools, source, odds, filter): its odds are the last number pushed, its source the one before.
-                        Odds = otherMethod.IsConstructor ? last?.Const : null,
-                        Source = otherMethod.IsConstructor ? before?.Const : null,
-                    };
-                    // A closure capturing one value of an enum we saw a constant array of: the loop's values (Glass Eye).
-                    if (filter is { IsStatic: false } && filter.DeclaringType is { } closure && ThisField(closure) is var self
-                        && closure.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(field => field != self).ToList() is { Count: 1 } captured
-                        && arrays.TryGetValue(captured[0].FieldType, out var values))
-                    {
-                        reward.LoopField = captured[0];
-                        reward.LoopValues = values;
-                    }
-                    _rewards.Add(reward);
                     pools.Clear();
-                    filter = null;
+                    _optionsMade++;
                 }
-                else if ((type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && (otherMethod.Name == "TransformToRandom"
-                        || (otherMethod.Name == "Transform" && otherMethod.GetParameters().Any(parameterInfo => parameterInfo.ParameterType.Name == "Rng"))))
-                    || (type == typeof(CardFactory) && otherMethod.Name == nameof(CardFactory.CreateRandomCardForTransform)))
-                    _transformRandom = true;
-                if (type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && otherMethod.Name.StartsWith("Upgrade", StringComparison.Ordinal)) upgrades = true;
-                if (type.Name == "CardSelectCmd" && otherMethod.Name == "FromDeckForUpgrade") picksUpgrade = true;
-                if (type.Name == "CardSelectCmd" && otherMethod.Name == "FromDeckForTransformation") _picksTransform = true;
-                if ((type == typeof(MegaCrit.Sts2.Core.Commands.CardCmd) && otherMethod.Name.StartsWith("Enchant", StringComparison.Ordinal)) || (type.Name == "CardSelectCmd" && otherMethod.Name == "FromDeckForEnchantment"))
-                    _enchantsDeck = true;
                 // Whose character a pool belongs to: the last call that returned one (Owner.Character, or Sea Glass's Character).
                 if (otherMethod is MethodInfo { ReturnType: var returnType } && typeof(CharacterModel).IsAssignableFrom(returnType)) character = otherMethod;
             }
             _loosePools.AddRange(pools);
-            // An upgrade with no pick from your deck in the same code is of the cards it makes (Astrolabe's new cards); with a
-            // pick, it's of your cards.
-            if (upgrades && !picksUpgrade && (_fixed.Count > 0 || _transformRandom || _rewards.Count > 0)) GivesUpgraded = true;
-            else if (upgrades || picksUpgrade) _upgradesDeck = true;
         }
+
+        /// <summary>
+        /// The program's steps (decision #357): each card reward (a CardReward made with its CardCreationOptions and count, a CardFactory.CreateForReward
+        /// in a step's values) with its pools, filter, odds, flags and count as values; the enchantments and upgrades it makes and what they take; a
+        /// transform to a random card, and whether you pick the card it turns.
+        /// </summary>
+        public void ReadSteps(IReadOnlyList<OptionStep> steps)
+        {
+            var seen = new HashSet<string>();
+            var options = new HashSet<string>();
+            var upgrades = new List<OptionStep>();
+            foreach (var step in steps)
+            {
+                var values = ValuesOf(step.Step);
+                // A CardReward made with a CardCreationOptions (not Kaleidoscope's, made from cards its code picked): its options and its count.
+                if (step.Step is CommandStep { Command: { DeclaringType: "CardReward", Name: ".ctor" } } made && made.Values.Count >= 2 && IsOptions(made.Values[0]))
+                    Reward(made.Values[0], made.Values[1], step, isCardReward: true, seen, steps);
+                // Not inside a command's result (its arguments are that command's step's, read there).
+                foreach (var part in values.Select(value => value.Map(inner => inner is ResultValue ? NullValue.Instance : null)).SelectMany(value => value.Parts()))
+                    if (part is QueryValue { Type: "CardFactory", Name: "CreateForReward", Arguments.Count: 3 } created && IsOptions(created.Arguments[2]))
+                        Reward(created.Arguments[2], created.Arguments[1], step, isCardReward: false, seen, steps);
+                foreach (var part in values.Concat(step.Condition?.Literals.Select(literal => literal.Test) ?? Enumerable.Empty<ProgramValue>())
+                             .Select(value => value.Map(inner => inner is ResultValue ? NullValue.Instance : null)).SelectMany(value => value.Parts()))
+                {
+                    // A card made from a value of the model's (Dusty Tome's card, ModelDb.GetById(this.AncientCard): the one its hover tip shows).
+                    if (part is QueryValue { Name: "CreateCard", GenericArguments.Count: 0, Arguments: [var model, _] } && !_madeFrom.Contains((model, step.Owner))) _madeFrom.Add((model, step.Owner));
+                    // Every CardCreationOptions the program makes (a reward's, a CardReward's reroll options), for the check against the code's.
+                    if (part is QueryValue { Type: "CardCreationOptions", Of: null } maker && (maker.Name == ".ctor" || maker.ValueType == "CardCreationOptions"))
+                        options.Add(step.Owner.FullName + "|" + step.Relic?.Name + "|" + step.Via + "|" + part);
+                    if (part is QueryValue { Type: "ModelDb", Name: "Enchantment", GenericArguments: [var enchantment] } && EnchantmentType(enchantment) is { } type) _enchantments.Add(type);
+                    if (part is QueryValue { Type: "CardFactory", Name: "CreateRandomCardForTransform" }) _transformRandom = true;
+                }
+                switch (step.Step)
+                {
+                    case CommandStep command when command.Command is { DeclaringType: "CardCmd" } card && card.Name.StartsWith("Enchant", StringComparison.Ordinal):
+                        _enchantsDeck = true;
+                        foreach (var enchantment in card.GenericArguments)
+                            if (EnchantmentType(enchantment) is { } type) _enchantments.Add(type);
+                        break;
+                    case CommandStep { Command: { DeclaringType: "CardCmd", Name: "TransformToRandom" } }:
+                    case CommandStep { Command: { DeclaringType: "CardCmd", Name: "Transform" } transform } when transform.ParameterTypes.Contains("Rng"):
+                        _transformRandom = true;
+                        break;
+                    case CommandStep command when command.Command is { DeclaringType: "CardCmd" } card && card.Name.StartsWith("Upgrade", StringComparison.Ordinal):
+                        upgrades.Add(step);
+                        break;
+                    case ChoiceStep { Command: { DeclaringType: "CardSelectCmd", Name: "FromDeckForEnchantment" } }:
+                        _enchantsDeck = true;
+                        break;
+                    case ChoiceStep { Command: { DeclaringType: "CardSelectCmd", Name: "FromDeckForTransformation" } }:
+                        _picksTransform = true;
+                        break;
+                    case ChoiceStep { Command: { DeclaringType: "CardSelectCmd", Name: "FromDeckForUpgrade" } }:
+                        _upgradesDeck = true;
+                        _upgradeTakes.Add(null);
+                        break;
+                }
+            }
+            _optionsRead = options.Count;
+            // An upgrade is of the cards the option gives (Astrolabe's transformed cards, Archaic Tooth's made card) or of your deck's (a pick, or your
+            // deck's cards through a test: War Paint's Skills), by where its card comes from; one whose card can't be told is of the cards it gives
+            // when it gives any, else of your deck's.
+            var gives = _fixed.Count > 0 || _rewards.Count > 0 || _transformRandom;
+            foreach (var upgrade in upgrades)
+            {
+                var values = ((CommandStep)upgrade.Step).Values;
+                var takes = new List<LambdaValue>();
+                switch (values.Count == 0 ? UpgradeOf.Unknown : SourceOf(values[0], upgrade.Step, steps, takes))
+                {
+                    case UpgradeOf.Given:
+                        GivesUpgraded = true;
+                        break;
+                    case UpgradeOf.Deck:
+                        _upgradesDeck = true;
+                        _upgradeTakes.AddRange(takes.Count == 0 ? new LambdaValue?[] { null } : takes.Cast<LambdaValue?>());
+                        break;
+                    default:
+                        if (gives) GivesUpgraded = true;
+                        else
+                        {
+                            _upgradesDeck = true;
+                            _upgradeTakes.Add(null);
+                        }
+                        break;
+                }
+            }
+        }
+
+        private enum UpgradeOf { Unknown, Given, Deck }
+
+        /// <summary>
+        /// Where an upgrade's card comes from: a card the option makes (a transform's new card, a reward's, one it creates), your deck (a pick from it,
+        /// its cards, with the tests the code puts on them: <paramref name="takes"/>), or neither it can tell. A foreach's item is the loop's items'.
+        /// </summary>
+        private static UpgradeOf SourceOf(ProgramValue card, ProgramStep at, IReadOnlyList<OptionStep> steps, List<LambdaValue> takes)
+        {
+            var parts = card.Parts().ToList();
+            if (parts.Any(part => part is NamedValue { Name: "each" }) && LoopOf(at, steps) is { Items: { } items }) parts.AddRange(items.Parts());
+            if (parts.Any(part => part is QueryValue { Type: "CardFactory" } or QueryValue { Name: "CreateCard" } || part is ResultValue { Command: var command }
+                    && (command.StartsWith("CardCmd.Transform", StringComparison.Ordinal) || command.StartsWith("CardFactory.", StringComparison.Ordinal))))
+                return UpgradeOf.Given;
+            var deck = ((int)PileType.Deck).ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (parts.Any(part => part is ResultValue { Command: "CardSelectCmd.FromDeckForUpgrade" } || part is QueryValue { Name: "Deck" }
+                    || part is QueryValue { Name: "GetPile", Arguments: [ConstantValue pile, ..] } && pile.ToString() == deck))
+            {
+                takes.AddRange(parts.OfType<QueryValue>().Where(query => query is { Type: "Enumerable", Name: "Where" or "FirstOrDefault" or "First", Arguments.Count: 2 })
+                    .Select(query => query.Arguments[1]).OfType<LambdaValue>());
+                return UpgradeOf.Deck;
+            }
+            return UpgradeOf.Unknown;
+        }
+
+        /// <summary>The loop whose body holds <paramref name="step"/> (the nearest), among the steps read.</summary>
+        private static LoopStep? LoopOf(ProgramStep step, IReadOnlyList<OptionStep> steps)
+        {
+            static bool Holds(IEnumerable<ProgramStep> body, ProgramStep step) =>
+                body.Any(inner => ReferenceEquals(inner, step) || inner is LoopStep nested && Holds(nested.Body, step) || inner is CommandStep command && Holds(command.Inner, step));
+            return steps.Select(read => read.Step).OfType<LoopStep>().LastOrDefault(loop => Holds(loop.Body, step));
+        }
+
+        /// <summary>A step's values (a command's or a choice's arguments, a made card's, a loop's items).</summary>
+        private static IEnumerable<ProgramValue> ValuesOf(ProgramStep step) => step switch
+        {
+            CommandStep command => command.Values,
+            ChoiceStep choice => choice.Values,
+            CreateStep create => create.Values,
+            LoopStep { Items: { } items } => new[] { items },
+            _ => Array.Empty<ProgramValue>(),
+        };
+
+        /// <summary>A CardCreationOptions value: its factory or constructor, with WithFlags or WithRngOverride on it.</summary>
+        private static bool IsOptions(ProgramValue value) => Unwrapped(value, out _) is QueryValue { Type: "CardCreationOptions" };
+
+        /// <summary>The options' factory or constructor call under the WithFlags and WithRngOverride on it (the rng only changes the roll), and the flags they add.</summary>
+        private static ProgramValue Unwrapped(ProgramValue value, out int flags)
+        {
+            flags = 0;
+            while (true)
+                switch (value)
+                {
+                    case StoredValue stored:
+                        value = stored.Value;
+                        break;
+                    case QueryValue { Type: "CardCreationOptions", Name: "WithFlags", Of: { } inner, Arguments: [var added] }:
+                        if (added is ConstantValue constant) flags |= (int)constant.Value;
+                        value = inner;
+                        break;
+                    case QueryValue { Type: "CardCreationOptions", Name: "WithRngOverride", Of: { } inner }:
+                        value = inner;
+                        break;
+                    default:
+                        return value;
+                }
+        }
+
+        private void Reward(ProgramValue options, ProgramValue count, OptionStep step, bool isCardReward, HashSet<string> seen, IReadOnlyList<OptionStep> steps)
+        {
+            if (Unwrapped(options, out var flags) is not QueryValue { Type: "CardCreationOptions" } maker || maker.Arguments.Count == 0) return;
+            if (!seen.Add(step.Owner.FullName + "|" + step.Relic?.Name + "|" + step.Via + "|" + options + "|" + count)) return;
+            var constructor = maker.Name == ".ctor";
+            var filter = maker.Arguments.Count > (constructor ? 3 : 1) ? maker.Arguments[constructor ? 3 : 1] : null;
+            var reward = new RewardSource
+            {
+                Pools = maker.Arguments[0],
+                Maker = maker.Name,
+                Filter = filter as LambdaValue,
+                Source = constructor && maker.Arguments.Count > 1 && maker.Arguments[1] is ConstantValue source ? (int)source.Value : null,
+                Odds = constructor && maker.Arguments.Count > 2 && maker.Arguments[2] is ConstantValue odds ? (int)odds.Value : null,
+                Flags = flags | (isCardReward ? (int)CardCreationFlags.IsCardReward : 0),
+                Count = count,
+                Owner = step.Owner,
+            };
+            // A filter that reads a value a loop over a constant array of an enum sets (Glass Eye's c => c.Rarity == rarity): a pass per value.
+            if (reward.Filter is { } lambda && LoopOf(step.Step, steps) != null && FreeName(lambda) is { } free && EnumTypeOf(lambda, free) is { } enumType
+                && _arrays.TryGetValue(enumType, out var values))
+            {
+                reward.LoopName = free;
+                reward.LoopValues = values;
+            }
+            _rewards.Add(reward);
+        }
+
+        /// <summary>The one name a filter reads that isn't its parameter or its model (a local a loop sets); null for none or more.</summary>
+        private static string? FreeName(LambdaValue lambda)
+        {
+            var names = lambda.Body.Literals.SelectMany(literal => literal.Test.Parts()).Select(part => part switch
+            {
+                NamedValue { Name: var name } when name != "this" => name,
+                ParameterValue { Name: var name } => name,
+                _ => null,
+            }).OfType<string>().Where(name => name != lambda.Parameter).Distinct().ToList();
+            return names.Count == 1 ? names[0] : null;
+        }
+
+        /// <summary>The enum a filter compares the free name with (c.Rarity == rarity: CardRarity), by the other side's type.</summary>
+        private static Type? EnumTypeOf(LambdaValue lambda, string free)
+        {
+            foreach (var compare in lambda.Body.Literals.Select(literal => literal.Test).OfType<CompareValue>())
+            {
+                var other = IsName(compare.Left, free) ? compare.Right : IsName(compare.Right, free) ? compare.Left : null;
+                if (other is QueryValue { ValueType: var name } && typeof(CardModel).Assembly.GetTypes().FirstOrDefault(type => type.IsEnum && type.Name == name) is { } found) return found;
+            }
+            return null;
+        }
+
+        private static bool IsName(ProgramValue value, string name) => value is NamedValue named && named.Name == name || value is ParameterValue parameter && parameter.Name == name;
+
+        private static Type? EnchantmentType(string name) =>
+            typeof(EnchantmentModel).Assembly.GetTypes().FirstOrDefault(type => type.Name == name && typeof(EnchantmentModel).IsAssignableFrom(type) && !type.IsAbstract);
 
         /// <summary>For the tests: what was read (fixed cards, rewards, rewards with a filter, transform, rewards whose pool the option passes in, pools of a character other than yours).</summary>
         internal (int Fixed, int Rewards, int Filters, bool Transform, int PoolFromOption, int OtherCharacterPools) Summary =>
-            (_fixed.Count, _rewards.Count, _rewards.Count(rewardSource => rewardSource.Filter != null), _transformRandom, _rewards.Count(rewardSource => rewardSource.Pools.Contains(FromOption)),
-             _rewards.SelectMany(rewardSource => rewardSource.Pools).Count(poolSource => poolSource.Character != null && !typeof(Player).IsAssignableFrom(poolSource.Character.DeclaringType)));
+            (_fixed.Count, _rewards.Count, _rewards.Count(rewardSource => rewardSource.Filter != null), _transformRandom,
+             _rewards.Count(rewardSource => PoolValues(rewardSource.Pools).Any(pool => pool is NamedValue { Name: not "this" } or ParameterValue)),
+             _rewards.SelectMany(rewardSource => PoolValues(rewardSource.Pools)).Count(pool => pool is QueryValue { Name: "CardPool", Of: QueryValue { Name: "Character", Of: NamedValue { Name: "this" } } }));
 
         /// <summary>For the tests: each reward's odds (null: the factory's own), count ("Cards", "Cards/3", "3", or "?") and loop values.</summary>
         internal List<(string Maker, string Count, string Loop)> RewardsRead =>
-            _rewards.Select(rewardSource => (rewardSource.Maker.IsConstructor ? "new:" + rewardSource.Odds : rewardSource.Maker.Name,
-                rewardSource.Count is { } intExpr ? (intExpr.Const?.ToString() ?? intExpr.Var!) + (intExpr.Divisor != 1 ? "/" + intExpr.Divisor : "") : "?",
+            _rewards.Select(rewardSource => (rewardSource.Maker == ".ctor" ? "new:" + rewardSource.Odds : rewardSource.Maker, CountText(rewardSource.Count),
                 rewardSource.LoopValues is { } loopValues ? string.Join(",", loopValues) : "")).ToList();
+
+        private static string CountText(ProgramValue? count) => count switch
+        {
+            StoredValue stored => CountText(stored.Value),
+            ConstantValue constant => constant.ToString(),
+            CardValue card => card.Key,
+            ArithmeticValue { Op: "div", Left: var left, Right: ConstantValue divisor } => CountText(left) + "/" + divisor,
+            _ => "?",
+        };
 
         /// <summary>For the tests: whether you pick the card a transform turns.</summary>
         internal bool PicksTransform => _picksTransform;
@@ -392,9 +585,8 @@ public sealed partial class RunReminders
         internal (string Enchantments, bool GivesUpgraded, bool UpgradesDeck) ChangesRead =>
             (string.Join(",", _enchantments.Select(type => type.Name).OrderBy(name => name)), GivesUpgraded, _upgradesDeck);
 
-        private static bool IsRewardMaker(MethodBase method) =>
-            (method.IsConstructor && method.DeclaringType?.Name == "CardReward" && method.GetParameters().Any(parameterInfo => parameterInfo.ParameterType == typeof(CardCreationOptions)))
-            || (method.DeclaringType == typeof(CardFactory) && method.Name == nameof(CardFactory.CreateForReward) && method.GetParameters().Length == 3);
+        /// <summary>For the tests: what an upgrade of your cards can take (each test the code puts on them; "any" for a pick or none).</summary>
+        internal IReadOnlyList<string> UpgradeTakes => _upgradeTakes.Select(take => take?.ToString() ?? "any").ToList();
 
         private static bool TryConst(CodeInstruction ins, out int value)
         {
@@ -413,40 +605,17 @@ public sealed partial class RunReminders
             return false;
         }
 
-        private static bool ProducesInt(CodeInstruction ins) =>
-            TryConst(ins, out _) || ins.opcode == OpCodes.Div || (ins.operand is MethodBase { Name: "get_IntValue" });
-
-        /// <summary>A local or field an instruction stores to (store) or loads from: "loc:3", "fld:&lt;cardCount&gt;5__2".</summary>
-        private static string? SlotKey(CodeInstruction ins, bool store)
-        {
-            if (store ? ins.IsStloc() : ins.IsLdloc())
-            {
-                var idx = ins.operand switch { LocalBuilder localBuilder => localBuilder.LocalIndex, int index => index, byte shortIndex => shortIndex, _ => LocalIndex(ins) };
-                return idx < 0 ? null : "loc:" + idx;
-            }
-            if (ins.opcode == (store ? OpCodes.Stfld : OpCodes.Ldfld) && ins.operand is FieldInfo field && field.FieldType == typeof(int)) return "fld:" + field.Name;
-            return null;
-        }
-
-        private static int LocalIndex(CodeInstruction ins)
-        {
-            var name = ins.opcode.Name ?? "";
-            var dot = name.LastIndexOf('.');
-            return dot >= 0 && int.TryParse(name[(dot + 1)..], out var number) ? number : -1;
-        }
-
-        private static bool IsCardFilter(MethodInfo method) =>
-            method.ReturnType == typeof(bool) && method.GetParameters() is { Length: 1 } parameterInfos && typeof(CardModel).IsAssignableFrom(parameterInfos[0].ParameterType);
-
         /// <summary>The cards (canonical) this code can give, or null when a reward's pool couldn't be read.</summary>
         public List<CardModel>? Candidates(Player me)
         {
+            if (RewardsUnread) return null;
             var set = new HashSet<CardModel>();
             foreach (var type in _fixed)
             {
                 var card = ModelDb.AllCards.FirstOrDefault(canonicalCard => canonicalCard.GetType() == type);
                 if (card != null) set.Add(card);
             }
+            foreach (var card in MadeFromValues()) set.Add(card);
             foreach (var reward in _rewards)
             {
                 if (Built(reward, me) is not { } built) return null;
@@ -476,22 +645,27 @@ public sealed partial class RunReminders
         /// </summary>
         private List<(CardCreationOptions Options, List<CardModel> Possible)>? Built(RewardSource reward, Player me)
         {
-            if (reward.Pools.Contains(FromOption) && OptionPool() == null) return null;
-            // A pool whose character can't be told: the cards are unknown, so the icons stay.
-            if (reward.Pools.Any(poolSource => poolSource.Method.Name == "get_CardPool" && CharacterOf(poolSource.Character, me) == null)) return null;
-            var pools = reward.Pools.Select(poolSource => Pool(poolSource, me)).OfType<CardPoolModel>().Distinct().ToList();
+            // A pool that can't be told (a character's that can't be, one passed in that the option doesn't hold): the cards are unknown, so the icons stay.
+            var pools = new List<CardPoolModel>();
+            foreach (var poolValue in PoolValues(reward.Pools))
+            {
+                if (PoolOf(poolValue, reward.Owner, me) is not { } pool) return null;
+                if (!pools.Contains(pool)) pools.Add(pool);
+            }
             var built = new List<(CardCreationOptions, List<CardModel>)>();
             foreach (var value in reward.LoopValues ?? new object?[] { null })
             {
-                var keep = Filter(reward.Filter, reward.LoopField, value);
+                var keep = Filter(reward, value);
                 CardCreationOptions? options;
                 try
                 {
                     options = reward.Maker switch
                     {
-                        ConstructorInfo when reward.Odds is { } odds => new CardCreationOptions(pools,
+                        ".ctor" when reward.Odds is { } odds => new CardCreationOptions(pools,
                             (CardCreationSource)(reward.Source ?? (int)CardCreationSource.Other), (CardRarityOddsType)odds, keep),
-                        MethodInfo { IsStatic: true } factory when factory.GetParameters().Length == 2 => factory.Invoke(null, new object[] { pools, keep }) as CardCreationOptions,
+                        var name when typeof(CardCreationOptions).GetMethods(BindingFlags.Public | BindingFlags.Static)
+                            .FirstOrDefault(method => method.Name == name && method.ReturnType == typeof(CardCreationOptions) && method.GetParameters().Length == 2) is { } factory
+                            => factory.Invoke(null, new object[] { pools, keep }) as CardCreationOptions,
                         _ => null,
                     };
                 }
@@ -517,10 +691,14 @@ public sealed partial class RunReminders
             {
                 if (ModelDb.AllCards.FirstOrDefault(canonicalCard => canonicalCard.GetType() == type) is { } card && applies(card)) return (1, 1);
             }
+            var madeFrom = MadeFromValues();
+            if (madeFrom.Any(applies)) return (1, 1);
             foreach (var poolSource in _loosePools)
             {
                 if (Unlocked(Pool(poolSource, me), me).Any(applies)) return null;
             }
+            // A reward the program doesn't hold, or an upgraded card it gives that the reading can't name (Dusty Tome's): unknown.
+            if (RewardsUnread || GivesUpgraded && _fixed.Count == 0 && madeFrom.Count == 0 && _rewards.Count == 0 && _loosePools.Count == 0 && !_transformRandom) return null;
             var chances = new List<double>();
             foreach (var reward in _rewards)
             {
@@ -598,13 +776,16 @@ public sealed partial class RunReminders
             enchantments.Count == 0 || enchantments.Any(type => EnchantmentOf(type)?.CanEnchant(card) ?? true);
 
         /// <summary>The pick lets you choose the card: its filter, on the card, as the game's code tests it (true when it has none or can't be told).</summary>
-        private bool Takes(SpireQoL.Features.OptionPick pick, CardModel card)
+        private bool Takes(SpireQoL.Features.OptionPick pick, CardModel card) => Takes(pick.Filter, card);
+
+        /// <summary>A test the code puts on a card of yours holds for it, as the game's code tests it (true when there's none or it can't be told).</summary>
+        private bool Takes(LambdaValue? filter, CardModel card)
         {
-            if (pick.Filter == null) return true;
+            if (filter == null) return true;
             try
             {
-                var board = SpireQoL.Procs.Programs.ProgramBoard.Of(Holders().OfType<EventModel>().FirstOrDefault() ?? (object?)Target ?? card);
-                return SpireQoL.Procs.Programs.ProgramEvaluator.Passes(pick.Filter, card, board, SpireQoL.Procs.Programs.ModelProgram.Empty) != false;
+                var board = ProgramBoard.Of(Holders().OfType<EventModel>().FirstOrDefault() ?? (object?)Target ?? card);
+                return ProgramEvaluator.Passes(filter, card, board, ModelProgram.Empty) != false;
             }
             catch { return true; }
         }
@@ -625,8 +806,10 @@ public sealed partial class RunReminders
         /// </summary>
         public List<DrawGroup>? Groups(Player me)
         {
+            if (RewardsUnread) return null;
             var groups = new List<DrawGroup>();
             var fixedCards = _fixed.Select(type => ModelDb.AllCards.FirstOrDefault(card => card.GetType() == type)).OfType<CardModel>().ToList();
+            fixedCards.AddRange(MadeFromValues().Where(card => !fixedCards.Contains(card)));
             if (fixedCards.Count > 0) groups.Add(new DrawGroup(DrawKind.Certain, fixedCards, CardRarityOddsType.Uniform, Count: null, GivesUpgraded));
             foreach (var reward in _rewards)
             {
@@ -743,56 +926,80 @@ public sealed partial class RunReminders
             catch { return null; }
         }
 
-        /// <summary>A number read from the code, on the objects running it (their DynamicVars).</summary>
-        private int? Evaluate(IntExpr intExpr)
+        /// <summary>
+        /// A number the program's value works out to on the objects running the code (decision #357): a constant, a value of theirs (DynamicVars.Cards:
+        /// the event's, the relic's), one divided by another (Sea Glass's Cards / 3); null when it can't be told.
+        /// </summary>
+        private int? Evaluate(ProgramValue value)
         {
-            int? value = intExpr.Const;
-            if (intExpr.Var != null)
+            switch (value)
             {
-                foreach (var holder in Holders())
-                {
-                    // Events, relics, cards: each model type has its own DynamicVars.
-                    if (holder.GetType().GetProperty("DynamicVars")?.GetValue(holder) is not MegaCrit.Sts2.Core.Localization.DynamicVars.DynamicVarSet vars) continue;
-                    try
+                case StoredValue stored:
+                    return Evaluate(stored.Value);
+                case ConstantValue constant:
+                    return (int)constant.Value;
+                case ArithmeticValue { Op: "div" } division:
+                    return Evaluate(division.Left) is { } left && Evaluate(division.Right) is { } right && right != 0 ? left / right : null;
+                case CardValue card:
+                    foreach (var holder in Holders())
                     {
-                        value = (int)vars[intExpr.Var].IntValue;
-                        break;
+                        // Events, relics, cards: each model type has its own DynamicVars.
+                        if (holder.GetType().GetProperty("DynamicVars")?.GetValue(holder) is not MegaCrit.Sts2.Core.Localization.DynamicVars.DynamicVarSet vars) continue;
+                        try { return (int)vars[card.Key].IntValue; }
+                        catch { /* not this one */ }
                     }
-                    catch { /* not this one */ }
-                }
+                    return null;
+                default:
+                    return null;
             }
-            return value is { } known && intExpr.Divisor != 0 ? known / intExpr.Divisor : null;
         }
 
-        /// <summary>Stands for "the pool the option passes in" in a reward's pools.</summary>
-        private static readonly PoolSource FromOption = new(AccessTools.Method(typeof(OptionCards), nameof(Candidates)), Character: null);
-
-        private CardPoolModel? Pool(PoolSource source, Player me)
+        /// <summary>A reward's pools, one value each (a list or array the code builds of them; none for Array.Empty).</summary>
+        private static IEnumerable<ProgramValue> PoolValues(ProgramValue pools) => pools switch
         {
-            if (source == FromOption) return OptionPool();
-            if (source.Method.Name == "get_CardPool") return CharacterOf(source.Character, me)?.CardPool;
-            try { return ((MethodInfo)source.Method).Invoke(null, null) as CardPoolModel; }
+            StoredValue stored => PoolValues(stored.Value),
+            ArrayValue array => array.Items.SelectMany(PoolValues),
+            QueryValue { Type: "Array", Name: "Empty" } => Enumerable.Empty<ProgramValue>(),
+            QueryValue { Name: ".ctor", Of: null } list when list.Type != "CardPoolModel" => list.Arguments.SelectMany(PoolValues),
+            _ => new[] { pools },
+        };
+
+        /// <summary>
+        /// A pool as the program's value names it: the game's (ModelDb.CardPool&lt;ColorlessCardPool&gt;), a character's (yours: a player's Character; the
+        /// model's own: Sea Glass's), or one passed in (Colorful Philosophers' pool, the one the option's delegate holds). Null when it can't be told.
+        /// </summary>
+        private CardPoolModel? PoolOf(ProgramValue pool, Type owner, Player me)
+        {
+            try
+            {
+                return pool switch
+                {
+                    StoredValue stored => PoolOf(stored.Value, owner, me),
+                    QueryValue { Type: "ModelDb", Name: "CardPool", GenericArguments: [var name] } =>
+                        typeof(CardPoolModel).Assembly.GetTypes().FirstOrDefault(type => type.Name == name && typeof(CardPoolModel).IsAssignableFrom(type)) is { } poolType
+                            ? typeof(ModelDb).GetMethod(nameof(ModelDb.CardPool))!.MakeGenericMethod(poolType).Invoke(null, null) as CardPoolModel : null,
+                    QueryValue { Name: "CardPool", Of: { } character } => CharacterOf(character, owner, me)?.CardPool,
+                    NamedValue { Name: not "this" } or ParameterValue => OptionPool(),
+                    _ => null,
+                };
+            }
             catch { return null; }
         }
 
         /// <summary>
-        /// The character a pool belongs to: yours (a Player's Character, or no call seen), or what the call gives on the object
-        /// running the code (the relic, the event, a closure); null when it can't be told.
+        /// The character whose pool a reward takes: the model's own (this.Character: Sea Glass's, on the object running the code), else a player's,
+        /// yours (Owner.Character, a player passed in); null when it can't be told.
         /// </summary>
-        private CharacterModel? CharacterOf(MethodBase? getter, Player me)
+        private CharacterModel? CharacterOf(ProgramValue character, Type owner, Player me)
         {
-            if (getter == null || typeof(Player).IsAssignableFrom(getter.DeclaringType)) return me.Character;
-            try
-            {
-                if (getter.IsStatic) return getter.Invoke(null, null) as CharacterModel;
-                foreach (var on in Holders())
-                {
-                    if (getter.DeclaringType!.IsInstanceOfType(on)) return getter.Invoke(on, null) as CharacterModel;
-                }
-            }
-            catch { /* unknown */ }
-            return null;
+            if (character is not QueryValue { Name: "Character" } query) return null;
+            if (query.Of is not NamedValue { Name: "this" }) return me.Character;
+            try { return HolderOf(owner)?.GetType().GetProperty("Character", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.GetValue(HolderOf(owner)) as CharacterModel; }
+            catch { return null; }
         }
+
+        /// <summary>The object the code of <paramref name="owner"/> runs on, among the option's (its event, a relic it gives); null when it's none of them (an event's part).</summary>
+        private object? HolderOf(Type owner) => Holders().FirstOrDefault(owner.IsInstanceOfType);
 
         /// <summary>The objects the option's code runs on: its delegate target, the event a closure holds, the relic it gives.</summary>
         private IEnumerable<object> Holders()
@@ -821,6 +1028,21 @@ public sealed partial class RunReminders
                 .FirstOrDefault(cardPoolModel => cardPoolModel != null);
         }
 
+        /// <summary>A pool the code names without a reward: the game's, or a character's (yours, or the model's own).</summary>
+        private CardPoolModel? Pool(PoolSource source, Player me)
+        {
+            try
+            {
+                if (source.Method.Name != "get_CardPool") return ((MethodInfo)source.Method).Invoke(null, null) as CardPoolModel;
+                if (source.Character == null || typeof(Player).IsAssignableFrom(source.Character.DeclaringType)) return me.Character.CardPool;
+                if (source.Character.IsStatic) return (source.Character.Invoke(null, null) as CharacterModel)?.CardPool;
+                foreach (var on in Holders())
+                    if (source.Character.DeclaringType!.IsInstanceOfType(on)) return (source.Character.Invoke(on, null) as CharacterModel)?.CardPool;
+            }
+            catch { /* unknown */ }
+            return null;
+        }
+
         private static IEnumerable<CardModel> Unlocked(CardPoolModel? pool, Player me) =>
             pool == null ? Enumerable.Empty<CardModel>() : pool.GetUnlockedCards(me.UnlockState, me.RunState.CardMultiplayerConstraint);
 
@@ -831,33 +1053,21 @@ public sealed partial class RunReminders
         }
 
         /// <summary>
-        /// The filter as a predicate: a static lambda, a lambda on the compiler's singleton (<c>&lt;&gt;9</c>), a method of the
-        /// event itself, or a closure over the event (<c>&lt;&gt;4__this</c>) and, for a loop, the value of this pass. A closure
-        /// holding another value it can't be given keeps every card; a filter that throws keeps the card.
+        /// A reward's filter as a predicate (decision #357): its lambda evaluated on each card as the game's code tests it (ProgramEvaluator), on the
+        /// object its code runs on, with a loop's value for this pass (Glass Eye's rarity). A filter that can't be told keeps the card.
         /// </summary>
-        private Func<CardModel, bool> Filter(MethodInfo? method, FieldInfo? loopField = null, object? loopValue = null)
+        private Func<CardModel, bool> Filter(RewardSource reward, object? loopValue)
         {
-            if (method == null) return _ => true;
-            object? inst = null;
-            if (!method.IsStatic)
+            if (reward.Filter is not { } filter) return _ => true;
+            if (reward.LoopName is { } name && loopValue != null)
             {
-                var type = method.DeclaringType!;
-                inst = Holders().FirstOrDefault(type.IsInstanceOfType);
-                if (inst == null && type.GetField("<>9", BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic) is { } nine) inst = nine.GetValue(null);
-                if (inst == null)
-                {
-                    var fields = type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                    var self = ThisField(type);
-                    if (fields.Any(field => field != self && field != loopField)) return _ => true;
-                    inst = RuntimeHelpers.GetUninitializedObject(type);
-                    var owner = Holders().FirstOrDefault(holder => self != null && self.FieldType.IsInstanceOfType(holder));
-                    if (self != null && owner != null) self.SetValue(inst, owner);
-                    if (loopField != null && loopValue != null) loopField.SetValue(inst, loopValue);
-                }
+                var constant = new ConstantValue(Convert.ToInt64(loopValue, System.Globalization.CultureInfo.InvariantCulture));
+                filter = (LambdaValue)filter.Map(part => IsName(part, name) ? constant : null);
             }
+            var board = ProgramBoard.Of(HolderOf(reward.Owner) ?? new object());
             return card =>
             {
-                try { return method.Invoke(inst, new object[] { card }) is true; }
+                try { return ProgramEvaluator.Passes(filter, card, board, ModelProgram.Empty) != false; }
                 catch { return true; }
             };
         }

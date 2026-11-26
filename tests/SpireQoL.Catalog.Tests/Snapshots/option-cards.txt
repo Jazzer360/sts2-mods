@@ -23,7 +23,7 @@ ColossalFlower.ExtractInstead: groups ?; cards ?; changes []; attack 0; rare 0; 
 ColossalFlower.ObtainPollinousCore: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
 CrystalSphere.UncoverFuture: groups Reward/Uniform/3: 80 #65d074b2; cards 85 #712ae6c6; changes []; attack 0.8152; rare 0.6807; cannon 0; lighter no
 CrystalSphere.PaymentPlan: groups Reward/Uniform/3: 80 #65d074b2; cards 85 #712ae6c6; changes []; attack 0.8152; rare 0.6807; cannon 0; lighter no
-Darv.<RelicOption>g__OnChosen|0 [DustyTome]: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+Darv.<RelicOption>g__OnChosen|0 [DustyTome]: groups ?; cards ?; changes [] gives upgraded; attack ?; rare ?; cannon ?; lighter no
 Darv.<RelicOption>g__OnChosen|0 [Astrolabe]: groups Transform/Uniform/1/up: 80 #65d074b2; cards 80 #65d074b2; changes [] gives upgraded picks transform; attack 0.425; rare 0.3125; cannon 0.425; lighter no
 Darv.<RelicOption>g__OnChosen|0 [BlackStar]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
 Darv.<RelicOption>g__OnChosen|0 [CallingBell]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
@@ -152,9 +152,9 @@ RoundTeaParty.PickFight: groups ?; cards ?; changes []; attack 0; rare 0; cannon
 RoundTeaParty.ContinueFight: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
 SapphireSeed.Eat: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
 SapphireSeed.Plant: groups ?; cards ?; changes [Sown]; attack 0; rare 0; cannon 0; lighter reaches
-SelfHelpBook.ReadTheBack: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter reaches
-SelfHelpBook.ReadPassage: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
-SelfHelpBook.ReadEntireBook: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+SelfHelpBook.ReadTheBack: groups ?; cards ?; changes [Sharp]; attack 0; rare 0; cannon 0; lighter reaches
+SelfHelpBook.ReadPassage: groups ?; cards ?; changes [Nimble]; attack 0; rare 0; cannon 0; lighter no
+SelfHelpBook.ReadEntireBook: groups ?; cards ?; changes [Swift]; attack 0; rare 0; cannon 0; lighter no
 SelfHelpBook.SkipBook: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
 ShrineOfTheWarlord.TakeWeapon: groups Certain/Uniform/?: 1 [MightyWeapon]; cards 1 [MightyWeapon]; changes []; attack 1; rare 0; cannon 0; lighter no
 ShrineOfTheWarlord.TakeShield: groups Certain/Uniform/?: 1 [MightyShield]; cards 1 [MightyShield]; changes []; attack 0; rare 0; cannon 0; lighter no
@@ -287,7 +287,7 @@ relic CursedPearl: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; li
 relic DistinguishedCape: groups Certain/Uniform/?: 1 [Apparition] + Pool/Uniform/?: 18 #c4d33548; cards 19 #0200aa07; changes []; attack 0; rare 0; cannon 0; lighter no
 relic DollysMirror: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
 relic DowsingRod: groups Certain/Uniform/?: 1 [Dowsing]; cards 1 [Dowsing]; changes []; attack 0; rare 0; cannon 0; lighter no
-relic DustyTome: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+relic DustyTome: groups ?; cards ?; changes [] gives upgraded; attack ?; rare ?; cannon ?; lighter no
 relic ElectricShrymp: groups ?; cards ?; changes [Imbued]; attack 0; rare 0; cannon 0; lighter no
 relic EmptyCage: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
 relic FakeLeesWaffle: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
