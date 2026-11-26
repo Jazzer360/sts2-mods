@@ -24,7 +24,7 @@ public class ExplosiveParityTests
         var actual = Enumerable.Range(0, Scenarios).Select(scenario => $"{scenario} {Fingerprint(scenario)}").ToList();
         if (Environment.GetEnvironmentVariable("SPIREQOL_RECORD_EXPLOSIVE") is { Length: > 0 } recordTo)
         {
-            File.WriteAllLines(recordTo, actual);
+            ParityRecording.Write(recordTo, actual, ParityPath);
             return;
         }
         var expected = File.ReadAllLines(ParityPath);

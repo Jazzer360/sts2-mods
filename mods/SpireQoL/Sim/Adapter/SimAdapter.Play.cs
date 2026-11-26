@@ -78,7 +78,8 @@ public static partial class SimAdapter
         var steps = StepPlayOf(card, me, combat, ids, play, aimedEnemy, owner, ally, allyId, plays, boardTarget: aimedEnemy);
         play.Body = BodyFromSteps(steps);
         // A replay of a card whose numbers change with each play in a way its code doesn't show (decision #160: Thrash).
-        if (plays > 1 && PlayGrowth.Of(card).Unmodelled is { } growthUnknown) play.Body.Add(new NotModelledAction(growthUnknown));
+        // On any later play, the simulator's own replays (Echo Form's, decided as the play starts) too.
+        if (PlayGrowth.Of(card).Unmodelled is { } growthUnknown) play.Body.Add(new FirstPlayOnly(Array.Empty<SimAction>()) { LaterPlays = new SimAction[] { new NotModelledAction(growthUnknown) } });
         if (DrawnCardReaderOf(card.GetType()) is { } reader) UseDrawnCard(play, reader);
         // The card's energy from its own hooks during the play (Epic Retrieval's for each arrow it knocks loose: CardEnergy.Rules).
         CardEnergy.AddHookEnergy(play, card);

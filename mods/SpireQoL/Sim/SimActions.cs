@@ -407,6 +407,12 @@ public sealed record TakeFromHandAction(HandTakeWay Way) : SimAction
     public bool FromDrawPile { get; init; }
     /// <summary>What the play does after each card it takes, before the next (the take's loop's other commands).</summary>
     public IReadOnlyList<SimAction> EachCard { get; init; } = Array.Empty<SimAction>();
+    /// <summary>
+    /// A take of each card it lets through: the ones among them in the hand as the play starts that act there as the turn ends (decision #402: Compact
+    /// turns a Wither into Fuel, and the Wither's damage goes with it). Each leaves the end-of-turn cards the simulation follows in your hand.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public IReadOnlyList<TurnEndCard>? TurnEndTaken { get; init; }
 }
 
 /// <summary>

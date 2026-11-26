@@ -38,6 +38,19 @@ public class PossessTests
     }
 
     [Fact]
+    public void AnAttackOnEveryEnemyHitsTheOthersBeforeItsDeathGivesTheStrengthBack()
+    {
+        // Decision #402 (a dev review: Hyperbeam killed The Lost and hit The Forgotten for 33, the simulator said 35): one CreatureCmd.Damage with every
+        // target deals each its damage, then runs the results' hooks, then kills the killed (CreatureCmd.Kill after the results loop). The hit on the
+        // other enemy is worked out with the Strength still taken (6 - 2 = 4), and the 2 come back after.
+        var everyone = new AttackAction(Hits: 1, SimPlay.Target.All, new DamageSpec(Base: 6, SimProps.Move));
+        var after = Assert.Single(After(Fight(stolenStrength: -2), Play(Card("Hyperbeam"), target: 0, plays: 1, everyone)));
+        Assert.False(after.Enemy(id: 0)!.Alive);
+        Assert.Equal(40 - 4, after.Enemy(id: 1)!.Hp);
+        Assert.Equal(0, after.You.Powers[PowerId.Strength]);
+    }
+
+    [Fact]
     public void KillingItGivesTheStolenDexterityBack()
     {
         var after = Assert.Single(After(Fight(stolenStrength: 0, stolenDexterity: -1), Play(Card("Hit"), target: 0, plays: 1, Hit(target: 0))));

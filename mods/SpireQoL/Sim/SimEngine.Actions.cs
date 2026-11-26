@@ -343,6 +343,15 @@ public static partial class SimEngine
                     : cardEvent == take.EventIfNot ? state.TakeMatching : state.TakeMatching.With(take.Filter, matching, data: 1);
         }
         else if (take.Filter != null && count > 0) state.TakeMatching = state.TakeMatching.Add(take.Filter, -count);
+        // The cards it takes that act in your hand as the turn ends (TakeFromHandAction.TurnEndTaken, read as the play starts): they don't once taken,
+        // transformed where they are too (Compact's Wither, made Fuel). Each entry once, matched by class and amount; a later play finds them gone.
+        if (take.TurnEndTaken is { Count: > 0 } turnEndTaken && count > 0)
+        {
+            var taker = state.MutablePlayer(owner);
+            foreach (var gone in turnEndTaken)
+                if (taker.TurnEndCards.FindIndex(card => card.Card == gone.Card && card.Amount == gone.Amount) is var at and >= 0)
+                    taker.TurnEndCards = taker.TurnEndCards.Where((_, index) => index != at).ToList();
+        }
         if (take.Leaves && count > 0)
         {
             var wholeHand = take.Way == HandTakeWay.Each && take.Filter == null;
@@ -619,13 +628,23 @@ public static partial class SimEngine
         {
             if (rounds <= 0) return new[] { state };
             var ids = state.Targetable.Select(enemy => enemy.Id).ToList();
-            IEnumerable<SimState> states = new[] { state };
+            // One CreatureCmd.Damage with every target (decision #402): each one's damage worked out and dealt in turn, then the results' hooks in
+            // the same order, then the deaths together (CreatureCmd.Kill of the killed after the results loop): a death's AfterDeath (Possess
+            // Strength giving your Strength back) comes after every target's hit.
+            var deferred = new List<DeferredHit>();
+            var dealer = Info(state).Dealer;
             foreach (var id in ids)
+                if (state.Enemy(id) is { Alive: true }) HitDamage(state, dealer, id, at, deferred);
+            // The results' hooks and what they set off run before the kills, while the fight goes on (SimState.KillsNotYetRun).
+            state.KillsNotYetRun = true;
+            TellDeferred(state, deferred);
+            var told = Then(DrainPending(state), branch =>
             {
-                var target = id;
-                states = Then(states, branch => branch.Enemy(target) is { Alive: true } ? HitOnce(branch, Info(branch).Dealer, target, at) : new[] { branch });
-            }
-            return Then(states, branch => HitAllRound(branch, rounds - 1 + (at.RepeatPerKill ? ids.Count(id => branch.Enemy(id) is { Alive: false }) : 0)));
+                branch.KillsNotYetRun = false;
+                AllyDeaths(branch);
+                return DrainPending(branch);
+            });
+            return Then(told, branch => HitAllRound(branch, rounds - 1 + (at.RepeatPerKill ? ids.Count(id => branch.Enemy(id) is { Alive: false }) : 0)));
         }
     }
 
@@ -663,7 +682,18 @@ public static partial class SimEngine
     /// </summary>
     private static IEnumerable<SimState> HitOnce(SimState state, int dealer, int target, AttackAction at)
     {
-        if (at.NeedsArrow && state.ArrowAwayAt < 0) return new[] { state };
+        HitDamage(state, dealer, target, at, deferred: null);
+        AllyDeaths(state); // a death runs its hooks as it happens (AfterDeath: Impaled lets its arrows go, Crab Rage, Explosive)
+        return DrainPending(state); // what the hit set off where hooks can't branch (an arrow knocked loose: Yah, Twine)
+    }
+
+    /// <summary>
+    /// One hit's damage on its target, worked out now and dealt (and its splash); its results' hooks wait in <paramref name="deferred"/> when it's one
+    /// target among several of one damage (decision #402), and its deaths are the caller's.
+    /// </summary>
+    private static void HitDamage(SimState state, int dealer, int target, AttackAction at, List<DeferredHit>? deferred)
+    {
+        if (at.NeedsArrow && state.ArrowAwayAt < 0) return;
         var spec = at.Damage;
         var card = state.CurrentPlay?.Card;
         var ctx = new DamageCtx(dealer, target, spec.Props, card, state.CurrentPlay);
@@ -676,10 +706,10 @@ public static partial class SimEngine
         // The first hit on each enemy, for the damage-formula audit (not after Mighty Wings gave Strength mid-attack: the preview
         // can't know that).
         if (card != null && !at.ByOsty && !state.FirstHits.ContainsKey(target) && !state.Fired.Has(RelicId.MightyWings.Name)) state.FirstHits = state.FirstHits.Add(target, amount);
-        if (amount <= 0) return new[] { state };
+        if (amount <= 0) return;
         if (state.Enemy(target) is { Alive: true } enemy)
         {
-            Damage(state, enemy, amount, dealer, spec.Props, card);
+            Damage(state, enemy, amount, dealer, spec.Props, card, deferred);
             // The hit killed its target (its DamageResult's WasTargetKilled, a revive after it included): SimTest.AttackKilled.
             if (enemy.Hp <= 0) state.AttackKilled = true;
         }
@@ -695,8 +725,6 @@ public static partial class SimEngine
                 if (splash > 0) Damage(state, other, splash, dealer, props, card);
             }
         }
-        AllyDeaths(state); // a death runs its hooks as it happens (AfterDeath: Impaled lets its arrows go, Crab Rage, Explosive)
-        return DrainPending(state); // what the hit set off where hooks can't branch (an arrow knocked loose: Yah, Twine)
     }
 
     /// <summary>The terms without the card's enchantment: it turned itself off after the play before (Vigorous).</summary>

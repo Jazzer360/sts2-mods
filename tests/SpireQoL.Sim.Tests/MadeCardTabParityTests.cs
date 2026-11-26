@@ -23,7 +23,7 @@ public class MadeCardTabParityTests
         var actual = Enumerable.Range(0, Scenarios).Select(scenario => $"{scenario} {Tabs(scenario)}").ToList();
         if (Environment.GetEnvironmentVariable("SPIREQOL_RECORD_MADE_CARD_TABS") is { Length: > 0 } recordTo)
         {
-            File.WriteAllLines(recordTo, actual);
+            ParityRecording.Write(recordTo, actual, ParityPath, (recorded, now) => Reviewed(recorded) == now);
             return;
         }
         var expected = File.ReadAllLines(ParityPath).Select(Reviewed).ToArray();

@@ -200,6 +200,19 @@ public static class BoardCounts
         return Collection(take, others, board, program, fromHandOnly: !everyPile, _ => true);
     }
 
+    /// <summary>
+    /// The cards in your hand, other than the card played, a take of each card of its collection lets through as the play starts (Compact's statuses):
+    /// the ones it takes, for what the simulator follows of them (SimAdapter: their end-of-turn effects, decision #402). Empty when it can't be told.
+    /// </summary>
+    internal static List<CardModel> MatchingCardsAtStart(AbstractModel model, Programs.CardEffects.CardsTaken take)
+    {
+        var program = Programs.CardPrograms.Of(model.GetType());
+        var board = Programs.ProgramBoard.For(model);
+        if (take.Items == null || Programs.ProgramEvaluator.Items(take.Items, board, program) is not { } items) return new List<CardModel>();
+        return items.OfType<CardModel>().Where(item => !ReferenceEquals(item, board.Card) && item.Pile?.Type == PileType.Hand
+            && (take.ItemTest.IsAlways || Programs.ProgramEvaluator.HoldsFor(take.ItemTest, item, board, program) != false)).ToList();
+    }
+
     /// <summary>The take's collection holds cards outside your hand (Flak Cannon's: every pile), on the board.</summary>
     internal static bool TakesFromEveryPile(AbstractModel model, Programs.CardEffects.CardsTaken take)
     {

@@ -1223,7 +1223,8 @@ public static partial class SimAdapter
             baseOn[id] = baseValue;
             captured[id] = SimReaders.Damage(me.RunState, play.Combat, card, me.Creature, creature, baseValue, props);
         }
-        var growth = play.Plays > 1 && !fixedNumbers ? PlayGrowth.Of(card) : PlayGrowth.Growth.None;
+        // Each later play's growth (decision #160), whatever the play count read now: a replay the simulator decides as the play starts (Echo Form's) has it too.
+        var growth = !fixedNumbers ? PlayGrowth.Of(card) : PlayGrowth.Growth.None;
         return new AttackAction(hits, mode, new DamageSpec(baseDamage, SimReaders.Props(props))
         {
             BaseOn = baseOn, Captured = captured, Fixed = fixedNumbers, GrowsEachPlay = growth.Damage, EnchantFirstPlayOnly = growth.EnchantFirstPlayOnly,
@@ -1495,7 +1496,7 @@ public static partial class SimAdapter
             (baseValue, valueProps) = (SafeDecimal(() => calc.Calculate(null)), dynamicVar is CalculatedBlockVar calculatedBlock && OnBoard(play, ValueAt(found.Command, 1)) is DynamicVar ? calculatedBlock.Props : props);
         else if (card.DynamicVars.TryGetValue("Block", out var otherDynamicVar)) (baseValue, valueProps) = (otherDynamicVar.BaseValue, OnBoard(play, ValueAt(found.Command, 1)) is DynamicVar ? PropsOf(otherDynamicVar) : props);
         else return new GainBlockAction(gains, CardBlock(card, combat, me), SimProps.Move) { Fixed = true, To = to };
-        var growth = play.Plays > 1 ? PlayGrowth.Of(card) : PlayGrowth.Growth.None;
+        var growth = PlayGrowth.Of(card); // each later play's, Echo Form's replay included
         return new GainBlockAction(gains, baseValue, SimReaders.Props(valueProps))
         {
             Captured = SimReaders.Block(combat, card, gainer, baseValue, valueProps), To = to, GrowsEachPlay = growth.Block,
@@ -2099,6 +2100,9 @@ public static partial class SimAdapter
                         actions.Add(new TakeFromHandAction(way)
                         {
                             Event = cardEvent, Made = made, Leaves = leaves, Most = most, Filter = key, Matching = BoardCounts.MatchingAtStart(model, take, everyPile: false), EachCard = EachCardOf(take, play),
+                            // Each card it lets through: the ones that act in your hand as the turn ends go with them (decision #402: Compact's Wither).
+                            TurnEndTaken = way == HandTakeWay.Each && model is CardModel
+                                && BoardCounts.MatchingCardsAtStart(model, take).Select(TurnEndOf).OfType<TurnEndCard>().ToList() is { Count: > 0 } turnEnds ? turnEnds : null,
                         });
                     break;
                 }

@@ -29,7 +29,7 @@ public class BonusTabParityTests
         var actual = Enumerable.Range(0, Scenarios).Select(scenario => $"{scenario} {Tabs(scenario)}").ToList();
         if (Environment.GetEnvironmentVariable("SPIREQOL_RECORD_BONUS_TABS") is { Length: > 0 } recordTo)
         {
-            File.WriteAllLines(recordTo, actual);
+            ParityRecording.Write(recordTo, actual, ParityPath, (recorded, now) => Compared(Rewritten(now)) == Compared(Rewritten(recorded)));
             return;
         }
         var expected = File.ReadAllLines(ParityPath).Select(Rewritten).ToArray();

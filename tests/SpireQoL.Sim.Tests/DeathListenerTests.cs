@@ -48,15 +48,18 @@ public class DeathListenerTests
     }
 
     [Fact]
-    public void TheHitThatKillsIsToldToItsOwnPowers()
+    public void TheHitThatKillsIsntToldToItsTarget()
     {
-        // SkittishPower.AfterDamageReceived notes the attack's first hit on its owner: the hit that kills it too (the game kills it after
-        // its damage hooks, CreatureCmd.Damage).
+        // Decision #402: CreatureCmd.Damage's results loop tells AfterDamageReceived only `if (!result.WasTargetKilled || !originalTarget.IsDead)`, else
+        // the target is among the killed (both branches): SkittishPower.AfterDamageReceived never notes the hit that killed its owner.
         var state = new SimState { Enemies = { Enemy(id: 1, hp: 5, hits: 4), Enemy(id: 2, hp: 30, hits: 8) } };
         state.Enemies[0].Powers = state.Enemies[0].Powers.With(PowerId.Skittish, 3);
         SimEngine.ApplyPlayTo(state, Strike(target: 1, damage: 9), out var after, out _);
         var dead = after[0].Enemy(id: 1)!;
         Assert.False(dead.Alive);
-        Assert.NotEqual(0, dead.Powers.DataOf(PowerId.Skittish));
+        Assert.Equal(0, dead.Powers.DataOf(PowerId.Skittish));
+        // One it doesn't kill is told.
+        SimEngine.ApplyPlayTo(state, Strike(target: 1, damage: 2), out var survived, out _);
+        Assert.NotEqual(0, survived[0].Enemy(id: 1)!.Powers.DataOf(PowerId.Skittish));
     }
 }

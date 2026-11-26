@@ -513,7 +513,10 @@ public static partial class SimEngine
     /// </summary>
     /// <param name="dealer">Who deals it (you by default; Who.YourOsty for Osty's hits).</param>
     /// <param name="props">The damage's props: a card's hit is a powered Move; procs, orbs and the like are Unpowered.</param>
-    internal static int Damage(SimState state, SimEnemy enemy, int amount, int? dealer = Who.You, SimProps props = SimProps.Unpowered, SimCard? card = null)
+    /// <param name="deferred">One target among several of one damage (decision #402: CreatureCmd.Damage with every target): its results' hooks
+    /// (AfterBlockBroken, AfterDamageGiven, AfterDamageReceived) wait here until every target's damage is dealt (TellDeferred).</param>
+    internal static int Damage(SimState state, SimEnemy enemy, int amount, int? dealer = Who.You, SimProps props = SimProps.Unpowered, SimCard? card = null,
+        List<DeferredHit>? deferred = null)
     {
         if (amount <= 0 || !enemy.Alive) return 0;
         var listeners = Listeners(state);
@@ -563,14 +566,36 @@ public static partial class SimEngine
         state.AttackDealt += absorbed + toHp;
         // After the HP loss, before the damage hooks (the game's results loop in CreatureCmd.Damage). A hit that killed it is told to its
         // own powers too: the game kills it after these hooks.
-        if (blockBroken) foreach (var (model, o) in ListenersWith(state, enemy.Id)) model.AfterBlockBroken(state, o, enemy.Id, dealer);
         // DamageResult.WasFullyBlocked (CreatureCmd.GetDamageResults): not Unblockable, block before it or block that took some, no HP past the pipeline.
         var fullyBlocked = !props.Has(SimProps.Unblockable) && (hadBlock || absorbed > 0) && toHp == 0;
         var hit = new DamageEvent(dealer, enemy.Id, props, card, absorbed + Math.Min(toHp, Math.Max(0, hpBefore)), absorbed, toHp, hpBefore > 0 && enemy.Hp <= 0, fullyBlocked);
         if (props.IsPoweredAttack() && dealer is Who.You or Who.YourOsty) BiggestHit(state, hit.Total);
-        foreach (var (m, o) in ListenersWith(state, enemy.Id)) m.AfterDamageGiven(state, o, hit);
-        foreach (var (m, o) in ListenersWith(state, enemy.Id)) m.AfterDamageReceived(state, o, hit);
+        var result = new DeferredHit(enemy, hit, blockBroken, dealer);
+        if (deferred != null) deferred.Add(result);
+        else AfterTheHit(state, result);
         return toHp;
+    }
+
+    /// <summary>
+    /// One target's damage result as CreatureCmd.Damage's results loop tells it, once the damage is dealt: AfterBlockBroken when its block broke, then
+    /// AfterDamageGiven and AfterDamageReceived.
+    /// </summary>
+    internal readonly record struct DeferredHit(SimEnemy Enemy, DamageEvent Hit, bool BlockBroken, int? Dealer);
+
+    private static void AfterTheHit(SimState state, DeferredHit result)
+    {
+        var enemy = result.Enemy;
+        if (result.BlockBroken) foreach (var (model, o) in ListenersWith(state, enemy.Id)) model.AfterBlockBroken(state, o, enemy.Id, result.Dealer);
+        foreach (var (m, o) in ListenersWith(state, enemy.Id)) m.AfterDamageGiven(state, o, result.Hit);
+        // A target the hit killed isn't told it (CreatureCmd.Damage: `!WasTargetKilled || !IsDead`, else it's among the killed), on both branches.
+        if (result.Hit.Killed && !enemy.Alive) return;
+        foreach (var (m, o) in ListenersWith(state, enemy.Id)) m.AfterDamageReceived(state, o, result.Hit);
+    }
+
+    /// <summary>The results of one damage with several targets, each in turn, once every target's damage is dealt (decision #402).</summary>
+    internal static void TellDeferred(SimState state, List<DeferredHit> results)
+    {
+        foreach (var result in results) AfterTheHit(state, result);
     }
 
     private static bool AnyListensToDamage(List<(SimModel Model, int Owner)> listeners)
@@ -1658,7 +1683,7 @@ public static partial class SimEngine
     /// </summary>
     internal static bool FightEnding(SimState state, int? performer = null)
     {
-        if (state.HeldOpenByTheDead) return false;
+        if (state.HeldOpenByTheDead || state.KillsNotYetRun) return false;
         foreach (var enemy in state.Enemies)
             if (enemy.Alive && !PowersOf(state, enemy.Id).Has(PowerId.Minion)) return false;
         foreach (var (model, owner) in Listeners(state))

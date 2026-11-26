@@ -786,7 +786,14 @@ public static partial class SimAdapter
             {
                 if (SimModels.Get(SimReaders.ModelName(model)) is ReadModel { CardsMadeIntoDraw: { Count: > 0 } cards }) foreach (var cardClass in cards) Made(cardClass);
                 // And into your hand (decision #364: Withering Presence's Wither): what each does there as the turn ends.
-                if (SimModels.Get(SimReaders.ModelName(model)) is { CardsMadeIntoHand: { Count: > 0 } intoHand }) foreach (var cardClass in intoHand) Made(cardClass);
+                if (SimModels.Get(SimReaders.ModelName(model)) is { CardsMadeIntoHand: { Count: > 0 } intoHand })
+                    foreach (var cardClass in intoHand)
+                    {
+                        // As the board's monsters make it on its generation (decision #402: Aeonglass gives a Wither the upgrades it has given).
+                        if (made.ContainsKey(cardClass) || Procs.Programs.MadeCards.CanonicalOf(cardClass) is not { } canonical) continue;
+                        try { made[cardClass] = Profile(AsGenerated(canonical, combat, me)); }
+                        catch { Made(cardClass); }
+                    }
             }
             // Your draw pile's: what an enemy's powers, your powers and your relics make into it.
             foreach (var creature in combat.Enemies.Append(me.Creature))
@@ -931,6 +938,51 @@ public static partial class SimAdapter
         try { return SafeBool(() => card.IsUpgradable) ? TurnEndOf(SpireQoL.Cards.UpgradedCopy.Of(card)) : null; }
         catch { return null; }
     }
+
+    /// <summary>
+    /// A card as it comes out of its generation (CardPileCmd's add of a made card runs Hook.AfterCardGeneratedForCombat): each monster on the board
+    /// whose hook changes nothing but the card (GenerationTouchesOnlyTheCard: Aeonglass.MatchWitherToUpgradeCount, a Wither's FakeUpgrade for each
+    /// upgrade it gave) runs it on a copy of the canonical card. The canonical card itself when none does.
+    /// </summary>
+    private static CardModel AsGenerated(CardModel canonical, ICombatState combat, Player me)
+    {
+        CardModel? copy = null;
+        foreach (var enemy in combat.Enemies)
+        {
+            if (enemy.Monster is not { } monster || !GenerationTouchesOnlyTheCard(monster.GetType())) continue;
+            copy ??= canonical.ToMutable();
+            if (!monster.AfterCardGeneratedForCombat(copy, me).IsCompleted) return canonical; // it waits on something: not run here
+        }
+        return copy ?? canonical;
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> GenerationHooks = new();
+
+    /// <summary>
+    /// The monster class overrides AfterCardGeneratedForCombat with code that calls no game command and stores nothing of its own (its own methods it
+    /// calls too): it only changes the card it's given, which can then be run on a copy.
+    /// </summary>
+    internal static bool GenerationTouchesOnlyTheCard(Type monster) => GenerationHooks.GetOrAdd(monster, type =>
+    {
+        const System.Reflection.BindingFlags declared = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly;
+        if (type.GetMethod(nameof(AbstractModel.AfterCardGeneratedForCombat), declared) is not { } hook) return false;
+        bool OnlyTheCard(System.Reflection.MethodInfo method, int depth)
+        {
+            if (depth > 2) return false;
+            List<HarmonyLib.CodeInstruction> code;
+            try { code = Diagnostics.GameCode.Instructions(method); }
+            catch { return false; }
+            foreach (var instruction in code)
+            {
+                if (instruction.opcode == System.Reflection.Emit.OpCodes.Stfld || instruction.opcode == System.Reflection.Emit.OpCodes.Stsfld) return false;
+                if (instruction.operand is not System.Reflection.MethodInfo called) continue;
+                if (called.DeclaringType?.Namespace == "MegaCrit.Sts2.Core.Commands") return false;
+                if (called.DeclaringType == type && !OnlyTheCard(called, depth + 1)) return false;
+            }
+            return true;
+        }
+        return OnlyTheCard(hook, depth: 0);
+    });
 
     /// <summary>A card that acts in hand at the end of your turn (SimEngine.HandAtTurnEnd), with its amount; null otherwise.</summary>
     private static TurnEndCard? TurnEndOf(CardModel card)

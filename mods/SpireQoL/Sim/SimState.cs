@@ -1156,6 +1156,12 @@ public sealed class SimState
     /// -Sign * base.Amount: decision #400). The engine's scratch: set by the removal, read only while the power is off, cleared as the hook's steps end.
     /// </summary>
     public (int Owner, PowerId Power, int Amount)? RemovedByItsHook;
+    /// <summary>
+    /// A damage with several targets has dealt them all and its results' hooks are running, before its kills (decision #402: CreatureCmd.Damage kills
+    /// the killed after its results loop): the fight isn't ending yet, so what those hooks set off runs (Personal Hive's Dazed beside the last kill).
+    /// The engine's scratch: set and cleared inside the round.
+    /// </summary>
+    public bool KillsNotYetRun;
 
     /// <summary>
     /// The history ledger's questions (decision #191): every query of the game's log of the fight that the cards, relics and powers on this
