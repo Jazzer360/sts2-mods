@@ -338,7 +338,7 @@ public class ReadModelParityTests
         nameof(SimModel.ModifyCardPlayResultLocation), nameof(SimModel.AfterModifyingCardPlayResultLocation),
         nameof(SimModel.ModifyPowerAmountGivenAdditive), nameof(SimModel.ModifyPowerAmountGivenMultiplicative), nameof(SimModel.ModifyPowerAmountGiven), nameof(SimModel.AfterModifyingPowerAmountGiven),
         nameof(SimModel.TryModifyPowerAmountReceived), nameof(SimModel.AfterModifyingPowerAmountReceived),
-        nameof(SimModel.TryModifyEnergyCostInCombat), nameof(SimModel.TryModifyEnergyCostInCombatLate),
+        nameof(SimModel.TryModifyEnergyCostInCombat), nameof(SimModel.TryModifyEnergyCostInCombatLate), nameof(SimModel.TryModifyStarCost),
         nameof(SimModel.AfterCreatureAddedToCombat),
         nameof(SimModel.AfterRemoved),
         nameof(SimModel.AfterEnergyReset), nameof(SimModel.AfterEnergyResetLate), nameof(SimModel.BeforeHandDraw), nameof(SimModel.BeforeHandDrawLate),
@@ -750,6 +750,18 @@ public class ReadModelParityTests
                                             return $"{first} {afterFirst} / {late} {afterLate}";
                                         });
                                     }
+                break;
+            case nameof(SimModel.TryModifyStarCost):
+                // The same cards at each star cost so far (SimEngine.HandStarCost): the answer and the cost it leaves.
+                foreach (var type in new[] { SimCardType.Attack, SimCardType.Skill, SimCardType.Power })
+                    foreach (var pile in new[] { SimCardPile.Hand, SimCardPile.Play })
+                        foreach (var player in new[] { Who.You, Who.Teammate(0) })
+                            foreach (var cost in new[] { 0, 1, 3 })
+                            {
+                                var costed = new SimCostedCard(new SimCard("Costed", type), player, pile);
+                                yield return ($"{type} in {pile} of {player} at {cost} stars", (model, state) =>
+                                    $"{model.TryModifyStarCost(state, owner, costed, cost, out var after)} {after}");
+                            }
                 break;
             case nameof(SimModel.AfterCreatureAddedToCombat):
                 // A creature joining the fight on either side: an enemy (one of the board's), and you (a player's side).

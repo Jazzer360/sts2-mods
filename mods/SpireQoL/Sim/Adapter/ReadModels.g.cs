@@ -45,6 +45,7 @@ public static partial class ReadModels
         nameof(MegaCrit.Sts2.Core.Models.Afflictions.Bound),
         RelicId.BoundPhylactery.Name,
         RelicId.Bread.Name,
+        RelicId.BrilliantScarf.Name,
         RelicId.Brimstone.Name,
         PowerId.Buffer.Name,
         RelicId.BurningSticks.Name,

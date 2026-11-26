@@ -105,6 +105,58 @@ public class HandCostTests
         Assert.Equal(1, SimEngine.HandCost(WithPowers((PowerId.BorrowedTime, 1)), Who.You, free));
     }
 
+    private static SimHandCard Starred(int id, int energy, int stars) => new()
+    {
+        Id = id, Name = "Starred", Cost = energy, LocalCost = energy, LocalStarCost = stars, Card = new SimCard("Starred", SimCardType.Skill),
+    };
+
+    private static SimState WithScarf(int cardsPlayed)
+    {
+        var state = WithPowers();
+        state.You.Relics = state.You.Relics.With(RelicId.BrilliantScarf, amount: 0);
+        state.You.Fields = state.You.Fields.With("BrilliantScarf.CardsPlayedThisTurn", cardsPlayed);
+        return state;
+    }
+
+    [Fact]
+    public void BrilliantScarfsStarCostPassRuns()
+    {
+        // BrilliantScarf.TryModifyStarCost (decision #386): its owner's card in their hand or being played costs no stars while they've played one card fewer
+        // than its count this turn (6: the sixth card), as its energy pass makes it cost no energy; another count leaves both.
+        Assert.IsType<ReadModel>(SimModels.Get(RelicId.BrilliantScarf.Name));
+        var card = Starred(id: 3, energy: 2, stars: 2);
+        Assert.Equal(0, SimEngine.HandStarCost(WithScarf(cardsPlayed: 5), Who.You, card));
+        Assert.Equal(0, SimEngine.HandCost(WithScarf(cardsPlayed: 5), Who.You, card));
+        Assert.Equal(2, SimEngine.HandStarCost(WithScarf(cardsPlayed: 4), Who.You, card));
+        Assert.Equal(2, SimEngine.HandCost(WithScarf(cardsPlayed: 4), Who.You, card));
+        Assert.Equal(2, SimEngine.HandStarCost(WithScarf(cardsPlayed: 5), Who.You, card, SimCardPile.Other));
+    }
+
+    [Fact]
+    public void ACardThatCostsNoStarsCostsNoneWhateverThePass()
+    {
+        // Hook.ModifyStarCost leaves a negative star cost (none) alone, and an X star cost isn't asked: both read as costing no stars.
+        Assert.Equal(0, SimEngine.HandStarCost(WithScarf(cardsPlayed: 4), Who.You, Card(id: 3, "Plain", SimCardType.Skill, cost: 1)));
+        var unknown = WithPowers();
+        unknown.CostsUnknown = "VoidFormPower's TryModifyStarCost changes what cards cost, and the simulator doesn't run it";
+        Assert.Null(SimEngine.HandStarCost(unknown, Who.You, Starred(id: 3, energy: 0, stars: 1)));
+    }
+
+    [Fact]
+    public void MummifiedHandsPickCountsACardThatCostsOnlyStars()
+    {
+        // CardModel.CostsEnergyOrStars: a card that costs stars and no energy can be the free one, a branch of its own beside the Strike's.
+        var state = WithPowers();
+        state.You.Simpleton = 1;
+        state.You.AutoHand = new() { Card(id: 11, "Strike", SimCardType.Attack, cost: 1), Starred(id: 12, energy: 0, stars: 2) };
+        var branches = SimEngine.FreeInHand(state, Who.You, played: 7).ToList();
+        Assert.Equal(2, branches.Count);
+        var starredFree = Assert.Single(branches, branch => branch.You.AutoHand!.Single(card => card.Id == 12).LocalStarCost == 0);
+        Assert.Equal(1, starredFree.You.AutoHand!.Single(card => card.Id == 11).LocalCost);
+        // Free this turn: no stars, no energy.
+        Assert.Equal(0, SimEngine.HandStarCost(state, Who.You, Starred(id: 12, energy: 0, stars: 2).FreeCopy()));
+    }
+
     [Fact]
     public void ACardReadBeforeTheRuleCostsWhatTheGameShowed()
     {

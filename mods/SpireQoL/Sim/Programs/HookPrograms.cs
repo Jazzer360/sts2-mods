@@ -144,7 +144,7 @@ public enum HookName
     /// Hook.ModifyEnergyCostInCombat's two passes (CardEnergyCost.GetWithModifiers, after the card's local modifiers) and Hook.ModifyStarCost's:
     /// each listener's Try on the cost so far (HookFact.CostSoFar), its out value the cost where it answers true (HookProgram.Modifies); its card the
     /// one costed (its pile HookFact.CardPile). The energy passes run wherever a simulation reads a hand card's cost (SimEngine.HandCost: decision
-    /// #334); no simulation reads a star cost, so TryModifyStarCost's body stays a gap.
+    /// #334), the star cost pass wherever it reads a hand card's star cost (SimEngine.HandStarCost: decision #386).
     /// </summary>
     TryModifyEnergyCostInCombat,
     TryModifyEnergyCostInCombatLate,

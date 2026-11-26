@@ -115,11 +115,28 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// A hand card's live star cost (CardModel.GetStarCostWithModifiers, decision #386): its star cost before the listeners' pass (SimHandCard.LocalStarCost:
+    /// CurrentStarCost), then Hook.ModifyStarCost on it: every listener's TryModifyStarCost in the game's order on the cost so far. 0 for a card that
+    /// costs no stars (no star cost, X stars, or a card read before the rule). Null where it isn't known: a cost pass on the board the simulator doesn't
+    /// run (SimState.CostsUnknown). <paramref name="pile"/>: the card's pile (your hand; the play pile while it's played).
+    /// </summary>
+    internal static int? HandStarCost(SimState state, int player, SimHandCard card, SimCardPile pile = SimCardPile.Hand)
+    {
+        if (card.LocalStarCost is not { } cost || card.Card is not { } facts) return 0;
+        if (state.CostsUnknown != null) return null;
+        var costed = new SimCostedCard(facts, player, pile);
+        // The out value is the cost from here on, whatever the answer (the game's loop passes modifiedCost on).
+        foreach (var (model, owner) in Listeners(state)) model.TryModifyStarCost(state, owner, costed, cost, out cost);
+        return cost;
+    }
+
+    /// <summary>
     /// CardModel.SetToFreeThisTurn on the game's random pick among the cards in <paramref name="player"/>'s hand that cost energy or stars
-    /// (CostsEnergyOrStars: an X cost doesn't), each at its live cost (HandCost), as Mummified Hand picks (FreeInHandStep). What reads a hand
-    /// card's cost in a simulation is the pick of the cheapest at the turn's end (SimpletonPower), from the hand as AutoHand holds it, which is then
-    /// every playable card: a branch per card there that costs energy, each equally likely, that card free (its local cost 0, the listeners' passes
-    /// still on it). Otherwise nothing a simulation reads changes. A cost that isn't known makes the branch unknown (SimState.CostsUnknown).
+    /// (CostsEnergyOrStars: an X cost doesn't), each at its live cost (HandCost) and live star cost (HandStarCost), as Mummified Hand picks
+    /// (FreeInHandStep). What reads a hand card's cost in a simulation is the pick of the cheapest at the turn's end (SimpletonPower), from the hand
+    /// as AutoHand holds it, which is then every playable card: a branch per card there that costs energy or stars, each equally likely, that card
+    /// free (its local cost and star cost 0, the listeners' passes still on them). Otherwise nothing a simulation reads changes. A cost that isn't
+    /// known makes the branch unknown (SimState.CostsUnknown).
     /// <paramref name="played"/> is the card in play (SimCard.HandId), no longer in the hand.
     /// </summary>
     internal static IEnumerable<SimState> FreeInHand(SimState state, int player, int played)
@@ -129,12 +146,12 @@ public static partial class SimEngine
         foreach (var card in hand)
         {
             if (card.Id == played) continue;
-            if (HandCost(state, player, card) is not { } cost)
+            if (HandCost(state, player, card) is not { } cost || HandStarCost(state, player, card) is not { } stars)
             {
                 state.Unmodelled ??= state.CostsUnknown;
                 return new[] { state };
             }
-            if (cost is > 0 and < XCost) costing.Add(card);
+            if (cost is > 0 and < XCost || stars > 0) costing.Add(card);
         }
         if (costing.Count == 0) return new[] { state };
         var result = new List<SimState>(costing.Count);

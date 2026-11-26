@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 33 engine rules naming 192 game methods; 3 adapter rules; 33 hand-written models.
+# 34 engine rules naming 195 game methods; 3 adapter rules; 33 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -22,6 +22,9 @@ A card in a hand you pick made Ethereal (decision #348): one there not Ethereal 
 A hand card's live energy cost (decision #334): its cost before global modifiers, then every listener's cost pass, then every Late pass, at least 0; Simpleton's cheapest by it
   game: CardEnergyCost.GetWithModifiers, CardEnergyCost.GetResolved, Hook.ModifyEnergyCostInCombat, SimpletonPower.AfterAutoPostPlayPhaseEntered (beta only)
   simulator: SimEngine.HandCost, SimEngine.LiveCost, SimEngine.Cheapest
+A hand card's live star cost (decision #386): its star cost before the listeners' pass, then every listener's star cost pass
+  game: CardModel.GetStarCostWithModifiers, CardModel.CurrentStarCost, Hook.ModifyStarCost
+  simulator: SimEngine.HandStarCost
 A card in a hand made free this turn: the game's random pick among the cards that cost, what a simulation reads of it (the cheapest card at the turn's end)
   game: CardModel.SetToFreeThisTurn, CardModel.CostsEnergyOrStars
   simulator: SimEngine.FreeInHand

@@ -9,8 +9,8 @@ namespace SpireQoL.Catalog.Tests;
 /// <summary>
 /// A card's cost hooks read as Try hooks (decisions #332, #334): TryModifyEnergyCostInCombat and its Late pass, each its answer and the cost its out
 /// parameter holds, the costed card's owner, type, keywords, affliction and pile (card.Pile?.Type is Hand or Play) and originalCost (the cost so far)
-/// read, run by the engine wherever a simulation reads a hand card's cost (SimEngine.HandCost). No simulation reads a star cost, so TryModifyStarCost
-/// stays a gap.
+/// read, run by the engine wherever a simulation reads a hand card's cost (SimEngine.HandCost); TryModifyStarCost the same way, wherever a simulation
+/// reads a hand card's star cost (SimEngine.HandStarCost: decision #386).
 /// </summary>
 public class CardCostHookTests
 {
@@ -57,10 +57,12 @@ public class CardCostHookTests
         Assert.DoesNotContain(new ModelSpec(type.Name, ModelKind.Power, new[] { before }).Values(), value => value is HookFactValue { Fact: HookFact.CardPile });
     }
 
-    [Fact]
-    public void AStarCostPassIsAGap()
+    [Theory]
+    [InlineData(typeof(VoidFormPower))]
+    [InlineData(typeof(BrilliantScarf))]
+    public void AStarCostPassReads(Type type)
     {
         GameModels.EnsureLoaded();
-        Assert.Equal("gap: its body reads, but no simulation reads a hand card's star cost (TryModifyStarCost)", GapOf(typeof(VoidFormPower), "TryModifyStarCost"));
+        Assert.Null(GapOf(type, "TryModifyStarCost"));
     }
 }

@@ -852,15 +852,17 @@ public sealed class SimHandCard
     /// <remarks>Its own plays become the copy's (SimPlay.HandCard): played, it's the copy that leaves your hand.</remarks>
     public SimHandCard CopyWithId(int id) => new()
     {
-        Id = id, Name = Name, IsAttack = IsAttack, Cost = Cost, LocalCost = LocalCost, Card = Card, AutoPlayedBy = AutoPlayedBy, Upgraded = Upgraded?.CopyWithId(id), _key = Key,
+        Id = id, Name = Name, IsAttack = IsAttack, Cost = Cost, LocalCost = LocalCost, LocalStarCost = LocalStarCost, Card = Card, AutoPlayedBy = AutoPlayedBy, Upgraded = Upgraded?.CopyWithId(id), _key = Key,
         Plays = Id == 0 ? Plays : Plays.Select(play => play.HandCard == Id ? play.AsHandCard(id) : play).ToList(),
     };
 
     /// <summary>
-    /// This card made free this turn (CardModel.SetToFreeThisTurn: EnergyCost.SetThisTurnOrUntilPlayed(0), a local modifier of 0 after its others):
-    /// its cost before global modifiers 0, the listeners' passes still on it (SimEngine.HandCost), the rest the same (its key its own).
+    /// This card made free this turn (CardModel.SetToFreeThisTurn: EnergyCost.SetThisTurnOrUntilPlayed(0), a local modifier of 0 after its others, and
+    /// SetStarCostThisTurn(0)): its cost before global modifiers 0 and its star cost 0 (one with no star cost keeps none: CurrentStarCost), the listeners'
+    /// passes still on them (SimEngine.HandCost, HandStarCost), the rest the same (its key its own).
     /// </summary>
-    public SimHandCard FreeCopy() => new() { Id = Id, Name = Name, IsAttack = IsAttack, Cost = 0, LocalCost = LocalCost == null ? null : 0, Card = Card, AutoPlayedBy = AutoPlayedBy, Upgraded = Upgraded?.FreeCopy(), Plays = Plays };
+    public SimHandCard FreeCopy() => new() { Id = Id, Name = Name, IsAttack = IsAttack, Cost = 0, LocalCost = LocalCost == null ? null : 0, LocalStarCost = LocalStarCost == null ? null : 0, Card = Card,
+        AutoPlayedBy = AutoPlayedBy, Upgraded = Upgraded?.FreeCopy(), Plays = Plays };
 
     public string Name = "";
     public bool IsAttack;
@@ -873,6 +875,13 @@ public sealed class SimHandCard
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? LocalCost;
+    /// <summary>
+    /// Its star cost before the listeners' pass (CardModel.CurrentStarCost: its own temporary costs, a free copy's 0), from which SimEngine.HandStarCost
+    /// works out its live star cost through every listener's TryModifyStarCost (Hook.ModifyStarCost); null when it costs no stars (no star cost, or X
+    /// stars: CostsEnergyOrStars counts neither), or for a card read before the rule.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? LocalStarCost;
     /// <summary>What the cost hooks test of it (its class, type, Ethereal, affliction: SimCostedCard), with LocalCost.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SimCard? Card;
@@ -933,8 +942,8 @@ public sealed class SimState
 
     /// <summary>
     /// Why a hand card's live cost isn't known in this simulation (decision #334): a listener of the game's cost passes on the board whose pass the
-    /// simulator doesn't run (a class not read whole, a card's own hook: Cho Limbs, Coda), or null. A read of a cost (SimEngine.HandCost) is
-    /// unknown then, and so is the branch that asks it (Unmodelled).
+    /// simulator doesn't run (a class not read whole, a card's own hook: Cho Limbs, Coda), its energy passes or its star cost pass, or null. A read of a
+    /// cost (SimEngine.HandCost, HandStarCost) is unknown then, and so is the branch that asks it (Unmodelled).
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? CostsUnknown;

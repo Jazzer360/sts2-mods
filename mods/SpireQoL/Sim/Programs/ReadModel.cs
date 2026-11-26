@@ -619,8 +619,7 @@ public sealed class ReadModel : SimModel
         HookName.AfterModifyingPowerAmountReceived => nameof(AfterModifyingPowerAmountReceived),
         HookName.TryModifyEnergyCostInCombat => nameof(TryModifyEnergyCostInCombat),
         HookName.TryModifyEnergyCostInCombatLate => nameof(TryModifyEnergyCostInCombatLate),
-        // No simulation reads a star cost: a read one is never run (its body stays a gap: HookReader).
-        HookName.TryModifyStarCost => "",
+        HookName.TryModifyStarCost => nameof(TryModifyStarCost),
         // Its power's own question as its owner dies (Creature.RemoveAllPowersAfterDeath): asked of it, never of every listener.
         HookName.ShouldPowerBeRemovedAfterOwnerDeath => nameof(StaysOnDeadOwner),
         // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook; an enchantment's OnPlay
@@ -1129,6 +1128,10 @@ public sealed class ReadModel : SimModel
     /// <summary>Hook.ModifyEnergyCostInCombat's second pass (Free Attack's Attacks in your hand or being played: 0).</summary>
     public override bool TryModifyEnergyCostInCombatLate(SimState state, int owner, SimCostedCard costed, int cost, out int modified) =>
         TryCost(HookName.TryModifyEnergyCostInCombatLate, state, owner, costed, cost, out modified);
+
+    /// <summary>Hook.ModifyStarCost: its code's answer on the star cost so far (Brilliant Scarf's card played as its count says: 0).</summary>
+    public override bool TryModifyStarCost(SimState state, int owner, SimCostedCard costed, int cost, out int modified) =>
+        TryCost(HookName.TryModifyStarCost, state, owner, costed, cost, out modified);
 
     private bool TryCost(HookName hook, SimState state, int owner, SimCostedCard costed, int cost, out int modified)
     {
@@ -2885,8 +2888,8 @@ public sealed class ReadModel : SimModel
         or HookName.AfterCardGeneratedForCombat or HookName.AfterShuffle or HookName.AfterStarsSpent or HookName.AfterStarsGained or HookName.AfterEnergySpent
         or HookName.AfterArrowDislodged;
 
-    /// <summary>A card's energy cost pass (SimEngine.HandCost): its card the one costed (HookArgs.Costed).</summary>
-    private static bool IsCostHook(HookName hook) => hook is HookName.TryModifyEnergyCostInCombat or HookName.TryModifyEnergyCostInCombatLate;
+    /// <summary>A card's cost pass (SimEngine.HandCost, HandStarCost): its card the one costed (HookArgs.Costed).</summary>
+    private static bool IsCostHook(HookName hook) => hook is HookName.TryModifyEnergyCostInCombat or HookName.TryModifyEnergyCostInCombatLate or HookName.TryModifyStarCost;
 
     /// <summary>A hook whose card is the card played (its play's or its count's), not an event's.</summary>
     private static bool IsPlayHook(HookName hook) =>

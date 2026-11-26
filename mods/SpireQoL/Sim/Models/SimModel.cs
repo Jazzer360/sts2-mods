@@ -444,6 +444,16 @@ public abstract class SimModel
         modified = cost;
         return false;
     }
+    /// <summary>
+    /// Hook.ModifyStarCost (CardModel.GetStarCostWithModifiers, after the card's own CurrentStarCost): true when the model changes the star cost of
+    /// <paramref name="costed"/> so far, the cost it leaves in <paramref name="modified"/> (Void Form's and Brilliant Scarf's free cards: 0), each listener
+    /// in turn on the cost so far. Pure (SimEngine.HandStarCost).
+    /// </summary>
+    public virtual bool TryModifyStarCost(SimState state, int owner, SimCostedCard costed, int cost, out int modified)
+    {
+        modified = cost;
+        return false;
+    }
 
     // ---- hooks (may branch)
 

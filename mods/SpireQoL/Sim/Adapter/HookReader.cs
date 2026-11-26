@@ -1172,15 +1172,13 @@ public static class HookReader
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(Ways(amounts)), Modifies = answers }, null, null);
                 }
                 // A card's cost as a Try hook (decisions #332, #334): read the same way, its answer and its out cost each way, the card the one costed
-                // (HookFact.CardPile its pile) and originalCost the cost so far (HookFact.CostSoFar); the engine runs the energy passes wherever a
-                // simulation reads a hand card's cost (SimEngine.HandCost). No simulation reads a star cost, so a star cost hook that reads stays a gap.
+                // (HookFact.CardPile its pile) and originalCost the cost so far (HookFact.CostSoFar); the engine runs the energy passes and the star cost
+                // pass wherever a simulation reads a hand card's cost (SimEngine.HandCost, HandStarCost).
                 if (name is HookName.TryModifyEnergyCostInCombat or HookName.TryModifyEnergyCostInCombatLate or HookName.TryModifyStarCost && hook.ReturnType.Name == "Boolean"
                     && hook.GetParameters().SingleOrDefault(parameter => parameter.IsOut) is { Name: { } costName })
                 {
                     var answers = Pruned(TestWays(ProgramReader.ReadReturnedWays(_type, hook, _read)));
                     var costs = Pruned(Ways(ProgramReader.ReadOutWays(_type, hook, costName, _read) ?? throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: no out parameter {costName}")));
-                    if (name == HookName.TryModifyStarCost)
-                        return (null, new GapOf(ReaderCapability.CardCosts, $"gap: its body reads, but no simulation reads a hand card's star cost ({hook.Name})"), null);
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = costs, Modifies = answers }, null, null);
                 }
                 if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name is HookName.ModifyCardPlayCount or HookName.ModifyOrbPassiveTriggerCounts)

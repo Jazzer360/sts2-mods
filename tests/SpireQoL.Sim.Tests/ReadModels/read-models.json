@@ -4362,6 +4362,1934 @@
     "HelpsOwner": false
   },
   {
+    "Name": "BrilliantScarf",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "CardsPlayedThisTurn",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "CardsPlayedThisTurn"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "BrilliantScarf.AfterCardPlayed:0018",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsAutoPlay"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "BrilliantScarf.AfterCardPlayed:0031",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsOwners"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "CardsPlayedThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "BrilliantScarf.BeforeSideTurnStart:0011",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "TryModifyEnergyCostInCombatLate",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "BrilliantScarf.TryModifyEnergyCostInCombatLate:000E",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "BrilliantScarf.ShouldModifyCost:0024",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "EventIsOwners"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "BrilliantScarf.ShouldModifyCost:0052",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "CardsPlayedThisTurn"
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "Subtract",
+                              "Left": {
+                                "$kind": "HookVar",
+                                "Key": "Cards",
+                                "Canonical": 6
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "BrilliantScarf.ShouldModifyCost:0096",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Or",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:007D",
+                              "Test": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "NotEqual",
+                                    "Left": {
+                                      "$kind": "HookField",
+                                      "Field": "CardsPlayedThisTurn"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Subtract",
+                                      "Left": {
+                                        "$kind": "HookVar",
+                                        "Key": "Cards",
+                                        "Canonical": 6
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 1
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:0089",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:007D",
+                              "Test": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "NotEqual",
+                                    "Left": {
+                                      "$kind": "HookField",
+                                      "Field": "CardsPlayedThisTurn"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Subtract",
+                                      "Left": {
+                                        "$kind": "HookVar",
+                                        "Key": "Cards",
+                                        "Canonical": 6
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 1
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:008D",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardPile"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 2
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "BrilliantScarf.TryModifyEnergyCostInCombatLate:000E",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "BrilliantScarf.ShouldModifyCost:0052",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "CardsPlayedThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Subtract",
+                          "Left": {
+                            "$kind": "HookVar",
+                            "Key": "Cards",
+                            "Canonical": 6
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "BrilliantScarf.ShouldModifyCost:0096",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:0052",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "CardsPlayedThisTurn"
+                                },
+                                "Right": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Subtract",
+                                  "Left": {
+                                    "$kind": "HookVar",
+                                    "Key": "Cards",
+                                    "Canonical": 6
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:007D",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "BrilliantScarf.ShouldModifyCost:0089",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:0052",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "CardsPlayedThisTurn"
+                                },
+                                "Right": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Subtract",
+                                  "Left": {
+                                    "$kind": "HookVar",
+                                    "Key": "Cards",
+                                    "Canonical": 6
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:007D",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:008D",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "BrilliantScarf.TryModifyEnergyCostInCombatLate:000E",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "BrilliantScarf.ShouldModifyCost:0024",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "EventIsOwners"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "BrilliantScarf.ShouldModifyCost:0052",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "CardsPlayedThisTurn"
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "Subtract",
+                              "Left": {
+                                "$kind": "HookVar",
+                                "Key": "Cards",
+                                "Canonical": 6
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "BrilliantScarf.ShouldModifyCost:0096",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Or",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:007D",
+                              "Test": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "NotEqual",
+                                    "Left": {
+                                      "$kind": "HookField",
+                                      "Field": "CardsPlayedThisTurn"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Subtract",
+                                      "Left": {
+                                        "$kind": "HookVar",
+                                        "Key": "Cards",
+                                        "Canonical": 6
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 1
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:0089",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:007D",
+                              "Test": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "NotEqual",
+                                    "Left": {
+                                      "$kind": "HookField",
+                                      "Field": "CardsPlayedThisTurn"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Subtract",
+                                      "Left": {
+                                        "$kind": "HookVar",
+                                        "Key": "Cards",
+                                        "Canonical": 6
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 1
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:008D",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardPile"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 2
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "BrilliantScarf.TryModifyEnergyCostInCombatLate:000E",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "BrilliantScarf.ShouldModifyCost:0052",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "CardsPlayedThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Subtract",
+                          "Left": {
+                            "$kind": "HookVar",
+                            "Key": "Cards",
+                            "Canonical": 6
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "BrilliantScarf.ShouldModifyCost:0096",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:0052",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "CardsPlayedThisTurn"
+                                },
+                                "Right": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Subtract",
+                                  "Left": {
+                                    "$kind": "HookVar",
+                                    "Key": "Cards",
+                                    "Canonical": 6
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:007D",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "BrilliantScarf.ShouldModifyCost:0089",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:0052",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "CardsPlayedThisTurn"
+                                },
+                                "Right": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Subtract",
+                                  "Left": {
+                                    "$kind": "HookVar",
+                                    "Key": "Cards",
+                                    "Canonical": 6
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:007D",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:008D",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Hook": "TryModifyStarCost",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "BrilliantScarf.TryModifyStarCost:000E",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "BrilliantScarf.ShouldModifyCost:0024",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "EventIsOwners"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "BrilliantScarf.ShouldModifyCost:0052",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "CardsPlayedThisTurn"
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "Subtract",
+                              "Left": {
+                                "$kind": "HookVar",
+                                "Key": "Cards",
+                                "Canonical": 6
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "BrilliantScarf.ShouldModifyCost:0096",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Or",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:007D",
+                              "Test": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "NotEqual",
+                                    "Left": {
+                                      "$kind": "HookField",
+                                      "Field": "CardsPlayedThisTurn"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Subtract",
+                                      "Left": {
+                                        "$kind": "HookVar",
+                                        "Key": "Cards",
+                                        "Canonical": 6
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 1
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:0089",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:007D",
+                              "Test": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "NotEqual",
+                                    "Left": {
+                                      "$kind": "HookField",
+                                      "Field": "CardsPlayedThisTurn"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Subtract",
+                                      "Left": {
+                                        "$kind": "HookVar",
+                                        "Key": "Cards",
+                                        "Canonical": 6
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 1
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:008D",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardPile"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 2
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "BrilliantScarf.TryModifyStarCost:000E",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "BrilliantScarf.ShouldModifyCost:0052",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "CardsPlayedThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Subtract",
+                          "Left": {
+                            "$kind": "HookVar",
+                            "Key": "Cards",
+                            "Canonical": 6
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "BrilliantScarf.ShouldModifyCost:0096",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:0052",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "CardsPlayedThisTurn"
+                                },
+                                "Right": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Subtract",
+                                  "Left": {
+                                    "$kind": "HookVar",
+                                    "Key": "Cards",
+                                    "Canonical": 6
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:007D",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "BrilliantScarf.ShouldModifyCost:0089",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:0052",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "CardsPlayedThisTurn"
+                                },
+                                "Right": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Subtract",
+                                  "Left": {
+                                    "$kind": "HookVar",
+                                    "Key": "Cards",
+                                    "Canonical": 6
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:007D",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:008D",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "BrilliantScarf.TryModifyStarCost:000E",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "BrilliantScarf.ShouldModifyCost:0024",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "EventIsOwners"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "BrilliantScarf.ShouldModifyCost:0052",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookField",
+                              "Field": "CardsPlayedThisTurn"
+                            },
+                            "Right": {
+                              "$kind": "HookMath",
+                              "Operation": "Subtract",
+                              "Left": {
+                                "$kind": "HookVar",
+                                "Key": "Cards",
+                                "Canonical": 6
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "BrilliantScarf.ShouldModifyCost:0096",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Or",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:007D",
+                              "Test": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "NotEqual",
+                                    "Left": {
+                                      "$kind": "HookField",
+                                      "Field": "CardsPlayedThisTurn"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Subtract",
+                                      "Left": {
+                                        "$kind": "HookVar",
+                                        "Key": "Cards",
+                                        "Canonical": 6
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 1
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:0089",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:007D",
+                              "Test": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "NotEqual",
+                                    "Left": {
+                                      "$kind": "HookField",
+                                      "Field": "CardsPlayedThisTurn"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Subtract",
+                                      "Left": {
+                                        "$kind": "HookVar",
+                                        "Key": "Cards",
+                                        "Canonical": 6
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 1
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:008D",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardPile"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 2
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "BrilliantScarf.TryModifyStarCost:000E",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "BrilliantScarf.ShouldModifyCost:0052",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "CardsPlayedThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookMath",
+                          "Operation": "Subtract",
+                          "Left": {
+                            "$kind": "HookVar",
+                            "Key": "Cards",
+                            "Canonical": 6
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "BrilliantScarf.ShouldModifyCost:0096",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:0052",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "CardsPlayedThisTurn"
+                                },
+                                "Right": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Subtract",
+                                  "Left": {
+                                    "$kind": "HookVar",
+                                    "Key": "Cards",
+                                    "Canonical": 6
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:007D",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "BrilliantScarf.ShouldModifyCost:0089",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "BrilliantScarf.ShouldModifyCost:0052",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookField",
+                                  "Field": "CardsPlayedThisTurn"
+                                },
+                                "Right": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Subtract",
+                                  "Left": {
+                                    "$kind": "HookVar",
+                                    "Key": "Cards",
+                                    "Canonical": 6
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:007D",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "BrilliantScarf.ShouldModifyCost:0052",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookField",
+                                    "Field": "CardsPlayedThisTurn"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Subtract",
+                                    "Left": {
+                                      "$kind": "HookVar",
+                                      "Key": "Cards",
+                                      "Canonical": 6
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "BrilliantScarf.ShouldModifyCost:008D",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "Brimstone",
     "Kind": "Relic",
     "Hooks": [

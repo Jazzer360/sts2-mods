@@ -294,10 +294,16 @@ public static partial class SimAdapter
     internal static int? LocalCostOf(CardModel card) => card.EnergyCost.CostsX ? null : card.EnergyCost.GetWithModifiers(CostModifiers.Local);
 
     /// <summary>
+    /// A card's star cost before the listeners' pass (CardModel.CurrentStarCost: SimHandCard.LocalStarCost, decision #386); null when it costs no stars
+    /// (a negative star cost, none, or X stars: CostsEnergyOrStars counts neither).
+    /// </summary>
+    internal static int? LocalStarCostOf(CardModel card) => card.HasStarCostX || card.CurrentStarCost < 0 ? null : card.CurrentStarCost;
+
+    /// <summary>
     /// Why a hand card's live cost isn't known on this board (SimState.CostsUnknown, decision #334): the first of the game's hook listeners
-    /// (CombatState.IterateHookListeners) whose class has an energy cost pass (TryModifyEnergyCostInCombat, its Late pass) the simulator doesn't
-    /// run: a class not read whole (Tangled's, whose AfterApplied loop doesn't read yet), a card's own hook (Cho Limbs, Coda). Null when every
-    /// one runs.
+    /// (CombatState.IterateHookListeners) whose class has a cost pass (TryModifyEnergyCostInCombat, its Late pass, TryModifyStarCost: decision #386)
+    /// the simulator doesn't run: a class not read whole (Tangled's, whose AfterApplied loop doesn't read yet), a card's own hook (Cho Limbs, Coda).
+    /// Null when every one runs.
     /// </summary>
     internal static string? CostPassesNotRun(ICombatState combat)
     {
@@ -320,9 +326,9 @@ public static partial class SimAdapter
 
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, string[]> CostPasses = new();
 
-    /// <summary>The energy cost passes a class overrides (its own or a base class's below AbstractModel).</summary>
+    /// <summary>The cost passes a class overrides (its own or a base class's below AbstractModel).</summary>
     private static string[] CostPassesOf(Type type) => CostPasses.GetOrAdd(type, modelType =>
-        new[] { nameof(SimModel.TryModifyEnergyCostInCombat), nameof(SimModel.TryModifyEnergyCostInCombatLate) }
+        new[] { nameof(SimModel.TryModifyEnergyCostInCombat), nameof(SimModel.TryModifyEnergyCostInCombatLate), nameof(SimModel.TryModifyStarCost) }
             .Where(pass => modelType.GetMethod(pass, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance) is { } method
                            && method.DeclaringType != typeof(AbstractModel))
             .ToArray());
@@ -362,7 +368,7 @@ public static partial class SimAdapter
                         Name = card.GetType().Name,
                         IsAttack = card.Type == CardType.Attack,
                         Cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved(),
-                        LocalCost = LocalCostOf(card), Card = SimReaders.CostedFacts(card),
+                        LocalCost = LocalCostOf(card), LocalStarCost = LocalStarCostOf(card), Card = SimReaders.CostedFacts(card),
                         Plays = AutoPlays(card, me, combat, ids, owner),
                         AutoPlayedBy = AutoPlayedBy(card, sources),
                         Upgraded = handUpgraded ? UpgradedHandCard(card, me, combat, ids, owner, sources) : null,
@@ -418,7 +424,7 @@ public static partial class SimAdapter
             {
                 Id = id, Name = card.GetType().Name, IsAttack = copy.Type == CardType.Attack,
                 Cost = copy.EnergyCost.CostsX ? 999999999 : copy.EnergyCost.GetResolved(),
-                LocalCost = LocalCostOf(copy), Card = SimReaders.CostedFacts(copy), Plays = plays, AutoPlayedBy = AutoPlayedBy(copy, sources),
+                LocalCost = LocalCostOf(copy), LocalStarCost = LocalStarCostOf(copy), Card = SimReaders.CostedFacts(copy), Plays = plays, AutoPlayedBy = AutoPlayedBy(copy, sources),
             };
         }
         catch { return null; }
@@ -602,7 +608,7 @@ public static partial class SimAdapter
                                          || unplayable && handSources.Any(source => autoPlayedBy?.Contains(source.Key) == true || autoPlayedBy?.Contains(source.Key + "?") == true));
                 var playsFromPile = topPlays || exhausted && exhaustPlays;
                 var cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved();
-                var who = pickable || strike || playsFromPile ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}" : "";
+                var who = pickable || strike || playsFromPile ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}{(LocalStarCostOf(card) is { } stars ? "*" + stars : "")}" : "";
                 // I Am Invincible plays from the top of the draw pile at the end of your turn: its block.
                 var invincible = card is IAmInvincible ? CardBlock(card, combat, me) : 0;
                 var perfectFit = SimReaders.OnTopWhenShuffled(card);
@@ -629,7 +635,8 @@ public static partial class SimAdapter
                     // An upgraded copy plays as the card it stands for (its id in your hand).
                     if (original != null) foreach (var play in plays) if (play.HandCard == HandId(card)) play.HandCard = id;
                     if (card.Pile?.Type == PileType.Draw) foreach (var play in plays) { play.HandDelta -= 1; play.HandCard = id; }
-                    auto = new SimHandCard { Id = id, Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, LocalCost = LocalCostOf(card), Card = SimReaders.CostedFacts(card), Plays = plays, AutoPlayedBy = autoPlayedBy };
+                    auto = new SimHandCard { Id = id, Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, LocalCost = LocalCostOf(card), LocalStarCost = LocalStarCostOf(card),
+                        Card = SimReaders.CostedFacts(card), Plays = plays, AutoPlayedBy = autoPlayedBy };
                     autoByKey[key] = auto;
                 }
                 (SimHandCard? Plain, SimHandCard? Upgraded) fromPile = default;
