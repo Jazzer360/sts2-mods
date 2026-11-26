@@ -131,7 +131,7 @@ public static class HandModelled
             new[] { "SimEngine.NextMoveAttacks" },
             new[] { "Creature.PrepareForNextTurn", "MonsterModel.RollMove", "MonsterMoveStateMachine.RollMove", "Creature.StunInternal", "MonsterModel.IntendsToAttack" }),
         new("A heal: up to max HP",
-            new[] { "SimEngine.Heal" },
+            new[] { "SimEngine.Heal", "SimEngine.TellHealed" },
             new[] { "CreatureCmd.Heal", "Creature.HealInternal" }),
         new("The fight's log: what each event adds, the counts the questions to it read",
             new[] { "SimEngine.Record", "SimEngine.HistoryCount", "SimEngine.RecordCardEvent", "SimEngine.RecordPlay", "SimEngine.DrawnType", "SimEngine.RecordDamageReceived", "SimEngine.TurnCountsStartOver" },

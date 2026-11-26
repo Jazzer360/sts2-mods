@@ -58,8 +58,8 @@ public sealed class SurprisePower : DeathSetsOff
 // Rupture is read from its code (ReadModel, decision #243).
 
 /// <summary>
-/// RedSkull: Strength once your HP is at or below its threshold (AfterCurrentHpChanged). The adapter's amount is the HP at the
-/// threshold; a bonus when every branch of an aim takes you there from above it.
+/// RedSkull: Strength once your HP is at or below its threshold (AfterCurrentHpChanged), worked out on your max HP as it stands (Threshold); a
+/// bonus when every branch of an aim takes you there from above it.
 /// </summary>
 public sealed class RedSkull : SimModel
 {
@@ -70,9 +70,20 @@ public sealed class RedSkull : SimModel
     {
         if (owner != Who.You) return null;
         var hp = start.You.Hp;
-        var threshold = SimEngine.RelicsOf(start, owner)[ThisRelic];
+        var threshold = Threshold(start, owner, start.You);
         return hp > threshold ? new(Harmful: false, outcome => outcome.PlayHpLostMin > 0 && hp - outcome.PlayHpLostMin <= threshold) : null;
     }
+
+    /// <summary>
+    /// The HP at or below which it gives its Strength: RedSkull.ModifyStrengthIfNecessary's owner is above it while CurrentHp &gt; MaxHp × HpThreshold / 100, on
+    /// their max HP as it stands, so a max HP lost or gained in the simulation (Brightest Flame, Paper Cuts) moves it; from its HpThreshold value (the
+    /// adapter reads every relic's values), the whole HP below it (HP is whole). Without that value (a test's, an older report's) or a max HP known, the HP
+    /// the adapter worked it out to (its amount).
+    /// </summary>
+    private int Threshold(SimState state, int owner, SimPlayer player) =>
+        player.MaxHp != int.MaxValue && SimEngine.VarValue(state, owner, Name, "HpThreshold", fallback: -1m) is var percent and >= 0m
+            ? (int)Math.Floor(player.MaxHp * percent / 100m)
+            : SimEngine.RelicsOf(state, owner)[ThisRelic];
 
     /// <summary>
     /// RedSkull.AfterCurrentHpChanged (ModifyStrengthIfNecessary): HP lost to its threshold or below (amount) gives its Strength at once,
@@ -83,7 +94,7 @@ public sealed class RedSkull : SimModel
     {
         if (hit.Target != owner || hit.Unblocked <= 0 || !Who.IsPlayer(owner) || state.Player(owner) is not { } player || player.Hp == int.MaxValue) return;
         var relics = SimEngine.RelicsOf(state, owner);
-        if (relics.DataOf(ThisRelic) != 0 || player.Hp > relics[ThisRelic]) return;
+        if (relics.DataOf(ThisRelic) != 0 || player.Hp > Threshold(state, owner, player)) return;
         SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], StrengthGiven));
         SimEngine.ApplyInHit(state, owner, owner, PowerId.Strength, SimEngine.Var(state, owner, Name, "StrengthPower", fallback: 3), debuff: false);
     }
@@ -97,7 +108,7 @@ public sealed class RedSkull : SimModel
     {
         if (!Who.IsPlayer(owner) || state.Player(owner) is not { } player || player.Hp == int.MaxValue) return;
         var relics = SimEngine.RelicsOf(state, owner);
-        var above = player.Hp > relics[ThisRelic];
+        var above = player.Hp > Threshold(state, owner, player);
         var given = relics.DataOf(ThisRelic) != 0;
         if (above == given)
         {

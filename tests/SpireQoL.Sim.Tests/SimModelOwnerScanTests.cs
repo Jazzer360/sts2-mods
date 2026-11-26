@@ -20,6 +20,7 @@ public class SimModelOwnerScanTests
         ["play.Owner != Who.You"] = "Withering Presence counts its Target's cards; the adapter loads only the one aimed at you (SimReaders.Powers)",
         ["if (owner != Who.You) return null;"] = "a tab judged on how your turn ends, on your cards: your relic's or power's (as before the rules moved to the models; a teammate's shows on their Incoming Damage)",
         ["var hp = start.You.Hp;"] = "Red Skull's outcome tab is yours only (the line before returns for anyone else): your HP",
+        ["var threshold = Threshold(start, owner, start.You);"] = "Red Skull's outcome tab is yours only: its threshold on your max HP",
         // The read models (Sim/Programs/ReadModel.cs): every class read from its code runs through it.
         ["Owner = Who.You, Hook = HookName.OnPlay, Card = card"] = "an enchantment's OnPlay draws counted outside a simulation (the Return tags' hand size): the card in your hand, yours",
         ["HookOutcome.KillsOne => owner == Who.You ||"] = "a tab judged on how your turn ends, on your cards: yours, or any player's whose death code rewards each player on its side (Compost: decision #277)",

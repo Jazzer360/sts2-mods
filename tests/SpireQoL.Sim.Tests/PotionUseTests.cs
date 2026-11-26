@@ -300,6 +300,37 @@ public class PotionUseTests
     }
 
     [Fact]
+    public void RedSkullsThresholdIsWorkedOutOnTheMaxHpAsItStands()
+    {
+        // RedSkull.ModifyStrengthIfNecessary: above it while CurrentHp > MaxHp × HpThreshold / 100, on the max HP then. Fruit Juice's 5 max HP takes you to
+        // 27 of 55: not above 27.5, so its Strength stays (the threshold read as 25 HP at 50 max HP would have taken it back).
+        var state = WithRedSkull(hp: 22);
+        state.You.MaxHp = 50;
+        state.Vars[$"{Who.You}:RedSkull:HpThreshold"] = 50;
+        SimEngine.ApplyPlayTo(state, Potion("FruitJuice", Who.You, new GainMaxHpAction(Amount: 5)), out var raised, out _);
+        var branch = Assert.Single(raised);
+        Assert.Equal(27, branch.You.Hp);
+        Assert.Equal(3, branch.You.Powers[PowerId.Strength]);
+    }
+
+    [Fact]
+    public void AnOstyHealTellsTheHooksAsAPlayersDoes()
+    {
+        // CreatureCmd.Heal of Osty ends with Hook.AfterCurrentHpChanged (his gain): Red Skull asks its owner's HP on any creature's change, so with its
+        // Strength given and you above its threshold it takes the Strength back.
+        var state = WithRedSkull(hp: 30);
+        state.You.Relics = state.You.Relics.With(RelicId.RedSkull, amount: 25, data: Models.RedSkull.StrengthGiven);
+        state.You.Powers = state.You.Powers.With(PowerId.Strength, amount: 3);
+        state.You.OstyShields = true;
+        state.You.OstyHp = 4;
+        state.You.OstyMaxHp = 10;
+        SimEngine.ApplyPlayTo(state, Potion("BloodPotion", Who.You, new HealAction(Amount: 3) { Osty = true }), out var healed, out _);
+        var branch = Assert.Single(healed);
+        Assert.Equal(7, branch.You.OstyHp);
+        Assert.Equal(0, branch.You.Powers[PowerId.Strength]);
+    }
+
+    [Fact]
     public void MaxHpGainedRaisesTheMaxThenHealsAsMuch()
     {
         // Fruit Juice: CreatureCmd.GainMaxHp(target, MaxHp): SetMaxHp(MaxHp + 5), then Heal of what it went up by.

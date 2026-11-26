@@ -328,11 +328,21 @@ public static partial class SimEngine
             if (player.Died || player.Hp == int.MaxValue) return;
             var healed = state.MutablePlayer(creature);
             healed.Hp = (int)Math.Min(healed.MaxHp, (long)healed.Hp + amount);
-            foreach (var (model, owner) in Listeners(state))
-                if (model.Overrides(nameof(SimModel.AfterCurrentHpChanged))) model.AfterCurrentHpChanged(state, owner, creature, amount);
+            TellHealed(state, creature, amount);
             return;
         }
         if (state.Enemy(creature) is { Alive: true }) state.Unmodelled ??= "an enemy's heal (its max HP isn't read)";
+    }
+
+    /// <summary>
+    /// Hook.AfterCurrentHpChanged as CreatureCmd.Heal tells it: <paramref name="creature"/> healed by <paramref name="amount"/> (above 0), the amount asked
+    /// however much it healed, to every listener (decision #342): a player's heal, and Osty's (his heal and a summon's: Red Skull asks its owner's HP on any
+    /// creature's change).
+    /// </summary>
+    internal static void TellHealed(SimState state, int creature, int amount)
+    {
+        foreach (var (model, owner) in Listeners(state))
+            if (model.Overrides(nameof(SimModel.AfterCurrentHpChanged))) model.AfterCurrentHpChanged(state, owner, creature, amount);
     }
 
     /// <summary>A power's amount down by one, gone at 0 (PowerCmd.Decrement: PowerCmd.ModifyAmount, then PowerCmd.Remove once ShouldRemoveDueToAmount).</summary>

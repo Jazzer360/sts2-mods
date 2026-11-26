@@ -96,7 +96,7 @@ An enemy's next move, rolled as your next turn starts, from its move rules on a 
   simulator: SimEngine.NextMoveAttacks
 A heal: up to max HP
   game: CreatureCmd.Heal, Creature.HealInternal
-  simulator: SimEngine.Heal
+  simulator: SimEngine.Heal, SimEngine.TellHealed
 The fight's log: what each event adds, the counts the questions to it read
   game: CombatHistory.Add
   simulator: SimEngine.Record, SimEngine.HistoryCount, SimEngine.RecordCardEvent, SimEngine.RecordPlay, SimEngine.DrawnType, SimEngine.RecordDamageReceived, SimEngine.TurnCountsStartOver
