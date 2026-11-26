@@ -112,4 +112,15 @@ public class ShotTests
         Assert.Equal(39, one.Enemy(id: 0)!.Hp);
         Assert.Equal(1, one.Enemy(id: 0)!.Powers[PowerId.Impaled]);
     }
+
+    [Fact]
+    public void AnArrowSlotGainedHasItsArrowToShoot()
+    {
+        // Quiver (ArrowCmd.GainArrowSlot: PlayerCombatState.GainArrow adds an ArrowSlot, Retrieved as it starts, so AvailableArrowCount counts it), then a
+        // shot in the same simulation finds one of the two arrows.
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 50) } };
+        var after = Assert.Single(After(state, Play(Card("Quiver", SimCardType.Power), target: 0, plays: 1, new GainArrowSlotsAction(Count: 2), new ShootAction(),
+            Attack(baseDamage: 6) with { NeedsArrow = true }, new ImpaleAction())));
+        Assert.Equal(1, after.You.Arrows);
+    }
 }

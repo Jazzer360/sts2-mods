@@ -29,6 +29,7 @@ public class FightEndTests
         ["ArrowCmd.ImpaleTarget"] = "PowerCmd.Apply of Impaled (guarded) and Hook.AfterArrowImpaled (a combat hook)",
         ["ArrowCmd.DislodgeArrow"] = "Hook.AfterArrowDislodged (a combat hook: Twine and Yah hear nothing once the fight is ending) and the arrow back to you, which matters to nothing after the fight",
         ["CardCmd.ApplyKeyword"] = "a keyword on a card in hand (Ethereal: it exhausts as the turn ends): no turn end follows a fight that's over",
+        ["ArrowCmd.GainArrowSlot"] = "an arrow slot for the fight: nothing reads it once the fight is over",
         ["CardCmd.Enchant"] = "an enchantment on a card the play makes, acting on that card's play: no play follows a fight that's over",
         ["CardCmd.ApplySingleTurnSly"] = "Sly on a card for the turn: a discard of it, which it changes, doesn't follow a fight that's over",
         ["CardCmd.ApplySingleTurnRetain"] = "Retain on a card for the turn: nothing it changes (the flush as the turn ends) follows a fight that's over",

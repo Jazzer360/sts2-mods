@@ -268,6 +268,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Sculpting Strike, Snap and Hand Trick are predicted instead of showing `?`: the card Sculpting Strike makes Ethereal exhausts as your turn ends (what reacts to an exhaust counts it), and the Retain or Sly the others give changes nothing before the turn is over.
 - Blade of Ink is predicted instead of showing `?`: the Inky on the Shivs it makes acts when a Shiv is played.
 - Darkness is predicted instead of showing `?`: each Dark orb's passive it sets off grows that orb's evoke, so a Dark orb evoked later in the turn deals what it would.
+- Quiver is predicted instead of showing `?`: each arrow slot it gives has its arrow ready to shoot.
 
 #### Removed
 - Biiig Hug's tag and its settings row: the Soot it adds on a shuffle never makes a shuffle worth avoiding. The Soot is still worked out (a later draw can find it, and your relics and powers that react to a card you make hear it).

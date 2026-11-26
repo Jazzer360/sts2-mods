@@ -76,6 +76,7 @@ public static partial class SimAdapter
         ["ArrowCmd.ShootArrowAtTarget"] = "ShootAction, the attack it's given (needing the arrow), ImpaleAction",
         ["ArrowCmd.TryShootArrow"] = "ShootAction",
         ["ArrowCmd.ImpaleTarget"] = "what its delegate runs, then ImpaleAction",
+        ["ArrowCmd.GainArrowSlot"] = "GainArrowSlotsAction: an arrow slot for the card's owner, with its arrow there, each round of its loop",
         ["ArrowCmd.DislodgeArrow"] = "DislodgeAllAction (the loop around it pulls every arrow of yours out)",
         [nameof(PoisonPower) + ".Trigger"] = "ModelCommandAction: the power's own command on each enemy's instance of it, as its code runs it (ModelSpec.Commands)",
     };
@@ -88,7 +89,6 @@ public static partial class SimAdapter
     internal static readonly IReadOnlyDictionary<string, string> CommandsNotTranslated = new Dictionary<string, string>
     {
         ["CardCmd.AutoPlay"] = "a card in hand or a pile played by the card: that play isn't followed",
-        ["ArrowCmd.GainArrowSlot"] = "an arrow slot gained: not followed",
         ["PotionCmd.TryToProcure"] = "a potion procured: what reacts to it (AfterPotionProcured) isn't followed",
         ["PlayerCmd.GainGold"] = "gold gained: what reacts to it (AfterGoldGained) isn't followed",
     };
@@ -388,6 +388,8 @@ public static partial class SimAdapter
                 actions.Add(new ImpaleAction());
                 return (actions, null);
             }
+            case ("ArrowCmd", "GainArrowSlot"):
+                return RoundsOf(found, play) is var slots and > 0 ? (new List<SimAction> { new GainArrowSlotsAction(slots) }, null) : none;
             case ("ArrowCmd", "DislodgeArrow"):
                 return (new List<SimAction> { new DislodgeAllAction() }, null);
             // A block only for the card its draw gave (Escape Plan's Skill): the draw's action asks it (UseDrawnCard moves the block into it).
@@ -510,6 +512,7 @@ public static partial class SimAdapter
         ["CardCmd.ApplySingleTurnSly"] = "Sly given for the turn to a card other than one you pick: not followed",
         ["CardCmd.ApplySingleTurnRetain"] = "Retain given for the turn to a card other than one you pick or the play drew: not followed",
         ["CardCmd.Enchant"] = "an enchantment given to a card other than one the play makes: not followed",
+        ["ArrowCmd.GainArrowSlot"] = "an arrow slot gained by a player other than the card's owner: not followed",
         ["OrbCmd.Passive"] = "an orb's passive set off at a creature, or of an orb other than each of yours of a class: not followed",
         ["CreatureCmd.Kill"] = "a creature other than your Osty killed: not followed",
         ["CreatureCmd.SetCurrentHp"] = "the HP of a creature other than the card's target set: not followed",
@@ -534,6 +537,7 @@ public static partial class SimAdapter
             "CardCmd.Upgrade" => UpgradeTargetOf(command, program) != null,
             "CardCmd.Enchant" => EnchantsMadeCard(command, program),
             "OrbCmd.Passive" => PassivesOrbOf(command, program) != null,
+            "ArrowCmd.GainArrowSlot" => IsOwnerPlayer(ValueAt(command, 0)),
             "CardCmd.ApplyKeyword" or "CardCmd.ApplySingleTurnSly" or "CardCmd.ApplySingleTurnRetain" => KeywordGivenOf(command, program) != null,
             "PlayerCmd.GainStars" => Argument(command, 1) is "Owner" or "cardPlay.Target.Player",
             "PowerCmd.Remove" => RemovesTargetsArtifact(command, program) || command.Command.GenericArguments.Count == 1 && IsYou(ValueAt(command, 0)),

@@ -1280,6 +1280,9 @@ public static partial class SimEngine
             case TriggerPoisonAction: branches.Each(branch => RunModelCommand(branch, PowerId.Poison.Name, "Trigger")); break;
             case KillOstyAction: branches.Do(branch => OstyLoses(branch, Who.You, branch.You.OstyHp)); break;
             case OrbPassiveAction orbPassiveAction: RunOrbPassive(branches, orbPassiveAction); break;
+            case GainArrowSlotsAction gainArrowSlotsAction:
+                branches.Do(branch => { if (branch.Player(branch.CurrentPlay?.Owner ?? Who.You) != null) branch.MutablePlayer(branch.CurrentPlay?.Owner ?? Who.You).Arrows += gainArrowSlotsAction.Count; });
+                break;
             case EtherealInHandAction: branches.Do(branch => EtherealInHand(branch, branch.CurrentPlay?.Owner ?? Who.You)); break;
             case UpgradeCardsAction upgradeCardsAction: branches.Do(branch => UpgradeCards(branch, branch.CurrentPlay?.Owner ?? Who.You, upgradeCardsAction.Piles, upgradeCardsAction.Source)); break;
             case SummonAction summonAction: RunSummon(branches, summonAction); break;

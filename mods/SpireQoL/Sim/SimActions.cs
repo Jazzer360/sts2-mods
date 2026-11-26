@@ -529,6 +529,12 @@ public sealed record UpgradeCardsAction(UpgradedPiles Piles, string Source) : Si
 /// </summary>
 public sealed record EtherealInHandAction : SimAction;
 
+/// <summary>
+/// ArrowCmd.GainArrowSlot of the play's owner, <paramref name="Count"/> times (Quiver's): PlayerCombatState.GainArrow adds a slot whose arrow is there to
+/// shoot (a new ArrowSlot starts Retrieved: AvailableArrowCount counts it), so one more arrow each (SimPlayer.Arrows). No hook runs.
+/// </summary>
+public sealed record GainArrowSlotsAction(int Count) : SimAction;
+
 /// <summary>Your Osty dies (CreatureCmd.Kill: Sacrifice, Bone Shards), losing all his HP (Necro Mastery reacts).</summary>
 public sealed record KillOstyAction : SimAction;
 

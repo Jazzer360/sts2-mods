@@ -2878,12 +2878,12 @@ Quietus [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 [Exhausted1]
 Quietus [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Exhausted1]
 Quietus [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted1]
 Quietus [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 [Exhausted1]
-Quiver [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [] ?ArrowCmd.GainArrowSlot: an arrow slot gained: not followed
-Quiver [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [] ?ArrowCmd.GainArrowSlot: an arrow slot gained: not followed
-Quiver [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 [] ?ArrowCmd.GainArrowSlot: an arrow slot gained: not followed
-Quiver [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [] ?ArrowCmd.GainArrowSlot: an arrow slot gained: not followed
-Quiver [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [] ?ArrowCmd.GainArrowSlot: an arrow slot gained: not followed
-Quiver [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 [] ?ArrowCmd.GainArrowSlot: an arrow slot gained: not followed
+Quiver [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
+Quiver [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
+Quiver [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 []
+Quiver [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
+Quiver [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 []
+Quiver [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 []
 Radiate [Standard] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 []
 Radiate [Upgraded] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 []
 Radiate [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=200/0 enemy1=30/0 []
