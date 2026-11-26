@@ -54,8 +54,8 @@ FocusPotion [teammate]: FocusPower 2 on teammate
 Fortifier [you]: block 0 Unpowered to you
 Fortifier [teammate]: block 0 Unpowered to teammate
 FoulPotion [no one]: ? FoulPotion: damage to a creature the simulator doesn't name (Where(this.Owner.Creature.CombatState.Creatures, c => c.IsPet == 0))
-FruitJuice [you]: ? CreatureCmd.GainMaxHp: max HP gained: not followed
-FruitJuice [teammate]: ? CreatureCmd.GainMaxHp: max HP gained: not followed
+FruitJuice [you]: GainMaxHpAction { Amount = 5, Player =  }
+FruitJuice [teammate]: GainMaxHpAction { Amount = 5, Player = -2 }
 FyshOil [you]: StrengthPower 1 on You; DexterityPower 1 on You
 FyshOil [teammate]: StrengthPower 1 on teammate; DexterityPower 1 on teammate
 GamblersBrew [you]: TakeFromHandAction { Way = Pick, Event = Discarded, Made = , EventIfNot = , Most = 999999999, Filter = , Matching = 0, Leaves = True, FromDrawPile = False, EachCard = SpireQoL.Sim.SimAction[] }; Drawn 0

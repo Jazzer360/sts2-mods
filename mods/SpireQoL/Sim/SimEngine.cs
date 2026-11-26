@@ -1281,6 +1281,7 @@ public static partial class SimEngine
             case KillOstyAction: branches.Do(branch => OstyLoses(branch, Who.You, branch.You.OstyHp)); break;
             case SummonAction summonAction: RunSummon(branches, summonAction); break;
             case HealAction healAction: RunHeal(branches, healAction); break;
+            case GainMaxHpAction gainMaxHpAction: RunGainMaxHp(branches, gainMaxHpAction); break;
             case CardPlayAction cardPlayAction: RunCardPlay(branches, cardPlayAction); break;
             case PotionUseAction potionUseAction: RunPotionUse(branches, potionUseAction); break;
             case AttackAction at: RunAttack(branches, at); break;

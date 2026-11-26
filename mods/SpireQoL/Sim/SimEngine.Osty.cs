@@ -126,6 +126,23 @@ public static partial class SimEngine
         else Heal(branch, player, heal.Amount);
     });
 
+    private static void RunGainMaxHp(BranchSet branches, GainMaxHpAction gainMaxHp) => branches.Do(branch =>
+        GainMaxHp(branch, gainMaxHp.Player ?? branch.CurrentPlay?.Owner ?? Who.You, gainMaxHp.Amount));
+
+    /// <summary>
+    /// CreatureCmd.GainMaxHp of a player: SetMaxHp(MaxHp + amount) (Creature.SetMaxHpInternal, at most 999999999), then CreatureCmd.Heal of what
+    /// it went up by, up to the new max (SimEngine.Heal). A projection follows no one's HP (decision #308); a player whose max HP the simulator
+    /// doesn't keep (int.MaxValue: none read) or who died changes nothing.
+    /// </summary>
+    public static void GainMaxHp(SimState state, int player, int amount)
+    {
+        if (amount <= 0 || state.Forecasting || state.Player(player) is not { Died: false } gainer || gainer.MaxHp == int.MaxValue) return;
+        var raised = state.MutablePlayer(player);
+        var before = raised.MaxHp;
+        raised.MaxHp = (int)Math.Min(999999999L, (long)raised.MaxHp + amount);
+        Heal(state, player, raised.MaxHp - before);
+    }
+
     private static void RunDamage(BranchSet branches, DamageAction damageAction) => branches.Each(branch =>
     {
         // Its targets: every hittable enemy as the command starts (CreatureCmd.Damage of a list: each in turn, the dead skipped, the deaths after

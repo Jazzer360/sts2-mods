@@ -230,6 +230,8 @@ public sealed partial class ProcAudit
             if (predicted != actual) differences.Add($"{what} {what}: predicted {predicted}, actual {actual}");
         }
         Cmp("your block", player.Block, simPlayer.Block);
+        // Max HP a play or a potion raises (CreatureCmd.GainMaxHp: Feed, Fruit Juice, decision #335).
+        Cmp("your max HP", player.MaxHp, simPlayer.MaxHp);
         // What it took from your hand and gave it (the room later draws have; Cloak Clasp, Regret at the end of the turn).
         Cmp("cards in hand", player.HandCount, simPlayer.HandCount);
         if (drawn is { } drawnCount) Cmp("cards drawn", player.Drawn - startP.Drawn, drawnCount);

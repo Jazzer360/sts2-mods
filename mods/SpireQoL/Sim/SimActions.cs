@@ -506,3 +506,13 @@ public sealed record HealAction(int Amount) : SimAction
     /// <summary>The player healed (a potion thrown at a teammate: decision #335); null: the play's player.</summary>
     public int? Player { get; init; }
 }
+
+/// <summary>
+/// CreatureCmd.GainMaxHp of <paramref name="Amount"/> on a player (Feed, Fruit Juice): their max HP up by it (CreatureCmd.SetMaxHp), then a heal of
+/// what it went up by (CreatureCmd.Heal), as SimEngine.GainMaxHp runs it.
+/// </summary>
+public sealed record GainMaxHpAction(int Amount) : SimAction
+{
+    /// <summary>The player who gains it (a potion thrown at a teammate); null: the play's player.</summary>
+    public int? Player { get; init; }
+}

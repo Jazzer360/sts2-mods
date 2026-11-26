@@ -250,6 +250,45 @@ public class PotionUseTests
     }
 
     [Fact]
+    public void MaxHpGainedRaisesTheMaxThenHealsAsMuch()
+    {
+        // Fruit Juice: CreatureCmd.GainMaxHp(target, MaxHp): SetMaxHp(MaxHp + 5), then Heal of what it went up by.
+        var state = Fight();
+        state.You.Hp = 30;
+        SimEngine.ApplyPlayTo(state, Potion("FruitJuice", Who.You, new GainMaxHpAction(Amount: 5)), out var after, out _);
+        var branch = Assert.Single(after);
+        Assert.Equal(55, branch.You.MaxHp);
+        Assert.Equal(35, branch.You.Hp);
+        Assert.Null(branch.Unmodelled);
+    }
+
+    [Fact]
+    public void MaxHpGainedByATeammateIsTheirs()
+    {
+        var state = Fight();
+        state.Teammates.Add(new SimPlayer { Hp = 40, MaxHp = 40 });
+        var juice = Potion("FruitJuice", Who.Teammate(teammateIndex: 0), new GainMaxHpAction(Amount: 5) { Player = Who.Teammate(teammateIndex: 0) });
+        SimEngine.ApplyPlayTo(state, juice, out var after, out _);
+        var branch = Assert.Single(after);
+        Assert.Equal(45, branch.Teammates[0].MaxHp);
+        Assert.Equal(45, branch.Teammates[0].Hp);
+        Assert.Equal(50, branch.You.MaxHp);
+    }
+
+    [Fact]
+    public void MaxHpGainedWithNoneReadChangesNothing()
+    {
+        // A player whose max HP the simulator doesn't keep (none read: int.MaxValue) gains none, and isn't healed past what's kept.
+        var state = Fight();
+        state.You.MaxHp = int.MaxValue;
+        state.You.Hp = 30;
+        SimEngine.ApplyPlayTo(state, Potion("FruitJuice", Who.You, new GainMaxHpAction(Amount: 5)), out var after, out _);
+        var branch = Assert.Single(after);
+        Assert.Equal(int.MaxValue, branch.You.MaxHp);
+        Assert.Equal(30, branch.You.Hp);
+    }
+
+    [Fact]
     public void APotionPlaysNoCard()
     {
         // Nothing of a card play's runs: your hand keeps its size, no card play is counted.

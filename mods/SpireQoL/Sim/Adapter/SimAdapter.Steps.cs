@@ -38,6 +38,7 @@ public static partial class SimAdapter
         ["Hook.AfterDiedToDoom"] = "KillEachAction's tell: the listeners told the list its kill went over (DoomPower.DoomKill, after its foreach)",
         ["OstyCmd.Summon"] = "SummonAction: its amount for the player its second argument names (you, or each player its loop goes over), as OstyCmd.Summon runs (SimEngine.Summon)",
         ["CreatureCmd.Heal"] = "HealAction: its amount on you, your Osty or the player it's aimed at, up to max HP",
+        ["CreatureCmd.GainMaxHp"] = "GainMaxHpAction: its amount on you or the player it's aimed at, their max HP raised, then healed by it",
         ["CreatureCmd.SetCurrentHp"] = "ExecuteAction (the target, on its condition)",
         ["CreatureCmd.Stun"] = "StunTargetAction (the target: its next move the stunned move)",
         ["CreatureCmd.LoseBlock"] = "StripBlockAction (the target's block, and its Artifact when the play removes it)",
@@ -86,7 +87,6 @@ public static partial class SimAdapter
         ["CardCmd.ApplySingleTurnRetain"] = "Retain given to a card this turn: not followed",
         ["CardCmd.Enchant"] = "an enchantment given to a card: not followed",
         ["OrbCmd.Passive"] = "an orb's passive set off by a card: not followed",
-        ["CreatureCmd.GainMaxHp"] = "max HP gained: not followed",
         ["CreatureCmd.LoseMaxHp"] = "max HP lost: not followed",
         ["ArrowCmd.GainArrowSlot"] = "an arrow slot gained: not followed",
         ["PotionCmd.TryToProcure"] = "a potion procured: what reacts to it (AfterPotionProcured) isn't followed",
@@ -401,6 +401,8 @@ public static partial class SimAdapter
                 return (new List<SimAction> { new KillOstyAction() }, null);
             case ("OstyCmd", "Summon"):
                 return (SummonsFrom(found, play), null);
+            case ("CreatureCmd", "GainMaxHp"):
+                return (MaxHpFrom(found, play), null);
             case ("CreatureCmd", "Heal"):
                 return (HealsFrom(found, play), null);
             case ("CreatureCmd", "SetCurrentHp"):
@@ -1491,6 +1493,20 @@ public static partial class SimAdapter
         if (IsTarget(ValueAt(command, 0)) && play.AimsAtPlayer)
             return Who.IsPlayer(play.AllyId) ? new List<SimAction> { new HealAction(amount) { Player = play.AllyId == Who.You ? null : play.AllyId } } : new List<SimAction>();
         return new List<SimAction> { new NotModelledAction($"{play.Name} heals a creature its translation doesn't name ({ValueAt(command, 0)})") };
+    }
+
+    /// <summary>
+    /// CreatureCmd.GainMaxHp(creature, amount): its amount (its second argument on the board) on you (Feed), or the player it's aimed at (Fruit Juice
+    /// used on you or thrown at a teammate); anyone else's max HP isn't kept (unknown where it runs).
+    /// </summary>
+    private static List<SimAction> MaxHpFrom(CardEffects.Found found, StepPlay play)
+    {
+        var command = found.Command;
+        var amount = Number(play, ValueAt(command, 1), Sts2State.Var(play.Model, "MaxHp"));
+        if (IsYou(ValueAt(command, 0))) return new List<SimAction> { new GainMaxHpAction(amount) };
+        if (IsTarget(ValueAt(command, 0)) && play.AimsAtPlayer)
+            return Who.IsPlayer(play.AllyId) ? new List<SimAction> { new GainMaxHpAction(amount) { Player = play.AllyId == Who.You ? null : play.AllyId } } : new List<SimAction>();
+        return new List<SimAction> { new NotModelledAction($"{play.Name} raises the max HP of a creature its translation doesn't name ({ValueAt(command, 0)})") };
     }
 
     // ---------------------------------------------------------------- orbs
