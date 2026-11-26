@@ -1809,6 +1809,8 @@ public sealed class ReadModel : SimModel
                         case HookTarget.PowerOwner or HookTarget.HitTarget or HookTarget.Added: return SimEngine.ApplyAndTell(state, applier, args.Target, power, given, debuff);
                         // The player who played the card (cardPlay.Card.Owner.Creature: Vital Spark's Tainted on whoever plays a Tainted card).
                         case HookTarget.PlayOwner: return args.Play is { } played ? SimEngine.ApplyAndTell(state, applier, played.Owner, power, given, debuff) : One(state);
+                        // A loop's creature (the item each round: Tank's Guarded on each other living player of its side).
+                        case HookTarget.Each: return SimEngine.ApplyAndTell(state, applier, args.Each, power, given, debuff);
                         // Every hittable enemy as the command starts; or every living one, hittable or not (a player's model's living opponents:
                         // Brimstone's), each as the lazy filter reaches it.
                         case HookTarget.AllEnemies or HookTarget.LivingOpponents:

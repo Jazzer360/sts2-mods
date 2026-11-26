@@ -105,6 +105,7 @@ written when checked off: the record of how each was done. What's open stays in 
 - [x] Possess Strength and Possess Speed (decision #326): hand-written models; what each took from each player kept in its holder's fields (read from its own data by creature: `SimModel.OwnData`), given back as its owner dies, mid-play included.
 - [x] Paper Cuts' max HP loss (decision #327): `CreatureCmd.LoseMaxHp` of a player translated (`LoseMaxHpStep`, `SimEngine.LoseMaxHp`): HP above the new max lost first as a damage, then the max set.
 - [x] Dampen's last caster dying (decision #328): a hand-written model takes it off you; with any card it downgraded, what follows is unknown where it happens.
+- [x] Tank (decision #329): read from its code: a hook's unfiltered loop over its owner's side and a power on the loop's creature are read, so a card that gives Tank carries it (Guarded on the other living players, 1.5 on powered attacks on you).
 
 ## 15. Out-of-combat reminders (Reward Tags, Event Reminders, Shop Reminders, Map Reminders: `reward-tags`, `event-reminders`, `shop-reminders`, `map-reminders`; Run Reminders until decision #185; goal 3 in ROADMAP)
 - [x] 0.36.0: card reward panel (Bing Bong, Book of Five Rings, Lucky Fysh, Pael's Wing) and event option icons (cards, curses, HP loss, gold, potions, resting), read from each option's code; the event-option check; `docs/RELICS.md` generated with every relic.

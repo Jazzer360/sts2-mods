@@ -40582,6 +40582,149 @@
     "HelpsOwner": false
   },
   {
+    "Name": "TankPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterApplied",
+        "Steps": [
+          {
+            "$kind": "ForEachStep",
+            "Over": "Teammates",
+            "Steps": [
+              {
+                "$kind": "ApplyPowerStep",
+                "Power": "GuardedPower",
+                "Target": "Each",
+                "Amount": {
+                  "$kind": "HookFactValue",
+                  "Fact": "Amount"
+                },
+                "GoesAtZero": false,
+                "Debuff": false,
+                "When": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterApplied\u003Ed__10.MoveNext:0048",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureAlive",
+                        "Creature": {
+                          "Who": "Each",
+                          "PetOwner": false
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterApplied\u003Ed__10.MoveNext:0053",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CreatureIsPlayer",
+                        "Creature": {
+                          "Who": "Each",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "\u003CAfterApplied\u003Ed__10.MoveNext:005C",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "SameCreature",
+                        "Creature": {
+                          "Who": "Each",
+                          "PetOwner": false
+                        },
+                        "Other": {
+                          "Who": "Owner",
+                          "PetOwner": false
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "Hook": "AfterRemoved",
+        "Steps": [
+          {
+            "$kind": "UnknownStep",
+            "Why": "TankPower\u0027s AfterRemoved isn\u0027t read (gap: a loop)"
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyDamageMultiplicative",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "TankPower.ModifyDamageMultiplicative:0007",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "TankPower.ModifyDamageMultiplicative:0015",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PoweredAttack"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookVar",
+                "Key": "DamageIncrease",
+                "Canonical": 1.5
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "TenderPower",
     "Kind": "Power",
     "Hooks": [
@@ -43117,11 +43260,80 @@
         "Hook": "BeforeSideTurnStart",
         "Steps": [
           {
-            "$kind": "UnknownStep",
-            "Why": "TwistedFunnel\u0027s BeforeSideTurnStart isn\u0027t read (gap: PoisonPower on each)",
+            "$kind": "FlashStep",
             "When": {
-              "$kind": "HookFactValue",
-              "Fact": "TakesPart"
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnStart\u003Ed__6.MoveNext:0031",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnStart\u003Ed__6.MoveNext:0049",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TurnNumber"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ForEachStep",
+            "Over": "HittableEnemies",
+            "Steps": [
+              {
+                "$kind": "ApplyPowerStep",
+                "Power": "PoisonPower",
+                "Target": "Each",
+                "Amount": {
+                  "$kind": "HookVar",
+                  "Key": "PoisonPower",
+                  "Canonical": 4
+                },
+                "GoesAtZero": false,
+                "Debuff": true
+              }
+            ],
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnStart\u003Ed__6.MoveNext:0031",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "TakesPart"
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeSideTurnStart\u003Ed__6.MoveNext:0049",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TurnNumber"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 1
+                  }
+                }
+              }
             }
           }
         ]

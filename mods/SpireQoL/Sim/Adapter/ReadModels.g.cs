@@ -300,6 +300,7 @@ public static partial class ReadModels
         RelicId.SymbioticVirus.Name,
         nameof(MegaCrit.Sts2.Core.Models.Afflictions.Tainted),
         PowerId.Tainted.Name,
+        PowerId.Tank.Name,
         PowerId.Tender.Name,
         PowerId.Territorial.Name,
         RelicId.TheAbacus.Name,

@@ -224,7 +224,7 @@ power SwordSagePower: AfterCardEnteredCombat: gap: the simulator runs no read mo
 power TagTeamPower: AfterModifyingCardPlayCount: read | ModifyCardPlayCount: gap: the value card.Owner.Creature
 power TaintedPower: AfterSideTurnEnd: read | ModifyDamageAdditive: read
 power TangledPower: AfterApplied: gap: a loop | AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterRemoved: unknown where it runs: gap: a loop | AfterSideTurnEnd: read | TryModifyEnergyCostInCombat: gap: the simulator runs no read model's TryModifyEnergyCostInCombat
-power TankPower: AfterApplied: gap: a loop | AfterRemoved: unknown where it runs: gap: a loop | ModifyDamageMultiplicative: read
+power TankPower: AfterApplied: read | AfterRemoved: unknown where it runs: gap: a loop | ModifyDamageMultiplicative: read
 power TenderPower: AfterCardPlayed: read | AfterSideTurnEnd: read
 power TerritorialPower: AfterSideTurnEnd: read
 power TheBombPower: BeforeSideTurnEnd: read
@@ -409,7 +409,7 @@ relic ToughBandages: AfterCardDiscarded: read
 relic TungstenRod: AfterModifyingHpLostAfterOsty: read | ModifyHpLostAfterOsty: read
 relic TuningFork: AfterCardPlayed: read
 relic Twine: AfterArrowDislodged: read
-relic TwistedFunnel: BeforeSideTurnStart: unknown where it runs: gap: PoisonPower on each
+relic TwistedFunnel: BeforeSideTurnStart: read
 relic UnceasingTop: AfterHandEmptied: gap: the simulator runs no read model's AfterHandEmptied
 relic UnsettlingLamp: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeCombatStart: not run: before the fight: the state is read after it | BeforePowerAmountChanged: gap: the simulator runs no read model's BeforePowerAmountChanged | ModifyPowerAmountGivenMultiplicative: gap: the value cardSource
 relic Vambrace: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingBlockAmount: read | BeforeCombatStart: not run: before the fight: the state is read after it | ModifyBlockMultiplicative: read

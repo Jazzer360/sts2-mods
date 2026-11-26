@@ -2282,7 +2282,7 @@ public static class HookReader
                         : values[applierAt] is NullValue ? new HookCreature(HookWho.NoOne)
                         : throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: {power} applied by someone else");
                     var amount = Value(values[amountAt]);
-                    if (Targets(values[targetAt]) is not (HookTarget.Owner or HookTarget.PowerOwner or HookTarget.AllEnemies or HookTarget.HitTarget or HookTarget.PlayTarget or HookTarget.PlayOwner or HookTarget.LivingOpponents or HookTarget.Added)) throw new Gap(Other(values[targetAt]), $"gap: {power} on {values[targetAt]}");
+                    if (Targets(values[targetAt]) is not (HookTarget.Owner or HookTarget.PowerOwner or HookTarget.AllEnemies or HookTarget.HitTarget or HookTarget.PlayTarget or HookTarget.PlayOwner or HookTarget.LivingOpponents or HookTarget.Added or HookTarget.Each)) throw new Gap(Other(values[targetAt]), $"gap: {power} on {values[targetAt]}");
                     // A temporary Strength or Dexterity power (Helical Dart's) lands as the Strength or Dexterity its BeforeApplied applies, by its sign
                     // (TemporaryStrengthPower, TemporaryDexterityPower: IsPositive), as the card programs land it (SimAdapter.PowersFrom).
                     if (TemporaryOf(power) is { } underlying)
@@ -4040,6 +4040,8 @@ public static class HookReader
         /// <summary>What a foreach of the code goes over: the fight's players (CombatState.Players), its hittable enemies; null for anything else.</summary>
         private HookItems? ItemsOf(ProgramValue items) =>
             Unstored(items) is QueryValue { Name: "Players", Of: QueryValue { Name: "CombatState" } } ? HookItems.Players
+            // The owner's side, unfiltered (foreach over CombatState.GetTeammatesOf(base.Owner): Tank's teammates given Guarded).
+            : Unstored(items) is QueryValue { Name: "GetTeammatesOf", Arguments: [var whose] } && IsOwner(whose) ? HookItems.Teammates
             : IsHittableEnemies(items) ? HookItems.HittableEnemies : null;
 
         /// <summary>
