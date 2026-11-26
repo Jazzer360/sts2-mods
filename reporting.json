@@ -1,7 +1,7 @@
 {
   "comment": "The oldest mod version whose error reports are still wanted, per mod id (decisions #79, #81). Builds older than this stop sending, and the Sentry mirror drops what older builds sent. Raise it to the release that rewrote the code old reports are about; no mod release needed.",
   "oldestReported": {
-    "SpireQoL": "1.0.0"
+    "SpireQoL": "2.0.0"
   },
   "gameplayModsComment": "Mod ids that change the game though their manifest says affects_gameplay false (decision #97): with one loaded, Spire QoL sends no mismatch reports (crashes still go, unless that mod's code is in them). Add an id when its mechanics turn up as our mismatches; no mod release needed.",
   "gameplayMods": []
