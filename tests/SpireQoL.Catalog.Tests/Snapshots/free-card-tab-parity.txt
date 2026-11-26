@@ -1,0 +1,528 @@
+free attack | None | seen | Bash: free:FreeAttackPower=2
+free attack | None | seen | Anger: free:FreeAttackPower=crossed
+free attack | None | seen | Whirlwind: free:FreeAttackPower=crossed
+free attack | None | seen | ShrugItOff: none
+free attack | None | seen | DefendIronclad: none
+free attack | None | seen | Inflame: none
+free attack | None | seen | Corruption: none
+free attack | None | seen | Bash+: free:FreeAttackPower=2
+free attack | None | unseen | Bash: free:FreeAttackPower=2
+free attack | None | unseen | Anger: free:FreeAttackPower=crossed
+free attack | None | unseen | Whirlwind: free:FreeAttackPower=crossed
+free attack | None | unseen | ShrugItOff: none
+free attack | None | unseen | DefendIronclad: none
+free attack | None | unseen | Inflame: none
+free attack | None | unseen | Corruption: none
+free attack | None | unseen | Bash+: free:FreeAttackPower=2
+free attack | ThisTurn | seen | Bash: free:FreeAttackPower=1
+free attack | ThisTurn | seen | Anger: free:FreeAttackPower=1
+free attack | ThisTurn | seen | Whirlwind: free:FreeAttackPower=crossed
+free attack | ThisTurn | seen | ShrugItOff: none
+free attack | ThisTurn | seen | DefendIronclad: none
+free attack | ThisTurn | seen | Inflame: none
+free attack | ThisTurn | seen | Corruption: none
+free attack | ThisTurn | seen | Bash+: free:FreeAttackPower=1
+free attack | ThisTurn | unseen | Bash: free:FreeAttackPower=1
+free attack | ThisTurn | unseen | Anger: free:FreeAttackPower=1
+free attack | ThisTurn | unseen | Whirlwind: free:FreeAttackPower=crossed
+free attack | ThisTurn | unseen | ShrugItOff: none
+free attack | ThisTurn | unseen | DefendIronclad: none
+free attack | ThisTurn | unseen | Inflame: none
+free attack | ThisTurn | unseen | Corruption: none
+free attack | ThisTurn | unseen | Bash+: free:FreeAttackPower=1
+free attack | ThisCombat | seen | Bash: free:FreeAttackPower=1
+free attack | ThisCombat | seen | Anger: free:FreeAttackPower=1
+free attack | ThisCombat | seen | Whirlwind: free:FreeAttackPower=crossed
+free attack | ThisCombat | seen | ShrugItOff: none
+free attack | ThisCombat | seen | DefendIronclad: none
+free attack | ThisCombat | seen | Inflame: none
+free attack | ThisCombat | seen | Corruption: none
+free attack | ThisCombat | seen | Bash+: free:FreeAttackPower=1
+free attack | ThisCombat | unseen | Bash: free:FreeAttackPower=?
+free attack | ThisCombat | unseen | Anger: free:FreeAttackPower=?
+free attack | ThisCombat | unseen | Whirlwind: free:FreeAttackPower=crossed
+free attack | ThisCombat | unseen | ShrugItOff: none
+free attack | ThisCombat | unseen | DefendIronclad: none
+free attack | ThisCombat | unseen | Inflame: none
+free attack | ThisCombat | unseen | Corruption: none
+free attack | ThisCombat | unseen | Bash+: free:FreeAttackPower=?
+free attack 2 | None | seen | Bash: free:FreeAttackPower=2
+free attack 2 | None | seen | Anger: free:FreeAttackPower=crossed
+free attack 2 | None | seen | Whirlwind: free:FreeAttackPower=crossed
+free attack 2 | None | seen | ShrugItOff: none
+free attack 2 | None | seen | DefendIronclad: none
+free attack 2 | None | seen | Inflame: none
+free attack 2 | None | seen | Corruption: none
+free attack 2 | None | seen | Bash+: free:FreeAttackPower=2
+free attack 2 | None | unseen | Bash: free:FreeAttackPower=2
+free attack 2 | None | unseen | Anger: free:FreeAttackPower=crossed
+free attack 2 | None | unseen | Whirlwind: free:FreeAttackPower=crossed
+free attack 2 | None | unseen | ShrugItOff: none
+free attack 2 | None | unseen | DefendIronclad: none
+free attack 2 | None | unseen | Inflame: none
+free attack 2 | None | unseen | Corruption: none
+free attack 2 | None | unseen | Bash+: free:FreeAttackPower=2
+free attack 2 | ThisTurn | seen | Bash: free:FreeAttackPower=1
+free attack 2 | ThisTurn | seen | Anger: free:FreeAttackPower=1
+free attack 2 | ThisTurn | seen | Whirlwind: free:FreeAttackPower=crossed
+free attack 2 | ThisTurn | seen | ShrugItOff: none
+free attack 2 | ThisTurn | seen | DefendIronclad: none
+free attack 2 | ThisTurn | seen | Inflame: none
+free attack 2 | ThisTurn | seen | Corruption: none
+free attack 2 | ThisTurn | seen | Bash+: free:FreeAttackPower=1
+free attack 2 | ThisTurn | unseen | Bash: free:FreeAttackPower=1
+free attack 2 | ThisTurn | unseen | Anger: free:FreeAttackPower=1
+free attack 2 | ThisTurn | unseen | Whirlwind: free:FreeAttackPower=crossed
+free attack 2 | ThisTurn | unseen | ShrugItOff: none
+free attack 2 | ThisTurn | unseen | DefendIronclad: none
+free attack 2 | ThisTurn | unseen | Inflame: none
+free attack 2 | ThisTurn | unseen | Corruption: none
+free attack 2 | ThisTurn | unseen | Bash+: free:FreeAttackPower=1
+free attack 2 | ThisCombat | seen | Bash: free:FreeAttackPower=1
+free attack 2 | ThisCombat | seen | Anger: free:FreeAttackPower=1
+free attack 2 | ThisCombat | seen | Whirlwind: free:FreeAttackPower=crossed
+free attack 2 | ThisCombat | seen | ShrugItOff: none
+free attack 2 | ThisCombat | seen | DefendIronclad: none
+free attack 2 | ThisCombat | seen | Inflame: none
+free attack 2 | ThisCombat | seen | Corruption: none
+free attack 2 | ThisCombat | seen | Bash+: free:FreeAttackPower=1
+free attack 2 | ThisCombat | unseen | Bash: free:FreeAttackPower=?
+free attack 2 | ThisCombat | unseen | Anger: free:FreeAttackPower=?
+free attack 2 | ThisCombat | unseen | Whirlwind: free:FreeAttackPower=crossed
+free attack 2 | ThisCombat | unseen | ShrugItOff: none
+free attack 2 | ThisCombat | unseen | DefendIronclad: none
+free attack 2 | ThisCombat | unseen | Inflame: none
+free attack 2 | ThisCombat | unseen | Corruption: none
+free attack 2 | ThisCombat | unseen | Bash+: free:FreeAttackPower=?
+free skill | None | seen | Bash: none
+free skill | None | seen | Anger: none
+free skill | None | seen | Whirlwind: none
+free skill | None | seen | ShrugItOff: free:FreeSkillPower=1
+free skill | None | seen | DefendIronclad: free:FreeSkillPower=1
+free skill | None | seen | Inflame: none
+free skill | None | seen | Corruption: none
+free skill | None | seen | Bash+: none
+free skill | None | unseen | Bash: none
+free skill | None | unseen | Anger: none
+free skill | None | unseen | Whirlwind: none
+free skill | None | unseen | ShrugItOff: free:FreeSkillPower=1
+free skill | None | unseen | DefendIronclad: free:FreeSkillPower=1
+free skill | None | unseen | Inflame: none
+free skill | None | unseen | Corruption: none
+free skill | None | unseen | Bash+: none
+free skill | ThisTurn | seen | Bash: none
+free skill | ThisTurn | seen | Anger: none
+free skill | ThisTurn | seen | Whirlwind: none
+free skill | ThisTurn | seen | ShrugItOff: free:FreeSkillPower=1
+free skill | ThisTurn | seen | DefendIronclad: free:FreeSkillPower=1
+free skill | ThisTurn | seen | Inflame: none
+free skill | ThisTurn | seen | Corruption: none
+free skill | ThisTurn | seen | Bash+: none
+free skill | ThisTurn | unseen | Bash: none
+free skill | ThisTurn | unseen | Anger: none
+free skill | ThisTurn | unseen | Whirlwind: none
+free skill | ThisTurn | unseen | ShrugItOff: free:FreeSkillPower=1
+free skill | ThisTurn | unseen | DefendIronclad: free:FreeSkillPower=1
+free skill | ThisTurn | unseen | Inflame: none
+free skill | ThisTurn | unseen | Corruption: none
+free skill | ThisTurn | unseen | Bash+: none
+free skill | ThisCombat | seen | Bash: none
+free skill | ThisCombat | seen | Anger: none
+free skill | ThisCombat | seen | Whirlwind: none
+free skill | ThisCombat | seen | ShrugItOff: free:FreeSkillPower=1
+free skill | ThisCombat | seen | DefendIronclad: free:FreeSkillPower=1
+free skill | ThisCombat | seen | Inflame: none
+free skill | ThisCombat | seen | Corruption: none
+free skill | ThisCombat | seen | Bash+: none
+free skill | ThisCombat | unseen | Bash: none
+free skill | ThisCombat | unseen | Anger: none
+free skill | ThisCombat | unseen | Whirlwind: none
+free skill | ThisCombat | unseen | ShrugItOff: free:FreeSkillPower=?
+free skill | ThisCombat | unseen | DefendIronclad: free:FreeSkillPower=?
+free skill | ThisCombat | unseen | Inflame: none
+free skill | ThisCombat | unseen | Corruption: none
+free skill | ThisCombat | unseen | Bash+: none
+free power | None | seen | Bash: none
+free power | None | seen | Anger: none
+free power | None | seen | Whirlwind: none
+free power | None | seen | ShrugItOff: none
+free power | None | seen | DefendIronclad: none
+free power | None | seen | Inflame: free:FreePowerPower=1
+free power | None | seen | Corruption: free:FreePowerPower=3
+free power | None | seen | Bash+: none
+free power | None | unseen | Bash: none
+free power | None | unseen | Anger: none
+free power | None | unseen | Whirlwind: none
+free power | None | unseen | ShrugItOff: none
+free power | None | unseen | DefendIronclad: none
+free power | None | unseen | Inflame: free:FreePowerPower=1
+free power | None | unseen | Corruption: free:FreePowerPower=3
+free power | None | unseen | Bash+: none
+free power | ThisTurn | seen | Bash: none
+free power | ThisTurn | seen | Anger: none
+free power | ThisTurn | seen | Whirlwind: none
+free power | ThisTurn | seen | ShrugItOff: none
+free power | ThisTurn | seen | DefendIronclad: none
+free power | ThisTurn | seen | Inflame: free:FreePowerPower=1
+free power | ThisTurn | seen | Corruption: free:FreePowerPower=1
+free power | ThisTurn | seen | Bash+: none
+free power | ThisTurn | unseen | Bash: none
+free power | ThisTurn | unseen | Anger: none
+free power | ThisTurn | unseen | Whirlwind: none
+free power | ThisTurn | unseen | ShrugItOff: none
+free power | ThisTurn | unseen | DefendIronclad: none
+free power | ThisTurn | unseen | Inflame: free:FreePowerPower=1
+free power | ThisTurn | unseen | Corruption: free:FreePowerPower=1
+free power | ThisTurn | unseen | Bash+: none
+free power | ThisCombat | seen | Bash: none
+free power | ThisCombat | seen | Anger: none
+free power | ThisCombat | seen | Whirlwind: none
+free power | ThisCombat | seen | ShrugItOff: none
+free power | ThisCombat | seen | DefendIronclad: none
+free power | ThisCombat | seen | Inflame: free:FreePowerPower=1
+free power | ThisCombat | seen | Corruption: free:FreePowerPower=1
+free power | ThisCombat | seen | Bash+: none
+free power | ThisCombat | unseen | Bash: none
+free power | ThisCombat | unseen | Anger: none
+free power | ThisCombat | unseen | Whirlwind: none
+free power | ThisCombat | unseen | ShrugItOff: none
+free power | ThisCombat | unseen | DefendIronclad: none
+free power | ThisCombat | unseen | Inflame: free:FreePowerPower=?
+free power | ThisCombat | unseen | Corruption: free:FreePowerPower=?
+free power | ThisCombat | unseen | Bash+: none
+all three | None | seen | Bash: free:FreeAttackPower=2
+all three | None | seen | Anger: free:FreeAttackPower=crossed
+all three | None | seen | Whirlwind: free:FreeAttackPower=crossed
+all three | None | seen | ShrugItOff: free:FreeSkillPower=1
+all three | None | seen | DefendIronclad: free:FreeSkillPower=1
+all three | None | seen | Inflame: free:FreePowerPower=1
+all three | None | seen | Corruption: free:FreePowerPower=3
+all three | None | seen | Bash+: free:FreeAttackPower=2
+all three | None | unseen | Bash: free:FreeAttackPower=2
+all three | None | unseen | Anger: free:FreeAttackPower=crossed
+all three | None | unseen | Whirlwind: free:FreeAttackPower=crossed
+all three | None | unseen | ShrugItOff: free:FreeSkillPower=1
+all three | None | unseen | DefendIronclad: free:FreeSkillPower=1
+all three | None | unseen | Inflame: free:FreePowerPower=1
+all three | None | unseen | Corruption: free:FreePowerPower=3
+all three | None | unseen | Bash+: free:FreeAttackPower=2
+all three | ThisTurn | seen | Bash: free:FreeAttackPower=1
+all three | ThisTurn | seen | Anger: free:FreeAttackPower=1
+all three | ThisTurn | seen | Whirlwind: free:FreeAttackPower=crossed
+all three | ThisTurn | seen | ShrugItOff: free:FreeSkillPower=1
+all three | ThisTurn | seen | DefendIronclad: free:FreeSkillPower=1
+all three | ThisTurn | seen | Inflame: free:FreePowerPower=1
+all three | ThisTurn | seen | Corruption: free:FreePowerPower=1
+all three | ThisTurn | seen | Bash+: free:FreeAttackPower=1
+all three | ThisTurn | unseen | Bash: free:FreeAttackPower=1
+all three | ThisTurn | unseen | Anger: free:FreeAttackPower=1
+all three | ThisTurn | unseen | Whirlwind: free:FreeAttackPower=crossed
+all three | ThisTurn | unseen | ShrugItOff: free:FreeSkillPower=1
+all three | ThisTurn | unseen | DefendIronclad: free:FreeSkillPower=1
+all three | ThisTurn | unseen | Inflame: free:FreePowerPower=1
+all three | ThisTurn | unseen | Corruption: free:FreePowerPower=1
+all three | ThisTurn | unseen | Bash+: free:FreeAttackPower=1
+all three | ThisCombat | seen | Bash: free:FreeAttackPower=1
+all three | ThisCombat | seen | Anger: free:FreeAttackPower=1
+all three | ThisCombat | seen | Whirlwind: free:FreeAttackPower=crossed
+all three | ThisCombat | seen | ShrugItOff: free:FreeSkillPower=1
+all three | ThisCombat | seen | DefendIronclad: free:FreeSkillPower=1
+all three | ThisCombat | seen | Inflame: free:FreePowerPower=1
+all three | ThisCombat | seen | Corruption: free:FreePowerPower=1
+all three | ThisCombat | seen | Bash+: free:FreeAttackPower=1
+all three | ThisCombat | unseen | Bash: free:FreeAttackPower=?
+all three | ThisCombat | unseen | Anger: free:FreeAttackPower=?
+all three | ThisCombat | unseen | Whirlwind: free:FreeAttackPower=crossed
+all three | ThisCombat | unseen | ShrugItOff: free:FreeSkillPower=?
+all three | ThisCombat | unseen | DefendIronclad: free:FreeSkillPower=?
+all three | ThisCombat | unseen | Inflame: free:FreePowerPower=?
+all three | ThisCombat | unseen | Corruption: free:FreePowerPower=?
+all three | ThisCombat | unseen | Bash+: free:FreeAttackPower=?
+free attack, borrowed time | None | seen | Bash: free:FreeAttackPower=3
+free attack, borrowed time | None | seen | Anger: free:FreeAttackPower=1
+free attack, borrowed time | None | seen | Whirlwind: free:FreeAttackPower=crossed
+free attack, borrowed time | None | seen | ShrugItOff: none
+free attack, borrowed time | None | seen | DefendIronclad: none
+free attack, borrowed time | None | seen | Inflame: none
+free attack, borrowed time | None | seen | Corruption: none
+free attack, borrowed time | None | seen | Bash+: free:FreeAttackPower=3
+free attack, borrowed time | None | unseen | Bash: free:FreeAttackPower=3
+free attack, borrowed time | None | unseen | Anger: free:FreeAttackPower=1
+free attack, borrowed time | None | unseen | Whirlwind: free:FreeAttackPower=crossed
+free attack, borrowed time | None | unseen | ShrugItOff: none
+free attack, borrowed time | None | unseen | DefendIronclad: none
+free attack, borrowed time | None | unseen | Inflame: none
+free attack, borrowed time | None | unseen | Corruption: none
+free attack, borrowed time | None | unseen | Bash+: free:FreeAttackPower=3
+free attack, borrowed time | ThisTurn | seen | Bash: free:FreeAttackPower=2
+free attack, borrowed time | ThisTurn | seen | Anger: free:FreeAttackPower=2
+free attack, borrowed time | ThisTurn | seen | Whirlwind: free:FreeAttackPower=crossed
+free attack, borrowed time | ThisTurn | seen | ShrugItOff: none
+free attack, borrowed time | ThisTurn | seen | DefendIronclad: none
+free attack, borrowed time | ThisTurn | seen | Inflame: none
+free attack, borrowed time | ThisTurn | seen | Corruption: none
+free attack, borrowed time | ThisTurn | seen | Bash+: free:FreeAttackPower=2
+free attack, borrowed time | ThisTurn | unseen | Bash: free:FreeAttackPower=2
+free attack, borrowed time | ThisTurn | unseen | Anger: free:FreeAttackPower=2
+free attack, borrowed time | ThisTurn | unseen | Whirlwind: free:FreeAttackPower=crossed
+free attack, borrowed time | ThisTurn | unseen | ShrugItOff: none
+free attack, borrowed time | ThisTurn | unseen | DefendIronclad: none
+free attack, borrowed time | ThisTurn | unseen | Inflame: none
+free attack, borrowed time | ThisTurn | unseen | Corruption: none
+free attack, borrowed time | ThisTurn | unseen | Bash+: free:FreeAttackPower=2
+free attack, borrowed time | ThisCombat | seen | Bash: free:FreeAttackPower=2
+free attack, borrowed time | ThisCombat | seen | Anger: free:FreeAttackPower=2
+free attack, borrowed time | ThisCombat | seen | Whirlwind: free:FreeAttackPower=crossed
+free attack, borrowed time | ThisCombat | seen | ShrugItOff: none
+free attack, borrowed time | ThisCombat | seen | DefendIronclad: none
+free attack, borrowed time | ThisCombat | seen | Inflame: none
+free attack, borrowed time | ThisCombat | seen | Corruption: none
+free attack, borrowed time | ThisCombat | seen | Bash+: free:FreeAttackPower=2
+free attack, borrowed time | ThisCombat | unseen | Bash: free:FreeAttackPower=?
+free attack, borrowed time | ThisCombat | unseen | Anger: free:FreeAttackPower=?
+free attack, borrowed time | ThisCombat | unseen | Whirlwind: free:FreeAttackPower=crossed
+free attack, borrowed time | ThisCombat | unseen | ShrugItOff: none
+free attack, borrowed time | ThisCombat | unseen | DefendIronclad: none
+free attack, borrowed time | ThisCombat | unseen | Inflame: none
+free attack, borrowed time | ThisCombat | unseen | Corruption: none
+free attack, borrowed time | ThisCombat | unseen | Bash+: free:FreeAttackPower=?
+free power, curious | None | seen | Bash: none
+free power, curious | None | seen | Anger: none
+free power, curious | None | seen | Whirlwind: none
+free power, curious | None | seen | ShrugItOff: none
+free power, curious | None | seen | DefendIronclad: none
+free power, curious | None | seen | Inflame: free:FreePowerPower=crossed
+free power, curious | None | seen | Corruption: free:FreePowerPower=2
+free power, curious | None | seen | Bash+: none
+free power, curious | None | unseen | Bash: none
+free power, curious | None | unseen | Anger: none
+free power, curious | None | unseen | Whirlwind: none
+free power, curious | None | unseen | ShrugItOff: none
+free power, curious | None | unseen | DefendIronclad: none
+free power, curious | None | unseen | Inflame: free:FreePowerPower=crossed
+free power, curious | None | unseen | Corruption: free:FreePowerPower=2
+free power, curious | None | unseen | Bash+: none
+free power, curious | ThisTurn | seen | Bash: none
+free power, curious | ThisTurn | seen | Anger: none
+free power, curious | ThisTurn | seen | Whirlwind: none
+free power, curious | ThisTurn | seen | ShrugItOff: none
+free power, curious | ThisTurn | seen | DefendIronclad: none
+free power, curious | ThisTurn | seen | Inflame: free:FreePowerPower=crossed
+free power, curious | ThisTurn | seen | Corruption: free:FreePowerPower=crossed
+free power, curious | ThisTurn | seen | Bash+: none
+free power, curious | ThisTurn | unseen | Bash: none
+free power, curious | ThisTurn | unseen | Anger: none
+free power, curious | ThisTurn | unseen | Whirlwind: none
+free power, curious | ThisTurn | unseen | ShrugItOff: none
+free power, curious | ThisTurn | unseen | DefendIronclad: none
+free power, curious | ThisTurn | unseen | Inflame: free:FreePowerPower=crossed
+free power, curious | ThisTurn | unseen | Corruption: free:FreePowerPower=crossed
+free power, curious | ThisTurn | unseen | Bash+: none
+free power, curious | ThisCombat | seen | Bash: none
+free power, curious | ThisCombat | seen | Anger: none
+free power, curious | ThisCombat | seen | Whirlwind: none
+free power, curious | ThisCombat | seen | ShrugItOff: none
+free power, curious | ThisCombat | seen | DefendIronclad: none
+free power, curious | ThisCombat | seen | Inflame: free:FreePowerPower=crossed
+free power, curious | ThisCombat | seen | Corruption: free:FreePowerPower=crossed
+free power, curious | ThisCombat | seen | Bash+: none
+free power, curious | ThisCombat | unseen | Bash: none
+free power, curious | ThisCombat | unseen | Anger: none
+free power, curious | ThisCombat | unseen | Whirlwind: none
+free power, curious | ThisCombat | unseen | ShrugItOff: none
+free power, curious | ThisCombat | unseen | DefendIronclad: none
+free power, curious | ThisCombat | unseen | Inflame: free:FreePowerPower=?
+free power, curious | ThisCombat | unseen | Corruption: free:FreePowerPower=?
+free power, curious | ThisCombat | unseen | Bash+: none
+free power, curious 3 | None | seen | Bash: none
+free power, curious 3 | None | seen | Anger: none
+free power, curious 3 | None | seen | Whirlwind: none
+free power, curious 3 | None | seen | ShrugItOff: none
+free power, curious 3 | None | seen | DefendIronclad: none
+free power, curious 3 | None | seen | Inflame: free:FreePowerPower=crossed
+free power, curious 3 | None | seen | Corruption: free:FreePowerPower=crossed
+free power, curious 3 | None | seen | Bash+: none
+free power, curious 3 | None | unseen | Bash: none
+free power, curious 3 | None | unseen | Anger: none
+free power, curious 3 | None | unseen | Whirlwind: none
+free power, curious 3 | None | unseen | ShrugItOff: none
+free power, curious 3 | None | unseen | DefendIronclad: none
+free power, curious 3 | None | unseen | Inflame: free:FreePowerPower=crossed
+free power, curious 3 | None | unseen | Corruption: free:FreePowerPower=crossed
+free power, curious 3 | None | unseen | Bash+: none
+free power, curious 3 | ThisTurn | seen | Bash: none
+free power, curious 3 | ThisTurn | seen | Anger: none
+free power, curious 3 | ThisTurn | seen | Whirlwind: none
+free power, curious 3 | ThisTurn | seen | ShrugItOff: none
+free power, curious 3 | ThisTurn | seen | DefendIronclad: none
+free power, curious 3 | ThisTurn | seen | Inflame: free:FreePowerPower=crossed
+free power, curious 3 | ThisTurn | seen | Corruption: free:FreePowerPower=crossed
+free power, curious 3 | ThisTurn | seen | Bash+: none
+free power, curious 3 | ThisTurn | unseen | Bash: none
+free power, curious 3 | ThisTurn | unseen | Anger: none
+free power, curious 3 | ThisTurn | unseen | Whirlwind: none
+free power, curious 3 | ThisTurn | unseen | ShrugItOff: none
+free power, curious 3 | ThisTurn | unseen | DefendIronclad: none
+free power, curious 3 | ThisTurn | unseen | Inflame: free:FreePowerPower=crossed
+free power, curious 3 | ThisTurn | unseen | Corruption: free:FreePowerPower=crossed
+free power, curious 3 | ThisTurn | unseen | Bash+: none
+free power, curious 3 | ThisCombat | seen | Bash: none
+free power, curious 3 | ThisCombat | seen | Anger: none
+free power, curious 3 | ThisCombat | seen | Whirlwind: none
+free power, curious 3 | ThisCombat | seen | ShrugItOff: none
+free power, curious 3 | ThisCombat | seen | DefendIronclad: none
+free power, curious 3 | ThisCombat | seen | Inflame: free:FreePowerPower=crossed
+free power, curious 3 | ThisCombat | seen | Corruption: free:FreePowerPower=crossed
+free power, curious 3 | ThisCombat | seen | Bash+: none
+free power, curious 3 | ThisCombat | unseen | Bash: none
+free power, curious 3 | ThisCombat | unseen | Anger: none
+free power, curious 3 | ThisCombat | unseen | Whirlwind: none
+free power, curious 3 | ThisCombat | unseen | ShrugItOff: none
+free power, curious 3 | ThisCombat | unseen | DefendIronclad: none
+free power, curious 3 | ThisCombat | unseen | Inflame: free:FreePowerPower=?
+free power, curious 3 | ThisCombat | unseen | Corruption: free:FreePowerPower=?
+free power, curious 3 | ThisCombat | unseen | Bash+: none
+free skill, corruption | None | seen | Bash: none
+free skill, corruption | None | seen | Anger: none
+free skill, corruption | None | seen | Whirlwind: none
+free skill, corruption | None | seen | ShrugItOff: free:FreeSkillPower=crossed
+free skill, corruption | None | seen | DefendIronclad: free:FreeSkillPower=crossed
+free skill, corruption | None | seen | Inflame: none
+free skill, corruption | None | seen | Corruption: none
+free skill, corruption | None | seen | Bash+: none
+free skill, corruption | None | unseen | Bash: none
+free skill, corruption | None | unseen | Anger: none
+free skill, corruption | None | unseen | Whirlwind: none
+free skill, corruption | None | unseen | ShrugItOff: free:FreeSkillPower=crossed
+free skill, corruption | None | unseen | DefendIronclad: free:FreeSkillPower=crossed
+free skill, corruption | None | unseen | Inflame: none
+free skill, corruption | None | unseen | Corruption: none
+free skill, corruption | None | unseen | Bash+: none
+free skill, corruption | ThisTurn | seen | Bash: none
+free skill, corruption | ThisTurn | seen | Anger: none
+free skill, corruption | ThisTurn | seen | Whirlwind: none
+free skill, corruption | ThisTurn | seen | ShrugItOff: free:FreeSkillPower=crossed
+free skill, corruption | ThisTurn | seen | DefendIronclad: free:FreeSkillPower=crossed
+free skill, corruption | ThisTurn | seen | Inflame: none
+free skill, corruption | ThisTurn | seen | Corruption: none
+free skill, corruption | ThisTurn | seen | Bash+: none
+free skill, corruption | ThisTurn | unseen | Bash: none
+free skill, corruption | ThisTurn | unseen | Anger: none
+free skill, corruption | ThisTurn | unseen | Whirlwind: none
+free skill, corruption | ThisTurn | unseen | ShrugItOff: free:FreeSkillPower=crossed
+free skill, corruption | ThisTurn | unseen | DefendIronclad: free:FreeSkillPower=crossed
+free skill, corruption | ThisTurn | unseen | Inflame: none
+free skill, corruption | ThisTurn | unseen | Corruption: none
+free skill, corruption | ThisTurn | unseen | Bash+: none
+free skill, corruption | ThisCombat | seen | Bash: none
+free skill, corruption | ThisCombat | seen | Anger: none
+free skill, corruption | ThisCombat | seen | Whirlwind: none
+free skill, corruption | ThisCombat | seen | ShrugItOff: free:FreeSkillPower=crossed
+free skill, corruption | ThisCombat | seen | DefendIronclad: free:FreeSkillPower=crossed
+free skill, corruption | ThisCombat | seen | Inflame: none
+free skill, corruption | ThisCombat | seen | Corruption: none
+free skill, corruption | ThisCombat | seen | Bash+: none
+free skill, corruption | ThisCombat | unseen | Bash: none
+free skill, corruption | ThisCombat | unseen | Anger: none
+free skill, corruption | ThisCombat | unseen | Whirlwind: none
+free skill, corruption | ThisCombat | unseen | ShrugItOff: free:FreeSkillPower=?
+free skill, corruption | ThisCombat | unseen | DefendIronclad: free:FreeSkillPower=?
+free skill, corruption | ThisCombat | unseen | Inflame: none
+free skill, corruption | ThisCombat | unseen | Corruption: none
+free skill, corruption | ThisCombat | unseen | Bash+: none
+free attack, veilpiercer | None | seen | Bash: free:FreeAttackPower=2
+free attack, veilpiercer | None | seen | Anger: free:FreeAttackPower=crossed
+free attack, veilpiercer | None | seen | Whirlwind: free:FreeAttackPower=crossed
+free attack, veilpiercer | None | seen | ShrugItOff: none
+free attack, veilpiercer | None | seen | DefendIronclad: none
+free attack, veilpiercer | None | seen | Inflame: none
+free attack, veilpiercer | None | seen | Corruption: none
+free attack, veilpiercer | None | seen | Bash+: free:FreeAttackPower=2
+free attack, veilpiercer | None | unseen | Bash: free:FreeAttackPower=2
+free attack, veilpiercer | None | unseen | Anger: free:FreeAttackPower=crossed
+free attack, veilpiercer | None | unseen | Whirlwind: free:FreeAttackPower=crossed
+free attack, veilpiercer | None | unseen | ShrugItOff: none
+free attack, veilpiercer | None | unseen | DefendIronclad: none
+free attack, veilpiercer | None | unseen | Inflame: none
+free attack, veilpiercer | None | unseen | Corruption: none
+free attack, veilpiercer | None | unseen | Bash+: free:FreeAttackPower=2
+free attack, veilpiercer | ThisTurn | seen | Bash: free:FreeAttackPower=1
+free attack, veilpiercer | ThisTurn | seen | Anger: free:FreeAttackPower=1
+free attack, veilpiercer | ThisTurn | seen | Whirlwind: free:FreeAttackPower=crossed
+free attack, veilpiercer | ThisTurn | seen | ShrugItOff: none
+free attack, veilpiercer | ThisTurn | seen | DefendIronclad: none
+free attack, veilpiercer | ThisTurn | seen | Inflame: none
+free attack, veilpiercer | ThisTurn | seen | Corruption: none
+free attack, veilpiercer | ThisTurn | seen | Bash+: free:FreeAttackPower=1
+free attack, veilpiercer | ThisTurn | unseen | Bash: free:FreeAttackPower=1
+free attack, veilpiercer | ThisTurn | unseen | Anger: free:FreeAttackPower=1
+free attack, veilpiercer | ThisTurn | unseen | Whirlwind: free:FreeAttackPower=crossed
+free attack, veilpiercer | ThisTurn | unseen | ShrugItOff: none
+free attack, veilpiercer | ThisTurn | unseen | DefendIronclad: none
+free attack, veilpiercer | ThisTurn | unseen | Inflame: none
+free attack, veilpiercer | ThisTurn | unseen | Corruption: none
+free attack, veilpiercer | ThisTurn | unseen | Bash+: free:FreeAttackPower=1
+free attack, veilpiercer | ThisCombat | seen | Bash: free:FreeAttackPower=1
+free attack, veilpiercer | ThisCombat | seen | Anger: free:FreeAttackPower=1
+free attack, veilpiercer | ThisCombat | seen | Whirlwind: free:FreeAttackPower=crossed
+free attack, veilpiercer | ThisCombat | seen | ShrugItOff: none
+free attack, veilpiercer | ThisCombat | seen | DefendIronclad: none
+free attack, veilpiercer | ThisCombat | seen | Inflame: none
+free attack, veilpiercer | ThisCombat | seen | Corruption: none
+free attack, veilpiercer | ThisCombat | seen | Bash+: free:FreeAttackPower=1
+free attack, veilpiercer | ThisCombat | unseen | Bash: free:FreeAttackPower=?
+free attack, veilpiercer | ThisCombat | unseen | Anger: free:FreeAttackPower=?
+free attack, veilpiercer | ThisCombat | unseen | Whirlwind: free:FreeAttackPower=crossed
+free attack, veilpiercer | ThisCombat | unseen | ShrugItOff: none
+free attack, veilpiercer | ThisCombat | unseen | DefendIronclad: none
+free attack, veilpiercer | ThisCombat | unseen | Inflame: none
+free attack, veilpiercer | ThisCombat | unseen | Corruption: none
+free attack, veilpiercer | ThisCombat | unseen | Bash+: free:FreeAttackPower=?
+none | None | seen | Bash: none
+none | None | seen | Anger: none
+none | None | seen | Whirlwind: none
+none | None | seen | ShrugItOff: none
+none | None | seen | DefendIronclad: none
+none | None | seen | Inflame: none
+none | None | seen | Corruption: none
+none | None | seen | Bash+: none
+none | None | unseen | Bash: none
+none | None | unseen | Anger: none
+none | None | unseen | Whirlwind: none
+none | None | unseen | ShrugItOff: none
+none | None | unseen | DefendIronclad: none
+none | None | unseen | Inflame: none
+none | None | unseen | Corruption: none
+none | None | unseen | Bash+: none
+none | ThisTurn | seen | Bash: none
+none | ThisTurn | seen | Anger: none
+none | ThisTurn | seen | Whirlwind: none
+none | ThisTurn | seen | ShrugItOff: none
+none | ThisTurn | seen | DefendIronclad: none
+none | ThisTurn | seen | Inflame: none
+none | ThisTurn | seen | Corruption: none
+none | ThisTurn | seen | Bash+: none
+none | ThisTurn | unseen | Bash: none
+none | ThisTurn | unseen | Anger: none
+none | ThisTurn | unseen | Whirlwind: none
+none | ThisTurn | unseen | ShrugItOff: none
+none | ThisTurn | unseen | DefendIronclad: none
+none | ThisTurn | unseen | Inflame: none
+none | ThisTurn | unseen | Corruption: none
+none | ThisTurn | unseen | Bash+: none
+none | ThisCombat | seen | Bash: none
+none | ThisCombat | seen | Anger: none
+none | ThisCombat | seen | Whirlwind: none
+none | ThisCombat | seen | ShrugItOff: none
+none | ThisCombat | seen | DefendIronclad: none
+none | ThisCombat | seen | Inflame: none
+none | ThisCombat | seen | Corruption: none
+none | ThisCombat | seen | Bash+: none
+none | ThisCombat | unseen | Bash: none
+none | ThisCombat | unseen | Anger: none
+none | ThisCombat | unseen | Whirlwind: none
+none | ThisCombat | unseen | ShrugItOff: none
+none | ThisCombat | unseen | DefendIronclad: none
+none | ThisCombat | unseen | Inflame: none
+none | ThisCombat | unseen | Corruption: none
+none | ThisCombat | unseen | Bash+: none
