@@ -33,7 +33,11 @@ public sealed record OrbAction(OrbAction.Op Kind) : SimAction
 /// OrbCmd.Passive of each of the play's owner's orbs of <paramref name="Kind"/>, <paramref name="Times"/> times each, with no target (Darkness' Dark orbs: its read
 /// Passive, decision #214), as SimEngine.RunOrbPassive runs it: the orb's own Passive, read from its code, not through TriggerPassive (no trigger-count hooks).
 /// </summary>
-public sealed record OrbPassiveAction(OrbKind Kind, int Times) : SimAction;
+public sealed record OrbPassiveAction(OrbKind Kind, int Times) : SimAction
+{
+    /// <summary>At the play's target (OrbCmd.Passive given cardPlay.Target: Tesla Coil's Lightning, decision #365), not with none.</summary>
+    public bool AtTarget { get; init; }
+}
 
 /// <summary>Your Focus changes by this much (FocusPower or a temporary Focus power): your orbs' values move with it.</summary>
 public sealed record FocusAction(int Delta) : SimAction;
@@ -81,6 +85,20 @@ public static partial class SimEngine
     /// <summary>An orb's name in Incoming Damage's breakdown: its kind, "(evoked)" for an evoke's, "all" for damage to every enemy (Glass (evoked, all)).</summary>
     private static string OrbLabel(OrbKind kind, bool evoke, bool all) =>
         kind + (evoke && all ? " (evoked, all)" : evoke ? " (evoked)" : all ? " (all)" : "");
+
+    /// <summary>
+    /// An orb's own CreatureCmd.Damage on the creature it was given (decision #365: OrbCmd.Passive at Tesla Coil's target; its code's `target` when one is
+    /// given), alive or not, as the game deals it to the creature named.
+    /// </summary>
+    internal static IEnumerable<SimState> OrbDamageAt(SimState state, OrbCtx orb, bool evoke, int target, int amount, SimProps props)
+    {
+        if (state.Enemy(target) is { } enemy)
+        {
+            if (state.Log && enemy.Alive) state.EndOfTurnDamage.Add((OrbLabel(orb.Kind, evoke, all: false), amount));
+            Damage(state, enemy, amount, orb.Player, props);
+        }
+        return new[] { state };
+    }
 
     /// <summary>
     /// An orb's own CreatureCmd.Damage (its Passive's, its Evoke's: OrbModel's owner deals it, Unpowered) on its targets: a roll over the
@@ -296,7 +314,7 @@ public static partial class SimEngine
                 {
                     var player = branch.CurrentPlay?.Owner ?? Who.You;
                     if (branch.Player(player) is not { } simPlayer || index >= simPlayer.Orbs.Count || simPlayer.Orbs[index].Kind != orbPassiveAction.Kind) return new[] { branch };
-                    if (SimModels.Orb(orbPassiveAction.Kind) is { } model) return model.RunOrb(HookName.Passive, branch, player, index, evoked: null);
+                    if (SimModels.Orb(orbPassiveAction.Kind) is { } model) return model.RunOrb(HookName.Passive, branch, player, index, evoked: null, given: orbPassiveAction.AtTarget ? branch.CurrentPlay?.Target : null);
                     branch.Unmodelled ??= SimModels.OrbUnreadReason(orbPassiveAction.Kind);
                     return new[] { branch };
                 });

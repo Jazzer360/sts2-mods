@@ -20693,7 +20693,7 @@
         "Steps": [
           {
             "$kind": "DamageStep",
-            "Target": "RandomEnemy",
+            "Target": "GivenElseRandom",
             "Amount": {
               "$kind": "HookOrbProperty",
               "Property": "PassiveVal"

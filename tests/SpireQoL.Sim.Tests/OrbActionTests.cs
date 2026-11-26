@@ -63,6 +63,23 @@ public class OrbActionTests
     }
 
     [Fact]
+    public void ALightningPassiveAtTheCardsTargetHitsThatEnemy()
+    {
+        // Decision #365: OrbCmd.Passive given cardPlay.Target (Tesla Coil's): Lightning's Passive, read from its code (`target ?? NextItem(hittable)`),
+        // hits the enemy given, never a roll; with none given it's a roll over the hittable enemies, a branch each.
+        var state = Defect();
+        state.Enemies.Add(Enemy(id: 1, hp: 100));
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 } };
+        var aimed = After(state, Play(Card("TeslaCoil", SimCardType.Attack), target: 1, plays: 1, new OrbPassiveAction(OrbKind.Lightning, Times: 1) { AtTarget = true }));
+        var branch = Assert.Single(aimed);
+        Assert.Equal(97, branch.Enemy(id: 1)!.Hp);
+        Assert.Equal(100, branch.Enemy(id: 0)!.Hp);
+        Assert.Null(branch.Unmodelled);
+        var rolled = After(state, Play(Card("Darkness", SimCardType.Skill), target: Who.None, plays: 1, new OrbPassiveAction(OrbKind.Lightning, Times: 1)));
+        Assert.Equal(2, rolled.Count);
+    }
+
+    [Fact]
     public void StormChannelsLightningOnPowerCardsAndMetronomeCountsIt()
     {
         var state = Defect();

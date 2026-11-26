@@ -2200,7 +2200,7 @@ public static class HookReader
                     if (!noDealer && !IsOwner(values[dealerAt])) throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: damage dealt by {values[dealerAt]}");
                     // Damage the simulator's procs deal: to every hittable enemy, a roll over them, the creature a power landed on, or its owner.
                     var damaged = Targets(values[targetAt]);
-                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.PowerOwner or HookTarget.Owner or HookTarget.WeakestEnemy or HookTarget.EvokeTargets or HookTarget.Each or HookTarget.LivingPlayers or HookTarget.PlayOwner or HookTarget.Dealer))
+                    if (damaged is not (HookTarget.AllEnemies or HookTarget.RandomEnemy or HookTarget.GivenElseRandom or HookTarget.PowerOwner or HookTarget.Owner or HookTarget.WeakestEnemy or HookTarget.EvokeTargets or HookTarget.Each or HookTarget.LivingPlayers or HookTarget.PlayOwner or HookTarget.Dealer))
                         throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: damage to {values[targetAt]}");
                     return new DamageStep(damaged, amount, props) { NoDealer = noDealer };
                 }
@@ -2491,7 +2491,16 @@ public static class HookReader
             if (value is StoredValue stored) return Targets(stored.Value);
             // A list of one (new ReadOnlySingleElementList(x)): x.
             if (value is QueryValue { Name: ".ctor", Arguments: [var single] } listOfOne && listOfOne.Type.StartsWith("<>z__ReadOnlySingleElementList", StringComparison.Ordinal)) return Targets(single);
-            // A value of several ways (Lightning's target ?? a roll): the ways that can hold, all naming the same creatures.
+            // A list of one (new ReadOnlySingleElementList(x)), kept in a local or not: x.
+            static ProgramValue? OneOf(ProgramValue value) =>
+                Unstored(value) is QueryValue { Name: ".ctor", Arguments: [var single] } listOfOne && listOfOne.Type.StartsWith("<>z__ReadOnlySingleElementList", StringComparison.Ordinal)
+                    ? Unstored(single) : Unstored(value);
+            // A value of several ways (Lightning's target ?? a roll): the ways that can hold, all naming the same creatures. An orb's Passive's own target
+            // or else a roll over the hittable enemies (decision #365): the creature its Passive is given (OrbCmd.Passive at one: Tesla Coil's), else a roll.
+            if (value is WaysValue givenOrRolled && _kind == ModelKind.Orb && _hook == "Passive" && givenOrRolled.Ways.Count == 2
+                && givenOrRolled.Ways.Any(way => OneOf(way.Value) is ParameterValue { Name: "target" } or NamedValue { Name: "target" })
+                && givenOrRolled.Ways.Any(way => OneOf(way.Value) is QueryValue { Name: "NextItem", Arguments: [var rolled] } && IsHittableEnemies(rolled)))
+                return HookTarget.GivenElseRandom;
             if (value is WaysValue ways)
             {
                 var named = ways.Ways.Where(way => Simplified(Condition(way.When) ?? new HookConstant(1m)) is not HookConstant { Value: 0m }).Select(way => Targets(way.Value)).Distinct().ToList();

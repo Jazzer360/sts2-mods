@@ -25,6 +25,11 @@ internal readonly struct HookArgs
     public int PowerAmount { get; init; }
     public int Applier { get; init; }
     public int Target { get; init; }
+    /// <summary>
+    /// An orb's Passive was given a creature (OrbCmd.Passive at one: Tesla Coil's target, decision #365), held in <see cref="Target"/>; false: none
+    /// (TriggerPassive's). A flag beside Target rather than a field of its own, so each run's arguments stay their size.
+    /// </summary>
+    public bool TargetGiven { get; init; }
     public bool Debuff { get; init; }
     /// <summary>
     /// The power's own Target (PowerModel.Target, what its IsVisible asks) in the received pass: Who.None when it has none; null where it isn't
@@ -375,12 +380,12 @@ public sealed class ReadModel : SimModel
     /// One of the orb's own programs (its Passive, as TriggerPassive runs it once per trigger; its Evoke, as OrbCmd runs it on the orb taken out of
     /// its slots), on the state given: <paramref name="index"/> its slot, or -1 with <paramref name="evoked"/> the orb out of them.
     /// </summary>
-    public IEnumerable<SimState> RunOrb(HookName hook, SimState state, int player, int index, SimOrb? evoked)
+    public IEnumerable<SimState> RunOrb(HookName hook, SimState state, int player, int index, SimOrb? evoked, int? given = null)
     {
         if (_steps[(int)hook] is not { } steps) return One(state);
         var args = new HookArgs
         {
-            State = state, Owner = player, Hook = hook, Play = state.CurrentPlay, Orb = new OrbCtx(player, index, OrbKind), Evoked = evoked,
+            State = state, Owner = player, Hook = hook, Play = state.CurrentPlay, Orb = new OrbCtx(player, index, OrbKind), Evoked = evoked, Target = given ?? 0, TargetGiven = given != null,
             Asked = _asksOnce[(int)hook] ? new int[_testSlots.Count] : null, Locals = _localSlots.Count > 0 ? new decimal[_localSlots.Count] : null,
         };
         return RunSteps(steps, args);
@@ -1545,7 +1550,12 @@ public sealed class ReadModel : SimModel
                 var amount = Compile(orbDamage.Amount);
                 var props = Compile(orbDamage.Props);
                 var target = orbDamage.Target;
-                if (target is not (HookTarget.RandomEnemy or HookTarget.AllEnemies or HookTarget.WeakestEnemy)) throw new InvalidOperationException($"{Name}: no orb damage to {target}");
+                if (target is not (HookTarget.RandomEnemy or HookTarget.AllEnemies or HookTarget.WeakestEnemy or HookTarget.GivenElseRandom)) throw new InvalidOperationException($"{Name}: no orb damage to {target}");
+                // The creature its Passive was given (Tesla Coil's target: decision #365), else a roll, as its code's `target ?? NextItem(hittable)`.
+                if (target == HookTarget.GivenElseRandom)
+                    return args => args.TargetGiven
+                        ? SimEngine.OrbDamageAt(args.State, args.Orb, evoke: args.Hook == HookName.Evoke, args.Target, (int)amount(in args), (SimProps)(int)props(in args))
+                        : SimEngine.OrbDamage(args.State, args.Orb, evoke: args.Hook == HookName.Evoke, HookTarget.RandomEnemy, (int)amount(in args), (SimProps)(int)props(in args));
                 return args => SimEngine.OrbDamage(args.State, args.Orb, evoke: args.Hook == HookName.Evoke, target, (int)amount(in args), (SimProps)(int)props(in args));
             }
             case GainEnergyStep orbEnergy when Spec.Kind == ModelKind.Orb:

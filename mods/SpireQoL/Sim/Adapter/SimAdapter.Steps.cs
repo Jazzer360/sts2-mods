@@ -74,7 +74,7 @@ public static partial class SimAdapter
         ["OrbCmd.Channel"] = "OrbAction(Channel) of its orb, into the orbs of the player its argument names",
         ["OrbCmd.EvokeNext"] = "OrbAction(EvokeFront), keeping the orb when its dequeue argument says so; every orb twice (EvokeAllTwice)",
         ["OrbCmd.AddSlots"] = "OrbAction(Slots)",
-        ["OrbCmd.Passive"] = "OrbPassiveAction: each of your orbs of the class its loop goes over, its passive with no target, the other loops' rounds times (PassivesOrbOf)",
+        ["OrbCmd.Passive"] = "OrbPassiveAction: each of your orbs of the class its loop goes over, its passive with no target or at the play's target (Tesla Coil's), the other loops' rounds times (PassivesOrbOf)",
         ["OrbCmd.RemoveSlots"] = "OrbAction(Slots), negative",
         ["ArrowCmd.ShootArrowAtTarget"] = "ShootAction, the attack it's given (needing the arrow), ImpaleAction",
         ["ArrowCmd.TryShootArrow"] = "ShootAction",
@@ -475,7 +475,7 @@ public static partial class SimAdapter
             {
                 if (PassivesOrbOf(command, play.Program) is not { } orbKind) return none;
                 var times = RoundsOf(found, play, skip: OverOwnersOrbs);
-                return times > 0 ? (new List<SimAction> { new OrbPassiveAction(orbKind, times) }, null) : none;
+                return times > 0 ? (new List<SimAction> { new OrbPassiveAction(orbKind, times) { AtTarget = Argument(command, 2) == "cardPlay.Target" } }, null) : none;
             }
             case ("CardCmd", "Enchant"):
                 return command.Command.GenericArguments is [var enchantment] && EnchantmentActsOnlyOnItsPlay(enchantment)
@@ -517,7 +517,7 @@ public static partial class SimAdapter
         ["CardCmd.ApplySingleTurnRetain"] = "Retain given for the turn to a card other than one you pick or the play drew: not followed",
         ["CardCmd.Enchant"] = "an enchantment given to a card other than one the play makes: not followed",
         ["ArrowCmd.GainArrowSlot"] = "an arrow slot gained by a player other than the card's owner: not followed",
-        ["OrbCmd.Passive"] = "an orb's passive set off at a creature, or of an orb other than each of yours of a class: not followed",
+        ["OrbCmd.Passive"] = "an orb's passive set off at a creature other than the play's target, or of orbs other than each of yours of a class its code names as the reader reads it (a class kept by OfType isn't read: Tesla Coil's): not followed",
         ["CreatureCmd.Kill"] = "a creature other than your Osty killed: not followed",
         ["CreatureCmd.SetCurrentHp"] = "the HP of a creature other than the card's target set: not followed",
         ["CreatureCmd.Stun"] = "a creature other than the card's target stunned: not followed",
@@ -592,7 +592,7 @@ public static partial class SimAdapter
     /// </summary>
     internal static OrbKind? PassivesOrbOf(CommandStep command, ModelProgram program)
     {
-        if (Argument(command, 2) != "null" || ValueAt(command, 1) is not NamedValue { Name: "each" }) return null;
+        if (Argument(command, 2) is not ("null" or "cardPlay.Target") || ValueAt(command, 1) is not NamedValue { Name: "each" }) return null;
         if (program.All().OfType<LoopStep>().LastOrDefault(loop => OverOwnersOrbs(loop) && new ModelProgram("", loop.Body).All().Contains(command)) is not { Items: { } items }) return null;
         var classes = StepValues.Unstored(items)!.Parts().OfType<QueryValue>().Where(part => part.Name == "is").Select(part => part.Type).Distinct().ToList();
         return classes is [var orbClass] ? HookReader.OrbKindOf(orbClass) : null;

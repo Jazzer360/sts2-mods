@@ -696,6 +696,11 @@ public enum HookTarget
     AllEnemies,
     /// <summary>A random enemy that can be hit (a roll over HittableEnemies): a branch per enemy, never the roll.</summary>
     RandomEnemy,
+    /// <summary>
+    /// The creature an orb's Passive is given, else a random enemy that can be hit (Lightning's `target ?? NextItem(hittable)`: decision #365): OrbCmd.Passive at
+    /// a creature (Tesla Coil's at its target) or with none (TriggerPassive passes none, as the turn ends).
+    /// </summary>
+    GivenElseRandom,
     /// <summary>The creature the power landing landed on (power.Owner in AfterPowerAmountChanged).</summary>
     PowerOwner,
     /// <summary>The creature a hit landed on (AfterDamageGiven's and AfterDamageReceived's target).</summary>
