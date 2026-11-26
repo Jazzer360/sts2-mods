@@ -56,7 +56,7 @@ SwordSagePower: [hooks: AfterCardEnteredCombat] AfterCardEnteredCombat: gap: the
 TagTeamPower: [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyCardPlayCount: gap: the value card.Owner.Creature
 TrashToTreasurePower: [orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first)] AfterCardGeneratedForCombat: gap: an orb made first
 UnceasingTop: [hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...)] AfterHandEmptied: gap: the simulator runs no read model's AfterHandEmptied
-UnmovablePower: [the fight's log (the history ledger, decision #191)] ModifyBlockMultiplicative: gap: the fight's log (plays counted once: Count(DistinctBy(Where(OfType(Instance.History.Entries), e => e.HappenedThisTurn(this.CombatState) and e.CardPlay a...
+UnmovablePower: [the fight's log (the history ledger, decision #191)] ModifyBlockMultiplicative: gap: the fight's log (plays counted once: Count(DistinctBy(Where(OfType<BlockGainedEntry>(Instance.History.Entries), e => e.HappenedThisTurn(this.CombatState...
 UnsettlingLamp: [hooks: the power amount given] BeforePowerAmountChanged: gap: the simulator runs no read model's BeforePowerAmountChanged | [queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust)] ModifyPowerAmountGivenMultiplicative: gap: the value cardSource
 Void: [the simulator's own model (no game class by its name)] no game class
 WitheringPresencePower: [its own data: a card or a play kept, a field used directly] AfterCardPlayed: gap: the value cardPlay.Card.Owner

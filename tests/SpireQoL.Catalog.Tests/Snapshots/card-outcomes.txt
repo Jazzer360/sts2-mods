@@ -3742,12 +3742,12 @@ Terraforming [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 []
 Terraforming [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
 Terraforming [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 []
 Terraforming [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 []
-TeslaCoil [Standard] 1 you=80/0 e3 h3 d6/3 enemy0=197/0 [] ?OrbCmd.Passive: an orb's passive set off at a creature other than the play's target, or of orbs other than each of yours of a class its code names as the reader reads it (a class kept by OfType isn't read: Tesla Coil's): not followed
-TeslaCoil [Upgraded] 1 you=80/0 e3 h3 d6/3 enemy0=196/0 [] ?OrbCmd.Passive: an orb's passive set off at a creature other than the play's target, or of orbs other than each of yours of a class its code names as the reader reads it (a class kept by OfType isn't read: Tesla Coil's): not followed
-TeslaCoil [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=197/0 enemy1=30/0 [] ?OrbCmd.Passive: an orb's passive set off at a creature other than the play's target, or of orbs other than each of yours of a class its code names as the reader reads it (a class kept by OfType isn't read: Tesla Coil's): not followed
-TeslaCoil [Replayed] 1 you=80/0 e3 h3 d6/3 enemy0=194/0 [] ?OrbCmd.Passive: an orb's passive set off at a creature other than the play's target, or of orbs other than each of yours of a class its code names as the reader reads it (a class kept by OfType isn't read: Tesla Coil's): not followed
-TeslaCoil [Teammate] 1 you=80/0 e3 h3 d6/3 mate0=70/0 e3 h2 enemy0=197/0 [] ?OrbCmd.Passive: an orb's passive set off at a creature other than the play's target, or of orbs other than each of yours of a class its code names as the reader reads it (a class kept by OfType isn't read: Tesla Coil's): not followed
-TeslaCoil [Alone] 1 you=80/0 e3 h0 d6/3 enemy0=197/0 [] ?OrbCmd.Passive: an orb's passive set off at a creature other than the play's target, or of orbs other than each of yours of a class its code names as the reader reads it (a class kept by OfType isn't read: Tesla Coil's): not followed
+TeslaCoil [Standard] 1 you=80/0 e3 h3 d6/3 enemy0=197/0 []
+TeslaCoil [Upgraded] 1 you=80/0 e3 h3 d6/3 enemy0=196/0 []
+TeslaCoil [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=197/0 enemy1=30/0 []
+TeslaCoil [Replayed] 1 you=80/0 e3 h3 d6/3 enemy0=194/0 []
+TeslaCoil [Teammate] 1 you=80/0 e3 h3 d6/3 mate0=70/0 e3 h2 enemy0=197/0 []
+TeslaCoil [Alone] 1 you=80/0 e3 h0 d6/3 enemy0=197/0 []
 TheBall [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=190/0 []
 TheBall [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=190/0 []
 TheBall [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=190/0 enemy1=30/0 []

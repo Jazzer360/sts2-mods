@@ -517,7 +517,7 @@ public static partial class SimAdapter
         ["CardCmd.ApplySingleTurnRetain"] = "Retain given for the turn to a card other than one you pick or the play drew: not followed",
         ["CardCmd.Enchant"] = "an enchantment given to a card other than one the play makes: not followed",
         ["ArrowCmd.GainArrowSlot"] = "an arrow slot gained by a player other than the card's owner: not followed",
-        ["OrbCmd.Passive"] = "an orb's passive set off at a creature other than the play's target, or of orbs other than each of yours of a class its code names as the reader reads it (a class kept by OfType isn't read: Tesla Coil's): not followed",
+        ["OrbCmd.Passive"] = "an orb's passive set off at a creature other than the play's target, or of orbs other than each of yours of a class its code names (`is` or OfType): not followed",
         ["CreatureCmd.Kill"] = "a creature other than your Osty killed: not followed",
         ["CreatureCmd.SetCurrentHp"] = "the HP of a creature other than the card's target set: not followed",
         ["CreatureCmd.Stun"] = "a creature other than the card's target stunned: not followed",
@@ -586,15 +586,18 @@ public static partial class SimAdapter
     }
 
     /// <summary>
-    /// The class of orb an OrbCmd.Passive step sets off, when the simulator follows it (decision #214): with no target (its third argument null: the orb's
-    /// passive as its turn-end trigger runs it), on each of the owner's orbs of a class (a foreach over OrbQueue.Orbs filtered by `orb is X`). Null for any
-    /// other (Tesla Coil's Lightning passives at the card's target). Pure on the step's code.
+    /// The class of orb an OrbCmd.Passive step sets off, when the simulator follows it (decisions #214, #367): with no target (its third argument null: the
+    /// orb's passive as its turn-end trigger runs it) or at the play's target, on each of the owner's orbs of a class (a foreach over OrbQueue.Orbs filtered by
+    /// `orb is X`, Darkness', or by OfType&lt;X&gt;, Tesla Coil's). Null for any other. Pure on the step's code.
     /// </summary>
     internal static OrbKind? PassivesOrbOf(CommandStep command, ModelProgram program)
     {
         if (Argument(command, 2) is not ("null" or "cardPlay.Target") || ValueAt(command, 1) is not NamedValue { Name: "each" }) return null;
         if (program.All().OfType<LoopStep>().LastOrDefault(loop => OverOwnersOrbs(loop) && new ModelProgram("", loop.Body).All().Contains(command)) is not { Items: { } items }) return null;
-        var classes = StepValues.Unstored(items)!.Parts().OfType<QueryValue>().Where(part => part.Name == "is").Select(part => part.Type).Distinct().ToList();
+        var queries = StepValues.Unstored(items)!.Parts().OfType<QueryValue>().ToList();
+        var classes = queries.Where(part => part.Name == "is").Select(part => part.Type)
+            .Concat(queries.Where(part => part is { Type: "Enumerable", Name: "OfType", GenericArguments: [_] }).Select(part => part.GenericArguments[0]))
+            .Distinct().ToList();
         return classes is [var orbClass] ? HookReader.OrbKindOf(orbClass) : null;
     }
 

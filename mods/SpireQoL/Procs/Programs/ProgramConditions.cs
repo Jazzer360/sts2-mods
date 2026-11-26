@@ -74,7 +74,8 @@ public sealed record QueryValue(string Type, string Name, ProgramValue? Of, IRea
     {
         if (Name == ".ctor") return "new " + Type + "(" + string.Join(", ", Arguments) + ")";
         if (Name == "is") return Of + " is " + Type;
-        var name = (Of != null ? Of + "." + Name : Name) + (GenericArguments.Count > 0 && Type != "Enumerable" ? "<" + string.Join(",", GenericArguments) + ">" : "");
+        // A query's type arguments, except Enumerable's that only follow from what it's asked of (ToList, Where): OfType's and Cast's are a class it keeps.
+        var name = (Of != null ? Of + "." + Name : Name) + (GenericArguments.Count > 0 && (Type != "Enumerable" || Name is "OfType" or "Cast") ? "<" + string.Join(",", GenericArguments) + ">" : "");
         return IsProperty ? name : name + "(" + string.Join(", ", Arguments) + ")";
     }
 }
