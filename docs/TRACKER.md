@@ -412,6 +412,9 @@ An indicator on a choice outside combat when one of your relics changes what it 
 
 ## 16. Open concerns (2026-11-10, waiting on play testing)
 
+- [ ] **DrawPileMemory patches once** (2026-11-26, the release review): it patches under whichever of Incoming Damage, Proc Tags or the Death Skull loads first; if that feature's apply fails and its patches are undone, `_patched` stays true and the other two silently lose the draw-pile memory. Patch it from a host-level owner, or re-apply from the next feature.
+- [ ] **QuietusPower's ledger note** names `AfterArrowShot`, which v0.114.0's Quietus doesn't have (main has no Quietus): rewrite it from its hook bodies.
+
 - [ ] **A black screen at a run's start** (2026-11-25, dev build be2bda4, Regent A10, seed 250M3CQPT2AV): the main menu's Common preload never finished, and the run's preload waited on it. In that launch Quick setup had opened during the preload and loaded card frames, banners and icons; in the four other launches that day the same overlap happened and the preload finished. Fixed as the likely cause: the settings menu waits for the game's preload (`Cards.GamePreload`). Two things new that day may have made the race likelier: dev mode's performance trace attached to every launch (dotnet-trace installed that morning) and the heavier work at load since 2026-11-24. Watch: a `[preload]` warning or a `preload` report (a preload unfinished after 30 s, with what it was loading) means it's back, with evidence. If one comes, check whether the trace was on and what else the mod was loading. Close once a week of launches passes with none.
 
 - [ ] **A card Feral sends back makes Stampede's pick unknown** (2026-11-21): `SimEngine.AddToHand` marks the hand's contents unknown for any card joining it, but the card Feral returns is known (the one just played). Keep it in `AutoHand` instead.
