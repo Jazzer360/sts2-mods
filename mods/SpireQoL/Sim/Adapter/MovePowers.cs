@@ -100,8 +100,10 @@ internal static class MovePowers
     /// The block a move gives its own enemy (CreatureCmd.GainBlock on base.Creature: block it gives others, Guardbot's, isn't
     /// counted), through the game's block math as things stand (Hook.ModifyBlock: Frail, Dexterity), summed over its calls.
     /// Null when the move gives it none, or when an amount isn't a number we can read (then no number is shown).
+    /// <paramref name="now"/> false (a later move, Intent Forecast): the move's own amounts, summed (decision #399), and null where the block math
+    /// wouldn't leave them as they are: it changes them now, or the enemy's moves give Dexterity.
     /// </summary>
-    public static int? BlockOf(MonsterModel monster, MoveState move)
+    public static int? BlockOf(MonsterModel monster, MoveState move, bool now = true)
     {
         try
         {
@@ -112,22 +114,51 @@ internal static class MovePowers
                 if (!BlockCalls.TryGetValue(perform.Method, out calls!)) BlockCalls[perform.Method] = calls = ReadBlock(perform.Method);
             }
             if (calls.Count == 0) return null;
+            // A later move: no number for an enemy whose moves give Dexterity, which its block math adds (The Forgotten's Miasma steals yours, each one
+            // blocking for more): its block then isn't the move's own amount, and the forecast doesn't follow it (decision #399).
+            if (!now && GivesDexterity(monster.GetType())) return null;
             var creature = monster.Creature;
-            var total = 0m;
+            var (total, modified) = (0m, 0m);
             foreach (var blockCall in calls)
             {
                 var amount = Evaluate(monster, blockCall.Constant, blockCall.Getter, blockCall.Combined);
                 if (amount is not { } known) return null;
-                total += creature.CombatState is { } combat
+                total += known;
+                modified += creature.CombatState is { } combat
                     ? MegaCrit.Sts2.Core.Hooks.Hook.ModifyBlock(combat, creature, known, (MegaCrit.Sts2.Core.ValueProps.ValueProp)blockCall.Props, null, null, out _)
                     : known;
             }
-            return (int)total;
+            // Its block math changes it now (Dexterity or Frail on it): a later move's block isn't its own amount either.
+            if (!now) return modified == total ? (int)total : null;
+            return (int)modified;
         }
         catch
         {
             return null;
         }
+    }
+
+    private static readonly Dictionary<Type, bool> DexterityGivers = new();
+
+    /// <summary>Whether one of the monster class's moves applies Dexterity (to anyone), from the moves' code (read at load, as Of reads it).</summary>
+    private static bool GivesDexterity(Type monster)
+    {
+        lock (DexterityGivers)
+        {
+            if (DexterityGivers.TryGetValue(monster, out var known)) return known;
+        }
+        var gives = false;
+        foreach (var perform in Procs.Programs.MonsterCode.Moves(monster))
+        {
+            List<Call> calls;
+            lock (Calls)
+            {
+                if (!Calls.TryGetValue(perform, out calls!)) Calls[perform] = calls = Read(perform);
+            }
+            gives |= calls.Any(call => call.Power == typeof(MegaCrit.Sts2.Core.Models.Powers.DexterityPower));
+        }
+        lock (DexterityGivers) DexterityGivers[monster] = gives;
+        return gives;
     }
 
     /// <summary>

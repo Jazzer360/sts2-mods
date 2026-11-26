@@ -289,6 +289,12 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
                 var gained = span.OfType<BlockGainedEntry>().Where(blockGainedEntry => blockGainedEntry.Receiver == creature).Sum(blockGainedEntry => blockGainedEntry.Amount);
                 if (gained != block) issues.Add($"intent block: {name}'s {shown.MoveId} showed {block}, it gained {gained}");
             }
+            // Intent Forecast shows a later move's own amounts, without the block math (decision #399): held to the same move when it's made.
+            if (shown.ForecastBlock is { } forecastBlock)
+            {
+                var gained = span.OfType<BlockGainedEntry>().Where(blockGainedEntry => blockGainedEntry.Receiver == creature).Sum(blockGainedEntry => blockGainedEntry.Amount);
+                if (gained != forecastBlock) issues.Add($"intent forecast block: {name}'s {shown.MoveId} forecast {forecastBlock}, it gained {gained}");
+            }
             var applied = span.OfType<PowerReceivedEntry>().Where(powerReceivedEntry => powerReceivedEntry.Applier == creature).ToList();
             // A move can apply a power with no applier, to its own monster (Devoted Sculptor's Ritual: PowerCmd.Apply(..., null)) or to
             // you (Slimed Berserker's Leeching Hug: Weak, applier null): counted for the powers the intent showed, when it's on its

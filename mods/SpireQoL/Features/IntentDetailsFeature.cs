@@ -37,16 +37,21 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
 
     public void Attach(OverlayHost host) { }
 
-    /// <summary>What an enemy's current move shows: its block (null: none, or not a number we can read) and the powers it applies.</summary>
-    internal sealed record Shown(string MoveId, int? Block, IReadOnlyList<MovePowers.Applied> Powers);
+    /// <summary>
+    /// What an enemy's current move shows: its block (null: none, or not a number we can read) and the powers it applies. ForecastBlock: its block
+    /// as Intent Forecast shows the move on a later turn (the move's own amounts: decision #399), for the check.
+    /// </summary>
+    internal sealed record Shown(string MoveId, int? Block, IReadOnlyList<MovePowers.Applied> Powers, int? ForecastBlock = null);
 
     /// <summary>What the enemy's intent on screen gets (null when its intent is hidden or it has no move).</summary>
     internal static Shown? For(Creature enemy)
     {
         if (enemy is not { IsEnemy: true, IsAlive: true } || enemy.Monster is not { } monster || monster.NextMove is not { } move) return null;
         if (move.Intents.Any(abstractIntent => abstractIntent is HiddenIntent or UnknownIntent)) return null;
-        var block = move.Intents.Any(abstractIntent => abstractIntent is DefendIntent) ? MovePowers.BlockOf(monster, move) : null;
-        return new Shown(move.Id, block, MovePowers.Of(monster, move));
+        var defends = move.Intents.Any(abstractIntent => abstractIntent is DefendIntent);
+        var block = defends ? MovePowers.BlockOf(monster, move) : null;
+        var forecastBlock = defends ? MovePowers.BlockOf(monster, move, now: false) : null;
+        return new Shown(move.Id, block, MovePowers.Of(monster, move), forecastBlock is > 0 ? forecastBlock : null);
     }
 
     public void OnFrame(OverlayHost host)
@@ -90,8 +95,8 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
         }
     }
 
-    /// <summary>The block number on a defend intent, where the game puts an attack's damage (its %Value label).</summary>
-    private static void Block(Control holder, NIntent intent, int? amount)
+    /// <summary>The block number on a defend intent, where the game puts an attack's damage (its %Value label). Intent Forecast's too.</summary>
+    internal static void Block(Control holder, NIntent intent, int? amount)
     {
         var label = holder.GetNodeOrNull<Label>(GodotNames.Path(BlockName));
         if (amount == null)

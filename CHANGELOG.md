@@ -15,6 +15,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - A play that wins the fight no longer counts Right Hand Hand, Make It So or Whistling Arrows coming back to your hand: the game brings nothing back once the fight is over.
 - Playing Beckon no longer counts its 6 HP at the end of your turn: Incoming Damage and the Play Preview leave it out once it's played.
 - Intent Forecast: the Ceremonial Beast's next Plow counts the Strength its last Plow gave it.
+- Intent Forecast: a later move that blocks shows its block on its defend intent, as the intent on screen does (not for The Forgotten, whose block grows with the Dexterity it steals). Its buff and debuff icons sit in the bottom-left corner too.
 - After you kill the Test Subject, the fight goes on while it waits to come back: your plays, Incoming Damage and the end of your turn are predicted again (they were predicted as if the fight had ended).
 - Droplet of Precognition and Liquid Memories drunk on yourself: the card you pick joins your hand in the predictions.
 - Intent Details: buff and debuff icons sit in the bottom-left corner of their intent, where a status intent shows its count, so a number beside them (the Haunted Ship's Dazed count) no longer covers theirs; and an enemy whose next move takes over the intents already on screen gets that move's numbers (the Seapunk's block).

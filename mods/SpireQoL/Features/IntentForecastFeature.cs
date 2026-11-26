@@ -41,8 +41,11 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
     /// <summary>Holders that only bob (a chance above its move), rather than sitting level with the intent icon beside them.</summary>
     private readonly HashSet<Control> _bobOnly = new();
     private float _bob;
-    /// <summary>Each forecast intent with the powers in its corner, placed again every frame (its layout settles after it's ready).</summary>
-    private readonly List<(NIntent Node, List<MovePowers.Applied>? Powers)> _corners = new();
+    /// <summary>
+    /// Each forecast intent with the powers in its corner and the block on a defend intent, placed again every frame (its layout settles after it's
+    /// ready).
+    /// </summary>
+    private readonly List<(NIntent Node, List<MovePowers.Applied>? Powers, int? Block)> _corners = new();
 
     public IntentForecastFeature(QolContext ctx) => _ctx = ctx;
 
@@ -201,8 +204,8 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         // The projection's rolls can leave nothing certain to show (Show chances off, a sleeper waking into a random pick).
         _widget!.HasContent = now.Shown.Count > 0;
         if (now.Shown.Count == 0) return;
-        foreach (var (node, powers) in _corners)
-            if (GodotObject.IsInstanceValid(node) && node.IsNodeReady()) IntentCorner.Place(node, powers);
+        foreach (var (node, powers, block) in _corners)
+            if (GodotObject.IsInstanceValid(node) && node.IsNodeReady()) Decorate(node, powers, block);
         // NIntent._Process's bob, for rows with no intent icon to follow.
         var offsetY = -(Mathf.Sin(Time.GetTicksMsec() * 0.001f * Mathf.Pi + _bob) * 10f + 8f);
         // The narrower side of each row's intents gets a spacer (each shown child adds its width and a gap): the intents sit centred.
@@ -325,6 +328,9 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
         // The powers the move applies (Frail 2), from its code, each in the corner of the buff or debuff intent it belongs to
         // (IntentCorner, as on the intent on screen: decision #99).
         var corners = enemy.Monster is { } monster ? IntentCorner.Assign(move.Intents, MovePowers.Of(monster, move, now: false)) : new();
+        // The block it gains, on its defend intent as on the intent on screen (Intent Details): the move's own amounts, which an enemy's block
+        // math leaves as they are (decision #399).
+        var block = enemy.Monster is { } blocker && move.Intents.Any(abstractIntent => abstractIntent is DefendIntent) ? MovePowers.BlockOf(blocker, move, now: false) : null;
         var firstHit = 0;
         for (var intentIndex = 0; intentIndex < move.Intents.Count; intentIndex++)
         {
@@ -337,18 +343,26 @@ public sealed class IntentForecastFeature : IFeature, IFrameFeature
                 firstHit += hits;
             }
             var powers = corners.TryGetValue(intentIndex, out var mine) ? mine : null;
+            var blocks = intent is DefendIntent && block is > 0 ? block : null;
             var node = NIntent.Create(bob);
             node.MouseFilter = Control.MouseFilterEnum.Ignore;
             line.AddChild(node);
-            if (powers != null) _corners.Add((node, powers));
+            if (powers != null || blocks != null) _corners.Add((node, powers, blocks));
             void Show()
             {
                 node.UpdateIntent(intent, targets, enemy);
-                IntentCorner.Place(node, powers);
+                Decorate(node, powers, blocks);
             }
             if (node.IsNodeReady()) Show();
             else node.Ready += Show;
         }
+    }
+
+    /// <summary>A forecast intent's block number, then its power chips (in that order, as on the intent on screen).</summary>
+    private static void Decorate(NIntent node, List<MovePowers.Applied>? powers, int? block)
+    {
+        if (block != null && node.GetNodeOrNull<Control>(GodotNames.Path("%IntentHolder")) is { } holder) IntentDetailsFeature.Block(holder, node, block);
+        IntentCorner.Place(node, powers);
     }
 
     /// <summary>The bob timing (NIntent._timeOffset) of the enemy's first intent on screen, or 0.</summary>
