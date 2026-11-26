@@ -13,6 +13,14 @@ namespace SpireQoL.Diagnostics;
 /// <summary>ProcAudit, part: A play's tabs against what the game did: procs, block, damage, draws and the rest of what the card itself does.</summary>
 public sealed partial class ProcAudit
 {
+    /// <summary>The summons in a simulated play's actions, those under a condition too (the most it can make).</summary>
+    private static int SummonsIn(IEnumerable<SimAction> actions) => actions.Sum(action => action switch
+    {
+        SummonAction => 1,
+        WhenAction conditioned => SummonsIn(conditioned.Then),
+        _ => 0,
+    });
+
     private static List<string> Compare(Window window, Player me, List<CombatHistoryEntry> entries, List<AbstractModel> flashed, out ModelLines model)
     {
         var issues = new List<string>();
@@ -395,7 +403,12 @@ public sealed partial class ProcAudit
                 Budget(Effect.Orb, "orbs channeled", orbs, predictedOrbs.Most);
             }
             else modelLines.Skip("budget", "the card's counts are its simulation's, and it has no finished outcome at the target it was played at");
-            Budget(Effect.Summon, "summons", summons, window.Card.DynamicVars.ContainsKey("Summon") ? prediction.Plays : 0);
+            // The summons its simulated play makes, each of its plays (its SummonActions, those under a condition too: Dirge summons once for each
+            // energy it spends); one a play for a card with a Summon value when its play isn't at hand.
+            var ownSummons = prediction.Sim?.AimFor(window.Target) is { } aim && prediction.Sim.PlayByTarget.TryGetValue(aim, out var summonPlay)
+                ? SummonsIn(summonPlay.Body) * prediction.Plays
+                : window.Card.DynamicVars.ContainsKey("Summon") ? prediction.Plays : 0;
+            Budget(Effect.Summon, "summons", summons, ownSummons);
         }
         // Powers applied: types the card doesn't carry itself (its PowerVar<T> values), with no tab
         // whose source applies powers. Strength/Dexterity changes from Vigor-style consumption and
