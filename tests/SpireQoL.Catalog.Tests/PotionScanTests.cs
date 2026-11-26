@@ -118,6 +118,45 @@ public class PotionScanTests
         Assert.Equal(0, Assert.Single(after).You.Potions);
     }
 
+    /// <summary>
+    /// Distilled Chaos (decision #338): its three auto-plays off your draw pile's top, from the pile's contents (two Strikes and a Defend: every order
+    /// plays all three), on its own read of the board with each pile card's play built. The forecast's read builds none, and its use there is unknown.
+    /// </summary>
+    [Fact]
+    public void DistilledChaosPlaysThePilesCardsOnItsOwnBoard()
+    {
+        GameModels.EnsureLoaded();
+        var fight = new GameFight();
+        var enemy = fight.Combat.CreateCreature(ModelDb.Monster<Axebot>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(enemy);
+        fight.Add<MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad>(PileType.Draw);
+        fight.Add<MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad>(PileType.Draw);
+        fight.Add<MegaCrit.Sts2.Core.Models.Cards.DefendIronclad>(PileType.Draw);
+        var potion = ModelDb.Potion<MegaCrit.Sts2.Core.Models.Potions.DistilledChaos>().ToMutable();
+        fight.Me.AddPotionInternal(potion);
+        Assert.True(SimAdapter.PlaysFromDrawPile(potion, Who.You));
+
+        // The forecast's board: one plain profile for the three, no play built, so what the use plays is unknown.
+        var forecast = SimAdapter.Build(fight.Me, fight.Combat, out var forecastIds);
+        Assert.Single(forecast.You.Draw!.Rest);
+        SimEngine.ApplyPlayTo(forecast, SimAdapter.Potion(potion, fight.Me, fight.Combat, forecastIds, Who.You), out var unknown, out _);
+        Assert.All(unknown, branch => Assert.NotNull(branch.Unmodelled));
+
+        // Its own board: a profile per card, each with its play from the pile.
+        var start = SimAdapter.Build(fight.Me, fight.Combat, out var ids, pileAutoPlays: true);
+        Assert.Equal(2, start.You.Draw!.Rest.Count);
+        Assert.All(start.You.Draw.Rest, group => Assert.NotNull(group.Card.FromPile));
+        SimEngine.ApplyPlayTo(start, SimAdapter.Potion(potion, fight.Me, fight.Combat, ids, Who.You), out var after, out _);
+        var hp = enemy.CurrentHp;
+        Assert.All(after, branch =>
+        {
+            Assert.Null(branch.Unmodelled);
+            Assert.Equal(hp - 12, branch.Enemy(ids[enemy])!.Hp);
+            Assert.Equal(5, branch.You.Block);
+            Assert.Equal(3, branch.AutoPlayed);
+        });
+    }
+
     private static string AimName(int aim) => aim switch
     {
         Who.You => "you",

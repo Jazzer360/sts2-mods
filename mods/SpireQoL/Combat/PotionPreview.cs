@@ -48,8 +48,11 @@ internal static class PotionPreview
         catch { return null; }
     }
 
-    /// <summary>The search for the potion being previewed: what it's for (the potion, its aim, the board's key) and the job.</summary>
-    private sealed record Search(PotionModel Potion, int Aim, long StateKey, SimJob Job);
+    /// <summary>
+    /// The search for the potion being previewed: what it's for (the potion, its aim, the forecast's key of the board), the start it searches from (the
+    /// forecast's, or its own read of the board: decision #338) and the job.
+    /// </summary>
+    private sealed record Search(PotionModel Potion, int Aim, long StateKey, TurnEndModel.ForecastStart Start, SimJob Job);
 
     private static Search? _search;
     private static PlayPreview.Shown? _built;
@@ -105,14 +108,17 @@ internal static class PotionPreview
         if (_search is not { } search || !ReferenceEquals(search.Potion, potion) || search.Aim != aim || search.StateKey != start.StateKey)
         {
             _search?.Job.Cancel();
-            var play = SimAdapter.Potion(potion, me, combat, start.Ids, aim);
-            search = _search = new Search(potion, aim, start.StateKey, SimJob.Start(SimSearch.Of(start.State, play), $"{potion.GetType().Name} (potion at {aim})"));
+            // A use that auto-plays your draw pile's top (Distilled Chaos) searches from its own read of the board, with the pile's plays built
+            // (decision #338): once per potion, aim and board, as the search starts.
+            var own = SimAdapter.PlaysFromDrawPile(potion, aim) ? TurnEndModel.WithPileAutoPlays(start) ?? start : start;
+            var play = SimAdapter.Potion(potion, me, combat, own.Ids, aim);
+            search = _search = new Search(potion, aim, start.StateKey, own, SimJob.Start(SimSearch.Of(own.State, play), $"{potion.GetType().Name} (potion at {aim})"));
         }
         // Waited for on the first frame it's asked for only (SimWait): a later frame reads what it has.
         if (!search.Job.Waited) SimWait.Ready(search.Job);
         if (search.Job.Latest is not { } outcome) return null;
         if (_built is { } built && ReferenceEquals(built.Outcome, outcome) && ReferenceEquals(built.Source, potion)) return built;
-        return _built = new PlayPreview.Shown(potion, outcome, TurnEndModel.Preview(start, outcome), start.Ids);
+        return _built = new PlayPreview.Shown(potion, outcome, TurnEndModel.Preview(search.Start, outcome), search.Start.Ids);
     }
 
     /// <summary>No potion selected: its search (if still going) is no longer wanted.</summary>

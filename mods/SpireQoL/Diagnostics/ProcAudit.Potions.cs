@@ -46,10 +46,12 @@ public sealed partial class ProcAudit
             else if (!SimModels.Loaded) record.Skipped = "the models weren't read yet";
             else
             {
-                record.Start = SimAdapter.Build(me, combat, out var ids);
-                record.Ids = ids;
                 var target = action.TargetId is { } targetId ? combat.Creatures.FirstOrDefault(creature => creature.CombatId == targetId)
                     : potion.TargetType.IsSingleTarget() ? me.Creature : null;
+                // Its start as its preview's: with the pile's plays built for a use that auto-plays your draw pile's top (decision #338).
+                var aimedAtYou = target == me.Creature;
+                record.Start = SimAdapter.Build(me, combat, out var ids, pileAutoPlays: aimedAtYou && SimAdapter.PlaysFromDrawPile(potion, Who.You));
+                record.Ids = ids;
                 record.Play = SimAdapter.Potion(potion, me, combat, ids, SimAdapter.AimOf(target, me, combat, ids));
             }
         }

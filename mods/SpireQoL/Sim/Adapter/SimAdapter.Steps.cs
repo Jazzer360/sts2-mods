@@ -1683,7 +1683,7 @@ public static partial class SimAdapter
                 if (BoardCounts.HandTakeChosenOf(play.Model, Sts2State.Hand(play.Me).Count)) actions.Add(new NotModelledAction("you choose how many cards it takes into your hand"));
                 return (actions, intoHand.PlayTest);
             }
-            if (ReferenceEquals(CardEffects.TakesIntoHandOf(play.Type)[0].Command, command)) actions.AddRange(TakesToHand(play.Model, play.Me));
+            if (ReferenceEquals(CardEffects.TakesIntoHandOf(play.Type)[0].Command, command)) actions.AddRange(TakesToHand(play.Model, play.Me, play.Ids));
             return (actions, intoHand.PlayTest);
         }
         var pile = Argument(command, 1);
@@ -1723,10 +1723,14 @@ public static partial class SimAdapter
         foreach (var literal in found.Condition.Literals)
             if (literal.Test is CompareValue compare && (DrawPileCount(compare.Left) ? compare.Right : DrawPileCount(compare.Right) ? compare.Left : null) is { } bound)
                 return (new List<SimAction> { new ShuffleDrawPileAction(Array.Empty<SimDrawGroup>()) { WhenShorterThan = Number(play, bound, fallback: 1) } }, ProgramCondition.Always);
-        // The hand the play moved into your draw pile before it (Reboot), by profile.
-        var handIn = play.Program.Commands.TakeWhile(other => !ReferenceEquals(other, command))
-            .Any(other => other.Command is { DeclaringType: "CardPileCmd", Name: "Add" } && MovesYourWholeHand(other, play))
-            ? PileType.Hand.GetPile(play.Me).Cards.Where(other => other != play.Card).Select(other => DrawProfiles.GetValueOrDefault(other)).OfType<SimDrawCard>()
+        // The hand the play moved into your draw pile before it (Reboot), by profile (the board read's own: unknown in a play built before its piles are).
+        var movesHand = play.Program.Commands.TakeWhile(other => !ReferenceEquals(other, command))
+            .Any(other => other.Command is { DeclaringType: "CardPileCmd", Name: "Add" } && MovesYourWholeHand(other, play));
+        var profiles = DrawProfilesOf(play.Ids);
+        if (movesHand && profiles == null)
+            return (new List<SimAction> { new NotModelledAction("your hand shuffled in by a play built before the board's piles are read") }, null);
+        var handIn = movesHand
+            ? PileType.Hand.GetPile(play.Me).Cards.Where(other => other != play.Card).Select(other => profiles!.GetValueOrDefault(other)).OfType<SimDrawCard>()
                 .GroupBy(profile => profile.Key).Select(sameProfile => new SimDrawGroup(sameProfile.First(), sameProfile.Count())).ToList()
             : new List<SimDrawGroup>();
         return (new List<SimAction> { new ShuffleDrawPileAction(handIn) }, null);

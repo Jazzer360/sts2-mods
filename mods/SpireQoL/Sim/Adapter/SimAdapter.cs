@@ -59,12 +59,15 @@ public static partial class SimAdapter
 
     /// <summary>
     /// The state of the fight from the game (BuildFromGame). A member it couldn't read (Sts2State.ReadScope) makes it unknown, named
-    /// by the member: its fallback is a guess, not the game's state.
+    /// by the member: its fallback is a guess, not the game's state. With <paramref name="pileAutoPlays"/>, each card in your piles has its play
+    /// from your draw pile built (SimDrawCard.FromPile) whatever is in your hand, as when a card there auto-plays from it: a use that auto-plays the
+    /// pile's top (Distilled Chaos, decision #338) gets its own start this way, never the forecast's (its profiles split by card, so every other
+    /// simulation's draws would branch more). The ids are the build's own handle (BoardIds), carrying its piles' profiles for the plays translated on it.
     /// </summary>
-    public static SimState Build(Player me, ICombatState combat, out Dictionary<Creature, int> ids)
+    public static SimState Build(Player me, ICombatState combat, out Dictionary<Creature, int> ids, bool pileAutoPlays = false)
     {
         using var reads = Sts2State.TrackReads();
-        var state = BuildFromGame(me, combat, out ids);
+        var state = BuildFromGame(me, combat, out ids, pileAutoPlays);
         if (reads.Unread.Count > 0) state.Unmodelled ??= SimState.Unread(reads.Unread[0]);
         return state;
     }
@@ -128,9 +131,9 @@ public static partial class SimAdapter
             ?? (creature.PetOwner is { } petOwner && PetKindOf(petOwner, creature) is { } kind && PlayerIdOf(petOwner.Creature) is { } ownerId ? Who.PetOf(ownerId, kind) : null);
     }
 
-    private static SimState BuildFromGame(Player me, ICombatState combat, out Dictionary<Creature, int> ids)
+    private static SimState BuildFromGame(Player me, ICombatState combat, out Dictionary<Creature, int> ids, bool pileAutoPlays)
     {
-        var idMap = new Dictionary<Creature, int>();
+        var idMap = new BoardIds();
         ids = idMap;
         var state = new SimState { MainRules = BranchRules.MainRulesNow(), TurnNumber = me.PlayerCombatState?.TurnNumber ?? 0, RoundNumber = combat.RoundNumber, Dread = MoveBranches.DreadRun, EncounterScaling = EncounterScaling(combat) };
         var mates = Teammates(me, combat);
@@ -219,7 +222,7 @@ public static partial class SimAdapter
         foreach (var relic in me.Relics) SimReaders.AddVars(state, Who.You, relic);
         FillAutoPlays(state.You, me, combat, ids);
         state.CostsUnknown = CostPassesNotRun(combat);
-        FillDrawPile(state.You, me, combat, ids, state.History);
+        FillDrawPile(state.You, me, combat, idMap, state.History, pileAutoPlays);
         state.You.BeaconOfHope = me.Creature.HasPower<BeaconOfHopePower>();
         FillSurvival(state.You, me);
 
@@ -377,11 +380,23 @@ public static partial class SimAdapter
     }
 
     /// <summary>
-    /// Each card in your piles and its draw profile, from the last board read (FillDrawPile, on the game's thread): what a play
-    /// taking cards from your piles names as the ones it can take (TakeToHandAction), and with Reboot in your hand, your hand's
-    /// cards as they join your draw pile (ShuffleDrawPileAction).
+    /// The creatures' ids of one board read (Build's) and that read's own draw profiles (decision #338): each card in your piles and its profile
+    /// (FillDrawPile), what a play translated on this board names as the cards a take from your piles can take (TakeToHandAction), and with
+    /// Reboot in your hand, your hand's cards as they join your draw pile (ShuffleDrawPileAction). The build's own, so a second build in a frame
+    /// (a potion's own start) can't change what the plays translated on the first one read. Until its piles are read (a play the build itself
+    /// translates: a hand card's auto-play, a pile card's play) it has none (ProfilesRead false).
     /// </summary>
-    internal static IReadOnlyDictionary<CardModel, SimDrawCard> DrawProfiles { get; private set; } = new Dictionary<CardModel, SimDrawCard>();
+    public sealed class BoardIds : Dictionary<Creature, int>
+    {
+        public IReadOnlyDictionary<CardModel, SimDrawCard> DrawProfiles { get; internal set; } = EmptyProfiles;
+        public bool ProfilesRead { get; internal set; }
+    }
+
+    private static readonly IReadOnlyDictionary<CardModel, SimDrawCard> EmptyProfiles = new Dictionary<CardModel, SimDrawCard>();
+
+    /// <summary>The draw profiles of the board <paramref name="ids"/> were read with, or null where they aren't read (yet, or ids made by hand).</summary>
+    internal static IReadOnlyDictionary<CardModel, SimDrawCard>? DrawProfilesOf(IReadOnlyDictionary<Creature, int> ids) =>
+        ids is BoardIds { ProfilesRead: true } board ? board.DrawProfiles : null;
 
     /// <summary>
     /// Whether a drawn card's being a Status changes what the board does (decision #195, round five): a question to the fight's log the board
@@ -438,9 +453,8 @@ public static partial class SimAdapter
     /// turn (always), exhausting as Ethereal (always), a Status or Ethereal when the board asks it (AsksDrawnStatus, AsksDrawnEthereal), a Strike with
     /// Hellraiser, and with Stampede or Simpleton the card itself (how it plays). Everything else is one plain profile.
     /// </summary>
-    private static void FillDrawPile(SimPlayer player, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, IReadOnlyList<HistoryQuery> questions)
+    private static void FillDrawPile(SimPlayer player, Player me, ICombatState combat, BoardIds ids, IReadOnlyList<HistoryQuery> questions, bool pileAutoPlays)
     {
-        DrawProfiles = new Dictionary<CardModel, SimDrawCard>(ReferenceEqualityComparer.Instance);
         try
         {
             // A drawn card's being a Status matters when something on the board asks it (Iteration's count of the Statuses drawn this turn).
@@ -456,7 +470,7 @@ public static partial class SimAdapter
             // Something that auto-plays the top of your draw pile (Havoc, Cascade, The Devil in your hand; Lost Lute's power): how each
             // card plays from there goes into its profile, and which card it is.
             var handCards = PileType.Hand.GetPile(me).Cards;
-            var topPlays = handCards.Any(card => Procs.Programs.CardEffects.AutoPlaysFromDrawPile(card.GetType()) || card.GetType().Name == nameof(LostLute))
+            var topPlays = pileAutoPlays || handCards.Any(card => Procs.Programs.CardEffects.AutoPlaysFromDrawPile(card.GetType()) || card.GetType().Name == nameof(LostLute))
                            || me.Creature.Powers.Any(power => power.GetType().Name == nameof(LostLutePower));
             var topUpgrades = handCards.Any(card => Procs.Programs.BoardCounts.AutoPlaysOf(card) is { Upgrade: true });
             var fromPileByKey = new Dictionary<string, (SimHandCard? Plain, SimHandCard? Upgraded, bool Exhausts)>();
@@ -535,7 +549,8 @@ public static partial class SimAdapter
             // The cards in your hand too, for a play that puts them into your draw pile (Reboot).
             if (handCards.Any(card => Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType())))
                 foreach (var card in handCards) Remembered(card);
-            DrawProfiles = profiles;
+            ids.DrawProfiles = profiles;
+            ids.ProfilesRead = true;
             // Cards something on this board makes into a draw pile (its code's MakeIntoDrawStep: Personal Hive's Dazed, Biiig Hug's Soot): their
             // profiles, from the game's own card, for a draw later in the same simulation.
             var made = new Dictionary<string, SimDrawCard>();

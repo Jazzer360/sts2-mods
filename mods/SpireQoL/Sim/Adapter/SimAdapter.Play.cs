@@ -338,21 +338,28 @@ public static partial class SimAdapter
 
     /// <summary>
     /// What one play takes into your hand from your piles (HandTakeOf), each play on its own (decision #189): each pile's cards it can
-    /// take, by profile (DrawProfiles), as a TakeToHandAction whose cards join your hand as they come (into a full hand, the discard pile).
-    /// How many a play takes: a pick's most, a roll's count (read as it runs when it counts your hand's room: The World, Anointed), every
-    /// card of a collection (All For One; a later play finds them gone). None with no pile read.
+    /// take, by profile (the board read's own: BoardIds), as a TakeToHandAction whose cards join your hand as they come (into a full hand, the
+    /// discard pile). How many a play takes: a pick's most, a roll's count (read as it runs when it counts your hand's room: The World, Anointed),
+    /// every card of a collection (All For One; a later play finds them gone). A play translated before its board's piles are read (a hand card's
+    /// auto-play, a pile card's play, built with the board) can't name them: unknown where there's a card it could take.
     /// </summary>
-    private static IEnumerable<SimAction> TakesToHand(AbstractModel model, Player me)
+    private static IEnumerable<SimAction> TakesToHand(AbstractModel model, Player me, IReadOnlyDictionary<Creature, int> ids)
     {
         if (HandTakeOf(model) is not { } take) yield break;
         var (count, from) = Procs.Programs.BoardCounts.HandTakeCount(model);
+        if (DrawProfilesOf(ids) is not { } profiles)
+        {
+            if (take.Piles.Any(pile => pile is PileType.Draw or PileType.Discard && pile.GetPile(me).Cards.Any(take.Eligible)))
+                yield return new NotModelledAction("a take from your piles in a play built before the board's piles are read");
+            yield break;
+        }
         foreach (var pile in take.Piles)
         {
             if (pile is not (PileType.Draw or PileType.Discard)) continue;
-            var counts = Eligible(me, pile == PileType.Discard, take.Eligible);
+            var counts = Eligible(me, pile == PileType.Discard, take.Eligible, profiles);
             // A play that shuffles your discard pile in first when your draw pile is short (Ki Chant) can take from what it shuffles in.
             if (pile == PileType.Draw && Procs.Programs.CardEffects.ShufflesWhenShort(model.GetType()))
-                foreach (var (key, inDiscard) in Eligible(me, fromDiscard: true, take.Eligible)) counts[key] = counts.GetValueOrDefault(key) + inDiscard;
+                foreach (var (key, inDiscard) in Eligible(me, fromDiscard: true, take.Eligible, profiles)) counts[key] = counts.GetValueOrDefault(key) + inDiscard;
             if (counts.Count == 0) continue;
             yield return new TakeToHandAction(take.Piles.Count > 1 ? int.MaxValue : count, counts)
                 { Random = take.Random, FromDiscard = pile == PileType.Discard, JoinsHand = true, CountFrom = from };
@@ -360,11 +367,11 @@ public static partial class SimAdapter
     }
 
     /// <summary>How many cards of each profile in your draw or discard pile pass the filter.</summary>
-    private static Dictionary<string, int> Eligible(Player me, bool fromDiscard, Func<CardModel, bool> eligible)
+    private static Dictionary<string, int> Eligible(Player me, bool fromDiscard, Func<CardModel, bool> eligible, IReadOnlyDictionary<CardModel, SimDrawCard> profiles)
     {
         var counts = new Dictionary<string, int>();
         foreach (var other in (fromDiscard ? PileType.Discard : PileType.Draw).GetPile(me).Cards)
-            if (eligible(other) && DrawProfiles.TryGetValue(other, out var profile)) counts[profile.Key] = counts.GetValueOrDefault(profile.Key) + 1;
+            if (eligible(other) && profiles.TryGetValue(other, out var profile)) counts[profile.Key] = counts.GetValueOrDefault(profile.Key) + 1;
         return counts;
     }
     private static decimal SafeDecimal(Func<decimal> read)

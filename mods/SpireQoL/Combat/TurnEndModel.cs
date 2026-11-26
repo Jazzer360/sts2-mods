@@ -426,6 +426,23 @@ public sealed class TurnEndModel
     }
 
     /// <summary>
+    /// The board again for a use that auto-plays the top of your draw pile (Distilled Chaos, decision #338): read with each pile card's play from
+    /// there built (SimAdapter.Build's pileAutoPlays), its shown and full states as BeginNow makes them, the rest of <paramref name="board"/>'s
+    /// start kept. No search of its own: its caller reads it once for the use, its aim and the board, never per frame.
+    /// </summary>
+    internal static ForecastStart? WithPileAutoPlays(ForecastStart board)
+    {
+        var me = Sts2State.Me;
+        var combat = Sts2State.Combat;
+        if (me?.PlayerCombatState == null || combat == null) return null;
+        var full = SimAdapter.Build(me, combat, out var ids, pileAutoPlays: true);
+        var fullKey = full.FullKey();
+        var state = CountTeammateHands || full.Teammates.Count == 0 ? full : full.WithoutTeammateHands();
+        var key = ReferenceEquals(state, full) ? fullKey : state.FullKey();
+        return board with { State = state, StateKey = key, FullState = full, FullKey = fullKey, Ids = ids, Reused = null };
+    }
+
+    /// <summary>
     /// Dev mode's check of a reused forecast. Its own method: the lambda capturing the states made its closure at the top of BeginNow,
     /// on every frame, reused or not (decision #177).
     /// </summary>

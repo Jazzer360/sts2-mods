@@ -53,6 +53,12 @@ public static partial class SimAdapter
         return play;
     }
 
+    /// <summary>
+    /// The use auto-plays the top of your draw pile (CardPileCmd.AutoPlayFromDrawPile in its code: Distilled Chaos) when used on you: what it plays
+    /// needs each pile card's play from there, which the forecast's board doesn't build (Build's pileAutoPlays: its own start, decision #338).
+    /// </summary>
+    public static bool PlaysFromDrawPile(PotionModel potion, int aim) => aim == Who.You && CardEffects.AutoPlaysFromDrawPile(potion.GetType());
+
     /// <summary>The potion's class overrides OnUse (a potion with none, the game's deprecated one, does nothing).</summary>
     private static bool PotionRuns(PotionModel potion) =>
         potion.GetType().GetMethod("OnUse", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public) is { } onUse

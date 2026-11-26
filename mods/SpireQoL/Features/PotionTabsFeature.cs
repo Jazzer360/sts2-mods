@@ -204,8 +204,10 @@ public sealed class PotionTabsFeature : IFeature, IFrameFeature
         if (!_uses.TryGetValue(potion, out var use) || use.StateKey != start.StateKey || use.Aim != aim)
         {
             use?.Job.Cancel();
-            var play = SimAdapter.Potion(potion, me, combat, start.Ids, aim);
-            _uses[potion] = use = new Use(start.StateKey, aim, SimJob.Start(SimSearch.PlayOnly(start.State, play), $"{potion.GetType().Name} (potion tags)"));
+            // A use that auto-plays your draw pile's top (Distilled Chaos) from its own read of the board, as its preview (decision #338).
+            var own = SimAdapter.PlaysFromDrawPile(potion, aim) ? TurnEndModel.WithPileAutoPlays(start) ?? start : start;
+            var play = SimAdapter.Potion(potion, me, combat, own.Ids, aim);
+            _uses[potion] = use = new Use(start.StateKey, aim, SimJob.Start(SimSearch.PlayOnly(own.State, play), $"{potion.GetType().Name} (potion tags)"));
         }
         if (!use.Job.Waited) SimWait.Ready(use.Job);
         return use.Job.Latest is { } outcome ? PotionTabs.SetOff(outcome, listening) : null;
