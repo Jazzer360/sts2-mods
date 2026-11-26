@@ -373,6 +373,13 @@ public sealed record SimSpawn(string Name, IReadOnlyList<int> Hp)
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public PowerId? Source { get; init; }
 
+    /// <summary>
+    /// Where in its source's AfterDeath the CreatureCmd.Add that adds it is (its code offset: decision #345), so each read SpawnStep takes its own
+    /// creatures, whatever a condition on another add left out; null for one any add of its source takes (a source whose code wasn't read).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? At { get; init; }
+
     /// <summary>Its monster's class (SimEnemy.Monster), as a power's code tests it; null for one not read.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Monster { get; init; }

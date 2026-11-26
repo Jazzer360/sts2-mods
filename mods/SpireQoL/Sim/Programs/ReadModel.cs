@@ -2047,9 +2047,10 @@ public sealed class ReadModel : SimModel
                     return SimEngine.MadeIntoDrawPile(args.State, new PendingMade(player, make.Card, creator, card));
                 };
             }
-            case SpawnStep:
+            case SpawnStep spawnStep:
             {
                 var source = PowerId.Of(Name);
+                var at = spawnStep.At;
                 return args =>
                 {
                     // CreatureCmd.Add as its owner dies: the next of the creatures its class's death adds (SimEnemy.Spawns, read from this code by the
@@ -2061,15 +2062,17 @@ public sealed class ReadModel : SimModel
                     }
                     // None read (a state written without them): none added.
                     if (enemy.Spawns == null) return One(args.State);
+                    // The next of the creatures this add adds (its code offset, decision #345: a round of a loop each its own).
                     var ordinal = 0;
                     foreach (var queued in args.State.PendingSpawns)
-                        if (queued.Dead == args.Owner && queued.Source == source) ordinal++;
-                    if (enemy.Spawns.Where(spawn => spawn.Source == source).ElementAtOrDefault(ordinal) is not { Unread: null })
+                        if (queued.Dead == args.Owner && queued.Source == source && queued.At == at) ordinal++;
+                    var pending = new PendingSpawn(args.Owner, source, ordinal, at);
+                    if (pending.Of(enemy) is not { Unread: null })
                     {
                         args.State.Unmodelled ??= $"{Name}: a creature {enemy.Name}'s death adds isn't read";
                         return One(args.State);
                     }
-                    args.State.PendingSpawns = args.State.PendingSpawns.Add(new PendingSpawn(args.Owner, source, ordinal));
+                    args.State.PendingSpawns = args.State.PendingSpawns.Add(pending);
                     return One(args.State);
                 };
             }

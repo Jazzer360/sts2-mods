@@ -1984,10 +1984,15 @@ public static class ProgramReader
             }
             // DynamicVars.Cards.BaseValue, DynamicVars["PlayMax"].IntValue: the card's value.
             // A calculated value worked out (DynamicVars.CalculatedCards.Calculate(target)): the card's value, on the play's target.
+            // Another model's value (Surprise's powerInstance.DynamicVars.Gold.IntValue, a foreach's Thievery) stays its query on that model
+            // (decision #346): read as the model's own, it named a value of this one.
             if (member.Name is "get_BaseValue" or "get_IntValue" or "Calculate")
             {
-                if (of is QueryValue { Name: "Item", Arguments: [NamedValue key] }) return (new CardValue(key.Name.Trim('"')), cursor);
-                if (of is QueryValue { Of: QueryValue { Name: "DynamicVars" } } value) return (new CardValue(_varKeyOf?.Invoke(value.Name) ?? value.Name), cursor);
+                // A foreach's item's or a parameter's values are another model's; any other receiver (this, a local it kept) its own, as before.
+                static bool OwnVars(ProgramValue? vars) => vars is QueryValue { Name: "DynamicVars" } dynamicVars
+                    && (dynamicVars.Of is StoredValue stored ? stored.Value : dynamicVars.Of) is not (NamedValue { Name: "each" } or ParameterValue);
+                if (of is QueryValue { Name: "Item", Arguments: [NamedValue key] } item && OwnVars(item.Of)) return (new CardValue(key.Name.Trim('"')), cursor);
+                if (of is QueryValue { Of: QueryValue { Name: "DynamicVars" } dynamicVars } value && OwnVars(dynamicVars)) return (new CardValue(_varKeyOf?.Invoke(value.Name) ?? value.Name), cursor);
             }
             // A foreach's item (enumerator.Current): each item it goes over.
             if (member.Name == "get_Current") return (new NamedValue("each"), cursor);

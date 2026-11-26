@@ -2383,7 +2383,7 @@ public static class HookReader
                 // once the hit is over (SpawnStep). Added in any other hook, or as another creature dies, it's a gap.
                 case "CreatureCmd.Add":
                     if (_hook != "AfterDeath") throw new Gap(ReaderCapability.CommandOnAnotherCreature, "gap: a creature added other than as a creature dies");
-                    return new SpawnStep();
+                    return new SpawnStep(command.Offset);
                 // Its owner's max and current HP set (CreatureCmd.SetMaxAndCurrentHp(base.Creature, amount), in its monster's method: Steam Eruption's
                 // TriggerAboutToBlowState): on a dead enemy, a revive.
                 case "CreatureCmd.SetMaxAndCurrentHp":

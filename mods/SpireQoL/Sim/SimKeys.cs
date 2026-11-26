@@ -150,9 +150,15 @@ public sealed record PendingMade(int Player, string Card, int Creator, SimCard? 
 
 /// <summary>
 /// A creature an enemy's death adds, waiting for the hit to be over (SimEngine.Spawn): the enemy that died, the class whose AfterDeath adds it, and
-/// which of that class's creatures it is (SimEnemy.Spawns, in the order its code adds them).
+/// which of that class's creatures it is (SimEnemy.Spawns, in the order its code adds them): the <paramref name="Ordinal"/>th of those its add at
+/// <paramref name="At"/> adds (its code offset: decision #345), or of all its source's when null (a hand-written model's).
 /// </summary>
-public sealed record PendingSpawn(int Dead, PowerId Source, int Ordinal);
+public sealed record PendingSpawn(int Dead, PowerId Source, int Ordinal, int? At = null)
+{
+    /// <summary>The creature it is, of the dead enemy's spawns: its source's at its add (a spawn read with no add matches any), the Ordinal-th.</summary>
+    public SimSpawn? Of(SimEnemy? dead) =>
+        dead?.Spawns?.Where(spawn => spawn.Source == Source && (At == null || spawn.At == null || spawn.At == At)).ElementAtOrDefault(Ordinal);
+}
 
 /// <summary>How many of each card event the current play has caused for its player (Unceasing Top: nothing drawn or created). Immutable.</summary>
 public sealed class CardEventCounts

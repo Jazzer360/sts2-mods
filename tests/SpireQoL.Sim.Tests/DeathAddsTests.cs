@@ -276,4 +276,19 @@ public class DeathAddsTests
         var branch = Assert.Single(SimEngine.Run(Fight(axebot), Strike(target: 0, damage: 6)).Branches);
         Assert.Equal("FurCoat's AfterCreatureAddedToCombat isn't simulated", branch.Unmodelled);
     }
+
+    [Fact]
+    public void EachAddTakesItsOwnCreaturesByItsCodeOffset()
+    {
+        // Decision #345: a power with two adds on different conditions, the first not holding on the board (so not read), the second read at offset
+        // 40. The read SpawnStep at 40 takes the creature at 40, the first of its own; by ordinal it would have been taken by the add at 20, whose
+        // creature isn't read: that step finds none and is unknown, never another add's creature.
+        var dead = new SimEnemy { Id = 0, Name = "E0", Spawns = new List<SimSpawn> { new("Axebot", new[] { 30 }) { Source = PowerId.Stock, At = 40 } } };
+        Assert.Equal("Axebot", new PendingSpawn(Dead: 0, PowerId.Stock, Ordinal: 0, At: 40).Of(dead)?.Name);
+        Assert.Null(new PendingSpawn(Dead: 0, PowerId.Stock, Ordinal: 0, At: 20).Of(dead));
+        // A hand-written model's (no add named) takes them in order; a spawn read with no add (its code unread) answers any add.
+        Assert.Equal("Axebot", new PendingSpawn(Dead: 0, PowerId.Stock, Ordinal: 0).Of(dead)?.Name);
+        var unread = new SimEnemy { Id = 0, Name = "E0", Spawns = new List<SimSpawn> { new("", Array.Empty<int>()) { Source = PowerId.Stock, Unread = "unread" } } };
+        Assert.Equal("unread", new PendingSpawn(Dead: 0, PowerId.Stock, Ordinal: 0, At: 20).Of(unread)?.Unread);
+    }
 }

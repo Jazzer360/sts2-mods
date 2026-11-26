@@ -37,6 +37,32 @@ public class SpawnTests
         Assert.Equal(new[] { Expected(ModelDb.Monster<SneakyGremlin>()), Expected(ModelDb.Monster<FatGremlin>()) },
             spawns.Select(spawn => $"{spawn.Name} {string.Join(",", spawn.Hp)}"));
         Assert.All(spawns, spawn => Assert.Equal(0, spawn.Powers.Count)); // neither gremlin's AfterAddedToRoom applies a power
+        // Each keyed by its own CreatureCmd.Add (decision #345): two adds, two offsets.
+        Assert.Equal(2, spawns.Select(spawn => spawn.At).Distinct().Count(at => at != null));
+    }
+
+    [Fact]
+    public void SurprisesFatGremlinJoinsWithAHeistForEachThievery()
+    {
+        // SurprisePower.AfterDeath gives its Fat Gremlin a Heist for each Thievery on its owner (PowerCmd.Apply of a HeistPower, that Thievery's own
+        // DynamicVars.Gold.IntValue) before adding it (decision #346): with none, none (the gremlins above); with two, both, each its own gold. The
+        // Sneaky Gremlin, added in between, has none.
+        var fight = new GameFight();
+        var merc = fight.Combat.CreateCreature(ModelDb.Monster<GremlinMerc>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(merc);
+        ModelDb.Power<SurprisePower>().ToMutable().ApplyInternal(merc, amount: 1m);
+        var thieveries = new[] { 15, 20 }.Select(gold =>
+        {
+            var thievery = ModelDb.Power<ThieveryPower>().ToMutable();
+            thievery.ApplyInternal(merc, amount: 1m);
+            thievery.DynamicVars.Gold.BaseValue = gold;
+            return thievery;
+        }).ToList();
+        var spawns = SimAdapter.SpawnsOf(merc, fight.Combat)!;
+        Assert.Equal(2, spawns.Count);
+        Assert.All(spawns, spawn => Assert.Null(spawn.Unread));
+        Assert.Equal(0, spawns[0].Powers.Count);
+        Assert.Equal(thieveries.Sum(thievery => thievery.DynamicVars.Gold.IntValue), spawns[1].Powers[PowerId.Heist]);
     }
 
     [Fact]

@@ -913,9 +913,9 @@ public sealed record KillStep(bool Forced = false) : HookStep;
 /// CreatureCmd.Add of a creature as its owner (an enemy) dies (Infested's four Wrigglers, Stock's next Axebot, each set up before it joins): the next
 /// of the creatures its class's death adds, as the adapter read them from this same code with every HP each can start with (SimEnemy.Spawns, by
 /// its class), joining once the hit is over (SimEngine.Spawn: a branch per HP). Run on another creature's death, or with nothing read to add, the
-/// simulation is unknown.
+/// simulation is unknown. <paramref name="At"/>: the add's code offset, which the adapter's spawns are keyed by (SimSpawn.At, decision #345).
 /// </summary>
-public sealed record SpawnStep : HookStep;
+public sealed record SpawnStep(int At) : HookStep;
 
 /// <summary>
 /// CreatureCmd.SetMaxAndCurrentHp of its owner (in its monster's method its power calls as it dies: Steam Eruption's TriggerAboutToBlowState): its

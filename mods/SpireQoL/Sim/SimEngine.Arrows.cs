@@ -139,7 +139,7 @@ public static partial class SimEngine
     /// </summary>
     internal static IEnumerable<SimState> Spawn(SimState state, PendingSpawn pending)
     {
-        if (state.Enemy(pending.Dead)?.Spawns?.Where(spawn => spawn.Source == pending.Source).ElementAtOrDefault(pending.Ordinal) is not { } spawn) return new[] { state };
+        if (pending.Of(state.Enemy(pending.Dead)) is not { } spawn) return new[] { state };
         if (spawn.Unread != null || spawn.Hp.Count == 0)
         {
             state.Unmodelled ??= $"a creature {state.Enemy(pending.Dead)!.Name}'s death adds isn't read ({spawn.Unread ?? "no HP"})";

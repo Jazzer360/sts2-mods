@@ -21,7 +21,48 @@ public static partial class SimAdapter
         ["unread"] = "a condition or a monster the evaluator can't read on the board",
         ["changeable"] = "a test or a value on the way to it that a play can change before the death, other than its source's own amount (decision #315)",
         ["asked as it dies"] = "a test of its source's amount that doesn't hold on the board: asked as the death runs, and should a play make it hold, the creature it adds isn't read (decision #315)",
+        ["powers"] = "a power its code applies to a creature it made before it joins, whose class, amount, condition or rounds the adapter can't read (decision #346)",
     };
+
+    /// <summary>The adds a step holds (itself, or the CreatureCmd.Adds in a loop's body), each by its code offset (SimSpawn.At).</summary>
+    private static IEnumerable<CommandStep> AddsIn(ProgramStep step) => step switch
+    {
+        CommandStep { Command.FullName: "CreatureCmd.Add" } add => new[] { add },
+        LoopStep loop => loop.Body.SelectMany(AddsIn),
+        _ => Array.Empty<CommandStep>(),
+    };
+
+    /// <summary>
+    /// The creature a PowerCmd.Apply gives its power to, when it's one the code made itself (a local of CombatState.CreateCreature: Surprise's
+    /// fatGremlin), by that local's key (ProgramReader.LocalKey); null for any other target.
+    /// </summary>
+    private static string? MadeTarget(CommandStep apply)
+    {
+        var at = apply.Command.GenericArguments.Count == 1 ? 1 : 2; // Apply<T>(context, target, ...); Apply(context, power, target, ...)
+        return at < apply.Values.Count && apply.Values[at] is StoredValue { Value: QueryValue { Name: "CreateCreature" } } made ? ProgramReader.LocalKey(made) : null;
+    }
+
+    /// <summary>The made creatures a step's PowerCmd.Applies give powers to (MadeTarget).</summary>
+    private static IEnumerable<string> MadeTargets(ProgramStep step) => step switch
+    {
+        CommandStep { Command.FullName: "PowerCmd.Apply" } apply when MadeTarget(apply) is { } key => new[] { key },
+        LoopStep loop => loop.Body.SelectMany(MadeTargets),
+        _ => Array.Empty<string>(),
+    };
+
+    /// <summary>
+    /// A PowerCmd.Apply to a made creature, read on the power's board: its class (Apply&lt;T&gt;, or the ModelDb.Power&lt;T&gt;() it's given) and its amount
+    /// (the argument after the target); null when either can't be read.
+    /// </summary>
+    private static (PowerId Power, int Amount)? MadePower(CommandStep apply, ProgramBoard board, ModelProgram program, IReadOnlyDictionary<string, object?> parameters)
+    {
+        var generic = apply.Command.GenericArguments.Count == 1;
+        var powerName = generic ? apply.Command.GenericArguments[0]
+            : apply.Values.Count > 1 ? apply.Values[1].Parts().OfType<QueryValue>().FirstOrDefault(query => query is { Name: nameof(ModelDb.Power), GenericArguments.Count: 1 })?.GenericArguments[0] : null;
+        var amountAt = generic ? 2 : 3;
+        if (powerName == null || PowerType(powerName) is not { } powerType || amountAt >= apply.Values.Count) return null;
+        return Number(ProgramEvaluator.Value(apply.Values[amountAt], board, program, parameters)) is { } amount ? (PowerId.Of(SimPowerName(powerType)), (int)amount) : null;
+    }
 
     /// <summary>
     /// What a test or a value in a power's AfterDeath reads that a play or a turn can change before the death (decision #311's rule outside a card's
@@ -66,11 +107,14 @@ public static partial class SimAdapter
         foreach (var power in creature.Powers)
         {
             var source = PowerId.Of(SimPowerName(power.GetType()));
-            // A creature its code adds that the adapter can't read: listed as such, so its death is unknown, never one that adds nothing.
-            void Unread(string gap)
+            // A creature its code adds that the adapter can't read: listed as such, so its death is unknown, never one that adds nothing; for each add
+            // in the step it can't read (by its code offset, decision #345), or for any of its source's (the whole code unread).
+            void Unread(string gap, ProgramStep? at = null)
             {
                 gaps?.Add(gap);
-                (spawns ??= new List<SimSpawn>()).Add(new SimSpawn("", Array.Empty<int>()) { Source = source, Unread = SpawnGaps[gap] });
+                spawns ??= new List<SimSpawn>();
+                var adds = at == null ? new List<int?> { null } : AddsIn(at).Select(add => (int?)add.Offset).ToList();
+                foreach (var offset in adds) spawns.Add(new SimSpawn("", Array.Empty<int>()) { Source = source, Unread = SpawnGaps[gap], At = offset });
             }
             try
             {
@@ -83,8 +127,12 @@ public static partial class SimAdapter
                 var readsOwnAmount = false;
                 var first = spawns?.Count ?? 0;
                 var changeableSetUp = new HashSet<string>(StringComparer.Ordinal);
+                // The powers its code applies to a creature it made before that creature joins (decision #346: Surprise's Heist on its Fat Gremlin),
+                // by the made creature's local, and the ones whose power, amount, condition or rounds it can't read (its creature then unread).
+                var madePowers = new Dictionary<string, List<(PowerId Power, int Amount)>>(StringComparer.Ordinal);
+                var madePowersUnread = new HashSet<string>(StringComparer.Ordinal);
                 static bool Adds(ProgramStep step) => step is CommandStep { Command.FullName: "CreatureCmd.Add" } || step is LoopStep loop && loop.Body.Any(Adds);
-                void Walk(IReadOnlyList<ProgramStep> steps, Dictionary<string, List<(string Property, object? Value)>> setUp)
+                void Walk(IReadOnlyList<ProgramStep> steps, Dictionary<string, List<(string Property, object? Value)>> setUp, IReadOnlyDictionary<string, object?> bound)
                 {
                     foreach (var step in steps)
                     {
@@ -93,32 +141,47 @@ public static partial class SimAdapter
                         var (testsOwnAmount, changeable) = step.Condition == null ? (false, null) : SpawnInputs(step.Condition, powerType, program);
                         if (changeable != null)
                         {
-                            if (Adds(step)) Unread("changeable");
+                            if (Adds(step)) Unread("changeable", step);
+                            madePowersUnread.UnionWith(MadeTargets(step));
                             continue;
                         }
                         readsOwnAmount |= testsOwnAmount && Adds(step);
-                        var holds = step.Condition == null ? true : ProgramEvaluator.Holds(step.Condition, board, program, parameters);
-                        if (holds == null && Adds(step)) Unread("unread");
+                        var holds = step.Condition == null ? true : ProgramEvaluator.Holds(step.Condition, board, program, bound);
+                        if (holds == null) madePowersUnread.UnionWith(MadeTargets(step));
+                        if (holds == null && Adds(step)) Unread("unread", step);
                         // Its amount's test not holding on the board: the read step asks it again as the death runs (the same amount, the same
                         // answer); should a play make it hold, the creature isn't read.
-                        if (holds == false && testsOwnAmount && Adds(step)) Unread("asked as it dies");
+                        if (holds == false && testsOwnAmount && Adds(step)) Unread("asked as it dies", step);
                         if (holds != true) continue;
                         switch (step)
                         {
+                            // A foreach applying powers to a creature it made (Surprise's Heist for each of its owner's Thievery): its body once per item of
+                            // its collection on the board, the item its `each` (each.DynamicVars.Gold.IntValue); a collection it can't read leaves the
+                            // creature unread, never added without them.
+                            case LoopStep loop when loop.Items != null && !Adds(loop) && MadeTargets(loop).ToList() is { Count: > 0 } targets:
+                                if (ProgramEvaluator.Items(loop.Items, board, program) is not { } items) madePowersUnread.UnionWith(targets);
+                                else foreach (var item in items)
+                                    Walk(loop.Body, setUp, new Dictionary<string, object?>(bound) { ["each"] = item });
+                                break;
+                            case CommandStep { Command.FullName: "PowerCmd.Apply" } apply when MadeTarget(apply) is { } madeKey:
+                                if (MadePower(apply, board, program, bound) is { } given)
+                                    (madePowers.TryGetValue(madeKey, out var already) ? already : madePowers[madeKey] = new List<(PowerId, int)>()).Add(given);
+                                else madePowersUnread.Add(madeKey);
+                                break;
                             case LoopStep loop:
                                 // A counter loop (for i < n): each round makes and adds its own creature.
                                 if (loop.While != null && SpawnInputs(loop.While, powerType, program) is var (boundReadsAmount, boundChangeable)
                                     && (boundChangeable != null || boundReadsAmount))
                                 {
-                                    if (Adds(loop)) Unread("changeable");
+                                    if (Adds(loop)) Unread("changeable", loop);
                                     continue;
                                 }
-                                if (CounterRounds(loop, board, program, parameters) is not { } rounds)
+                                if (CounterRounds(loop, board, program, bound) is not { } rounds)
                                 {
-                                    if (Adds(loop)) Unread("a loop");
+                                    if (Adds(loop)) Unread("a loop", loop);
                                     continue;
                                 }
-                                for (var round = 0; round < rounds; round++) Walk(loop.Body, new Dictionary<string, List<(string, object?)>>(setUp, StringComparer.Ordinal));
+                                for (var round = 0; round < rounds; round++) Walk(loop.Body, new Dictionary<string, List<(string, object?)>>(setUp, StringComparer.Ordinal), bound);
                                 break;
                             // A property set on a monster the code makes before it joins: kept for that monster's CreatureCmd.Add.
                             case StoreStep made when made.Field.StartsWith(ProgramReader.MadeMonsterPrefix, StringComparison.Ordinal):
@@ -131,7 +194,7 @@ public static partial class SimAdapter
                                 readsOwnAmount |= setUpReadsAmount;
                                 if (setUpChangeable != null) changeableSetUp.Add(monsterClass);
                                 setUp[monsterClass] = (setUp.TryGetValue(monsterClass, out var earlier) ? earlier : new List<(string, object?)>())
-                                    .Append((property, ProgramEvaluator.Value(made.Value, board, program, parameters))).ToList();
+                                    .Append((property, ProgramEvaluator.Value(made.Value, board, program, bound))).ToList();
                                 break;
                             }
                             case CommandStep { Command.FullName: "CreatureCmd.Add" } add:
@@ -140,30 +203,40 @@ public static partial class SimAdapter
                                 var name = SpawnedMonster(add) ?? madeClass;
                                 if (name == null || MonsterType(name) is not { } type)
                                 {
-                                    Unread("unread");
+                                    Unread("unread", add);
                                     continue;
                                 }
                                 if (madeClass != null && changeableSetUp.Contains(madeClass))
                                 {
-                                    Unread("changeable");
+                                    Unread("changeable", add);
                                     continue;
                                 }
                                 var monster = madeClass != null ? SetUp(type, setUp.TryGetValue(madeClass, out var properties) ? properties : new List<(string, object?)>(), combat) : CanonicalMonster(type);
                                 if (monster == null)
                                 {
-                                    Unread("set up");
+                                    Unread("set up", add);
                                     continue;
                                 }
                                 // Made as it's added (Add<T>, Add(monster, ...)), its HP is none the creatures this death added before it joined with; a
                                 // creature made earlier (CombatState.CreateCreature, then Add(creature): Surprise's Fat Gremlin) was given its HP then.
                                 var madeAsAdded = add.Command.GenericArguments.Count == 1 || madeClass != null;
-                                (spawns ??= new List<SimSpawn>()).Add(Spawn(type, monster, combat, taken) with { Source = source, Monster = name, UniqueFromEarlier = madeAsAdded });
+                                // A creature made earlier joins with the powers its code applied to it first (decision #346), or is unread without them.
+                                var made = add.Values.Count > 0 && add.Values[0] is StoredValue madeCreature ? ProgramReader.LocalKey(madeCreature) : null;
+                                if (made != null && madePowersUnread.Contains(made))
+                                {
+                                    Unread("powers", add);
+                                    continue;
+                                }
+                                var spawn = Spawn(type, monster, combat, taken);
+                                if (made != null && madePowers.TryGetValue(made, out var applied))
+                                    foreach (var (power, amount) in applied) spawn = spawn with { Powers = spawn.Powers.Add(power, delta: amount) };
+                                (spawns ??= new List<SimSpawn>()).Add(spawn with { Source = source, Monster = name, UniqueFromEarlier = madeAsAdded, At = add.Offset });
                                 break;
                             }
                         }
                     }
                 }
-                Walk(program.Steps, new Dictionary<string, List<(string, object?)>>(StringComparer.Ordinal));
+                Walk(program.Steps, new Dictionary<string, List<(string, object?)>>(StringComparer.Ordinal), parameters);
                 if (readsOwnAmount && spawns != null)
                     for (var index = first; index < spawns.Count; index++) spawns[index] = spawns[index] with { ReadAtAmount = power.Amount };
             }
