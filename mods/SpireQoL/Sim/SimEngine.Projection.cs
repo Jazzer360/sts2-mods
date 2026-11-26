@@ -25,7 +25,15 @@ public sealed record ProjectedChoice(int EnemyId, IReadOnlyList<(ProjectedMove M
 /// move on screen and the state after it (a stun's named move for a stunned one), its moves so far (that one last), and each of its moves read as
 /// the intent on screen is (one behind a hidden intent, or whose attack can't be read, is left out: its turn is unknown). Pure data, shared.
 /// </summary>
-public sealed record ProjectedRules(MoveGraph Graph, string Current, string? CurrentFollowUp, IReadOnlyList<string> Log, IReadOnlyDictionary<string, ProjectedMove> Moves);
+public sealed record ProjectedRules(MoveGraph Graph, string Current, string? CurrentFollowUp, IReadOnlyList<string> Log, IReadOnlyDictionary<string, ProjectedMove> Moves)
+{
+    /// <summary>
+    /// The rules of a creature that joins in the projection (decision #378): its machine new, no move on screen (Current names no state, so its first
+    /// roll is from its initial state) and none so far.
+    /// </summary>
+    public static ProjectedRules Joining(MoveGraph graph, IReadOnlyDictionary<string, ProjectedMove> moves) =>
+        new(graph, Current: "", CurrentFollowUp: null, Log: Array.Empty<string>(), moves);
+}
 
 /// <summary>
 /// What a projected move hits you for, each hit in order (decision #304): as it lands (the damage math at that hit, with no plays of yours in between),
@@ -87,15 +95,21 @@ public static partial class SimEngine
     /// <param name="rules">The enemies whose moves the projection works out itself (decision #309), by id: each turn's move rolled as your turn
     /// starts (after Hook.BeforeSideTurnStart, as CombatManager.StartTurn's PrepareForNextTurn), from its rules asked of the projected state
     /// (IntentForecast.NextInProjection), in place of its moves in <paramref name="turns"/>.</param>
-    public static Projection Project(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns, IReadOnlyDictionary<int, ProjectedRules>? rules = null) =>
-        Project(start, turns, rules, new SimWork());
+    /// <param name="joining">The move rules of each monster a move or a death can add (decision #378), by its class (SimEnemy.Monster): a creature
+    /// that joins in the projection rolls its moves from them as one on the board does (JoinedRolls).</param>
+    public static Projection Project(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns, IReadOnlyDictionary<int, ProjectedRules>? rules = null,
+        IReadOnlyDictionary<string, ProjectedRules>? joining = null) =>
+        Project(start, turns, rules, new SimWork(), joining);
 
     /// <summary>The projection with <paramref name="work"/>: SimJob's on a worker (its cancellation and background gate, decision #107).</summary>
-    internal static Projection Project(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns, IReadOnlyDictionary<int, ProjectedRules>? rules, SimWork work)
+    internal static Projection Project(SimState start, IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns, IReadOnlyDictionary<int, ProjectedRules>? rules, SimWork work,
+        IReadOnlyDictionary<string, ProjectedRules>? joining = null)
     {
         var projection = new Projection();
         var rolling = rules?.ToDictionary(entry => entry.Key, entry => new MoveRoll(entry.Value)) ?? new Dictionary<int, MoveRoll>();
-        var turnCount = rolling.Count > 0 ? Math.Max(turns.Count, IntentForecast.MaxTurns) : turns.Count;
+        var turnCount = rolling.Count > 0 || joining is { Count: > 0 } ? Math.Max(turns.Count, IntentForecast.MaxTurns) : turns.Count;
+        var onBoard = new HashSet<int>();
+        foreach (var enemy in start.Enemies) onBoard.Add(enemy.Id);
         if (turnCount == 0) return projection;
         foreach (var id in rolling.Keys) projection.Moves[id] = new List<ForecastTurn>();
         var first = start.Clone();
@@ -110,6 +124,7 @@ public static partial class SimEngine
             // This turn, with no more plays: as Run without a play.
             Certainly(branches, uncertain, () => Fighting(branches, () => AutoPostPlay(branches)));
             Certainly(branches, uncertain, () => EndOfTurn(branches));
+            JoinedRolls(branches.States, joining, onBoard, rolling, projection, rolledAtAdd: true);
             Certainly(branches, uncertain, () => Fighting(branches, () => EnemyTurnStart(branches)));
             Certainly(branches, uncertain, () => TheirTurn(branches, choices: null, row: null));
             for (var turn = 0; turn < turnCount; turn++)
@@ -118,7 +133,11 @@ public static partial class SimEngine
                 // The enemies whose rules are read roll their moves there, after its BeforeSideTurnStart (decision #309).
                 var given = turn < turns.Count ? turns[turn] : Array.Empty<ProjectedChoice>();
                 IReadOnlyList<ProjectedChoice> choices = given;
-                Certainly(branches, uncertain, () => YourTurnStart(branches, rolled: () => choices = Rolled(branches.States, given, rolling, projection, turn)));
+                Certainly(branches, uncertain, () => YourTurnStart(branches, rolled: () =>
+                {
+                    JoinedRolls(branches.States, joining, onBoard, rolling, projection, rolledAtAdd: false);
+                    choices = Rolled(branches.States, given, rolling, projection, turn);
+                }));
                 if (choices.Count == 0) break;
                 var state = branches.States[0];
                 var row = new Dictionary<int, Dictionary<string, ProjectedHits>>();
@@ -137,6 +156,7 @@ public static partial class SimEngine
                 }
                 // Its end with no plays, the enemies' turn start, their moves, their turn's end.
                 Certainly(branches, uncertain, () => EndOfTurn(branches));
+                JoinedRolls(branches.States, joining, onBoard, rolling, projection, rolledAtAdd: true);
                 Certainly(branches, uncertain, () => Fighting(branches, () => EnemyTurnStart(branches)));
                 Certainly(branches, uncertain, () => TheirTurn(branches, choices, row));
             }
@@ -175,6 +195,40 @@ public static partial class SimEngine
         /// <summary>The state its next move is rolled from: the move after the last one (the initial state when it names none).</summary>
         public string From => Last == Rules.Current && Rules.CurrentFollowUp is { } followUp ? followUp
             : Rules.Graph.Nodes.GetValueOrDefault(Last) is MoveNodeMove { FollowUp: { } next } ? next : Rules.Graph.InitialId;
+    }
+
+    /// <summary>
+    /// Each creature that joined the fight in the projection since the board (a move's add, a death's spawn) whose monster's rules were read
+    /// (<paramref name="joining"/>, decision #378) rolls its moves from here as one on the board does: its machine new (MonsterModel.SetUpForCombat),
+    /// so its first roll is its initial state's (MonsterMoveStateMachine.RollMove: a move it starts on stays until it's made) with no moves so far
+    /// (ProjectedRules.Joining). One that joined on the players' side (<paramref name="rolledAtAdd"/>: CombatManager.AfterCreatureAdded rolls it as it
+    /// joins) has made that roll already: it's its move in the enemy turn that follows, which the simulator gives a creature joining then none of
+    /// (a death's spawn makes no move the turn it joins), and its next roll follows it; a random one there ends its forecast. One that joined on the
+    /// enemies' side rolls at your turn's start (Creature.PrepareForNextTurn). A creature of a monster with no rules read makes no move counted.
+    /// </summary>
+    private static void JoinedRolls(List<SimState> states, IReadOnlyDictionary<string, ProjectedRules>? joining, HashSet<int> onBoard, Dictionary<int, MoveRoll> rolling,
+        Projection projection, bool rolledAtAdd)
+    {
+        if (joining is not { Count: > 0 }) return;
+        foreach (var state in states)
+        {
+            foreach (var enemy in state.Enemies)
+            {
+                if (!enemy.Alive || onBoard.Contains(enemy.Id) || rolling.ContainsKey(enemy.Id) || !joining.TryGetValue(enemy.Monster, out var rules)) continue;
+                var roll = new MoveRoll(rules);
+                rolling[enemy.Id] = roll;
+                projection.Moves[enemy.Id] = new List<ForecastTurn>();
+                if (!rolledAtAdd) continue;
+                var first = IntentForecast.NextInProjection(rules.Graph, roll.From, roll.Log, state, enemy.Id);
+                if (first is not { Count: 1 })
+                {
+                    roll.Over = true;
+                    continue;
+                }
+                roll.Last = first[0].Move;
+                roll.Log.Add(first[0].Move);
+            }
+        }
     }
 
     /// <summary>

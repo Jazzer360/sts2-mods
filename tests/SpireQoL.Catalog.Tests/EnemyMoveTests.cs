@@ -81,6 +81,26 @@ public class EnemyMoveTests
     }
 
     [Fact]
+    public void TheParafrightTheObscuraAddsRollsItsSlamInTheProjection()
+    {
+        // The Obscura's Illusion adds a Parafright in the enemy turn; its rules are read from the monster as it joins (decision #378: a copy of the
+        // canonical one, its machine made as AddCreature makes it), so the projection's later turns roll its Slam from its initial state on.
+        var fight = new GameFight();
+        Enemy<TheObscura>(fight, "ILLUSION_MOVE");
+        var input = SimAdapter.ProjectionStart(fight.Me, fight.Combat)!;
+        var rules = input.Joining["Parafright"];
+        Assert.Equal("SLAM_MOVE", rules.Graph.InitialId);
+        var slam = rules.Moves["SLAM_MOVE"];
+        var otherFight = new GameFight();
+        var parafright = Enemy<Parafright>(otherFight, "SLAM_MOVE");
+        Assert.Equal((decimal)Hit(parafright, otherFight), slam.Intent!.Single().Base);
+        var projection = SimEngine.Project(input.State, input.Turns, input.Rules, input.Joining);
+        var joined = input.State.Enemies.Max(enemy => enemy.Id) + 1;
+        Assert.Equal("SLAM_MOVE", projection.ForecastOf(joined)!.First().Moves.Single().Move);
+        Assert.NotNull(projection.Of(turn: 0, enemyId: joined, move: "SLAM_MOVE"));
+    }
+
+    [Fact]
     public void FabricatorsRandomBotIsNotFollowed()
     {
         // Fabricator's bots are a random one of a set other than the last it made (RunRng.MonsterAi.NextItem of a model, not a type argument): not read,

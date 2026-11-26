@@ -20,7 +20,11 @@ public static partial class SimAdapter
     /// (<see cref="StartProjection"/>).
     /// </summary>
     internal sealed record ProjectionInput(SimState State, IReadOnlyDictionary<Creature, int> Ids, IReadOnlyList<IReadOnlyList<ProjectedChoice>> Turns,
-        IReadOnlyDictionary<int, ProjectedRules> Rules);
+        IReadOnlyDictionary<int, ProjectedRules> Rules)
+    {
+        /// <summary>The move rules of each monster a move or a death on the board can add, by class (decision #378: JoiningRules).</summary>
+        public IReadOnlyDictionary<string, ProjectedRules> Joining { get; init; } = new Dictionary<string, ProjectedRules>();
+    }
 
     /// <summary>
     /// A projection's start from <paramref name="state"/> and its enemies' <paramref name="ids"/> (or the board built now, without teammates' hands
@@ -62,7 +66,7 @@ public static partial class SimAdapter
             var rules = new Dictionary<int, ProjectedRules>();
             foreach (var (id, creature, _, _) in forecasts)
                 if (RulesOf(me, combat, mates, creature, idOf) is { } read) rules[id] = read;
-            return new ProjectionInput(state, ids, turns, rules);
+            return new ProjectionInput(state, ids, turns, rules) { Joining = JoiningRules(me, combat, mates, state, rules.Values, turns, idOf) };
         }
         catch (Exception exception)
         {
@@ -72,7 +76,88 @@ public static partial class SimAdapter
     }
 
     /// <summary>The projection of <paramref name="input"/> on a worker (SimJob, decision #107): the frame waits for it as for any search (SimWait).</summary>
-    internal static SimJob StartProjection(ProjectionInput input, string label) => SimJob.StartProjection(input.State, input.Turns, label, rules: input.Rules);
+    internal static SimJob StartProjection(ProjectionInput input, string label) => SimJob.StartProjection(input.State, input.Turns, label, rules: input.Rules, joining: input.Joining);
+
+    /// <summary>How many monsters' rules a projection reads for the creatures that can join (each one's own adds included): a bound on the closure.</summary>
+    private const int MaxJoiningMonsters = 8;
+
+    /// <summary>
+    /// The move rules of each monster that can join the fight in a projection (decision #378), by class: each a death's spawn names (SimEnemy.Spawns)
+    /// or a move's add (MoveSpawnAction) in the board's moves, the forecast's and the read rules' moves, and in the moves of those it reads in turn.
+    /// Each is read from the monster as it joins (MonsterRules).
+    /// </summary>
+    private static Dictionary<string, ProjectedRules> JoiningRules(Player me, ICombatState combat, List<Player> mates, SimState state, IEnumerable<ProjectedRules> rules,
+        IReadOnlyList<IReadOnlyList<ProjectedChoice>> turns, Func<Creature, int?> idOf)
+    {
+        var joining = new Dictionary<string, ProjectedRules>(StringComparer.Ordinal);
+        var waiting = new Queue<string>();
+        void Named(string? monster)
+        {
+            if (!string.IsNullOrEmpty(monster) && !joining.ContainsKey(monster) && !waiting.Contains(monster)) waiting.Enqueue(monster);
+        }
+        void InMoves(IEnumerable<SimAction>? actions)
+        {
+            if (actions == null) return;
+            foreach (var action in actions)
+                if (action is MoveSpawnAction add) Named(add.Spawn.Monster);
+                else if (action is WhenAction when) InMoves(when.Then);
+        }
+        foreach (var enemy in state.Enemies)
+        {
+            foreach (var spawn in enemy.Spawns ?? new List<SimSpawn>()) Named(spawn.Monster);
+            InMoves(enemy.Move);
+        }
+        foreach (var read in rules) foreach (var move in read.Moves.Values) InMoves(move.Actions);
+        foreach (var turn in turns) foreach (var choice in turn) foreach (var (move, _) in choice.Options) InMoves(move.Actions);
+        var tried = 0;
+        while (waiting.Count > 0 && tried++ < MaxJoiningMonsters)
+        {
+            var monster = waiting.Dequeue();
+            if (MonsterRules(me, combat, mates, monster, idOf) is not { } read) continue;
+            joining[monster] = read;
+            foreach (var move in read.Moves.Values) InMoves(move.Actions);
+        }
+        return joining;
+    }
+
+    /// <summary>
+    /// A monster's move rules as it joins (decision #378): a copy of its canonical model (ModelDb.Monster&lt;T&gt;().ToMutable(), as CreatureCmd.Add makes
+    /// it) on a creature of its own in the fight but not on its board (new Creature: nothing added), its machine made as AddCreature makes it
+    /// (MonsterModel.SetUpForCombat), and each move read as one on the board is (ProjectedMoveOf). A condition between moves is the simulator's,
+    /// asked of the projected state, or not known (never as the game's lambda answers it on a creature that hasn't joined); a random pick's weights
+    /// are its code's on the creature as it joins. Null when it can't be read.
+    /// </summary>
+    private static ProjectedRules? MonsterRules(Player me, ICombatState combat, List<Player> mates, string monsterClass, Func<Creature, int?> idOf)
+    {
+        try
+        {
+            if (MonsterType(monsterClass) is not { } type || CanonicalMonster(type)?.ToMutable() is not { } monster) return null;
+            var creature = new Creature(monster, MegaCrit.Sts2.Core.Combat.CombatSide.Enemy, slotName: null) { CombatState = combat };
+            monster.SetUpForCombat();
+            if (monster.MoveStateMachine is not { } machine || IntentReader.Graph(machine, monster) is not { } graph) return null;
+            var nodes = graph.Nodes.ToDictionary(entry => entry.Key, entry => entry.Value is MoveNodeConditional conditional
+                ? conditional with { Branches = conditional.Branches.Select(branch => (branch.To, (bool?)null)).ToList() }
+                : entry.Value);
+            var moves = new Dictionary<string, ProjectedMove>(StringComparer.Ordinal);
+            foreach (var move in machine.States.Values.OfType<MoveState>())
+            {
+                try
+                {
+                    if (ProjectedMoveOf(me, combat, mates, creature, move, idOf, stepsWhole: true) is { } projected) moves[move.Id] = projected;
+                }
+                catch (Exception exception) when (exception is InvalidOperationException or NullReferenceException or ArgumentException)
+                {
+                    // a move whose intent can't be read off the board is left out: its turn is unknown
+                }
+            }
+            return ProjectedRules.Joining(graph with { Nodes = nodes }, moves);
+        }
+        catch (Exception exception)
+        {
+            ModEntry.Log.Detail($"[sim] the rules of a {monsterClass} joining couldn't be read: {exception.GetType().Name}: {exception.Message}");
+            return null;
+        }
+    }
 
     /// <summary>
     /// An enemy's move rules for a projection (decision #309): its graph with each condition as the simulator's (IntentReader.Rules), the move on
@@ -92,9 +177,11 @@ public static partial class SimAdapter
     /// <summary>
     /// A forecast move as the simulator's (ProjectedMove): each attack intent's hits (its DamageCalc's base, with the captured terms on each player, as
     /// BuildFromGame reads the intent on screen) and its code's steps (MoveOf). Null for one behind a hidden intent (decision #72), or an attack whose
-    /// base can't be read.
+    /// base can't be read. With <paramref name="stepsWhole"/> (a creature that hasn't joined: decision #378), its steps are read only when every one
+    /// is (a step on the creature itself has no id yet): one it can't build leaves the move unread rather than without that step.
     /// </summary>
-    private static ProjectedMove? ProjectedMoveOf(Player me, ICombatState combat, List<Player> mates, Creature creature, MoveState move, Func<Creature, int?> idOf)
+    private static ProjectedMove? ProjectedMoveOf(Player me, ICombatState combat, List<Player> mates, Creature creature, MoveState move, Func<Creature, int?> idOf,
+        bool stepsWhole = false)
     {
         if (creature.Monster is not { } monster || move.Intents.Any(intent => intent is HiddenIntent or UnknownIntent)) return null;
         var intent = new List<IntentHit>();
@@ -116,10 +203,12 @@ public static partial class SimAdapter
             var atRead = powerType != null ? creature.Powers.Where(power => power.GetType() == powerType).Sum(power => power.Amount) : 0;
             for (var i = 0; i < repeats; i++) intent.Add(new IntentHit(damageCalc) { Captured = terms, BaseFrom = baseFrom, BasePower = basePower, BasePowerAtRead = atRead });
         }
+        var gaps = stepsWhole ? new List<string>() : null;
+        var actions = MoveOf(monster, hitsPerAttack, idOf, combat, gaps, given: move);
         return new ProjectedMove(move.Id)
         {
             Intent = intent.Count > 0 ? intent : null,
-            Actions = MoveOf(monster, hitsPerAttack, idOf, combat, given: move),
+            Actions = gaps is { Count: > 0 } ? null : actions,
             OnlyAttacks = move.Intents.All(each => each is AttackIntent),
         };
     }

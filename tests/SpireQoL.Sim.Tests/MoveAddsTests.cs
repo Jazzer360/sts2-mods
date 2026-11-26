@@ -64,6 +64,61 @@ public class MoveAddsTests
         Assert.Single(Assert.Single(outcome.Branches).Enemies);
     }
 
+    /// <summary>The rules of a monster that joins (decision #378): BITE (4 damage) first, then REST, then BITE again, read as ProjectedRules.Joining.</summary>
+    private static Dictionary<string, ProjectedRules> BiteThenRest()
+    {
+        var graph = new MoveGraph(new Dictionary<string, MoveNode>
+        {
+            ["BITE"] = new MoveNodeMove("BITE", FollowUp: "REST"),
+            ["REST"] = new MoveNodeMove("REST", FollowUp: "BITE"),
+        }, InitialId: "BITE");
+        var moves = new Dictionary<string, ProjectedMove>
+        {
+            ["BITE"] = new("BITE") { Intent = new List<IntentHit> { new(Base: 4) }, Actions = new SimAction[] { new MoveAttackAction(FirstHit: 0, Hits: 1) }, OnlyAttacks = true },
+            ["REST"] = new("REST") { Actions = Array.Empty<SimAction>() },
+        };
+        return new Dictionary<string, ProjectedRules>(StringComparer.Ordinal) { ["EyeWithTeeth"] = ProjectedRules.Joining(graph, moves) };
+    }
+
+    private static string Moves(Projection projection, int enemyId) =>
+        string.Join(" | ", projection.ForecastOf(enemyId)!.Select(turn => string.Join(", ", turn.Moves.Select(move => move.Chance < 1 ? $"{move.Move} {move.Chance:0.##}" : move.Move))));
+
+    [Fact]
+    public void TheCreatureAMoveAddsRollsItsMovesInTheProjection()
+    {
+        // It joins in the enemy turn (no roll then: CreatureCmd.Add rolls only on the players' side), so its first move is rolled as your next turn
+        // starts, from its new machine's initial state (MonsterMoveStateMachine.RollMove keeps a move it starts on), then its rules go on from there.
+        var projection = SimEngine.Project(Fight(Fogmog(Eye(6))), Array.Empty<IReadOnlyList<ProjectedChoice>>(), rules: null, joining: BiteThenRest());
+        Assert.Equal("BITE | REST | BITE", Moves(projection, enemyId: 1));
+        Assert.Equal(new[] { 4 }, projection.Of(turn: 0, enemyId: 1, move: "BITE")!.AtYourTurnStart);
+        Assert.Equal(new[] { 4 }, projection.Of(turn: 2, enemyId: 1, move: "BITE")!.AtYourTurnStart);
+    }
+
+    [Fact]
+    public void ACreatureWhoseRulesArentReadMakesNoMoveCounted()
+    {
+        // Its monster's rules not read: it makes no move the projection counts, as before.
+        var projection = SimEngine.Project(Fight(Fogmog(Eye(6))), Array.Empty<IReadOnlyList<ProjectedChoice>>(), rules: null, joining: null);
+        Assert.Null(projection.ForecastOf(enemyId: 1));
+        Assert.Empty(projection.Turns);
+    }
+
+    [Fact]
+    public void AJoiningCreaturesRandomFirstMoveEndsItsForecast()
+    {
+        // Its initial state a random pick: that turn shows both moves with their chances, and nothing after it (the first random pick ends it).
+        var graph = new MoveGraph(new Dictionary<string, MoveNode>
+        {
+            ["PICK"] = new MoveNodeRandom("PICK", new[] { new RandomBranch("BITE", MoveRepeat.CanRepeatForever, MaxTimes: 0, Cooldown: 0, Weight: 1), new RandomBranch("REST", MoveRepeat.CanRepeatForever, MaxTimes: 0, Cooldown: 0, Weight: 3) }),
+            ["BITE"] = new MoveNodeMove("BITE", FollowUp: "PICK"),
+            ["REST"] = new MoveNodeMove("REST", FollowUp: "PICK"),
+        }, InitialId: "PICK");
+        var joining = new Dictionary<string, ProjectedRules>(StringComparer.Ordinal) { ["EyeWithTeeth"] = ProjectedRules.Joining(graph, BiteThenRest()["EyeWithTeeth"].Moves) };
+        var projection = SimEngine.Project(Fight(Fogmog(Eye(6))), Array.Empty<IReadOnlyList<ProjectedChoice>>(), rules: null, joining);
+        Assert.Equal("REST 0.75, BITE 0.25", Moves(projection, enemyId: 1));
+        Assert.Single(projection.Turns);
+    }
+
     [Fact]
     public void ADeadSummonerAddsNothing()
     {
