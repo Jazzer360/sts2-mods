@@ -59,12 +59,17 @@ public sealed partial class RunReminders
 
     // ------------------------------------------------------------------ check (audit)
 
-    /// <summary>What the player has that an option can change, to compare before and after it.</summary>
-    private sealed record Before(HashSet<CardModel> Deck, int Gold, int Hp, int MaxHp, int Potions, HashSet<RelicModel> Relics)
+    /// <summary>
+    /// What the player has that an option can change, to compare before and after it: the deck (each card's upgrades and enchantment too), gold, HP, max
+    /// HP, potions and relics.
+    /// </summary>
+    private sealed record Before(HashSet<CardModel> Deck, int Gold, int Hp, int MaxHp, int Potions, HashSet<RelicModel> Relics,
+        Dictionary<CardModel, (int Upgrades, EnchantmentModel? Enchantment)> Cards)
     {
         public static Before Of(Player me) => new(me.Deck.Cards.ToHashSet(ReferenceEqualityComparer.Instance as IEqualityComparer<CardModel>),
             me.Gold, me.Creature.CurrentHp, me.Creature.MaxHp, me.Potions.Count(),
-            me.Relics.ToHashSet(ReferenceEqualityComparer.Instance as IEqualityComparer<RelicModel>));
+            me.Relics.ToHashSet(ReferenceEqualityComparer.Instance as IEqualityComparer<RelicModel>),
+            me.Deck.Cards.ToDictionary(card => card, card => (card.CurrentUpgradeLevel, card.Enchantment), ReferenceEqualityComparer.Instance as IEqualityComparer<CardModel>));
     }
 
     /// <summary>The option being resolved: relics with a reminder rule that flash while it runs, and the state before it.</summary>
@@ -77,6 +82,9 @@ public sealed partial class RunReminders
         public required Before Start;
         public readonly List<RelicModel> Flashed = new();
         public readonly List<RelicModel> Subscribed = new();
+        /// <summary>Any relic of yours flashed while it ran (not only the reminders' relics): a reaction, whose effects aren't the option's.</summary>
+        public bool AnyFlashed;
+        public readonly List<RelicModel> Watched = new();
         /// <summary>The relics whose icon the option had (IconsFor, before the settings switches).</summary>
         public HashSet<RelicModel> Shown = new();
         /// <summary>The cards you were offered while it ran (reward and choice screens), for the odds log.</summary>
@@ -99,6 +107,8 @@ public sealed partial class RunReminders
             window.Shown = IconsFor(__instance, me).Select(relicCrossed => relicCrossed.Relic).ToHashSet();
             foreach (var relic in me.Relics)
             {
+                relic.Flashed += OnAnyFlashed;
+                window.Watched.Add(relic);
                 if (ChoiceReminders.For(relic.GetType().Name) is not { On: not ChoiceEffect.None }) continue;
                 relic.Flashed += OnFlashed;
                 window.Subscribed.Add(relic);
@@ -126,26 +136,54 @@ public sealed partial class RunReminders
         catch (Exception ex) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-flash"); }
     }
 
+    private static void OnAnyFlashed(RelicModel relic, IEnumerable<MegaCrit.Sts2.Core.Entities.Creatures.Creature> _)
+    {
+        if (_window is { } window) window.AnyFlashed = true;
+    }
+
     /// <summary>
     /// What the option did, from the player's state before and after it: cards and curses that joined
     /// the deck (new card objects, so transforms count), gold gained, HP lost (not when max HP fell
     /// too: that's max HP loss), potions gained. Gold that Lucky Fysh paid for a card isn't the option's.
+    /// Also (decision #351) gold lost, a heal (HP up by more than max HP), max HP up or down, potions lost, cards that left the deck, a
+    /// card of yours upgraded or enchanted, relics gained or lost, and a fight started.
     /// </summary>
     private static ChoiceEffect Observed(Window window, out string details)
     {
         var me = window.Me;
         var before = window.Start;
         var added = me.Deck.Cards.Where(card => !before.Deck.Contains(card)).ToList();
+        var deck = me.Deck.Cards.ToHashSet(ReferenceEqualityComparer.Instance as IEqualityComparer<CardModel>);
+        var removed = before.Deck.Where(card => !deck.Contains(card)).ToList();
         var choiceEffect = ChoiceEffect.None;
         if (added.Any(card => card.Type != MegaCrit.Sts2.Core.Entities.Cards.CardType.Curse)) choiceEffect |= ChoiceEffect.CardToDeck;
         if (added.Any(card => card.Type == MegaCrit.Sts2.Core.Entities.Cards.CardType.Curse)) choiceEffect |= ChoiceEffect.CurseToDeck;
         var luckyFysh = window.Flashed.Any(relic => relic is LuckyFysh);
         if (me.Gold > before.Gold && !luckyFysh) choiceEffect |= ChoiceEffect.GoldGain;
+        if (me.Gold < before.Gold) choiceEffect |= ChoiceEffect.GoldLoss;
         if (me.Creature.CurrentHp < before.Hp && me.Creature.MaxHp >= before.MaxHp) choiceEffect |= ChoiceEffect.HpLoss;
+        if (me.Creature.CurrentHp - before.Hp > Math.Max(0, me.Creature.MaxHp - before.MaxHp)) choiceEffect |= ChoiceEffect.Heal;
+        if (me.Creature.MaxHp > before.MaxHp) choiceEffect |= ChoiceEffect.MaxHpGain;
+        if (me.Creature.MaxHp < before.MaxHp) choiceEffect |= ChoiceEffect.MaxHpLoss;
         if (me.Potions.Count() > before.Potions) choiceEffect |= ChoiceEffect.Potion;
-        details = $"deck +[{string.Join(", ", added.Select(card => card.GetType().Name))}], gold {before.Gold}→{me.Gold}, HP {before.Hp}/{before.MaxHp}→{me.Creature.CurrentHp}/{me.Creature.MaxHp}, potions {before.Potions}→{me.Potions.Count()}";
+        if (me.Potions.Count() < before.Potions) choiceEffect |= ChoiceEffect.PotionLoss;
+        if (removed.Count > 0) choiceEffect |= ChoiceEffect.CardRemoval;
+        var kept = me.Deck.Cards.Where(card => before.Cards.ContainsKey(card)).ToList();
+        if (kept.Any(card => card.CurrentUpgradeLevel > before.Cards[card].Upgrades)) choiceEffect |= ChoiceEffect.UpgradeCard;
+        if (kept.Any(card => card.Enchantment != null && card.Enchantment != before.Cards[card].Enchantment)) choiceEffect |= ChoiceEffect.EnchantCard;
+        var relics = me.Relics.ToHashSet(ReferenceEqualityComparer.Instance as IEqualityComparer<RelicModel>);
+        if (me.Relics.Any(relic => !before.Relics.Contains(relic))) choiceEffect |= ChoiceEffect.RelicGain;
+        if (before.Relics.Any(relic => !relics.Contains(relic))) choiceEffect |= ChoiceEffect.RelicLoss;
+        if (Sts2State.InCombat) choiceEffect |= ChoiceEffect.Fight;
+        details = $"deck +[{string.Join(", ", added.Select(card => card.GetType().Name))}] -[{string.Join(", ", removed.Select(card => card.GetType().Name))}], gold {before.Gold}→{me.Gold}, HP {before.Hp}/{before.MaxHp}→{me.Creature.CurrentHp}/{me.Creature.MaxHp}, potions {before.Potions}→{me.Potions.Count()}, relics {before.Relics.Count}→{relics.Count}";
         return choiceEffect;
     }
+
+    /// <summary>
+    /// The effects the check reported as unread before the option reading (decision #351): the others it holds to the reading only when no relic of
+    /// yours flashed while the option ran (a reaction's heal, max HP or gold, Darkstone Periapt's, Dragon Fruit's, isn't the option's).
+    /// </summary>
+    private const ChoiceEffect CheckedAlways = ChoiceEffect.CardToDeck | ChoiceEffect.CurseToDeck | ChoiceEffect.HpLoss | ChoiceEffect.GoldGain | ChoiceEffect.Potion;
 
     /// <summary>
     /// Ends the window (the next option, combat starting, or just after the option's task ended) and
@@ -161,6 +199,7 @@ public sealed partial class RunReminders
         if (window == null) return;
         _window = null;
         foreach (var relic in window.Subscribed) relic.Flashed -= OnFlashed;
+        foreach (var relic in window.Watched) relic.Flashed -= OnAnyFlashed;
         var observed = Observed(window, out var state);
         // The run ended (a win's last Proceed, or dying): the game sets your HP to 0 as it closes the run (RunState.IsGameOver is
         // every player dead), which isn't the option's doing. Logged, not checked.
@@ -182,10 +221,11 @@ public sealed partial class RunReminders
         var unread = observed & ~window.Effects & ~fromObtained;
         // A card added by an option read as adding a curse (or the other way) is still a card the icons covered.
         if ((window.Effects & (ChoiceEffect.CardToDeck | ChoiceEffect.CurseToDeck)) != 0) unread &= ~ChoiceEffect.CardToDeck;
+        if (window.AnyFlashed) unread &= CheckedAlways;
         var unseen = window.Effects & ~observed & ~ChoiceEffect.RestHeal;
         if (!window.Reading.Whole) ModEntry.Log.Detail($"[audit] [reminders] {window.Option.TextKey}: the reading has gaps: {string.Join("; ", window.Reading.Gaps)}");
         var what = $"{window.Option.TextKey}: read {window.Effects}, happened {observed}; " +
-                   (obtained.Count == 0 ? "" : $"obtained [{string.Join(", ", obtained.Select(relic => $"{relic.GetType().Name}: {ObtainEffects(relic)}"))}]; ") + $"icons [{string.Join(", ", shown.Select(relic => relic.GetType().Name))}]; flashed [{string.Join(", ", window.Flashed.Select(relic => relic.GetType().Name))}]; {state}; reading: {window.Reading}";
+                   (obtained.Count == 0 ? "" : $"obtained [{string.Join(", ", obtained.Select(relic => $"{relic.GetType().Name}: {ObtainEffects(relic)}"))}]; ") + $"icons [{string.Join(", ", shown.Select(relic => relic.GetType().Name))}]; flashed [{string.Join(", ", window.Flashed.Select(relic => relic.GetType().Name))}]{(window.AnyFlashed && window.Flashed.Count == 0 ? " (another relic flashed)" : "")}; {state}; reading: {window.Reading}";
         ModEntry.Log.Detail($"[audit] [reminders] {what}");
         if (quiet.Count > silent.Count) ModEntry.Log.Detail($"[audit] [reminders] icon shown, no reaction (logged only): {string.Join(", ", quiet.Select(relic => relic.GetType().Name).Except(silent))}");
         if (unseen != ChoiceEffect.None) ModEntry.Log.Detail($"[audit] [reminders] read but didn't happen (logged only): {unseen}");
