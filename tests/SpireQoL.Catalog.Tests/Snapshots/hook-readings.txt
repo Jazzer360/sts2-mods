@@ -152,7 +152,7 @@ power PagestormPower: AfterCardDrawn: read
 power PainfulStabsPower: AfterAttack: gap: a loop
 power PaleBlueDotPower: AfterCardPlayed: read | AfterSideTurnEnd: read | AfterSideTurnStart: not run: nothing in its body acts | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power PanachePower: AfterCardPlayed: read | AfterSideTurnEnd: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
-power PaperCutsPower: AfterDamageGiven: gap: CreatureCmd.LoseMaxHp isn't translated
+power PaperCutsPower: AfterDamageGiven: read
 power PersonalHivePower: AfterDamageReceived: read
 power PhantomBladesPower: AfterApplied: read | AfterRemoved: read | ModifyDamageAdditive: gap: tests Contains(cardSource.Tags, 5) | TryModifyKeywordsInCombat: gap: the simulator runs no read model's TryModifyKeywordsInCombat
 power PillarOfCreationPower: AfterCardGeneratedForCombat: read

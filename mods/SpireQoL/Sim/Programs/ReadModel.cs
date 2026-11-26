@@ -2033,6 +2033,12 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
+            case LoseMaxHpStep maxHpLoss:
+            {
+                var amount = Compile(maxHpLoss.Amount);
+                var onOwner = maxHpLoss.Target == HookTarget.Owner;
+                return args => SimEngine.LoseMaxHp(args.State, args.Owner, Name, onOwner ? args.Owner : args.Target, (int)amount(in args), label: OwnerLabel(in args));
+            }
             case SetHpStep setHp:
             {
                 var amount = Compile(setHp.Amount);

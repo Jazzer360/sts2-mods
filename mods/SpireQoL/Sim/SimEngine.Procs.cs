@@ -137,6 +137,32 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// CreatureCmd.LoseMaxHp of <paramref name="creature"/> (a model's: Paper Cuts on the player its owner's attack got through to): with HP above the new
+    /// max, that much is lost first as a damage (Unblockable, Unpowered, no dealer: the one path for damage to a player), then the max is set, at least
+    /// 1, and HP above it comes down to it (Creature.SetMaxHpInternal). A projection follows no one's HP (decision #308); a creature that isn't a
+    /// player (the simulator keeps no enemy's max HP) is unknown.
+    /// </summary>
+    public static IEnumerable<SimState> LoseMaxHp(SimState state, int owner, string name, int creature, int amount, string? label = null)
+    {
+        if (amount <= 0 || state.Forecasting) return new[] { state };
+        if (!Who.IsPlayer(creature) || state.Player(creature) is not { } player)
+        {
+            state.Unmodelled ??= $"{name} takes max HP from a creature whose max HP the simulator doesn't keep";
+            return new[] { state };
+        }
+        if (player.Hp <= 0 || player.Died || player.MaxHp == int.MaxValue) return new[] { state };
+        var newMax = player.MaxHp - amount;
+        var states = newMax < player.Hp ? ProcDamagePlayer(state, owner, name, creature, player.Hp - newMax, SimProps.Unblockable | SimProps.Unpowered, noDealer: true, label: label) : new[] { state };
+        foreach (var branch in states)
+            if (branch.Player(creature) is { } after)
+            {
+                after.MaxHp = Math.Max(1, newMax);
+                if (after.Hp > after.MaxHp) after.Hp = after.MaxHp;
+            }
+        return states;
+    }
+
+    /// <summary>
     /// Damage to <paramref name="player"/>'s Osty from a creature's proc (an enemy's Thorns as Osty attacks it), while he lives: CreatureCmd.Damage of
     /// him, so the damage math with him as its target; his player's block takes it first unless it's Unblockable (a pet's damage is blocked by its
     /// owner's block: GetDamageResults' target.PetOwner?.Creature, the blockRedirect result), the HP-loss pipeline on him, BeforeDamageReceived, his HP;

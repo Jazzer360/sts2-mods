@@ -905,6 +905,12 @@ public sealed record SpawnStep : HookStep;
 public sealed record SetHpStep(HookValue Amount) : HookStep;
 
 /// <summary>
+/// CreatureCmd.LoseMaxHp of a player its code names (Paper Cuts' the hit's target): HP above the new max is lost first as damage (Unblockable,
+/// Unpowered, no dealer), then the max set (at least 1), HP above it coming down to it (SimEngine.LoseMaxHp).
+/// </summary>
+public sealed record LoseMaxHpStep(HookTarget Target, HookValue Amount) : HookStep;
+
+/// <summary>
 /// MonsterModel.SetMoveImmediate(move, forceTransition: true) on its owner's monster: its next move is <paramref name="Move"/> (the monster's own
 /// property holding that MoveState: Waterfall Giant's AboutToBlowState), as the adapter read it from that monster (SimEnemy.SetMoves), in place of
 /// the one its intent showed. With no move read under that name, the simulation is unknown.
@@ -1291,6 +1297,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             LoseBlockStep loss => Inside(loss.Amount),
             SummonStep summon => Inside(summon.Amount),
             SetHpStep setHp => Inside(setHp.Amount),
+            LoseMaxHpStep maxHpLoss => Inside(maxHpLoss.Amount),
             ApplyPowerStep apply => Inside(apply.Amount),
             StoreFieldStep store => Inside(store.Value),
             MonsterStateStep monsterState => Inside(monsterState.Value),

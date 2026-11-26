@@ -54,6 +54,7 @@ public static class HookReader
         ["CreatureCmd.GainBlock"] = "GainBlockStep: block for the owner through the block pipeline (its amount and props, or its BlockVar's)",
         ["CreatureCmd.Damage"] = "DamageStep: damage to every hittable enemy, a random one (a branch each), the creature a power landed on or the owner, from the owner or no one",
         ["CreatureCmd.Heal"] = "HealStep: the owner heals, up to its max HP",
+        ["CreatureCmd.LoseMaxHp"] = "LoseMaxHpStep: a player the hook's code names (a hit's target, the owner) loses max HP, HP above the new max lost first as damage",
         ["CreatureCmd.LoseBlock"] = "LoseBlockStep: the owner loses up to that much block, AfterBlockBroken told when it breaks, its remover the owner or no one",
         ["OstyCmd.Summon"] = "SummonStep: a summon for its owner, the player who played the card or the hit's dealer's player, as OstyCmd.Summon runs (SimEngine.Summon)",
         ["CreatureCmd.Stun"] = "StunStep: the owner (an enemy) stunned, when the stunned move it's given calls no command",
@@ -548,6 +549,7 @@ public static class HookReader
             LoseBlockStep loss => loss with { Amount = Map(loss.Amount)! },
             SummonStep summon => summon with { Amount = Map(summon.Amount)! },
             SetHpStep setHp => setHp with { Amount = Map(setHp.Amount)! },
+            LoseMaxHpStep maxHpLoss => maxHpLoss with { Amount = Map(maxHpLoss.Amount)! },
             ApplyPowerStep apply => apply with { Amount = Map(apply.Amount)! },
             StoreFieldStep store => store with { Value = Map(store.Value)! },
             BindStep bind => bind with { Value = Map(bind.Value)! },
@@ -2153,6 +2155,17 @@ public static class HookReader
                     var byOwner = IsOwner(values[removerAt]);
                     if (!byOwner && values[removerAt] is not NullValue) throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: a block loss by {values[removerAt]}");
                     return new LoseBlockStep(Value(values[amountAt])) { ByOwner = byOwner };
+                }
+                // A player's max HP lost (Paper Cuts' on the hit's target): CreatureCmd.LoseMaxHp(choiceContext, creature, amount, cardSource), no card.
+                case "CreatureCmd.LoseMaxHp":
+                {
+                    var targetAt = IndexOf(types, "Creature");
+                    var amountAt = IndexOf(types, "Decimal");
+                    if (targetAt < 0 || amountAt < 0) throw new Gap(ReaderCapability.CommandNotTranslated, $"gap: max HP loss overload {string.Join(",", types)}");
+                    if (IndexOf(types, "CardModel") is var cardAt and >= 0 && values[cardAt] is not NullValue) throw new Gap(ReaderCapability.CommandNotTranslated, "gap: a max HP loss from a card");
+                    var lost = Targets(values[targetAt]);
+                    if (lost is not (HookTarget.HitTarget or HookTarget.Owner)) throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: max HP lost by {values[targetAt]}");
+                    return new LoseMaxHpStep(lost, Value(values[amountAt]));
                 }
                 case "CreatureCmd.Damage":
                 {

@@ -219,6 +219,7 @@ public static partial class ReadModels
         PowerId.Pagestorm.Name,
         PowerId.PaleBlueDot.Name,
         PowerId.Panache.Name,
+        PowerId.PaperCuts.Name,
         RelicId.ParryingShield.Name,
         RelicId.PenNib.Name,
         nameof(MegaCrit.Sts2.Core.Models.Enchantments.PerfectFit),
