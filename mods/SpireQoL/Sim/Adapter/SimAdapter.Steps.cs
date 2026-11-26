@@ -894,6 +894,19 @@ public static partial class SimAdapter
         // The dealer: the potion's owner (its creature), as every potion's code gives it.
         if (DealerOf(command, play) != Who.You) return Unknown(play, "damage dealt by someone other than you");
         var valueProp = (ValueProp)(int)props.Value;
+        // Every creature but the pets (Foul Potion's): the players in the fight's order, then the enemies, each in turn (decision #340).
+        if (StepValues.IsEveryCreatureButPets(whom))
+        {
+            // An enemy there that can't be hit is still in its list (CombatState.Creatures), which the simulator's hits don't reach.
+            if (play.Combat.Enemies.Any(enemy => enemy.IsAlive && !enemy.IsHittable)) return Unknown(play, "damage to every creature with an enemy that can't be hit");
+            var everyone = new Dictionary<int, CapturedTerms>();
+            foreach (var (enemy, id) in play.Ids)
+                if (enemy.IsAlive) everyone[id] = SimReaders.Damage(play.Me.RunState, play.Combat, card: null, play.Me.Creature, enemy, amount.Value, valueProp);
+            var players = new List<int>();
+            foreach (var player in play.Combat.Players)
+                if (AimOf(player.Creature, play.Me, play.Combat, play.Ids) is var aim && Who.IsPlayer(aim)) players.Add(aim);
+            return new List<SimAction> { new DamageAction(new DamageSpec(amount.Value, SimReaders.Props(valueProp)) { Captured = everyone }) { EveryEnemy = true, Players = players, Source = play.Name } };
+        }
         if (IsEveryEnemy(whom))
         {
             var captured = new Dictionary<int, CapturedTerms>();

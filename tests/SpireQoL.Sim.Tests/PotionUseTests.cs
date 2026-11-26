@@ -65,6 +65,26 @@ public class PotionUseTests
     }
 
     [Fact]
+    public void ADamagePotionOnEveryCreatureHitsThePlayersThenTheEnemies()
+    {
+        // Foul Potion (decision #340): CreatureCmd.Damage(CombatState.Creatures.Where(c => !c.IsPet), 12, Unpowered, Owner.Creature): the fight's
+        // allies (you, then your teammate), then its enemies, each in turn; block takes it (it isn't Unblockable), and a dead teammate is skipped.
+        var state = Fight();
+        state.You.Block = 5;
+        state.Teammates.Add(new SimPlayer { Hp = 40, MaxHp = 40 });
+        state.Teammates.Add(new SimPlayer { Hp = 0, MaxHp = 40 });
+        var play = Potion("FoulPotion", Who.None, new DamageAction(new DamageSpec(12, SimProps.Unpowered))
+            { EveryEnemy = true, Players = new[] { Who.You, Who.Teammate(teammateIndex: 0), Who.Teammate(teammateIndex: 1) }, Source = "FoulPotion" });
+        SimEngine.ApplyPlayTo(state, play, out var after, out _);
+        var branch = Assert.Single(after);
+        Assert.Equal(43, branch.You.Hp);
+        Assert.Equal(0, branch.You.Block);
+        Assert.Equal(28, branch.Teammates[0].Hp);
+        Assert.Equal(0, branch.Teammates[1].Hp);
+        Assert.Equal(18, branch.Enemy(id: 0)!.Hp);
+    }
+
+    [Fact]
     public void ABlockPotionIsntRaisedByDexterity()
     {
         // Block Potion: CreatureCmd.GainBlock(target, BlockVar(12, Unpowered)) on you.

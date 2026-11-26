@@ -460,6 +460,13 @@ public sealed record DamageAction(DamageSpec Damage) : SimAction
     /// Ampoule's HittableEnemies).
     /// </summary>
     public bool EveryEnemy { get; init; }
+    /// <summary>
+    /// The players it's dealt to first, in the fight's order (CreatureCmd.Damage of every creature but the pets: Foul Potion's, the fight's allies
+    /// before its enemies), each still alive as their turn in the list comes, through the one path for damage to a player (decision #219); null: none.
+    /// </summary>
+    public IReadOnlyList<int>? Players { get; init; }
+    /// <summary>What deals it, as Incoming Damage names a player's damage (the potion's or card's class).</summary>
+    public string? Source { get; init; }
 }
 
 /// <summary>

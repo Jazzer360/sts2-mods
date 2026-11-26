@@ -72,6 +72,26 @@ public static class StepValues
     public static bool PicksByOrder(ProgramValue? value) =>
         value != null && value.Parts().Any(part => part is QueryValue { Type: "Enumerable", Name: "MinBy" or "MaxBy" or "OrderBy" or "OrderByDescending" or "ThenBy" or "ThenByDescending" });
 
+    /// <summary>
+    /// Every creature of the fight but the pets (Foul Potion's `CombatState.Creatures.Where(c => !c.IsPet)`): the players, then the enemies, as the
+    /// fight lists them (CombatState.Creatures: its allies, then its enemies).
+    /// </summary>
+    public static bool IsEveryCreatureButPets(ProgramValue? value) => Unstored(value) switch
+    {
+        QueryValue { Name: "ToList", Arguments: [var listed] } => IsEveryCreatureButPets(listed),
+        QueryValue { Type: "Enumerable", Name: "Where", Arguments: [var filtered, LambdaValue notPet] } =>
+            Unstored(filtered) is QueryValue { Name: "Creatures", Of: QueryValue { Name: "CombatState" } } && IsNotPet(notPet),
+        _ => false,
+    };
+
+    /// <summary>The lambda asks its creature isn't a pet: `!c.IsPet`, as the code reads it (not IsPet, or IsPet == 0).</summary>
+    private static bool IsNotPet(LambdaValue lambda)
+    {
+        bool IsPetOf(ProgramValue value) => value is QueryValue { Name: "IsPet", Of: ParameterValue { Name: var given } } && given == lambda.Parameter;
+        return lambda.Body.Terms is [[var only]] && (only is { Holds: false } && IsPetOf(only.Test)
+            || only.Test is CompareValue { Left: var left, Right: ConstantValue { Value: 0 } } compare && IsPetOf(left) && (compare.Op == Comparison.Equal) == only.Holds);
+    }
+
     /// <summary>A lambda that gives its parameter's property by this name (e => e.IsHittable).</summary>
     private static bool ReadsOwn(LambdaValue lambda, string property) =>
         lambda.Body.Terms is [[{ Holds: true, Test: QueryValue { Name: var name, Of: ParameterValue { Name: var given } } }]] && name == property && given == lambda.Parameter;

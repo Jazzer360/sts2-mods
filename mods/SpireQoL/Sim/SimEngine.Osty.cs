@@ -152,6 +152,14 @@ public static partial class SimEngine
         var spec = damageAction.Damage;
         var card = branch.CurrentPlay?.Card;
         var hit = false;
+        // The players first, when it's dealt to every creature (the fight's allies before its enemies), dealt by you as the enemies' is.
+        if (damageAction.Players is { } players)
+            foreach (var player in players)
+            {
+                if (!branch.TakesPart(player) || player == Who.You && branch.You.Hp <= 0) continue;
+                DamagePlayer(branch, damageAction.Source ?? "damage", player, spec.BaseFor(player), spec.Props, dealer: Who.You, card);
+                hit = true;
+            }
         foreach (var target in targets)
         {
             if (branch.Enemy(target) is not { Alive: true } enemy) continue;

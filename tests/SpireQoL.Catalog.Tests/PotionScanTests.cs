@@ -197,7 +197,8 @@ public class PotionScanTests
     /// <summary>An action as the snapshot shows it: its kind and what matters of it (a captured term's numbers aren't the translation's).</summary>
     private static string Describe(SimAction action) => action switch
     {
-        DamageAction damage => $"damage {damage.Damage.Base} {damage.Damage.Props}" + (damage.EveryEnemy ? " to every enemy" : damage.TargetId is { } target ? $" to {AimName(target)}" : ""),
+        DamageAction damage => $"damage {damage.Damage.Base} {damage.Damage.Props}" + (damage.Players is { Count: > 0 } players ? $" to {string.Join(", ", players.Select(AimName))} then" : "")
+            + (damage.EveryEnemy ? " to every enemy" : damage.TargetId is { } target ? $" to {AimName(target)}" : ""),
         GainBlockAction block => $"block {block.Base} {block.Props} to {AimName(block.To)}",
         ApplyPowerAction power => $"{power.Power.Name} {power.Amount} on {(power.To == ApplyPowerAction.Where.Creature ? AimName(power.Creature) : power.To.ToString())}",
         CardEventAction cardEvent => $"{cardEvent.Event} {cardEvent.Count}" + (cardEvent.Player is { } player ? $" for {AimName(player)}" : ""),

@@ -53,7 +53,7 @@ FocusPotion [you]: FocusAction { Delta = 2 }
 FocusPotion [teammate]: FocusPower 2 on teammate
 Fortifier [you]: block 0 Unpowered to you
 Fortifier [teammate]: block 0 Unpowered to teammate
-FoulPotion [no one]: ? FoulPotion: damage to a creature the simulator doesn't name (Where(this.Owner.Creature.CombatState.Creatures, c => c.IsPet == 0))
+FoulPotion [no one]: damage 12 Unpowered to you, teammate then to every enemy
 FruitJuice [you]: GainMaxHpAction { Amount = 5, Player =  }
 FruitJuice [teammate]: GainMaxHpAction { Amount = 5, Player = -2 }
 FyshOil [you]: StrengthPower 1 on You; DexterityPower 1 on You
