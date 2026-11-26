@@ -75,7 +75,7 @@ public class OptionCardsSnapshotTests
     /// A new run's Ironclad, as far as the card reading looks: the game's test character (an Ironclad made for a new run reaches the game's engine) with
     /// the Ironclad's class and the cards it starts with (five Strikes, four Defends, a Bash) in its deck.
     /// </summary>
-    private static Player Ironclad()
+    internal static Player Ironclad()
     {
         var me = Player.CreateForNewRun<Deprived>(MegaCrit.Sts2.Core.Unlocks.UnlockState.all, 1);
         typeof(Player).GetField("<Character>k__BackingField", Instance)!.SetValue(me, ModelDb.Character<Ironclad>());

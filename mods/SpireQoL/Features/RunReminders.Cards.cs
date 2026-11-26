@@ -282,7 +282,7 @@ public sealed partial class RunReminders
         private bool _upgradesDeck;
         private bool _enchantsDeck;
         /// <summary>
-        /// What an upgrade of your cards can take: a pick from your deck (FromDeckForUpgrade: any upgradable card, null), or the test the
+        /// What an upgrade of your cards can take (decision #358): a pick from your deck (FromDeckForUpgrade: any upgradable card, null), or the test the
         /// code puts on your deck's cards before it upgrades them (War Paint's c.Type == Skill). Empty with an upgrade of your cards: any upgradable card.
         /// </summary>
         private readonly List<LambdaValue?> _upgradeTakes = new();
@@ -402,7 +402,7 @@ public sealed partial class RunReminders
                         break;
                     case ChoiceStep { Command: { DeclaringType: "CardSelectCmd", Name: "FromDeckForUpgrade" } }:
                         _upgradesDeck = true;
-                        _upgradeTakes.Add(null);
+                        Taken(null);
                         break;
                 }
             }
@@ -422,14 +422,14 @@ public sealed partial class RunReminders
                         break;
                     case UpgradeOf.Deck:
                         _upgradesDeck = true;
-                        _upgradeTakes.AddRange(takes.Count == 0 ? new LambdaValue?[] { null } : takes.Cast<LambdaValue?>());
+                        foreach (var take in takes.Count == 0 ? new LambdaValue?[] { null } : takes.Cast<LambdaValue?>()) Taken(take);
                         break;
                     default:
                         if (gives) GivesUpgraded = true;
                         else
                         {
                             _upgradesDeck = true;
-                            _upgradeTakes.Add(null);
+                            Taken(null);
                         }
                         break;
                 }
@@ -437,6 +437,12 @@ public sealed partial class RunReminders
         }
 
         private enum UpgradeOf { Unknown, Given, Deck }
+
+        /// <summary>An upgrade of your cards takes the cards <paramref name="take"/> holds for (any upgradable card for null), once each.</summary>
+        private void Taken(LambdaValue? take)
+        {
+            if (!_upgradeTakes.Any(known => known?.ToString() == take?.ToString())) _upgradeTakes.Add(take);
+        }
 
         /// <summary>
         /// Where an upgrade's card comes from: a card the option makes (a transform's new card, a reward's, one it creates), your deck (a pick from it,
@@ -760,7 +766,8 @@ public sealed partial class RunReminders
             var others = _enchantments.Where(type => !named.Contains(type.Name)).ToList();
             return rule.Change switch
             {
-                CardChange.Upgrade => _upgradesDeck && deck.Any(card => Base(card) && card.IsUpgradable),
+                // An upgrade of your cards reaches one it can take (decision #358): a pick takes any upgradable card, War Paint's code only your Skills.
+                CardChange.Upgrade => _upgradesDeck && deck.Any(card => Base(card) && card.IsUpgradable && (_upgradeTakes.Count == 0 || _upgradeTakes.Any(take => Takes(take, card)))),
                 // A pick the reading names (Self-Help Book's: Sharp on an Attack you pick): a card of yours the rule applies to that the pick lets you
                 // choose and its enchantment can go on (decision #353); an enchantment the code names besides, as before.
                 CardChange.Enchant when enchantPicks.Count > 0 => deck.Any(card => Base(card) && (enchantPicks.Any(pick => Takes(pick, card)

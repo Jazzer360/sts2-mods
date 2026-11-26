@@ -126,6 +126,25 @@ public class OptionCardsTests
     }
 
     [Fact]
+    public void AnUpgradeOfYourCardsReachesOnlyTheCardsItTakes()
+    {
+        // Miniature Cannon on an option that upgrades your cards (decision #358): War Paint upgrades your Skills (its code's c.Type == Skill), so it never
+        // reaches the Strikes and the Bash of a new Ironclad; Whetstone upgrades your Attacks; a pick from your deck (Aroma of Chaos) takes any upgradable card.
+        GameModels.EnsureLoaded();
+        var me = OptionCardsSnapshotTests.Ironclad();
+        var cannon = SpireQoL.Data.CardAffinity.For("MiniatureCannon")!;
+        var relics = Relics();
+        var warPaint = Read(relics["WarPaint"])[0];
+        Assert.Contains(warPaint.UpgradeTakes, take => take.Contains("Skill", StringComparison.Ordinal));
+        Assert.False(warPaint.ChangeReaches(me, cannon));
+        Assert.True(Read(relics["Whetstone"])[0].ChangeReaches(me, cannon));
+        var aroma = RunReminders.CardsFrom(OptionReader.Game.Read(OptionReader.Game.Options(Events().Single(type => type.Name == "AromaOfChaos"))
+            .Single(option => option.Handler.Name == "MaintainControl").Handler));
+        Assert.Equal(new[] { "any" }, aroma.UpgradeTakes);
+        Assert.True(aroma.ChangeReaches(me, cannon));
+    }
+
+    [Fact]
     public void AncientRelicsAreReadAsTheyAre()
     {
         // An ancient's relic option is read through its AfterObtained (and the lambdas it uses).

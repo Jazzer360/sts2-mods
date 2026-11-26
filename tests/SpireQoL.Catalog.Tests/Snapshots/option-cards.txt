@@ -351,7 +351,7 @@ relic TanxsWhistle: groups Certain/Uniform/?: 1 [Whistle]; cards 1 [Whistle]; ch
 relic TouchOfOrobas: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
 relic ToyBox: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
 relic TriBoomerang: groups ?; cards ?; changes [Instinct]; attack 0; rare 0; cannon 0; lighter reaches
-relic WarPaint: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+relic WarPaint: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0; lighter no
 relic Whetstone: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
 relic Wuppy: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
 relic YummyCookie: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
