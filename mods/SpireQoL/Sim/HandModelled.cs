@@ -24,7 +24,7 @@ public static class HandModelled
             new[] { "SimEngine.RunPotionUse", "SimEngine.RunProcurePotion" },
             new[] { "PotionModel.OnUseWrapper", "PotionModel.RemoveBeforeUse", "Hook.BeforePotionUsed", "Hook.AfterPotionUsed", "PotionCmd.TryToProcure", "Hook.AfterPotionProcured" }),
         new("A card play: its shape (play count, result location), each play's hooks and its body in its program's order",
-            new[] { "SimEngine.RunCardPlay", "SimEngine.PlayOnce", "SimEngine.RunEnchantment", "SimEngine.DecideCardPlay", "SimEngine.ApplyPlay", "SimEngine.ApplyPlayTo", "SimEngine.RunScript", "SimEngine.RunScriptTo", "SimEngine.Count", "SimEngine.CardResolved", "SimEngine.RunFixedHits" },
+            new[] { "SimEngine.RunCardPlay", "SimEngine.PlayOnce", "SimEngine.RunEnchantment", "SimEngine.DecideCardPlay", "SimEngine.PlayedOntoDrawPile", "SimEngine.ApplyPlay", "SimEngine.ApplyPlayTo", "SimEngine.RunScript", "SimEngine.RunScriptTo", "SimEngine.Count", "SimEngine.CardResolved", "SimEngine.RunFixedHits" },
             new[] { "CardModel.OnPlayWrapper", "EnchantmentModel.OnPlay", "Hook.ModifyCardPlayCount", "Hook.AfterModifyingCardPlayCount", "Hook.ModifyCardPlayResultLocation", "Hook.BeforeCardPlayed", "Hook.AfterCardPlayed", "CardCmd.AutoPlay" }),
         new("A card changed during its play: an upgrade of the card in play makes its later plays its upgraded copy's (read by the adapter from an upgraded copy), a keyword added stays on it",
             new[] { "SimEngine.UpgradeCardInPlay", "SimEngine.KeywordCardInPlay", "SimEngine.WithKeywords" },

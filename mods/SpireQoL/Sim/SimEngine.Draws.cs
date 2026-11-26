@@ -250,6 +250,7 @@ public static partial class SimEngine
     /// </summary>
     private static void JoinHand(SimState state, SimPlayer simPlayer, SimDrawCard card, int id)
     {
+        if (card.Unread != null) state.Unmodelled ??= card.Unread;
         JoinsTakes(state, card.TakenBy, known: true, intoHand: true, made: false);
         if (card.Upgradable && simPlayer.PilesUpgraded) state.Unmodelled ??= "a card that could have been upgraded in its pile joined your hand";
         // One whose upgrade is read for what it does as the turn ends (decision #363: its TurnEnd's Upgraded, Ethereal still once upgraded) isn't one an

@@ -150,11 +150,16 @@ public class SimJsonTests
         type.GetProperties(BindingFlags.Instance | BindingFlags.Public).Where(property => property.GetIndexParameters().Length == 0 && property.Name != "EqualityContract")
             .Cast<MemberInfo>().Concat(type.GetFields(BindingFlags.Instance | BindingFlags.Public));
 
-    /// <summary>A value of a type that isn't its default: collections hold one sample, objects have every member set.</summary>
-    private static object Sample(Type type, int depth = 0)
+    /// <summary>
+    /// A value of a type that isn't its default: collections hold one sample, objects have every member set, except a member that holds (itself, or
+    /// in a collection) a type already being sampled around it (<paramref name="within"/>): a hand card's play's pile profile's own plays (SimPlay.PileProfile,
+    /// SimDrawCard.FromPile), an upgraded copy (SimHandCard.Upgraded, SimDrawCard.UpgradedTo), each sampled once, not forever.
+    /// </summary>
+    private static object Sample(Type type, int depth = 0, IReadOnlySet<Type>? within = null)
     {
         if (depth > 12) throw new InvalidOperationException($"{type.Name} nests too deep to sample");
-        if (Nullable.GetUnderlyingType(type) is { } inner) return Sample(inner, depth);
+        within ??= new HashSet<Type>();
+        if (Nullable.GetUnderlyingType(type) is { } inner) return Sample(inner, depth, within);
         if (type == typeof(int)) return 3;
         if (type == typeof(long)) return 4L;
         if (type == typeof(decimal)) return 2.5m;
@@ -172,28 +177,31 @@ public class SimJsonTests
         if (type == typeof(SimAction)) return new HitYouAction(Name: "Probe", Amount: 3);
         if (type == typeof(SimCondition)) return new CountCondition(SimCounted.HandMatching, SimCompare.Greater, Than: 3) { Filter = "Probe", At = "Probe", Matching = 3, Before = 3 };
         if (type.IsGenericType && type.Name.StartsWith("ValueTuple", StringComparison.Ordinal))
-            return Activator.CreateInstance(type, type.GetGenericArguments().Select(element => Sample(element, depth + 1)).ToArray())!;
+            return Activator.CreateInstance(type, type.GetGenericArguments().Select(element => Sample(element, depth + 1, within)).ToArray())!;
         if (type.IsGenericType && type.GetGenericArguments() is [var keyType, var valueType] && typeof(IEnumerable).IsAssignableFrom(type) && type.Name.Contains("Dictionary"))
         {
             var dictionary = (IDictionary)Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(keyType, valueType))!;
-            dictionary.Add(Sample(keyType, depth + 1), Sample(valueType, depth + 1));
+            dictionary.Add(Sample(keyType, depth + 1, within), Sample(valueType, depth + 1, within));
             return dictionary;
         }
         if (type.IsGenericType && type.GetGenericArguments() is [var elementType] && typeof(IEnumerable).IsAssignableFrom(type))
         {
             // The collection itself when it can be made (a HashSet), else a list (an IReadOnlyList).
             var collection = Activator.CreateInstance(type.IsInterface || type.IsAbstract ? typeof(List<>).MakeGenericType(elementType) : type)!;
-            collection.GetType().GetMethod("Add", [elementType])!.Invoke(collection, [Sample(elementType, depth + 1)]);
+            collection.GetType().GetMethod("Add", [elementType])!.Invoke(collection, [Sample(elementType, depth + 1, within)]);
             return collection;
         }
         if (type.IsAbstract || type.IsInterface || type.IsPrimitive) throw new InvalidOperationException($"teach Sample to make a {type.Name}");
         var constructor = type.GetConstructors().OrderByDescending(candidate => candidate.GetParameters().Length).First();
-        var sample = constructor.Invoke(constructor.GetParameters().Select(parameter => Sample(parameter.ParameterType, depth + 1)).ToArray());
-        // A member of its own type (an upgraded copy: SimHandCard.Upgraded, SimDrawCard.UpgradedTo) is sampled once, not forever.
-        bool Nested(Type member) => member == type && depth > 0;
-        foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public).Where(field => !field.IsInitOnly && !Nested(field.FieldType))) field.SetValue(sample, Sample(field.FieldType, depth + 1));
+        var sample = constructor.Invoke(constructor.GetParameters().Select(parameter => Sample(parameter.ParameterType, depth + 1, within)).ToArray());
+        var inside = new HashSet<Type>(within) { type };
+        // The type a member holds, itself or in a collection.
+        static Type Held(Type member) =>
+            Nullable.GetUnderlyingType(member) ?? (member.IsGenericType && typeof(IEnumerable).IsAssignableFrom(member) && member.GetGenericArguments() is [var element] ? element : member);
+        bool Nested(Type member) => Held(member) is var held && (held == type ? depth > 0 : within.Contains(held));
+        foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public).Where(field => !field.IsInitOnly && !Nested(field.FieldType))) field.SetValue(sample, Sample(field.FieldType, depth + 1, inside));
         foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public).Where(property => property.CanWrite && property.GetIndexParameters().Length == 0 && !Nested(property.PropertyType)))
-            property.SetValue(sample, Sample(property.PropertyType, depth + 1));
+            property.SetValue(sample, Sample(property.PropertyType, depth + 1, inside));
         return sample;
     }
 }

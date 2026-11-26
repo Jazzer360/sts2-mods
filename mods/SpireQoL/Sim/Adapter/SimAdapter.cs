@@ -490,6 +490,8 @@ public static partial class SimAdapter
     {
         public IReadOnlyDictionary<CardModel, SimDrawCard> DrawProfiles { get; internal set; } = EmptyProfiles;
         public bool ProfilesRead { get; internal set; }
+        /// <summary>A listener on the board changes where a played card goes (MovesPlayedCards): its hand cards' profiles are read, and each hand card's play carries its own.</summary>
+        public bool PlayedCardsMove { get; internal set; }
     }
 
     private static readonly IReadOnlyDictionary<CardModel, SimDrawCard> EmptyProfiles = new Dictionary<CardModel, SimDrawCard>();
@@ -683,14 +685,26 @@ public static partial class SimAdapter
                 Rest = Groups(PileType.Draw.GetPile(me).Cards.Where(card => !known.Contains(card))),
                 Discard = Groups(PileType.Discard.GetPile(me).Cards),
             };
-            // The cards in your hand too, for a play that puts them into your draw pile (Reboot).
-            if (handCards.Any(card => Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType())))
+            // The cards in your hand too, for a play that puts them into your draw pile (Reboot), or a listener that sends a card played from your hand
+            // there (its ModifyCardPlayResultLocation: Rebound's, Nostalgia's top of the draw pile): each hand card's play, and its auto-plays, carry it.
+            var movesPlayed = MovesPlayedCards(me, combat);
+            if (movesPlayed || handCards.Any(card => Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType())))
                 foreach (var card in handCards) Remembered(card);
+            if (movesPlayed && player.AutoHand != null)
+                foreach (var card in handCards)
+                    if (profiles.TryGetValue(card, out var handProfile) && player.AutoHand.Find(handCard => handCard.Id == HandId(card)) is { } picked)
+                    {
+                        foreach (var play in picked.Plays) if (play.HandCard == picked.Id) play.PileProfile = handProfile;
+                        // Its upgraded plays as its upgraded profile (decision #363), where that's read.
+                        if (picked.Upgraded != null && handProfile.UpgradedTo is { } upgradedProfile)
+                            foreach (var play in picked.Upgraded.Plays) if (play.HandCard == picked.Id) play.PileProfile = upgradedProfile;
+                    }
             // Your exhaust pile's cards in its order, for a card in your hand that auto-plays cards from there (decision #360: Eidolon, Knife Trap).
             if (exhaustPlays && player.PileAutoPlays != null)
                 player.PileAutoPlays = player.PileAutoPlays with { ExhaustCards = PileType.Exhaust.GetPile(me).Cards.Select(card => Profile(card, exhausted: true)).ToList() };
             ids.DrawProfiles = profiles;
             ids.ProfilesRead = true;
+            ids.PlayedCardsMove = movesPlayed;
             // Cards something on this board makes into a draw pile (its code's MakeIntoDrawStep: Personal Hive's Dazed, Biiig Hug's Soot): their
             // profiles, from the game's own card, for a draw later in the same simulation.
             var made = new Dictionary<string, SimDrawCard>();

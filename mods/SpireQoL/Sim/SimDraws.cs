@@ -77,6 +77,11 @@ public sealed record SimDrawCard(string Key)
     /// #363), for one an upgrade could change (Upgradable); null when that isn't read (an upgrade of its pile then makes it unknown: SimPlayer.PilesUpgraded).
     /// </summary>
     public SimDrawCard? UpgradedTo { get; init; }
+    /// <summary>
+    /// Why what it is isn't known (a card played from your hand put on top of your draw pile with no profile read for it: SimEngine.PlayedOntoDrawPile);
+    /// null for a card read. Its count is right; drawn or taken into your hand, it makes the branch unknown.
+    /// </summary>
+    public string? Unread { get; init; }
 
     /// <summary>
     /// Nothing about it is followed (every field but its key at its default: the adapter's plain profile): moving it changes only a

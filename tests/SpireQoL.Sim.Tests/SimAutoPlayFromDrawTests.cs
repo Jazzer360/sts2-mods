@@ -119,13 +119,62 @@ public class SimAutoPlayFromDrawTests
     {
         // ReboundPower.ModifyCardPlayResultLocation: a card of its owner's bound for the discard pile goes on top of the draw pile, a stack each
         // (the card that played it uses the first).
+        // Havoc itself goes on top once its play is over (decision #388), above the card it played.
         var state = You(new() { new SimDrawGroup(Strike, 1) });
         state.You.Powers = state.You.Powers.With(PowerId.Rebound, amount: 2);
-        var branch = Assert.Single(SimEngine.Run(state, Havoc(exhaust: false)).Branches);
+        var havoc = Havoc(exhaust: false);
+        havoc.PileProfile = new SimDrawCard("havoc");
+        var branch = Assert.Single(SimEngine.Run(state, havoc).Branches);
         Assert.Equal(44, branch.Enemy(id: 1)!.Hp);
-        Assert.Equal("strike", Assert.Single(branch.You.Draw!.Top).Key);
+        Assert.Equal(new[] { "havoc", "strike" }, branch.You.Draw!.Top.Select(card => card.Key));
         Assert.Equal(0, branch.You.Draw.DiscardCount);
         Assert.False(branch.You.Powers.Has(PowerId.Rebound));
+        Assert.Null(branch.Unmodelled);
+    }
+
+    private static SimPlay HandDefend(SimDrawCard? pileProfile) => new()
+    {
+        Name = "DefendIronclad", HandCard = 7, HandDelta = -1, TargetId = Who.None, PileProfile = pileProfile,
+        Card = new SimCardPlay(new SimCard("DefendIronclad", SimCardType.Skill), Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: false),
+        Body = { new GainBlockAction(Times: 1, Base: 5, SimProps.Move) },
+    };
+
+    [Fact]
+    public void ReboundPutsACardPlayedFromYourHandOnTopForALaterDraw()
+    {
+        // Decision #388: OnPlayWrapper moves a card played from your hand to its result location (Rebound's top of the draw pile) before
+        // CheckForEmptyHand, so your last card played under Rebound with an empty draw pile is the card Unceasing Top draws.
+        var state = You(new());
+        state.You.HandCount = 1;
+        state.You.Relics = state.You.Relics.With(RelicId.UnceasingTop, amount: 0, data: 1);
+        state.You.Powers = state.You.Powers.With(PowerId.Rebound, amount: 1);
+        var branch = Assert.Single(SimEngine.Run(state, HandDefend(new SimDrawCard("defend") { Fading = true })).Branches);
+        Assert.True(branch.Fired.Has("UnceasingTop"));
+        Assert.Equal(1, branch.You.HandCount);
+        Assert.Equal(0, branch.You.Draw!.Count);
+        Assert.Equal(1, branch.You.Fading); // drawn as itself: Ethereal in your hand
+        Assert.Null(branch.Unmodelled);
+
+        // With another card left in your hand nothing draws it: it waits on top of the pile.
+        state.You.HandCount = 2;
+        branch = Assert.Single(SimEngine.Run(state, HandDefend(new SimDrawCard("defend"))).Branches);
+        Assert.Equal("defend", Assert.Single(branch.You.Draw!.Top).Key);
+        Assert.Equal(1, branch.You.HandCount);
+    }
+
+    [Fact]
+    public void ACardPutOnTopWhoseProfileIsntReadIsUnknownOnlyOnceDrawn()
+    {
+        // A play built before the board's piles are read carries no profile: the card counts in the pile, and drawing it makes the branch unknown.
+        var state = You(new());
+        state.You.HandCount = 2;
+        state.You.Powers = state.You.Powers.With(PowerId.Rebound, amount: 1);
+        var waiting = Assert.Single(SimEngine.Run(state, HandDefend(pileProfile: null)).Branches);
+        Assert.Equal(1, waiting.You.Draw!.Count);
+        Assert.Null(waiting.Unmodelled);
+        state.You.HandCount = 1;
+        state.You.Relics = state.You.Relics.With(RelicId.UnceasingTop, amount: 0, data: 1);
+        Assert.NotNull(Assert.Single(SimEngine.Run(state, HandDefend(pileProfile: null)).Branches).Unmodelled);
     }
 
     [Fact]

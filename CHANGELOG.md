@@ -297,6 +297,8 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - A card played from your draw pile or your exhaust pile (Havoc, Cascade, The Devil, Lost Lute, Knife Trap) goes where the game sends it once played: to the exhaust pile when a play before it gave you Corruption (it was counted in your discard pile too), back on top of your draw pile with Rebound (it went to your discard pile), and nowhere for a Power Havoc plays (it was exhausted, setting off Feel No Pain and Dark Embrace). A card Havoc exhausts that gives energy when exhausted gives it in the predictions.
 - Star costs are worked out by the same cost rule as energy costs: with Brilliant Scarf, Simpleton's end-of-turn card and what Mummified Hand's free card changes are predicted (they showed `?`), and Mummified Hand's free card can be one that costs only stars, as in the game. Void Form still leaves them `?`.
 
+- A card played from your hand under Rebound or Nostalgia goes on top of your draw pile in the predictions: a draw after it in the same play (Unceasing Top's, when it was your last card) draws it, where the predictions drew another card, or none.
+
 #### Removed
 - Biiig Hug's tag and its settings row: the Soot it adds on a shuffle never makes a shuffle worth avoiding. The Soot is still worked out (a later draw can find it, and your relics and powers that react to a card you make hear it).
 - The Free Card tag and its settings row (Tune's free card): game v0.114.0 took the power out. Free Attack, Free Skill and Free Power keep theirs.

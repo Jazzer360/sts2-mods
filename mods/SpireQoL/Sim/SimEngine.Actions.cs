@@ -104,16 +104,33 @@ public static partial class SimEngine
                 branches.States.AddRange(others);
             }
         }
-        // The card goes where the shape said (CardPlay.ResultPile): back on top of its owner's hand (Feral), keeping its slot. One auto-played from a
-        // pile keeps its location for the pile move after it (SimEngine.PlayFromPile; the frame it puts back clears it).
+        // The card goes where the shape said (CardPlay.ResultPile): back on top of its owner's hand (Feral), keeping its slot; one from your hand on top of
+        // its owner's draw pile (Rebound, Nostalgia). One auto-played from a pile keeps its location for the pile move after it (SimEngine.PlayFromPile; the
+        // frame it puts back clears it).
         branches.Do(branch =>
         {
             if (branch.PlayResultLocation == SimResultLocation.HandTop) AddToHand(branch, cardPlayAction.Play.Owner, count: 1);
+            else if (branch.PlayResultLocation == SimResultLocation.DrawTop && cardPlayAction is { FromHand: true, FromPile: false }) PlayedOntoDrawPile(branch, cardPlayAction);
             branch.CurrentPlay = null; branch.PlayTaken = 0; branch.TakeMatching = NamedCounts.Empty; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty;
             branch.PlayCountNow = 0; branch.PlayChanges = SimState.CardChanges.None;
             if (!cardPlayAction.FromPile) branch.PlayResultLocation = SimResultLocation.Default;
         });
     }
+
+    /// <summary>
+    /// A card played from your hand goes on top of its owner's draw pile (OnPlayWrapper's CardPileCmd.Add at its result location: Rebound's, Nostalgia's),
+    /// as its profile (CardPlayAction.PileProfile), so a draw later in the simulation draws it (Unceasing Top's, a draw a later play makes). One whose
+    /// profile isn't read (a play built before the board's piles are) is there as a card of unknown kind (SimDrawCard.Unread): drawn or taken, the
+    /// branch is unknown. Without a draw pile the simulator follows (SimPlayer.Draw), only the hand's count moves (CardResolved).
+    /// </summary>
+    private static void PlayedOntoDrawPile(SimState state, CardPlayAction cardPlayAction)
+    {
+        var owner = cardPlayAction.Play.Owner;
+        if (!DrawsFromPile(state, owner)) return;
+        OnTop(state, owner, cardPlayAction.PileProfile ?? new SimDrawCard(UnreadOnTop) { Unread = UnreadOnTop });
+    }
+
+    private const string UnreadOnTop = "a card played from your hand went on top of your draw pile, and what it is there isn't read";
 
     /// <summary>
     /// One play of a card play (CardModel.OnPlayWrapper's loop body): BeforeCardPlayed, the play started, its body (OnPlay), its enchantment's
