@@ -3,9 +3,9 @@
 
 ## Powers and relics
 
-beta powers: 303 classes, 272 with hooks; read from code 193, hand-written 23, neither 58 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 303 classes, 272 with hooks; read from code 194, hand-written 23, neither 57 (each by its first gap: Snapshots/hook-readings.txt)
 beta relics: 316 classes, 310 with hooks; read from code 126, hand-written 7, neither 177 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 163, hand-written 21, neither 53 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 164, hand-written 21, neither 52 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 113, hand-written 7, neither 173 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: the game's own code, called live 9, read from its code 6, not modelled by name 5, a per-name rule 2, no hooks 1
@@ -169,7 +169,7 @@ a potion's chosen target (OnUse's target, as a card play's): 29 classes, 28 alon
 commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn): 10 classes, 10 alone: AttackPotion (potion)*, BottledSong (potion)*, ColorlessPotion (potion)*, LiquidMemories (potion)*, OrobicAcid (potion)*, PowerPotion (potion)*, SkillPotion (potion)*, SneckoOil (potion)*, SoldiersStew (potion)*, TouchOfInsanity (potion)*
 a command on another creature (the players, a card's owner, a roll's list): 8 classes, 8 alone: Clarity (potion)*, CureAll (potion)*, Duplicator (potion)*, EnergyPotion (potion)*, ExplosiveAmpoule (potion)*, FocusPotion (potion)*, RadiantTincture (potion)*, SwiftPotion (potion)*
 a loop over items (creatures, cards): 9 classes, 6 alone: ImpaledPower, PaelsEye, PossessSpeedPower*, PossessStrengthPower*, SmoggyPower, BlessingOfTheForge (potion)*, CosmicConcoction (potion)*, EntropicBrew (potion)*, GlowwaterPotion (potion)*
-its own data: a card or a play kept, a field used directly: 6 classes, 4 alone: DampenPower*, ImitationLearningPower*, SandpitPower, SurroundedPower, WitheringPresencePower*, Ashwater (potion)*
+its own data: a card or a play kept, a field used directly: 7 classes, 4 alone: DampenPower*, ImitationLearningPower*, SandpitPower, SurroundedPower, UnsettlingLamp, WitheringPresencePower*, Ashwater (potion)*
 another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 4 classes, 4 alone: CoveredPower*, SurprisePower*, Goopy (enchantment)*, FoulPotion (potion)*
 a pick: 3 classes, 3 alone: StratagemPower*, DropletOfPrecognition (potion)*, GamblersBrew (potion)*
 commands: a card made (AddGeneratedCardToCombat, a made card): 3 classes, 3 alone: CrystallineEuphoria (potion)*, CunningPotion (potion)*, PotOfGhouls (potion)*
@@ -193,4 +193,3 @@ hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
 the fight's log (the history ledger, decision #191): 1 classes, 1 alone: UnmovablePower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*
 a model's own method (its body read where it's called): 1 classes, 0 alone: FairyInABottle (potion)
-hooks: the power amount given: 1 classes, 0 alone: UnsettlingLamp

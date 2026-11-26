@@ -173,11 +173,5 @@
   {
     "Name": "VelvetChoker",
     "Why": "VelvetChoker isn\u0027t modelled, and its turn\u0027s-start hooks never act as your turn starts"
-  },
-  {
-    "Name": "VoidFormPower",
-    "Why": "VoidFormPower acts as your turn starts and isn\u0027t simulated there: BeforeSideTurnStart, its other hooks not read (BeforeApplied: gap: the simulator runs no read model\u0027s BeforeApplied)",
-    "ActsForAPlayer": true,
-    "ForecastIgnores": true
   }
 ]

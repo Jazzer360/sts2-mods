@@ -605,6 +605,13 @@ public abstract class SimModel
     /// lands on a creature without it; for an instanced power (<see cref="Instanced"/>) on every copy.
     /// </summary>
     public virtual void AfterApplied(SimState state, int owner, int applier, int amount) { }
+    /// <summary>A new instance of this power is about to land on its owner (the game's BeforeApplied, after the amount's passes); told to it alone.</summary>
+    public virtual void BeforeApplied(SimState state, int owner, int applier, int amount) { }
+    /// <summary>
+    /// A power is about to land on <paramref name="target"/> or change there (Hook.BeforePowerAmountChanged, PowerCmd.Apply and ModifyAmount, before the
+    /// amount's passes), told to every listener: a new instance isn't on its target yet.
+    /// </summary>
+    public virtual void BeforePowerAmountChanged(SimState state, int owner, PowerId power, int amount, int target, int applier) { }
     /// <summary>
     /// This power came off <paramref name="owner"/> (PowerCmd.Remove: RemoveInternal, then PowerModel.AfterRemoved(oldOwner), told to it alone),
     /// with <paramref name="amount"/> the amount it had (RemoveInternal leaves it). Deterministic, on the state given (SimEngine.RemovePower).

@@ -801,6 +801,9 @@ public static partial class SimEngine
         // Creature.CanReceivePowers: every listener's ShouldAllowHitting of the target (Die For You and Wuppy's Loyalty, read from their code: a
         // dead creature receives none, as a pet killed by the hit Monarch's Gaze is told of).
         if (!CanReceivePowers(state, target)) return false;
+        // Hook.BeforePowerAmountChanged, before the amount's passes: every listener (a new instance isn't on its target yet, so it isn't told of itself).
+        foreach (var (model, owner) in Listeners(state))
+            if (model.Overrides(nameof(SimModel.BeforePowerAmountChanged))) model.BeforePowerAmountChanged(state, owner, power, amount, target, applier);
         amount = AmountGiven(state, applier, target, power, amount, debuff);
         amount = AmountReceived(state, applier, target, power, amount, debuff);
         if (amount == 0) return false;
@@ -847,6 +850,9 @@ public static partial class SimEngine
         if (powerModel is ReadModel read)
         {
             var copy = read.Land(state, target, applier, amount, had);
+            // Its BeforeApplied on its fresh state (PowerCmd.Apply: the new instance's own, before it's on), then its AfterApplied.
+            if (!had) read.BeforeApplied(state, target, applier, amount);
+            else if (copy > 0 && read.Runs(HookName.BeforeApplied)) state.Unmodelled ??= $"{power.Name}'s BeforeApplied on a copy of its own isn't run";
             if (!had || copy > 0) read.AfterApplied(state, target, applier, amount, copy);
             return true;
         }

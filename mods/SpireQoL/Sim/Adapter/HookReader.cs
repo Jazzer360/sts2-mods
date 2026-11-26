@@ -3190,6 +3190,13 @@ public static class HookReader
                     : throw new Gap(ReaderCapability.CardFacts, $"gap: a card type {cardType.Value}");
                 return new HookMath(OperationOf(compare.Op), new HookFactValue(HookFact.CardType), new HookConstant((int)simType));
             }
+            // The power told is this one (Void Form's BeforePowerAmountChanged: power != this): its class, on its owner (HookFact.PowerIsThis).
+            if (compare.Op is Comparison.Equal or Comparison.NotEqual && _kind == ModelKind.Power
+                && (IsPowerTold(compare.Left) && compare.Right is NamedValue { Name: "this" } || IsPowerTold(compare.Right) && compare.Left is NamedValue { Name: "this" }))
+            {
+                HookValue isThis = new HookFactValue(HookFact.PowerIsThis);
+                return compare.Op == Comparison.Equal ? isThis : Not(isThis);
+            }
             if (compare.Left is QueryValue { Name: "GetTypeForAmount", Of: { } typedPower, Arguments: var typeArguments } && IsPowerTold(typedPower) && compare.Right is ConstantValue powerType
                 && compare.Op is Comparison.Equal or Comparison.NotEqual)
             {

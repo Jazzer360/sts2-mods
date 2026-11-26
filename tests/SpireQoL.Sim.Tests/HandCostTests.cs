@@ -183,6 +183,25 @@ public class HandCostTests
     }
 
     [Fact]
+    public void VoidFormMaxesItsCountAsItLandsOrGrows()
+    {
+        // Decision #390: VoidFormPower reads whole. Its owner's first cards each turn cost 0 (its Late pass, while its count of cards played this turn is
+        // under its amount); BeforeApplied and BeforePowerAmountChanged (power == this) set the count past it (HideTemporaryZeroCostVisual), so the rest
+        // of the turn it lands or grows in costs as before. Another power landing doesn't.
+        Assert.IsType<ReadModel>(SimModels.Get(PowerId.VoidForm.Name));
+        var held = WithPowers((PowerId.VoidForm, 2));
+        Assert.Equal(0, Cost(held, SimCardType.Attack, cost: 2));
+        SimEngine.ApplyPower(held, applier: Who.You, target: Who.You, PowerId.Strength, amount: 1, debuff: false, out _);
+        Assert.Equal(0, Cost(held, SimCardType.Attack, cost: 2));
+        SimEngine.ApplyPower(held, applier: Who.You, target: Who.You, PowerId.VoidForm, amount: 1, debuff: false, out _);
+        Assert.Equal(2, Cost(held, SimCardType.Attack, cost: 2));
+        var landing = WithPowers();
+        SimEngine.ApplyPower(landing, applier: Who.You, target: Who.You, PowerId.VoidForm, amount: 2, debuff: false, out _);
+        Assert.Equal(2, Cost(landing, SimCardType.Attack, cost: 2));
+        Assert.Null(landing.Unmodelled);
+    }
+
+    [Fact]
     public void ACardReadBeforeTheRuleCostsWhatTheGameShowed()
     {
         // A replay case's hand card with no local cost: the cost the game showed when it was read.

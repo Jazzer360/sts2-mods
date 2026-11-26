@@ -43,6 +43,16 @@ public enum HookName
     /// <summary>PowerModel.AfterApplied: a new instance of the power landed (a copy of an instanced one: each application).</summary>
     AfterApplied,
     /// <summary>
+    /// PowerModel.BeforeApplied(target, amount, applier, cardSource): a new instance of the power is about to land (PowerCmd.Apply, after the amount's
+    /// passes), told to that power alone.
+    /// </summary>
+    BeforeApplied,
+    /// <summary>
+    /// Hook.BeforePowerAmountChanged(power, amount, target, applier, cardSource): a power is about to land or change (PowerCmd.Apply, ModifyAmount), told
+    /// to every listener before the amount's passes; a new instance isn't on its target yet, so it isn't told of itself.
+    /// </summary>
+    BeforePowerAmountChanged,
+    /// <summary>
     /// Hook.BeforeSideTurnStart as a side's turn starts: the enemies' (its participants the living enemies), or the players' next turn in a projection
     /// (its participants the living players and their pets: SimState.SideStarting).
     /// </summary>
@@ -270,6 +280,8 @@ public enum HookFact
     ApplierIsOwner,
     /// <summary>The power landing is the one named in Of (power is VulnerablePower).</summary>
     PowerIs,
+    /// <summary>The power told is this model itself (power == this: its class, on its owner; Void Form's BeforePowerAmountChanged).</summary>
+    PowerIsThis,
     /// <summary>The power landing is one of the classes listed in Of, comma-separated (power is ITemporaryPower: the classes that are).</summary>
     PowerIn,
     /// <summary>How much of the power landed (amount).</summary>

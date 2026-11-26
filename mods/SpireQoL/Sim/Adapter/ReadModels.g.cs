@@ -343,6 +343,7 @@ public static partial class ReadModels
         PowerId.Vigor.Name,
         PowerId.ViolentChord.Name,
         PowerId.VitalSpark.Name,
+        PowerId.VoidForm.Name,
         PowerId.Vulnerable.Name,
         PowerId.Weak.Name,
         RelicId.WhittlingKnife.Name,

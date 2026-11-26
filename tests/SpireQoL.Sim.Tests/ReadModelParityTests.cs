@@ -340,7 +340,7 @@ public class ReadModelParityTests
         nameof(SimModel.TryModifyPowerAmountReceived), nameof(SimModel.AfterModifyingPowerAmountReceived),
         nameof(SimModel.TryModifyEnergyCostInCombat), nameof(SimModel.TryModifyEnergyCostInCombatLate), nameof(SimModel.TryModifyStarCost),
         nameof(SimModel.AfterCreatureAddedToCombat),
-        nameof(SimModel.AfterRemoved),
+        nameof(SimModel.AfterRemoved), nameof(SimModel.BeforeApplied), nameof(SimModel.BeforePowerAmountChanged),
         nameof(SimModel.AfterEnergyReset), nameof(SimModel.AfterEnergyResetLate), nameof(SimModel.BeforeHandDraw), nameof(SimModel.BeforeHandDrawLate),
         nameof(SimModel.AfterPlayerTurnStartEarly), nameof(SimModel.AfterPlayerTurnStart), nameof(SimModel.AfterPlayerTurnStartLate),
         nameof(SimModel.AfterDiedToDoom), nameof(SimModel.BeforePotionUsed), nameof(SimModel.AfterPotionUsed), nameof(SimModel.AfterPotionProcured), nameof(SimModel.AfterGoldGained),
@@ -819,6 +819,25 @@ public class ReadModelParityTests
                             var power = new PowerId(model.Name);
                             if (fresh) SimEngine.SetPowers(state, owner, SimEngine.PowersOf(state, owner).Without(power));
                             Land(model, state, owner, applier, power, amount: 2, had: !fresh);
+                            return Branches(new[] { state }) + " // " + Sequence(state, TurnEndHooks, (branch, turnEndHook) => turnEndHook(model, branch, owner));
+                        });
+                break;
+            case nameof(SimModel.BeforeApplied):
+                // A new instance about to land on its owner (PowerCmd.Apply: after its amount's passes), by each applier; then the players' turn ends.
+                foreach (var applier in others)
+                    yield return ($"about to land, applied by {applier}, then the players' turn ends", (model, state) =>
+                    {
+                        model.BeforeApplied(state, owner, applier, amount: 2);
+                        return Branches(new[] { state }) + " // " + Sequence(state, TurnEndHooks, (branch, turnEndHook) => turnEndHook(model, branch, owner));
+                    });
+                break;
+            case nameof(SimModel.BeforePowerAmountChanged):
+                // A power about to land or change (Hook.BeforePowerAmountChanged): the model's own on its owner, or Strength, on its owner or another.
+                foreach (var target in others)
+                    foreach (var self in new[] { true, false })
+                        yield return ($"{(self ? "its own power" : "Strength")} on {target}, then the players' turn ends", (model, state) =>
+                        {
+                            model.BeforePowerAmountChanged(state, owner, self ? new PowerId(model.Name) : PowerId.Strength, amount: 2, target, applier: Who.You);
                             return Branches(new[] { state }) + " // " + Sequence(state, TurnEndHooks, (branch, turnEndHook) => turnEndHook(model, branch, owner));
                         });
                 break;

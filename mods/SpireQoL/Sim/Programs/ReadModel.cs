@@ -567,6 +567,8 @@ public sealed class ReadModel : SimModel
         HookName.ModifyBlockAdditive => nameof(ModifyBlockAdditive),
         HookName.ModifyBlockMultiplicative => nameof(ModifyBlockMultiplicative),
         HookName.AfterApplied => nameof(AfterApplied),
+        HookName.BeforeApplied => nameof(BeforeApplied),
+        HookName.BeforePowerAmountChanged => nameof(BeforePowerAmountChanged),
         HookName.AfterRemoved => nameof(AfterRemoved),
         HookName.BeforeSideTurnStart => nameof(BeforeSideTurnStart),
         HookName.AfterSideTurnStart => nameof(AfterSideTurnStart),
@@ -765,6 +767,31 @@ public sealed class ReadModel : SimModel
     /// given; for a power kept in copies, the copy that landed (<see cref="Land"/>).
     /// </summary>
     public override void AfterApplied(SimState state, int owner, int applier, int amount) => AfterApplied(state, owner, applier, amount, copy: 0);
+
+    /// <summary>
+    /// A new instance of it is about to land on its owner (PowerModel.BeforeApplied, after its amount's passes: SimEngine.ApplyPower runs it once its fresh
+    /// state is set, before AfterApplied): deterministic, on the state given.
+    /// </summary>
+    public override void BeforeApplied(SimState state, int owner, int applier, int amount)
+    {
+        if (_steps[(int)HookName.BeforeApplied] is not { } steps) return;
+        var args = new HookArgs { State = state, Owner = owner, Hook = HookName.BeforeApplied, Play = state.CurrentPlay, Applier = applier, PowerAmount = amount, Target = owner };
+        args = args with { Asked = _asksOnce[(int)HookName.BeforeApplied] ? new int[_testSlots.Count] : null, Taken = _takes[(int)HookName.BeforeApplied] ? new int[1] : null };
+        foreach (var branch in RunSteps(steps, args))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: BeforeApplied branched");
+    }
+
+    /// <summary>
+    /// A power is about to land or change (Hook.BeforePowerAmountChanged, before the amount's passes: SimEngine.ApplyPower): deterministic, on the state given.
+    /// </summary>
+    public override void BeforePowerAmountChanged(SimState state, int owner, PowerId power, int amount, int target, int applier)
+    {
+        if (_steps[(int)HookName.BeforePowerAmountChanged] is not { } steps) return;
+        var args = new HookArgs { State = state, Owner = owner, Hook = HookName.BeforePowerAmountChanged, Play = state.CurrentPlay, Power = power, PowerAmount = amount, Target = target, Applier = applier };
+        args = args with { Asked = _asksOnce[(int)HookName.BeforePowerAmountChanged] ? new int[_testSlots.Count] : null, Taken = _takes[(int)HookName.BeforePowerAmountChanged] ? new int[1] : null };
+        foreach (var branch in RunSteps(steps, args))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: BeforePowerAmountChanged branched");
+    }
 
     public void AfterApplied(SimState state, int owner, int applier, int amount, int copy)
     {
@@ -2699,6 +2726,11 @@ public sealed class ReadModel : SimModel
             }
             case HookFact.ApplierIsOwner: return (in HookArgs args) => args.Applier == args.Owner ? 1m : 0m;
             case HookFact.PowerIs: return (in HookArgs args) => args.Power.Name == named ? 1m : 0m;
+            case HookFact.PowerIsThis:
+            {
+                var own = Name;
+                return (in HookArgs args) => args.Power.Name == own && args.Target == args.Owner ? 1m : 0m;
+            }
             case HookFact.PowerIn:
             {
                 var names = (named ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);

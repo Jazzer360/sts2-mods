@@ -52627,6 +52627,1578 @@
     "HurtsPlayOwner": true
   },
   {
+    "Name": "VoidFormPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.cardsPlayedThisTurn",
+            "Value": {
+              "$kind": "HookMath",
+              "Operation": "Add",
+              "Left": {
+                "$kind": "HookField",
+                "Field": "Data.cardsPlayedThisTurn"
+              },
+              "Right": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            },
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "VoidFormPower.AfterCardPlayed:0016",
+                    "Test": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlayIsOwners"
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "VoidFormPower.AfterCardPlayed:0021",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "PlayIsAutoPlay"
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "VoidFormPower.AfterCardPlayed:0029",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsLast"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeApplied",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.cardsPlayedThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 999999999
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforePowerAmountChanged",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.cardsPlayedThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 999999999
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "VoidFormPower.BeforePowerAmountChanged:0002",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "PowerIsThis"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "BeforeSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "Data.cardsPlayedThisTurn",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 0
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "VoidFormPower.BeforeSideTurnStart:000C",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "TryModifyEnergyCostInCombatLate",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "VoidFormPower.TryModifyEnergyCostInCombatLate:000E",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VoidFormPower.ShouldSkip:0065",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Or",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "VoidFormPower.ShouldSkip:001A",
+                                "Test": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "EventIsOwners"
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "VoidFormPower.ShouldSkip:0063:stored",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Or",
+                                  "Left": {
+                                    "$kind": "HookTest",
+                                    "At": "VoidFormPower.ShouldSkip:0050",
+                                    "Test": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Equal",
+                                      "Left": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardPile"
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 1
+                                      }
+                                    }
+                                  },
+                                  "Right": {
+                                    "$kind": "HookNot",
+                                    "Inner": {
+                                      "$kind": "HookTest",
+                                      "At": "VoidFormPower.ShouldSkip:0054",
+                                      "Test": {
+                                        "$kind": "HookMath",
+                                        "Operation": "NotEqual",
+                                        "Left": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CardPile"
+                                        },
+                                        "Right": {
+                                          "$kind": "HookConstant",
+                                          "Value": 2
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "VoidFormPower.ShouldSkip:0018:stored",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookFactValue",
+                                "Fact": "EventIsOwners"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "GreaterOrEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardsPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "Amount"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "VoidFormPower.ShouldSkip:0065",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "VoidFormPower.ShouldSkip:001A",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookFactValue",
+                                "Fact": "EventIsOwners"
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "VoidFormPower.ShouldSkip:0063:stored",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "Or",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "VoidFormPower.ShouldSkip:0050",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardPile"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "VoidFormPower.ShouldSkip:0054",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "NotEqual",
+                                    "Left": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardPile"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 2
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VoidFormPower.ShouldSkip:0018:stored",
+                        "Test": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookFactValue",
+                            "Fact": "EventIsOwners"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "VoidFormPower.TryModifyEnergyCostInCombatLate:000E",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "VoidFormPower.ShouldSkip:0065",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "VoidFormPower.ShouldSkip:0063:stored",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "Or",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "VoidFormPower.ShouldSkip:0050",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Equal",
+                                    "Left": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardPile"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "VoidFormPower.ShouldSkip:0054",
+                                    "Test": {
+                                      "$kind": "HookMath",
+                                      "Operation": "NotEqual",
+                                      "Left": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardPile"
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 2
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "GreaterOrEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.cardsPlayedThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "Amount"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "VoidFormPower.ShouldSkip:0065",
+                      "Test": {
+                        "$kind": "HookTest",
+                        "At": "VoidFormPower.ShouldSkip:0063:stored",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "Or",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "VoidFormPower.ShouldSkip:0050",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardPile"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 1
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "VoidFormPower.ShouldSkip:0054",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardPile"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 2
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "VoidFormPower.TryModifyEnergyCostInCombatLate:000E",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VoidFormPower.ShouldSkip:0065",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Or",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "VoidFormPower.ShouldSkip:001A",
+                                "Test": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "EventIsOwners"
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "VoidFormPower.ShouldSkip:0063:stored",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Or",
+                                  "Left": {
+                                    "$kind": "HookTest",
+                                    "At": "VoidFormPower.ShouldSkip:0050",
+                                    "Test": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Equal",
+                                      "Left": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardPile"
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 1
+                                      }
+                                    }
+                                  },
+                                  "Right": {
+                                    "$kind": "HookNot",
+                                    "Inner": {
+                                      "$kind": "HookTest",
+                                      "At": "VoidFormPower.ShouldSkip:0054",
+                                      "Test": {
+                                        "$kind": "HookMath",
+                                        "Operation": "NotEqual",
+                                        "Left": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CardPile"
+                                        },
+                                        "Right": {
+                                          "$kind": "HookConstant",
+                                          "Value": 2
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "VoidFormPower.ShouldSkip:0018:stored",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookFactValue",
+                                "Fact": "EventIsOwners"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "GreaterOrEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardsPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "Amount"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "VoidFormPower.ShouldSkip:0065",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "VoidFormPower.ShouldSkip:001A",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookFactValue",
+                                "Fact": "EventIsOwners"
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "VoidFormPower.ShouldSkip:0063:stored",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "Or",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "VoidFormPower.ShouldSkip:0050",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardPile"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "VoidFormPower.ShouldSkip:0054",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "NotEqual",
+                                    "Left": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardPile"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 2
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VoidFormPower.ShouldSkip:0018:stored",
+                        "Test": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookFactValue",
+                            "Fact": "EventIsOwners"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "VoidFormPower.TryModifyEnergyCostInCombatLate:000E",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "VoidFormPower.ShouldSkip:0065",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "VoidFormPower.ShouldSkip:0063:stored",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "Or",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "VoidFormPower.ShouldSkip:0050",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Equal",
+                                    "Left": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardPile"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "VoidFormPower.ShouldSkip:0054",
+                                    "Test": {
+                                      "$kind": "HookMath",
+                                      "Operation": "NotEqual",
+                                      "Left": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardPile"
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 2
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "GreaterOrEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.cardsPlayedThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "Amount"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "VoidFormPower.ShouldSkip:0065",
+                      "Test": {
+                        "$kind": "HookTest",
+                        "At": "VoidFormPower.ShouldSkip:0063:stored",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "Or",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "VoidFormPower.ShouldSkip:0050",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardPile"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 1
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "VoidFormPower.ShouldSkip:0054",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardPile"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 2
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Hook": "TryModifyStarCost",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "VoidFormPower.TryModifyStarCost:000E",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VoidFormPower.ShouldSkip:0065",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Or",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "VoidFormPower.ShouldSkip:001A",
+                                "Test": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "EventIsOwners"
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "VoidFormPower.ShouldSkip:0063:stored",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Or",
+                                  "Left": {
+                                    "$kind": "HookTest",
+                                    "At": "VoidFormPower.ShouldSkip:0050",
+                                    "Test": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Equal",
+                                      "Left": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardPile"
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 1
+                                      }
+                                    }
+                                  },
+                                  "Right": {
+                                    "$kind": "HookNot",
+                                    "Inner": {
+                                      "$kind": "HookTest",
+                                      "At": "VoidFormPower.ShouldSkip:0054",
+                                      "Test": {
+                                        "$kind": "HookMath",
+                                        "Operation": "NotEqual",
+                                        "Left": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CardPile"
+                                        },
+                                        "Right": {
+                                          "$kind": "HookConstant",
+                                          "Value": 2
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "VoidFormPower.ShouldSkip:0018:stored",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookFactValue",
+                                "Fact": "EventIsOwners"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "GreaterOrEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardsPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "Amount"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "VoidFormPower.ShouldSkip:0065",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "VoidFormPower.ShouldSkip:001A",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookFactValue",
+                                "Fact": "EventIsOwners"
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "VoidFormPower.ShouldSkip:0063:stored",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "Or",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "VoidFormPower.ShouldSkip:0050",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardPile"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "VoidFormPower.ShouldSkip:0054",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "NotEqual",
+                                    "Left": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardPile"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 2
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VoidFormPower.ShouldSkip:0018:stored",
+                        "Test": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookFactValue",
+                            "Fact": "EventIsOwners"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "VoidFormPower.TryModifyStarCost:000E",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "VoidFormPower.ShouldSkip:0065",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "VoidFormPower.ShouldSkip:0063:stored",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "Or",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "VoidFormPower.ShouldSkip:0050",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Equal",
+                                    "Left": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardPile"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "VoidFormPower.ShouldSkip:0054",
+                                    "Test": {
+                                      "$kind": "HookMath",
+                                      "Operation": "NotEqual",
+                                      "Left": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardPile"
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 2
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "GreaterOrEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.cardsPlayedThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "Amount"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "VoidFormPower.ShouldSkip:0065",
+                      "Test": {
+                        "$kind": "HookTest",
+                        "At": "VoidFormPower.ShouldSkip:0063:stored",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "Or",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "VoidFormPower.ShouldSkip:0050",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardPile"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 1
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "VoidFormPower.ShouldSkip:0054",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardPile"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 2
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "VoidFormPower.TryModifyStarCost:000E",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VoidFormPower.ShouldSkip:0065",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Or",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "VoidFormPower.ShouldSkip:001A",
+                                "Test": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "EventIsOwners"
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "VoidFormPower.ShouldSkip:0063:stored",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Or",
+                                  "Left": {
+                                    "$kind": "HookTest",
+                                    "At": "VoidFormPower.ShouldSkip:0050",
+                                    "Test": {
+                                      "$kind": "HookMath",
+                                      "Operation": "Equal",
+                                      "Left": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardPile"
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 1
+                                      }
+                                    }
+                                  },
+                                  "Right": {
+                                    "$kind": "HookNot",
+                                    "Inner": {
+                                      "$kind": "HookTest",
+                                      "At": "VoidFormPower.ShouldSkip:0054",
+                                      "Test": {
+                                        "$kind": "HookMath",
+                                        "Operation": "NotEqual",
+                                        "Left": {
+                                          "$kind": "HookFactValue",
+                                          "Fact": "CardPile"
+                                        },
+                                        "Right": {
+                                          "$kind": "HookConstant",
+                                          "Value": 2
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "VoidFormPower.ShouldSkip:0018:stored",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookFactValue",
+                                "Fact": "EventIsOwners"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "GreaterOrEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "Data.cardsPlayedThisTurn"
+                      },
+                      "Right": {
+                        "$kind": "HookFactValue",
+                        "Fact": "Amount"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "VoidFormPower.ShouldSkip:0065",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "VoidFormPower.ShouldSkip:001A",
+                            "Test": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookFactValue",
+                                "Fact": "EventIsOwners"
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "VoidFormPower.ShouldSkip:0063:stored",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookMath",
+                              "Operation": "Or",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "VoidFormPower.ShouldSkip:0050",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardPile"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 1
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "VoidFormPower.ShouldSkip:0054",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "NotEqual",
+                                    "Left": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardPile"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 2
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "VoidFormPower.ShouldSkip:0018:stored",
+                        "Test": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookFactValue",
+                            "Fact": "EventIsOwners"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "VoidFormPower.TryModifyStarCost:000E",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "VoidFormPower.ShouldSkip:0065",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "VoidFormPower.ShouldSkip:0063:stored",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookMath",
+                                "Operation": "Or",
+                                "Left": {
+                                  "$kind": "HookTest",
+                                  "At": "VoidFormPower.ShouldSkip:0050",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Equal",
+                                    "Left": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardPile"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 1
+                                    }
+                                  }
+                                },
+                                "Right": {
+                                  "$kind": "HookNot",
+                                  "Inner": {
+                                    "$kind": "HookTest",
+                                    "At": "VoidFormPower.ShouldSkip:0054",
+                                    "Test": {
+                                      "$kind": "HookMath",
+                                      "Operation": "NotEqual",
+                                      "Left": {
+                                        "$kind": "HookFactValue",
+                                        "Fact": "CardPile"
+                                      },
+                                      "Right": {
+                                        "$kind": "HookConstant",
+                                        "Value": 2
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 0
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "GreaterOrEqual",
+                        "Left": {
+                          "$kind": "HookField",
+                          "Field": "Data.cardsPlayedThisTurn"
+                        },
+                        "Right": {
+                          "$kind": "HookFactValue",
+                          "Fact": "Amount"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "VoidFormPower.ShouldSkip:0065",
+                      "Test": {
+                        "$kind": "HookTest",
+                        "At": "VoidFormPower.ShouldSkip:0063:stored",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookMath",
+                            "Operation": "Or",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "VoidFormPower.ShouldSkip:0050",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardPile"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 1
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "VoidFormPower.ShouldSkip:0054",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "NotEqual",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardPile"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 2
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "VulnerablePower",
     "Kind": "Power",
     "Hooks": [
