@@ -21,7 +21,7 @@ namespace SpireQoL.Features;
 /// </summary>
 public sealed class IntentDetailsFeature : IFeature, IFrameFeature
 {
-    private const string BlockName = "SpireQoLIntentBlock";
+    internal const string BlockName = "SpireQoLIntentBlock";
 
     /// <summary>Each enemy's intents as last drawn (the board probe, the turn, its intent nodes): drawn again only when that changes.</summary>
     private readonly Dictionary<NCreature, int> _drawnFor = new(ReferenceEqualityComparer.Instance);

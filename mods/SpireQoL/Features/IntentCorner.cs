@@ -8,8 +8,9 @@ using Sts2Mods.Core.Ui;
 namespace SpireQoL.Features;
 
 /// <summary>
-/// The powers a move applies, as small chips in the bottom-right corner of the intent they belong to (a buff on its buff intent,
-/// a debuff on its debuff intent), where the game puts an attack's damage: read as part of that intent, not as another one.
+/// The powers a move applies, as small chips in a corner of the intent they belong to (a buff on its buff intent, a debuff on its debuff
+/// intent): bottom left, or top left on an intent that shows a number of its own (decisions #398, #401). Read as part of that intent, not as
+/// another one.
 /// Shared by Intent Details (the intent on screen) and Intent Forecast (later moves). Our node, under the intent's %IntentHolder,
 /// so it bobs with the icon; the game's nodes aren't changed.
 /// </summary>
@@ -81,11 +82,15 @@ internal static class IntentCorner
         }
         var size = row.GetCombinedMinimumSize();
         row.Size = size;
-        // The bottom-left corner of the game's %Value box (else the holder's), where a status intent shows its count: an attack's damage and a
-        // defend intent's block (Intent Details) are bottom right, so neither the intent's own number nor the one beside it covers the chip (the
-        // Haunted Ship's Haunt: Weak beside its Dazed count).
-        var box = intent.GetNodeOrNull<Control>(GodotNames.Path("%Value")) is { } value ? new Rect2(value.Position, value.Size) : new Rect2(Vector2.Zero, holder.Size);
-        row.Position = new Vector2(box.Position.X, box.End.Y - size.Y);
+        // The bottom-left corner of the game's %Value box (else the holder's), where a status intent shows its count, so the number of the intent
+        // beside it doesn't cover the chip (the Haunted Ship's Haunt: Weak beside its Dazed count). On an intent that shows a number of its own (an
+        // attack's damage, a status count, Intent Details' block), the top-left corner instead, clear of it (Toadpole's Spike Spit: its Thorns taken
+        // away on its attack intent: decision #401).
+        // NIntent.UpdateIntent sets its text: the attack's label, a status intent's count, else empty.
+        var value = intent.GetNodeOrNull<RichTextLabel>(GodotNames.Path("%Value"));
+        var box = value != null ? new Rect2(value.Position, value.Size) : new Rect2(Vector2.Zero, holder.Size);
+        var showsNumber = value is { Visible: true } && !string.IsNullOrWhiteSpace(value.Text) || holder.GetNodeOrNull<Label>(GodotNames.Path(IntentDetailsFeature.BlockName)) != null;
+        row.Position = showsNumber ? Vector2.Zero : new Vector2(box.Position.X, box.End.Y - size.Y);
     }
 
     /// <summary>A power's icon with its amount beside it (the icon alone when the amount isn't a number the move keeps).</summary>
