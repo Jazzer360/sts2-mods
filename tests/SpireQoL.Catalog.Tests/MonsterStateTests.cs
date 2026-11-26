@@ -9,8 +9,9 @@ namespace SpireQoL.Catalog.Tests;
 /// <summary>
 /// A monster's own state a power's code sets and its move's code reads (decision #271), on the game's own objects: Bowlbug Rock's Headbutt is its
 /// attack, then its stun of itself on its IsOffBalance (`if (IsOffBalance) await Stun()`), which Imbalanced's AfterDamageGiven sets on a hit of its
-/// fully blocked; its state starts as the game's monster has it.
+/// fully blocked; its state starts as the game's monster has it. It builds a game fight, so it runs with the others that do (GameFightCollection).
 /// </summary>
+[Collection(GameFightCollection.Name)]
 public class MonsterStateTests
 {
     [Fact]
