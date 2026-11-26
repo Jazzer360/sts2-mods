@@ -296,7 +296,7 @@ public static partial class SimAdapter
     /// <summary>
     /// Why a hand card's live cost isn't known on this board (SimState.CostsUnknown, decision #334): the first of the game's hook listeners
     /// (CombatState.IterateHookListeners) whose class has an energy cost pass (TryModifyEnergyCostInCombat, its Late pass) the simulator doesn't
-    /// run: a class not read whole (Free Attack's, whose BeforeCardPlayed doesn't read yet), a card's own hook (Cho Limbs, Coda). Null when every
+    /// run: a class not read whole (Tangled's, whose AfterApplied loop doesn't read yet), a card's own hook (Cho Limbs, Coda). Null when every
     /// one runs.
     /// </summary>
     internal static string? CostPassesNotRun(ICombatState combat)

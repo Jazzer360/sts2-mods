@@ -83,9 +83,9 @@ power FlutterPower: AfterDamageReceived: read | ModifyDamageMultiplicative: read
 power FocusPower: ModifyOrbValue: read
 power ForegoneConclusionPower: BeforeHandDraw: unknown where it runs: gap: CardPileCmd.ShuffleIfNecessary isn't translated
 power FrailPower: AfterSideTurnEnd: read | ModifyBlockMultiplicative: read
-power FreeAttackPower: BeforeCardPlayed: gap: tests cardPlay.Card.Pile | TryModifyEnergyCostInCombatLate: read
-power FreePowerPower: BeforeCardPlayed: gap: tests cardPlay.Card.Pile | TryModifyEnergyCostInCombatLate: read
-power FreeSkillPower: BeforeCardPlayed: gap: tests cardPlay.Card.Pile | TryModifyEnergyCostInCombatLate: read
+power FreeAttackPower: BeforeCardPlayed: read | TryModifyEnergyCostInCombatLate: read
+power FreePowerPower: BeforeCardPlayed: read | TryModifyEnergyCostInCombatLate: read
+power FreeSkillPower: BeforeCardPlayed: read | TryModifyEnergyCostInCombatLate: read
 power FriendshipPower: ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy
 power FurnacePower: AfterSideTurnStart: gap: ForgeCmd.Forge isn't translated
 power GalvanicPower: AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterCardPlayed: read | BeforeCombatStart: not run: before the fight: the state is read after it
@@ -238,7 +238,7 @@ power TrashToTreasurePower: AfterCardGeneratedForCombat: gap: an orb made first
 power TunePower: AfterCardPlayed: read
 power TyrannyPower: AfterPlayerTurnStart: unknown where it runs: gap: a pick | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 power UnderworldPower: AfterDamageGiven: read | AfterSideTurnEnd: read
-power VeilpiercerPower: BeforeCardPlayed: gap: tests cardPlay.Card.Pile | TryModifyEnergyCostInCombatLate: read
+power VeilpiercerPower: BeforeCardPlayed: read | TryModifyEnergyCostInCombatLate: read
 power ViciousPower: AfterPowerAmountChanged: read
 power VigorPower: AfterAttack: read | BeforeAttack: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyDamageAdditive: read
 power ViolentChordPower: AfterCardPlayed: read

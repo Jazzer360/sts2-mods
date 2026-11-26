@@ -2682,6 +2682,10 @@ public static class HookReader
                 // one (your hand, or the play pile as it's played: SimEngine.HandCost).
                 case QueryValue { Name: "Pile", Of: { } costedPileOf } when IsCostHook(_hook) && IsEventCard(Unstored(costedPileOf)):
                     return new HookConstant(1m);
+                // The played card's pile tested as there as its play begins (cardPlay.Card.Pile?.Type in BeforeCardPlayed: Free Attack's, Veilpiercer's):
+                // CardModel.OnPlayWrapper puts it into the play pile first (CardPileCmd.AddDuringManualCardPlay, or CardPileCmd.Add for an auto-play).
+                case QueryValue { Name: "Pile", Of: { } playedPileOf } when IsPlayedAtItsStart(Unstored(playedPileOf)):
+                    return new HookConstant(1m);
                 // A pick from the owner's hand tested as there, in the condition of the step it guards (FreeInHandStep: the step acts on what the
                 // hand holds).
                 case QueryValue { Name: "NextItem", Arguments: [var picked] } when _handPickHolds && FromOwnersHand(picked):
@@ -3757,7 +3761,7 @@ public static class HookReader
         /// </summary>
         private bool IsCostedPileType(ProgramValue value) => Unstored(value) switch
         {
-            QueryValue { Name: "Type", Of: QueryValue { Name: "Pile", Of: { } pileOf } } => IsCostHook(_hook) && IsEventCard(Unstored(pileOf)),
+            QueryValue { Name: "Type", Of: QueryValue { Name: "Pile", Of: { } pileOf } } => IsCostHook(_hook) && IsEventCard(Unstored(pileOf)) || IsPlayedAtItsStart(Unstored(pileOf)),
             QueryValue { Name: "GetValueOrDefault", Arguments.Count: 0, Of: { } nullable } => IsCostedPileType(OrDefault(Unstored(nullable))),
             // The switch's nullable, its null way the pile not there (no card a simulation costs is in no pile): the way that's made.
             WaysValue ways => ways.Ways.Any(way => IsCostedPileType(way.Value)) && ways.Ways.All(way => way.Value is ConstantValue { Value: 0 } || IsCostedPileType(way.Value)),
@@ -3781,6 +3785,9 @@ public static class HookReader
                     null => throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's pile is {pile.Value}"),
                     _ => SimCardPile.Other,
                 };
+                // The played card as its play begins is in the play pile (IsPlayedAtItsStart): the compare is decided.
+                if (!IsCostHook(_hook))
+                    return new HookConstant((simPile == SimCardPile.Play) == (compare.Op == Comparison.Equal) ? 1m : 0m);
                 return new HookMath(OperationOf(compare.Op), new HookFactValue(HookFact.CardPile), new HookConstant((int)simPile));
             }
             return null;
@@ -4365,6 +4372,12 @@ public static class HookReader
 
         /// <summary>The hooks that decide a card play's shape before its plays, their card the one played (decision #192).</summary>
         private static readonly HashSet<string> PlayShapeHooks = new(StringComparer.Ordinal) { "ModifyCardPlayCount", "AfterModifyingCardPlayCount", "ModifyCardPlayResultLocation", "AfterModifyingCardPlayResultLocation" };
+
+        /// <summary>
+        /// The card played, as its play begins (cardPlay.Card in BeforeCardPlayed): CardModel.OnPlayWrapper has put it into the play pile
+        /// (CardPileCmd.AddDuringManualCardPlay, or CardPileCmd.Add(card, PileType.Play) for an auto-play) before Hook.BeforeCardPlayed, for each of its plays.
+        /// </summary>
+        private bool IsPlayedAtItsStart(ProgramValue value) => _hook == nameof(HookName.BeforeCardPlayed) && IsPlayCard(value);
 
         private bool IsEventCard(ProgramValue value) => value is NamedValue { Name: "card" } or ParameterValue { Name: "card" } && _hook != "AfterCardPlayed" && !PlayShapeHooks.Contains(_hook);
 

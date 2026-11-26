@@ -13913,6 +13913,2547 @@
     "HelpsOwner": false
   },
   {
+    "Name": "FreeAttackPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "BeforeCardPlayed",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:002F",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:0047",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:009C",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:002F",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlayIsOwners"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:0047",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CardType"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:0080",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:002F",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PlayIsOwners"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:0047",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardType"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "TryModifyEnergyCostInCombatLate",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0018",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0067",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:004E",
+                            "Test": {
+                              "$kind": "HookTest",
+                              "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardType"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 1
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:005A",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:004E",
+                            "Test": {
+                              "$kind": "HookTest",
+                              "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardType"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 1
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:005E",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0067",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:004E",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:005A",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardPile"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:004E",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:005E",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0018",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0067",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:004E",
+                            "Test": {
+                              "$kind": "HookTest",
+                              "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardType"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 1
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:005A",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:004E",
+                            "Test": {
+                              "$kind": "HookTest",
+                              "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardType"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 1
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:005E",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 1
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0067",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:004E",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:005A",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardPile"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:004E",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "FreeAttackPower.TryModifyEnergyCostInCombatLate:005E",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "FreePowerPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "BeforeCardPlayed",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:002F",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:0047",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:009C",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:002F",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlayIsOwners"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:0047",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CardType"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 3
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:0080",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:002F",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PlayIsOwners"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:0047",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardType"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 3
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "TryModifyEnergyCostInCombatLate",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0018",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0067",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 3
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:004E",
+                            "Test": {
+                              "$kind": "HookTest",
+                              "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardType"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 3
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:005A",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 3
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:004E",
+                            "Test": {
+                              "$kind": "HookTest",
+                              "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardType"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 3
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:005E",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0067",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 3
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:004E",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 3
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:005A",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardPile"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 3
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:004E",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 3
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:005E",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0018",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0067",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 3
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:004E",
+                            "Test": {
+                              "$kind": "HookTest",
+                              "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardType"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 3
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:005A",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 3
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:004E",
+                            "Test": {
+                              "$kind": "HookTest",
+                              "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardType"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 3
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:005E",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0067",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 3
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:004E",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 3
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:005A",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardPile"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 3
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:004E",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 3
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "FreePowerPower.TryModifyEnergyCostInCombatLate:005E",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "FreeSkillPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "BeforeCardPlayed",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:002F",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:0047",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 2
+                    }
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:009C",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:002F",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlayIsOwners"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:0047",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CardType"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 2
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:0080",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:002F",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PlayIsOwners"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "\u003CBeforeCardPlayed\u003Ed__5.MoveNext:0047",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardType"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 2
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "TryModifyEnergyCostInCombatLate",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0018",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 2
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 2
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0067",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:004E",
+                            "Test": {
+                              "$kind": "HookTest",
+                              "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardType"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 2
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:005A",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:004E",
+                            "Test": {
+                              "$kind": "HookTest",
+                              "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardType"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 2
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:005E",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 2
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0067",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:004E",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:005A",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardPile"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:004E",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:005E",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0018",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 2
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 2
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0067",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Or",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:004E",
+                            "Test": {
+                              "$kind": "HookTest",
+                              "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardType"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 2
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:005A",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "And",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookTest",
+                            "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:004E",
+                            "Test": {
+                              "$kind": "HookTest",
+                              "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardType"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 2
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:005E",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 2
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0067",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:004E",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:005A",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "Equal",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardPile"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          }
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "And",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardType"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookTest",
+                          "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:004E",
+                          "Test": {
+                            "$kind": "HookTest",
+                            "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:0023",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardType"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "FreeSkillPower.TryModifyEnergyCostInCombatLate:005E",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 2
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "FrostOrb",
     "Kind": "Orb",
     "Hooks": [
@@ -45604,6 +48145,381 @@
     "Tab": "Trigger",
     "HelpsOwner": false,
     "TermActs": true
+  },
+  {
+    "Name": "VeilpiercerPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "BeforeCardPlayed",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeCardPlayed\u003Ed__7.MoveNext:002F",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "\u003CBeforeCardPlayed\u003Ed__7.MoveNext:004C",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardEthereal"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CBeforeCardPlayed\u003Ed__7.MoveNext:00A1",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "\u003CBeforeCardPlayed\u003Ed__7.MoveNext:002F",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PlayIsOwners"
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "\u003CBeforeCardPlayed\u003Ed__7.MoveNext:004C",
+                      "Test": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardEthereal"
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "\u003CBeforeCardPlayed\u003Ed__7.MoveNext:0085",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "And",
+                      "Left": {
+                        "$kind": "HookTest",
+                        "At": "\u003CBeforeCardPlayed\u003Ed__7.MoveNext:002F",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "PlayIsOwners"
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookTest",
+                        "At": "\u003CBeforeCardPlayed\u003Ed__7.MoveNext:004C",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CardEthereal"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "TryModifyEnergyCostInCombatLate",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:0018",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:0028",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardEthereal"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:006C",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:005F",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CardPile"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:0063",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardPile"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 2
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:006C",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:005F",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardPile"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:0063",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CardPile"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 2
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:0018",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:0028",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardEthereal"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:006C",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Or",
+                    "Left": {
+                      "$kind": "HookTest",
+                      "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:005F",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CardPile"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 1
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:0063",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CardPile"
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 2
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:006C",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:005F",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardPile"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "VeilpiercerPower.TryModifyEnergyCostInCombatLate:0063",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "NotEqual",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CardPile"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 2
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
   },
   {
     "Name": "VenerableTeaSet",
