@@ -158,10 +158,10 @@ public sealed partial class SettingsMenu
         if (Cards.GamePreload.Busy)
         {
             if (!_openOncePreloaded) ModEntry.Log.Detail("settings menu: opens once the game's asset preload is done");
-            _openOncePreloaded = true;
+            _openOncePreloaded = Cards.GamePreload.SettingsMenuWaiting = true;
             return;
         }
-        _openOncePreloaded = false;
+        _openOncePreloaded = Cards.GamePreload.SettingsMenuWaiting = false;
         if (_layer == null || !GodotObject.IsInstanceValid(_layer)) Build(tree);
         _layer!.Visible = true;
         Rebuild();
@@ -170,7 +170,7 @@ public sealed partial class SettingsMenu
 
     public void Close()
     {
-        _openOncePreloaded = false;
+        _openOncePreloaded = Cards.GamePreload.SettingsMenuWaiting = false;
         if (_layer != null && GodotObject.IsInstanceValid(_layer)) _layer.Visible = false;
         BlockGameInput(block: false);
         // Quick setup shows itself at the first launch only (FirstLaunch); once the menu has been open, it's done.

@@ -190,6 +190,7 @@ public static class ModEntry
         foreach (var notice in features.OfType<UpdateNoticeFeature>()) notice.OpenSettings = menu.Open;
         host.AddHotkey(ParseKey(settings.SettingsKey, Key.F10), menu.Toggle);
         host.AddLateFrame("settings-menu", menu.OnFrame);
+        host.AddLateFrame("preload-watch", Cards.GamePreload.Watch);
         Menu.SettingsCatalog.Check(Log);
 
         Combat.TurnEndModel.PartTime = host.AddPartTime;

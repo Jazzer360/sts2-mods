@@ -35,4 +35,15 @@ public class GamePreloadTests
 
     [Fact]
     public void NoLoaderIsNotBusy() => Assert.False(Cards.GamePreload.Busy);
+
+    /// <summary>The stuck-preload report reads these of AssetLoadingSession (GamePreload.Describe): a rename would leave its report blank.</summary>
+    [Fact]
+    public void TheSessionsFieldsTheStuckReportReadsAreThere()
+    {
+        foreach (var name in new[] { "_name", "_toLoad", "_loading", "_finalizing", "_vfxScenes", "_vfxLoading", "_currentVfxPath" })
+            Assert.True(AccessTools.Field(typeof(AssetLoadingSession), name) != null, $"AssetLoadingSession.{name} is gone");
+    }
+
+    [Fact]
+    public void TheWatchDoesNothingWithNoLoader() => Cards.GamePreload.Watch();
 }
