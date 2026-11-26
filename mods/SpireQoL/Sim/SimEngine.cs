@@ -1324,6 +1324,10 @@ public static partial class SimEngine
             case WhenAction whenAction: RunWhen(branches, whenAction); break;
             case AskAction askAction: RunAsk(branches, askAction); break;
             case LoseHpAction loseHpAction: branches.Do(branch => LoseHp(branch, branch.CurrentPlay?.Card.Name ?? "HP cost", loseHpAction.Amount, branch.CurrentPlay?.Owner ?? Who.You, branch.CurrentPlay?.Card)); break;
+            case LoseMaxHpAction loseMaxHpAction:
+                branches.Each(branch => LoseMaxHp(branch, branch.CurrentPlay?.Owner ?? Who.You, branch.CurrentPlay?.Card.Name ?? "max HP", branch.CurrentPlay?.Owner ?? Who.You, loseMaxHpAction.Amount,
+                    card: branch.CurrentPlay?.Card));
+                break;
             default: throw new NotSupportedException($"No runner for {action.GetType().Name}");
         }
         // Events raised inside its hits or deaths (an arrow knocked loose) run once the action is over.

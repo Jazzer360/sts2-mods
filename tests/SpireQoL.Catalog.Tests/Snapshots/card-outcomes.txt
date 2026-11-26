@@ -454,12 +454,12 @@ BrightenUp [Crowded] 1 you=80/0 e2 h10 d0/3 enemy0=200/0 enemy1=30/0 [Exhausted1
 BrightenUp [Replayed] 1 you=80/0 e2 h10 d6/3 enemy0=200/0 [Exhausted1 Generated4]
 BrightenUp [Teammate] 1 you=80/0 e2 h7 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted1 Generated4]
 BrightenUp [Alone] 1 you=80/0 e2 h4 d6/3 enemy0=200/0 [Exhausted1 Generated4]
-BrightestFlame [Standard] 1 you=80/0 e5 h5 d4/3 enemy0=200/0 [Drawn2 EnergyGained2] ?CreatureCmd.LoseMaxHp: max HP lost: not followed
-BrightestFlame [Upgraded] 1 you=80/0 e6 h6 d3/3 enemy0=200/0 [Drawn3 EnergyGained3] ?CreatureCmd.LoseMaxHp: max HP lost: not followed
-BrightestFlame [Crowded] 1 you=80/0 e5 h10 d2/0 enemy0=200/0 enemy1=30/0 [Drawn1 Shuffled1 EnergyGained2] ?CreatureCmd.LoseMaxHp: max HP lost: not followed
-BrightestFlame [Replayed] 1 you=80/0 e7 h7 d2/3 enemy0=200/0 [Drawn2 EnergyGained2] ?CreatureCmd.LoseMaxHp: max HP lost: not followed
-BrightestFlame [Teammate] 1 you=80/0 e5 h5 d4/3 mate0=70/0 e3 h2 enemy0=200/0 [Drawn2 EnergyGained2] ?CreatureCmd.LoseMaxHp: max HP lost: not followed
-BrightestFlame [Alone] 1 you=80/0 e5 h2 d4/3 enemy0=200/0 [Drawn2 EnergyGained2] ?CreatureCmd.LoseMaxHp: max HP lost: not followed
+BrightestFlame [Standard] 1 you=78/0 e5 h5 d4/3 enemy0=200/0 [Drawn2 EnergyGained2]
+BrightestFlame [Upgraded] 1 you=78/0 e6 h6 d3/3 enemy0=200/0 [Drawn3 EnergyGained3]
+BrightestFlame [Crowded] 1 you=78/0 e5 h10 d2/0 enemy0=200/0 enemy1=30/0 [Drawn1 Shuffled1 EnergyGained2]
+BrightestFlame [Replayed] 1 you=76/0 e7 h7 d2/3 enemy0=200/0 [Drawn2 EnergyGained2]
+BrightestFlame [Teammate] 1 you=78/0 e5 h5 d4/3 mate0=70/0 e3 h2 enemy0=200/0 [Drawn2 EnergyGained2]
+BrightestFlame [Alone] 1 you=78/0 e5 h2 d4/3 enemy0=200/0 [Drawn2 EnergyGained2]
 BubbleBubble [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
 BubbleBubble [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
 BubbleBubble [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 []

@@ -260,6 +260,12 @@ public sealed record StunTargetAction : SimAction;
 public sealed record LoseHpAction(int Amount) : SimAction;
 
 /// <summary>
+/// CreatureCmd.LoseMaxHp of the card's owner from its play (Brightest Flame: decision #341): HP above the new max lost first, as the HP its card costs
+/// (CreatureCmd.Damage with the card as its source: dealt by its owner, Unblockable, Unpowered, Move), then the max set, at least 1 (SimEngine.LoseMaxHp).
+/// </summary>
+public sealed record LoseMaxHpAction(int Amount) : SimAction;
+
+/// <summary>
 /// A part of the play the adapter couldn't read from the game (Sts2State.ReadScope: a member a game update renamed): what's built
 /// from it is a guess, so the play is unknown (SimState.Unmodelled), named by the member.
 /// </summary>

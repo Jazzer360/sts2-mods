@@ -255,6 +255,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - An enemy that joins the fight when another dies (Infested's Wrigglers, Stock's next Axebot, Surprise's gremlins) gets Philosopher's Stone's Strength, worked out from the relic's own code; with Fur Coat (whose 1 HP isn't worked out yet) what follows its joining shows `?` instead of the enemy at full HP.
 - Multiplayer: playing Tank is followed (worked out from its own code): the enemies' attacks on you after it deal half again, and your teammates have its Guarded. It was left out of the predictions. With Twisted Funnel, the later turns' forecast no longer shows `?` for its first-turn Poison.
 - Killing the last Magi Knight while Dampen is on you shows `?` where it happens: your cards get their upgrades back then, which isn't worked out yet (it showed the cards as they were).
+- Brightest Flame's max HP loss is worked out: at full HP its play shows the HP it takes and your new max, where it showed `?`.
 - Paper Cuts' max HP loss is worked out from its own code: when its hit leaves you above your new max HP, Incoming Damage counts the HP you lose down to it.
 - Killing The Lost during a play gives you back the Strength and Dexterity it took, for the play's later hits and block, as the game does.
 - The later turns' forecast no longer shows `?` for a relic or power whose effect as your next turn starts is only cards, energy or HP (Bellows, Big Hat, Ninja Scroll, Happy Flower...), which that forecast doesn't count, as it already didn't for ones not worked out from their code.

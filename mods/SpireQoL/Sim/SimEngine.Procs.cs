@@ -140,10 +140,23 @@ public static partial class SimEngine
     /// CreatureCmd.LoseMaxHp of <paramref name="creature"/> (a model's: Paper Cuts on the player its owner's attack got through to): with HP above the new
     /// max, that much is lost first as a damage (Unblockable, Unpowered, no dealer: the one path for damage to a player), then the max is set, at least
     /// 1, and HP above it comes down to it (Creature.SetMaxHpInternal). A projection follows no one's HP (decision #308); a creature that isn't a
-    /// player (the simulator keeps no enemy's max HP) is unknown.
+    /// player (the simulator keeps no enemy's max HP) is unknown. With <paramref name="card"/> (a card's play: Brightest Flame, decision #341) the HP
+    /// lost is its card's damage (dealt by the card's owner, Unblockable, Unpowered and Move: CreatureCmd.Damage with a cardSource), as the HP a card costs.
     /// </summary>
-    public static IEnumerable<SimState> LoseMaxHp(SimState state, int owner, string name, int creature, int amount, string? label = null)
+    public static IEnumerable<SimState> LoseMaxHp(SimState state, int owner, string name, int creature, int amount, string? label = null, SimCard? card = null)
     {
+        if (card != null && amount > 0 && !state.Forecasting && Who.IsPlayer(creature) && state.Player(creature) is { Died: false, Hp: > 0 } cardOwner && cardOwner.MaxHp != int.MaxValue)
+        {
+            var cardMax = cardOwner.MaxHp - amount;
+            if (cardMax < cardOwner.Hp) LoseHp(state, name, cardOwner.Hp - cardMax, creature, card);
+            if (state.Player(creature) is not null)
+            {
+                var mutable = state.MutablePlayer(creature);
+                mutable.MaxHp = Math.Max(1, cardMax);
+                if (mutable.Hp > mutable.MaxHp) mutable.Hp = mutable.MaxHp;
+            }
+            return new[] { state };
+        }
         if (amount <= 0 || state.Forecasting) return new[] { state };
         if (!Who.IsPlayer(creature) || state.Player(creature) is not { } player)
         {

@@ -75,4 +75,48 @@ public class OwnerDamageTests
         Assert.Equal(2, branch.You.Taken);
         Assert.Equal(1, branch.You.Powers[PowerId.Buffer]);
     }
+
+    /// <summary>Brightest Flame's play: CreatureCmd.LoseMaxHp(ctx, Owner.Creature, MaxHp, this) (decision #341).</summary>
+    private static SimPlay MaxHpLoss(int hp, int maxHp, int amount, out SimState state)
+    {
+        state = Board();
+        state.You.Hp = hp;
+        state.You.MaxHp = maxHp;
+        var play = HpCost(card: CardId.BrightestFlame.Name, amount: 0);
+        play.Body.Clear();
+        play.Body.Add(new LoseMaxHpAction(amount));
+        return play;
+    }
+
+    [Fact]
+    public void MaxHpLostFromACardTakesTheHpAboveTheNewMaxAsTheCardsDamage()
+    {
+        // At full HP: the 2 above the new max is CreatureCmd.Damage with the card as its source (dealt by you, Unblockable, Unpowered, Move), through
+        // the damage math (Hard to Kill holds it to 1), then the max goes down to 68 and HP above it comes down to it.
+        var play = MaxHpLoss(hp: 70, maxHp: 70, amount: 2, out var state);
+        var branch = Assert.Single(SimEngine.Run(state, play).Branches);
+        Assert.Equal(68, branch.You.MaxHp);
+        Assert.Equal(68, branch.You.Hp);
+        Assert.Equal(2, branch.You.Taken);
+
+        var capped = MaxHpLoss(hp: 70, maxHp: 70, amount: 2, out var hardToKill);
+        hardToKill.You.Powers = PowerSet.Empty.With(PowerId.HardToKill, amount: 1);
+        var cappedBranch = Assert.Single(SimEngine.Run(hardToKill, capped).Branches);
+        Assert.Equal(1, cappedBranch.You.Taken);
+        Assert.Equal(68, cappedBranch.You.MaxHp);
+        Assert.Equal(68, cappedBranch.You.Hp); // SetMaxHp brings the HP the cap left above the new max down to it
+    }
+
+    [Fact]
+    public void MaxHpLostFromACardBelowItsMaxTakesNoHp()
+    {
+        // HP 50 of 70: the new max 68 is above it, so no damage; at least 1 max is left.
+        var play = MaxHpLoss(hp: 50, maxHp: 70, amount: 2, out var state);
+        var branch = Assert.Single(SimEngine.Run(state, play).Branches);
+        Assert.Equal(68, branch.You.MaxHp);
+        Assert.Equal(50, branch.You.Hp);
+        Assert.Equal(0, branch.You.Taken);
+        var floored = MaxHpLoss(hp: 1, maxHp: 2, amount: 5, out var low);
+        Assert.Equal(1, Assert.Single(SimEngine.Run(low, floored).Branches).You.MaxHp);
+    }
 }

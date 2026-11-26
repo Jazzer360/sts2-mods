@@ -39,6 +39,7 @@ public static partial class SimAdapter
         ["OstyCmd.Summon"] = "SummonAction: its amount for the player its second argument names (you, or each player its loop goes over), as OstyCmd.Summon runs (SimEngine.Summon)",
         ["CreatureCmd.Heal"] = "HealAction: its amount on you, your Osty or the player it's aimed at, up to max HP",
         ["CreatureCmd.GainMaxHp"] = "GainMaxHpAction: its amount on you or the player it's aimed at, their max HP raised, then healed by it",
+        ["CreatureCmd.LoseMaxHp"] = "LoseMaxHpAction: its amount off its owner's max HP (the card's), HP above the new max lost first as the card's damage",
         ["CreatureCmd.SetCurrentHp"] = "ExecuteAction (the target, on its condition)",
         ["CreatureCmd.Stun"] = "StunTargetAction (the target: its next move the stunned move)",
         ["CreatureCmd.LoseBlock"] = "StripBlockAction (the target's block, and its Artifact when the play removes it)",
@@ -87,7 +88,6 @@ public static partial class SimAdapter
         ["CardCmd.ApplySingleTurnRetain"] = "Retain given to a card this turn: not followed",
         ["CardCmd.Enchant"] = "an enchantment given to a card: not followed",
         ["OrbCmd.Passive"] = "an orb's passive set off by a card: not followed",
-        ["CreatureCmd.LoseMaxHp"] = "max HP lost: not followed",
         ["ArrowCmd.GainArrowSlot"] = "an arrow slot gained: not followed",
         ["PotionCmd.TryToProcure"] = "a potion procured: what reacts to it (AfterPotionProcured) isn't followed",
         ["PlayerCmd.GainGold"] = "gold gained: what reacts to it (AfterGoldGained) isn't followed",
@@ -403,6 +403,8 @@ public static partial class SimAdapter
                 return (SummonsFrom(found, play), null);
             case ("CreatureCmd", "GainMaxHp"):
                 return (MaxHpFrom(found, play), null);
+            case ("CreatureCmd", "LoseMaxHp"):
+                return (MaxHpLossFrom(found, play), null);
             case ("CreatureCmd", "Heal"):
                 return (HealsFrom(found, play), null);
             case ("CreatureCmd", "SetCurrentHp"):
@@ -1520,6 +1522,19 @@ public static partial class SimAdapter
         if (IsTarget(ValueAt(command, 0)) && play.AimsAtPlayer)
             return Who.IsPlayer(play.AllyId) ? new List<SimAction> { new GainMaxHpAction(amount) { Player = play.AllyId == Who.You ? null : play.AllyId } } : new List<SimAction>();
         return new List<SimAction> { new NotModelledAction($"{play.Name} raises the max HP of a creature its translation doesn't name ({ValueAt(command, 0)})") };
+    }
+
+    /// <summary>
+    /// CreatureCmd.LoseMaxHp(choiceContext, creature, amount, cardSource) of you from a card's play (Brightest Flame, decision #341): its amount (its third
+    /// argument on the board) off your max HP, as decision #327's engine runs it, the HP above the new max lost as the card's damage (its cardSource the card).
+    /// Anyone else's, or one with no card as its source (a potion's), is unknown where it runs.
+    /// </summary>
+    private static List<SimAction> MaxHpLossFrom(CardEffects.Found found, StepPlay play)
+    {
+        var command = found.Command;
+        if (!IsYou(ValueAt(command, 1)) || play.Card == null || ValueAt(command, 3) is not NamedValue { Name: "this" })
+            return new List<SimAction> { new NotModelledAction($"{play.Name} takes max HP from a creature, or with a source, its translation doesn't name ({ValueAt(command, 1)})") };
+        return new List<SimAction> { new LoseMaxHpAction(Number(play, ValueAt(command, 2), Sts2State.Var(play.Model, "MaxHp"))) };
     }
 
     // ---------------------------------------------------------------- orbs
