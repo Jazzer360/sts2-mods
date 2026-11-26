@@ -42,6 +42,12 @@ internal static class IntentCorner
         return null;
     }
 
+    /// <summary>The list each chip row was last built from or held to (Place): never changed in place by its callers.</summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<GodotObject, IReadOnlyList<MovePowers.Applied>> BuiltFrom = new();
+
+    /// <summary>What a row of chips shows, as text: each power and its amount.</summary>
+    private static string Key(IReadOnlyList<MovePowers.Applied> powers) => string.Join(",", powers.Select(applied => $"{applied.Power.Name}:{applied.Amount}"));
+
     /// <summary>Puts these chips in the intent's corner (none: removes them). Rebuilt only when what they show changes.</summary>
     public static void Place(NIntent intent, IReadOnlyList<MovePowers.Applied>? powers)
     {
@@ -52,18 +58,24 @@ internal static class IntentCorner
             row.RemoveAndFree();
             return;
         }
-        var key = string.Join(",", powers.Select(applied => $"{applied.Power.Name}:{applied.Amount}"));
-        if (row != null && UiKit.KeyOf(row) != key)
+        // The same list the row was built from: nothing to compare (its key, built as text, made garbage on every frame the forecast showed a
+        // move that applies powers: a dev review).
+        if (row != null && !(BuiltFrom.TryGetValue(row, out var from) && ReferenceEquals(from, powers)))
         {
-            row.QueueFree();
-            row = null;
+            if (UiKit.KeyOf(row) != Key(powers))
+            {
+                row.QueueFree();
+                row = null;
+            }
+            else BuiltFrom.AddOrUpdate(row, powers);
         }
         if (row == null)
         {
             row = UiKit.Row(separation: 2);
             row.Name = GodotNames.Name(PowersName);
             row.MouseFilter = Control.MouseFilterEnum.Ignore;
-            UiKit.SetKey(row, key);
+            UiKit.SetKey(row, Key(powers));
+            BuiltFrom.AddOrUpdate(row, powers);
             foreach (var applied in powers) row.AddChild(Chip(applied));
             holder.AddChild(row);
         }
