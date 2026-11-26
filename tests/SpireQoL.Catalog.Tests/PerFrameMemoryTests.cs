@@ -32,6 +32,16 @@ public class PerFrameMemoryTests
     }
 
     [Fact]
+    public void TheRestSitesBossCheckAsksWhatChangedWithoutGarbage()
+    {
+        // A dev review: at the fire, the boss start's prediction (Pantograph, Bath Robes) was worked out again every frame, 1.7 KB each; it's
+        // worked out again only when its key (your HP and relics) changes, and reading the key makes nothing.
+        var gameFight = new GameFight();
+        var perCall = BytesPerCall(() => SpireQoL.Features.RestPreviewFeature.PlayerKey(gameFight.Me));
+        Assert.True(perCall == 0, $"{perCall} bytes a frame");
+    }
+
+    [Fact]
     public void ReadingAPrivateMemberMakesNothing()
     {
         // Sts2State.Private: the member is found once per type and name (it made three Traverse objects and a name every call).

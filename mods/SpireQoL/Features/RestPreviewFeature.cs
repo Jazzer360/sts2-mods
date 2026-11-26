@@ -141,7 +141,8 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         _matePanel = new RestMathPanel(_mate.Content);
     }
 
-    private static readonly HashSet<string> SidesLogged = new();
+    /// <summary>The character places logged, by rounded position (a number pair: a text key made garbage on every frame's layout).</summary>
+    private static readonly HashSet<(int X, int Y)> SidesLogged = new();
 
     /// <summary>
     /// The character's rect when it sits on that half of the screen (right: its centre right of the screen's middle), else null:
@@ -152,8 +153,7 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         if (character is not { } rect || NRestSiteRoom.Instance is not { } room || !GodotObject.IsInstanceValid(room)) return null;
         var middle = room.GetViewportRect().Size.X / 2;
         var onRight = rect.GetCenter().X > middle;
-        var key = $"{rect.Position.X:0},{rect.Position.Y:0}";
-        if (SidesLogged.Add(key)) ModEntry.Log.Detail($"rest preview: character at {rect.Position}, {rect.Size} (screen middle {middle:0}): panel on its {(onRight ? "right" : "left")}");
+        if (SidesLogged.Add(((int)Math.Round(rect.Position.X), (int)Math.Round(rect.Position.Y)))) ModEntry.Log.Detail($"rest preview: character at {rect.Position}, {rect.Size} (screen middle {middle:0}): panel on its {(onRight ? "right" : "left")}");
         return onRight == right ? rect : null;
     }
 
@@ -217,6 +217,8 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
 
     private int _restCheckFrames;
     private int? _bossPredicted;
+    /// <summary>What the boss's start was last worked out from at the fire (PlayerKey); null away from it.</summary>
+    private int? _bossKey;
     private int _bossFrames;
     private int _mendFrames;
 
@@ -309,16 +311,24 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
         }
         if (hovered != null) AddPlayer(ref hashCode, hovered);
         return hashCode.ToHashCode();
+    }
 
-        static void AddPlayer(ref HashCode hashCode, Player player)
-        {
-            hashCode.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(player));
-            hashCode.Add(player.Creature.CurrentHp);
-            hashCode.Add(player.Creature.MaxHp);
-            var relics = player.Relics;
-            hashCode.Add(relics.Count);
-            for (var i = 0; i < relics.Count; i++) { hashCode.Add(relics[i].DisplayAmount); hashCode.Add(relics[i].Status); }
-        }
+    /// <summary>What a rest's outcome reads of a player, as one number: their HP, max HP and relics (each one's counter and status).</summary>
+    internal static int PlayerKey(Player player)
+    {
+        var hashCode = new HashCode();
+        AddPlayer(ref hashCode, player);
+        return hashCode.ToHashCode();
+    }
+
+    private static void AddPlayer(ref HashCode hashCode, Player player)
+    {
+        hashCode.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(player));
+        hashCode.Add(player.Creature.CurrentHp);
+        hashCode.Add(player.Creature.MaxHp);
+        var relics = player.Relics;
+        hashCode.Add(relics.Count);
+        for (var i = 0; i < relics.Count; i++) { hashCode.Add(relics[i].DisplayAmount); hashCode.Add(relics[i].Status); }
     }
 
     private static void Show(RestMathPanel panel, Preview preview, bool rest) =>
@@ -365,12 +375,18 @@ public sealed class RestPreviewFeature : IFeature, IFrameFeature
 
         if (NRestSiteRoom.Instance is { } nRestSiteRoom && GodotObject.IsInstanceValid(nRestSiteRoom))
         {
-            // How you leave the rest site (rested or not): with Pantograph or Bath Robes ready, the boss fight's start.
-            var preview = Compute(me, rest: false);
-            _bossPredicted = preview is { BossRelics.Count: > 0 } ? preview.Outcome.ResultHp : null;
+            // How you leave the rest site (rested or not): with Pantograph or Bath Robes ready, the boss fight's start. Worked out again only when
+            // what it reads changes (your HP and relics): every frame at the fire made 1.7 KB of garbage (a dev review).
+            if (PlayerKey(me) is var key && key != _bossKey)
+            {
+                _bossKey = key;
+                var preview = Compute(me, rest: false);
+                _bossPredicted = preview is { BossRelics.Count: > 0 } ? preview.Outcome.ResultHp : null;
+            }
             _bossFrames = 0;
             return;
         }
+        _bossKey = null;
         if (_bossPredicted is not { } boss) return;
         if (!Sts2State.InCombat) return;
         if (me.RunState.CurrentRoom?.RoomType != RoomType.Boss)
