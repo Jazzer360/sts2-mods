@@ -55,9 +55,12 @@ public static partial class SimAdapter
             if (aimedAtTeammate < allies.Count) { play.AllyTarget = aimedAtTeammate; ally = allies[aimedAtTeammate].Creature; allyId = Who.Teammate(aimedAtTeammate); }
         }
         play.HandCard = card.Pile?.Type == PileType.Hand ? HandId(card) : 0;
-        // What it is in your draw pile, on a board where a listener can send it there once played (SimPlay.PileProfile: the board read's).
-        if (play.HandCard != 0 && ids is BoardIds { ProfilesRead: true, PlayedCardsMove: true } board && board.DrawProfiles.GetValueOrDefault(card) is { } pileProfile)
-            play.PileProfile = pileProfile;
+        // What it is in the pile it goes to once played (SimPlay.PileProfile, ExhaustProfile: the board read's, decision #392).
+        if (play.HandCard != 0 && ids is BoardIds { ProfilesRead: true } board)
+        {
+            play.PileProfile = board.PlayedProfiles.GetValueOrDefault(card);
+            play.ExhaustProfile = board.ExhaustedPlayedProfiles.GetValueOrDefault(card);
+        }
         // Its draws join the hand as the simulator runs them (decision #189): none for the card leaving to account for.
         play.Draws = 0;
         // Whom its block and channels are for, read from its code (decision #182): a teammate it's aimed at (Lift, Ignition).
@@ -88,16 +91,17 @@ public static partial class SimAdapter
     }
 
     /// <summary>
-    /// A listener on the board changes where a played card goes (its model's ModifyCardPlayResultLocation, read from its code or its model: Rebound's and
-    /// Nostalgia's top of the draw pile, Feral's hand, Corruption's exhaust pile): the hand's cards' profiles are read for the plays that go there.
+    /// The card <paramref name="card"/> turns into once its play is over (CardModel.TransformIntoAfterPlay, set in its OnPlay: Mourning Blow's Sadness, read
+    /// as its AfterPlay make), as the game's canonical card, which is what lands in its result pile; null for one that doesn't, or whose card isn't built.
     /// </summary>
-    private static bool MovesPlayedCards(Player me, ICombatState combat)
+    private static CardModel? TurnsIntoAfterPlay(CardModel card)
     {
-        static bool Moves(AbstractModel model) => SimModels.Get(SimReaders.ModelName(model))?.Overrides(nameof(SimModel.ModifyCardPlayResultLocation)) == true;
-        foreach (var relic in me.Relics) if (Moves(relic)) return true;
-        foreach (var creature in combat.Enemies.Append(me.Creature))
-            foreach (var power in creature.Powers) if (Moves(power)) return true;
-        return false;
+        try
+        {
+            return Procs.Programs.MadeCards.Of(card.GetType()).FirstOrDefault(make => make.By == Procs.Programs.MadeCards.Way.AfterPlay) is { Card: { } made }
+                ? Procs.Programs.MadeCards.CanonicalOf(made) : null;
+        }
+        catch { return null; }
     }
 
     /// <summary>One of the player's powers or relics upgrades the card being played (SimModel.UpgradesCardInPlay, read from its code or its model).</summary>

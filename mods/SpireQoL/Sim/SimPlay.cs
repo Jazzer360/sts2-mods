@@ -42,11 +42,18 @@ public sealed class SimPlay
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public CardVersion? Upgraded;
     /// <summary>
-    /// The card as it would be in its owner's draw pile (its profile, the board read's: SimAdapter.FillDrawPile), for a play from your hand whose result
-    /// location puts it there (Rebound's, Nostalgia's: the top of the draw pile), so a draw later in the simulation draws it; null where it isn't read.
+    /// The card as it lands in its owner's draw or discard pile once played (its profile, the board read's: SimAdapter.FillDrawPile; the card it turns
+    /// into, for one that transforms after its play), for a play from your hand: the discard pile, or the top of the draw pile where a listener sends
+    /// it there (Rebound's, Nostalgia's), so a shuffle or a draw later in the simulation has it; null where it isn't read.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SimDrawCard? PileProfile;
+    /// <summary>
+    /// The card as it lands in its owner's exhaust pile once played (its exhausted profile), on a board where that pile's cards are followed one by
+    /// one (SimPileAutoPlays.ExhaustCards: Eidolon, Knife Trap), so an auto-play of them later in the simulation can pick it; null where it isn't read.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SimDrawCard? ExhaustProfile;
     /// <summary>Actions before the card play (the energy it spends) and after it (its own exhaust, events of the whole play).</summary>
     public List<SimAction> Before = new(), After = new();
     /// <summary>The card in your hand this play is (SimHandCard.Id): playing it takes it out of SimPlayer.AutoHand. 0 = none.</summary>
@@ -198,7 +205,7 @@ public sealed class SimScript
         var shorthand = Shorthand(simPlay);
         if (shorthand.Count > 0) body.Add(new FirstPlayOnly(shorthand));
         script.Actions.Add(new CardPlayAction(play, body) { FromHand = simPlay.HandCard != 0, HandCard = simPlay.HandCard, CountByModels = true, Upgraded = simPlay.Upgraded,
-            FromPile = fromPile, ExhaustOnNextPlay = exhaustOnNextPlay, PileProfile = simPlay.PileProfile });
+            FromPile = fromPile, ExhaustOnNextPlay = exhaustOnNextPlay, PileProfile = simPlay.PileProfile, ExhaustProfile = simPlay.ExhaustProfile });
         script.Actions.AddRange(simPlay.After);
         script.Actions.Add(new CardResolvedAction(simPlay.HandDelta, simPlay.HandCard, simPlay.AutoPlay, simPlay.Draws, simPlay.FadingDelta, simPlay.IsAttack) { Owner = play.Owner, HexFadingDelta = simPlay.HexFadingDelta });
         if (simPlay.RandomPoison > 0 && simPlay.RandomPoisonTimes > 0)

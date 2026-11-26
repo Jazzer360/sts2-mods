@@ -105,12 +105,18 @@ public static partial class SimEngine
             }
         }
         // The card goes where the shape said (CardPlay.ResultPile): back on top of its owner's hand (Feral), keeping its slot; one from your hand on top of
-        // its owner's draw pile (Rebound, Nostalgia). One auto-played from a pile keeps its location for the pile move after it (SimEngine.PlayFromPile; the
-        // frame it puts back clears it).
+        // its owner's draw pile (Rebound, Nostalgia), into their discard pile, or into their exhaust pile. One auto-played from a pile keeps its location for
+        // the pile move after it (SimEngine.PlayFromPile; the frame it puts back clears it).
         branches.Do(branch =>
         {
             if (branch.PlayResultLocation == SimResultLocation.HandTop) AddToHand(branch, cardPlayAction.Play.Owner, count: 1);
-            else if (branch.PlayResultLocation == SimResultLocation.DrawTop && cardPlayAction is { FromHand: true, FromPile: false }) PlayedOntoDrawPile(branch, cardPlayAction);
+            else if (cardPlayAction is { FromHand: true, FromPile: false })
+                switch (branch.PlayResultLocation)
+                {
+                    case SimResultLocation.DrawTop: PlayedOntoDrawPile(branch, cardPlayAction); break;
+                    case SimResultLocation.Default: PlayedIntoDiscardPile(branch, cardPlayAction); break;
+                    case SimResultLocation.Exhaust: PlayedIntoExhaustPile(branch, cardPlayAction); break;
+                }
             branch.CurrentPlay = null; branch.PlayTaken = 0; branch.TakeMatching = NamedCounts.Empty; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty;
             branch.PlayCountNow = 0; branch.PlayChanges = SimState.CardChanges.None;
             if (!cardPlayAction.FromPile) branch.PlayResultLocation = SimResultLocation.Default;
@@ -131,6 +137,33 @@ public static partial class SimEngine
     }
 
     private const string UnreadOnTop = "a card played from your hand went on top of your draw pile, and what it is there isn't read";
+
+    /// <summary>
+    /// A card played from your hand goes to its owner's discard pile (OnPlayWrapper's CardPileCmd.Add at its result location, the discard pile when nothing
+    /// changed it), as its profile (CardPlayAction.PileProfile), so a shuffle later in the simulation (a draw from an empty draw pile) or a take or play from
+    /// there has it. One whose profile isn't read is there as a card of unknown kind (SimDrawCard.Unread). Without a draw pile the simulator follows, nothing.
+    /// </summary>
+    private static void PlayedIntoDiscardPile(SimState state, CardPlayAction cardPlayAction)
+    {
+        var owner = cardPlayAction.Play.Owner;
+        if (!DrawsFromPile(state, owner)) return;
+        Discarded(state, owner, cardPlayAction.PileProfile ?? new SimDrawCard(UnreadDiscarded) { Unread = UnreadDiscarded });
+    }
+
+    private const string UnreadDiscarded = "a card played from your hand went to your discard pile, and what it is there isn't read";
+
+    /// <summary>
+    /// A card played from your hand goes to its owner's exhaust pile (CardCmd.Exhaust at its result location: one that exhausts itself, Corruption's Skills)
+    /// at the end of that pile's listed cards, where they're followed one by one (SimPileAutoPlays.ExhaustCards: Eidolon's and Knife Trap's plays from
+    /// there), as its exhausted profile (CardPlayAction.ExhaustProfile). One whose profile isn't read isn't listed: the pile's count (SimPlayer.ExhaustPile,
+    /// counted by its exhaust) then differs from its list, and a play from there is unknown.
+    /// </summary>
+    private static void PlayedIntoExhaustPile(SimState state, CardPlayAction cardPlayAction)
+    {
+        var owner = cardPlayAction.Play.Owner;
+        if (cardPlayAction.ExhaustProfile is not { } profile || state.Player(owner)?.PileAutoPlays is not { ExhaustCards: { } listed } piles) return;
+        state.MutablePlayer(owner).PileAutoPlays = piles with { ExhaustCards = new List<SimDrawCard>(listed) { profile } };
+    }
 
     /// <summary>
     /// One play of a card play (CardModel.OnPlayWrapper's loop body): BeforeCardPlayed, the play started, its body (OnPlay), its enchantment's

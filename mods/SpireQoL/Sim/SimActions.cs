@@ -40,8 +40,10 @@ public sealed record CardPlayAction(SimCardPlay Play, IReadOnlyList<SimAction> B
     /// (GetResultLocationForCardPlay) before the listeners change it; its exhaust then is the card that played it's doing (indirect).
     /// </summary>
     public bool ExhaustOnNextPlay { get; init; }
-    /// <summary>The card as it would be in its owner's draw pile (SimPlay.PileProfile), for a play from your hand that puts it on top of it; null: not read.</summary>
+    /// <summary>The card as it lands in its owner's draw or discard pile once played (SimPlay.PileProfile), for a play from your hand; null: not read.</summary>
     public SimDrawCard? PileProfile { get; init; }
+    /// <summary>The card as it lands in its owner's exhaust pile once played (SimPlay.ExhaustProfile), where that pile's cards are followed; null: not read.</summary>
+    public SimDrawCard? ExhaustProfile { get; init; }
 }
 
 /// <summary>A card as a change during its play leaves it (its upgraded copy): the card its later plays' hooks see, and what each of them does.</summary>

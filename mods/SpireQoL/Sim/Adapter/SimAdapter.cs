@@ -496,8 +496,10 @@ public static partial class SimAdapter
     {
         public IReadOnlyDictionary<CardModel, SimDrawCard> DrawProfiles { get; internal set; } = EmptyProfiles;
         public bool ProfilesRead { get; internal set; }
-        /// <summary>A listener on the board changes where a played card goes (MovesPlayedCards): its hand cards' profiles are read, and each hand card's play carries its own.</summary>
-        public bool PlayedCardsMove { get; internal set; }
+        /// <summary>Each card in your hand as it lands in your discard or draw pile once played (decision #392): its profile, or what it turns into after its play.</summary>
+        public IReadOnlyDictionary<CardModel, SimDrawCard> PlayedProfiles { get; internal set; } = EmptyProfiles;
+        /// <summary>Each card in your hand as it lands in your exhaust pile once played, where that pile's cards are followed one by one (Eidolon, Knife Trap).</summary>
+        public IReadOnlyDictionary<CardModel, SimDrawCard> ExhaustedPlayedProfiles { get; internal set; } = EmptyProfiles;
     }
 
     private static readonly IReadOnlyDictionary<CardModel, SimDrawCard> EmptyProfiles = new Dictionary<CardModel, SimDrawCard>();
@@ -600,10 +602,12 @@ public static partial class SimAdapter
             SimDrawCard Profile(CardModel card, bool exhausted = false, CardModel? original = null)
             {
                 var turnEnd = TurnEndOf(card);
-                var fading = IsFading(card, combat);
+                // Its keywords read once (CardModel.Keywords builds a new set each time: a profile asked it up to four times).
+                var keywords = card.Keywords;
+                var fading = IsFading(card, combat, keywords);
                 var hexFading = fading && EtherealOnlyFromHex(card);
                 var status = statusAsked && card.Type == CardType.Status;
-                var ethereal = etherealAsked && card.Keywords.Contains(CardKeyword.Ethereal);
+                var ethereal = etherealAsked && keywords.Contains(CardKeyword.Ethereal);
                 var strike = hellraiser && card.Tags.Contains(CardTag.Strike);
                 // Hellraiser's auto-play is built like a picked card's (decision #121), except past the game's cap on endless
                 // auto-plays, when every enemy you could hit can't die (HellraiserPower: 9 a turn): then it isn't simulated.
@@ -611,11 +615,12 @@ public static partial class SimAdapter
                 // What a card in your hand that auto-plays your piles' cards (decision #360) lets through: an Unplayable card a hand one lets through is followed
                 // no further once drawn (its play isn't built: the hand's later auto-plays are unknown).
                 var autoPlayedBy = AutoPlayedBy(card, sources);
-                var unplayable = card.Keywords.Contains(CardKeyword.Unplayable);
+                var unplayable = keywords.Contains(CardKeyword.Unplayable);
                 var pickable = picks && (!unplayable && (player.Simpleton > 0 || card.Type == CardType.Attack || handSources.Count > 0)
                                          || unplayable && handSources.Any(source => autoPlayedBy?.Contains(source.Key) == true || autoPlayedBy?.Contains(source.Key + "?") == true));
                 var playsFromPile = topPlays || exhausted && exhaustPlays;
-                var cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved();
+                // Its cost only where the card itself is kept (CardEnergyCost.GetResolved allocates).
+                var cost = pickable || strike || playsFromPile ? card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved() : 0;
                 var who = pickable || strike || playsFromPile ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}{(LocalStarCostOf(card) is { } stars ? "*" + stars : "")}" : "";
                 // I Am Invincible plays from the top of the draw pile at the end of your turn: its block.
                 var invincible = card is IAmInvincible ? CardBlock(card, combat, me) : 0;
@@ -626,7 +631,7 @@ public static partial class SimAdapter
                 // facts the cost passes test (its type, Ethereal, affliction: no pass reads a card's class, so cards that cost alike stay one profile).
                 var localCost = readsCost ? LocalCostOf(card) : null;
                 var costed = localCost != null ? SimReaders.CostedFacts(card) with { Name = "" } : null;
-                var sly = readsCost && card.Keywords.Contains(CardKeyword.Sly);
+                var sly = readsCost && keywords.Contains(CardKeyword.Sly);
                 // It acts when it's exhausted (Drum of Battle): its type goes with it, for an exhaust of a kind.
                 var exhaustEnergy = CardEnergy.WhenExhausted(card);
                 var energyLost = CardEnergy.LostWhenDrawn(card);
@@ -674,7 +679,8 @@ public static partial class SimAdapter
                 }
                 catch { return drawCard; }
             }
-            var profiles = new Dictionary<CardModel, SimDrawCard>(ReferenceEqualityComparer.Instance);
+            // Sized for every card of your piles and hand at once (a dictionary that grows copies itself each time).
+            var profiles = new Dictionary<CardModel, SimDrawCard>(PileType.Draw.GetPile(me).Cards.Count + PileType.Discard.GetPile(me).Cards.Count + handCards.Count, ReferenceEqualityComparer.Instance);
             SimDrawCard Remembered(CardModel card)
             {
                 var profile = Profile(card);
@@ -691,26 +697,41 @@ public static partial class SimAdapter
                 Rest = Groups(PileType.Draw.GetPile(me).Cards.Where(card => !known.Contains(card))),
                 Discard = Groups(PileType.Discard.GetPile(me).Cards),
             };
-            // The cards in your hand too, for a play that puts them into your draw pile (Reboot), or a listener that sends a card played from your hand
-            // there (its ModifyCardPlayResultLocation: Rebound's, Nostalgia's top of the draw pile): each hand card's play, and its auto-plays, carry it.
-            var movesPlayed = MovesPlayedCards(me, combat);
-            if (movesPlayed || handCards.Any(card => Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType())))
-                foreach (var card in handCards) Remembered(card);
-            if (movesPlayed && player.AutoHand != null)
+            // The cards in your hand too (decision #392): for a play that puts them into your draw pile (Reboot), and for where each goes once played from
+            // your hand (OnPlayWrapper's result location): your discard pile, or the top of your draw pile where a listener sends it there (Rebound's,
+            // Nostalgia's), so a shuffle or a draw later in the same simulation has it. A card that turns into another after its play (Mourning Blow's
+            // Sadness: CardCmd.Transform before the move) lands as what it turns into. Each hand card's play, and its auto-plays, carry it.
+            var played = new Dictionary<CardModel, SimDrawCard>(handCards.Count, ReferenceEqualityComparer.Instance);
+            // And your exhaust pile's cards in its order, for a card in your hand that auto-plays cards from there (decision #360: Eidolon, Knife Trap),
+            // with each hand card as it would land there once played (one that exhausts itself, Corruption's Skills).
+            var exhaustListed = exhaustPlays && player.PileAutoPlays != null;
+            var exhaustedPlayed = exhaustListed ? new Dictionary<CardModel, SimDrawCard>(handCards.Count, ReferenceEqualityComparer.Instance) : null;
+            foreach (var card in handCards)
+            {
+                var landing = TurnsIntoAfterPlay(card) ?? card;
+                var profile = Remembered(card);
+                played[card] = ReferenceEquals(landing, card) ? profile : Profile(landing);
+                if (exhaustedPlayed != null) exhaustedPlayed[card] = Profile(landing, exhausted: true);
+            }
+            if (player.AutoHand != null)
                 foreach (var card in handCards)
-                    if (profiles.TryGetValue(card, out var handProfile) && player.AutoHand.Find(handCard => handCard.Id == HandId(card)) is { } picked)
+                    if (player.AutoHand.Find(handCard => handCard.Id == HandId(card)) is { } picked)
                     {
-                        foreach (var play in picked.Plays) if (play.HandCard == picked.Id) play.PileProfile = handProfile;
-                        // Its upgraded plays as its upgraded profile (decision #363), where that's read.
-                        if (picked.Upgraded != null && handProfile.UpgradedTo is { } upgradedProfile)
-                            foreach (var play in picked.Upgraded.Plays) if (play.HandCard == picked.Id) play.PileProfile = upgradedProfile;
+                        var handProfile = played[card];
+                        var exhaustProfile = exhaustedPlayed?.GetValueOrDefault(card);
+                        foreach (var play in picked.Plays)
+                            if (play.HandCard == picked.Id) { play.PileProfile = handProfile; play.ExhaustProfile = exhaustProfile; }
+                        // Its upgraded plays as its upgraded profiles (decision #363), where they're read.
+                        if (picked.Upgraded != null)
+                            foreach (var play in picked.Upgraded.Plays)
+                                if (play.HandCard == picked.Id) { play.PileProfile = handProfile.UpgradedTo; play.ExhaustProfile = exhaustProfile?.UpgradedTo; }
                     }
-            // Your exhaust pile's cards in its order, for a card in your hand that auto-plays cards from there (decision #360: Eidolon, Knife Trap).
-            if (exhaustPlays && player.PileAutoPlays != null)
-                player.PileAutoPlays = player.PileAutoPlays with { ExhaustCards = PileType.Exhaust.GetPile(me).Cards.Select(card => Profile(card, exhausted: true)).ToList() };
+            if (exhaustListed)
+                player.PileAutoPlays = player.PileAutoPlays! with { ExhaustCards = PileType.Exhaust.GetPile(me).Cards.Select(card => Profile(card, exhausted: true)).ToList() };
             ids.DrawProfiles = profiles;
+            ids.PlayedProfiles = played;
+            ids.ExhaustedPlayedProfiles = exhaustedPlayed ?? EmptyProfiles;
             ids.ProfilesRead = true;
-            ids.PlayedCardsMove = movesPlayed;
             // Cards something on this board makes into a draw pile (its code's MakeIntoDrawStep: Personal Hive's Dazed, Biiig Hug's Soot): their
             // profiles, from the game's own card, for a draw later in the same simulation.
             var made = new Dictionary<string, SimDrawCard>();
@@ -1092,7 +1113,20 @@ public static partial class SimAdapter
     {
         try
         {
-            return card.Keywords.Contains(CardKeyword.Ethereal) && (card.HasTurnEndInHandEffect || Hook.ShouldEtherealTrigger(combat, card));
+            return IsFading(card, combat, card.Keywords);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>As IsFading, with the card's keywords read already (CardModel.Keywords builds a new set each time it's asked).</summary>
+    private static bool IsFading(CardModel card, ICombatState combat, IReadOnlySet<CardKeyword> keywords)
+    {
+        try
+        {
+            return keywords.Contains(CardKeyword.Ethereal) && (card.HasTurnEndInHandEffect || Hook.ShouldEtherealTrigger(combat, card));
         }
         catch
         {

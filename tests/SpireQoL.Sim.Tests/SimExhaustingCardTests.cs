@@ -132,7 +132,7 @@ public class SimExhaustingCardTests
         Assert.All(result.Branches, branch =>
         {
             Assert.Equal(3, branch.You.Draw!.Count); // the discard pile's four, one drawn
-            Assert.Equal(0, branch.You.Draw.DiscardCount);
+            Assert.Equal(1, branch.You.Draw.DiscardCount); // the card played, once played (after its draws)
         });
     }
 

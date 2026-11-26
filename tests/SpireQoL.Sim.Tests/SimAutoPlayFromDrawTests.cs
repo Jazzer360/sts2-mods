@@ -37,11 +37,18 @@ public class SimAutoPlayFromDrawTests
         return state;
     }
 
-    private static SimPlay Havoc(int count = 1, bool exhaust = true) => new()
+    /// <summary>Havoc, which exhausts itself (its Exhaust keyword: its own exhaust after its play), or Cascade (exhaust: false), which goes to your discard pile once played.</summary>
+    private static SimPlay Havoc(int count = 1, bool exhaust = true)
     {
-        Name = "Havoc", HandCard = 7, HandDelta = -1,
-        Body = { new AutoPlayFromDrawAction(count) { ForceExhaust = exhaust } },
-    };
+        var play = new SimPlay
+        {
+            Name = "Havoc", HandCard = 7, HandDelta = -1,
+            Card = new SimCardPlay(new SimCard(exhaust ? "Havoc" : "Cascade", SimCardType.Skill) { ExhaustsSelf = exhaust }, Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: false),
+            Body = { new AutoPlayFromDrawAction(count) { ForceExhaust = exhaust } },
+        };
+        if (exhaust) play.After.Add(new CardEventAction(CardEvent.Exhausted, Count: 1));
+        return play;
+    }
 
     [Fact]
     public void HavocPlaysTheTopCardAndExhaustsIt()
@@ -63,7 +70,7 @@ public class SimAutoPlayFromDrawTests
         var hit = outcome.Chance(branch => branch.Enemy(id: 1)!.Hp < 50);
         Assert.Equal(0.25, hit.Low, precision: 9);
         Assert.Equal(0.25, hit.High, precision: 9);
-        Assert.All(outcome.Branches, branch => Assert.Equal(1, branch.You.Draw!.DiscardCount));
+        Assert.All(outcome.Branches, branch => Assert.Equal(1 + 1, branch.You.Draw!.DiscardCount)); // the card it played, and Cascade itself once played
     }
 
     [Fact]
@@ -111,7 +118,7 @@ public class SimAutoPlayFromDrawTests
         var branch = Assert.Single(SimEngine.Run(state, play).Branches);
         Assert.Equal(5 + 3, branch.You.Block);
         Assert.Equal(1, branch.You.ExhaustPile);
-        Assert.Equal(0, branch.You.Draw!.DiscardCount);
+        Assert.Equal(1, branch.You.Draw!.DiscardCount); // Cascade itself: its result location was decided before Corruption landed
     }
 
     [Fact]
@@ -163,6 +170,54 @@ public class SimAutoPlayFromDrawTests
     }
 
     [Fact]
+    public void ACardPlayedFromYourHandGoesToYourDiscardPileForALaterShuffle()
+    {
+        // OnPlayWrapper moves a card played from your hand to its result location (the discard pile, nothing changing it) before CheckForEmptyHand:
+        // your last card played with an empty draw pile is shuffled back in for Unceasing Top's draw (CardPileCmd.Draw's ShuffleIfNecessary), and drawn.
+        var state = You(new());
+        state.You.HandCount = 1;
+        state.You.Relics = state.You.Relics.With(RelicId.UnceasingTop, amount: 0, data: 1);
+        var branch = Assert.Single(SimEngine.Run(state, HandDefend(new SimDrawCard("defend") { Fading = true })).Branches);
+        Assert.True(branch.Fired.Has("UnceasingTop"));
+        Assert.Equal(1, branch.You.HandCount);
+        Assert.Equal(0, branch.You.Draw!.Count);
+        Assert.Equal(0, branch.You.Draw.DiscardCount);
+        Assert.Equal(1, branch.You.Fading); // drawn as itself: Ethereal in your hand
+        Assert.Null(branch.Unmodelled);
+
+        // With another card left in your hand nothing draws it: it waits in the discard pile, as its profile.
+        state.You.HandCount = 2;
+        branch = Assert.Single(SimEngine.Run(state, HandDefend(new SimDrawCard("defend"))).Branches);
+        Assert.Equal("defend", Assert.Single(branch.You.Draw!.Discard).Card.Key);
+        Assert.Equal(0, branch.You.Draw.Count);
+    }
+
+    [Fact]
+    public void ACardPlayedFromYourHandWhoseProfileIsntReadIsUnknownOnlyOnceShuffledInAndDrawn()
+    {
+        var state = You(new());
+        state.You.HandCount = 2;
+        var waiting = Assert.Single(SimEngine.Run(state, HandDefend(pileProfile: null)).Branches);
+        Assert.Equal(1, waiting.You.Draw!.DiscardCount);
+        Assert.Null(waiting.Unmodelled);
+        state.You.HandCount = 1;
+        state.You.Relics = state.You.Relics.With(RelicId.UnceasingTop, amount: 0, data: 1);
+        Assert.NotNull(Assert.Single(SimEngine.Run(state, HandDefend(pileProfile: null)).Branches).Unmodelled);
+    }
+
+    [Fact]
+    public void APowerOrACopyPlayedFromYourHandGoesToNoPile()
+    {
+        // GetResultLocationForCardPlay: a Power, or a copy (a duplicate's play), is removed from the fight once played.
+        var power = HandDefend(new SimDrawCard("inflame"));
+        power.Card = power.Card! with { Card = new SimCard("Inflame", SimCardType.Power) };
+        Assert.Equal(0, Assert.Single(SimEngine.Run(You(new()), power).Branches).You.Draw!.DiscardCount);
+        var copy = HandDefend(new SimDrawCard("defend"));
+        copy.Card = copy.Card! with { Card = copy.Card.Card with { Dupe = true } };
+        Assert.Equal(0, Assert.Single(SimEngine.Run(You(new()), copy).Branches).You.Draw!.DiscardCount);
+    }
+
+    [Fact]
     public void ACardPutOnTopWhoseProfileIsntReadIsUnknownOnlyOnceDrawn()
     {
         // A play built before the board's piles are read carries no profile: the card counts in the pile, and drawing it makes the branch unknown.
@@ -190,14 +245,14 @@ public class SimAutoPlayFromDrawTests
         var energy = state.You.Energy;
         var branch = Assert.Single(SimEngine.Run(state, Havoc()).Branches);
         Assert.Equal(energy + 1, branch.You.Energy);
-        Assert.Equal(1, branch.You.ExhaustPile);
+        Assert.Equal(1 + 1, branch.You.ExhaustPile); // and Havoc itself
         Assert.Equal(0, branch.You.Draw!.DiscardCount);
     }
 
     [Fact]
     public void HavocsPowerGoesNowhere()
     {
-        // GetResultLocationForCardPlay: a Power goes nowhere, ExhaustOnNextPlay or not (its type is asked first): no exhaust.
+        // GetResultLocationForCardPlay: a Power goes nowhere, ExhaustOnNextPlay or not (its type is asked first): no exhaust but Havoc's own.
         var power = new SimDrawCard("power")
         {
             FromPile = new SimHandCard { Name = "Inflame", Plays = { new SimPlay { Name = "Inflame", AutoPlay = true, HandDelta = 0, TargetId = Who.None,
@@ -206,8 +261,8 @@ public class SimAutoPlayFromDrawTests
         var state = You(new() { new SimDrawGroup(power, 1) });
         state.You.Powers = state.You.Powers.With(PowerId.FeelNoPain, amount: 3);
         var branch = Assert.Single(SimEngine.Run(state, Havoc()).Branches);
-        Assert.Equal(0, branch.You.Block);
-        Assert.Equal(0, branch.You.ExhaustPile);
+        Assert.Equal(3, branch.You.Block); // Havoc's own exhaust only
+        Assert.Equal(1, branch.You.ExhaustPile);
         Assert.Equal(0, branch.You.Draw!.DiscardCount);
     }
 

@@ -60,7 +60,7 @@ public class SimAutoPlayCardsTests
         Assert.Equal(2, outcome.Branches.Count);
         Assert.All(outcome.Branches, branch => Assert.Equal(94, branch.Enemy(id: 1)!.Hp + branch.Enemy(id: 2)!.Hp));
         Assert.All(outcome.Branches, branch => Assert.Equal(2, branch.You.Draw!.Count));
-        Assert.All(outcome.Branches, branch => Assert.Equal(1, branch.You.Draw!.DiscardCount));
+        Assert.All(outcome.Branches, branch => Assert.Equal(1 + 1, branch.You.Draw!.DiscardCount)); // the Strike, and the card played once played
         Assert.All(outcome.Branches, branch => Assert.Null(branch.Unmodelled));
     }
 
@@ -82,7 +82,7 @@ public class SimAutoPlayCardsTests
             Card(new AutoPlayCardsAction(Key, SimPile.Draw, AutoPlayWay.Random, Count: 1) { Fallback = Key + "/else" }));
         var branch = Assert.Single(outcome.Branches);
         Assert.Equal(1, branch.You.Draw!.Count);
-        Assert.Equal(1, branch.You.Draw.DiscardCount);
+        Assert.Equal(1 + 1, branch.You.Draw.DiscardCount); // the Unplayable card, and the card played once played
         Assert.Null(branch.Unmodelled);
     }
 
@@ -102,7 +102,7 @@ public class SimAutoPlayCardsTests
         var outcome = SimEngine.Run(Board(discard: new() { new SimDrawGroup(Strike, 2), new SimDrawGroup(Defend, 1) }), Card(new AutoPlayCardsAction(Key, SimPile.Discard, AutoPlayWay.Shuffled, Count: 3)));
         var branch = Assert.Single(outcome.Branches);
         Assert.Equal(38, branch.Enemy(id: 1)!.Hp);
-        Assert.Equal(3, branch.You.Draw!.DiscardCount);
+        Assert.Equal(3 + 1, branch.You.Draw!.DiscardCount); // and the card played, once played
         Assert.Equal(2, branch.AutoPlayed);
         Assert.Null(branch.You.PileAutoPlays!.Listed);
     }
@@ -165,6 +165,30 @@ public class SimAutoPlayCardsTests
     }
 
     [Fact]
+    public void ACardOfYourHandThatExhaustsItselfJoinsTheExhaustPilesListForALaterPlayFromThere()
+    {
+        // A card that plays the Shiv in your hand (it exhausts itself: CardCmd.Exhaust at its result location), then every card of your exhaust pile
+        // (Eidolon's way): the Shiv, now at the end of that pile's list, plays again from there, and is back once it exhausts.
+        var shiv = new SimDrawCard("shiv") { AutoPlayedBy = Listed, FromPile = new SimHandCard { Name = "Shiv", IsAttack = true, Plays = { Hits(damage: 4, exhausts: true) } } };
+        var state = Board();
+        state.You.PileAutoPlays = state.You.PileAutoPlays! with { ExhaustCards = new List<SimDrawCard>() };
+        var handShiv = Hits(damage: 4, handCard: 5, exhausts: true);
+        handShiv.ExhaustProfile = shiv;
+        state.You.AutoHand = new() { InHand(id: 5, handShiv) };
+        var play = Card(new AutoPlayCardsAction(Key, SimPile.Hand, AutoPlayWay.Each, Count: 0));
+        play.Body.Add(new AutoPlayCardsAction(Key, SimPile.Exhaust, AutoPlayWay.Each, Count: 0));
+        var branch = Assert.Single(SimEngine.Run(state, play).Branches);
+        Assert.Equal(42, branch.Enemy(id: 1)!.Hp);
+        Assert.Equal(1, branch.You.ExhaustPile);
+        Assert.Equal("shiv", Assert.Single(branch.You.PileAutoPlays!.ExhaustCards!).Key);
+        Assert.Null(branch.Unmodelled);
+
+        // Its exhausted profile not read: the pile's list falls behind its count, and the play from there is unknown.
+        handShiv.ExhaustProfile = null;
+        Assert.NotNull(Assert.Single(SimEngine.Run(state, play).Branches).Unmodelled);
+    }
+
+    [Fact]
     public void AnExhaustPilesCardThatDoesntExhaustItselfGoesToTheDiscardPile()
     {
         // Eidolon: an Ethereal Strike in the exhaust pile plays, then goes to the discard pile.
@@ -176,7 +200,7 @@ public class SimAutoPlayCardsTests
         Assert.Equal(44, branch.Enemy(id: 1)!.Hp);
         Assert.Equal(0, branch.You.ExhaustPile);
         Assert.Empty(branch.You.PileAutoPlays!.ExhaustCards!);
-        Assert.Equal(1, branch.You.Draw!.DiscardCount);
+        Assert.Equal(1 + 1, branch.You.Draw!.DiscardCount); // the Strike, and the card played once played
     }
 
     [Fact]

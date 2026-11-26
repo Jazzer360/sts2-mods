@@ -96,7 +96,7 @@ public class SimDrawTests
         var branch = Assert.Single(outcome.Branches);
         Assert.Single(branch.You.TurnEndCards);
         Assert.Equal(1, branch.You.Draw!.RestCount);
-        Assert.Equal(0, branch.You.Draw.DiscardCount);
+        Assert.Equal(1, branch.You.Draw.DiscardCount); // the card played, once played (after its draw)
     }
 
     [Fact]
@@ -310,6 +310,8 @@ public class SimDrawTests
         var play = new SimPlay
         {
             Name = "Reboot", HandCard = 7, HandDelta = -1 + 1, Draws = 1,
+            // Reboot exhausts itself (its Exhaust keyword): it isn't in your discard pile once played.
+            Card = new SimCardPlay(new SimCard("Reboot", SimCardType.Skill) { ExhaustsSelf = true }, Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: false),
             Body = { new LeaveHandAction(Count: 0) { Whole = true }, new ShuffleDrawPileAction(new[] { new SimDrawGroup(Burn, 1) }), new CardEventAction(CardEvent.Drawn, 1) },
         };
         var outcome = SimEngine.Run(state, play);

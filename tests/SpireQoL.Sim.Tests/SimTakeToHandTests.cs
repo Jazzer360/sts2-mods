@@ -115,7 +115,7 @@ public class SimTakeToHandTests
         state.You.Draw = new SimDrawPile { Rest = state.You.Draw!.Rest, Discard = new() { new SimDrawGroup(Burn, 1), new SimDrawGroup(Plain, 1) } };
         var outcome = SimEngine.Run(state, Takes(new TakeToHandAction(Count: 1, new Dictionary<string, int> { ["burn"] = 1 }) { FromDiscard = true }));
         var branch = Assert.Single(outcome.Branches);
-        Assert.Equal(1, branch.You.Draw!.DiscardCount);
+        Assert.Equal(1 + 1, branch.You.Draw!.DiscardCount); // the plain card left, and the card played once played
         Assert.Equal(2, branch.You.Taken);
     }
 }
