@@ -900,12 +900,23 @@ public static partial class SimEngine
     internal static IEnumerable<SimState> Tell(SimState state, PowerId power, int amount, int applier, int target, bool debuff) =>
         Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, branch) => model.AfterPowerApplied(branch, owner, power, amount, applier, target, debuff));
 
+    /// <summary>
+    /// A card play's application lands as a debuff (ApplyPowerAction.Debuff: a debuff's type on an enemy) at the amount given: a debuff that can't go
+    /// below 0 given less than 0 is a buff then (PowerModel.GetTypeForAmount: SimModels.IsDebuffAt), as PowerCmd tells its listeners.
+    /// </summary>
+    private static bool LandsAsDebuff(ApplyPowerAction applyPowerAction, int given) =>
+        applyPowerAction.Debuff && (given >= 0 || SimModels.IsDebuffAt(applyPowerAction.Power, given));
+
     /// <summary>The power on each creature it reaches, then AfterPowerApplied for each that landed (Artifact took none of it).</summary>
     private static void RunApplyPower(BranchSet branches, ApplyPowerAction applyPowerAction)
     {
-        IEnumerable<SimState> Apply(SimState state, int applier, int target) =>
-            ApplyPower(state, applier, target, applyPowerAction.Power, AmountOf(state, applyPowerAction, applier, target), applyPowerAction.Debuff, out var landed)
-                ? Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, branch) => model.AfterPowerApplied(branch, owner, applyPowerAction.Power, landed, applier, target, applyPowerAction.Debuff)) : new[] { state };
+        IEnumerable<SimState> Apply(SimState state, int applier, int target)
+        {
+            var given = AmountOf(state, applyPowerAction, applier, target);
+            var debuff = LandsAsDebuff(applyPowerAction, given);
+            return ApplyPower(state, applier, target, applyPowerAction.Power, given, debuff, out var landed)
+                ? Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, branch) => model.AfterPowerApplied(branch, owner, applyPowerAction.Power, landed, applier, target, debuff)) : new[] { state };
+        }
         if (applyPowerAction.To == ApplyPowerAction.Where.RandomEnemy)
         {
             // Each application to a random hittable enemy: a branch per target, one step each (the branch budget holds).
@@ -923,8 +934,10 @@ public static partial class SimEngine
     {
         IEnumerable<SimState> Apply(SimState state, int applier, int target)
         {
-            if (!ApplyPower(state, applier, target, applyPowerAction.Power, AmountOf(state, applyPowerAction, applier, target), applyPowerAction.Debuff, out var landed)) return new[] { state };
-            var told = Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, copy) => model.AfterPowerApplied(copy, owner, applyPowerAction.Power, landed, applier, target, applyPowerAction.Debuff));
+            var given = AmountOf(state, applyPowerAction, applier, target);
+            var debuff = LandsAsDebuff(applyPowerAction, given);
+            if (!ApplyPower(state, applier, target, applyPowerAction.Power, given, debuff, out var landed)) return new[] { state };
+            var told = Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, copy) => model.AfterPowerApplied(copy, owner, applyPowerAction.Power, landed, applier, target, debuff));
             // The new copy aimed at a player once it's there (decision #322: Imitation Learning's PlayerTarget, set after its PowerCmd.Apply).
             if (applyPowerAction.AimedAt is not { } aim) return told;
             return told.Select(copy =>

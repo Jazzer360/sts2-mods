@@ -1585,7 +1585,7 @@ public sealed class ReadModel : SimModel
                     HookTarget.Owner => ApplyPowerAction.Where.You,
                     _ => throw new InvalidOperationException($"{Name}: no enchantment power on {enchantmentPower.Target}"),
                 };
-                if (enchantmentPower.By != null || enchantmentPower.DebuffWhenNegative) throw new InvalidOperationException($"{Name}: no enchantment power applied by another");
+                if (enchantmentPower.By != null) throw new InvalidOperationException($"{Name}: no enchantment power applied by another");
                 return args => SimEngine.ApplyPowerOf(args.State, new ApplyPowerAction(power, (int)amount(in args)) { To = to, Debuff = debuff });
             }
             case StoreFieldStep enchantmentStore when Spec.Kind == ModelKind.Enchantment:
@@ -1769,8 +1769,6 @@ public sealed class ReadModel : SimModel
             {
                 var amount = Compile(apply.Amount);
                 var power = new PowerId(apply.Power);
-                var alwaysDebuff = apply.Debuff;
-                var debuffWhenNegative = apply.DebuffWhenNegative;
                 var target = apply.Target;
                 var appliedBy = apply.By;
                 var goesAtZero = apply.GoesAtZero;
@@ -1781,7 +1779,9 @@ public sealed class ReadModel : SimModel
                     // PowerCmd.Apply of 0 does nothing (its first test: amount == 0m returns), so the model doesn't act (Rupture's Strength for a card
                     // that cost no HP). PowerCmd.ModifyAmount of itself (GoesAtZero) isn't Apply.
                     if (given == 0 && !goesAtZero) return One(state);
-                    var debuff = alwaysDebuff || debuffWhenNegative && given < 0;
+                    // A debuff by the game's type at the amount given (PowerModel.GetTypeForAmount: SimModels.IsDebuffAt), worked out as it runs: a
+                    // counter that can go below 0 given less than 0 is one (Monologue's Strength taken back), a debuff that can't is a buff then.
+                    var debuff = SimModels.IsDebuffAt(power, given);
                     // Its applier: its owner, or the creature its code names (the applier it keeps; no one).
                     var applier = appliedBy == null ? args.Owner : CreatureOf(in args, appliedBy);
                     if (fires) state.LogFired(Name, amount: 0, args.Owner);

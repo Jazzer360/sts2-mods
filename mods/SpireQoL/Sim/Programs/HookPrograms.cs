@@ -811,15 +811,11 @@ public sealed record ApplyPowerStep(string Power, HookTarget Target, HookValue A
     /// </summary>
     public bool GoesAtZero { get; init; }
 
-    /// <summary>It lands as a debuff (Artifact takes it): the power's type for its amount, as the adapter read it.</summary>
-    public bool Debuff { get; init; }
-
     /// <summary>
-    /// It lands as a debuff when its amount, worked out as it runs, is below 0 (a power that can go below 0, its AllowNegative: Monologue's
-    /// Strength taken back, -StrengthApplied; power.GetTypeForAmount).
+    /// It lands as a debuff at the amount the reader read (PowerModel.GetTypeForAmount of a constant; its Type otherwise): what it's seen as when
+    /// read. What a run is told is the type at the amount given then (SimModels.IsDebuffAt: Monologue's Strength taken back is one).
     /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public bool DebuffWhenNegative { get; init; }
+    public bool Debuff { get; init; }
 
     /// <summary>
     /// Who applies it (PowerCmd.Apply's applier): the power's applier it keeps (base.Applier: Oblivion's Doom, Tender's Strength), no one (a

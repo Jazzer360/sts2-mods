@@ -2307,7 +2307,7 @@ public static class HookReader
                     }
                     return new ApplyPowerStep(power, Targets(values[targetAt]), amount)
                     {
-                        Debuff = LandsAsDebuff(power, amount), DebuffWhenNegative = amount is not HookConstant && AllowsNegative(power), By = by,
+                        Debuff = LandsAsDebuff(power, amount), By = by,
                     };
                 }
                 case "OrbCmd.Channel":
@@ -2343,7 +2343,7 @@ public static class HookReader
                     var offset = Value(values[offsetAt]);
                     return new ApplyPowerStep(_type.Name, HookTarget.Owner, offset)
                     {
-                        Debuff = LandsAsDebuff(_type.Name, offset), DebuffWhenNegative = offset is not HookConstant && AllowsNegative(_type.Name), By = by, GoesAtZero = !AllowsNegative(_type.Name),
+                        Debuff = LandsAsDebuff(_type.Name, offset), By = by, GoesAtZero = !AllowsNegative(_type.Name),
                     };
                 }
                 // Another power of its owner's removed by its class (PowerCmd.Remove<StrengthPower>(base.Owner): Plow's): that power off its owner, when
@@ -2536,15 +2536,20 @@ public static class HookReader
         }
 
         /// <summary>
-        /// A power lands as a debuff (Artifact takes it, PowerCmd.Apply's power.GetTypeForAmount): a debuff type, or a power that can go below 0
-        /// given less than 0 (TypeOfNegative), read from the power's own code.
+        /// A power lands as a debuff at the amount read (PowerModel.GetTypeForAmount, its Type, StackType and AllowNegative read from the power's own
+        /// code): a counter that can go below 0 given a constant below 0 is one, a debuff that can't is a buff then, and any other amount its Type.
+        /// What a step is told as it runs is the type at the amount given then (SimModels.IsDebuffAt).
         /// </summary>
         private bool LandsAsDebuff(string power, HookValue amount)
         {
             var powerType = _type.Assembly.GetType("MegaCrit.Sts2.Core.Models.Powers." + power) ?? throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: no power class {power}");
             var negative = amount is HookConstant { Value: < 0m };
-            if (negative && Returned(powerType, "get_AllowNegative") is ConstantValue { Value: 1 }) return true;
-            return Returned(powerType, "get_Type") is ConstantValue type && EnumName(powerType.Assembly, "PowerType", type.Value) == "Debuff";
+            var allowNegative = Returned(powerType, "get_AllowNegative") is ConstantValue { Value: 1 };
+            var counter = Returned(powerType, "get_StackType") is ConstantValue stack && EnumName(powerType.Assembly, "PowerStackType", stack.Value) == "Counter";
+            var debuff = Returned(powerType, "get_Type") is ConstantValue type && EnumName(powerType.Assembly, "PowerType", type.Value) == "Debuff";
+            if (negative && counter && allowNegative) return true;
+            if (negative && !allowNegative && debuff) return false;
+            return debuff;
         }
 
         /// <summary>The class's Type is PowerType.Debuff, and its StackType PowerStackType.Counter, read from their getters (its own or PowerModel's).</summary>

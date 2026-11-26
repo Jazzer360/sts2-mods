@@ -45,7 +45,9 @@ public static partial class SimEngine
     {
         var had = AimedAmount(state, holder, power, player);
         if (had == 0) return new[] { state };
-        var debuff = SimModels.IsDebuffAt(power, had);
+        // The type at the offset added (PowerCmd.ModifyAmount tells Hook.ModifyPowerAmountGiven, Received and AfterPowerAmountChanged of the offset,
+        // each listener asking power.GetTypeForAmount of it): a debuff taken down is a buff then.
+        var debuff = SimModels.IsDebuffAt(power, offset);
         var amount = applier is { } giver ? AmountGiven(state, giver, holder, power, offset, debuff) : offset;
         // The copy's own Target (what its IsVisible asks): you, or, aimed at a teammate, not known (its aim may be a player of its class's own).
         amount = AmountReceived(state, applier ?? Who.None, holder, power, amount, debuff, powerTarget: player == Who.You ? Who.You : null);

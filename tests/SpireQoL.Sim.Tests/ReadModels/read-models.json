@@ -1562,7 +1562,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookTest",
               "At": "\u003CAfterCardGeneratedForCombat\u003Ed__6.MoveNext:002A",
@@ -2949,7 +2948,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "By": {
               "Who": "NoOne",
               "PetOwner": false
@@ -3038,7 +3036,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookTest",
               "At": "\u003CAfterSideTurnStart\u003Ed__6.MoveNext:0022",
@@ -4146,7 +4143,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookTest",
               "At": "\u003CAfterSideTurnStart\u003Ed__8.MoveNext:0031",
@@ -4167,7 +4163,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "By": {
               "Who": "NoOne",
               "PetOwner": false
@@ -7583,7 +7578,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookMath",
               "Operation": "And",
@@ -8655,7 +8649,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookTest",
               "At": "\u003CAfterSideTurnStart\u003Ed__12.MoveNext:0025",
@@ -10955,7 +10948,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookTest",
               "At": "\u003CAfterCardPlayed\u003Ed__4.MoveNext:0029",
@@ -11951,7 +11943,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookMath",
               "Operation": "And",
@@ -15500,7 +15491,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookTest",
               "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0022",
@@ -18183,7 +18173,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookMath",
               "Operation": "And",
@@ -18539,7 +18528,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "By": {
               "Who": "NoOne",
               "PetOwner": false
@@ -18586,7 +18574,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "By": {
               "Who": "NoOne",
               "PetOwner": false
@@ -20664,7 +20651,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "By": {
               "Who": "NoOne",
               "PetOwner": false
@@ -20891,7 +20877,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookMath",
               "Operation": "And",
@@ -21043,7 +21028,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookMath",
               "Operation": "And",
@@ -21136,7 +21120,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookTest",
               "At": "\u003CAfterSideTurnEnd\u003Ed__17.MoveNext:0029",
@@ -29622,7 +29605,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "By": {
               "Who": "NoOne",
               "PetOwner": false
@@ -32416,7 +32398,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookMath",
               "Operation": "And",
@@ -32526,7 +32507,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookMath",
               "Operation": "And",
@@ -32815,7 +32795,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookMath",
               "Operation": "And",
@@ -34306,7 +34285,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookMath",
               "Operation": "And",
@@ -34829,7 +34807,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookMath",
               "Operation": "And",
@@ -34866,7 +34843,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookMath",
               "Operation": "Or",
@@ -36189,7 +36165,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookMath",
               "Operation": "And",
@@ -40978,7 +40953,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "By": {
               "Who": "Applier",
               "PetOwner": false
@@ -41002,7 +40976,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "By": {
               "Who": "Applier",
               "PetOwner": false
@@ -41067,7 +41040,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookTest",
               "At": "\u003CAfterSideTurnEnd\u003Ed__6.MoveNext:0022",
@@ -50363,7 +50335,6 @@
             },
             "GoesAtZero": false,
             "Debuff": false,
-            "DebuffWhenNegative": true,
             "When": {
               "$kind": "HookTest",
               "At": "\u003CAfterSideTurnStart\u003Ed__6.MoveNext:0022",
