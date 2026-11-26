@@ -874,12 +874,16 @@ public static partial class SimAdapter
         if (play.Aimed is not { } target || !play.Ids.TryGetValue(target, out var targetId)) return new List<SimAction>();
         if (card.Type == CardType.Attack || InsideShot(command, play))
             return new List<SimAction> { AttackAction(card, key, SimPlay.Target.Single, hits: 1, byOsty: false, play) with { NeedsArrow = InsideShot(command, play) } };
-        if (key == null || !card.DynamicVars.TryGetValue(key, out var value) || value is not DamageVar damage)
+        // Its amount and props as a potion's are read (decision #343): a damage value given whole (its BaseValue and its own Props), or an amount and
+        // the props its code passes after it.
+        var (amount, props) = DamageOf(command, play);
+        if (amount == null || props == null)
             return new List<SimAction> { new NotModelledAction($"{card.GetType().Name} damages its target by a value its translation doesn't read ({ValueAt(command, 2)})") };
+        var valueProp = (ValueProp)(int)props.Value;
         return new List<SimAction>
         {
-            new DamageAction(new DamageSpec(damage.BaseValue, SimReaders.Props(damage.Props))
-                { Captured = new Dictionary<int, CapturedTerms> { [targetId] = SimReaders.Damage(play.Me.RunState, play.Combat, card, play.Me.Creature, target, damage.BaseValue, damage.Props) } }),
+            new DamageAction(new DamageSpec(amount.Value, SimReaders.Props(valueProp))
+                { Captured = new Dictionary<int, CapturedTerms> { [targetId] = SimReaders.Damage(play.Me.RunState, play.Combat, card, play.Me.Creature, target, amount.Value, valueProp) } }),
         };
     }
 
@@ -928,6 +932,8 @@ public static partial class SimAdapter
     /// <summary>A damage command's amount and props: a damage value given whole (its BaseValue and Props), or an amount and the props after it.</summary>
     private static (decimal? Amount, decimal? Props) DamageOf(CommandStep command, StepPlay play)
     {
+        // A calculated value given whole is worked out on its target, which its base value isn't: not read here.
+        if (OnBoard(play, ValueAt(command, 2)) is CalculatedVar) return (null, null);
         if (OnBoard(play, ValueAt(command, 2)) is DynamicVar dynamicVar) return (dynamicVar.BaseValue, (int)PropsOf(dynamicVar));
         var amount = NumberOnBoard(play, ValueAt(command, 2));
         var props = OnBoard(play, ValueAt(command, 3)) switch
@@ -1059,14 +1065,18 @@ public static partial class SimAdapter
         if (toAlly && card.DynamicVars.ContainsKey("CalculatedBlock")) return new GainBlockAction(gains, CardBlock(card, combat, me, gainer, gainer), SimProps.Move) { Fixed = true, To = to };
         decimal baseValue;
         var key = ValueKey(ValueAt(found.Command, 1));
-        if (key != null && card.DynamicVars.TryGetValue(key, out var named) && named is not CalculatedVar) baseValue = named.BaseValue;
-        else if (card.DynamicVars.TryGetValue("CalculatedBlock", out var dynamicVar) && dynamicVar is CalculatedVar calc) baseValue = SafeDecimal(() => calc.Calculate(null));
-        else if (card.DynamicVars.TryGetValue("Block", out var otherDynamicVar)) baseValue = otherDynamicVar.BaseValue;
+        // Its props as a potion's are read (decision #343): a block value given whole has its own (BlockVar.Props, CalculatedBlockVar.Props); an
+        // amount, the props its code passes after it (BlockPropsOf).
+        var valueProps = props;
+        if (key != null && card.DynamicVars.TryGetValue(key, out var named) && named is not CalculatedVar) (baseValue, valueProps) = (named.BaseValue, OnBoard(play, ValueAt(found.Command, 1)) is DynamicVar ? PropsOf(named) : props);
+        else if (card.DynamicVars.TryGetValue("CalculatedBlock", out var dynamicVar) && dynamicVar is CalculatedVar calc)
+            (baseValue, valueProps) = (SafeDecimal(() => calc.Calculate(null)), dynamicVar is CalculatedBlockVar calculatedBlock && OnBoard(play, ValueAt(found.Command, 1)) is DynamicVar ? calculatedBlock.Props : props);
+        else if (card.DynamicVars.TryGetValue("Block", out var otherDynamicVar)) (baseValue, valueProps) = (otherDynamicVar.BaseValue, OnBoard(play, ValueAt(found.Command, 1)) is DynamicVar ? PropsOf(otherDynamicVar) : props);
         else return new GainBlockAction(gains, CardBlock(card, combat, me), SimProps.Move) { Fixed = true, To = to };
         var growth = play.Plays > 1 ? PlayGrowth.Of(card) : PlayGrowth.Growth.None;
-        return new GainBlockAction(gains, baseValue, SimProps.Move)
+        return new GainBlockAction(gains, baseValue, SimReaders.Props(valueProps))
         {
-            Captured = SimReaders.Block(combat, card, gainer, baseValue, ValueProp.Move), To = to, GrowsEachPlay = growth.Block,
+            Captured = SimReaders.Block(combat, card, gainer, baseValue, valueProps), To = to, GrowsEachPlay = growth.Block,
             EnchantFirstPlayOnly = growth.EnchantFirstPlayOnly,
         };
     }
