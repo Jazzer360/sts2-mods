@@ -298,12 +298,12 @@ BladeDance [Crowded] 1 you=80/0 e2 h10 d0/5 enemy0=200/0 enemy1=30/0 [Exhausted1
 BladeDance [Replayed] 1 you=80/0 e2 h9 d6/3 enemy0=200/0 [Exhausted1 Generated3]
 BladeDance [Teammate] 1 you=80/0 e2 h6 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted1 Generated3]
 BladeDance [Alone] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Exhausted1 Generated3]
-BladeOfInk [Standard] 1 you=80/0 e2 h5 d6/3 enemy0=200/0 [Generated2] ?CardCmd.Enchant: an enchantment given to a card: not followed
-BladeOfInk [Upgraded] 1 you=80/0 e2 h6 d6/3 enemy0=200/0 [Generated3] ?CardCmd.Enchant: an enchantment given to a card: not followed
-BladeOfInk [Crowded] 1 you=80/0 e2 h10 d0/4 enemy0=200/0 enemy1=30/0 [Generated2] ?CardCmd.Enchant: an enchantment given to a card: not followed
-BladeOfInk [Replayed] 1 you=80/0 e2 h7 d6/3 enemy0=200/0 [Generated2] ?CardCmd.Enchant: an enchantment given to a card: not followed
-BladeOfInk [Teammate] 1 you=80/0 e2 h5 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Generated2] ?CardCmd.Enchant: an enchantment given to a card: not followed
-BladeOfInk [Alone] 1 you=80/0 e2 h2 d6/3 enemy0=200/0 [Generated2] ?CardCmd.Enchant: an enchantment given to a card: not followed
+BladeOfInk [Standard] 1 you=80/0 e2 h5 d6/3 enemy0=200/0 [Generated2]
+BladeOfInk [Upgraded] 1 you=80/0 e2 h6 d6/3 enemy0=200/0 [Generated3]
+BladeOfInk [Crowded] 1 you=80/0 e2 h10 d0/4 enemy0=200/0 enemy1=30/0 [Generated2]
+BladeOfInk [Replayed] 1 you=80/0 e2 h7 d6/3 enemy0=200/0 [Generated2]
+BladeOfInk [Teammate] 1 you=80/0 e2 h5 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Generated2]
+BladeOfInk [Alone] 1 you=80/0 e2 h2 d6/3 enemy0=200/0 [Generated2]
 BladeSymphony [Standard] 1 you=80/0 e1 h5 d6/3 enemy0=200/0 [Generated2]
 BladeSymphony [Upgraded] 1 you=80/0 e2 h5 d6/3 enemy0=200/0 [Generated2]
 BladeSymphony [Crowded] 1 you=80/0 e1 h10 d0/4 enemy0=200/0 enemy1=30/0 [Generated2]

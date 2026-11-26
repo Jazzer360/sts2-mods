@@ -62,6 +62,7 @@ public static partial class SimAdapter
         ["CardCmd.ApplyKeyword"] = "EtherealInHandAction for a picked card made Ethereal; Retain, Sly, Exhaust or Innate given to a pick or a drawn card: no action (KeywordGivenOf)",
         ["CardCmd.ApplySingleTurnSly"] = "no action: Sly for the turn on a picked card (KeywordGivenOf)",
         ["CardCmd.ApplySingleTurnRetain"] = "no action: Retain for the turn on a picked or drawn card (KeywordGivenOf)",
+        ["CardCmd.Enchant"] = "no action: an enchantment on a card the play makes, whose class acts only on its card's play (EnchantsMadeCard, EnchantmentActsOnlyOnItsPlay)",
         ["CardCmd.DiscardAndDraw"] = "TakeFromHandAction(Discarded), then the draws",
         ["CardCmd.Transform"] = "TakeFromHandAction(Generated) in your hand, or a made card in its pile",
         ["CardCmd.TransformTo"] = "the same as Transform",
@@ -86,7 +87,6 @@ public static partial class SimAdapter
     internal static readonly IReadOnlyDictionary<string, string> CommandsNotTranslated = new Dictionary<string, string>
     {
         ["CardCmd.AutoPlay"] = "a card in hand or a pile played by the card: that play isn't followed",
-        ["CardCmd.Enchant"] = "an enchantment given to a card: not followed",
         ["OrbCmd.Passive"] = "an orb's passive set off by a card: not followed",
         ["ArrowCmd.GainArrowSlot"] = "an arrow slot gained: not followed",
         ["PotionCmd.TryToProcure"] = "a potion procured: what reacts to it (AfterPotionProcured) isn't followed",
@@ -459,6 +459,11 @@ public static partial class SimAdapter
                 return KeywordGivenOf(command, play.Program) == CardKeyword.Ethereal
                     ? (new List<SimAction> { new EtherealInHandAction() }, Without(found.Condition, literal => literal.Test.Parts().Any(part => part is ResultValue { Command: var picked } && picked.StartsWith("CardSelectCmd.", StringComparison.Ordinal))))
                     : none;
+            // An enchantment on a card the play makes (Blade of Ink's Inky on its Shivs): the made card is followed by its class, type and tags, and an
+            // enchantment that acts only on its card's play acts when it's played, a later decision. One that listens elsewhere (a draw, the flush) isn't followed.
+            case ("CardCmd", "Enchant"):
+                return command.Command.GenericArguments is [var enchantment] && EnchantmentActsOnlyOnItsPlay(enchantment)
+                    ? none : (Unknown(play, $"an enchantment given to a card it makes that acts outside its card's play ({string.Join(", ", command.Command.GenericArguments)}): not followed"), null);
             case ("CardCmd", "Upgrade"):
                 if (UpgradeTargetOf(command, play.Program) is not { Target: UpgradeTarget.Piles, Piles: var piles }) return none;
                 // A card's upgrade of the piles of the teammate it's aimed at: their piles aren't simulated.
@@ -496,6 +501,7 @@ public static partial class SimAdapter
         ["CardCmd.ApplyKeyword"] = "a keyword given to a card other than one you pick or the play drew, or one other than Ethereal, Retain, Sly, Exhaust or Innate: not followed",
         ["CardCmd.ApplySingleTurnSly"] = "Sly given for the turn to a card other than one you pick: not followed",
         ["CardCmd.ApplySingleTurnRetain"] = "Retain given for the turn to a card other than one you pick or the play drew: not followed",
+        ["CardCmd.Enchant"] = "an enchantment given to a card other than one the play makes: not followed",
         ["CreatureCmd.Kill"] = "a creature other than your Osty killed: not followed",
         ["CreatureCmd.SetCurrentHp"] = "the HP of a creature other than the card's target set: not followed",
         ["CreatureCmd.Stun"] = "a creature other than the card's target stunned: not followed",
@@ -517,6 +523,7 @@ public static partial class SimAdapter
             "CreatureCmd.Kill" => Argument(command, 0) == "Owner.Osty" || program.All().OfType<LoopStep>().Any(loop => KillsEachItem(loop) && loop.Body.Contains(command)),
             "CreatureCmd.LoseBlock" => Argument(command, 1) == "cardPlay.Target",
             "CardCmd.Upgrade" => UpgradeTargetOf(command, program) != null,
+            "CardCmd.Enchant" => EnchantsMadeCard(command, program),
             "CardCmd.ApplyKeyword" or "CardCmd.ApplySingleTurnSly" or "CardCmd.ApplySingleTurnRetain" => KeywordGivenOf(command, program) != null,
             "PlayerCmd.GainStars" => Argument(command, 1) is "Owner" or "cardPlay.Target.Player",
             "PowerCmd.Remove" => RemovesTargetsArtifact(command, program) || command.Command.GenericArguments.Count == 1 && IsYou(ValueAt(command, 0)),
@@ -559,6 +566,35 @@ public static partial class SimAdapter
             _ => null,
         };
     }
+
+    /// <summary>A CardCmd.Enchant step enchants a card the play makes (decision #349: MakesCards on its card argument). Pure on the step's code.</summary>
+    internal static bool EnchantsMadeCard(CommandStep command, ModelProgram program) => UpgradedValue(command, program) is { } card && MakesCards(card.Parts().ToList());
+
+    /// <summary>
+    /// The members of an enchantment that act only on its own card (EnchantmentModel): its play (OnPlay, its card's damage, block and play count), its
+    /// setting up as it's given (OnEnchant, RecalculateValues), and which cards it can go on.
+    /// </summary>
+    private static readonly HashSet<string> OnItsCardOnly = new(StringComparer.Ordinal)
+    {
+        "OnPlay", "OnEnchant", "RecalculateValues", "CanEnchant", "CanEnchantCardType", "EnchantBlockAdditive", "EnchantBlockMultiplicative",
+        "EnchantDamageAdditive", "EnchantDamageMultiplicative", "EnchantPlayCount",
+    };
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> OnlyOnItsPlay = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The enchantment class acts only on its own card's play (decision #349): its code overrides no method of the game's models but the ones on its card
+    /// (OnItsCardOnly) and its properties, so it does nothing while its card sits in a pile (Inky's Weak on its card's play). False for one that answers a
+    /// hook elsewhere (a draw, the flush, the shuffle: Slither's AfterCardDrawn, Slumbering Essence's BeforeFlush), or a class it can't find.
+    /// </summary>
+    internal static bool EnchantmentActsOnlyOnItsPlay(string enchantment) => OnlyOnItsPlay.GetOrAdd(enchantment, name =>
+    {
+        var type = typeof(EnchantmentModel).Assembly.GetTypes().FirstOrDefault(candidate => candidate.Name == name && typeof(EnchantmentModel).IsAssignableFrom(candidate));
+        if (type == null) return false;
+        const System.Reflection.BindingFlags declared = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly;
+        return type.GetMethods(declared).Where(method => method.IsVirtual && !method.IsSpecialName && method.GetBaseDefinition().DeclaringType is { } baseType && baseType != type && typeof(AbstractModel).IsAssignableFrom(baseType))
+            .All(method => OnItsCardOnly.Contains(method.Name));
+    });
 
     /// <summary>What a card's CardCmd.Upgrade upgrades (UpgradeTargetOf).</summary>
     internal enum UpgradeTarget
