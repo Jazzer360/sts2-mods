@@ -66,10 +66,10 @@ public sealed partial class ProcAudit
                 model.Skip("lethal", "an enemy about to blow before the play", start.Name);
                 continue;
             }
-            // Gone from the board after the play: dead. So is a Waterfall Giant the play brought to 0: Steam Eruption keeps it at
-            // 999999999 HP, stunned until it blows (WaterfallGiant.TriggerAboutToBlowState), as good as dead (issue #428).
-            var aboutToBlow = IsBlowing(creature);
-            var simChance = !aboutToBlow && window.AfterIds.TryGetValue(creature, out var aid) && post.Branches[0].Enemy(aid) != null ? post.DeadChanceRange(aid) : new SimChance(Low: 1, High: 1, Seen: true);
+            // Gone from the board after the play: dead. A Waterfall Giant the play brought to 0 is on the board, brought back at 999999999 HP about
+            // to blow (WaterfallGiant.TriggerAboutToBlowState): the lethal tag's "dead when it would act" (DeadChanceRange, decisions #295, #336)
+            // counts it alive, and so does its board after the play.
+            var simChance = window.AfterIds.TryGetValue(creature, out var aid) && post.Branches[0].Enemy(aid) != null ? post.DeadChanceRange(aid) : new SimChance(Low: 1, High: 1, Seen: true);
             if (chance.Certain && !simChance.Certain)
                 issues.Add($"lethal: {start.Name} predicted to die before acting in every outcome of this play, but after it: {simChance.Text()}");
             else if (!chance.Possible && simChance.Low > 0)

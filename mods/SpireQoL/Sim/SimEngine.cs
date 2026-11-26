@@ -1603,10 +1603,13 @@ public static partial class SimEngine
     private static void Revive(SimState state, SimEnemy enemy)
     {
         enemy.Revived = true;
+        var poisonBefore = enemy.PoisonStacks;
         var powers = enemy.Powers;
         foreach (var entry in powers.Items)
             if (SimModels.Get(entry.Name.Name)?.StaysOnDeadOwner(state, enemy.Id) != true) powers = powers.Without(entry.Name);
         enemy.Powers = powers;
+        // Its Poison gone with the rest, so is the preview of its next tick.
+        enemy.FollowPoisonPreview(poisonBefore);
     }
 
     /// <summary>

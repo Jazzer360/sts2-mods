@@ -351,6 +351,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 
 - [ ] Remaining approximations: poison TriggerCount, a card's procs timing relative to its hits, block remainder across gains.
 - When a report is resolved, note here which layer it was: simulator rule / adapter / audit comparison.
+  - [x] Dev review 2026-11-26, the Waterfall Giant and Memento Mori: the lethal check's "as good as dead" rule (audit, decision #336); the revived Giant's poison preview kept (simulator: the preview field only the state check reads); Explode projected at 0 (adapter and simulator: the projection read a damage its About to Blow sets as it stood, decision #337).
 
 ---
 

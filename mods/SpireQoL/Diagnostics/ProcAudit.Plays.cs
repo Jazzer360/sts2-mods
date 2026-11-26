@@ -78,7 +78,9 @@ public sealed partial class ProcAudit
     /// Waterfall Giants about to blow: brought to 0, Steam Eruption keeps one at 999999999 HP, stunned until it explodes and kills
     /// itself (WaterfallGiant.TriggerAboutToBlowState, ExplodeMove). Every check that compares an enemy's HP or death treats it so,
     /// all three rules here (decided once, after it came back several times; a new check of enemy HP or death applies them too):
-    ///  1. A play that brings it to 0 killed it: as good as dead (the lethal check; the after-play HP check skips its 999999999).
+    ///  1. A play that brings it to 0 brings it back: alive when it would act, as the lethal tag counts it (DeadChanceRange, decisions #295,
+    ///     #336), so the lethal check holds it to its board after the play; the after-play HP check skips its 999999999 where the prediction
+    ///     read no revive.
     ///  2. One already about to blow before the play is no play's kill: it explodes on its turn whatever the play does (the lethal
     ///     check skips it, with a note).
     ///  3. The forecast check counts its HP only up to the killing hit (ForecastAudit.EnemyIssues); its self-kill after exploding

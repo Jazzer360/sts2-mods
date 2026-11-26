@@ -170,6 +170,21 @@ public class DeathAddsTests
     }
 
     [Fact]
+    public void ARevivedGiantsPoisonIsGoneWithItsPower()
+    {
+        // A dev review (Memento Mori on a poisoned Giant at 12 HP): CreatureCmd.Kill's RemoveAllPowersAfterDeath takes its Poison off as it comes
+        // back, so the preview of its next tick (SimEnemy.Poison, what the state after the play is held to) goes with it.
+        var giant = Giant(hp: 12);
+        giant.PoisonStacks = 4;
+        giant.Poison = 4;
+        var branch = Assert.Single(SimEngine.Run(Fight(giant), Strike(target: 0, damage: 12)).Branches);
+        var revived = branch.Enemy(id: 0)!;
+        Assert.True(revived.Revived);
+        Assert.False(revived.Powers.Has(PowerId.Poison));
+        Assert.Equal(0, revived.Poison);
+    }
+
+    [Fact]
     public void AGiantYourEndOfTurnKillsDiesBeforeActingForTheDeathSkull()
     {
         // Decision #295: your end of turn kills it (Lightning's passive), Steam Eruption brings it straight back. The Death Skull says it dies
