@@ -131,6 +131,7 @@ internal static class RelicTracking
         ["LizardTail"] = "none: saves you from dying once (simulator; Incoming Damage shows it when it will)",
         ["LavaLamp"] = "none: notes damage taken for its end-of-combat upgrade",
         ["BookRepairKnife"] = "none: heals when enemies die to Doom",
+        ["BiiigHug"] = "none: a Soot into your draw pile on each of your shuffles, worked out from its code (a later draw can find it; your created-card relics and powers hear it); no tab, since a Soot never makes a shuffle worth avoiding (decision #263)",
     };
 
     /// <summary>

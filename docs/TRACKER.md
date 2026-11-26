@@ -359,7 +359,6 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 
 - [ ] Verify in game (v0.114.0): Esc closes the settings menu and the inspect screen; Tune's tag on the turn's first Ki; Hard to Kill on an enemy with block.
 - [ ] A creature killed during its own attack keeps its powers until the attack ends (v0.114.0: `Creature.IsAttacking`; an enemy's AfterAttack powers, a player's hooks): not yet checked against what the simulator keeps for a creature that dies mid-attack (Thorns on its attacker).
-- [ ] Pael's Growth's rest-site Clone option is the Clone enchantment's now (v0.114.0): offered only while you hold a Clone card; the Map Reminders rule shows it whenever you hold the relic.
 - Known gaps that could **underestimate damage to you**: none known. ~~Multiplayer Covered/Intercept~~ (0.37.4); ~~Queen and Kin Priest switching moves mid-turn~~ (reviewed for v0.113.1: neither switch changes an attack).
 <!-- gaps:start (written by scripts/coverage-ledger.mjs from the review files; don't edit by hand) -->
 - Known gaps (11; each is logged when present in a fight):
@@ -371,9 +370,9 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
   - [ ] PaperCutsPower (ledger): AfterDamageGiven takes its amount of max HP from a player its owner's powered attack got through to (CreatureCmd.LoseMaxHp): HP above the new max comes down to it, a loss the simulator doesn't follow (only when its amount is more than the HP the hit took: TRACKER)
   - [ ] PhilosophersStone (ledger): AfterCreatureAddedToCombat gives every enemy Strength as it enters (PowerCmd.Apply): the ones there are read live, but one the simulator adds mid-fight itself (a death's spawn: SimEngine.Spawn) enters without it (TRACKER)
   - [ ] PossessSpeedPower (ledger): AfterPowerAmountChanged counts the Dexterity its owner took from each player, and AfterDeath gives it back (PowerCmd.Apply): a kill during your play gives you your Dexterity back for the rest of the play and your turn's end, which the simulator doesn't follow (TRACKER)
+  - [ ] PossessStrengthPower (ledger): AfterPowerAmountChanged counts the Strength its owner took from each player, and AfterDeath gives it back (PowerCmd.Apply): a kill during your play gives you your Strength back for the play's later hits, which the simulator doesn't follow (TRACKER)
   - [ ] RuinedHelmet (ledger): TryModifyPowerAmountReceived doubles the first Strength its owner gains in a fight (more than 0, UsedThisCombat unset), AfterModifyingPowerAmountReceived spends it: the simulator lands that Strength undoubled (only Artifact is followed in PowerCmd.Apply's received pass), so a play's later hits, and its replays', deal less than they will
   - [ ] TankPower (ledger): AfterApplied gives every living teammate player Guarded (half the powered attack damage they take), AfterRemoved takes back the Guarded it gave, and its own ModifyDamageMultiplicative makes powered attacks on its owner deal 1.5 times: the simulator doesn't apply Tank when a play gives it (no model: a buff it doesn't follow is left out), so the enemies' hits on you and your teammates after playing Tank are off (TRACKER: multiplayer step 2 leftovers)
-  - [ ] PossessStrengthPower (ledger): AfterPowerAmountChanged counts the Strength its owner took from each player, and AfterDeath gives it back (PowerCmd.Apply): a kill during your play gives you your Strength back for the play's later hits, which the simulator doesn't follow (TRACKER)
 <!-- gaps:end -->
 
 ---

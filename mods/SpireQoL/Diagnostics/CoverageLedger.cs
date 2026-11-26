@@ -43,7 +43,7 @@ internal static partial class CoverageLedger
         // ======== relics
         ["ArtOfWar"] = "covered: read from its code (ReadModel, decision #239): AfterCardPlayed marks an Attack played this turn, AfterSideTurnEnd keeps it as last turn's; its AfterEnergyReset pays its energy on !AnyAttacksPlayedLastTurn (past the turn predicted), so the play that turns that off gives it up: its crossed tab, checked by the relic going dark (its AfterCardPlayed sets Status Normal)",
         ["BeatingRemnant"] = "covered: read from its code (ReadModel, decision #195): ModifyHpLostAfterOsty caps HP its owner loses at MaxHpLoss less its DamageReceivedThisTurn, which AfterDamageReceived counts (its BeforeSideTurnStart reset comes as its owner's next turn starts)",
-        ["BiiigHug"] = "covered: read from its code (ReadModel, decision #257): AfterShuffle makes a Soot into your draw pile at a random spot (AddGeneratedCardToCombat, you its creator: your created-card hooks hear it); crossed shuffle tab",
+        ["BiiigHug"] = "covered: read from its code (ReadModel, decision #257): AfterShuffle makes a Soot into your draw pile at a random spot (AddGeneratedCardToCombat, you its creator: your created-card hooks hear it), so a later draw can find it; no tab (decision #263)",
         ["BingBong"] = "ignore: AfterCardChangedPiles copies cards added to your deck (deck, not combat piles)",
         ["BoneFlute"] = "covered: read from its code (ReadModel, decision #228): AfterAttack gains block when its owner's Osty made the attack (command.Attacker's monster of the type Player.Osty gets, its PetOwner the owner); block tab for Osty-attack cards",
         ["BookOfFiveRings"] = "ignore: AfterCardChangedPiles heals when cards are added to your deck (deck, not combat)",
