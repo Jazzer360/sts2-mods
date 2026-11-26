@@ -632,7 +632,12 @@ public static partial class SimAdapter
                 var playsFromPile = topPlays || exhausted && exhaustPlays;
                 // Its cost only where the card itself is kept (CardEnergyCost.GetResolved allocates).
                 var cost = pickable || strike || playsFromPile ? card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved() : 0;
-                var who = pickable || strike || playsFromPile ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}{(LocalStarCostOf(card) is { } stars ? "*" + stars : "")}" : "";
+                // The card itself, with what its play from your hand keeps of its costs (decision #394: its cost before global modifiers, whether it costs
+                // before any, and the facts the cost passes test), so copies that differ only there aren't one profile.
+                var who = pickable || strike || playsFromPile
+                    ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}{(LocalStarCostOf(card) is { } stars ? "*" + stars : "")}"
+                      + $"/{LocalCostOf(card)}/{CostsBeforeModifiersOf(card)}/{keywords.Contains(CardKeyword.Ethereal)}/{card.Affliction?.GetType().Name}"
+                    : "";
                 // I Am Invincible plays from the top of the draw pile at the end of your turn: its block.
                 var invincible = card is IAmInvincible ? CardBlock(card, combat, me) : 0;
                 var perfectFit = SimReaders.OnTopWhenShuffled(card);

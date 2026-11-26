@@ -303,6 +303,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Reading the game's code as the mod loads can no longer fail when two readings start at the same moment (a card's predictions or an event's reminders would then have read as unknown).
 - A card played from your hand goes to your discard pile in the predictions, so a draw after it from an empty draw pile in the same play (Unceasing Top's) can shuffle it back in and draw it; one that exhausts goes to your exhaust pile, where Eidolon or Knife Trap played later in the same play can play it. Mourning Blow lands there as the Sadness it turns into.
 - Mummified Hand's free card is picked among your whole hand, as in the game: an Unplayable card that costs (Beat Down, Catastrophe, Eidolon, Hidden Gem, Uproar) can take the pick, so another card is free less often (Simpleton's end-of-turn card).
+- Two copies of a card in your draw pile that cost the same but differ in their base cost (or one is Ethereal or afflicted) are told apart once drawn, for Stampede's and Simpleton's picks and Mummified Hand's free card.
 
 #### Removed
 - Biiig Hug's tag and its settings row: the Soot it adds on a shuffle never makes a shuffle worth avoiding. The Soot is still worked out (a later draw can find it, and your relics and powers that react to a card you make hear it).
