@@ -82,7 +82,7 @@ public static class HandModelled
         new("Orbs: the slots, a channel into them (the front one evoked when they're full), an evoke out of them, the passives' order at the turn's end, " +
             "TriggerPassive's count and its loop, a random orb, and the orb hooks' pipelines; an orb's damage and block as its code's commands run them " +
             "(each orb's own Passive, Evoke and values are read from its code, and Focus, Infused Core, Thunder and Gold-Plated Cables from theirs: decision #214)",
-            new[] { "SimEngine.FreshOrb", "SimEngine.ChannelOrb", "SimEngine.ChannelKind", "SimEngine.RunOrb", "SimEngine.Evoke", "SimEngine.EvokeLast", "SimEngine.OrbPassives", "SimEngine.ChangeFocus",
+            new[] { "SimEngine.FreshOrb", "SimEngine.ChannelOrb", "SimEngine.ChannelKind", "SimEngine.RunOrb", "SimEngine.Evoke", "SimEngine.EvokeLast", "SimEngine.OrbPassives", "SimEngine.RunOrbPassive", "SimEngine.ChangeFocus",
                 "SimEngine.OrbValue", "SimEngine.OrbValuesAgain", "SimEngine.OrbDamage", "SimEngine.OrbBlock" },
             new[] { "OrbCmd.Channel", "OrbCmd.Evoke", "OrbCmd.EvokeLast", "OrbCmd.EvokeNext", "OrbCmd.Passive", "OrbCmd.AddSlots", "OrbCmd.RemoveSlots", "OrbQueue.BeforeTurnEnd", "OrbModel.GetRandomOrb",
                 "OrbModel.TriggerPassive", "OrbModel.ModifyOrbValue", "Hook.ModifyOrbValue", "Hook.AfterOrbChanneled", "Hook.AfterOrbEvoked", "Hook.ModifyOrbPassiveTriggerCount",

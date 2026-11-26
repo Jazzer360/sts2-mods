@@ -916,12 +916,12 @@ DarkShackles [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=200/0 enemy1=30/0 [Exhausted
 DarkShackles [Replayed] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 [Exhausted1]
 DarkShackles [Teammate] 1 you=80/0 e3 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted1]
 DarkShackles [Alone] 1 you=80/0 e3 h0 d6/3 enemy0=200/0 [Exhausted1]
-Darkness [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [] ?OrbCmd.Passive: an orb's passive set off by a card: not followed
-Darkness [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [] ?OrbCmd.Passive: an orb's passive set off by a card: not followed
-Darkness [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 [] ?OrbCmd.Passive: an orb's passive set off by a card: not followed
-Darkness [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=194/0 [] ?OrbCmd.Passive: an orb's passive set off by a card: not followed
-Darkness [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [] ?OrbCmd.Passive: an orb's passive set off by a card: not followed
-Darkness [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 [] ?OrbCmd.Passive: an orb's passive set off by a card: not followed
+Darkness [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
+Darkness [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
+Darkness [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 []
+Darkness [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=188/0 []
+Darkness [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 []
+Darkness [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 []
 Dash [Standard] 1 you=80/10 e1 h3 d6/3 enemy0=190/0 []
 Dash [Upgraded] 1 you=80/13 e1 h3 d6/3 enemy0=187/0 []
 Dash [Crowded] 1 you=80/10 e1 h9 d0/3 enemy0=190/0 enemy1=30/0 []
@@ -3742,12 +3742,12 @@ Terraforming [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 []
 Terraforming [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
 Terraforming [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 []
 Terraforming [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 []
-TeslaCoil [Standard] 1 you=80/0 e3 h3 d6/3 enemy0=197/0 [] ?OrbCmd.Passive: an orb's passive set off by a card: not followed
-TeslaCoil [Upgraded] 1 you=80/0 e3 h3 d6/3 enemy0=196/0 [] ?OrbCmd.Passive: an orb's passive set off by a card: not followed
-TeslaCoil [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=197/0 enemy1=30/0 [] ?OrbCmd.Passive: an orb's passive set off by a card: not followed
-TeslaCoil [Replayed] 1 you=80/0 e3 h3 d6/3 enemy0=194/0 [] ?OrbCmd.Passive: an orb's passive set off by a card: not followed
-TeslaCoil [Teammate] 1 you=80/0 e3 h3 d6/3 mate0=70/0 e3 h2 enemy0=197/0 [] ?OrbCmd.Passive: an orb's passive set off by a card: not followed
-TeslaCoil [Alone] 1 you=80/0 e3 h0 d6/3 enemy0=197/0 [] ?OrbCmd.Passive: an orb's passive set off by a card: not followed
+TeslaCoil [Standard] 1 you=80/0 e3 h3 d6/3 enemy0=197/0 [] ?OrbCmd.Passive: an orb's passive set off at a creature, or of an orb other than each of yours of a class: not followed
+TeslaCoil [Upgraded] 1 you=80/0 e3 h3 d6/3 enemy0=196/0 [] ?OrbCmd.Passive: an orb's passive set off at a creature, or of an orb other than each of yours of a class: not followed
+TeslaCoil [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=197/0 enemy1=30/0 [] ?OrbCmd.Passive: an orb's passive set off at a creature, or of an orb other than each of yours of a class: not followed
+TeslaCoil [Replayed] 1 you=80/0 e3 h3 d6/3 enemy0=194/0 [] ?OrbCmd.Passive: an orb's passive set off at a creature, or of an orb other than each of yours of a class: not followed
+TeslaCoil [Teammate] 1 you=80/0 e3 h3 d6/3 mate0=70/0 e3 h2 enemy0=197/0 [] ?OrbCmd.Passive: an orb's passive set off at a creature, or of an orb other than each of yours of a class: not followed
+TeslaCoil [Alone] 1 you=80/0 e3 h0 d6/3 enemy0=197/0 [] ?OrbCmd.Passive: an orb's passive set off at a creature, or of an orb other than each of yours of a class: not followed
 TheBall [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=190/0 []
 TheBall [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=190/0 []
 TheBall [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=190/0 enemy1=30/0 []

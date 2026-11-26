@@ -51,6 +51,18 @@ public class OrbActionTests
     }
 
     [Fact]
+    public void ACardSetsOffEachDarkOrbsPassiveAsItsTurnEndTriggerWould()
+    {
+        // Darkness+ (decision #214: OrbCmd.Passive of each Dark orb, twice, no target): each Dark orb's Passive, read from its code, adds its passive
+        // value to its evoke; the Lightning orb between them isn't set off.
+        var state = Defect();
+        state.You.Orbs = new() { new SimOrb { Kind = OrbKind.Dark, Passive = 6, Evoke = 6 }, new SimOrb { Kind = OrbKind.Lightning, Passive = 3, Evoke = 8 }, new SimOrb { Kind = OrbKind.Dark, Passive = 6, Evoke = 12 } };
+        var after = Assert.Single(After(state, Play(Card("Darkness", SimCardType.Skill), target: Who.None, plays: 1, new OrbPassiveAction(OrbKind.Dark, Times: 2))));
+        Assert.Equal(new[] { 18, 8, 24 }, after.You.Orbs.Select(orb => orb.Evoke));
+        Assert.Equal(100, after.Enemy(id: 0)!.Hp);
+    }
+
+    [Fact]
     public void StormChannelsLightningOnPowerCardsAndMetronomeCountsIt()
     {
         var state = Defect();

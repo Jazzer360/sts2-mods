@@ -267,6 +267,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Cards that upgrade a card while they're played are predicted instead of showing `?` (Armaments, Apotheosis, Drain Power, Abundance, and the upgraded Begone, Charge, Compact, Dirge, Florescence, Guards, Hidden Daggers, Jackpot, Largesse, Manifest Authority, Primal Force, Quasar, Reave, Splash, Stoke, Storm of Steel, The Lovers and The Moon), and so is Blessing of the Forge: an upgrade of a card they make or one you pick changes nothing this turn, and one of your hand or piles is followed, uncertain only where an upgraded card acts later in the turn (a Burn in your hand, a card drawn after Apotheosis, a card Stampede could pick).
 - Sculpting Strike, Snap and Hand Trick are predicted instead of showing `?`: the card Sculpting Strike makes Ethereal exhausts as your turn ends (what reacts to an exhaust counts it), and the Retain or Sly the others give changes nothing before the turn is over.
 - Blade of Ink is predicted instead of showing `?`: the Inky on the Shivs it makes acts when a Shiv is played.
+- Darkness is predicted instead of showing `?`: each Dark orb's passive it sets off grows that orb's evoke, so a Dark orb evoked later in the turn deals what it would.
 
 #### Removed
 - Biiig Hug's tag and its settings row: the Soot it adds on a shuffle never makes a shuffle worth avoiding. The Soot is still worked out (a later draw can find it, and your relics and powers that react to a card you make hear it).

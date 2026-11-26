@@ -29,6 +29,12 @@ public sealed record OrbAction(OrbAction.Op Kind) : SimAction
     public int To { get; init; } = Who.You;
 }
 
+/// <summary>
+/// OrbCmd.Passive of each of the play's owner's orbs of <paramref name="Kind"/>, <paramref name="Times"/> times each, with no target (Darkness' Dark orbs: its read
+/// Passive, decision #214), as SimEngine.RunOrbPassive runs it: the orb's own Passive, read from its code, not through TriggerPassive (no trigger-count hooks).
+/// </summary>
+public sealed record OrbPassiveAction(OrbKind Kind, int Times) : SimAction;
+
 /// <summary>Your Focus changes by this much (FocusPower or a temporary Focus power): your orbs' values move with it.</summary>
 public sealed record FocusAction(int Delta) : SimAction;
 
@@ -272,6 +278,29 @@ public static partial class SimEngine
             branches.AddRange(ChannelOrb(branch, FreshOrb(branch, RandomOrbs[i], player), player));
         }
         return branches;
+    }
+
+    /// <summary>
+    /// OrbCmd.Passive set off by a card (OrbPassiveAction, decision #214): each of its owner's orbs of the kind, front first, its Passive the action's times
+    /// in a row (OrbModel.Passive with no target: the game's countAffectedByHooks false skips Hook.ModifyOrbPassiveTriggerCount), as its read program runs
+    /// it at the turn's end. An orb whose code isn't read makes the simulation unknown.
+    /// </summary>
+    private static void RunOrbPassive(BranchSet branches, OrbPassiveAction orbPassiveAction)
+    {
+        var maxOrbs = branches.States.Max(branch => branch.Player(branch.CurrentPlay?.Owner ?? Who.You)?.Orbs.Count ?? 0);
+        for (var i = 0; i < maxOrbs; i++)
+        {
+            var index = i;
+            for (var time = 0; time < orbPassiveAction.Times; time++)
+                branches.Each(branch =>
+                {
+                    var player = branch.CurrentPlay?.Owner ?? Who.You;
+                    if (branch.Player(player) is not { } simPlayer || index >= simPlayer.Orbs.Count || simPlayer.Orbs[index].Kind != orbPassiveAction.Kind) return new[] { branch };
+                    if (SimModels.Orb(orbPassiveAction.Kind) is { } model) return model.RunOrb(HookName.Passive, branch, player, index, evoked: null);
+                    branch.Unmodelled ??= SimModels.OrbUnreadReason(orbPassiveAction.Kind);
+                    return new[] { branch };
+                });
+        }
     }
 
     private static void RunOrb(BranchSet branches, OrbAction orbAction)

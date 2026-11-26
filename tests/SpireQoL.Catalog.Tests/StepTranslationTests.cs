@@ -105,10 +105,10 @@ public class StepTranslationTests
     }
 
     /// <summary>
-    /// The card steps in a shape not followed yet, each unknown where it runs and named in the open TRACKER item on ShapesNotFollowed: none now (End
-    /// of Days' kill of every doomed enemy is KillEachAction).
+    /// The card steps in a shape not followed yet, each unknown where it runs and named in the open TRACKER item on ShapesNotFollowed: Tesla Coil's Lightning
+    /// passives at its target (decision #214: an orb's read Passive takes no target). End of Days' kill of every doomed enemy is KillEachAction.
     /// </summary>
-    private static readonly HashSet<string> KnownShapesNotFollowed = new(StringComparer.Ordinal);
+    private static readonly HashSet<string> KnownShapesNotFollowed = new(StringComparer.Ordinal) { "TeslaCoil: OrbCmd.Passive" };
 
     private static bool Named(string command) =>
         SimAdapter.CommandsTranslated.ContainsKey(command) || SimAdapter.CommandsNotTranslated.ContainsKey(command) || SimAdapter.CommandsOutsideTheFight.ContainsKey(command);

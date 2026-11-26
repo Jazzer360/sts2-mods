@@ -71,6 +71,7 @@ public static partial class SimAdapter
         ["OrbCmd.Channel"] = "OrbAction(Channel) of its orb, into the orbs of the player its argument names",
         ["OrbCmd.EvokeNext"] = "OrbAction(EvokeFront), keeping the orb when its dequeue argument says so; every orb twice (EvokeAllTwice)",
         ["OrbCmd.AddSlots"] = "OrbAction(Slots)",
+        ["OrbCmd.Passive"] = "OrbPassiveAction: each of your orbs of the class its loop goes over, its passive with no target, the other loops' rounds times (PassivesOrbOf)",
         ["OrbCmd.RemoveSlots"] = "OrbAction(Slots), negative",
         ["ArrowCmd.ShootArrowAtTarget"] = "ShootAction, the attack it's given (needing the arrow), ImpaleAction",
         ["ArrowCmd.TryShootArrow"] = "ShootAction",
@@ -87,7 +88,6 @@ public static partial class SimAdapter
     internal static readonly IReadOnlyDictionary<string, string> CommandsNotTranslated = new Dictionary<string, string>
     {
         ["CardCmd.AutoPlay"] = "a card in hand or a pile played by the card: that play isn't followed",
-        ["OrbCmd.Passive"] = "an orb's passive set off by a card: not followed",
         ["ArrowCmd.GainArrowSlot"] = "an arrow slot gained: not followed",
         ["PotionCmd.TryToProcure"] = "a potion procured: what reacts to it (AfterPotionProcured) isn't followed",
         ["PlayerCmd.GainGold"] = "gold gained: what reacts to it (AfterGoldGained) isn't followed",
@@ -461,6 +461,14 @@ public static partial class SimAdapter
                     : none;
             // An enchantment on a card the play makes (Blade of Ink's Inky on its Shivs): the made card is followed by its class, type and tags, and an
             // enchantment that acts only on its card's play acts when it's played, a later decision. One that listens elsewhere (a draw, the flush) isn't followed.
+            // Each of your orbs of a class set off (Darkness' Dark orbs): their passive, as many times as the loops round it go (its loop over the orbs is the
+            // action's own: it goes over them as they are then).
+            case ("OrbCmd", "Passive"):
+            {
+                if (PassivesOrbOf(command, play.Program) is not { } orbKind) return none;
+                var times = RoundsOf(found, play, skip: OverOwnersOrbs);
+                return times > 0 ? (new List<SimAction> { new OrbPassiveAction(orbKind, times) }, null) : none;
+            }
             case ("CardCmd", "Enchant"):
                 return command.Command.GenericArguments is [var enchantment] && EnchantmentActsOnlyOnItsPlay(enchantment)
                     ? none : (Unknown(play, $"an enchantment given to a card it makes that acts outside its card's play ({string.Join(", ", command.Command.GenericArguments)}): not followed"), null);
@@ -502,6 +510,7 @@ public static partial class SimAdapter
         ["CardCmd.ApplySingleTurnSly"] = "Sly given for the turn to a card other than one you pick: not followed",
         ["CardCmd.ApplySingleTurnRetain"] = "Retain given for the turn to a card other than one you pick or the play drew: not followed",
         ["CardCmd.Enchant"] = "an enchantment given to a card other than one the play makes: not followed",
+        ["OrbCmd.Passive"] = "an orb's passive set off at a creature, or of an orb other than each of yours of a class: not followed",
         ["CreatureCmd.Kill"] = "a creature other than your Osty killed: not followed",
         ["CreatureCmd.SetCurrentHp"] = "the HP of a creature other than the card's target set: not followed",
         ["CreatureCmd.Stun"] = "a creature other than the card's target stunned: not followed",
@@ -524,6 +533,7 @@ public static partial class SimAdapter
             "CreatureCmd.LoseBlock" => Argument(command, 1) == "cardPlay.Target",
             "CardCmd.Upgrade" => UpgradeTargetOf(command, program) != null,
             "CardCmd.Enchant" => EnchantsMadeCard(command, program),
+            "OrbCmd.Passive" => PassivesOrbOf(command, program) != null,
             "CardCmd.ApplyKeyword" or "CardCmd.ApplySingleTurnSly" or "CardCmd.ApplySingleTurnRetain" => KeywordGivenOf(command, program) != null,
             "PlayerCmd.GainStars" => Argument(command, 1) is "Owner" or "cardPlay.Target.Player",
             "PowerCmd.Remove" => RemovesTargetsArtifact(command, program) || command.Command.GenericArguments.Count == 1 && IsYou(ValueAt(command, 0)),
@@ -566,6 +576,24 @@ public static partial class SimAdapter
             _ => null,
         };
     }
+
+    /// <summary>
+    /// The class of orb an OrbCmd.Passive step sets off, when the simulator follows it (decision #214): with no target (its third argument null: the orb's
+    /// passive as its turn-end trigger runs it), on each of the owner's orbs of a class (a foreach over OrbQueue.Orbs filtered by `orb is X`). Null for any
+    /// other (Tesla Coil's Lightning passives at the card's target). Pure on the step's code.
+    /// </summary>
+    internal static OrbKind? PassivesOrbOf(CommandStep command, ModelProgram program)
+    {
+        if (Argument(command, 2) != "null" || ValueAt(command, 1) is not NamedValue { Name: "each" }) return null;
+        if (program.All().OfType<LoopStep>().LastOrDefault(loop => OverOwnersOrbs(loop) && new ModelProgram("", loop.Body).All().Contains(command)) is not { Items: { } items }) return null;
+        var classes = StepValues.Unstored(items)!.Parts().OfType<QueryValue>().Where(part => part.Name == "is").Select(part => part.Type).Distinct().ToList();
+        return classes is [var orbClass] ? HookReader.OrbKindOf(orbClass) : null;
+    }
+
+    /// <summary>A foreach over the card's owner's orbs (base.Owner.PlayerCombatState.OrbQueue.Orbs, filtered or not).</summary>
+    private static bool OverOwnersOrbs(LoopStep loop) =>
+        loop.Over.StartsWith("each of", StringComparison.Ordinal) && loop.Items is { } items
+        && StepValues.Unstored(items)!.Parts().Any(part => part is QueryValue { Name: "Orbs", Of: QueryValue { Name: "OrbQueue", Of: QueryValue { Name: "PlayerCombatState", Of: var whose } } } && IsOwner(whose));
 
     /// <summary>A CardCmd.Enchant step enchants a card the play makes (decision #349: MakesCards on its card argument). Pure on the step's code.</summary>
     internal static bool EnchantsMadeCard(CommandStep command, ModelProgram program) => UpgradedValue(command, program) is { } card && MakesCards(card.Parts().ToList());
