@@ -974,22 +974,17 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         return hooks;
     }
 
-    /// <summary>Hooks that change the map or a kind of room by themselves (docs/PATHING.md): overriding one is a room test.</summary>
-    internal static readonly HashSet<string> MapHooks = new()
-    {
-        "ModifyUnknownMapPointRoomTypes", "ModifyGeneratedMap", "ModifyGeneratedMapLate", "ShouldAllowFreeTravel", "ShouldGenerateTreasure",
-        "ModifyNextEvent", "ModifyOddsIncreaseForUnrolledRoomType", "TryModifyRestSiteOptions", "ShouldDisableRemainingRestSiteOptions",
-        "ModifyRestSiteHealAmount", "TryModifyRestSiteHealRewards", "AfterRestSiteHeal", "AfterRestSiteSmith",
-        // What a shop offers and charges: they change what a Merchant is worth (Membership Card's prices).
-        "ModifyMerchantPrice", "ShouldRefillMerchantEntry", "ModifyMerchantCardPool", "ModifyMerchantCardRarity",
-        "ShouldAllowMerchantCardRemoval", "ModifyMerchantCardCreationResults", "AfterItemPurchased",
-    };
+    /// <summary>
+    /// Hooks that change the map or a kind of room by themselves (docs/PATHING.md): overriding one is a room test. The room reading's table
+    /// (Data/RoomReadings: the rest site's, the shop's, what a ? can be, a chest, the map's own).
+    /// </summary>
+    internal static IReadOnlySet<string> MapHooks => SpireQoL.Data.RoomReadings.MapHookNames;
 
     /// <summary>
     /// Pathing (docs/PATHING.md, decision #65): the hooks of a relic or card that act on a kind of room. A map hook it overrides, or an
     /// override whose code (async bodies and lambdas included) reads a room's type (AbstractRoom.RoomType, an encounter's RoomType,
     /// MapPoint.PointType) or tests a room's class (`room is MerchantRoom`). Each is "Hook: what it reads", for the review in
-    /// Data/ChoiceReminders (a Map rule) or ChoiceReminders.MapReviewed. Read from the compiled code, so new ones are caught.
+    /// the room reading (Data/RoomReadings, decision #374), which reads each one. Read from the compiled code apart from the reading, so new ones are caught.
     /// </summary>
     internal static List<string> RoomTestingHooks(Type type)
     {
@@ -1032,14 +1027,18 @@ public sealed class CoverageWatch : IFeature, IFrameFeature
         return bodies;
     }
 
-    /// <summary>Pathing (decision #65): a relic whose hooks act on a kind of room has a Map rule or a reason (ChoiceReminders.MapReviewed).</summary>
+    /// <summary>
+    /// Pathing (decisions #65, #374): every hook of a relic's that acts on a kind of room is read by its room reading (Data/RoomReadings), with nothing
+    /// in it unread.
+    /// </summary>
     private static void CheckRelicRooms(Type type)
     {
         var name = type.Name;
-        if (SpireQoL.Data.ChoiceReminders.For(name) is { Map: not SpireQoL.Data.PathRoom.None } || SpireQoL.Data.ChoiceReminders.MapReviewed.ContainsKey(name)) return;
-        var hooks = RoomTestingHooks(type);
-        if (hooks.Count == 0) return;
-        Unexpected(name, "relic-room-unreviewed", $"a relic whose hooks act on a kind of room, with no map rule and no reviewed reason (ChoiceReminders.MapReviewed): {string.Join("; ", hooks)}.");
+        var reading = SpireQoL.Data.RoomReadings.For(name);
+        var unread = RoomTestingHooks(type).Where(hook => reading == null || !reading.Hooks.Contains(hook[..hook.IndexOf(':')])).ToList();
+        var gaps = reading?.Notes.Where(note => note.Contains("? ", StringComparison.Ordinal)).ToList() ?? new List<string>();
+        if (unread.Count == 0 && gaps.Count == 0) return;
+        Unexpected(name, "relic-room-unreviewed", $"a relic whose hooks act on a kind of room, not read by its room reading (Data/RoomReadings): {string.Join("; ", unread.Concat(gaps))}.");
     }
 
     private static void CheckRelicCards(Type type)

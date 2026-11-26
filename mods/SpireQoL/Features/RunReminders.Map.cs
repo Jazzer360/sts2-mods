@@ -223,24 +223,24 @@ public sealed partial class RunReminders
         new HashSet<RoomType> { RoomType.Monster, RoomType.Elite, RoomType.Event, RoomType.Shop, RoomType.Treasure };
 
     /// <summary>
-    /// Whether it still changes that kind of room: not used up; Maw Bank until you buy something; a `?` changer while its own hook changes what a `?` can be (Golden Compass's act, Lantern Key's act 3).
+    /// Whether it still changes that kind of room (its room reading, decision #374): not used up; not ended by what a choice there set (Maw Bank's gold
+    /// per room, until you buy something: its HasItemBeenBought); a `?` changer whose only `?` rule is what a `?` can be, while its hook changes that
+    /// (Golden Compass's act, Lantern Key's act 3; Dowsing counts the `?` rooms you enter as well, so it always shows).
     /// </summary>
     private static bool PathApplies(AbstractModel model)
     {
         try
         {
             if (model is RelicModel { IsUsedUp: true }) return false;
-            switch (model.GetType().Name)
-            {
-                case nameof(MawBank):
-                    return !Traverse.Create(model).Property("HasItemBeenBought").GetValue<bool>();
-            }
-            var hook = model.GetType().GetMethod("ModifyUnknownMapPointRoomTypes");
-            if (hook != null && hook.DeclaringType == model.GetType())
+            var reading = RoomReadings.For(model.GetType().Name);
+            foreach (var field in reading?.Until ?? Array.Empty<string>())
+                if (IsSet(model, field)) return false;
+            var hook = model.GetType().GetMethod(nameof(AbstractModel.ModifyUnknownMapPointRoomTypes));
+            if (reading is { WhileChanging: true } && hook != null && hook.DeclaringType == model.GetType())
             {
                 // The hook is plain math on the set (no side effects): what a ? can be with it, against without it.
                 var after = (IReadOnlySet<RoomType>)hook.Invoke(model, new object[] { UnknownCanBe })!;
-                if (model is not Dowsing) return !after.SetEquals(UnknownCanBe);
+                return !after.SetEquals(UnknownCanBe);
             }
             return true;
         }
@@ -249,6 +249,21 @@ public sealed partial class RunReminders
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-map:" + model.GetType().Name);
             return true;
         }
+    }
+
+    /// <summary>Whether a field (or property) of the model's own is set: true, or a number other than zero.</summary>
+    private static bool IsSet(AbstractModel model, string field)
+    {
+        var traverse = Traverse.Create(model);
+        var value = traverse.Property(field).PropertyExists() ? traverse.Property(field).GetValue() : traverse.Field(field).GetValue();
+        return value switch
+        {
+            null => false,
+            bool flag => flag,
+            int number => number != 0,
+            long number => number != 0,
+            _ => true,
+        };
     }
 
     /// <summary>

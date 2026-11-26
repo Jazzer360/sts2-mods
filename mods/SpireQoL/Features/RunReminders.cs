@@ -1004,6 +1004,7 @@ public sealed partial class RunReminders
             && type.Namespace?.EndsWith(".Mocks", StringComparison.Ordinal) != true).ToList();
         // Your relics' rules first (decision #359): every screen of the reminders asks them.
         RelicReadings.ReadAll();
+        RoomReadings.ReadAll();
         var count = OptionReader.Game.ReadAll(events);
         foreach (var eventType in events)
         {

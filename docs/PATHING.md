@@ -80,6 +80,7 @@ Notes:
   - Or one whose `AfterRoomEntered` / `BeforeRoomEntered` / `AfterCombatVictory` / `AfterCombatEnd` / `TryModifyRewards` / `BeforeSideTurnStart` body compares `RoomType`, `MapPointType` or a room class (`RestSiteRoom`, `MerchantRoom`).
   - The room-type comparison can be read from the IL, as `OptionCards` reads event options. That gives the row for free and catches new relics like Black Star without naming them.
 - Quest cards in the deck (Dowsing, Byrdonis Egg, Lantern Key) are covered the same way, from the card's hooks.
+- Done (decision #374): the rows are read from each relic's and card's hooks by the program reader (`Data/RoomReadings.cs`): a room hook that acts gives its room, any other hook its acting steps' room tests; every room, every fight, the boss's and what the map shows give no row. The hand table is the catalog tests' check (`RoomReadingsTests`), `Snapshots/room-readings.txt` (and `-main`) each model's reading; only Silver Crucible is reviewed out (`ChoiceReminders.MapReviewed`).
 - Settings: a Pathing section, with a switch per relic like the Outside fights section (decision #43), and a master switch.
 - A Guide page example (a legend row with icons).
 

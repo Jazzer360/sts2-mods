@@ -1,0 +1,72 @@
+AmethystAubergine: no row || TryModifyRewards: every fight
+BathRobes: no row || BeforeCombatStart: the boss (every path ends there)
+BlackStar: rooms Elite || TryModifyRewards: Elite
+BoomingConch: rooms Elite || AfterSideTurnStart: Elite | ModifyHandDraw: Elite
+BronzeScales: no row || AfterRoomEntered: every fight
+BurningSticks: no row || AfterRoomEntered: every fight
+ByrdonisEgg: rooms RestSite || TryModifyRestSiteOptions: RestSite
+Byrdpip: rooms RestSite || TryModifyRestSiteOptions: RestSite
+DataDisk: no row || AfterRoomEntered: every fight
+DivineRight: no row || AfterRoomEntered: every fight
+Dowsing: rooms Unknown || BeforeRoomEntered: Unknown | ModifyUnknownMapPointRoomTypes: Unknown
+DreamCatcher: rooms RestSite || TryModifyRestSiteHealRewards: RestSite
+EmberTea: no row || AfterRoomEntered: every fight
+EternalFeather: rooms RestSite || AfterRoomEntered: RestSite
+FakeVenerableTeaSet: rooms RestSite || AfterRoomEntered: RestSite
+FishingRod: rooms Monster || AfterCombatEnd: Monster
+FresnelLens: no row || ModifyMerchantCardCreationResults: shop cards changed like every card you get
+FrozenEgg: no row || ModifyMerchantCardCreationResults: nothing
+FurCoat: no row || ModifyGeneratedMapLate: the map shows it
+GhostSeed: no row || AfterRoomEntered: every fight
+Girya: rooms RestSite || AfterRoomEntered: every fight | TryModifyRestSiteOptions: RestSite
+GoldenCompass: rooms Unknown | while it changes a ? || ModifyGeneratedMap: the map shows it | ModifyUnknownMapPointRoomTypes: Unknown
+Gorget: no row || AfterRoomEntered: every fight
+JuzuBracelet: rooms Unknown | while it changes a ? || ModifyUnknownMapPointRoomTypes: Unknown
+LanternKey: rooms Unknown | while it changes a ? || ModifyNextEvent: Unknown | ModifyUnknownMapPointRoomTypes: Unknown
+LavaLamp: no row || AfterDamageReceived: every fight | TryModifyCardRewardOptionsLate: every fight
+LavaRock: no row || TryModifyRewards: the boss (every path ends there)
+LordsParasol: rooms Shop || AfterRoomEntered: Shop
+MawBank: rooms Shop | crossed Shop | until HasItemBeenBought || AfterItemPurchased: Shop crossed
+MealTicket: rooms Shop || AfterRoomEntered: Shop
+MeatCleaver: rooms RestSite || TryModifyRestSiteOptions: RestSite
+MembershipCard: rooms Shop || ModifyMerchantPrice: Shop
+Metronome: no row || AfterRoomEntered: every fight
+MiniatureTent: rooms RestSite || ShouldDisableRemainingRestSiteOptions: RestSite
+MoltenEgg: no row || ModifyMerchantCardCreationResults: nothing
+OddlySmoothStone: no row || AfterRoomEntered: every fight
+PaelsGrowth: rooms RestSite || AfterObtained: gives Clone (RestSite)
+Pantograph: no row || BeforeCombatStart: the boss (every path ends there)
+Permafrost: no row || AfterRoomEntered: every fight
+PhilosophersStone: no row || AfterRoomEntered: every fight
+Planisphere: rooms Unknown || AfterRoomEntered: Unknown
+PrayerWheel: rooms Monster || TryModifyRewards: Monster
+PumpkinCandle: rooms RestSite || TryModifyRestSiteOptions: RestSite
+RedSkull: no row || AfterRoomEntered: every fight
+RegalPillow: rooms RestSite || AfterRestSiteHeal: nothing | AfterRoomEntered: nothing | ModifyRestSiteHealAmount: RestSite
+RingingTriangle: no row || AfterRoomEntered: every fight
+Shovel: rooms RestSite || TryModifyRestSiteOptions: RestSite
+SilverCrucible: rooms Treasure | reviewed: the first treasure room you enter has no chest, whichever it is: no route avoids it || AfterRoomEntered: Treasure | ShouldGenerateTreasure: Treasure
+SlingOfCourage: rooms Elite || AfterRoomEntered: Elite
+SongBow: no row || AfterRoomEntered: every fight
+SpoilsMap: no row || AfterCardChangedPiles: nothing | ModifyGeneratedMap: the map shows it | ModifyGeneratedMapLate: the map shows it
+StoneCalendar: no row || AfterRoomEntered: nothing
+StoneCracker: no row || AfterRoomEntered: every fight
+StoneHumidifier: rooms RestSite || AfterRestSiteHeal: RestSite
+Storyteller: no row || AfterRoomEntered: every fight
+SwordOfJade: no row || AfterRoomEntered: every fight
+SwordOfStone: rooms Elite || AfterCombatVictory: Elite
+TheCourier: rooms Shop || ModifyMerchantPrice: Shop | ShouldRefillMerchantEntry: Shop
+TheHunt: no row || OnPlay: its play (in a fight)
+ThrowingAxe: no row || AfterRoomEntered: every fight
+TinyMailbox: rooms RestSite || TryModifyRestSiteHealRewards: RestSite
+TormentousCollar: rooms Elite || BeforeSideTurnStart: Elite
+ToxicEgg: no row || ModifyMerchantCardCreationResults: nothing
+Vajra: no row || AfterRoomEntered: every fight
+VelvetChoker: no row || AfterRoomEntered: nothing
+VenerableTeaSet: rooms RestSite || AfterRoomEntered: RestSite
+WarHammer: rooms Elite || AfterCombatVictory: Elite
+WhiteBeastStatue: no row || ShouldForcePotionReward: every fight
+WhiteStar: rooms Elite || TryModifyRewards: Elite
+WingedBoots: no row || ShouldAllowFreeTravel: the map shows it
+WongosMysteryTicket: no row || TryModifyRewards: every fight
+Wuppy: rooms RestSite || AfterObtained: every room | TryModifyRestSiteOptions: RestSite

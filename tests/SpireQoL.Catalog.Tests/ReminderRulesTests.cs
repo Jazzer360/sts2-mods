@@ -88,7 +88,7 @@ public class ReminderRulesTests
             .Where(relic => relic.Hooks.Count > 0).Select(relic => $"{relic.Name}: {string.Join(", ", relic.Hooks)}").ToList();
         Assert.True(missing.Count == 0, "Relics that change a choice outside fights with no rule and no reviewed reason:\n" + string.Join("\n", missing));
         var names = Relics().Select(type => type.Name).ToHashSet();
-        var unknown = SpireQoL.Diagnostics.RelicChoiceTracking.Reasons.Keys.Concat(ChoiceReminders.MapRules.Keys).Where(name => !names.Contains(name)
+        var unknown = SpireQoL.Diagnostics.RelicChoiceTracking.Reasons.Keys.Concat(ChoiceReminders.MapReviewed.Keys).Where(name => !names.Contains(name)
             && !typeof(CardModel).Assembly.GetTypes().Any(type => type.Name == name && typeof(CardModel).IsAssignableFrom(type))).ToList();
         Assert.True(unknown.Count == 0, "Reasons or map rules for no relic or card of the game's: " + string.Join(", ", unknown));
     }

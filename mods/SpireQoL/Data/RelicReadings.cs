@@ -43,7 +43,7 @@ public sealed record RelicReading(string Relic, ChoiceEffect On, ChoiceEffect Cr
 
     /// <summary>
     /// The fields of its own that a choice sets and whose being set ends a bonus of its (Maw Bank's HasItemBeenBought, set by a purchase): what makes
-    /// that choice crossed (and, for the map, what ends its row).
+    /// that choice crossed, and what ends its map row (decision #374).
     /// </summary>
     public IReadOnlyList<(string Field, ChoiceEffect Effect)> Ends { get; init; } = Array.Empty<(string, ChoiceEffect)>();
 }

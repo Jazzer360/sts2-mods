@@ -5,9 +5,9 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// Pathing (decision #65, docs/PATHING.md): every relic and card in the installed game whose hooks act on a kind of room (a map
-/// hook, or code that reads a room's type) has a Map rule (Data/ChoiceReminders) or a reviewed reason (ChoiceReminders.MapReviewed).
-/// Read from the compiled code, so ones new in a game update fail here.
+/// Pathing (decisions #65, #374, docs/PATHING.md): every hook of a relic or card in the installed game that acts on a kind of room (a map hook, or code
+/// that reads a room's type) is read by its room reading (Data/RoomReadings), which gives its row or says why it has none. The scan reads the compiled
+/// code apart from the reading, so a hook new in a game update that the reading doesn't read fails here.
 /// </summary>
 [Collection(GameFightCollection.Name)]
 public class PathingTests
@@ -19,14 +19,14 @@ public class PathingTests
         .Where(type => !type.IsAbstract && (typeof(RelicModel).IsAssignableFrom(type) || typeof(CardModel).IsAssignableFrom(type))).ToList();
 
     [Fact]
-    public void EveryRoomTestHasAMapRuleOrAReason()
+    public void EveryRoomTestIsReadByTheRoomReading()
     {
         var missing = Models()
-            .Where(type => ChoiceReminders.For(type.Name) is not { Map: not PathRoom.None } && !ChoiceReminders.MapReviewed.ContainsKey(type.Name))
-            .Select(type => (type.Name, Hooks: SpireQoL.Diagnostics.CoverageWatch.RoomTestingHooks(type)))
+            .Select(type => (type.Name, Hooks: SpireQoL.Diagnostics.CoverageWatch.RoomTestingHooks(type)
+                .Where(hook => RoomReadings.For(type.Name) is not { } reading || !reading.Hooks.Contains(hook[..hook.IndexOf(':')])).ToList()))
             .Where(nameHooks => nameHooks.Hooks.Count > 0)
             .Select(nameHooks => $"{nameHooks.Name}: {string.Join("; ", nameHooks.Hooks)}").ToList();
-        Assert.True(missing.Count == 0, "Room tests with no Map rule or reason:\n" + string.Join("\n", missing));
+        Assert.True(missing.Count == 0, "Room tests the room reading doesn't read:\n" + string.Join("\n", missing));
     }
 
     [Fact]
@@ -46,5 +46,13 @@ public class PathingTests
             .Where(name => !names.Contains(name)).ToList();
         Assert.Empty(unknown);
         Assert.All(ChoiceReminders.Rules, reminderRule => Assert.Equal(PathRoom.None, reminderRule.MapCrossed & ~reminderRule.Map));
+    }
+
+    /// <summary>A reviewed reason is for a model whose reading gives a row it shouldn't show (Silver Crucible's chest): one with no row needs none.</summary>
+    [Fact]
+    public void EveryReviewedReasonHidesARow()
+    {
+        var idle = ChoiceReminders.MapReviewed.Keys.Where(name => RoomReadings.For(name) is not { Rooms: not PathRoom.None }).ToList();
+        Assert.True(idle.Count == 0, "Reviewed map reasons for a model whose reading gives no row: " + string.Join(", ", idle));
     }
 }
