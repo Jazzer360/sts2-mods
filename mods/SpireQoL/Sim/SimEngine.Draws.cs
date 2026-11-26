@@ -403,8 +403,13 @@ public static partial class SimEngine
         return result;
     }
 
-    /// <summary>A card off the top of the draw pile plays itself (AutoPlayFromDraw), then goes where it goes.</summary>
-    private static IEnumerable<SimState> PlayFromPile(SimState state, int player, SimDrawCard card, bool forceExhaust, bool upgrade)
+    /// <summary>
+    /// A card off the top of the draw pile plays itself (AutoPlayFromDraw), then goes where it goes; or a card a card's auto-play takes from a pile
+    /// (AutoPlayCardsAction: decision #360), at the play's target when <paramref name="atPlayTarget"/> (CardCmd.AutoPlay given it: Knife Trap's), and
+    /// back to its exhaust pile with <paramref name="exhaustedBack"/> when its play exhausts it (one taken from there).
+    /// </summary>
+    private static IEnumerable<SimState> PlayFromPile(SimState state, int player, SimDrawCard card, bool forceExhaust, bool upgrade, bool atPlayTarget = false,
+        Action<SimState>? exhaustedBack = null)
     {
         if (card.Upgradable && state.Player(player) is { PilesUpgraded: true }) state.Unmodelled ??= "a card that could have been upgraded in your draw pile played itself from there";
         if ((upgrade ? card.FromPileUpgraded : card.FromPile) is not { } built)
@@ -414,9 +419,17 @@ public static partial class SimEngine
             return new[] { state };
         }
         if (player == Who.You) state.AutoPlayed++;
+        var target = state.CurrentPlay?.Target ?? Who.None;
         var plays = built.Plays.Count == 1 && built.Plays[0].TargetId < 0
             ? built.Plays
+            // At the target it's given, alive or not (CardCmd.AutoPlay picks one only when it's given none).
+            : atPlayTarget ? built.Plays.Where(play => play.TargetId == target).ToList()
             : built.Plays.Where(play => state.Enemy(play.TargetId) is { Alive: true, Hittable: true }).ToList();
+        if (atPlayTarget && plays.Count == 0 && built.Plays.Count > 0)
+        {
+            state.Unmodelled ??= "a card auto-played at the play's target has no play built at it";
+            return new[] { state };
+        }
         if (plays.Count == 0)
         {
             // Unplayable, or no enemy to hit: to the discard pile unplayed (CardCmd.MoveToResultPileWithoutPlaying).
@@ -434,7 +447,11 @@ public static partial class SimEngine
             foreach (var copy in sub.States)
             {
                 copy.RestoreFrame(frame);
-                if (card.ExhaustsWhenPlayed) result.Add(copy);
+                if (card.ExhaustsWhenPlayed)
+                {
+                    exhaustedBack?.Invoke(copy);
+                    result.Add(copy);
+                }
                 else if (forceExhaust) result.AddRange(ProcCardEvent(copy, CardEvent.Exhausted, count: 1, player, indirect: true));
                 else
                 {

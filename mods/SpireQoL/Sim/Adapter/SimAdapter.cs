@@ -343,7 +343,11 @@ public static partial class SimAdapter
         {
             player.Stampede = me.Creature.GetPower<StampedePower>()?.Amount ?? 0;
             player.Simpleton = SimpletonOf?.Invoke(me.Creature) ?? 0;
-            if (player.Stampede > 0 || player.Simpleton > 0)
+            // The cards in your hand that auto-play cards of your piles (decision #360): what the board reads for them.
+            var sources = owner == Who.You ? PileAutoPlaySources(me) : new List<PileAutoPlaySource>();
+            var fromHand = sources.Any(source => source.Read.Pile == SimPile.Hand);
+            if (sources.Count > 0) player.PileAutoPlays = new SimPileAutoPlays(sources.Where(source => source.Readable).Select(source => source.Key).ToList()) { FromHand = fromHand };
+            if (player.Stampede > 0 || player.Simpleton > 0 || fromHand)
             {
                 player.AutoHand = new List<SimHandCard>();
                 foreach (var card in Sts2State.Hand(me))
@@ -357,6 +361,7 @@ public static partial class SimAdapter
                         Cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved(),
                         LocalCost = LocalCostOf(card), Card = SimReaders.CostedFacts(card),
                         Plays = AutoPlays(card, me, combat, ids, owner),
+                        AutoPlayedBy = AutoPlayedBy(card, sources),
                     });
                 }
             }
@@ -376,7 +381,64 @@ public static partial class SimAdapter
             // unreadable: no auto-plays predicted (the forecast check skips a turn with unpredicted auto-plays)
             player.AutoHand = null;
             player.Stampede = player.Simpleton = 0;
+            player.PileAutoPlays = null; // a card's auto-play of your piles' cards is unknown then (AutoPlayCardsAction: not read)
         }
+    }
+
+    /// <summary>
+    /// A card in your hand whose play auto-plays cards of your piles (decision #360: CardAutoPlaysOf), with what it's read with: its own board and program,
+    /// for its filters. Readable: the board can follow it; not when its filter lets an Unplayable card of your hand through (the hand's followed cards,
+    /// AutoHand, are the playable ones), as Cho Chorus' tags alone would.
+    /// </summary>
+    internal sealed record PileAutoPlaySource(string Key, CardAutoPlayRead Read, CardModel Card, Procs.Programs.ProgramBoard Board, Procs.Programs.ModelProgram Program, bool Readable);
+
+    /// <summary>The auto-plays of <paramref name="cards"/>' plays that upgrade each card first on the board (Knife Trap+: its upgrade step's condition holds), by key.</summary>
+    private static HashSet<string> CardAutoPlaysUpgrading(IEnumerable<CardModel> cards) =>
+        cards.SelectMany(card => CardAutoPlaysOf(card.GetType())
+                .Where(entry => entry.Upgrade is { } upgrade && Procs.Programs.ProgramEvaluator.Holds(upgrade.Condition ?? Procs.Programs.ProgramCondition.Always,
+                    Procs.Programs.ProgramBoard.For(card), Procs.Programs.CardPrograms.Of(card.GetType())) == true)
+                .Select(entry => entry.Key))
+            .ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>Your hand's cards that auto-play cards of your piles, each auto-play once (by its key).</summary>
+    internal static List<PileAutoPlaySource> PileAutoPlaySources(Player me)
+    {
+        var sources = new List<PileAutoPlaySource>();
+        foreach (var card in Sts2State.Hand(me))
+            foreach (var (key, read, _, _) in CardAutoPlaysOf(card.GetType()))
+            {
+                if (sources.Any(source => source.Key == key)) continue;
+                var board = Procs.Programs.ProgramBoard.For(card);
+                var program = Procs.Programs.CardPrograms.Of(card.GetType());
+                var readable = read.Pile != SimPile.Hand || read.Filter == null
+                    || Sts2State.Hand(me).Where(other => other.Keywords.Contains(CardKeyword.Unplayable)).All(other => Procs.Programs.ProgramEvaluator.Passes(read.Filter, other, board, program) == false);
+                sources.Add(new PileAutoPlaySource(key, read, card, board, program, readable));
+            }
+        return sources;
+    }
+
+    /// <summary>
+    /// The auto-plays of <paramref name="sources"/> whose filter lets <paramref name="card"/> through (its key; "/else" for a fallback's; with "?" when the
+    /// filter can't be asked of it), sorted; null with none.
+    /// </summary>
+    internal static IReadOnlyList<string>? AutoPlayedBy(CardModel card, IReadOnlyList<PileAutoPlaySource> sources)
+    {
+        if (sources.Count == 0) return null;
+        var keys = new List<string>();
+        void Ask(string key, Procs.Programs.LambdaValue? filter, PileAutoPlaySource source)
+        {
+            switch (filter == null ? true : Procs.Programs.ProgramEvaluator.Passes(filter, card, source.Board, source.Program))
+            {
+                case true: keys.Add(key); break;
+                case null: keys.Add(key + "?"); break;
+            }
+        }
+        foreach (var source in sources)
+        {
+            Ask(source.Key, source.Read.Filter, source);
+            if (source.Read.Fallback != null) Ask(source.Key + "/else", source.Read.Fallback, source);
+        }
+        return keys.Count == 0 ? null : keys.Order(StringComparer.Ordinal).ToList();
     }
 
     /// <summary>
@@ -470,14 +532,23 @@ public static partial class SimAdapter
             // Something that auto-plays the top of your draw pile (Havoc, Cascade, The Devil in your hand; Lost Lute's power): how each
             // card plays from there goes into its profile, and which card it is.
             var handCards = PileType.Hand.GetPile(me).Cards;
+            // A card in your hand that auto-plays cards of your piles (decision #360): each card where it takes from has its filters asked (AutoPlayedBy) and
+            // its play from there built; one in your hand, its play from your hand.
+            var sources = player.PileAutoPlays == null ? new List<PileAutoPlaySource>() : PileAutoPlaySources(me);
+            var handSources = sources.Where(source => source.Read.Pile == SimPile.Hand).ToList();
             var topPlays = pileAutoPlays || handCards.Any(card => Procs.Programs.CardEffects.AutoPlaysFromDrawPile(card.GetType()) || card.GetType().Name == nameof(LostLute))
-                           || me.Creature.Powers.Any(power => power.GetType().Name == nameof(LostLutePower));
-            var topUpgrades = handCards.Any(card => Procs.Programs.BoardCounts.AutoPlaysOf(card) is { Upgrade: true });
+                           || me.Creature.Powers.Any(power => power.GetType().Name == nameof(LostLutePower))
+                           || sources.Any(source => source.Read.Pile is SimPile.Draw or SimPile.Discard);
+            var upgradingSources = CardAutoPlaysUpgrading(handCards);
+            var topUpgrades = handCards.Any(card => Procs.Programs.BoardCounts.AutoPlaysOf(card) is { Upgrade: true })
+                              || sources.Any(source => source.Read.Pile is SimPile.Draw or SimPile.Discard && upgradingSources.Contains(source.Key));
+            var exhaustPlays = sources.Any(source => source.Read.Pile == SimPile.Exhaust);
+            var exhaustUpgrades = sources.Any(source => source.Read.Pile == SimPile.Exhaust && upgradingSources.Contains(source.Key));
             var fromPileByKey = new Dictionary<string, (SimHandCard? Plain, SimHandCard? Upgraded, bool Exhausts)>();
             // The filtered takes of the cards in your hand (decision #189): a card drawn or taken into your hand during a play counts for
             // the ones it would be taken by (Second Wind's non-Attacks, The Hermit's Curse).
             var takeFilters = handCards.SelectMany(TakeFiltersOf).ToList();
-            SimDrawCard Profile(CardModel card)
+            SimDrawCard Profile(CardModel card, bool exhausted = false)
             {
                 var turnEnd = TurnEndOf(card);
                 var fading = IsFading(card, combat);
@@ -488,9 +559,15 @@ public static partial class SimAdapter
                 // Hellraiser's auto-play is built like a picked card's (decision #121), except past the game's cap on endless
                 // auto-plays, when every enemy you could hit can't die (HellraiserPower: 9 a turn): then it isn't simulated.
                 var hellraised = strike && !me.Creature.CombatState!.HittableEnemies.All(creature => creature.HpDisplay.IsInfinite());
-                var pickable = picks && !card.Keywords.Contains(CardKeyword.Unplayable) && (player.Simpleton > 0 || card.Type == CardType.Attack);
+                // What a card in your hand that auto-plays your piles' cards (decision #360) lets through: an Unplayable card a hand one lets through is followed
+                // no further once drawn (its play isn't built: the hand's later auto-plays are unknown).
+                var autoPlayedBy = AutoPlayedBy(card, sources);
+                var unplayable = card.Keywords.Contains(CardKeyword.Unplayable);
+                var pickable = picks && (!unplayable && (player.Simpleton > 0 || card.Type == CardType.Attack || handSources.Count > 0)
+                                         || unplayable && handSources.Any(source => autoPlayedBy?.Contains(source.Key) == true || autoPlayedBy?.Contains(source.Key + "?") == true));
+                var playsFromPile = topPlays || exhausted && exhaustPlays;
                 var cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved();
-                var who = pickable || strike || topPlays ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}" : "";
+                var who = pickable || strike || playsFromPile ? $"{card.GetType().Name}+{card.CurrentUpgradeLevel}/{card.Enchantment?.GetType().Name}/{cost}" : "";
                 // I Am Invincible plays from the top of the draw pile at the end of your turn: its block.
                 var invincible = card is IAmInvincible ? CardBlock(card, combat, me) : 0;
                 var perfectFit = SimReaders.OnTopWhenShuffled(card);
@@ -501,9 +578,9 @@ public static partial class SimAdapter
                 var exhaustEnergy = CardEnergy.WhenExhausted(card);
                 var energyLost = CardEnergy.LostWhenDrawn(card);
                 var takenBy = takeFilters.Count == 0 ? null : takeFilters.Where(filter => filter.Takes(card, false) != false).Select(filter => filter.Key).ToList() is { Count: > 0 } keys ? keys : null;
-                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}|{invincible}|{perfectFit}|{type}|{free}{sly}|{exhaustEnergy}{(exhaustEnergy > 0 ? SimReaders.TypeOf(card) : SimCardType.None)}|{energyLost}|{(takenBy == null ? "" : string.Join(",", takenBy))}";
+                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}|{invincible}|{perfectFit}|{type}|{free}{sly}|{exhaustEnergy}{(exhaustEnergy > 0 ? SimReaders.TypeOf(card) : SimCardType.None)}|{energyLost}|{(takenBy == null ? "" : string.Join(",", takenBy))}{(autoPlayedBy == null ? "" : "|" + string.Join(",", autoPlayedBy))}";
                 SimHandCard? auto = null;
-                if ((pickable || hellraised) && !autoByKey.TryGetValue(key, out auto))
+                if ((pickable && !unplayable || hellraised) && !autoByKey.TryGetValue(key, out auto))
                 {
                     // How it plays once in your hand: as the adapter builds a hand card's auto-plays. A card in the draw pile counts as
                     // not in your hand there (its hand delta 0, no hand card): played once drawn, it's from your hand, so one less, and
@@ -511,14 +588,14 @@ public static partial class SimAdapter
                     var plays = AutoPlays(card, me, combat, ids);
                     var id = HandId(card);
                     if (card.Pile?.Type == PileType.Draw) foreach (var play in plays) { play.HandDelta -= 1; play.HandCard = id; }
-                    auto = new SimHandCard { Id = id, Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, LocalCost = LocalCostOf(card), Card = SimReaders.CostedFacts(card), Plays = plays };
+                    auto = new SimHandCard { Id = id, Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, LocalCost = LocalCostOf(card), Card = SimReaders.CostedFacts(card), Plays = plays, AutoPlayedBy = autoPlayedBy };
                     autoByKey[key] = auto;
                 }
                 (SimHandCard? Plain, SimHandCard? Upgraded, bool Exhausts) fromPile = default;
-                if (topPlays && !fromPileByKey.TryGetValue(key, out fromPile))
+                if (playsFromPile && !fromPileByKey.TryGetValue(key + (exhausted ? "|exhausted" : ""), out fromPile))
                 {
-                    fromPile = (FromPile(card, card, me, combat, ids, out var exhausts), topUpgrades ? UpgradedFromPile(card, me, combat, ids) : null, exhausts);
-                    fromPileByKey[key] = fromPile;
+                    fromPile = (FromPile(card, card, me, combat, ids, out var exhausts), topUpgrades || exhausted && exhaustUpgrades ? UpgradedFromPile(card, me, combat, ids) : null, exhausts);
+                    fromPileByKey[key + (exhausted ? "|exhausted" : "")] = fromPile;
                 }
                 var drawCard = new SimDrawCard(key)
                 {
@@ -526,7 +603,7 @@ public static partial class SimAdapter
                     EnergyLostOnDraw = energyLost,
                     Exhausting = exhaustEnergy > 0 ? new ExhaustingCard(HandCard: 0, exhaustEnergy, SimReaders.TypeOf(card)) : null,
                     TurnEnd = turnEnd, Fading = fading, HexFading = hexFading, Status = status, Ethereal = ethereal, Strike = strike,
-                    Pickable = pickable, Auto = auto, InvincibleBlock = invincible, OnTopWhenShuffled = perfectFit, Type = type, Free = free, Sly = sly, TakenBy = takenBy,
+                    Pickable = pickable, Auto = auto, InvincibleBlock = invincible, OnTopWhenShuffled = perfectFit, Type = type, Free = free, Sly = sly, TakenBy = takenBy, AutoPlayedBy = autoPlayedBy,
                 };
                 // One an upgrade could change (something about it is followed): an upgrade of its pile or its hand makes what it does unknown.
                 return !drawCard.Plain && Safe(() => card.IsUpgradable) ? drawCard with { Key = key + "|upgradable", Upgradable = true } : drawCard;
@@ -551,6 +628,9 @@ public static partial class SimAdapter
             // The cards in your hand too, for a play that puts them into your draw pile (Reboot).
             if (handCards.Any(card => Procs.Programs.CardEffects.ShufflesDiscardPileIn(card.GetType())))
                 foreach (var card in handCards) Remembered(card);
+            // Your exhaust pile's cards in its order, for a card in your hand that auto-plays cards from there (decision #360: Eidolon, Knife Trap).
+            if (exhaustPlays && player.PileAutoPlays != null)
+                player.PileAutoPlays = player.PileAutoPlays with { ExhaustCards = PileType.Exhaust.GetPile(me).Cards.Select(card => Profile(card, exhausted: true)).ToList() };
             ids.DrawProfiles = profiles;
             ids.ProfilesRead = true;
             // Cards something on this board makes into a draw pile (its code's MakeIntoDrawStep: Personal Hive's Dazed, Biiig Hug's Soot): their

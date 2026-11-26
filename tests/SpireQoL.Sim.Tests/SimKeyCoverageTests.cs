@@ -95,6 +95,7 @@ public class SimKeyCoverageTests
         if (type == typeof(List<TurnEndCard>)) return new List<TurnEndCard>((List<TurnEndCard>)v!) { new("Burn", "Burn", Amount: 2) };
         if (type == typeof(List<SimHandCard>)) return new List<SimHandCard> { new() { Id = 5, Name = "Probe" } }; // another card (another copy of the same is the same hand)
         if (type == typeof(List<SimOrb>)) return new List<SimOrb> { new() { Kind = OrbKind.Dark, Passive = 6, Evoke = 6 } };
+        if (type == typeof(SimPileAutoPlays)) return v is SimPileAutoPlays { ExhaustCards: not null } ? null : new SimPileAutoPlays(new[] { "probe" }) { ExhaustCards = new List<SimDrawCard> { new("probe") } };
         if (type == typeof(SimDrawPile)) return new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("probe"), Count: 2) } };
         if (type == typeof(SimDrawCard)) return new SimDrawCard("probe");
         if (type == typeof(SimStunnedMove)) return new SimStunnedMove(((SimStunnedMove?)v)?.Name + "x", (state, _) => new[] { state });

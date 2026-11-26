@@ -25,6 +25,7 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.Cards),           // the cards in their piles that listen for hooks (their hand's among them: a Regret)
         // End-of-turn auto-plays picked from the hand (Stampede, Simpleton; never filled for a teammate today, decision #80).
         nameof(SimPlayer.Stampede), nameof(SimPlayer.Simpleton), nameof(SimPlayer.AutoHand),
+        nameof(SimPlayer.PileAutoPlays), // the auto-plays of cards in their piles their hand's cards make (decision #360; never filled for a teammate today)
     };
 
     /// <summary>On screen (their powers, relics, orbs, block, HP, hand size, cards they played) or the simulation's own bookkeeping.</summary>
@@ -111,6 +112,7 @@ public class SimTeammateHandFieldsTests
         else if (type == typeof(NamedCounts)) field.SetValue(player, NamedCounts.Empty.Add(SimKeys.Plays(PlayStage.Started), delta: 2));
         else if (type == typeof(List<SimOrb>)) field.SetValue(player, new List<SimOrb> { new() { Kind = OrbKind.Frost, Passive = 2, Evoke = 5 } });
         else if (type == typeof(SimDrawPile)) field.SetValue(player, new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("burn"), Count: 2) } });
+        else if (type == typeof(SimPileAutoPlays)) field.SetValue(player, new SimPileAutoPlays(new[] { "TheFool#0" }) { FromHand = true });
         else if (type == typeof(IReadOnlyDictionary<string, SimDrawCard>)) field.SetValue(player, new Dictionary<string, SimDrawCard> { ["Dazed"] = new("dazed") });
         else Assert.Fail($"SimPlayer.{field.Name}: type {type.Name} isn't handled by this test's Fill: add it");
     }

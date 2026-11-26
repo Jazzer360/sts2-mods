@@ -52,6 +52,7 @@ public static partial class SimAdapter
         ["CardPileCmd.Shuffle"] = "ShuffleDrawPileAction (with the hand the play put into your draw pile)",
         ["CardPileCmd.ShuffleIfNecessary"] = "ShuffleDrawPileAction when the draw pile is empty",
         ["CardPileCmd.AutoPlayFromDrawPile"] = "AutoPlayFromDrawAction: its count, exhaust and upgrading callback",
+        ["CardCmd.AutoPlay"] = "AutoPlayCardsAction: the cards of your pile its card argument names (each of a list, one at random, a shuffled list's first so many), filtered as its code filters them, at a random enemy or the play's target (CardAutoPlayOf); a card you pick, then played, is unknown (decision #188)",
         ["CardPileCmd.AddGeneratedCardToCombat"] = "CardEventAction(Generated), about the card it makes when its code names it (its class and type), for its creator, one, into the pile it names (MadeCards)",
         ["CardPileCmd.AddGeneratedCardsToCombat"] = "the same, as many as its list holds: a Create's count, a card factory's count, the rounds of the loop that filled it",
         ["CardPileCmd.AddToCombatAndPreview"] = "the same, its count argument of the card it names, for the target's player",
@@ -88,7 +89,6 @@ public static partial class SimAdapter
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, string> CommandsNotTranslated = new Dictionary<string, string>
     {
-        ["CardCmd.AutoPlay"] = "a card in hand or a pile played by the card: that play isn't followed",
         ["PotionCmd.TryToProcure"] = "a potion procured: what reacts to it (AfterPotionProcured) isn't followed",
         ["PlayerCmd.GainGold"] = "gold gained: what reacts to it (AfterGoldGained) isn't followed",
     };
@@ -450,6 +450,8 @@ public static partial class SimAdapter
                 return AddsFrom(found, play);
             case ("CardPileCmd", "Shuffle" or "ShuffleIfNecessary"):
                 return ShuffleFrom(found, play);
+            case ("CardCmd", "AutoPlay"):
+                return AutoPlayCardsFrom(found, play);
             case ("CardPileCmd", "AutoPlayFromDrawPile"):
                 return (AutoPlayFrom(found, play), null);
             // The cards of yours in some piles upgraded: what the simulator reads of them later (UpgradeCardsAction). Its tests of the card its loop
@@ -681,6 +683,8 @@ public static partial class SimAdapter
     {
         if (program.All().OfType<CommandStep>().Any(other => other.Command.FullName == "CardPileCmd.AutoPlayFromDrawPile" && other.Inner.Contains(command)))
             return (UpgradeTarget.AutoPlayed, UpgradedPiles.None);
+        // The card its loop then auto-plays, upgraded first (Knife Trap+'s Shivs): AutoPlayCardsAction.Upgraded.
+        if (UpgradedByAutoPlay(command, program) != null) return (UpgradeTarget.AutoPlayed, UpgradedPiles.None);
         if (UpgradedValue(command, program) is not { } upgraded) return null;
         var parts = upgraded.Parts().ToList();
         if (parts.Any(part => part is ResultValue { Command: var picked } && picked.StartsWith("CardSelectCmd.", StringComparison.Ordinal))) return (UpgradeTarget.Picked, UpgradedPiles.None);
@@ -703,6 +707,158 @@ public static partial class SimAdapter
             };
         if (piles != UpgradedPiles.None) return (UpgradeTarget.Piles, piles);
         return null;
+    }
+
+    // ---- cards in your piles a card plays (CardCmd.AutoPlay, decision #360)
+
+    /// <summary>
+    /// What a card's CardCmd.AutoPlay plays, read from its card argument (decision #360): the pile its code takes from (GetPile of yours, your
+    /// PlayerCombatState.ExhaustPile), the filter its Where keeps (null: every card), the way it takes them (every card of the list a loop goes over, a
+    /// random one as the step runs, or the list shuffled and its first so many), the filter it falls back on when the first finds none (Uproar's), and
+    /// whom each plays at (a random enemy: no target, or a roll over the hittable enemies; or the play's target).
+    /// </summary>
+    internal sealed record CardAutoPlayRead(SimPile Pile, AutoPlayWay Way, LambdaValue? Filter, LambdaValue? Fallback, ProgramValue? Count, bool AtTarget);
+
+    /// <summary>Why a card's CardCmd.AutoPlay isn't read (CardAutoPlayOf null): a card you pick, then played (decision #188 keeps its `?`), or an argument not read.</summary>
+    internal static string AutoPlayNotRead(CommandStep command) =>
+        ValueAt(command, 1)?.Parts().Any(part => part is ResultValue { Command: var picked } && picked.StartsWith("CardSelectCmd.", StringComparison.Ordinal)) == true
+            ? "a card you pick, then played: what it does is your pick's (decision #188 keeps its ?)"
+            : $"a card it plays that its code names in a way the simulator doesn't read ({ValueAt(command, 1)})";
+
+    /// <summary>
+    /// The CardCmd.AutoPlay of a card's code (CardAutoPlayRead), or null when its card argument isn't a card of your piles its code takes as the
+    /// simulator follows: Each (a loop over ToList(Where(pile, filter))), Random (FirstOrDefault(StableShuffle(ToList(Where(pile, filter))))), or
+    /// Shuffled (a loop over Take(StableShuffle(...), count)). Pure on the step's code.
+    /// </summary>
+    internal static CardAutoPlayRead? CardAutoPlayOf(CommandStep command, ModelProgram program)
+    {
+        if (command.Command.FullName != "CardCmd.AutoPlay" || ValueAt(command, 1) is not { } card) return null;
+        var atTarget = ValueAt(command, 2) switch
+        {
+            NullValue => (bool?)false,
+            QueryValue { Name: "NextItem", Arguments: [var among] } when Unstored(among) is QueryValue { Name: "HittableEnemies" } => false,
+            var given when given?.ToString() == "cardPlay.Target" => true,
+            _ => null,
+        };
+        if (atTarget is not { } aimed) return null;
+        if (card is NamedValue { Name: "each" })
+        {
+            if (program.All().OfType<LoopStep>().LastOrDefault(loop => loop.Items != null && new ModelProgram("", loop.Body).All().Contains(command))?.Items is not { } items) return null;
+            if (Listed(items) is not { } list) return null;
+            if (Unlisted(items) is QueryValue { Name: "Take", Arguments: [var shuffled, var count] } && Shuffled(shuffled) is { } inner && PileOf(inner) is { } shuffledPile)
+                return new CardAutoPlayRead(shuffledPile.Pile, AutoPlayWay.Shuffled, shuffledPile.Filter, Fallback: null, count, aimed);
+            return PileOf(list) is { } eachPile ? new CardAutoPlayRead(eachPile.Pile, AutoPlayWay.Each, eachPile.Filter, Fallback: null, Count: null, aimed) : null;
+        }
+        // One at random, or its fallback's when it finds none (Uproar: {found: it; not found: FirstOrDefault(StableShuffle(any Attack))}).
+        if (card is WaysValue { Ways: [(_, var first), (_, var second)] } && RandomOne(first) is { } main && RandomOne(second) is { } fallback && main.Pile == fallback.Pile)
+            return new CardAutoPlayRead(main.Pile, AutoPlayWay.Random, main.Filter, fallback.Filter ?? Always, Count: null, aimed);
+        return RandomOne(card) is { } random ? new CardAutoPlayRead(random.Pile, AutoPlayWay.Random, random.Filter, Fallback: null, Count: null, aimed) : null;
+    }
+
+    /// <summary>A filter every card passes (a fallback with no Where of its own).</summary>
+    private static readonly LambdaValue Always = new("c", ProgramCondition.Always);
+
+    /// <summary>The list a loop goes over, as it was made (a ToList of it, a local holding it).</summary>
+    private static ProgramValue? Listed(ProgramValue? value) => Unlisted(value) is { } list && (list is QueryValue { Name: "Where" or "Cards" or "Take" or "ExhaustPile" }) ? list : null;
+
+    private static ProgramValue? Unlisted(ProgramValue? value) => StepValues.Unstored(value) switch
+    {
+        QueryValue { Name: "ToList" or "ToArray" or "AsEnumerable", Arguments: [var inner] } => Unlisted(inner),
+        var other => other,
+    };
+
+    /// <summary>A shuffle of a list (StableShuffle(list, rng)): the list.</summary>
+    private static ProgramValue? Shuffled(ProgramValue? value) => Unlisted(value) is QueryValue { Name: "StableShuffle", Arguments: [var list, ..] } ? Unlisted(list) : null;
+
+    /// <summary>One card at random of a pile (FirstOrDefault(StableShuffle(ToList(Where(pile, filter))))): its pile and filter.</summary>
+    private static (SimPile Pile, LambdaValue? Filter)? RandomOne(ProgramValue value) =>
+        Unstored(value) is QueryValue { Name: "FirstOrDefault", Arguments: [var shuffled] } && Shuffled(shuffled) is { } list ? PileOf(list) : null;
+
+    /// <summary>The pile of yours a list holds the cards of (GetPile(pile, you).Cards, your PlayerCombatState.ExhaustPile.Cards), and its Where filter.</summary>
+    private static (SimPile Pile, LambdaValue? Filter)? PileOf(ProgramValue list)
+    {
+        LambdaValue? filter = null;
+        if (Unlisted(list) is QueryValue { Name: "Where", Arguments: [var source, LambdaValue lambda] })
+        {
+            filter = lambda;
+            list = source;
+        }
+        // A pile kept in a local first (Beat Down's, Cho Chorus' `CardPile pile = PileType.X.GetPile(Owner)`) is the pile.
+        var cards = Unlisted(list) is QueryValue { Name: "Cards", Of: var held } query ? query with { Of = StepValues.Unstored(held) } : Unlisted(list);
+        SimPile? pile = cards switch
+        {
+            QueryValue { Name: "Cards", Of: QueryValue { Name: "GetPile", Arguments: [ConstantValue { Value: var type }, var whose] } } when IsOwner(whose) => (PileType)type switch
+            {
+                PileType.Hand => SimPile.Hand,
+                PileType.Draw => SimPile.Draw,
+                PileType.Discard => SimPile.Discard,
+                PileType.Exhaust => SimPile.Exhaust,
+                _ => null,
+            },
+            QueryValue { Name: "Cards", Of: QueryValue { Name: "ExhaustPile", Of: QueryValue { Name: "PlayerCombatState", Of: var whose } } } when IsOwner(whose) => SimPile.Exhaust,
+            _ => null,
+        };
+        return pile is { } found ? (found, filter) : null;
+    }
+
+    /// <summary>
+    /// The CardCmd.AutoPlay a CardCmd.Upgrade's card is upgraded for: one in the same loop playing the loop's card after it (Knife Trap+'s Shivs, upgraded
+    /// before each plays). Null for any other upgrade.
+    /// </summary>
+    internal static CommandStep? UpgradedByAutoPlay(CommandStep upgrade, ModelProgram program)
+    {
+        if (upgrade.Command.FullName != "CardCmd.Upgrade" || ValueAt(upgrade, 0) is not NamedValue { Name: "each" }) return null;
+        var loop = program.All().OfType<LoopStep>().LastOrDefault(candidate => candidate.Items != null && candidate.Body.Contains(upgrade));
+        return loop?.Body.SkipWhile(step => !ReferenceEquals(step, upgrade)).OfType<CommandStep>()
+            .FirstOrDefault(step => step.Command.FullName == "CardCmd.AutoPlay" && ValueAt(step, 1) is NamedValue { Name: "each" });
+    }
+
+    /// <summary>
+    /// The card's auto-plays of cards in your piles, each read with its key (AutoPlayCardsAction.Key: the card's class and the command's offset), the ones
+    /// a step plays the same cards at the same way as another's left out (Beat Down's two AutoPlays, one for a card aimed at an enemy and one for the
+    /// rest: both at a random enemy), and whether its play upgrades each first (an upgrade step for it, on its own condition).
+    /// </summary>
+    internal static IReadOnlyList<(string Key, CardAutoPlayRead Read, CommandStep Command, CommandStep? Upgrade)> CardAutoPlaysOf(Type cardType) =>
+        AutoPlayReads.GetOrAdd(cardType, type =>
+        {
+            var program = CardPrograms.Of(type);
+            var reads = new List<(string, CardAutoPlayRead, CommandStep, CommandStep?)>();
+            foreach (var command in program.All().OfType<CommandStep>().Where(step => step.Command.FullName == "CardCmd.AutoPlay"))
+            {
+                if (CardAutoPlayOf(command, program) is not { } read || reads.Any(other => other.Item2 == read && Equals(ValueAt(other.Item3, 1), ValueAt(command, 1)))) continue;
+                var upgrade = program.All().OfType<CommandStep>().FirstOrDefault(step => ReferenceEquals(UpgradedByAutoPlay(step, program), command));
+                reads.Add(($"{type.Name}@{command.Offset:X4}", read, command, upgrade));
+            }
+            return reads;
+        });
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlyList<(string, CardAutoPlayRead, CommandStep, CommandStep?)>> AutoPlayReads = new();
+
+    /// <summary>
+    /// CardCmd.AutoPlay of cards in your piles (decision #360): AutoPlayCardsAction by its read (CardAutoPlaysOf), its count the rounds of its loops for a
+    /// random one, the most of a shuffled list on the board; its tests of the card its loop or its roll is at, of the fight's end and of whom the card
+    /// aims at are the action's own. A step that plays the same cards as another already read (Beat Down's second) is that one. Unknown, with why, for a
+    /// card you pick then played (decision #188), an argument not read, a potion's, or a teammate's.
+    /// </summary>
+    private static (List<SimAction> Actions, ProgramCondition? Guard) AutoPlayCardsFrom(CardEffects.Found found, StepPlay play)
+    {
+        var command = found.Command;
+        if (play.Card == null || play.Owner != Who.You) return (Unknown(play, "CardCmd.AutoPlay of a card in a pile that isn't yours: not followed"), null);
+        if (CardAutoPlayOf(command, play.Program) is not { } read) return (Unknown(play, "CardCmd.AutoPlay: " + AutoPlayNotRead(command)), null);
+        var reads = CardAutoPlaysOf(play.Type);
+        if (reads.FirstOrDefault(entry => ReferenceEquals(entry.Command, command)) is not { Key: { } key } entry)
+            return (new List<SimAction>(), null); // the same cards as another step's, read there
+        var count = read.Way switch
+        {
+            AutoPlayWay.Random => RoundsOf(found, play),
+            AutoPlayWay.Shuffled => read.Count is { } most && ProgramEvaluator.Number(most, play.Board, play.Program) is { } number ? (int)number : -1,
+            _ => 0,
+        };
+        if (count < 0) return (Unknown(play, $"CardCmd.AutoPlay: how many it plays ({read.Count}) isn't read on this board"), null);
+        var upgraded = entry.Upgrade is { } upgrade && ProgramEvaluator.Holds(upgrade.Condition ?? ProgramCondition.Always, play.Board, play.Program) == true;
+        var action = new AutoPlayCardsAction(key, read.Pile, read.Way, count) { AtTarget = read.AtTarget, Upgraded = upgraded, Fallback = read.Fallback != null ? key + "/else" : null };
+        return (new List<SimAction> { action }, Without(found.Condition, literal => literal.Test.Parts().Any(part =>
+            part is NamedValue { Name: "each" } or QueryValue { Name: "StableShuffle" or "IsOverOrEnding" or "TargetType" })));
     }
 
     /// <summary>The value names a card the play makes: a maker's query (CreateCard, a card factory, Soul.Create) or a making command's result (Shiv.CreateInHand, a transform).</summary>

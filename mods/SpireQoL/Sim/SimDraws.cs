@@ -63,6 +63,11 @@ public sealed record SimDrawCard(string Key)
     /// Hermit's Curse), while a card in your hand takes that way (decision #189); null otherwise.
     /// </summary>
     public IReadOnlyList<string>? TakenBy { get; init; }
+    /// <summary>
+    /// The auto-plays of cards in your piles whose filter lets it through (AutoPlayCardsAction.Key; the key and "?" when the filter can't be asked of it),
+    /// while a card on the board auto-plays cards from a pile this one can be in (decision #360); null otherwise.
+    /// </summary>
+    public IReadOnlyList<string>? AutoPlayedBy { get; init; }
 
     /// <summary>
     /// Nothing about it is followed (every field but its key at its default: the adapter's plain profile): moving it changes only a

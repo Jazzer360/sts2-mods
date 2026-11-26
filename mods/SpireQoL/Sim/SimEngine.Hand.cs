@@ -23,6 +23,8 @@ public static partial class SimEngine
         }
         if (piles.HasFlag(UpgradedPiles.Exhaust) && simPlayer.ExhaustAutoPlays.Any(play => play.Card?.Card.Upgradable != false))
             state.Unmodelled ??= $"{source} upgrades your exhaust pile, and a card there that can be upgraded plays itself as the turn ends";
+        // The exhaust pile's cards a card auto-plays (decision #360): one that can be upgraded isn't known once played from there.
+        if (piles.HasFlag(UpgradedPiles.Exhaust) && simPlayer.PileAutoPlays is { ExhaustCards: not null, ExhaustUpgraded: false } read) state.MutablePlayer(player).PileAutoPlays = read with { ExhaustUpgraded = true };
     }
 
     /// <summary>

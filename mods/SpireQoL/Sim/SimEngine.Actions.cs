@@ -20,6 +20,9 @@ public static partial class SimEngine
                 player.PlayingFromHand++;
                 if (player.ExhaustingInHand.Any(card => card.HandCard == cardPlayAction.HandCard))
                     player.ExhaustingInHand = player.ExhaustingInHand.Where(card => card.HandCard != cardPlayAction.HandCard).ToList();
+                // Nor can an auto-play from the hand pick it (decision #360: The Fool's, Cho Chorus'): the game moved it to the play pile.
+                if (player.AutoHand?.Any(card => card.Id == cardPlayAction.HandCard) == true)
+                    player.AutoHand = player.AutoHand.Where(card => card.Id != cardPlayAction.HandCard).ToList();
             });
         // Each filtered take's cards in the hand as the card play starts (decision #189): its plays follow them from here.
         var matching = NamedCounts.Empty;
@@ -371,7 +374,7 @@ public static partial class SimEngine
             // The cards it takes are the ones that change nothing the simulation follows (decision #167: a choice inside the play is
             // your later decision): there are enough of them unless the cards it follows in your hand (acting at the end of your turn,
             // acting when exhausted, Ethereal, what Stampede or Simpleton could pick) may be all that's left to take.
-            var picks = player.AutoHand == null ? 0 : player.Simpleton > 0 ? player.AutoHand.Count : player.AutoHand.Count(handCard => handCard.IsAttack);
+            var picks = player.AutoHand == null ? 0 : player.Simpleton > 0 || player.PileAutoPlays?.FromHand == true ? player.AutoHand.Count : player.AutoHand.Count(handCard => handCard.IsAttack);
             var followed = player.TurnEndCards.Count + player.ExhaustingInHand.Count + player.Fading + picks;
             if (inHand - followed < Math.Min(leave.Count, inHand))
                 state.Unmodelled ??= "it takes cards from your hand, and the cards the simulation follows there may be all it can take";

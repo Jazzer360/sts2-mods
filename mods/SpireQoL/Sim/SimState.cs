@@ -668,6 +668,11 @@ public sealed class SimPlayer
     /// <summary>Howl from Beyond copies in your exhaust pile: each auto-plays (its play, one per copy).</summary>
     public List<SimPlay> ExhaustAutoPlays = new();
     /// <summary>
+    /// What the board read for its cards' auto-plays of cards in their piles (decision #360: The Fool, Cho Chorus, Uproar, Beat Down, Eidolon, Knife Trap),
+    /// and where such an auto-play under way is; null with none (one reference, so a copy of every other player's state stays its size).
+    /// </summary>
+    public SimPileAutoPlays? PileAutoPlays;
+    /// <summary>
     /// I Am Invincible: its block when it's certainly the top of your draw pile (every card there is a copy of it: the
     /// order stays hidden otherwise); 0 = not certain. It auto-plays from the top (AutoPlayFromDrawPile).
     /// </summary>
@@ -713,6 +718,7 @@ public sealed class SimPlayer
         if (ExhaustingInHand.Count == 1) { key.Add(ExhaustingInHand[0].Energy); key.Add((int)ExhaustingInHand[0].Type); }
         else if (ExhaustingInHand.Count > 1)
             foreach (var exhausting in ExhaustingInHand.OrderBy(card => card.Energy).ThenBy(card => card.Type)) { key.Add(exhausting.Energy); key.Add((int)exhausting.Type); }
+        PileAutoPlays?.Hash(ref key);
         key.Add(AutoHand?.Count ?? -1);
         // By what each card is, in any order: branches that picked identical copies hold the same hand, and merge.
         if (AutoHand != null) foreach (var cardKey in AutoHand.Select(handCard => handCard.Key).OrderBy(cardKey => cardKey.Digest)) key.Add(cardKey.GetHashCode());
@@ -736,6 +742,52 @@ public sealed class SimPlayer
         _orbsShared = true;
         player._orbsShared = true;
         return player;
+    }
+}
+
+/// <summary>
+/// What a board read for its cards' auto-plays of cards in a player's piles (SimPlayer.PileAutoPlays, decision #360), and the state of one under way.
+/// Never changed in place (shared between copies of the state).
+/// </summary>
+/// <param name="Keys">
+/// The auto-plays the board read the cards for (AutoPlayCardsAction.Key): each such card in the hand has its filters asked of every card where it takes
+/// from, and their plays built. An auto-play of that kind the board didn't read for (a card brings it that wasn't in the hand) is unknown.
+/// </param>
+public sealed record SimPileAutoPlays(IReadOnlyList<string> Keys)
+{
+    /// <summary>A card on the board auto-plays cards from the hand (The Fool, Cho Chorus): every playable card there is followed in AutoHand.</summary>
+    public bool FromHand { get; init; }
+    /// <summary>
+    /// The exhaust pile's cards in its order, by profile, while a card on the board auto-plays cards from it (Eidolon, Knife Trap); null otherwise. Read
+    /// at the board: a card exhausted in the simulation joins only SimPlayer.ExhaustPile's count, so the list is complete while its count is that.
+    /// </summary>
+    public IReadOnlyList<SimDrawCard>? ExhaustCards { get; init; }
+    /// <summary>Cards in the exhaust pile were upgraded in this simulation (UpgradeCardsAction): one of ExhaustCards that could be isn't known then.</summary>
+    public bool ExhaustUpgraded { get; init; }
+    /// <summary>The cards an auto-play of a list (AutoPlayWay.Each, Shuffled) listed as it began and hasn't played yet (SimEngine.RunAutoPlayCards); null otherwise.</summary>
+    public SimListedCards? Listed { get; init; }
+
+    internal void Hash(ref BranchKey key)
+    {
+        key.Add(ExhaustUpgraded ? 1 : 0);
+        if (ExhaustCards != null) { key.Add(ExhaustCards.Count); foreach (var card in ExhaustCards) key.Add(card.Key.GetHashCode()); }
+        Listed?.Hash(ref key);
+    }
+}
+
+/// <summary>
+/// The cards an auto-play of a list (Cho Chorus' Wah and Ki cards, Eidolon's and Knife Trap's from the exhaust pile, Beat Down's Attacks from the discard
+/// pile) listed as it began and hasn't played yet (SimPlayer.Listed): the hand cards by id, in order, or the pile's cards by profile (in order for a list,
+/// as a set for a shuffled one), and how many it still plays.
+/// </summary>
+public sealed record SimListedCards(IReadOnlyList<int> HandCards, IReadOnlyList<SimDrawGroup> PileCards, int Left)
+{
+    internal void Hash(ref BranchKey key)
+    {
+        key.Add(Left);
+        key.Add(HandCards.Count);
+        foreach (var id in HandCards) key.Add(id);
+        foreach (var group in PileCards) { key.Add(group.Card.Key.GetHashCode()); key.Add(group.Count); }
     }
 }
 
@@ -789,7 +841,7 @@ public sealed class SimHandCard
     /// <remarks>Its own plays become the copy's (SimPlay.HandCard): played, it's the copy that leaves your hand.</remarks>
     public SimHandCard CopyWithId(int id) => new()
     {
-        Id = id, Name = Name, IsAttack = IsAttack, Cost = Cost, LocalCost = LocalCost, Card = Card, _key = Key,
+        Id = id, Name = Name, IsAttack = IsAttack, Cost = Cost, LocalCost = LocalCost, Card = Card, AutoPlayedBy = AutoPlayedBy, _key = Key,
         Plays = Id == 0 ? Plays : Plays.Select(play => play.HandCard == Id ? play.AsHandCard(id) : play).ToList(),
     };
 
@@ -797,7 +849,7 @@ public sealed class SimHandCard
     /// This card made free this turn (CardModel.SetToFreeThisTurn: EnergyCost.SetThisTurnOrUntilPlayed(0), a local modifier of 0 after its others):
     /// its cost before global modifiers 0, the listeners' passes still on it (SimEngine.HandCost), the rest the same (its key its own).
     /// </summary>
-    public SimHandCard FreeCopy() => new() { Id = Id, Name = Name, IsAttack = IsAttack, Cost = 0, LocalCost = LocalCost == null ? null : 0, Card = Card, Plays = Plays };
+    public SimHandCard FreeCopy() => new() { Id = Id, Name = Name, IsAttack = IsAttack, Cost = 0, LocalCost = LocalCost == null ? null : 0, Card = Card, AutoPlayedBy = AutoPlayedBy, Plays = Plays };
 
     public string Name = "";
     public bool IsAttack;
@@ -819,6 +871,12 @@ public sealed class SimHandCard
     /// predicted past it.
     /// </summary>
     public List<SimPlay> Plays = new();
+    /// <summary>
+    /// The auto-plays of hand cards whose filter lets it through (AutoPlayCardsAction.Key; the key and "?" when the filter can't be asked of it), while a
+    /// card on the board auto-plays cards from your hand (decision #360: The Fool, Cho Chorus); null otherwise.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? AutoPlayedBy;
 }
 
 /// <summary>One branch of the simulation: the state plus what happened so far.</summary>
@@ -1238,6 +1296,7 @@ public sealed class SimState
             player.Cards = CardSet.Empty;
             player.Stampede = player.Simpleton = 0;
             player.AutoHand = null;
+            player.PileAutoPlays = null;
         }
         return shown;
     }

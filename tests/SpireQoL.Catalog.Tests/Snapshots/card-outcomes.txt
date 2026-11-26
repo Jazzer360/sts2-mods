@@ -244,12 +244,12 @@ BeamCell [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=197/0 enemy1=30/0 []
 BeamCell [Replayed] 1 you=80/0 e3 h3 d6/3 enemy0=193/0 []
 BeamCell [Teammate] 1 you=80/0 e3 h3 d6/3 mate0=70/0 e3 h2 enemy0=197/0 []
 BeamCell [Alone] 1 you=80/0 e3 h0 d6/3 enemy0=197/0 []
-BeatDown [Standard] 1 you=80/0 e0 h3 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-BeatDown [Upgraded] 1 you=80/0 e0 h3 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-BeatDown [Crowded] 1 you=80/0 e0 h9 d0/3 enemy0=200/0 enemy1=30/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-BeatDown [Replayed] 1 you=80/0 e0 h3 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-BeatDown [Teammate] 1 you=80/0 e0 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-BeatDown [Alone] 1 you=80/0 e0 h0 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
+BeatDown [Standard] 1 you=80/0 e-2 h3 d6/3 enemy0=188/0 []
+BeatDown [Upgraded] 1 you=80/0 e-2 h3 d6/3 enemy0=188/0 []
+BeatDown [Crowded] 0.25 you=80/0 e-2 h9 d0/3 enemy0=188/0 enemy1=30/0 [] | 0.5 you=80/0 e-2 h9 d0/3 enemy0=194/0 enemy1=24/0 [] | 0.25 you=80/0 e-2 h9 d0/3 enemy0=200/0 enemy1=18/0 []
+BeatDown [Replayed] 1 you=80/0 e-4 h3 d6/3 enemy0=176/0 []
+BeatDown [Teammate] 1 you=80/0 e-2 h3 d6/3 mate0=70/0 e3 h2 enemy0=188/0 []
+BeatDown [Alone] 1 you=80/0 e-2 h0 d6/3 enemy0=188/0 []
 BeatIntoShape [Standard] 1 you=80/0 e2 h4 d6/3 enemy0=195/0 [Generated1]
 BeatIntoShape [Upgraded] 1 you=80/0 e2 h4 d6/3 enemy0=193/0 [Generated1]
 BeatIntoShape [Crowded] 1 you=80/0 e2 h10 d0/3 enemy0=195/0 enemy1=30/0 [Generated1]
@@ -592,12 +592,12 @@ Cascade [Crowded] 0.0833 you=80/5 e-3 h9 d0/3 enemy0=188/0 enemy1=30/0 [Shuffled
 Cascade [Replayed] 0.5 you=80/15 e-6 h3 d0/9 enemy0=182/0 [] | 0.45 you=80/15 e-6 h3 d0/9 enemy0=182/0 [] | 0.05 you=80/15 e-6 h3 d0/9 enemy0=182/0 []
 Cascade [Teammate] 0.05 you=80/15 e-3 h3 d3/6 mate0=70/0 e3 h2 enemy0=200/0 [] | 0.3 you=80/10 e-3 h3 d3/6 mate0=70/0 e3 h2 enemy0=194/0 [] | 0.15 you=80/5 e-3 h3 d3/6 mate0=70/0 e3 h2 enemy0=188/0 [] | 0.15 you=80/10 e-3 h3 d3/6 mate0=70/0 e3 h2 enemy0=194/0 [] | 0.3 you=80/5 e-3 h3 d3/6 mate0=70/0 e3 h2 enemy0=188/0 [] | 0.05 you=80/0 e-3 h3 d3/6 mate0=70/0 e3 h2 enemy0=182/0 []
 Cascade [Alone] 0.05 you=80/15 e-3 h0 d3/6 enemy0=200/0 [] | 0.3 you=80/10 e-3 h0 d3/6 enemy0=194/0 [] | 0.15 you=80/5 e-3 h0 d3/6 enemy0=188/0 [] | 0.15 you=80/10 e-3 h0 d3/6 enemy0=194/0 [] | 0.3 you=80/5 e-3 h0 d3/6 enemy0=188/0 [] | 0.05 you=80/0 e-3 h0 d3/6 enemy0=182/0 []
-Catastrophe [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Catastrophe [Upgraded] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Catastrophe [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=200/0 enemy1=30/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Catastrophe [Replayed] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Catastrophe [Teammate] 1 you=80/0 e1 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Catastrophe [Alone] 1 you=80/0 e1 h0 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
+Catastrophe [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [] ?Catastrophe: CardCmd.AutoPlay: a card it plays that its code names in a way the simulator doesn't read (?local)
+Catastrophe [Upgraded] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [] ?Catastrophe: CardCmd.AutoPlay: a card it plays that its code names in a way the simulator doesn't read (?local)
+Catastrophe [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=200/0 enemy1=30/0 [] ?Catastrophe: CardCmd.AutoPlay: a card it plays that its code names in a way the simulator doesn't read (?local)
+Catastrophe [Replayed] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [] ?Catastrophe: CardCmd.AutoPlay: a card it plays that its code names in a way the simulator doesn't read (?local)
+Catastrophe [Teammate] 1 you=80/0 e1 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [] ?Catastrophe: CardCmd.AutoPlay: a card it plays that its code names in a way the simulator doesn't read (?local)
+Catastrophe [Alone] 1 you=80/0 e1 h0 d6/3 enemy0=200/0 [] ?Catastrophe: CardCmd.AutoPlay: a card it plays that its code names in a way the simulator doesn't read (?local)
 CelestialMight [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=182/0 []
 CelestialMight [Upgraded] 1 you=80/0 e1 h3 d6/3 enemy0=176/0 []
 CelestialMight [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=182/0 enemy1=30/0 []
@@ -640,12 +640,12 @@ ChoBarbs [Crowded] 1 you=80/8 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 []
 ChoBarbs [Replayed] 1 you=80/16 e2 h3 d6/3 enemy0=200/0 []
 ChoBarbs [Teammate] 1 you=80/8 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 []
 ChoBarbs [Alone] 1 you=80/8 e2 h0 d6/3 enemy0=200/0 []
-ChoChorus [Standard] 1 you=80/14 e0 h3 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-ChoChorus [Upgraded] 1 you=80/18 e0 h3 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-ChoChorus [Crowded] 1 you=80/14 e0 h9 d0/3 enemy0=200/0 enemy1=30/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-ChoChorus [Replayed] 1 you=80/28 e0 h3 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-ChoChorus [Teammate] 1 you=80/14 e0 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-ChoChorus [Alone] 1 you=80/14 e0 h0 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
+ChoChorus [Standard] 1 you=80/14 e0 h3 d6/3 enemy0=200/0 []
+ChoChorus [Upgraded] 1 you=80/18 e0 h3 d6/3 enemy0=200/0 []
+ChoChorus [Crowded] 1 you=80/14 e0 h9 d0/3 enemy0=200/0 enemy1=30/0 []
+ChoChorus [Replayed] 1 you=80/28 e0 h3 d6/3 enemy0=200/0 []
+ChoChorus [Teammate] 1 you=80/14 e0 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 []
+ChoChorus [Alone] 1 you=80/14 e0 h0 d6/3 enemy0=200/0 []
 ChoFirm [Standard] 1 you=80/5 e2 h3 d6/3 enemy0=200/0 []
 ChoFirm [Upgraded] 1 you=80/7 e2 h3 d6/3 enemy0=200/0 []
 ChoFirm [Crowded] 1 you=80/5 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 []
@@ -988,12 +988,12 @@ Decay [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=200/0 enemy1=30/0 []
 Decay [Replayed] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 []
 Decay [Teammate] 1 you=80/0 e3 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 []
 Decay [Alone] 1 you=80/0 e3 h0 d6/3 enemy0=200/0 []
-DecisionsDecisions [Standard] 1 you=80/0 e3 h6 d3/3 enemy0=200/0 [Drawn3 Exhausted1 StarsSpent1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-DecisionsDecisions [Upgraded] 1 you=80/0 e3 h8 d1/3 enemy0=200/0 [Drawn5 Exhausted1 StarsSpent1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-DecisionsDecisions [Crowded] 1 you=80/0 e3 h10 d2/0 enemy0=200/0 enemy1=30/0 [Drawn1 Exhausted1 StarsSpent1 Shuffled1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-DecisionsDecisions [Replayed] 1 you=80/0 e3 h9 d0/3 enemy0=200/0 [Drawn3 Exhausted1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-DecisionsDecisions [Teammate] 1 you=80/0 e3 h6 d3/3 mate0=70/0 e3 h2 enemy0=200/0 [Drawn3 Exhausted1 StarsSpent1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-DecisionsDecisions [Alone] 1 you=80/0 e3 h3 d3/3 enemy0=200/0 [Drawn3 Exhausted1 StarsSpent1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
+DecisionsDecisions [Standard] 1 you=80/0 e3 h6 d3/3 enemy0=200/0 [Drawn3 Exhausted1 StarsSpent1] ?DecisionsDecisions: CardCmd.AutoPlay: a card you pick, then played: what it does is your pick's (decision #188 keeps its ?)
+DecisionsDecisions [Upgraded] 1 you=80/0 e3 h8 d1/3 enemy0=200/0 [Drawn5 Exhausted1 StarsSpent1] ?DecisionsDecisions: CardCmd.AutoPlay: a card you pick, then played: what it does is your pick's (decision #188 keeps its ?)
+DecisionsDecisions [Crowded] 1 you=80/0 e3 h10 d2/0 enemy0=200/0 enemy1=30/0 [Drawn1 Exhausted1 StarsSpent1 Shuffled1] ?DecisionsDecisions: CardCmd.AutoPlay: a card you pick, then played: what it does is your pick's (decision #188 keeps its ?)
+DecisionsDecisions [Replayed] 1 you=80/0 e3 h9 d0/3 enemy0=200/0 [Drawn3 Exhausted1] ?DecisionsDecisions: CardCmd.AutoPlay: a card you pick, then played: what it does is your pick's (decision #188 keeps its ?)
+DecisionsDecisions [Teammate] 1 you=80/0 e3 h6 d3/3 mate0=70/0 e3 h2 enemy0=200/0 [Drawn3 Exhausted1 StarsSpent1] ?DecisionsDecisions: CardCmd.AutoPlay: a card you pick, then played: what it does is your pick's (decision #188 keeps its ?)
+DecisionsDecisions [Alone] 1 you=80/0 e3 h3 d3/3 enemy0=200/0 [Drawn3 Exhausted1 StarsSpent1] ?DecisionsDecisions: CardCmd.AutoPlay: a card you pick, then played: what it does is your pick's (decision #188 keeps its ?)
 DeepStretch [Standard] 1 you=80/0 e2 h4 d5/3 enemy0=200/0 [Drawn1]
 DeepStretch [Upgraded] 1 you=80/0 e2 h4 d5/3 enemy0=200/0 [Drawn1]
 DeepStretch [Crowded] 1 you=80/0 e2 h10 d2/0 enemy0=200/0 enemy1=30/0 [Drawn1 Shuffled1]
@@ -1240,12 +1240,12 @@ Ecstasy [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=200/0 enemy1=30/0 []
 Ecstasy [Replayed] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 []
 Ecstasy [Teammate] 1 you=80/0 e1 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 []
 Ecstasy [Alone] 1 you=80/0 e1 h0 d6/3 enemy0=200/0 []
-Eidolon [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [Exhausted1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Eidolon [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Exhausted1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Eidolon [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=200/0 enemy1=30/0 [Exhausted1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Eidolon [Replayed] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [Exhausted1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Eidolon [Teammate] 1 you=80/0 e1 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Eidolon [Alone] 1 you=80/0 e1 h0 d6/3 enemy0=200/0 [Exhausted1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
+Eidolon [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [Exhausted1]
+Eidolon [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Exhausted1]
+Eidolon [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=200/0 enemy1=30/0 [Exhausted1]
+Eidolon [Replayed] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [Exhausted1]
+Eidolon [Teammate] 1 you=80/0 e1 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted1]
+Eidolon [Alone] 1 you=80/0 e1 h0 d6/3 enemy0=200/0 [Exhausted1]
 Encore [Standard] 1 you=80/0 e4 h5 d4/3 enemy0=200/0 [Drawn2 EnergyGained1]
 Encore [Upgraded] 1 you=80/0 e4 h6 d3/3 enemy0=200/0 [Drawn3 EnergyGained1]
 Encore [Crowded] 1 you=80/0 e4 h10 d2/0 enemy0=200/0 enemy1=30/0 [Drawn1 Shuffled1 EnergyGained1]
@@ -2122,12 +2122,12 @@ KinglyPunch [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=192/0 enemy1=30/0 []
 KinglyPunch [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=184/0 []
 KinglyPunch [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=192/0 []
 KinglyPunch [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=192/0 []
-KnifeTrap [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-KnifeTrap [Upgraded] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-KnifeTrap [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=200/0 enemy1=30/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-KnifeTrap [Replayed] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-KnifeTrap [Teammate] 1 you=80/0 e1 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-KnifeTrap [Alone] 1 you=80/0 e1 h0 d6/3 enemy0=200/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
+KnifeTrap [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 []
+KnifeTrap [Upgraded] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 []
+KnifeTrap [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=200/0 enemy1=30/0 []
+KnifeTrap [Replayed] 1 you=80/0 e1 h3 d6/3 enemy0=200/0 []
+KnifeTrap [Teammate] 1 you=80/0 e1 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 []
+KnifeTrap [Alone] 1 you=80/0 e1 h0 d6/3 enemy0=200/0 []
 Knockdown [Standard] 1 you=80/0 e0 h3 d6/3 enemy0=190/0 []
 Knockdown [Upgraded] 1 you=80/0 e0 h3 d6/3 enemy0=186/0 []
 Knockdown [Crowded] 1 you=80/0 e0 h9 d0/3 enemy0=190/0 enemy1=30/0 []
@@ -3784,12 +3784,12 @@ TheEmpress [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=200/0 enemy1=30/0 [Exhausted1]
 TheEmpress [Replayed] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 [Exhausted1]
 TheEmpress [Teammate] 1 you=80/0 e3 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted1]
 TheEmpress [Alone] 1 you=80/0 e3 h0 d6/3 enemy0=200/0 [Exhausted1]
-TheFool [Standard] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 [Exhausted1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-TheFool [Upgraded] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 [Exhausted1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-TheFool [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=200/0 enemy1=30/0 [Exhausted1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-TheFool [Replayed] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 [Exhausted1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-TheFool [Teammate] 1 you=80/0 e3 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-TheFool [Alone] 1 you=80/0 e3 h0 d6/3 enemy0=200/0 [Exhausted1] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
+TheFool [Standard] 0.5 you=80/5 e1 h1 d6/3 enemy0=194/0 [Exhausted1] | 0.5 you=80/5 e1 h1 d6/3 enemy0=194/0 [Exhausted1]
+TheFool [Upgraded] 0.5 you=80/5 e1 h1 d6/3 enemy0=194/0 [Exhausted1] | 0.5 you=80/5 e1 h1 d6/3 enemy0=194/0 [Exhausted1]
+TheFool [Crowded] 0.0089 you=80/5 e1 h7 d0/3 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.006 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.003 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.006 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.003 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=188/0 enemy1=30/0 [Exhausted1] | 0.0179 you=80/0 e1 h7 d0/3 enemy0=194/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=188/0 enemy1=30/0 [Exhausted1] | 0.0179 you=80/0 e1 h7 d0/3 enemy0=194/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=188/0 enemy1=30/0 [Exhausted1] | 0.0179 you=80/0 e1 h7 d0/3 enemy0=194/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=188/0 enemy1=30/0 [Exhausted1] | 0.0179 you=80/0 e1 h7 d0/3 enemy0=194/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.006 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.003 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.006 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.003 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=200/0 enemy1=18/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=200/0 enemy1=18/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=200/0 enemy1=18/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=200/0 enemy1=18/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0119 you=80/5 e-1 h9 d1/0 enemy0=200/0 enemy1=30/0 [Exhausted1] | 0.006 you=80/5 e-1 h9 d1/0 enemy0=200/0 enemy1=30/0 [Exhausted1] | 0.0119 you=80/5 e1 h9 d1/0 enemy0=200/0 enemy1=30/0 [Exhausted1] | 0.006 you=80/5 e1 h9 d1/0 enemy0=200/0 enemy1=30/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0046 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0093 you=80/5 e-1 h9 d1/0 enemy0=200/0 enemy1=30/0 [Exhausted1] | 0.0278 you=80/0 e-1 h10 d0/0 enemy0=200/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0046 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0046 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0046 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0093 you=80/5 e-1 h9 d1/0 enemy0=200/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0023 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0023 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0046 you=80/5 e-1 h9 d1/0 enemy0=200/0 enemy1=30/0 [Exhausted1] | 0.0023 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0023 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0023 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0023 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0023 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0023 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0023 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0023 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0046 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0046 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0093 you=80/5 e1 h9 d1/0 enemy0=200/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0046 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0046 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0046 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0093 you=80/5 e1 h9 d1/0 enemy0=200/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0023 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0023 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0046 you=80/5 e1 h9 d1/0 enemy0=200/0 enemy1=30/0 [Exhausted1] | 0.0023 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0023 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0023 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0023 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0023 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0023 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0023 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0023 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0046 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0046 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.006 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.003 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.006 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.003 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=188/0 enemy1=30/0 [Exhausted1] | 0.0179 you=80/0 e1 h7 d0/3 enemy0=194/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=188/0 enemy1=30/0 [Exhausted1] | 0.0179 you=80/0 e1 h7 d0/3 enemy0=194/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=188/0 enemy1=30/0 [Exhausted1] | 0.0179 you=80/0 e1 h7 d0/3 enemy0=194/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.006 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.003 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.006 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.003 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=200/0 enemy1=18/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=200/0 enemy1=18/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=200/0 enemy1=18/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.006 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.003 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.006 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.003 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=188/0 enemy1=30/0 [Exhausted1] | 0.0179 you=80/0 e1 h7 d0/3 enemy0=194/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=188/0 enemy1=30/0 [Exhausted1] | 0.0179 you=80/0 e1 h7 d0/3 enemy0=194/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.006 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.003 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.006 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.003 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=200/0 enemy1=18/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=200/0 enemy1=18/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.006 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.003 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.006 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.003 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=188/0 enemy1=30/0 [Exhausted1] | 0.0179 you=80/0 e1 h7 d0/3 enemy0=194/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.006 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.003 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.006 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.003 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.0089 you=80/0 e1 h7 d0/3 enemy0=200/0 enemy1=18/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.006 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.003 you=80/0 e-1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.006 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.003 you=80/0 e1 h9 d1/0 enemy0=194/0 enemy1=30/0 [Exhausted1] | 0.0089 you=80/5 e1 h7 d0/3 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.006 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.003 you=80/0 e-1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.006 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1] | 0.003 you=80/0 e1 h9 d1/0 enemy0=200/0 enemy1=24/0 [Exhausted1]
+TheFool [Replayed] 0.5 you=80/5 e1 h1 d6/3 enemy0=194/0 [Exhausted1] | 0.5 you=80/5 e1 h1 d6/3 enemy0=194/0 [Exhausted1]
+TheFool [Teammate] 0.5 you=80/5 e1 h1 d6/3 mate0=70/0 e3 h2 enemy0=194/0 [Exhausted1] | 0.5 you=80/5 e1 h1 d6/3 mate0=70/0 e3 h2 enemy0=194/0 [Exhausted1]
+TheFool [Alone] 1 you=80/0 e3 h0 d6/3 enemy0=200/0 [Exhausted1]
 TheGambit [Standard] 1 you=80/50 e3 h3 d6/3 enemy0=200/0 []
 TheGambit [Upgraded] 1 you=80/75 e3 h3 d6/3 enemy0=200/0 []
 TheGambit [Crowded] 1 you=80/50 e3 h9 d0/3 enemy0=200/0 enemy1=30/0 []
@@ -4084,12 +4084,12 @@ Uppercut [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=187/0 enemy1=30/0 []
 Uppercut [Replayed] 1 you=80/0 e1 h3 d6/3 enemy0=168/0 []
 Uppercut [Teammate] 1 you=80/0 e1 h3 d6/3 mate0=70/0 e3 h2 enemy0=187/0 []
 Uppercut [Alone] 1 you=80/0 e1 h0 d6/3 enemy0=187/0 []
-Uproar [Standard] 1 you=80/0 e1 h3 d6/3 enemy0=188/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Uproar [Upgraded] 1 you=80/0 e1 h3 d6/3 enemy0=184/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Uproar [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=188/0 enemy1=30/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Uproar [Replayed] 1 you=80/0 e1 h3 d6/3 enemy0=176/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Uproar [Teammate] 1 you=80/0 e1 h3 d6/3 mate0=70/0 e3 h2 enemy0=188/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
-Uproar [Alone] 1 you=80/0 e1 h0 d6/3 enemy0=188/0 [] ?CardCmd.AutoPlay: a card in hand or a pile played by the card: that play isn't followed
+Uproar [Standard] 1 you=80/0 e0 h3 d5/4 enemy0=182/0 []
+Uproar [Upgraded] 1 you=80/0 e0 h3 d5/4 enemy0=178/0 []
+Uproar [Crowded] 1 you=80/0 e1 h9 d0/3 enemy0=188/0 enemy1=30/0 []
+Uproar [Replayed] 1 you=80/0 e-1 h3 d4/5 enemy0=164/0 []
+Uproar [Teammate] 1 you=80/0 e0 h3 d5/4 mate0=70/0 e3 h2 enemy0=182/0 []
+Uproar [Alone] 1 you=80/0 e0 h0 d5/4 enemy0=182/0 []
 Uproot [Standard] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 []
 Uproot [Upgraded] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 []
 Uproot [Crowded] 1 you=80/0 e3 h9 d0/3 enemy0=200/0 enemy1=30/0 []

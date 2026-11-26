@@ -76,8 +76,9 @@ public static class HandModelled
                 "SimEngine.FireCardEvent", "SimEngine.CountEvent", "SimEngine.ProcCardEvent", "SimEngine.Raise", "SimEngine.DrainPending" },
             new[] { "CardCmd.Discard", "CardCmd.Exhaust", "CardPileCmd.Add", "CardPileCmd.AddGeneratedCardToCombat", "Hook.AfterCardDiscarded", "Hook.AfterCardExhausted", "Hook.AfterCardChangedPiles",
                 "Hook.AfterCardGeneratedForCombat", "PlayerCmd.GainEnergy", "Hook.AfterEnergySpent", "PlayerCmd.GainStars", "Hook.AfterStarsGained", "Hook.AfterStarsSpent" }),
-        new("Auto-plays: from the top of the draw pile, from the hand at the turn's end, the cards that play themselves",
-            new[] { "SimEngine.AutoPlayFromDraw", "SimEngine.AutoPlayTop", "SimEngine.PlayFromPile", "SimEngine.HellraiserPlays", "SimEngine.InvincibleFromPile", "SimEngine.AutoPlayFromHand", "SimEngine.AutoPostPlay", "SimEngine.AutoPostPlayOf" },
+        new("Auto-plays: from the top of the draw pile, from the hand at the turn's end, the cards that play themselves, a card's auto-play of cards in your piles (decision #360)",
+            new[] { "SimEngine.AutoPlayFromDraw", "SimEngine.AutoPlayTop", "SimEngine.PlayFromPile", "SimEngine.HellraiserPlays", "SimEngine.InvincibleFromPile", "SimEngine.AutoPlayFromHand", "SimEngine.AutoPostPlay", "SimEngine.AutoPostPlayOf",
+                "SimEngine.RunAutoPlayCards", "SimEngine.AutoPlayRandom", "SimEngine.AutoPlayListed", "SimEngine.ListCards", "SimEngine.PlayFromHand", "SimEngine.PlayFromExhaust" },
             new[] { "CardPileCmd.AutoPlayFromDrawPile", "CardCmd.AutoPlay", "Hook.BeforeCardAutoPlayed", "Hook.AfterAutoPostPlayPhaseEntered", "HellraiserPower.AfterCardDrawnEarly", "IAmInvincible.AfterAutoPostPlayPhaseEntered" }),
         new("Orbs: the slots, a channel into them (the front one evoked when they're full), an evoke out of them, the passives' order at the turn's end, " +
             "TriggerPassive's count and its loop, a random orb, and the orb hooks' pipelines; an orb's damage and block as its code's commands run them " +
@@ -164,7 +165,7 @@ public static class HandModelled
     /// </summary>
     public static readonly IReadOnlyList<string> Plumbing = new[]
     {
-        "SimEngine.Run", "SimEngine.RunAction", "SimEngine.AnyMayActOnTheEnemiesSide", "SimEngine.Then", "SimEngine.AnyListens", "SimEngine.OrbLabel", "SimEngine.Merge", "SimEngine.Detached", "SimEngine.Scratch", "SimEngine.Capped", "SimEngine.MarkUnread", "SimEngine.PlayResults", "SimEngine.Breakdown",
+        "SimEngine.Run", "SimEngine.RunAction", "SimEngine.Owner", "SimEngine.Lists", "SimEngine.ReadFor", "SimEngine.Candidates", "SimEngine.Listed", "SimEngine.AnyMayActOnTheEnemiesSide", "SimEngine.Then", "SimEngine.AnyListens", "SimEngine.OrbLabel", "SimEngine.Merge", "SimEngine.Detached", "SimEngine.Scratch", "SimEngine.Capped", "SimEngine.MarkUnread", "SimEngine.PlayResults", "SimEngine.Breakdown",
         "SimEngine.Title", "SimEngine.Var", "SimEngine.VarValue", "SimEngine.VarTotal", "SimEngine.PowersOf", "SimEngine.SetPowers", "SimEngine.RelicsOf", "SimEngine.SetRelics", "SimEngine.PowerOn",
         "SimEngine.HasPower", "SimEngine.FieldsOf", "SimEngine.SetField", "SimEngine.SetFields", "SimEngine.TurnOf", "SimEngine.TallyFor", "SimEngine.CountOf", "SimEngine.MostOf", "SimEngine.RunWhen",
         "SimEngine.RunAsk", "SimEngine.Holds", "SimEngine.HoldsNow", "SimEngine.Compares", "SimEngine.IsConditionFilter", "SimEngine.HandFilters", "SimEngine.Flattened", "SimEngine.ConditionParts",

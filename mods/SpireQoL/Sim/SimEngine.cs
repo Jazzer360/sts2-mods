@@ -1296,6 +1296,7 @@ public static partial class SimEngine
             case ModifyAimedPowerAction modifyAimedPowerAction: branches.Each(branch => RunModifyAimed(branch, modifyAimedPowerAction)); break;
             case CardEventAction cardEventAction: RunCardEvent(branches, cardEventAction); break;
             case DrawnCardAction drawnCardAction: branches.Each(branch => RunDrawnCard(branch, drawnCardAction)); break;
+            case AutoPlayCardsAction autoPlayCardsAction: RunAutoPlayCards(branches, autoPlayCardsAction); break;
             case AutoPlayFromDrawAction autoPlayFromDrawAction:
                 branches.Each(branch => AutoPlayFromDraw(branch, branch.CurrentPlay?.Owner ?? Who.You, CountOf(branch, autoPlayFromDrawAction.CountFrom, autoPlayFromDrawAction.Count), autoPlayFromDrawAction.ForceExhaust, autoPlayFromDrawAction.Upgrade));
                 break;

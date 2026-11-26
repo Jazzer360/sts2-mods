@@ -390,6 +390,41 @@ public sealed record AutoPlayFromDrawAction(int Count) : SimAction
     public SimCount CountFrom { get; init; }
 }
 
+/// <summary>A player's pile a card's auto-play takes the cards it plays from (CardCmd.AutoPlay of cards there).</summary>
+public enum SimPile { Hand, Draw, Discard, Exhaust }
+
+/// <summary>How a card's auto-play takes the cards it plays from their pile (AutoPlayCardsAction), read from its code.</summary>
+public enum AutoPlayWay
+{
+    /// <summary>Every card of the list its code makes as it begins, in the pile's order (Cho Chorus' Wah and Ki cards, Eidolon's Ethereal cards, Knife Trap's Shivs).</summary>
+    Each,
+    /// <summary>One card at random among the pile's cards as they are then, each round (FirstOrDefault(StableShuffle): Uproar's Attack, The Fool's card).</summary>
+    Random,
+    /// <summary>The list its code makes as it begins, shuffled, its first Count cards (Take(StableShuffle, Cards): Beat Down's Attacks): random cards, none twice, one after another.</summary>
+    Shuffled,
+}
+
+/// <summary>
+/// Cards of the play owner's <paramref name="Pile"/> a card plays (CardCmd.AutoPlay, decision #360): the ones its code's filter lets through (the cards
+/// whose profile or hand card lists <paramref name="Key"/>: SimDrawCard.AutoPlayedBy, SimHandCard.AutoPlayedBy), taken the way its code takes them
+/// (<paramref name="Way"/>; <paramref name="Count"/> rounds for a random one, the most for a shuffled list), each played free with its own play as the
+/// board built it (CardCmd.AutoPlay: at a random hittable enemy for a card aimed at one, or at the play's target when its code gives it), then gone where a
+/// card played goes. A pick at random is a branch per card there by its count, never the pile's order; a pick you make is no auto-play of this kind
+/// (decision #188 keeps its `?`).
+/// </summary>
+public sealed record AutoPlayCardsAction(string Key, SimPile Pile, AutoPlayWay Way, int Count) : SimAction
+{
+    /// <summary>Each card is played at the play's target (Knife Trap's Shivs: cardPlay.Target), not a random one.</summary>
+    public bool AtTarget { get; init; }
+    /// <summary>Each card is upgraded first (Knife Trap+'s CardCmd.Upgrade of each Shiv before it plays): its upgraded play (SimDrawCard.FromPileUpgraded).</summary>
+    public bool Upgraded { get; init; }
+    /// <summary>
+    /// When no card passes the filter, the key of a second filter its code falls back on (Uproar's any Attack, an Unplayable one too: a card it then finds
+    /// goes to the discard pile unplayed, CardCmd.AutoPlay); null for none.
+    /// </summary>
+    public string? Fallback { get; init; }
+}
+
 /// <summary>
 /// The play owner's draw pile shuffled with their discard pile (CardPileCmd.Shuffle), after <paramref name="HandIn"/> joined the draw
 /// pile (Reboot: every card in your hand, CardPileCmd.Add to the draw pile; the hand itself leaves with LeaveHandAction).
