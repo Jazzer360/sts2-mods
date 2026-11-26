@@ -119,6 +119,53 @@ public class MoveAddsTests
         Assert.Single(projection.Turns);
     }
 
+    private static SimSpawn Bot(string monster) => new(monster, new[] { 18, 19 }) { Monster = monster, UniqueFromEarlier = true };
+
+    /// <summary>A Fabricator whose move adds a bot it picks at random from Zapbot and Stabbot, other than the one it made last (decision #379).</summary>
+    private static SimEnemy Fabricator(string? lastNow) => new()
+    {
+        Id = 0, Name = "Fabricator", Monster = "Fabricator", Hp = 150,
+        Move = new SimAction[] { new MovePickSpawnAction(new[] { Bot("Zapbot"), Bot("Stabbot") }, Field: "_lastSpawned", lastNow) { AfterJoin = PowerSet.Empty.With(PowerId.Minion, amount: 1) } },
+    };
+
+    [Fact]
+    public void ABotOtherThanTheLastItMadeJoinsWithItsMinion()
+    {
+        // SpawnBot: NextItem of the set less _lastSpawned (a Zapbot, read on the board): the Stabbot, certainly; Minion lands on it as it joins (its
+        // summoner the applier), and the projection's later turns go on with it (its HP among several isn't followed there).
+        var projection = SimEngine.Project(Fight(Fabricator(lastNow: "Zapbot")), Array.Empty<IReadOnlyList<ProjectedChoice>>(), rules: null, joining: StabbotRules());
+        Assert.Equal("STAB", Moves(projection, enemyId: 1).Split(" | ")[0]);
+        Assert.Null(projection.Of(turn: 0, enemyId: 1, move: "STAB")!.Unknown);
+    }
+
+    [Fact]
+    public void ARandomBotIsABranchEachAndTheProjectionCantShareIt()
+    {
+        // No bot made yet: Zapbot or Stabbot, half each (never rolled). The branches don't share which creature joined, so the turns after are unknown.
+        var projection = SimEngine.Project(Fight(Fabricator(lastNow: null)), Array.Empty<IReadOnlyList<ProjectedChoice>>(), rules: null, joining: StabbotRules());
+        Assert.Contains(projection.Turns.SelectMany(row => row.Values).SelectMany(moves => moves.Values), hits => hits.Unknown == "a roll decides which enemies are in the fight");
+    }
+
+    [Fact]
+    public void AfterAPlayTheRandomBotAddsNothing()
+    {
+        // The enemy turn after a play runs on one state: the pick isn't branched there (its HP is a roll), so it adds nothing, as before it was read.
+        var branch = Assert.Single(SimEngine.Run(Fight(Fabricator(lastNow: "Zapbot"))).Branches);
+        Assert.Null(branch.Unmodelled);
+        Assert.Single(branch.Enemies);
+    }
+
+    /// <summary>Stabbot's rules as it joins: STAB (6 damage) every turn.</summary>
+    private static Dictionary<string, ProjectedRules> StabbotRules()
+    {
+        var graph = new MoveGraph(new Dictionary<string, MoveNode> { ["STAB"] = new MoveNodeMove("STAB", FollowUp: "STAB") }, InitialId: "STAB");
+        var moves = new Dictionary<string, ProjectedMove>
+        {
+            ["STAB"] = new("STAB") { Intent = new List<IntentHit> { new(Base: 6) }, Actions = new SimAction[] { new MoveAttackAction(FirstHit: 0, Hits: 1) }, OnlyAttacks = true },
+        };
+        return new Dictionary<string, ProjectedRules>(StringComparer.Ordinal) { ["Stabbot"] = ProjectedRules.Joining(graph, moves), ["Zapbot"] = ProjectedRules.Joining(graph, moves) };
+    }
+
     [Fact]
     public void ADeadSummonerAddsNothing()
     {

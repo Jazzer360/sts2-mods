@@ -160,10 +160,14 @@ public static partial class SimAdapter
                 if (step is CommandStep { Command.FullName: "CreatureCmd.Add" } spawn)
                 {
                     var gap = inLoop ? "in a loop" : conditional ? "a test a play can change" : MoveSpawnGap(spawn, program);
+                    // A random pick (decision #379) is followed in the projection only: the enemy turn after a play runs on one state.
+                    if (gap == null && spawn.Command.GenericArguments.Count == 0) gap = "a monster picked: the projection's only";
                     if (gap != null) yield return (spawn, gap);
                     continue;
                 }
                 if (step is not CommandStep { Command.FullName: "PowerCmd.Apply" or "CreatureCmd.GainBlock" } command) continue;
+                // A power on the creature an add just made, with that add followed (decision #379: Fabricator's Minion on its bot): it lands as it joins.
+                if (!inLoop && AddedBy(command, program) is { } made && MoveSpawnGap(made, program) == null && AfterJoinGap(command) == null) continue;
                 if (conditional || command.Condition != null) yield return (command, "on a condition");
                 else if (command.Command.FullName == "PowerCmd.Apply" && command.Command.GenericArguments.Count == 0) yield return (command, "a power made first");
             }
@@ -178,10 +182,75 @@ public static partial class SimAdapter
     /// </summary>
     internal static string? MoveSpawnGap(CommandStep add, ModelProgram program)
     {
-        if (add.Command.GenericArguments.Count != 1) return "a monster picked";
+        if (add.Command.GenericArguments.Count != 1 && (add.Values.Count == 0 || PickOf(add.Values[0]) == null)) return "a monster picked";
         if (add.Condition != null && add.Condition.Literals.Any(literal => !FixedForTheFight(literal.Test))) return "a test a play can change";
-        if (program.All().Any(step => step != add && StepParts(step).Any(part => part is ResultValue { Command: "CreatureCmd.Add" }))) return "used once joined";
+        // Its creature used later in the move: only a power applied to it (decision #379: Fabricator's Minion) is followed, as it joins.
+        if (program.All().Any(step => step != add && StepParts(step).Any(part => part is ResultValue { Command: "CreatureCmd.Add" })
+            && (step is not CommandStep apply || AddedBy(apply, program) is not { } made || ReferenceEquals(made, add) && AfterJoinGap(apply) != null))) return "used once joined";
         return null;
+    }
+
+    /// <summary>
+    /// The CreatureCmd.Add whose creature a PowerCmd.Apply targets (its second argument an add's result: the last add before it in the program),
+    /// or null for an apply on anything else.
+    /// </summary>
+    private static CommandStep? AddedBy(CommandStep apply, ModelProgram program)
+    {
+        if (apply.Command.FullName != "PowerCmd.Apply" || apply.Values.Count < 2
+            || apply.Values[1].Parts().OfType<ResultValue>().FirstOrDefault(result => result.Command == "CreatureCmd.Add") is not { } result) return null;
+        // In the program's order (a method called twice, as Fabricator's SpawnBot, has the same code offsets each time): the last add before it.
+        CommandStep? last = null;
+        foreach (var step in program.All())
+        {
+            if (ReferenceEquals(step, apply)) return last;
+            if (step is CommandStep { Command.FullName: "CreatureCmd.Add" } add) last = add;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Why a power on an added creature (AddedBy) can't be followed as it joins, or null: a power its type argument names, a constant amount, the
+    /// summoner applying it, its condition the same as its add's (or none).
+    /// </summary>
+    private static string? AfterJoinGap(CommandStep apply)
+    {
+        if (apply.Command.GenericArguments is not [var power] || PowerType(power) == null) return "a power made first";
+        if (apply.Values.Count < 4 || apply.Values[2] is not (ConstantValue or NamedValue { Name: "Decimal.One" or "Decimal.Zero" or "Decimal.MinusOne" })) return "an amount not read";
+        if (apply.Values[3] is not QueryValue { Name: nameof(MonsterModel.Creature), Of: NamedValue { Name: "this" } }) return "another applier";
+        if (apply.Condition != null && apply.Condition.Literals.Any(literal => !FixedForTheFight(literal.Test))) return "a test a play can change";
+        return null;
+    }
+
+    /// <summary>
+    /// A creature a move picks at random to add (decision #379), read from CreatureCmd.Add's monster: <c>rng.NextItem(ToList(Where(Set, m =&gt; m !=
+    /// this.Field)))</c>.ToMutable() (the Where optional), its set a static field of models on a monster's class: the set's monster classes and the field
+    /// it leaves out (null: none). Null for any other monster.
+    /// </summary>
+    internal static (IReadOnlyList<Type> Options, string? Field)? PickOf(ProgramValue monster)
+    {
+        // A value stored first (the field's store: _lastSpawned = NextItem(...)) is what was stored.
+        static ProgramValue? Stored(ProgramValue? value) => value is StoredValue stored ? Stored(stored.Value) : value;
+        if (Stored(monster) is not QueryValue { Name: "ToMutable", Of: var picked } || Stored(picked) is not QueryValue { Name: "NextItem", Arguments: [var nextOf] }) return null;
+        var items = Stored(nextOf);
+        if (items is QueryValue { Name: "ToList", Arguments: [var listed] }) items = Stored(listed);
+        string? field = null;
+        if (items is QueryValue { Name: "Where", Arguments: [var whereOf, LambdaValue lambda] })
+        {
+            var set = Stored(whereOf);
+            if (lambda.Body.Terms is not [[{ Test: CompareValue compare } literal]]) return null;
+            var excludes = compare.Op == Comparison.NotEqual ? literal.Holds : compare.Op == Comparison.Equal && !literal.Holds;
+            var (parameter, other) = compare.Left is ParameterValue ? (compare.Left, compare.Right) : (compare.Right, compare.Left);
+            if (!excludes || parameter is not ParameterValue || other is not QueryValue { Of: NamedValue { Name: "this" }, Arguments.Count: 0 } read) return null;
+            field = read.Name;
+            items = set;
+        }
+        // The set: a static field on a monster's class (Fabricator.aggroSpawns), as the reader names a static field.
+        if (items is not NamedValue { Name: var named } || named.LastIndexOf('.') is var dot && dot <= 0 || MonsterType(named[..dot]) is not { } owner) return null;
+        const System.Reflection.BindingFlags statics = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+        var value = owner.GetField(named[(dot + 1)..], statics)?.GetValue(null) ?? owner.GetProperty(named[(dot + 1)..], statics)?.GetValue(null);
+        if (value is not IEnumerable<MonsterModel> models) return null;
+        var options = models.Select(model => model.GetType()).ToList();
+        return options.Count == 0 ? null : (options, field);
     }
 
     /// <summary>The values a step is given (a command's arguments, a store's value), each with its parts.</summary>
@@ -246,6 +315,9 @@ public static partial class SimAdapter
         }
         // CreatureCmd.Add<T> outside a loop (decision #376): the monster joins, read as a death's spawn is; one it can't read (MoveSpawnGap) isn't followed.
         if (step is CommandStep { Command.FullName: "CreatureCmd.Add" } add && each == null) return MoveSpawn(add, context);
+        // A power on the creature an add just made (decision #379): the add's own action applies it as it joins (MoveSpawnAction.AfterJoin).
+        if (step is CommandStep { Command.FullName: "PowerCmd.Apply" } onAdded && each == null && AddedBy(onAdded, context.Program) is { } made
+            && MoveSpawnGap(made, context.Program) == null && AfterJoinGap(onAdded) == null) return Array.Empty<SimAction>();
         if (step.Condition != null)
         {
             if (step is CommandStep { Command.FullName: "PowerCmd.Apply" or "CreatureCmd.GainBlock" } or LoopStep) context.Gaps.Add("on a condition");
@@ -408,16 +480,49 @@ public static partial class SimAdapter
             if (holds == false) return Array.Empty<SimAction>(); // fixed for the fight, and false: it adds none
             if (holds == null) gap = "unread value";
         }
+        var afterJoin = gap == null ? AfterJoin(add, context) : PowerSet.Empty;
+        if (gap == null && add.Command.GenericArguments.Count == 0 && PickOf(add.Values[0]) is { } pick)
+        {
+            // A random pick (decision #379): every option read, or none; the field it leaves out read on the board until a pick sets it.
+            var options = pick.Options.Select(option => JoiningSpawn(option, context)).ToList();
+            if (options.Any(option => option == null))
+            {
+                context.Gaps.Add("unread value");
+                return Array.Empty<SimAction>();
+            }
+            var lastNow = pick.Field == null ? null
+                : context.Board.Self?.GetType().GetField(pick.Field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)?.GetValue(context.Board.Self) as MonsterModel;
+            return new SimAction[] { new MovePickSpawnAction(options!, pick.Field, lastNow?.GetType().Name) { AfterJoin = afterJoin } };
+        }
         var type = gap == null ? MonsterType(add.Command.GenericArguments[0]) : null;
-        var monster = type != null ? CanonicalMonster(type) : null;
-        if (gap != null || type == null || monster == null)
+        var spawn = type != null ? JoiningSpawn(type, context) : null;
+        if (gap != null || spawn == null)
         {
             context.Gaps.Add(gap ?? "unread value");
             return Array.Empty<SimAction>();
         }
+        return new SimAction[] { new MoveSpawnAction(spawn) { AfterJoin = afterJoin } };
+    }
+
+    /// <summary>The monster of <paramref name="type"/> joining in the enemy turn (Spawn: its HP none an enemy has, its starting powers), or null.</summary>
+    private static SimSpawn? JoiningSpawn(Type type, MoveContext context)
+    {
+        if (CanonicalMonster(type) is not { } monster) return null;
         var taken = context.Combat.Enemies.Select(enemy => enemy.MaxHp).ToHashSet();
-        var spawn = Spawn(type, monster, context.Combat, taken) with { Monster = type.Name, UniqueFromEarlier = true, JoinUnread = JoinUnread(context.Combat) };
-        return new SimAction[] { new MoveSpawnAction(spawn) };
+        return Spawn(type, monster, context.Combat, taken) with { Monster = type.Name, UniqueFromEarlier = true, JoinUnread = JoinUnread(context.Combat) };
+    }
+
+    /// <summary>The powers the move applies to the creature <paramref name="add"/> made (AddedBy, decision #379), each its amount read on the board.</summary>
+    private static PowerSet AfterJoin(CommandStep add, MoveContext context)
+    {
+        var powers = PowerSet.Empty;
+        foreach (var apply in context.Program.All().OfType<CommandStep>())
+        {
+            if (!ReferenceEquals(AddedBy(apply, context.Program), add) || AfterJoinGap(apply) != null || PowerType(apply.Command.GenericArguments[0]) is not { } power
+                || Number(ProgramEvaluator.Value(apply.Values[2], context.Board, context.Program)) is not { } amount) continue;
+            powers = powers.Add(PowerId.Of(SimPowerName(power)), delta: (int)amount);
+        }
+        return powers;
     }
 
     /// <summary>CreatureCmd.GainBlock(creature, amount, props, card): block on each enemy named, through the game's block math now.</summary>

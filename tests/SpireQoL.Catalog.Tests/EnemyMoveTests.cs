@@ -101,14 +101,17 @@ public class EnemyMoveTests
     }
 
     [Fact]
-    public void FabricatorsRandomBotIsNotFollowed()
+    public void FabricatorsRandomBotsAreReadAsPicks()
     {
-        // Fabricator's bots are a random one of a set other than the last it made (RunRng.MonsterAi.NextItem of a model, not a type argument): not read,
-        // so its move adds nothing to the enemy turn (a reviewed gap: TRACKER), as before.
+        // Fabricator's bots: RunRng.MonsterAi.NextItem of its defence set, then its aggro set, less _lastSpawned (decision #379), each with the Minion
+        // it then applies. Read as picks of the sets' monsters; after a play they add nothing (their HP is a roll: a reviewed gap), as before.
         var fight = new GameFight();
         var fabricator = Enemy<Fabricator>(fight, "FABRICATE_MOVE");
         var state = Read(fight, out var ids);
-        Assert.DoesNotContain(state.Enemy(ids[fabricator])!.Move!, action => action is MoveSpawnAction);
+        var picks = state.Enemy(ids[fabricator])!.Move!.OfType<MovePickSpawnAction>().ToList();
+        Assert.Equal(new[] { "Guardbot,Noisebot", "Stabbot,Zapbot" }, picks.Select(pick => string.Join(",", pick.Options.Select(option => option.Monster).Order(StringComparer.Ordinal))));
+        Assert.All(picks, pick => Assert.Equal(("_lastSpawned", 1), (pick.Field, pick.AfterJoin[PowerId.Minion])));
+        Assert.Single(Assert.Single(SimEngine.Run(state).Branches).Enemies);
     }
 
     [Fact]
@@ -232,13 +235,11 @@ public class EnemyMoveTests
         ["CeremonialBeast.PlowMove: PowerCmd.Apply<StrengthPower> (on a condition)"] = "its own Strength while it has Plow, after its own attack: no later hit of its this turn",
         ["Entomancer.SpitMove: PowerCmd.Apply<PersonalHivePower> (on a condition)"] = "its own Personal Hive below 3: a move with no attack",
         ["Entomancer.SpitMove: PowerCmd.Apply<StrengthPower> (on a condition)"] = "its own Strength by its Personal Hive: a move with no attack",
-        ["Fabricator.FabricateMove: CreatureCmd.Add (a monster picked)"] = "its two bots, each a random one of a set (RunRng.MonsterAi.NextItem) other than the last it made: not in the enemy turn's state (TRACKER: summons in a move); they make no move this turn",
-        ["Fabricator.FabricatingStrikeMove: CreatureCmd.Add (a monster picked)"] = "its bot after its attack, a random one of a set other than the last it made: not in the enemy turn's state (TRACKER: summons in a move); it makes no move this turn",
+        ["Fabricator.FabricateMove: CreatureCmd.Add (a monster picked: the projection's only)"] = "its two bots, each a random one of a set (RunRng.MonsterAi.NextItem) other than the last it made: a branch per bot in the projection (decision #379); after a play its HP among several is a roll the enemy turn's one state doesn't branch on (TRACKER: summons in a move), and they make no move this turn",
+        ["Fabricator.FabricatingStrikeMove: CreatureCmd.Add (a monster picked: the projection's only)"] = "its bot after its attack, a random one of a set other than the last it made: a branch per bot in the projection (decision #379); after a play its HP is a roll (TRACKER: summons in a move), and it makes no move this turn",
         ["LivingFog.BloatMove: CreatureCmd.Add<GasBomb> (in a loop)"] = "its Gas Bombs, BloatAmount of them while a slot is free (a kill frees one), before its attack: not in the enemy turn's state (TRACKER: summons in a move); they make no move this turn",
         ["Ovicopter.LayEggsMove: CreatureCmd.Add<ToughEgg> (in a loop)"] = "three Tough Eggs while a slot is free (a kill frees one): not in the enemy turn's state (TRACKER: summons in a move); they make no move this turn",
         ["TwoTailedRat.CallForBackup: CreatureCmd.Add<TwoTailedRat> (a test a play can change)"] = "a rat while a slot is free (a kill frees one): not in the enemy turn's state (TRACKER: summons in a move); it makes no move this turn",
-        ["Fabricator.FabricateMove: PowerCmd.Apply<MinionPower> (on a condition)"] = "Minion on the bot it summons (CreatureCmd.Add), which joins for its next turn",
-        ["Fabricator.FabricatingStrikeMove: PowerCmd.Apply<MinionPower> (on a condition)"] = "Minion on the bot it summons after its attack, which joins for its next turn",
         ["MagiKnight.DampenMove: PowerCmd.Apply (on a condition)"] = "Dampen on a target without it: no damage hook (DampenPower only reacts to its applier's death)",
         ["Ovicopter.LayEggsMove: PowerCmd.Apply<MinionPower> (on a condition)"] = "Minion on each egg it lays, which joins for its next turn",
         ["TestSubject.RespawnMove: PowerCmd.Apply<NemesisPower> (on a condition)"] = "its own power on its second respawn: a move with no attack (Nemesis acts at the turn's end)",

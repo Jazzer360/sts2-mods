@@ -265,6 +265,7 @@ public static partial class SimEngine
                     EndOfTurn(branches);
                     Fighting(branches, () => EnemyTurnStart(branches));
                     // The enemy turn of a branch whose fight is over moves no one (each move asks FightEnding first): it only marks the dead.
+                    PickTheirSpawns(branches);
                     branches.Do(EnemyTurn);
                     // Then the enemies' side's turn ends, while the fight goes on (CombatManager.ExecuteEnemyTurn: EndEnemyTurn after the last move).
                     Fighting(branches, () => EnemyTurnEnd(branches));
@@ -1907,7 +1908,13 @@ public static partial class SimEngine
                             // CreatureCmd.Stun of itself (Creature.StunInternal: nothing once it's dead): its next move is the stunned move.
                             case MoveStunAction when enemy.Alive: Stun(enemy); break;
                             // CreatureCmd.Add of a creature its code names (decision #376): it joins now, after the turn's list of who acts.
-                            case MoveSpawnAction moveSpawnAction: MoveSpawn(state, enemy, moveSpawnAction.Spawn); break;
+                            case MoveSpawnAction moveSpawnAction: MoveSpawn(state, enemy, moveSpawnAction.Spawn, moveSpawnAction.AfterJoin); break;
+                            // A random pick of the creature it adds (decision #379) is a branch each before the turn (PickSpawns); one left here wasn't.
+                            // Outside a projection it adds nothing, as before it was read (a reviewed gap: the bot's HP is a roll the enemy turn's
+                            // one state doesn't branch on, and it makes no move this turn).
+                            case MovePickSpawnAction when state.Forecasting:
+                                state.Unmodelled ??= $"{enemy.Name}'s move adds a creature it picks at random on a test of its own, which the enemy turn doesn't branch on";
+                                break;
                             // A property of its own its attack's damage reads (decision #337): only a projection has a later turn to read it.
                             case MoveStoreAction moveStoreAction when state.Forecasting: MoveStore(state, enemy, moveStoreAction); break;
                             // A step on its own state (Bowlbug Rock's IsOffBalance: decision #271), asked of it as the step runs.
@@ -1934,9 +1941,10 @@ public static partial class SimEngine
     /// players as PowerCmd.Apply scales a new one on an enemy), then Hook.AfterCreatureAddedToCombat's listeners, on the one state the enemy turn runs
     /// on. An HP it could start with among several (a roll), or a listener that branches there, leaves the turn unknown from here: never a pick.
     /// </summary>
-    private static void MoveSpawn(SimState state, SimEnemy summoner, SimSpawn spawn)
+    private static void MoveSpawn(SimState state, SimEnemy summoner, SimSpawn spawn, PowerSet afterJoin)
     {
-        if (spawn.Unread != null || spawn.Hp.Count != 1)
+        // A projection follows no one's HP (decision #379): a creature joining there with an HP among several joins with any of them.
+        if (spawn.Unread != null || spawn.Hp.Count == 0 || spawn.Hp.Count > 1 && !state.Forecasting)
         {
             state.Unmodelled ??= spawn.Hp.Count > 1 ? $"the HP of the {spawn.Name} {summoner.Name}'s move adds is a roll, which the enemy turn doesn't branch on"
                 : $"the creature {summoner.Name}'s move adds isn't read ({spawn.Unread ?? "no HP"})";
@@ -1950,6 +1958,85 @@ public static partial class SimEngine
         });
         foreach (var branch in AddedToCombat(state, id, spawn.JoinUnread))
             if (!ReferenceEquals(branch, state)) state.Unmodelled ??= $"a creature joining the fight in the enemy turn ({spawn.Name}) branches, which the enemy turn doesn't follow";
+        // What the move then applies to the creature it made (Fabricator's Minion: PowerCmd.Apply on CreatureCmd.Add's result), the summoner applying it.
+        foreach (var entry in afterJoin.Items)
+            if (state.Enemy(id) is { Alive: true }) ApplyPower(state, summoner.Id, id, entry.Name, entry.Amount, debuff: false);
+    }
+
+    /// <summary>
+    /// The creatures the enemies' moves pick at random to add (decision #379: MovePickSpawnAction, Fabricator's bots), a branch for each pick before
+    /// the enemy turn runs, each its share of the chance (RunRng.MonsterAi.NextItem: every option equally likely), never a roll. An enemy's picks are
+    /// worked out in its move's order, each from its options less the one its field holds (the last it made: its earlier pick in the same move, or
+    /// the one read on the board), the pick stored there; each branch's move adds its pick (MoveSpawnAction). Nothing in the turn but its own picks
+    /// changes what it can pick, so branching first is the same as the game's pick as the step runs. A pick nested under a test stays (and is unknown).
+    /// </summary>
+    private static IEnumerable<SimState> PickSpawns(SimState state)
+    {
+        List<SimState>? branches = null;
+        for (var index = 0; index < state.Enemies.Count; index++)
+        {
+            var enemy = state.Enemies[index];
+            if (!enemy.Alive || enemy.Stunned || enemy.Move is not { } move || !HasPick(move)) continue;
+            branches ??= new List<SimState> { state };
+            var next = new List<SimState>();
+            foreach (var branch in branches)
+            {
+                // Each branch's way through this enemy's picks: its move with each pick made, its field after them, and the share of the chance.
+                var ways = new List<(List<SimAction> Move, NamedCounts Fields, double Chance)> { (new List<SimAction>(), branch.Enemies[index].Fields, 1.0) };
+                foreach (var action in move)
+                {
+                    if (action is not MovePickSpawnAction pick)
+                    {
+                        foreach (var way in ways) way.Move.Add(action);
+                        continue;
+                    }
+                    var picked = new List<(List<SimAction>, NamedCounts, double)>();
+                    foreach (var (actions, fields, chance) in ways)
+                    {
+                        var last = pick.Field != null && fields.Has(pick.Field) ? fields[pick.Field] : pick.LastNow != null ? MovePickSpawnAction.MonsterCode(pick.LastNow) : (int?)null;
+                        var options = pick.Options.Where(option => option.Monster == null || MovePickSpawnAction.MonsterCode(option.Monster) != last).ToList();
+                        if (options.Count == 0) options = pick.Options.ToList(); // the game's NextItem of an empty list throws: not a case its sets reach
+                        foreach (var option in options)
+                        {
+                            var chosen = new List<SimAction>(actions) { new MoveSpawnAction(option) { AfterJoin = pick.AfterJoin } };
+                            var stored = pick.Field != null && option.Monster != null ? fields.With(pick.Field, MovePickSpawnAction.MonsterCode(option.Monster)) : fields;
+                            picked.Add((chosen, stored, chance / options.Count));
+                        }
+                    }
+                    ways = picked;
+                }
+                foreach (var (actions, fields, chance) in ways)
+                {
+                    var copy = ways.Count == 1 ? branch : branch.Clone();
+                    var picker = copy.Enemies[index];
+                    picker.Move = actions;
+                    picker.Fields = fields;
+                    copy.Weight *= chance;
+                    next.Add(copy);
+                }
+            }
+            branches = next;
+        }
+        return branches ?? (IEnumerable<SimState>)new[] { state };
+    }
+
+    /// <summary>A move with a random pick of the creature it adds at its top level (PickSpawns).</summary>
+    private static bool HasPick(IReadOnlyList<SimAction> move)
+    {
+        for (var i = 0; i < move.Count; i++) if (move[i] is MovePickSpawnAction) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// The enemy turn's picks (PickSpawns), as a step only when an enemy's move has one (no step, and nothing made, otherwise), in a projection only:
+    /// the enemy turn after a play runs on one state, which an HP among several the picked creature can join with would leave unknown (decision #379).
+    /// </summary>
+    private static void PickTheirSpawns(BranchSet branches)
+    {
+        if (branches.States.Count == 0 || !branches.States[0].Forecasting) return;
+        foreach (var state in branches.States)
+            foreach (var enemy in state.Enemies)
+                if (enemy.Alive && !enemy.Stunned && enemy.Move is { } move && HasPick(move)) { branches.Each(PickSpawns); return; }
     }
 
     /// <summary>The block your turn left each enemy, put back once the enemies' turn and its end are over (SimEnemy.TurnEndBlock): the outcome reads it.</summary>

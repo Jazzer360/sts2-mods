@@ -286,6 +286,7 @@ public static partial class SimEngine
     private static void TheirTurn(BranchSet branches, IReadOnlyList<ProjectedChoice>? choices, Dictionary<int, Dictionary<string, ProjectedHits>>? row)
     {
         if (choices != null) GiveMoves(branches, choices);
+        PickTheirSpawns(branches);
         branches.Do(EnemyTurn);
         branches.Do(StunsSpent);
         if (choices != null && row != null) Landed(branches.States, choices, row);
@@ -343,7 +344,8 @@ public static partial class SimEngine
         foreach (var enemy in result.Enemies)
         {
             var others = states.Select(state => state.Enemy(enemy.Id)).ToList();
-            if (others.Any(other => other == null))
+            // A creature missing from some, or another monster in some (decision #379: Fabricator's random bot), is a roll the phase doesn't share.
+            if (others.Any(other => other == null || other.Monster != enemy.Monster))
             {
                 result.Unmodelled ??= "a roll decides which enemies are in the fight";
                 continue;

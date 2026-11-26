@@ -253,7 +253,38 @@ public sealed record MoveStunAction : SimAction;
 /// enemies' turn has listed who acts (CombatManager.ExecuteEnemyTurn's Enemies.ToList()), so it makes no move this turn; it's in the fight for
 /// the rest of it (the later moves, the turn's end) and the forecast's later turns.
 /// </summary>
-public sealed record MoveSpawnAction(SimSpawn Spawn) : SimAction;
+public sealed record MoveSpawnAction(SimSpawn Spawn) : SimAction
+{
+    /// <summary>
+    /// The powers the move then applies to the creature it added (PowerCmd.Apply on CreatureCmd.Add's result: Fabricator's Minion on its bot, decision
+    /// #379), its applier the summoner, once it has joined.
+    /// </summary>
+    public PowerSet AfterJoin { get; init; } = PowerSet.Empty;
+}
+
+/// <summary>
+/// A creature an enemy's move adds that it picks at random (decision #379: CreatureCmd.Add of RunRng.MonsterAi.NextItem of a set of monsters,
+/// Fabricator's bots): one of <paramref name="Options"/>, each equally likely, other than the one its own field <paramref name="Field"/> holds (the
+/// last it made: kept in SimEnemy.Fields as each pick's MonsterCode, read on the board as <paramref name="LastNow"/> until a pick sets it), the pick
+/// stored there. Never rolled: the enemy turn starts with a branch per pick (SimEngine.PickSpawns), each its share of the chance, before any
+/// move runs (nothing in the turn but the enemy's own picks changes what it can pick).
+/// </summary>
+public sealed record MovePickSpawnAction(IReadOnlyList<SimSpawn> Options, string? Field, string? LastNow) : SimAction
+{
+    /// <summary>The powers the move then applies to the creature it added (as MoveSpawnAction's).</summary>
+    public PowerSet AfterJoin { get; init; } = PowerSet.Empty;
+
+    /// <summary>A monster's code in an enemy's fields (its class name's FNV-1a hash: the same on every run).</summary>
+    public static int MonsterCode(string monster)
+    {
+        unchecked
+        {
+            var hash = (int)2166136261;
+            foreach (var character in monster) hash = (hash ^ character) * 16777619;
+            return hash;
+        }
+    }
+}
 
 /// <summary>
 /// A card's stun of the enemy it's played at (CreatureCmd.Stun(cardPlay.Target), decision #299: Whistle): its next move the stunned move
