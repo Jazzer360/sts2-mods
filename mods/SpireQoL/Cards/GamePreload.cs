@@ -88,7 +88,7 @@ internal static class GamePreload
             int Count(string name) => fields.Field(name).GetValue() is System.Collections.ICollection queue ? queue.Count : -1;
             return $"'{fields.Field<string>("_name").Value}': to load {Count("_toLoad")}, loading {Count("_loading")}, finalizing {Count("_finalizing")}, " +
                 $"VFX left {Count("_vfxScenes")}, VFX loading {fields.Field<bool>("_vfxLoading").Value} ({fields.Field<string>("_currentVfxPath").Value ?? "none"}), " +
-                $"settings menu waiting {SettingsMenuWaiting}";
+                $"settings menu waiting {SettingsMenuWaiting}, performance trace: {Telemetry.DevDashboard.TraceStatus() ?? "none"}";
         }
         catch (Exception error)
         {
