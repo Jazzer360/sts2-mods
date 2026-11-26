@@ -437,6 +437,7 @@ public static partial class SimEngine
         player.Fading = player.HexFading = 0;
         player.ExhaustingInHand = new();
         if (player.AutoHand != null) player.AutoHand = new();
+        if (player.UnplayableHand != null) player.UnplayableHand = new();
     }
 
     /// <summary>

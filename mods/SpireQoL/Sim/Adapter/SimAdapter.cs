@@ -367,7 +367,18 @@ public static partial class SimAdapter
                 player.AutoHand = new List<SimHandCard>();
                 foreach (var card in Sts2State.Hand(me))
                 {
-                    if (card.Keywords.Contains(CardKeyword.Unplayable)) continue;
+                    if (card.Keywords.Contains(CardKeyword.Unplayable))
+                    {
+                        // With Simpleton, Mummified Hand's free card can be one of these (it picks among your whole hand: decision #393): its costs, no plays.
+                        if (player.Simpleton > 0)
+                            (player.UnplayableHand ??= new()).Add(new SimHandCard
+                            {
+                                Id = HandId(card), Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack,
+                                Cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved(),
+                                LocalCost = LocalCostOf(card), LocalStarCost = LocalStarCostOf(card), CostsBeforeModifiers = CostsBeforeModifiersOf(card), Card = SimReaders.CostedFacts(card),
+                            });
+                        continue;
+                    }
                     player.AutoHand.Add(new SimHandCard
                     {
                         Id = HandId(card),
@@ -395,7 +406,7 @@ public static partial class SimAdapter
         catch
         {
             // unreadable: no auto-plays predicted (the forecast check skips a turn with unpredicted auto-plays)
-            player.AutoHand = null;
+            player.AutoHand = player.UnplayableHand = null;
             player.Stampede = player.Simpleton = 0;
             player.PileAutoPlays = null; // a card's auto-play of your piles' cards is unknown then (AutoPlayCardsAction: not read)
         }

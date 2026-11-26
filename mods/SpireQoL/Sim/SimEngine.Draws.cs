@@ -90,6 +90,7 @@ public static partial class SimEngine
                 if (card.Fading) simPlayer.Fading--;
                 if (card.HexFading) simPlayer.HexFading--;
                 if (simPlayer.AutoHand != null) simPlayer.AutoHand = simPlayer.AutoHand.Where(handCard => handCard.Id != id).ToList();
+                if (simPlayer.UnplayableHand != null) simPlayer.UnplayableHand = simPlayer.UnplayableHand.Where(handCard => handCard.Id != id).ToList();
             }
             return ProcCardEvent(branch, CardEvent.Discarded, discard.Count, player);
         });

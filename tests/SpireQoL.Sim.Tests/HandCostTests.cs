@@ -183,6 +183,27 @@ public class HandCostTests
     }
 
     [Fact]
+    public void MummifiedHandsPickIsAmongYourWholeHandItsUnplayableCardsToo()
+    {
+        // MummifiedHand.AfterCardPlayed picks among PileType.Hand's cards (decision #393): an Unplayable card that costs (Beat Down's 3) is one of
+        // them. Its being free changes nothing a simulation reads, but it takes its share: the Strike is free half the time, not always.
+        var state = WithPowers();
+        state.You.Simpleton = 1;
+        var beatDown = Card(id: 13, "BeatDown", SimCardType.Skill, cost: 3);
+        beatDown.CostsBeforeModifiers = true;
+        state.You.AutoHand = new() { Card(id: 11, "Strike", SimCardType.Attack, cost: 1) };
+        state.You.UnplayableHand = new() { beatDown };
+        var branches = SimEngine.FreeInHand(state, Who.You, played: 7).ToList();
+        Assert.Equal(2, branches.Count);
+        Assert.All(branches, branch => Assert.Equal(0.5, branch.Weight, precision: 9));
+        var wasted = Assert.Single(branches, branch => branch.You.UnplayableHand!.Single().LocalCost == 0);
+        Assert.Equal(1, wasted.You.AutoHand!.Single().LocalCost);
+        Assert.Single(branches, branch => branch.You.AutoHand!.Single().LocalCost == 0 && branch.You.UnplayableHand!.Single().LocalCost == 3);
+        // The two branches differ in which card is free: they don't merge.
+        Assert.NotEqual(branches[0].Key(), branches[1].Key());
+    }
+
+    [Fact]
     public void VoidFormMaxesItsCountAsItLandsOrGrows()
     {
         // Decision #390: VoidFormPower reads whole. Its owner's first cards each turn cost 0 (its Late pass, while its count of cards played this turn is

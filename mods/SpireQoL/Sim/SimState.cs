@@ -676,6 +676,11 @@ public sealed class SimPlayer
     public int Simpleton;
     /// <summary>Your playable cards in hand, for Stampede and Simpleton to pick from (null when you have neither).</summary>
     public List<SimHandCard>? AutoHand;
+    /// <summary>
+    /// Your Unplayable cards in hand, by their costs (no plays), with Simpleton: Mummified Hand picks among your whole hand (SimEngine.FreeInHand), so one
+    /// that costs (Beat Down, Eidolon) can take its pick from the cards AutoHand follows. Null where nothing asks it.
+    /// </summary>
+    public List<SimHandCard>? UnplayableHand;
     /// <summary>Howl from Beyond copies in your exhaust pile: each auto-plays (its play, one per copy).</summary>
     public List<SimPlay> ExhaustAutoPlays = new();
     /// <summary>
@@ -733,6 +738,11 @@ public sealed class SimPlayer
         key.Add(AutoHand?.Count ?? -1);
         // By what each card is, in any order: branches that picked identical copies hold the same hand, and merge.
         if (AutoHand != null) foreach (var cardKey in AutoHand.Select(handCard => handCard.Key).OrderBy(cardKey => cardKey.Digest)) key.Add(cardKey.GetHashCode());
+        if (UnplayableHand != null)
+        {
+            key.Add(UnplayableHand.Count);
+            foreach (var cardKey in UnplayableHand.Select(handCard => handCard.Key).OrderBy(cardKey => cardKey.Digest)) key.Add(cardKey.GetHashCode());
+        }
         Powers.Hash(ref key); Relics.Hash(ref key); Turn.Hash(ref key); Fight.Hash(ref key); Fields.Hash(ref key); OstyPowers.Hash(ref key); WuppyPowers.Hash(ref key);
         key.Add(Orbs.Count);
         foreach (var orb in Orbs) orb.Hash(ref key);
@@ -1333,7 +1343,7 @@ public sealed class SimState
             player.MadeCards = null;
             player.Cards = CardSet.Empty;
             player.Stampede = player.Simpleton = 0;
-            player.AutoHand = null;
+            player.AutoHand = player.UnplayableHand = null;
             player.PileAutoPlays = null;
         }
         return shown;

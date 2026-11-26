@@ -84,7 +84,7 @@ public static partial class SimEngine
             player.ExhaustingInHand = new();
             player.Fading = player.HexFading = player.UpgradableAtTurnEnd = 0;
             player.Stampede = player.Simpleton = 0;
-            player.AutoHand = null;
+            player.AutoHand = player.UnplayableHand = null;
         }
         YourTurnStartGaps(state);
     }

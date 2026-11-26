@@ -66,7 +66,8 @@ public static partial class SimEngine
             // Random ones (Tune's): which isn't known, so one whose upgrade changes what it does as the turn ends (read at the board) isn't either.
             if (simPlayer.TurnEndCards.Any(card => card.Upgraded is { } upgraded && upgraded.Amount != card.Amount))
                 state.Unmodelled ??= $"{source} upgrades random cards in hand, and one that acts as the turn ends could be one";
-            if (simPlayer.AutoHand?.Any(card => card.Card?.Upgradable != false) == true) state.AutoPlaysUnknown = true;
+            if (simPlayer.AutoHand?.Any(card => card.Card?.Upgradable != false) == true || simPlayer.UnplayableHand?.Any(card => card.Card?.Upgradable != false) == true)
+                state.AutoPlaysUnknown = true;
             return;
         }
         // Every card (decision #363): each read upgraded at the board is that one now (TurnEndCard.Upgraded, SimHandCard.Upgraded); an auto-play's pick
@@ -78,6 +79,8 @@ public static partial class SimEngine
             if (hand.Any(card => card.Upgraded == null && card.Card?.Upgradable != false)) state.AutoPlaysUnknown = true;
             else changed.AutoHand = hand.Select(card => card.Upgraded ?? card).ToList();
         }
+        // An Unplayable card's upgraded copy isn't read (only its cost is followed, for Mummified Hand's pick): one that could change makes the pick unknown.
+        if (simPlayer.UnplayableHand?.Any(card => card.Card?.Upgradable != false) == true) state.AutoPlaysUnknown = true;
     }
 
     /// <summary>
@@ -135,7 +138,8 @@ public static partial class SimEngine
     /// (CostsEnergyOrStars: an X cost doesn't), each at its live cost (HandCost) and live star cost (HandStarCost), as Mummified Hand picks
     /// (FreeInHandStep): first among those whose cost before any modifier or base star cost is above 0 (SimHandCard.CostsBeforeModifiers, decision
     /// #389), else among them all. What reads a hand card's cost in a simulation is the pick of the cheapest at the turn's end (SimpletonPower), from the hand
-    /// as AutoHand holds it, which is then every playable card: a branch per card there that costs energy or stars, each equally likely, that card
+    /// as AutoHand holds it, which is then every playable card; the pick is among those and the Unplayable cards beside them (UnplayableHand, decision
+    /// #393), as the game's is among your whole hand: a branch per card there that costs energy or stars, each equally likely, that card
     /// free (its local cost and star cost 0, the listeners' passes still on them). Otherwise nothing a simulation reads changes. A cost that isn't
     /// known makes the branch unknown (SimState.CostsUnknown).
     /// <paramref name="played"/> is the card in play (SimCard.HandId), no longer in the hand.
@@ -145,7 +149,10 @@ public static partial class SimEngine
         if (state.AutoPlaysUnknown || state.Player(player) is not { Simpleton: > 0, AutoHand: { } hand }) return new[] { state };
         var costing = new List<SimHandCard>();
         var narrowed = new List<SimHandCard>();
-        foreach (var card in hand)
+        // The game picks among your whole hand (PileType.Hand's cards): its Unplayable cards too (UnplayableHand), whose being free changes nothing a
+        // simulation reads, but takes the pick from the others.
+        var unplayable = state.Player(player)!.UnplayableHand;
+        foreach (var card in unplayable == null ? hand : hand.Concat(unplayable))
         {
             if (card.Id == played) continue;
             if (HandCost(state, player, card) is not { } cost || HandStarCost(state, player, card) is not { } stars)
@@ -167,7 +174,9 @@ public static partial class SimEngine
         {
             var branch = costing.Count == 1 ? state : state.Clone();
             branch.Weight = state.Weight / costing.Count;
-            branch.MutablePlayer(player).AutoHand = hand.Select(card => card.Id == free.Id ? card.FreeCopy() : card).ToList();
+            if (unplayable != null && unplayable.Contains(free))
+                branch.MutablePlayer(player).UnplayableHand = unplayable.Select(card => card.Id == free.Id ? card.FreeCopy() : card).ToList();
+            else branch.MutablePlayer(player).AutoHand = hand.Select(card => card.Id == free.Id ? card.FreeCopy() : card).ToList();
             result.Add(branch);
         }
         return result;
