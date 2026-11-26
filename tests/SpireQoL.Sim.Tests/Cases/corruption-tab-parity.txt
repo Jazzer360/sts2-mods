@@ -1,0 +1,200 @@
+0 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 1 Attack 2>2 Skill 2>2 Power 2>2; | enemy 0
+1 | checked DarkEmbracePower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 1 Attack 3>2 Skill 0>0 Power 2>1; | enemy 40
+2 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 6
+3 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+4 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+5 | checked | left -1 exhausted 0 energy 3 block 0 hand 3 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 1 Attack 2>2 Skill 2>2 Power 2>2; | enemy 40
+6 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 0>0 Power 2>1; | enemy 6
+7 | checked | left -1 exhausted 0 energy 3 block 0 hand 1 Attack 2>2 Skill 2>2 Power 2>2; | enemy 34
+8 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 1 hand 1 Attack 3>2 Skill 0>0 Power 3>2; | enemy 6
+9 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 3 hand 1 Attack 2>2 Skill 0>0 Power 1>1; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 40
+10 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 3>2 Power 2>1; | enemy 6
+11 | checked | left -1 exhausted 1 energy 3 block 0 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+12 | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 1 hand 1 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+13 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+14 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+15 | checked | left -1 exhausted 1 energy 3 block 0 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+16 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 6
+17 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 3>2 Power 2>1; | enemy 40
+18 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+19 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 3 Attack 2>2 Skill 0>0 Power 1>1; -2 exhausted 0 energy 2 block 0 hand 1 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+20 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 40
+21 | checked DarkEmbracePower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+22 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+23 proc:FeelNoPainPower plain Block 1 amount 1 1-1; | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 3>2 Power 3>2; | enemy 6
+24 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 40
+25 | checked | left -1 exhausted 1 energy 3 block 0 hand 1 Attack 3>2 Skill 0>0 Power 3>2; | enemy 6
+26 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 0>0 Power 2>1; | enemy 40
+27 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 1>1; | enemy 6
+28 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 40
+29 | checked | left -1 exhausted 1 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 1 Attack 3>2 Skill 3>2 Power 2>1; | enemy 6
+30 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 1>1; | enemy 40
+31 | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 3 hand 1 Attack 2>2 Skill 0>0 Power 1>1; | enemy 6
+32 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 1 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+33 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 3>2 Power 3>2; | enemy 6
+34 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 3>2 Power 3>2; | enemy 40
+35 | checked | left -1 exhausted 1 energy 3 block 0 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+36 proc:FeelNoPainPower plain Block 2 amount 2 2-2; | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 3 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 1 energy 3 block 0 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+37 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 3>2 Power 2>1; | enemy 6
+38 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+39 | checked DarkEmbracePower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 1 Attack 2>2 Skill 0>0 Power 1>1; | enemy 6
+40 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 40
+41 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+42 proc:FeelNoPainPower plain Block 2 amount 2 2-2; proc:DarkEmbracePower plain Draw 1 amount 1 1-1; | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+43 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 2>2 Power 1>1; | enemy 40
+44 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>0 Power 2>2; | enemy 6
+45 proc:FeelNoPainPower plain Block 1 amount 1 1-1; | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+46 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+47 | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 1 Attack 2>2 Skill 2>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 3>2 Power 3>2; | enemy 40
+48 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 2>1; | enemy 6
+49 | checked | left -1 exhausted 2 energy 3 block 0 hand 1 Attack 3>2 Skill 0>0 Power 3>2; | enemy 40
+50 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+51 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+52 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+53 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 40
+54 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+55 | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 2 hand 1 Attack 3>2 Skill 0>0 Power 2>1; | enemy 40
+56 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 3 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+57 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 3>2 Power 2>1; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 40
+58 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+59 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 2>1; | enemy 40
+60 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+61 proc:FeelNoPainPower plain Block 1 amount 1 1-1; | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 4 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+62 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+63 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 3>2 Power 3>2; | enemy 6
+64 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 3>2 Power 3>2; | enemy 40
+65 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 1 hand 1 Attack 2>2 Skill 0>0 Power 1>1; | enemy 6
+66 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+67 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+68 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+69 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 6
+70 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 1 Attack 2>2 Skill 2>2 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 34
+71 | checked | left -1 exhausted 1 energy 3 block 0 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+72 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 40
+73 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 1 Attack 2>2 Skill 2>2 Power 1>1; | enemy 0
+74 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 0>0 Power 2>1; | enemy 40
+75 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 2>1; | enemy 6
+76 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+77 | checked DarkEmbracePower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 1 Attack 2>2 Skill 2>0 Power 1>1; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+78 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+79 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 6
+80 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 1 Attack 3>2 Skill 3>2 Power 3>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 34
+81 proc:DarkEmbracePower plain Draw 1 amount 1 1-1; | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+82 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+83 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 1>1; | enemy 6
+84 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 40
+85 | checked DarkEmbracePower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+86 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 6
+87 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 1>1; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+88 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 2 hand 1 Attack 3>2 Skill 0>0 Power 3>2; | enemy 6
+89 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 3 hand 1 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+90 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+91 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 40
+92 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+93 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 1>1; | enemy 40
+94 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 6
+95 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+96 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 6
+97 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 2 hand 1 Attack 3>2 Skill 3>0 Power 3>2; | enemy 40
+98 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 3 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 1 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+99 | checked | left -1 exhausted 1 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+100 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+101 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+102 proc:FeelNoPainPower plain Block 3 amount 3 3-3; | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 4 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+103 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 40
+104 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 2>1; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+105 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 40
+106 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 6
+107 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 40
+108 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+109 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+110 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 40
+111 proc:FeelNoPainPower plain Block 3 amount 3 3-3; proc:DarkEmbracePower plain Draw 1 amount 1 1-1; | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 6
+112 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 1 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+113 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 3>2 Power 2>1; | enemy 6
+114 proc:DarkEmbracePower plain Draw 1 amount 1 1-1; | checked DarkEmbracePower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+115 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 2 hand 2 Attack 3>2 Skill 0>0 Power 3>2; -2 exhausted 0 energy 2 block 0 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+116 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+117 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 3>2 Power 3>2; | enemy 6
+118 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+119 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+120 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 1 Attack 2>2 Skill 2>2 Power 2>2; | enemy 34
+121 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+122 | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; -2 exhausted 0 energy 2 block 0 hand 1 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+123 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+124 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+125 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 3 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 1 Attack 3>2 Skill 0>0 Power 2>1; | enemy 6
+126 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 40
+127 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+128 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 2 energy 3 block 0 hand 1 Attack 3>2 Skill 0>0 Power 3>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+129 proc:FeelNoPainPower plain Block 3 amount 3 3-3; proc:DarkEmbracePower plain Draw 1 amount 1 1-1; | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 2 energy 4 block 6 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+130 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>0 Power 2>2; | enemy 6
+131 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+132 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 3 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 1 energy 2 block 0 hand 1 Attack 3>2 Skill 0>0 Power 3>2; | enemy 6
+133 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 1>1; | enemy 40
+134 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+135 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+136 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 3>2 Power 3>2; | enemy 6
+137 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 3>2 Power 3>2; | enemy 40
+138 proc:FeelNoPainPower plain Block 3 amount 3 3-3; | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 3 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 1 energy 2 block 0 hand 1 Attack 3>2 Skill 0>0 Power 2>1; | enemy 6
+139 | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 2 hand 1 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+140 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+141 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+142 proc:DarkEmbracePower plain Draw 1 amount 1 1-1; | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 3 Attack 2>2 Skill 0>0 Power 1>1; -2 exhausted 1 energy 2 block 0 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+143 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>0 Power 2>2; | enemy 40
+144 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 3 hand 1 Attack 3>2 Skill 0>0 Power 3>2; | enemy 6
+145 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 1 hand 1 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 2>2 Power 1>1; | enemy 40
+146 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+147 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 40
+148 proc:FeelNoPainPower plain Block 2 amount 2 2-2; | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 4 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+149 | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 3 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+150 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+151 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+152 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 40
+153 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 1 Attack 3>3 Skill 3>3 Power 3>3; | enemy 0
+154 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+155 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+156 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+157 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>0 Power 2>2; | enemy 6
+158 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+159 proc:FeelNoPainPower plain Block 2 amount 2 2-2; proc:DarkEmbracePower plain Draw 1 amount 1 1-1; | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 2 energy 3 block 4 hand 1 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+160 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 3>2 Power 3>2; | enemy 40
+161 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+162 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 3 Attack 3>2 Skill 0>0 Power 3>2; -2 exhausted 0 energy 2 block 0 hand 1 Attack 2>2 Skill 2>2 Power 2>2; | enemy 40
+163 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 6
+164 proc:FeelNoPainPower plain Block 3 amount 3 3-3; | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 40
+165 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+166 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 0>0 Power 2>1; | enemy 40
+167 proc:FeelNoPainPower plain Block 1 amount 1 1-1; proc:DarkEmbracePower plain Draw 1 amount 1 1-1; | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+168 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+169 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+170 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; | enemy 40
+171 | checked | left -1 exhausted 1 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 6
+172 proc:FeelNoPainPower plain Block 2 amount 2 2-2; | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 2 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 1 energy 2 block 0 hand 1 Attack 2>2 Skill 0>0 Power 1>1; | enemy 40
+173 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 3 Attack 3>2 Skill 3>2 Power 3>2; -2 exhausted 0 energy 2 block 0 hand 1 Attack 2>2 Skill 0>0 Power 1>1; | enemy 6
+174 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+175 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 40
+176 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 1 Attack 2>2 Skill 2>2 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 1>1; | enemy 0
+177 | checked FeelNoPainPower 0/0; | left -1 exhausted 1 energy 3 block 2 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+178 proc:FeelNoPainPower plain Block 1 amount 1 1-1; | checked FeelNoPainPower 0/0; | left -1 exhausted 2 energy 3 block 2 hand 1 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+179 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 40
+180 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 1>1; | enemy 6
+181 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+182 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 6
+183 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 1 Attack 3>2 Skill 3>2 Power 3>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 34
+184 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 2>1; | enemy 6
+185 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+186 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 3 Attack 2>2 Skill 2>2 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 1 Attack 3>2 Skill 3>2 Power 3>2; | enemy 6
+187 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+188 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+189 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+190 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>0 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+191 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 40
+192 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+193 | checked DarkEmbracePower 0/0; FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 1 Attack 2>2 Skill 2>2 Power 1>1; -2 exhausted 0 energy 2 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 34
+194 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+195 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+196 | checked FeelNoPainPower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 2>2 Power 2>2; -2 exhausted 0 energy 2 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+197 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 6
+198 | checked DarkEmbracePower 0/0; | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 2>2 Skill 0>0 Power 2>2; | enemy 40
+199 | checked | left -1 exhausted 0 energy 3 block 0 hand 2 Attack 3>2 Skill 0>0 Power 3>2; | enemy 6
