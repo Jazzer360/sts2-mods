@@ -386,8 +386,9 @@ public static partial class SimEngine
     /// another: the discard pile shuffled in when the draw pile is empty (ShuffleIfNecessary); the known top card, else one card of the
     /// rest, a branch per profile by its count (the order is hidden). Each plays as built for the pile (SimDrawCard.FromPile, or
     /// FromPileUpgraded when <paramref name="upgrade"/>): free, at a random hittable enemy for a card aimed at one (CardCmd.AutoPlay),
-    /// a branch each, in the middle of whatever played it (its own state put back after, as Hellraiser's). Then it goes to the
-    /// discard pile, or to the exhaust pile when <paramref name="forceExhaust"/> (Havoc: ExhaustOnNextPlay) or it exhausts itself.
+    /// a branch each, in the middle of whatever played it (its own state put back after, as Hellraiser's). Then it goes where its play
+    /// leaves it (its result location): the discard pile, or the exhaust pile when <paramref name="forceExhaust"/> (Havoc: ExhaustOnNextPlay),
+    /// it exhausts itself or a listener sends it there (Corruption's Skills).
     /// </summary>
     internal static IEnumerable<SimState> AutoPlayFromDraw(SimState state, int player, int count, bool forceExhaust, bool upgrade = false)
     {
@@ -469,21 +470,21 @@ public static partial class SimEngine
             var branch = plays.Count == 1 ? state : state.Clone();
             branch.Weight = state.Weight / plays.Count;
             var sub = new BranchSet(branch, nested: true);
-            ApplyPlay(sub, play);
+            RunScript(sub, SimScript.Of(play, fromPile: true, exhaustOnNextPlay: forceExhaust));
             foreach (var copy in sub.States)
             {
+                // Where its play left it (CardModel.OnPlayWrapper's result location, through every listener: Corruption's Skills to the exhaust
+                // pile, Rebound's to the top of the draw pile, Feral's to your hand), its exhaust already counted by its card play.
+                var location = copy.PlayResultLocation;
                 copy.RestoreFrame(frame);
-                if (card.ExhaustsWhenPlayed)
+                switch (location)
                 {
-                    exhaustedBack?.Invoke(copy);
-                    result.Add(copy);
+                    case SimResultLocation.Exhaust: exhaustedBack?.Invoke(copy); break;
+                    case SimResultLocation.DrawTop: OnTop(copy, player, card); break;
+                    case SimResultLocation.Default: Discarded(copy, player, card); break;
+                    // In your hand (SimEngine.RunCardPlay put it there), or nowhere (a Power).
                 }
-                else if (forceExhaust) result.AddRange(ProcCardEvent(copy, CardEvent.Exhausted, count: 1, player, indirect: true));
-                else
-                {
-                    Discarded(copy, player, card);
-                    result.Add(copy);
-                }
+                result.Add(copy);
             }
         }
         return result;
@@ -493,6 +494,13 @@ public static partial class SimEngine
     {
         var simPlayer = state.MutablePlayer(player);
         simPlayer.Draw = simPlayer.Draw!.WithDiscarded(card);
+    }
+
+    /// <summary>A card put on top of its owner's draw pile (CardPilePosition.Top), known there.</summary>
+    private static void OnTop(SimState state, int player, SimDrawCard card)
+    {
+        var simPlayer = state.MutablePlayer(player);
+        simPlayer.Draw = simPlayer.Draw!.WithTopAt(index: 0, card);
     }
 
     /// <summary>

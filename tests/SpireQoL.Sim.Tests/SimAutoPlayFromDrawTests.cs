@@ -73,6 +73,95 @@ public class SimAutoPlayFromDrawTests
         Assert.Equal(44, Assert.Single(outcome.Branches).Enemy(id: 1)!.Hp);
     }
 
+    private static SimState WithCorruption(SimState state)
+    {
+        state.You.Powers = state.You.Powers.With(PowerId.Corruption, amount: 1).With(PowerId.FeelNoPain, amount: 3).With(PowerId.DarkEmbrace, amount: 1);
+        return state;
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void CorruptionExhaustsASkillPlayedFromYourDrawPileOnce(bool havoc)
+    {
+        // CardCmd.AutoPlay plays it through OnPlayWrapper, whose result location is the card's own (the discard pile, or the exhaust pile for
+        // Havoc's ExhaustOnNextPlay) through Hook.ModifyCardPlayResultLocation: Corruption sends a Skill to the exhaust pile. The Defend's one
+        // exhaust and the card that played it (a Skill too, Corruption's as well): two Feel No Pain blocks, two Dark Embrace draws, two cards in
+        // the exhaust pile, none in the discard pile.
+        var state = WithCorruption(You(new() { new SimDrawGroup(new SimDrawCard("drawn"), 2) }));
+        state.You.Draw!.Top.Add(Defend);
+        var branches = SimEngine.Run(state, Havoc(exhaust: havoc)).Branches;
+        Assert.All(branches, branch =>
+        {
+            Assert.Equal(5 + 3 + 3, branch.You.Block);
+            Assert.Equal(2, branch.You.ExhaustPile);
+            Assert.Equal(0, branch.You.Draw!.DiscardCount);
+            Assert.Equal(4 + 2, branch.You.HandCount); // the card that played it left your hand, Dark Embrace drew two
+        });
+    }
+
+    [Fact]
+    public void CorruptionGainedDuringThePlayExhaustsASkillPlayedFromYourDrawPile()
+    {
+        // Corruption given before the auto-play (it wasn't on the board): its result location still sends the Skill to the exhaust pile.
+        var state = You(new() { new SimDrawGroup(Defend, 1) });
+        state.You.Powers = state.You.Powers.With(PowerId.FeelNoPain, amount: 3);
+        var play = Havoc(exhaust: false);
+        play.Body.Insert(0, new ApplyPowerAction(PowerId.Corruption, Amount: 1) { To = ApplyPowerAction.Where.You });
+        var branch = Assert.Single(SimEngine.Run(state, play).Branches);
+        Assert.Equal(5 + 3, branch.You.Block);
+        Assert.Equal(1, branch.You.ExhaustPile);
+        Assert.Equal(0, branch.You.Draw!.DiscardCount);
+    }
+
+    [Fact]
+    public void ReboundPutsACardPlayedFromYourDrawPileBackOnTop()
+    {
+        // ReboundPower.ModifyCardPlayResultLocation: a card of its owner's bound for the discard pile goes on top of the draw pile, a stack each
+        // (the card that played it uses the first).
+        var state = You(new() { new SimDrawGroup(Strike, 1) });
+        state.You.Powers = state.You.Powers.With(PowerId.Rebound, amount: 2);
+        var branch = Assert.Single(SimEngine.Run(state, Havoc(exhaust: false)).Branches);
+        Assert.Equal(44, branch.Enemy(id: 1)!.Hp);
+        Assert.Equal("strike", Assert.Single(branch.You.Draw!.Top).Key);
+        Assert.Equal(0, branch.You.Draw.DiscardCount);
+        Assert.False(branch.You.Powers.Has(PowerId.Rebound));
+    }
+
+    [Fact]
+    public void ACardHavocExhaustsGivesItsOwnExhaustEnergy()
+    {
+        // Drum of Battle's AfterCardExhausted (card == this): its energy once Havoc's ExhaustOnNextPlay exhausts it, as when it exhausts itself.
+        var drum = new SimDrawCard("drum")
+        {
+            FromPile = new SimHandCard { Name = "DrumOfBattle", Plays = { new SimPlay { Name = "DrumOfBattle", AutoPlay = true, HandDelta = 0, TargetId = Who.None,
+                Card = new SimCardPlay(new SimCard("DrumOfBattle", SimCardType.Skill) { ExhaustEnergy = 1 }, Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: true) } } },
+        };
+        var state = You(new() { new SimDrawGroup(drum, 1) });
+        var energy = state.You.Energy;
+        var branch = Assert.Single(SimEngine.Run(state, Havoc()).Branches);
+        Assert.Equal(energy + 1, branch.You.Energy);
+        Assert.Equal(1, branch.You.ExhaustPile);
+        Assert.Equal(0, branch.You.Draw!.DiscardCount);
+    }
+
+    [Fact]
+    public void HavocsPowerGoesNowhere()
+    {
+        // GetResultLocationForCardPlay: a Power goes nowhere, ExhaustOnNextPlay or not (its type is asked first): no exhaust.
+        var power = new SimDrawCard("power")
+        {
+            FromPile = new SimHandCard { Name = "Inflame", Plays = { new SimPlay { Name = "Inflame", AutoPlay = true, HandDelta = 0, TargetId = Who.None,
+                Card = new SimCardPlay(new SimCard("Inflame", SimCardType.Power), Who.You, Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: true) } } },
+        };
+        var state = You(new() { new SimDrawGroup(power, 1) });
+        state.You.Powers = state.You.Powers.With(PowerId.FeelNoPain, amount: 3);
+        var branch = Assert.Single(SimEngine.Run(state, Havoc()).Branches);
+        Assert.Equal(0, branch.You.Block);
+        Assert.Equal(0, branch.You.ExhaustPile);
+        Assert.Equal(0, branch.You.Draw!.DiscardCount);
+    }
+
     [Fact]
     public void ACardWhosePlayIsntBuiltIsUnknown()
     {

@@ -579,7 +579,7 @@ public static partial class SimAdapter
             // A card of yours that upgrades every card of your hand, draw or discard pile (decision #363): each profile an upgrade could change gets its upgraded
             // one (SimDrawCard.UpgradedTo), read from the card's upgraded copy.
             var everyUpgraded = PilesYourCardsUpgrade(me);
-            var fromPileByKey = new Dictionary<string, (SimHandCard? Plain, SimHandCard? Upgraded, bool Exhausts)>();
+            var fromPileByKey = new Dictionary<string, (SimHandCard? Plain, SimHandCard? Upgraded)>();
             // The filtered takes of the cards in your hand (decision #189): a card drawn or taken into your hand during a play counts for
             // the ones it would be taken by (Second Wind's non-Attacks, The Hermit's Curse).
             var takeFilters = handCards.SelectMany(TakeFiltersOf).ToList();
@@ -632,15 +632,15 @@ public static partial class SimAdapter
                     auto = new SimHandCard { Id = id, Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, LocalCost = LocalCostOf(card), Card = SimReaders.CostedFacts(card), Plays = plays, AutoPlayedBy = autoPlayedBy };
                     autoByKey[key] = auto;
                 }
-                (SimHandCard? Plain, SimHandCard? Upgraded, bool Exhausts) fromPile = default;
+                (SimHandCard? Plain, SimHandCard? Upgraded) fromPile = default;
                 if (playsFromPile && !fromPileByKey.TryGetValue(key + (exhausted ? "|exhausted" : ""), out fromPile))
                 {
-                    fromPile = (FromPile(card, card, me, combat, ids, out var exhausts), topUpgrades || exhausted && exhaustUpgrades ? UpgradedFromPile(card, me, combat, ids) : null, exhausts);
+                    fromPile = (FromPile(card, card, me, combat, ids), topUpgrades || exhausted && exhaustUpgrades ? UpgradedFromPile(card, me, combat, ids) : null);
                     fromPileByKey[key + (exhausted ? "|exhausted" : "")] = fromPile;
                 }
                 var drawCard = new SimDrawCard(key)
                 {
-                    FromPile = fromPile.Plain, FromPileUpgraded = fromPile.Upgraded, ExhaustsWhenPlayed = fromPile.Exhausts,
+                    FromPile = fromPile.Plain, FromPileUpgraded = fromPile.Upgraded,
                     EnergyLostOnDraw = energyLost,
                     Exhausting = exhaustEnergy > 0 ? new ExhaustingCard(HandCard: 0, exhaustEnergy, SimReaders.TypeOf(card)) : null,
                     TurnEnd = turnEnd, Fading = fading, HexFading = hexFading, Status = status, Ethereal = ethereal, Strike = strike,
@@ -865,14 +865,12 @@ public static partial class SimAdapter
     /// How <paramref name="played"/> plays when a card auto-plays it from your draw pile (SimDrawCard.FromPile): as an auto-play of a
     /// card that isn't in your hand (its hand delta its own, no hand card). <paramref name="pileCard"/> is the card in your pile (the
     /// same, or the one an upgraded copy stands for). No plays for an Unplayable card (it goes to the discard pile unplayed). Null when
-    /// it can't be built.
+    /// it can't be built. Where it goes after is its play's result location, worked out in the simulation (SimEngine.PlayFromPile).
     /// </summary>
-    private static SimHandCard? FromPile(CardModel played, CardModel pileCard, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, out bool exhausts)
+    private static SimHandCard? FromPile(CardModel played, CardModel pileCard, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids)
     {
-        exhausts = false;
         try
         {
-            exhausts = ExhaustsAfterPlay(played, me);
             var plays = played.Keywords.Contains(CardKeyword.Unplayable) ? new List<SimPlay>() : AutoPlays(played, me, combat, ids);
             // Built for a card leaving your hand unless it's in your draw pile (SimPlay's HandDelta): it isn't in your hand.
             if (played.Pile?.Type != PileType.Draw) foreach (var play in plays) play.HandDelta += 1;
@@ -892,11 +890,11 @@ public static partial class SimAdapter
     /// </summary>
     private static SimHandCard? UpgradedFromPile(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids)
     {
-        if (!card.IsUpgradable) return FromPile(card, card, me, combat, ids, out _);
+        if (!card.IsUpgradable) return FromPile(card, card, me, combat, ids);
         try
         {
             var copy = SpireQoL.Cards.UpgradedCopy.Of(card);
-            return FromPile(copy, card, me, combat, ids, out _);
+            return FromPile(copy, card, me, combat, ids);
         }
         catch
         {
@@ -915,16 +913,6 @@ public static partial class SimAdapter
         if (card.TargetType != TargetType.AnyEnemy) return new List<SimPlay> { AutoPlay(card, me, combat, ids, target: Who.None, owner) };
         return ids.Where(entry => entry.Key.IsAlive && entry.Key.IsHittable).Select(entry => AutoPlay(card, me, combat, ids, entry.Value, owner)).ToList();
     }
-
-    /// <summary>
-    /// Where the card goes after its last play is the exhaust pile (CardModel.GetResultLocationForCardPlay, once however many plays): not a
-    /// Power or a dupe (History Course's copy); the Exhaust keyword (added Exhaust included) or ExhaustOnNextPlay; then Corruption sends a
-    /// played Skill there whatever it was (CorruptionPower.ModifyCardPlayResultLocation).
-    /// </summary>
-    internal static bool ExhaustsAfterPlay(CardModel card, Player me) =>
-        card.Type != CardType.Power
-        && ((!card.IsDupe && (card.Keywords.Contains(CardKeyword.Exhaust) || card.ExhaustOnNextPlay))
-            || (card.Type == CardType.Skill && me.Creature.Powers.Any(power => power is CorruptionPower)));
 
     private static SimPlay AutoPlay(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, int target, int owner = Who.You)
     {

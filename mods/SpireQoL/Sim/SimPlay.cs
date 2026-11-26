@@ -168,9 +168,10 @@ public sealed class SimScript
 
     /// <summary>
     /// A play as its script: the energy it spends, the card play (its actions on every play; the shorthand's on the first, as
-    /// totals), what follows it, the card leaving your hand, then the shorthand's procs.
+    /// totals), what follows it, the card leaving your hand, then the shorthand's procs. <paramref name="fromPile"/>: auto-played from a pile
+    /// (CardPlayAction.FromPile), and <paramref name="exhaustOnNextPlay"/> its ExhaustOnNextPlay set first (Havoc's).
     /// </summary>
-    public static SimScript Of(SimPlay simPlay)
+    public static SimScript Of(SimPlay simPlay, bool fromPile = false, bool exhaustOnNextPlay = false)
     {
         var script = new SimScript { Name = simPlay.Name };
         script.Actions.AddRange(simPlay.Before);
@@ -190,7 +191,8 @@ public sealed class SimScript
         var body = new List<SimAction>(simPlay.Body);
         var shorthand = Shorthand(simPlay);
         if (shorthand.Count > 0) body.Add(new FirstPlayOnly(shorthand));
-        script.Actions.Add(new CardPlayAction(play, body) { FromHand = simPlay.HandCard != 0, HandCard = simPlay.HandCard, CountByModels = true, Upgraded = simPlay.Upgraded });
+        script.Actions.Add(new CardPlayAction(play, body) { FromHand = simPlay.HandCard != 0, HandCard = simPlay.HandCard, CountByModels = true, Upgraded = simPlay.Upgraded,
+            FromPile = fromPile, ExhaustOnNextPlay = exhaustOnNextPlay });
         script.Actions.AddRange(simPlay.After);
         script.Actions.Add(new CardResolvedAction(simPlay.HandDelta, simPlay.HandCard, simPlay.AutoPlay, simPlay.Draws, simPlay.FadingDelta, simPlay.IsAttack) { Owner = play.Owner, HexFadingDelta = simPlay.HexFadingDelta });
         if (simPlay.RandomPoison > 0 && simPlay.RandomPoisonTimes > 0)

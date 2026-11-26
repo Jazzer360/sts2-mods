@@ -35,8 +35,6 @@ public sealed record SimDrawCard(string Key)
     /// </summary>
     public SimHandCard? FromPile { get; init; }
     public SimHandCard? FromPileUpgraded { get; init; }
-    /// <summary>Its play exhausts it (SimAdapter.ExhaustsAfterPlay): played from the pile, it goes to the exhaust pile, not the discard pile.</summary>
-    public bool ExhaustsWhenPlayed { get; init; }
     /// <summary>
     /// A shuffle puts it on top: its enchantment's ModifyShuffleOrder moves it to the front (ModelSpec.OnTopWhenShuffled, read from its code:
     /// Perfect Fit's).

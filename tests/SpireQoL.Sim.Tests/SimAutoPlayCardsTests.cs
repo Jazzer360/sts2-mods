@@ -147,7 +147,7 @@ public class SimAutoPlayCardsTests
         // Knife Trap+ at enemy 2: each Shiv in the exhaust pile, upgraded first, at its target; a Shiv exhausts itself, so it's back there after.
         var shiv = new SimDrawCard("shiv")
         {
-            AutoPlayedBy = Listed, ExhaustsWhenPlayed = true,
+            AutoPlayedBy = Listed,
             FromPile = new SimHandCard { Name = "Shiv", IsAttack = true, Plays = { Hits(damage: 4, target: 1, exhausts: true), Hits(damage: 4, target: 2, exhausts: true) } },
             FromPileUpgraded = new SimHandCard { Name = "Shiv", IsAttack = true, Plays = { Hits(damage: 6, target: 1, exhausts: true), Hits(damage: 6, target: 2, exhausts: true) } },
         };

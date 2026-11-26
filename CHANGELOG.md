@@ -294,6 +294,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Quiver is predicted instead of showing `?`: each arrow slot it gives has its arrow ready to shoot.
 - Red Skull's threshold follows your max HP when a play changes it: after a max HP gain (Fruit Juice) its Strength stays while you're still at or below half your new max HP. Osty's heals now tell it your HP changed, as a heal of yours does.
 - When Incoming Damage, Proc Tags or the Death Skull fails to load, the other two still remember the cards placed on top of your draw pile.
+- A card played from your draw pile or your exhaust pile (Havoc, Cascade, The Devil, Lost Lute, Knife Trap) goes where the game sends it once played: to the exhaust pile when a play before it gave you Corruption (it was counted in your discard pile too), back on top of your draw pile with Rebound (it went to your discard pile), and nowhere for a Power Havoc plays (it was exhausted, setting off Feel No Pain and Dark Embrace). A card Havoc exhausts that gives energy when exhausted gives it in the predictions.
 
 #### Removed
 - Biiig Hug's tag and its settings row: the Soot it adds on a shuffle never makes a shuffle worth avoiding. The Soot is still worked out (a later draw can find it, and your relics and powers that react to a card you make hear it).

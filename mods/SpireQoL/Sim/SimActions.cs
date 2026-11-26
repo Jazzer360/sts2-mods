@@ -30,6 +30,16 @@ public sealed record CardPlayAction(SimCardPlay Play, IReadOnlyList<SimAction> B
     /// is this card's, with this body, as OnPlayWrapper's next OnPlay reads the upgraded card. Null: none read (a later play is then unknown).
     /// </summary>
     public CardVersion? Upgraded { get; init; }
+    /// <summary>
+    /// A card auto-played from one of its owner's piles (SimEngine.PlayFromPile): where its play leaves it (SimState.PlayResultLocation) is kept past
+    /// the card play, for the pile move that follows it (the discard pile, the exhaust pile, the top of the draw pile, or the hand it's in already).
+    /// </summary>
+    public bool FromPile { get; init; }
+    /// <summary>
+    /// It exhausts once played whatever it is (CardModel.ExhaustOnNextPlay, set by AutoPlayFromDrawPile's forceExhaust: Havoc's), its own result location
+    /// (GetResultLocationForCardPlay) before the listeners change it; its exhaust then is the card that played it's doing (indirect).
+    /// </summary>
+    public bool ExhaustOnNextPlay { get; init; }
 }
 
 /// <summary>A card as a change during its play leaves it (its upgraded copy): the card its later plays' hooks see, and what each of them does.</summary>

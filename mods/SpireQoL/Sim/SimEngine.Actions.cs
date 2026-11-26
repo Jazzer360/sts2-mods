@@ -84,8 +84,9 @@ public static partial class SimEngine
                 }
             }
         }
-        // Sent to the exhaust pile by a model (Corruption's Skills): its own exhaust sets off what reacts to exhausts, then its own reaction
-        // (Drum of Battle's energy). One that exhausts itself has its exhaust in the play's After actions.
+        // Sent to the exhaust pile by a model (Corruption's Skills) or by the card that played it (Havoc's ExhaustOnNextPlay): its own exhaust sets
+        // off what reacts to exhausts, then its own reaction (Drum of Battle's energy). One that exhausts itself has its exhaust in the play's After
+        // actions.
         if (!cardPlayAction.Play.Card.ExhaustsSelf && branches.States.Any(branch => branch.PlayResultLocation == SimResultLocation.Exhaust))
         {
             var others = branches.States.Where(branch => branch.PlayResultLocation != SimResultLocation.Exhaust).ToList();
@@ -93,7 +94,7 @@ public static partial class SimEngine
             branches.Aside += others.Count;
             try
             {
-                Run(branches, new CardEventAction(CardEvent.Exhausted, Count: 1) { Card = cardPlayAction.Play.Card });
+                Run(branches, new CardEventAction(CardEvent.Exhausted, Count: 1) { Card = cardPlayAction.Play.Card, Indirect = cardPlayAction.ExhaustOnNextPlay });
                 if (cardPlayAction.Play.Card.ExhaustEnergy > 0)
                     Run(branches, new CardEventAction(CardEvent.EnergyGained, cardPlayAction.Play.Card.ExhaustEnergy) { Player = cardPlayAction.Play.Owner });
             }
@@ -103,12 +104,14 @@ public static partial class SimEngine
                 branches.States.AddRange(others);
             }
         }
-        // The card goes where the shape said (CardPlay.ResultPile): back on top of its owner's hand (Feral), keeping its slot.
+        // The card goes where the shape said (CardPlay.ResultPile): back on top of its owner's hand (Feral), keeping its slot. One auto-played from a
+        // pile keeps its location for the pile move after it (SimEngine.PlayFromPile; the frame it puts back clears it).
         branches.Do(branch =>
         {
             if (branch.PlayResultLocation == SimResultLocation.HandTop) AddToHand(branch, cardPlayAction.Play.Owner, count: 1);
             branch.CurrentPlay = null; branch.PlayTaken = 0; branch.TakeMatching = NamedCounts.Empty; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty;
-            branch.PlayCountNow = 0; branch.PlayResultLocation = SimResultLocation.Default; branch.PlayChanges = SimState.CardChanges.None;
+            branch.PlayCountNow = 0; branch.PlayChanges = SimState.CardChanges.None;
+            if (!cardPlayAction.FromPile) branch.PlayResultLocation = SimResultLocation.Default;
         });
     }
 
@@ -198,9 +201,9 @@ public static partial class SimEngine
     {
         var play = cardPlayAction.Play with { PlayIndex = 0 };
         // Its own result pile first (CardModel.GetResultLocationForCardPlay): nowhere for a Power or a copy, the exhaust pile for one that
-        // exhausts itself, else the discard pile.
+        // exhausts itself or whose ExhaustOnNextPlay was set (Havoc's), else the discard pile.
         var location = play.Card.Type == SimCardType.Power || play.Card.Dupe ? SimResultLocation.Nowhere
-            : play.Card.ExhaustsSelf ? SimResultLocation.Exhaust : SimResultLocation.Default;
+            : play.Card.ExhaustsSelf || cardPlayAction.ExhaustOnNextPlay ? SimResultLocation.Exhaust : SimResultLocation.Default;
         List<(SimModel Model, int Owner)>? moved = null;
         foreach (var (model, owner) in Listeners(state))
         {
