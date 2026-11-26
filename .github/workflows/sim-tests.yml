@@ -4,9 +4,10 @@ name: Simulator tests
 on:
   push:
     branches: [main]
-    paths: ["mods/SpireQoL/Sim/**", "tests/**", ".github/workflows/sim-tests.yml"]
+    paths: ["mods/SpireQoL/Sim/**", "tests/**", ".github/workflows/sim-tests.yml", "global.json", "Directory.Build.*"]
   pull_request:
-    paths: ["mods/SpireQoL/Sim/**", "tests/**"]
+    paths: ["mods/SpireQoL/Sim/**", "tests/**", "global.json", "Directory.Build.*"]
+  workflow_dispatch:
 
 jobs:
   test:
