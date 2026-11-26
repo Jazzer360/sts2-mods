@@ -213,15 +213,28 @@ public sealed class SimDrawPile
         return new SimDrawPile { Top = shuffled.Top, Rest = shuffled.Rest, Discard = shuffled.Discard, Picked = Picked };
     }
 
-    /// <summary>For the branch key: what's left, by profile.</summary>
+    /// <summary>
+    /// For the branch key: what's left, by profile, and the discard pile's cards by profile (decision #366: a play from there, Beat Down's, or a take,
+    /// tells them apart) in any order (a card played from a pile joins the end of its list, so the same cards can be listed in another order).
+    /// </summary>
     internal void Hash(ref BranchKey key)
     {
         key.Add(Top.Count);
         foreach (var drawn in Top) key.Add(drawn.Key.GetHashCode());
         foreach (var group in Rest) { key.Add(group.Card.Key.GetHashCode()); key.Add(group.Count); }
         var discarded = 0;
-        foreach (var group in Discard) discarded += group.Count;
+        var profiles = 0L;
+        foreach (var group in Discard)
+        {
+            discarded += group.Count;
+            // Each group mixed on its own and summed: the sum is the same in any order.
+            var one = new BranchKey();
+            one.Add(group.Card.Key.GetHashCode());
+            one.Add(group.Count);
+            unchecked { profiles += one.Value; }
+        }
         key.Add(discarded);
+        key.Add(profiles);
         key.Add(Picked);
     }
 }

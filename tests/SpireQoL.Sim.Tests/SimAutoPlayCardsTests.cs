@@ -117,6 +117,31 @@ public class SimAutoPlayCardsTests
     }
 
     [Fact]
+    public void BranchesWhoseDiscardPilesHoldDifferentCardsStayApart()
+    {
+        // A random take from the discard pile (Strike or the other Attack, one each), then Beat Down's 1 Attack from what's left: the branches differ
+        // only in which card the discard pile still holds, and that decides the play (6 or 10), so they mustn't merge.
+        var other = Strike with { Key = "other", FromPile = new SimHandCard { Name = "Other", IsAttack = true, Plays = { Hits(damage: 10) } } };
+        var play = Card(new AutoPlayCardsAction(Key, SimPile.Discard, AutoPlayWay.Shuffled, Count: 1));
+        play.Body.Insert(0, new TakeToHandAction(Count: 1, new Dictionary<string, int> { ["strike"] = 1, ["other"] = 1 }) { Random = true, FromDiscard = true });
+        var outcome = SimEngine.Run(Board(discard: new() { new SimDrawGroup(Strike, 1), new SimDrawGroup(other, 1) }), play);
+        Assert.Equal(0.5, outcome.Chance(branch => branch.Enemy(id: 1)!.Hp == 40).Low, precision: 9);
+        Assert.Equal(0.5, outcome.Chance(branch => branch.Enemy(id: 1)!.Hp == 44).Low, precision: 9);
+    }
+
+    [Fact]
+    public void TheDiscardPilesCardsAreInTheBranchKeyInAnyOrder()
+    {
+        var other = Strike with { Key = "other" };
+        SimState With(params SimDrawGroup[] discard) => Board(discard: discard.ToList());
+        // The same cards in another order: one key (a card played from a pile joins the end of its list).
+        Assert.Equal(With(new SimDrawGroup(Strike, 1), new SimDrawGroup(other, 2)).Key(), With(new SimDrawGroup(other, 2), new SimDrawGroup(Strike, 1)).Key());
+        // The same count, different cards: two keys.
+        Assert.NotEqual(With(new SimDrawGroup(Strike, 2), new SimDrawGroup(other, 1)).Key(), With(new SimDrawGroup(Strike, 1), new SimDrawGroup(other, 2)).Key());
+        Assert.NotEqual(With(new SimDrawGroup(Strike, 1)).Key(), With(new SimDrawGroup(other, 1)).Key());
+    }
+
+    [Fact]
     public void TheExhaustPilesListedCardsPlayAtThePlaysTargetAndThoseThatExhaustGoBack()
     {
         // Knife Trap+ at enemy 2: each Shiv in the exhaust pile, upgraded first, at its target; a Shiv exhausts itself, so it's back there after.
