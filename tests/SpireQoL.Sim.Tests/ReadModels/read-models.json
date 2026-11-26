@@ -34062,6 +34062,351 @@
     "HelpsOwner": false
   },
   {
+    "Name": "RuinedHelmet",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterModifyingPowerAmountReceived",
+        "Steps": [
+          {
+            "$kind": "FlashStep"
+          },
+          {
+            "$kind": "StoreFieldStep",
+            "Field": "UsedThisCombat",
+            "Value": {
+              "$kind": "HookConstant",
+              "Value": 1
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "TryModifyPowerAmountReceived",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "RuinedHelmet.TryModifyPowerAmountReceived:000E",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PowerIs",
+                    "Of": "StrengthPower"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "PowerAmount"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "RuinedHelmet.TryModifyPowerAmountReceived:001E",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "PowerAmount"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "RuinedHelmet.TryModifyPowerAmountReceived:002D",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PowerAmount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "PowerAmount"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "RuinedHelmet.TryModifyPowerAmountReceived:002D",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PowerAmount"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "RuinedHelmet.TryModifyPowerAmountReceived:0037",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "UsedThisCombat"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "PowerAmount"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "RuinedHelmet.TryModifyPowerAmountReceived:002D",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PowerAmount"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "RuinedHelmet.TryModifyPowerAmountReceived:0037",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "UsedThisCombat"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PowerAmount"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 2
+                }
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "RuinedHelmet.TryModifyPowerAmountReceived:000E",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PowerIs",
+                    "Of": "StrengthPower"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "RuinedHelmet.TryModifyPowerAmountReceived:001E",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "TargetIsOwner"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "RuinedHelmet.TryModifyPowerAmountReceived:002D",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "LessOrEqual",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PowerAmount"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 0
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "RuinedHelmet.TryModifyPowerAmountReceived:002D",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PowerAmount"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "RuinedHelmet.TryModifyPowerAmountReceived:0037",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "NotEqual",
+                    "Left": {
+                      "$kind": "HookField",
+                      "Field": "UsedThisCombat"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "RuinedHelmet.TryModifyPowerAmountReceived:002D",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "PowerAmount"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "RuinedHelmet.TryModifyPowerAmountReceived:0037",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "NotEqual",
+                      "Left": {
+                        "$kind": "HookField",
+                        "Field": "UsedThisCombat"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "RunicCapacitor",
     "Kind": "Relic",
     "Hooks": [

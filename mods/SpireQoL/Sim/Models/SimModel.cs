@@ -400,6 +400,17 @@ public abstract class SimModel
     public virtual int ModifyPowerAmountGiven(SimState state, int owner, PowerId power, int amount, int? applier, int target, bool debuff) => amount;
     /// <summary>Hook.AfterModifyingPowerAmountGiven: told to the models whose term changed a power's amount given (Snecko Skull's flash).</summary>
     public virtual void AfterModifyingPowerAmountGiven(SimState state, int owner, PowerId power) { }
+    /// <summary>
+    /// Hook.ModifyPowerAmountReceived's pass: true when the model changes a power's amount as it lands on <paramref name="target"/>, the amount it
+    /// leaves in <paramref name="modified"/> (Ruined Helmet's doubled first Strength), each listener in turn on the amount so far. Pure.
+    /// </summary>
+    public virtual bool TryModifyPowerAmountReceived(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff, out int modified)
+    {
+        modified = amount;
+        return false;
+    }
+    /// <summary>Hook.AfterModifyingPowerAmountReceived: told to the models whose Try changed a power's amount received (Ruined Helmet's flag spent).</summary>
+    public virtual void AfterModifyingPowerAmountReceived(SimState state, int owner, PowerId power) { }
 
     // ---- hooks (may branch)
 

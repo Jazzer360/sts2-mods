@@ -742,6 +742,27 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// Hook.ModifyPowerAmountReceived (PowerCmd.Apply and ModifyAmount, after the amount given): every listener's TryModifyPowerAmountReceived in
+    /// turn on the amount so far, the amount each that answers true leaves (Ruined Helmet's doubled first Strength), then
+    /// Hook.AfterModifyingPowerAmountReceived told to each of those, in the listeners' order. The amount received. Artifact, which answers here
+    /// too in the game, is the engine's own rule after it (ApplyPower).
+    /// </summary>
+    internal static int AmountReceived(SimState state, int applier, int target, PowerId power, int amount, bool debuff)
+    {
+        var listeners = Listeners(state);
+        List<(SimModel Model, int Owner)>? modifiers = null;
+        foreach (var (model, owner) in listeners)
+        {
+            if (!model.TryModifyPowerAmountReceived(state, owner, power, amount, applier, target, debuff, out var modified)) continue;
+            amount = modified;
+            (modifiers ??= new()).Add((model, owner));
+        }
+        if (modifiers != null)
+            foreach (var (model, owner) in modifiers) model.AfterModifyingPowerAmountReceived(state, owner, power);
+        return amount;
+    }
+
+    /// <summary>
     /// PowerCmd.Apply, as <see cref="ApplyPower(SimState, int, int, PowerId, int, bool)"/>, giving the amount that landed (<paramref name="landed"/>:
     /// after ModifyPowerAmountGiven and the players' scaling, what Hook.AfterPowerAmountChanged is told). A new one on an enemy in a fight of more
     /// than one player is scaled for the players (PowerModel.GetScaledAmountForMultiplayer, read from its code: SimModels.ScaledForPlayers); more
@@ -756,6 +777,7 @@ public static partial class SimEngine
         // dead creature receives none, as a pet killed by the hit Monarch's Gaze is told of).
         if (!CanReceivePowers(state, target)) return false;
         amount = AmountGiven(state, applier, target, power, amount, debuff);
+        amount = AmountReceived(state, applier, target, power, amount, debuff);
         if (amount == 0) return false;
         var powers = PowersOf(state, target);
         if (debuff && powers[PowerId.Artifact] > 0)

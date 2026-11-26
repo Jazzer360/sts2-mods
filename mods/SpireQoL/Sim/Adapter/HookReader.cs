@@ -1154,6 +1154,14 @@ public static class HookReader
                         or HookName.ShouldClearBlock or HookName.ShouldTakeExtraTurnEarly or HookName.ShouldTakeExtraTurn
                     && hook.ReturnType.Name == "Boolean")
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(TestWays(ProgramReader.ReadReturnedWays(_type, hook, _read))) }, null, null);
+                // A Try hook (TryModifyPowerAmountReceived): its answer each way (true: it changed the amount), and the amount its out parameter holds there.
+                if (name is HookName.TryModifyPowerAmountReceived && hook.ReturnType.Name == "Boolean"
+                    && hook.GetParameters().SingleOrDefault(parameter => parameter.IsOut) is { Name: { } outName })
+                {
+                    var answers = Pruned(TestWays(ProgramReader.ReadReturnedWays(_type, hook, _read)));
+                    var amounts = ProgramReader.ReadOutWays(_type, hook, outName, _read) ?? throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: no out parameter {outName}");
+                    return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(Ways(amounts)), Modifies = answers }, null, null);
+                }
                 if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name is HookName.ModifyCardPlayCount or HookName.ModifyOrbPassiveTriggerCounts)
                 {
                     var returns = Pruned(Ways(ProgramReader.ReadReturnedWays(_type, hook, _read)));
@@ -2800,7 +2808,7 @@ public static class HookReader
                         ? new HookFactValue(HookFact.CardAffliction) { Of = afflictionClass } : throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's affliction {afflictionClass}");
                 case QueryValue { Name: "Contains", Of: QueryValue { Name: "Keywords", Of: { } keywordsOf }, Arguments: [ConstantValue keyword] } when IsPlayCard(keywordsOf) || IsEventCard(keywordsOf):
                     return EnumName(_type.Assembly, "CardKeyword", keyword.Value) == "Ethereal" ? new HookFactValue(HookFact.CardEthereal) : throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's keyword {keyword.Value}");
-                case QueryValue { Name: "is", Of: NamedValue { Name: "power" } or ParameterValue { Name: "power" }, Type: var powerClass }:
+                case QueryValue { Name: "is", Of: NamedValue { Name: "power" or "canonicalPower" } or ParameterValue { Name: "power" or "canonicalPower" }, Type: var powerClass }:
                     return PowerIs(powerClass);
                 case QueryValue { Name: "is", Of: { } cardOf, Type: var cardClass } when IsEventCard(cardOf) || IsPlayCard(cardOf):
                     return new HookFactValue(HookFact.CardIs) { Of = cardClass };
@@ -3241,6 +3249,9 @@ public static class HookReader
                 // No cap (ModifyDamageCap's return for a damage it doesn't cap).
                 case NamedValue { Name: "Decimal.MaxValue" }: return new HookConstant(decimal.MaxValue);
                 case NamedValue { Name: "amount" } when _hook == "AfterPowerAmountChanged": return new HookFactValue(HookFact.PowerAmount);
+                // The amount a power lands with so far (TryModifyPowerAmountReceived's amount: after the amount given and the listeners before it).
+                case NamedValue { Name: "amount" } or ParameterValue { Name: "amount" } when _hook == nameof(HookName.TryModifyPowerAmountReceived):
+                    return new HookFactValue(HookFact.PowerAmount);
                 // The block a gain came to (AfterModifyingBlockAmount's modifiedAmount).
                 case NamedValue { Name: "modifiedAmount" } or ParameterValue { Name: "modifiedAmount" } when _hook == nameof(HookName.AfterModifyingBlockAmount):
                     return new HookFactValue(HookFact.BlockModified);

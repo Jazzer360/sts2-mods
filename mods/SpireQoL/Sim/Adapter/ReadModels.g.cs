@@ -248,6 +248,7 @@ public static partial class ReadModels
         PowerId.Ritual.Name,
         PowerId.RollingBoulder.Name,
         RelicId.RoyalPoison.Name,
+        RelicId.RuinedHelmet.Name,
         RelicId.RunicCapacitor.Name,
         PowerId.Rupture.Name,
         RelicId.Sai.Name,

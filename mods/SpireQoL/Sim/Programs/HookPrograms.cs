@@ -133,6 +133,14 @@ public enum HookName
     /// <summary>Hook.AfterModifyingPowerAmountGiven: told to the listeners whose term changed a power's amount given (Snecko Skull's flash).</summary>
     AfterModifyingPowerAmountGiven,
     /// <summary>
+    /// Hook.ModifyPowerAmountReceived's pass (PowerCmd.Apply and ModifyAmount, after the amount given: SimEngine.AmountReceived): each listener's
+    /// TryModifyPowerAmountReceived on the amount so far, its out value the amount where it answers true (HookProgram.Modifies); its power the one
+    /// landing, its target the creature it lands on, its applier who gives it.
+    /// </summary>
+    TryModifyPowerAmountReceived,
+    /// <summary>Hook.AfterModifyingPowerAmountReceived: told to the listeners whose Try answered true (Ruined Helmet's flag spent).</summary>
+    AfterModifyingPowerAmountReceived,
+    /// <summary>
     /// Hook.ShouldStopCombatFromEnding: whether the fight goes on with no primary enemy alive (CombatManager.IsEnding: Infested's, Stock's and Steam
     /// Eruption's, whose deaths bring creatures in): 1 it stops it ending.
     /// </summary>
@@ -989,6 +997,12 @@ public sealed record HookProgram(HookName Hook, IReadOnlyList<HookStep> Steps)
 {
     /// <summary>A Modify hook's value (null for a hook that runs commands).</summary>
     public HookValue? Returns { get; init; }
+
+    /// <summary>
+    /// A Try hook's answer (TryModifyPowerAmountReceived's bool: 1 when it changed the amount, its out value then <see cref="Returns"/>); null for
+    /// any other hook.
+    /// </summary>
+    public HookValue? Modifies { get; init; }
 }
 
 /// <summary>
@@ -1275,7 +1289,7 @@ public sealed record ModelSpec(string Name, ModelKind Kind, IReadOnlyList<HookPr
             MakeRandomInHandStep random => Inside(random.Count),
             _ => Array.Empty<HookValue>(),
         });
-        return Hooks.SelectMany(program => Inside(program.Returns).Concat(program.Steps.SelectMany(OfStep)))
+        return Hooks.SelectMany(program => Inside(program.Returns).Concat(Inside(program.Modifies)).Concat(program.Steps.SelectMany(OfStep)))
             .Concat((Commands ?? Array.Empty<CommandProgram>()).SelectMany(command => command.Steps.SelectMany(OfStep)))
             .Concat((OrbValues ?? new Dictionary<string, HookValue>()).Values.SelectMany(Inside))
             .Concat((Tests ?? new Dictionary<string, HookValue>()).Values.SelectMany(Inside))

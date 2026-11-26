@@ -47,6 +47,7 @@ public static partial class SimEngine
         if (had == 0) return new[] { state };
         var debuff = SimModels.IsDebuffAt(power, had);
         var amount = applier is { } giver ? AmountGiven(state, giver, holder, power, offset, debuff) : offset;
+        amount = AmountReceived(state, applier ?? Who.None, holder, power, amount, debuff);
         if (state.History.Count > 0) Record(state, new HistoryEvent(HistoryKind.PowerReceived, applier ?? Who.None) { Power = power });
         var left = had + amount;
         var key = SimKeys.Aimed(power.Name, player);

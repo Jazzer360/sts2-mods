@@ -7,7 +7,7 @@ power AllIsWellPower: AfterCardGeneratedForCombat: read
 power AmnesiaPower: AfterPlayerTurnStart: unknown where it runs: gap: PlayerCmd.LoseEnergy isn't translated | AfterSideTurnEnd: read | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 power ArcheryPower: AfterSideTurnStart: read
 power ArsenalPower: AfterCardGeneratedForCombat: read
-power ArtifactPower: AfterModifyingPowerAmountReceived: gap: the simulator runs no read model's AfterModifyingPowerAmountReceived | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply's scaling for the players: read into the class's PowerRule and run by the engine as it lands one (decision #234) | TryModifyPowerAmountReceived: gap: the simulator runs no read model's TryModifyPowerAmountReceived
+power ArtifactPower: AfterModifyingPowerAmountReceived: read | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply's scaling for the players: read into the class's PowerRule and run by the engine as it lands one (decision #234) | TryModifyPowerAmountReceived: gap: the value canonicalPower.GetTypeForAmount(amount)
 power AsleepPower: AfterDamageReceived: read | AfterSideTurnEnd: read | BeforeSideTurnEndVeryEarly: read
 power AutomationPower: AfterCardDrawn: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power BarricadePower: AfterApplied: read | ShouldClearBlock: read
@@ -380,7 +380,7 @@ relic RingOfTheDrake: ModifyHandDraw: gap: the simulator runs no read model's Mo
 relic RingOfTheSnake: ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 relic RippleBasin: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnEnd: read | BeforeSideTurnStart: read
 relic RoyalPoison: AfterPlayerTurnStart: read
-relic RuinedHelmet: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingPowerAmountReceived: gap: the simulator runs no read model's AfterModifyingPowerAmountReceived | TryModifyPowerAmountReceived: gap: the simulator runs no read model's TryModifyPowerAmountReceived
+relic RuinedHelmet: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingPowerAmountReceived: read | TryModifyPowerAmountReceived: read
 relic RunicCapacitor: AfterSideTurnStart: unknown where it runs: gap: OrbCmd.AddSlots isn't translated
 relic RunicPyramid: ShouldFlush: gap: the simulator runs no read model's ShouldFlush
 relic Sai: AfterSideTurnStart: read

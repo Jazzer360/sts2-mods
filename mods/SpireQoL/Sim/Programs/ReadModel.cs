@@ -227,6 +227,9 @@ public sealed class ReadModel : SimModel
     private readonly Dictionary<string, int> _testSlots = new(StringComparer.Ordinal);
     private readonly Evaluate?[] _returns = new Evaluate?[Enum.GetValues<HookName>().Length];
 
+    /// <summary>Its TryModifyPowerAmountReceived's answer (HookProgram.Modifies): 1 when its out value is the amount; null with no such hook.</summary>
+    private readonly Evaluate? _modifies;
+
     /// <summary>The hooks whose program takes back what the model bound to the play: each run gets a slot for it (HookArgs.Taken).</summary>
     private readonly bool[] _takes = new bool[Enum.GetValues<HookName>().Length];
 
@@ -291,6 +294,7 @@ public sealed class ReadModel : SimModel
                 && (HasCopies || program.Steps.Any(step => step is not StoreFieldStep) || program.Hook is not (HookName.ModifyBlockAdditive or HookName.ModifyBlockMultiplicative)))
                 throw new InvalidOperationException($"{Name}: {program.Hook} changes its state as it works out its value, which the engine doesn't run there");
             if (program.Returns != null) _returns[(int)program.Hook] = Compile(program.Returns);
+            if (program.Modifies != null) _modifies = Compile(program.Modifies);
             _steps[(int)program.Hook] = CompileSteps(program.Steps, new List<HookStep>(), firstRound: true, program.Hook);
         }
         foreach (var (question, test) in spec.Tests ?? new Dictionary<string, HookValue>()) _tests[question] = Compile(test);
@@ -594,6 +598,8 @@ public sealed class ReadModel : SimModel
         HookName.ModifyPowerAmountGivenAdditive => nameof(ModifyPowerAmountGivenAdditive),
         HookName.ModifyPowerAmountGivenMultiplicative => nameof(ModifyPowerAmountGivenMultiplicative),
         HookName.AfterModifyingPowerAmountGiven => nameof(AfterModifyingPowerAmountGiven),
+        HookName.TryModifyPowerAmountReceived => nameof(TryModifyPowerAmountReceived),
+        HookName.AfterModifyingPowerAmountReceived => nameof(AfterModifyingPowerAmountReceived),
         // Its power's own question as its owner dies (Creature.RemoveAllPowersAfterDeath): asked of it, never of every listener.
         HookName.ShouldPowerBeRemovedAfterOwnerDeath => nameof(StaysOnDeadOwner),
         // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook; an enchantment's OnPlay
@@ -1062,6 +1068,24 @@ public sealed class ReadModel : SimModel
     {
         foreach (var branch in Run(HookName.AfterModifyingPowerAmountGiven, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Power = power }))
             if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingPowerAmountGiven branched");
+    }
+
+    /// <summary>Hook.ModifyPowerAmountReceived's pass: its code's answer (true: its out value is the amount from here on, Ruined Helmet's doubling).</summary>
+    public override bool TryModifyPowerAmountReceived(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff, out int modified)
+    {
+        modified = amount;
+        if (_modifies is not { } modifies || _returns[(int)HookName.TryModifyPowerAmountReceived] is not { } returns) return false;
+        var args = new HookArgs { State = state, Owner = owner, Hook = HookName.TryModifyPowerAmountReceived, Play = state.CurrentPlay, Power = power, PowerAmount = amount, Applier = applier, Target = target, Debuff = debuff };
+        if (modifies(in args) == 0m) return false;
+        modified = (int)returns(in args);
+        return true;
+    }
+
+    /// <summary>Hook.AfterModifyingPowerAmountReceived, told to the listeners whose Try answered true: deterministic, on the state given.</summary>
+    public override void AfterModifyingPowerAmountReceived(SimState state, int owner, PowerId power)
+    {
+        foreach (var branch in Run(HookName.AfterModifyingPowerAmountReceived, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Power = power }))
+            if (!ReferenceEquals(branch, state)) throw new InvalidOperationException($"{Name}: AfterModifyingPowerAmountReceived branched");
     }
 
     /// <summary>Hook.ShouldClearBlock of <paramref name="creature"/>: its code's answer (Barricade and Burrowed keep their owner's).</summary>
@@ -2583,7 +2607,7 @@ public sealed class ReadModel : SimModel
             case HookFact.DealerIsOwner: return (in HookArgs args) => (args.Damage?.Dealer ?? args.Hit?.Dealer) == args.Owner ? 1m : 0m;
             case HookFact.DealerIsOwnersPet: return (in HookArgs args) => Who.IsPlayer(args.Owner) && Who.PetOwnerOf(args.Damage?.Dealer ?? args.Hit?.Dealer ?? Who.None) == args.Owner ? 1m : 0m;
             case HookFact.TargetIsOwner: return (in HookArgs args) =>
-                (args.Damage?.Target ?? args.Block?.Target ?? args.Hit?.Target ?? (args.Hook == HookName.AfterBlockBroken ? args.Target : null)) == args.Owner ? 1m : 0m;
+                (args.Damage?.Target ?? args.Block?.Target ?? args.Hit?.Target ?? (args.Hook is HookName.AfterBlockBroken or HookName.TryModifyPowerAmountReceived ? args.Target : null)) == args.Owner ? 1m : 0m;
             case HookFact.PoweredAttack: return (in HookArgs args) => (args.Damage?.Props ?? args.Hit?.Props ?? args.Attack?.Props)?.IsPoweredAttack() == true ? 1m : 0m;
             case HookFact.PoweredBlock: return (in HookArgs args) => args.Block?.Props.IsPoweredBlock() == true ? 1m : 0m;
             case HookFact.CardOrMonsterMove: return (in HookArgs args) => (args.Damage?.Props ?? args.Block?.Props ?? args.Hit?.Props)?.IsCardOrMonsterMove() == true ? 1m : 0m;

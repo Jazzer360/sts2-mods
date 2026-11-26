@@ -302,6 +302,13 @@ public static class ProgramReader
         new Reader(owner, read).ReturnedWays(BodyOf(method));
 
     /// <summary>
+    /// The value a method's out parameter holds at each of its returns (a Try hook's modifiedAmount), each way on the condition it's reached on;
+    /// null when it has no out parameter of that name.
+    /// </summary>
+    public static WaysValue? ReadOutWays(Type owner, MethodBase method, string parameter, Func<MethodBase, List<CodeOp>> read) =>
+        new Reader(owner, read).OutWays(BodyOf(method), parameter);
+
+    /// <summary>
     /// The questions to the game's log of the fight (CombatManager.Instance.History) a model type's code asks (decision #191), each the value
     /// its code works out: read from every method of the type and of the types nested in it (its state machines, its lambdas), each the
     /// outermost value a call there works out that reads the log. One that uses a parameter of a helper of the type's own (Spite's
@@ -624,6 +631,8 @@ public static class ProgramReader
 
         /// <summary>What a method returns on each way to a return, in order.</summary>
         public WaysValue ReturnedWays(MethodBase method) => Flow.Of(_read(method), method, LambdaOf, HelperValue, VarKeyOf).ReturnedWays();
+
+        public WaysValue? OutWays(MethodBase method, string parameter) => Flow.Of(_read(method), method, LambdaOf, HelperValue, VarKeyOf).OutWays(parameter);
 
         /// <summary>
         /// Each WithMultiplier call in a method's code (a card's CanonicalVars): the calculated value it's asked of, and what its lambda
@@ -1612,6 +1621,52 @@ public static class ProgramReader
         }
 
         /// <summary>
+        /// Each way to a return, with the condition it's reached on and the value its out parameter <paramref name="parameter"/> holds there (a Try
+        /// hook's modifiedAmount: the stores to it, stobj or stind through its address, on the way): null when the method has no such parameter.
+        /// </summary>
+        public WaysValue? OutWays(string parameter)
+        {
+            if (OutSlot(parameter) is not { } slot) return null;
+            var ways = new List<(ProgramCondition When, ProgramValue Value)>();
+            for (var i = 0; i < Ops.Count; i++)
+            {
+                if (Ops[i].OpCode != OpCodes.Ret || ReachedAt(i) is not { IsNever: false } reached) continue;
+                var value = OutValueAt(slot, i, depth: 0) ?? new UnknownValue($"{parameter} never set");
+                // Set differently on the ways to this return: each of those ways on its own.
+                if (value is WaysValue set)
+                {
+                    foreach (var (when, setValue) in set.Ways)
+                        if (reached.And(when) is { IsNever: false } both) ways.Add((both, setValue));
+                }
+                else ways.Add((reached, value));
+            }
+            return new WaysValue(ways);
+        }
+
+        /// <summary>The argument slot of the out (by reference) parameter named <paramref name="parameter"/>, or null.</summary>
+        private int? OutSlot(string parameter)
+        {
+            if (_method == null) return null;
+            var parameters = _method.GetParameters();
+            for (var i = 0; i < parameters.Length; i++)
+                if (parameters[i].Name == parameter && parameters[i].ParameterType.IsByRef) return _method.IsStatic ? i : i + 1;
+            return null;
+        }
+
+        /// <summary>A store through an out parameter's address (ldarg slot; a value; stobj or stind.*).</summary>
+        private bool StoresThrough(int index, int slot, int depth)
+        {
+            var name = Ops[index].OpCode.Name!;
+            if (Ops[index].OpCode != OpCodes.Stobj && !name.StartsWith("stind", StringComparison.Ordinal)) return false;
+            var value = ReadBack(index, depth + 1);
+            return value.Start > 0 && Ops[value.Start - 1].OpCode.Name!.StartsWith("ldarg", StringComparison.Ordinal) && Ops[value.Start - 1].Slot == slot;
+        }
+
+        /// <summary>What the out parameter in <paramref name="slot"/> holds just before <paramref name="at"/>: its last store on each way, or null.</summary>
+        private ProgramValue? OutValueAt(int slot, int at, int depth) =>
+            ParameterSet(index => StoresThrough(index, slot, depth), new UnknownValue("an out parameter never set"), at, depth);
+
+        /// <summary>
         /// A parameter returned with fields the code set on it on the way to that return (ldarga location; a value; stfld pileType: Rebound's
         /// location.pileType = PileType.Draw): the parameter with those fields, each the last store in the straight run of code just before the
         /// return. A store to it anywhere else (before a branch, so it may or may not have run) makes the value unknown.
@@ -1726,6 +1781,12 @@ public static class ProgramReader
                     return (given, at);
                 return (new UnknownValue("local"), at);
             }
+            // An out parameter read through its address (ldarg slot; ldobj or ldind.*: a Try hook's modifiedAmount *= 2): what the code stored there.
+            if ((instruction.OpCode == OpCodes.Ldobj || name.StartsWith("ldind", StringComparison.Ordinal)) && at > 0
+                && Ops[at - 1].OpCode.Name!.StartsWith("ldarg", StringComparison.Ordinal) && Ops[at - 1].Slot is { } addressSlot && !_jumpsTo.ContainsKey(at)
+                && _method?.GetParameters() is { } addressParameters && (_method.IsStatic ? addressSlot : addressSlot - 1) is var addressIndex
+                && addressIndex >= 0 && addressIndex < addressParameters.Length && addressParameters[addressIndex].ParameterType.IsByRef)
+                return (OutValueAt(addressSlot, at - 1, depth) ?? new UnknownValue("an out parameter never set"), at - 1);
             if (name.StartsWith("conv", StringComparison.Ordinal) || instruction.OpCode == OpCodes.Box || instruction.OpCode == OpCodes.Unbox_Any
                 || instruction.OpCode == OpCodes.Castclass)
                 return ReadBack(at, depth + 1);

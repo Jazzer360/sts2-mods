@@ -202,7 +202,7 @@ internal static partial class CoverageLedger
         ["RingOfTheDrake"] = "ignore: ModifyHandDraw adds its Cards to its owner's hand draw up to its Turns: the hand's draw, which a projection leaves out",
         ["RingOfTheSnake"] = "ignore: ModifyHandDraw adds its Cards to its owner's hand draw on turn 1 only",
         ["RoyalPoison"] = "ignore: read from its code (ReadModel): AfterPlayerTurnStart damages its owner on their turn 1 only (TurnNumber <= 1)",
-        ["RuinedHelmet"] = "gap: TryModifyPowerAmountReceived doubles the first Strength its owner gains in a fight (more than 0, UsedThisCombat unset), AfterModifyingPowerAmountReceived spends it: the simulator lands that Strength undoubled (only Artifact is followed in PowerCmd.Apply's received pass), so a play's later hits, and its replays', deal less than they will",
+        ["RuinedHelmet"] = "covered: read from its code (ReadModel, decision #324): TryModifyPowerAmountReceived doubles the first Strength its owner gains in a fight (more than 0, UsedThisCombat unset), in Hook.ModifyPowerAmountReceived's pass as a power lands (SimEngine.AmountReceived); AfterModifyingPowerAmountReceived spends it",
         ["RunicCapacitor"] = "ignore: read from its code (ReadModel): AfterSideTurnStart adds orb slots for its owner on their turn 1 only (TurnNumber <= 1)",
         ["RunicPyramid"] = "ignore: ShouldFlush keeps its owner's hand as their turn ends: the flush only moves cards to the discard pile (CardPileCmd.Add, no discard hooks), and nothing a simulation reads after the turn's end looks at the hand (a projection leaves it out)",
         ["Sai"] = "covered: read from its code (ReadModel): AfterSideTurnStart block for its owner as each of their turns starts (a projection's next turn runs it)",

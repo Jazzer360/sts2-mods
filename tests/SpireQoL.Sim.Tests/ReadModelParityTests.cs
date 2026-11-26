@@ -337,6 +337,7 @@ public class ReadModelParityTests
         nameof(SimModel.AfterBlockBroken), nameof(SimModel.ShouldClearBlock), nameof(SimModel.ShouldTakeExtraTurnEarly), nameof(SimModel.ShouldTakeExtraTurn),
         nameof(SimModel.ModifyCardPlayResultLocation), nameof(SimModel.AfterModifyingCardPlayResultLocation),
         nameof(SimModel.ModifyPowerAmountGivenAdditive), nameof(SimModel.ModifyPowerAmountGivenMultiplicative), nameof(SimModel.ModifyPowerAmountGiven), nameof(SimModel.AfterModifyingPowerAmountGiven),
+        nameof(SimModel.TryModifyPowerAmountReceived), nameof(SimModel.AfterModifyingPowerAmountReceived),
         nameof(SimModel.AfterRemoved),
         nameof(SimModel.AfterEnergyReset), nameof(SimModel.AfterEnergyResetLate), nameof(SimModel.BeforeHandDraw), nameof(SimModel.BeforeHandDrawLate),
         nameof(SimModel.AfterPlayerTurnStartEarly), nameof(SimModel.AfterPlayerTurnStart), nameof(SimModel.AfterPlayerTurnStartLate),
@@ -709,6 +710,25 @@ public class ReadModelParityTests
                                         if (given != amount) model.AfterModifyingPowerAmountGiven(state, owner, power);
                                         return $"{amount} -> {given}: " + Branches(new[] { state });
                                     });
+                break;
+            case nameof(SimModel.TryModifyPowerAmountReceived) or nameof(SimModel.AfterModifyingPowerAmountReceived):
+                // A power received of each kind from each applier by each creature, twice (what the first changes, the second sees), then
+                // AfterModifyingPowerAmountReceived when the model's Try answered true (SimEngine.AmountReceived).
+                foreach (var power in new[] { PowerId.Strength, PowerId.Weak, PowerId.Dexterity })
+                    foreach (var amount in new[] { 3, -1 })
+                        foreach (var applier in others)
+                            foreach (var target in new[] { 0, Who.You, Who.Teammate(0) })
+                                yield return ($"{power.Name} {amount} received by {target} from {applier}", (model, state) =>
+                                {
+                                    var text = new System.Text.StringBuilder();
+                                    for (var time = 0; time < 2; time++)
+                                    {
+                                        var modifies = model.TryModifyPowerAmountReceived(state, owner, power, amount, applier, target, debuff: amount < 0, out var received);
+                                        if (modifies) model.AfterModifyingPowerAmountReceived(state, owner, power);
+                                        text.Append($"{amount} -> {received} ({modifies}): ").Append(Branches(new[] { state })).Append(" // ");
+                                    }
+                                    return text.ToString();
+                                });
                 break;
             case nameof(SimModel.ShouldTakeExtraTurnEarly) or nameof(SimModel.ShouldTakeExtraTurn):
                 // Asked of every player as the players' turn is over (SimEngine.ExtraTurns).
