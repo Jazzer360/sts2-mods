@@ -50,7 +50,7 @@ public static partial class SimAdapter
     /// </summary>
     internal static readonly IReadOnlyDictionary<string, string> MoveStepGaps = new Dictionary<string, string>
     {
-        ["on a condition"] = "a step the move runs only on a condition the simulator doesn't ask of it yet (Plow's Strength while it has Plow, Pheromone Spit's by its Personal Hive, Dampen on a target without it; a stun of itself on its own state is asked: decision #271); none of them comes before a later hit this turn",
+        ["on a condition"] = "a step the move runs only on a condition the simulator doesn't ask of it yet (Pheromone Spit's by its Personal Hive, Dampen on a target without it; a stun of itself on its own state is asked: decision #271, and a power or block on a test of its own powers, Plow's Strength while it has Plow); none of them comes before a later hit this turn",
         ["a power made first"] = "PowerCmd.Apply of a power the move makes and sets up first (Sandpit, Dampen, Swipe, Thievery): its own amounts and targets aren't read",
         ["unread value"] = "a target or an amount the evaluator can't work out on the board",
         ["a monster picked"] = "CreatureCmd.Add of a monster the move picks or makes first (Fabricator's random bot: a model given, not a type argument): which one isn't read",
@@ -144,10 +144,13 @@ public static partial class SimAdapter
 
     /// <summary>
     /// The steps of a move that change the fight's creatures (a power, block) but can't be built whatever the board (MoveStepGaps: on a
-    /// condition, a power made first), each with its gap: what the scan holds to a reviewed list (MonsterProgramTests).
+    /// condition, a power made first), each with its gap: what the scan holds to a reviewed list (MonsterProgramTests). With the <paramref name="monster"/>
+    /// class, a power or block on a condition of its own state the simulator asks (MoveConditions.OfStep: Plow's Strength while it has Plow) is built.
     /// </summary>
-    internal static IEnumerable<(CommandStep Step, string Gap)> MoveGaps(ModelProgram program)
+    internal static IEnumerable<(CommandStep Step, string Gap)> MoveGaps(ModelProgram program, Type? monster = null)
     {
+        var self = monster == null ? null : SafeCanonical(monster);
+        bool Asked(CommandStep command) => self != null && command.Condition is { } condition && OnItsPowers(condition) && MoveConditions.OfStep(self, condition) != null;
         IEnumerable<(CommandStep, string)> Of(IEnumerable<ProgramStep> steps, bool conditional, bool inLoop)
         {
             foreach (var step in steps)
@@ -168,11 +171,25 @@ public static partial class SimAdapter
                 if (step is not CommandStep { Command.FullName: "PowerCmd.Apply" or "CreatureCmd.GainBlock" } command) continue;
                 // A power on the creature an add just made, with that add followed (decision #379: Fabricator's Minion on its bot): it lands as it joins.
                 if (!inLoop && AddedBy(command, program) is { } made && MoveSpawnGap(made, program) == null && AfterJoinGap(command) == null) continue;
+                if (!conditional && Asked(command)) continue;
                 if (conditional || command.Condition != null) yield return (command, "on a condition");
                 else if (command.Command.FullName == "PowerCmd.Apply" && command.Command.GenericArguments.Count == 0) yield return (command, "a power made first");
             }
         }
         return Of(program.Steps, conditional: false, inLoop: false);
+    }
+
+    /// <summary>
+    /// Every test of the condition is of a power (HasPower, GetPowerAmount): what a move's own steps can't change before it's asked. A test of a field
+    /// isn't taken (TestSubject's RespawnMove adds one to Respawns before its switch on it, which the simulated monster's field wouldn't have).
+    /// </summary>
+    private static bool OnItsPowers(ProgramCondition condition) =>
+        condition.Literals.Any() && condition.Literals.All(literal => literal.Test.Parts().Any(part => part is QueryValue { Name: "HasPower" or "GetPowerAmount" or "GetPower" }));
+
+    private static MonsterModel? SafeCanonical(Type monster)
+    {
+        try { return CanonicalMonster(monster); }
+        catch { return null; }
     }
 
     /// <summary>
@@ -320,6 +337,16 @@ public static partial class SimAdapter
             && MoveSpawnGap(made, context.Program) == null && AfterJoinGap(onAdded) == null) return Array.Empty<SimAction>();
         if (step.Condition != null)
         {
+            // A power or block on a condition of the monster's own state (Plow's Strength while it still has Plow: this.Creature.HasPower<PlowPower>()),
+            // asked as its stun's is (MoveConditions.OfStep): the projection's later turns carry what it gives (2.0.0's audit: the next Plow hit 2 more).
+            if (step is CommandStep { Command.FullName: "PowerCmd.Apply" or "CreatureCmd.GainBlock" } && each == null && context.Board.Self is MonsterModel self
+                && OnItsPowers(step.Condition) && MoveConditions.OfStep(self, step.Condition) is { } asked)
+            {
+                var gapsBefore = context.Gaps.Count;
+                var then = MoveStep(step with { Condition = null }, context, each).ToList();
+                if (context.Gaps.Count == gapsBefore) return then.Count == 0 ? Array.Empty<SimAction>() : new SimAction[] { new WhenAction(asked, then) };
+                return Array.Empty<SimAction>();
+            }
             if (step is CommandStep { Command.FullName: "PowerCmd.Apply" or "CreatureCmd.GainBlock" } or LoopStep) context.Gaps.Add("on a condition");
             return Array.Empty<SimAction>();
         }

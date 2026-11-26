@@ -10,6 +10,9 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 #### Fixed
 - Osty's attacks from Bone Shards, Fetch, Flatten, High Five, Poke, Rattle, Right Hand Hand, Sic 'Em, Snap and Sweeping Gaze were predicted to deal no damage: the lethal tag, the Play Preview and what follows from the hit (Reaper Form's Doom) count their damage again.
 - A play that wins the fight no longer counts Right Hand Hand, Make It So or Whistling Arrows coming back to your hand: the game brings nothing back once the fight is over.
+- Playing Beckon no longer counts its 6 HP at the end of your turn: Incoming Damage and the Play Preview leave it out once it's played.
+- Intent Forecast: the Ceremonial Beast's next Plow counts the Strength its last Plow gave it.
+- The audits no longer report the Dazed an Entomancer's Personal Hive gives you as unexplained, a Play Preview after you pick a card to transform or exhaust that the preview kept in your hand (BEGONE! on an Infection), or an enemy stunned by its own Imbalanced as a move the forecast missed.
 - The settings check no longer logs a warning about Darkstone Periapt (or any relic whose reminders were read before the game's cards were known) as the game loads.
 
 ### Spire QoL 2.0.0

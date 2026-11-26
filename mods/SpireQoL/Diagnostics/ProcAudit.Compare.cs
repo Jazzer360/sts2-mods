@@ -376,7 +376,9 @@ public sealed partial class ProcAudit
                 Budget(Effect.Discard, "discards", discards, predictedDiscards.Most);
                 // Transformed cards are logged as created too (CardCmd.Transform); the ones you choose how many of aren't simulated (Guards).
                 var made = Most(CardEvent.Generated) + prediction.ChosenTransformsAtMost;
-                Budget(Effect.Generate, "created cards", generated, made);
+                // A tab that counts the cards it makes (Personal Hive's Dazed) is held to them by MadeByTabs, which gives the card's own its
+                // range beyond: the budget would call them unexplained (a source read as a model explains only powers and summons: EffectsOf).
+                if (!sourceOf.Values.Any(tab => tab.Kind == TabAmount.CardsMade)) Budget(Effect.Generate, "created cards", generated, made);
                 MadeByTabs(made);
                 Budget(Effect.Orb, "orbs channeled", orbs, predictedOrbs.Most);
             }

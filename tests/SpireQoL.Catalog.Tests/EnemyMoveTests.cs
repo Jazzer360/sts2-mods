@@ -221,7 +221,7 @@ public class EnemyMoveTests
         var found = new SortedSet<string>(StringComparer.Ordinal);
         foreach (var monster in MonsterCode.Monsters(typeof(MonsterModel).Assembly.GetTypes()))
             foreach (var move in MonsterCode.Moves(monster))
-                foreach (var (step, gap) in SimAdapter.MoveGaps(ModelPrograms.Of(monster, move.Name)))
+                foreach (var (step, gap) in SimAdapter.MoveGaps(ModelPrograms.Of(monster, move.Name), monster))
                     found.Add($"{monster.Name}.{move.Name}: {step.Name} ({gap})");
         var unreviewed = found.Where(entry => !ReviewedGaps.ContainsKey(entry)).ToList();
         Assert.True(unreviewed.Count == 0, "Move steps the enemy turn can't build, unreviewed (decision #195: model it, or say why it can't change a later hit):\n" + string.Join("\n", unreviewed));
@@ -232,7 +232,6 @@ public class EnemyMoveTests
     /// <summary>Each move step the enemy turn can't build, and why it can't change a later hit this turn.</summary>
     private static readonly Dictionary<string, string> ReviewedGaps = new()
     {
-        ["CeremonialBeast.PlowMove: PowerCmd.Apply<StrengthPower> (on a condition)"] = "its own Strength while it has Plow, after its own attack: no later hit of its this turn",
         ["Entomancer.SpitMove: PowerCmd.Apply<PersonalHivePower> (on a condition)"] = "its own Personal Hive below 3: a move with no attack",
         ["Entomancer.SpitMove: PowerCmd.Apply<StrengthPower> (on a condition)"] = "its own Strength by its Personal Hive: a move with no attack",
         ["Fabricator.FabricateMove: CreatureCmd.Add (a monster picked: the projection's only)"] = "its two bots, each a random one of a set (RunRng.MonsterAi.NextItem) other than the last it made: a branch per bot in the projection (decision #379); after a play its HP among several is a roll the enemy turn's one state doesn't branch on (TRACKER: summons in a move), and they make no move this turn",

@@ -42,6 +42,11 @@ public static partial class SimEngine
         // A card added to a full hand goes to the discard pile instead (CardPileCmd.Add): never more than 10 (decision #90).
         // The cap is on the hand: the cards still being played (a play inside this one's: Hellraiser) are counted, not held.
         player.HandCount = Math.Clamp(player.HandCount + handDelta, 0, player.Draw != null ? MaxHand + player.PlayingFromHand : int.MaxValue);
+        // A playable card that acts in hand as the turn ends (Beckon) doesn't once played: its entry goes (matched by class and amount, as an
+        // upgraded copy's record differs in what it carries).
+        if (cardResolvedAction.TurnEndLeaving is { } leaving
+            && player.TurnEndCards.FindIndex(card => card.Card == leaving.Card && card.Amount == leaving.Amount) is var at and >= 0)
+            player.TurnEndCards = player.TurnEndCards.Where((_, index) => index != at).ToList();
         if (!cardResolvedAction.AutoPlay) player.PaelsEyeExhaust = false;
         if (player.AutoHand != null)
         {

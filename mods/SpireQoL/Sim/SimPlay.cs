@@ -78,6 +78,11 @@ public sealed class SimPlay
     /// the fight goes on, since CardPileCmd.Add returns at its start once it's ending (a play that wins the fight brings nothing back).
     /// </summary>
     public int BroughtBack;
+    /// <summary>
+    /// What the card itself would do in your hand as the turn ends (a playable one: Beckon's HP loss, OnTurnEndInHand), which leaves your hand
+    /// with it (SimPlayer.TurnEndCards lists the whole hand); null for any other card.
+    /// </summary>
+    public TurnEndCard? TurnEndLeaving;
     /// <summary>Ethereal cards in hand it plays (one less to exhaust at the end of the turn).</summary>
     public int FadingDelta;
     /// <summary>Of those, Ethereal only through Hex (SimPlayer.HexFading).</summary>
@@ -178,6 +183,8 @@ public sealed record CardResolvedAction(int HandDelta, int HandCard, bool AutoPl
     public int HexFadingDelta { get; init; }
     /// <summary>Cards brought back to their hand (SimPlay.BroughtBack): only while the fight goes on.</summary>
     public int BroughtBack { get; init; }
+    /// <summary>The played card's own end-of-turn effect (SimPlay.TurnEndLeaving): gone from its owner's hand with it.</summary>
+    public TurnEndCard? TurnEndLeaving { get; init; }
 }
 
 /// <summary>A script: the actions a play (or an auto-play, or a lead-in play) runs.</summary>
@@ -214,7 +221,7 @@ public sealed class SimScript
         script.Actions.Add(new CardPlayAction(play, body) { FromHand = simPlay.HandCard != 0, HandCard = simPlay.HandCard, CountByModels = true, Upgraded = simPlay.Upgraded,
             FromPile = fromPile, ExhaustOnNextPlay = exhaustOnNextPlay, PileProfile = simPlay.PileProfile, ExhaustProfile = simPlay.ExhaustProfile });
         script.Actions.AddRange(simPlay.After);
-        script.Actions.Add(new CardResolvedAction(simPlay.HandDelta, simPlay.HandCard, simPlay.AutoPlay, simPlay.Draws, simPlay.FadingDelta, simPlay.IsAttack) { Owner = play.Owner, HexFadingDelta = simPlay.HexFadingDelta, BroughtBack = simPlay.BroughtBack });
+        script.Actions.Add(new CardResolvedAction(simPlay.HandDelta, simPlay.HandCard, simPlay.AutoPlay, simPlay.Draws, simPlay.FadingDelta, simPlay.IsAttack) { Owner = play.Owner, HexFadingDelta = simPlay.HexFadingDelta, BroughtBack = simPlay.BroughtBack, TurnEndLeaving = simPlay.TurnEndLeaving });
         if (simPlay.RandomPoison > 0 && simPlay.RandomPoisonTimes > 0)
             script.Actions.Add(new ApplyPowerAction(PowerId.Poison, simPlay.RandomPoison) { To = ApplyPowerAction.Where.RandomEnemy, Times = simPlay.RandomPoisonTimes, Debuff = true });
         foreach (var proc in simPlay.Procs) script.Actions.Add(new FixedHitsAction(proc.Spread, proc.TargetId, proc.Damage, proc.Times));

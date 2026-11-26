@@ -44,6 +44,7 @@ public static partial class SimAdapter
             // What its plays draw, make and take into your hand joins it as they run (decision #189); the cards its hooks bring back after.
             HandDelta = card.Pile?.Type is PileType.Exhaust or PileType.Draw ? 0 : -1,
             BroughtBack = ReturnToHand.Back(card, me, playCount).Count,
+            TurnEndLeaving = card.Pile?.Type == PileType.Hand ? TurnEndOf(card) : null,
             FadingDelta = IsFading(card, combat) ? -1 : 0,
             HexFadingDelta = IsFading(card, combat) && EtherealOnlyFromHex(card) ? -1 : 0,
         };

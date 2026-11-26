@@ -184,6 +184,13 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             if (!creature.IsAlive || creature.Monster?.NextMove is not { } move || projected.Projection.Turns.Count == 0 || !projected.Projection.Turns[0].ContainsKey(id)) continue;
             var name = creature.Monster.GetType().Name;
             if (move.Intents.Any(intent => intent is MegaCrit.Sts2.Core.MonsterMoves.Intents.HiddenIntent or MegaCrit.Sts2.Core.MonsterMoves.Intents.UnknownIntent)) continue; // nothing shown
+            // Stunned in the enemy turn (Imbalanced on an attack you fully blocked): its move is the stun's, not a roll, and a projection follows no
+            // one's block (decision #308), so it can't say whether the stun comes.
+            if (creature.IsStunned)
+            {
+                Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "projection: the move rolled isn't one the forecast gave (a stun, a move set)", name);
+                continue;
+            }
             // The moves it rolled from the enemy's rules on the projected state (decision #309): the game's roll must be one of them.
             if (projected.Projection.ForecastOf(id) is { Count: > 0 } rolled && !rolled[0].Moves.Any(option => option.Move == move.Id))
             {

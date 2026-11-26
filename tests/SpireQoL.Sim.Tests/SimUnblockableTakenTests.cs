@@ -36,6 +36,25 @@ public class SimUnblockableTakenTests
         Assert.Equal(6, branch.UnblockableTaken);
     }
 
+    /// <summary>
+    /// Beckon is a Status you can play (cost 1): played, it isn't in your hand as the turn ends, so its 6 never comes. The turn-end list read from
+    /// your hand had it all the same (2.0.0's audit: the Play Preview showed 13, the board after the play gave 7).
+    /// </summary>
+    [Fact]
+    public void ABeckonYouPlayIsntInYourHandAsTheTurnEnds()
+    {
+        var state = new SimState { Enemies = { E(id: 1, hp: 30, hits: 7) } };
+        state.You.HandCount = 2;
+        state.You.TurnEndCards.Add(new TurnEndCard("Beckon", "Beckon", Amount: 6));
+        state.You.TurnEndCards.Add(new TurnEndCard("Beckon", "Beckon", Amount: 6));
+        var play = new SimPlay { Name = "Beckon", HandCard = 7, HandDelta = -1, TurnEndLeaving = new TurnEndCard("Beckon", "Beckon", Amount: 6),
+            Card = new SimCardPlay(new SimCard("Beckon", SimCardType.Status), Who.You, Target: Who.None, PlayIndex: 0, PlayCount: 1, AutoPlay: false) };
+        var branch = Assert.Single(SimEngine.Run(state, play).Branches);
+        // The hit's 7 and the other Beckon's 6.
+        Assert.Equal(13, branch.Taken);
+        Assert.Equal(6, branch.UnblockableTaken);
+    }
+
     [Fact]
     public void ItsWhatYouLoseAfterTungstenRod()
     {

@@ -43,6 +43,26 @@ public class MoveStoreTests
     }
 
     [Fact]
+    public void ThePlowAfterAPlowHitsForTheStrengthTheFirstGave()
+    {
+        // 2.0.0's audit: Plow (18, 20 on Deadly Enemies) gives the Ceremonial Beast PlowStrength (2) after its attack while it still has Plow
+        // (CeremonialBeast.PlowMove), so the next Plow hits for 2 more; the projection said the same as the first.
+        var fight = new GameFight();
+        var creature = fight.Combat.CreateCreature(ModelDb.Monster<CeremonialBeast>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(creature);
+        var monster = creature.Monster!;
+        monster.SetUpForCombat();
+        var plow = (MoveState)monster.MoveStateMachine!.States["PLOW_MOVE"];
+        typeof(MonsterModel).GetProperty(nameof(MonsterModel.NextMove))!.SetValue(monster, plow);
+        monster.MoveStateMachine.ForceCurrentState(plow);
+        ModelDb.Power<PlowPower>().ToMutable().ApplyInternal(creature, amount: 150m);
+        var input = SimAdapter.ProjectionStart(fight.Me, fight.Combat)!;
+        var projection = SimEngine.Project(input.State, input.Turns, input.Rules);
+        var first = plow.Intents.OfType<MegaCrit.Sts2.Core.MonsterMoves.Intents.AttackIntent>().Single().GetSingleDamage(fight.Combat.PlayerCreatures.ToList(), creature);
+        Assert.Equal(new[] { first + 2 }, projection.Of(turn: 0, input.Ids[creature], "PLOW_MOVE")!.AtYourTurnStart);
+    }
+
+    [Fact]
     public void PressureGunAddsToItsDamageForTheNextOne()
     {
         var fight = new GameFight();
