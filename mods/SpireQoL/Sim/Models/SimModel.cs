@@ -325,6 +325,12 @@ public abstract class SimModel
 
     /// <summary>Its tab is crossed (a warning: it helps the enemy, hurts you, or gives up a bonus), shown when it fires in some branch.</summary>
     public virtual bool Harmful => false;
+
+    /// <summary>
+    /// The classes of the cards it makes into its target's hand (decision #364: Withering Presence's Wither), for the board to read their profiles
+    /// (SimPlayer.MadeCards): what each does in hand as the turn ends, and its Ethereal.
+    /// </summary>
+    public virtual IReadOnlyList<string> CardsMadeIntoHand => Array.Empty<string>();
     /// <summary>
     /// Its tab is crossed for this owner (an enemy's id, a player's): a hand-written model's crossing is its own (<see cref="Harmful"/>); a
     /// read model's is by whose side its effect helps (ReadModel.HarmfulFor).

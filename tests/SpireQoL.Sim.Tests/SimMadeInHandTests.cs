@@ -55,6 +55,32 @@ public class SimMadeInHandTests
     }
 
     [Fact]
+    public void AWitherMadeIntoYourHandBurnsYouAsTheTurnEnds()
+    {
+        // Decision #364: the Wither's profile read at the board (SimPlayer.MadeCards) joins the cards acting in hand as the turn ends (its 3 damage to you).
+        var state = Hand(cards: 5);
+        state.You.Hp = 50;
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.WitheringPresence, amount: 1, data: 1);
+        state.You.MadeCards = new Dictionary<string, SimDrawCard> { [CardId.Wither.Name] = new("wither") { TurnEnd = new TurnEndCard(CardId.Wither.Name, "Wither", Amount: 3) } };
+        var after = After(state, Played("DefendSilent", SimCardType.Skill));
+        Assert.Equal(CardId.Wither.Name, Assert.Single(after.You.TurnEndCards).Card);
+        Assert.Equal(3, after.You.Taken);
+        // With no profile read for it (a board that didn't read one), the hand counts it, as before, and nothing acts.
+        state.You.MadeCards = null;
+        Assert.Empty(After(state, Played("DefendSilent", SimCardType.Skill)).You.TurnEndCards);
+    }
+
+    [Fact]
+    public void AnEtherealCardMadeIntoYourHandExhaustsAsTheTurnEnds()
+    {
+        // A card a power makes into your hand whose own profile is Ethereal (Fading): it counts among the cards that exhaust as the turn ends.
+        var state = Hand(cards: 5);
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.WitheringPresence, amount: 1, data: 1);
+        state.You.MadeCards = new Dictionary<string, SimDrawCard> { [CardId.Wither.Name] = new("wither") { Fading = true } };
+        Assert.Equal(1, After(state, Played("DefendSilent", SimCardType.Skill)).You.Fading);
+    }
+
+    [Fact]
     public void MusicBoxsCopyIsEtherealInYourHand()
     {
         // The first attack of the turn is copied into the hand, Ethereal: the hand keeps its size, and the copy exhausts at end of turn.

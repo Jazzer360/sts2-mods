@@ -72,7 +72,7 @@ public abstract class ProcModel : SimModel
     /// (SimEngine.AddToHand), then what reacts to cards made runs (AfterCardGeneratedForCombat), about <paramref name="card"/>.
     /// </summary>
     protected IEnumerable<SimState> MakeInHand(IEnumerable<SimState> states, SimCard? card, int count, int player, bool ethereal = false) =>
-        Cause(states.Select(branch => { SimEngine.AddToHand(branch, player, count, ethereal); return branch; }).ToList(), CardEvent.Generated, count, player, card);
+        Cause(states.Select(branch => { SimEngine.AddToHand(branch, player, count, ethereal, made: card?.Name); return branch; }).ToList(), CardEvent.Generated, count, player, card);
 
     /// <summary>Channels <paramref name="times"/> orbs of a kind for a player, one after another (OrbCmd.Channel); a random one is a branch per orb.</summary>
     protected static IEnumerable<SimState> Channel(IEnumerable<SimState> states, int player, OrbKind kind, int times)

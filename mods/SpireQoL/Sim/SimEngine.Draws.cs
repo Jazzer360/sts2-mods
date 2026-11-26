@@ -208,13 +208,21 @@ public static partial class SimEngine
     /// (CardPileCmd.Add). The cards being played still hold their slots until they resolve. An Ethereal one exhausts at end of turn
     /// (Fading); what they are isn't known to a pick from the hand (Stampede).
     /// </summary>
-    internal static void AddToHand(SimState state, int player, int count, bool ethereal = false, IReadOnlyList<string>? takenBy = null, bool known = false)
+    internal static void AddToHand(SimState state, int player, int count, bool ethereal = false, IReadOnlyList<string>? takenBy = null, bool known = false, string? made = null)
     {
         if (count <= 0 || state.Player(player) == null) return;
         var simPlayer = state.MutablePlayer(player);
         var added = Math.Min(count, RoomIn(simPlayer));
         simPlayer.HandCount += added;
         if (ethereal) simPlayer.Fading += added;
+        // A card of a class the board read the profile of (SimPlayer.MadeCards, decision #364: Withering Presence's Wither, the cards your hand's cards
+        // make): what it does in your hand as the turn ends, and its own Ethereal (it exhausts then).
+        if (added > 0 && made != null && simPlayer.MadeCards?.TryGetValue(made, out var profile) == true)
+        {
+            if (profile.TurnEnd != null) simPlayer.TurnEndCards = simPlayer.TurnEndCards.Concat(Enumerable.Repeat(profile.TurnEnd, added)).ToList();
+            if (profile.Fading && !ethereal) simPlayer.Fading += added;
+            if (profile.Upgradable && (profile.TurnEnd != null || profile.Fading)) simPlayer.UpgradableAtTurnEnd += added;
+        }
         if (added > 0 && simPlayer.AutoHand != null) state.AutoPlaysUnknown = true;
         // Made cards: what each would be taken by (TakenBy), when known.
         for (var i = 0; i < added; i++) JoinsTakes(state, takenBy, known, intoHand: true, made: true);

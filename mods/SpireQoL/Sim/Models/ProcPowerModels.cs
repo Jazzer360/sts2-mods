@@ -253,6 +253,7 @@ public sealed class WitheringPresencePower : ProcModel
     public override bool Instanced => true;
     public override bool Harmful => true;
     private static readonly SimCard Wither = new(CardId.Wither.Name, SimCardType.Status);
+    public override IReadOnlyList<string> CardsMadeIntoHand => new[] { CardId.Wither.Name };
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play)
     {
         if (owner < 0 || play.Owner != Who.You) return One(state);

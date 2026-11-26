@@ -698,6 +698,8 @@ public static partial class SimAdapter
             void MadeBy(AbstractModel model)
             {
                 if (SimModels.Get(SimReaders.ModelName(model)) is ReadModel { CardsMadeIntoDraw: { Count: > 0 } cards }) foreach (var cardClass in cards) Made(cardClass);
+                // And into your hand (decision #364: Withering Presence's Wither): what each does there as the turn ends.
+                if (SimModels.Get(SimReaders.ModelName(model)) is { CardsMadeIntoHand: { Count: > 0 } intoHand }) foreach (var cardClass in intoHand) Made(cardClass);
             }
             // Your draw pile's: what an enemy's powers, your powers and your relics make into it.
             foreach (var creature in combat.Enemies.Append(me.Creature))

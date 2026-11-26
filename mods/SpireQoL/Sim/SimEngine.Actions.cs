@@ -1077,7 +1077,7 @@ public static partial class SimEngine
             var made = cardEvent != CardEvent.Drawn;
             if (RoomIn(simPlayer) > 0)
             {
-                AddToHand(state, handOf, count: 1, takenBy: made ? cardEventAction.TakenBy : null, known: made && cardEventAction.TakenBy != null);
+                AddToHand(state, handOf, count: 1, takenBy: made ? cardEventAction.TakenBy : null, known: made && cardEventAction.TakenBy != null, made: made ? cardEventAction.MadeCard : null);
                 return FireCardEvent(state, cardEvent, player, cardEventAction.Indirect, cardEventAction.Card);
             }
             // Made into a full hand: it goes to the discard pile instead (CardPileCmd.Add), for a shuffle later in the turn.
