@@ -147,21 +147,11 @@ public sealed partial class SettingsMenu
         else Open();
     }
 
-    /// <summary>Asked to open while the game was preloading (Cards.GamePreload): it opens on the first frame the preload is done.</summary>
-    private bool _openOncePreloaded;
-
     public void Open()
     {
         if (Engine.GetMainLoop() is not SceneTree tree) return;
-        // Its tiny cards and icons load the game's card frames, banners and icons: not while the game's threaded preload runs, which a load of what
-        // it's loading can stall for good (a black screen at the next run's start, 2026-11-25).
-        if (Cards.GamePreload.Busy)
-        {
-            if (!_openOncePreloaded) ModEntry.Log.Detail("settings menu: opens once the game's asset preload is done");
-            _openOncePreloaded = Cards.GamePreload.SettingsMenuWaiting = true;
-            return;
-        }
-        _openOncePreloaded = Cards.GamePreload.SettingsMenuWaiting = false;
+        // It opens right away, the game's preload running or not (decision #397); the preload watch says whether it was open if one sticks.
+        Cards.GamePreload.MenuShown(open: true);
         if (_layer == null || !GodotObject.IsInstanceValid(_layer)) Build(tree);
         _layer!.Visible = true;
         Rebuild();
@@ -170,7 +160,7 @@ public sealed partial class SettingsMenu
 
     public void Close()
     {
-        _openOncePreloaded = Cards.GamePreload.SettingsMenuWaiting = false;
+        Cards.GamePreload.MenuShown(open: false);
         if (_layer != null && GodotObject.IsInstanceValid(_layer)) _layer.Visible = false;
         BlockGameInput(block: false);
         // Quick setup shows itself at the first launch only (FirstLaunch); once the menu has been open, it's done.
@@ -181,7 +171,6 @@ public sealed partial class SettingsMenu
     /// <summary>Called every frame: keeps the entry buttons on the Mods screen and pause menu.</summary>
     public void OnFrame()
     {
-        if (_openOncePreloaded && !Cards.GamePreload.Busy) Open();
         if (IsOpen && _root != null) FitPanel();
         // Timed in parts (the dev dashboard's steady table names the one that makes garbage).
         using (_host.Part("settings-menu:tiny-cards"))

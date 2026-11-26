@@ -8,10 +8,11 @@ namespace SpireQoL.Cards;
 /// <summary>
 /// Whether the game is preloading assets in the background (NAssetLoader's current session, or one queued after it). Godot's threaded loader can
 /// stall for good when another load touches what it's loading (the game's own notes on AssetLoadingSession's VFX queue and
-/// PreloadManager.EnsureAtlasesLoaded). The settings menu builds the game's card nodes and loads their frames, banners and icons; opened at the main
-/// menu while the "Common" preload was still going, that left the preload unfinished, and the next run's preload waited on it forever: a black
-/// screen (2026-11-25). So what the mod builds from the game's resources waits for these sessions to finish. Reads the game's nodes only: never
-/// creates the loader (NAssetLoader.Instance would make one when there's none).
+/// PreloadManager.EnsureAtlasesLoaded). On 2026-11-25 the main menu's "Common" preload never finished and the next run's start waited on it: a
+/// black screen. The settings menu had opened during that preload (it builds the game's card nodes and loads their frames, banners and icons), but
+/// the same overlap came and went in four other launches that day, so it isn't known to be the cause: the menu opens right away (decision #397),
+/// and the watch below reports a preload that doesn't finish, saying whether the menu opened during it. Reads the game's nodes only: never creates
+/// the loader (NAssetLoader.Instance would make one when there's none).
 /// </summary>
 internal static class GamePreload
 {
@@ -69,6 +70,7 @@ internal static class GamePreload
         if (!ReferenceEquals(session, _watched))
         {
             (_watched, _watchedSince, _reportedStuck) = (session, now, false);
+            MenuOpenedDuringPreload = SettingsMenuOpen;
             return;
         }
         if (_reportedStuck || now - _watchedSince < StuckAfterMs) return;
@@ -88,7 +90,7 @@ internal static class GamePreload
             int Count(string name) => fields.Field(name).GetValue() is System.Collections.ICollection queue ? queue.Count : -1;
             return $"'{fields.Field<string>("_name").Value}': to load {Count("_toLoad")}, loading {Count("_loading")}, finalizing {Count("_finalizing")}, " +
                 $"VFX left {Count("_vfxScenes")}, VFX loading {fields.Field<bool>("_vfxLoading").Value} ({fields.Field<string>("_currentVfxPath").Value ?? "none"}), " +
-                $"settings menu waiting {SettingsMenuWaiting}, performance trace: {Telemetry.DevDashboard.TraceStatus() ?? "none"}";
+                $"settings menu opened during it {MenuOpenedDuringPreload}, performance trace: {Telemetry.DevDashboard.TraceStatus() ?? "none"}";
         }
         catch (Exception error)
         {
@@ -96,8 +98,18 @@ internal static class GamePreload
         }
     }
 
-    /// <summary>The settings menu is waiting for the preload to open (set by SettingsMenu), for the stuck report.</summary>
-    internal static bool SettingsMenuWaiting { get; set; }
+    /// <summary>The settings menu is open (set by SettingsMenu as it opens and closes).</summary>
+    internal static bool SettingsMenuOpen { get; private set; }
+
+    /// <summary>The settings menu was open at some point during the session the watch follows, for the stuck report.</summary>
+    private static bool MenuOpenedDuringPreload { get; set; }
+
+    /// <summary>The settings menu opened or closed: while a preload runs, the stuck report says it was open during it.</summary>
+    internal static void MenuShown(bool open)
+    {
+        SettingsMenuOpen = open;
+        if (open && Busy) MenuOpenedDuringPreload = true;
+    }
 
     private static AccessTools.FieldRef<NAssetLoader, TField>? Field<TField>(string name)
     {

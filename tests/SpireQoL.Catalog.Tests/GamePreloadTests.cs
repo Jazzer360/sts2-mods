@@ -7,9 +7,9 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// The settings menu waits for the game's asset preload (Cards.GamePreload, 2026-11-25: opened during the main menu's "Common" preload, it left the
-/// game's threaded loader stalled and the next run's start on a black screen). GamePreload reads NAssetLoader's private fields; a game update that
-/// renames them would quietly make Busy always false, so the fields it reads are held here, and on main's decompile.
+/// The preload watch (Cards.GamePreload): a game preload unfinished after 30 s is reported, saying whether the settings menu was open during it (the
+/// 2026-11-25 black screen; the menu no longer waits for the preload: decision #397). GamePreload reads NAssetLoader's private fields; a game update
+/// that renames them would quietly make Busy always false and the watch blind, so the fields it reads are held here, and on main's decompile.
 /// </summary>
 public class GamePreloadTests
 {
@@ -46,4 +46,13 @@ public class GamePreloadTests
 
     [Fact]
     public void TheWatchDoesNothingWithNoLoader() => Cards.GamePreload.Watch();
+
+    [Fact]
+    public void TheMenuOpeningAndClosingIsKept()
+    {
+        Cards.GamePreload.MenuShown(open: true);
+        Assert.True(Cards.GamePreload.SettingsMenuOpen);
+        Cards.GamePreload.MenuShown(open: false);
+        Assert.False(Cards.GamePreload.SettingsMenuOpen);
+    }
 }

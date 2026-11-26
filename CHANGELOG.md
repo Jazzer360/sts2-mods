@@ -7,6 +7,9 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 ## [Unreleased]
 
 ### Spire QoL 2.0.1
+#### Changed
+- The settings menu opens right away at the first launch, without waiting for the game to finish loading its art in the background.
+
 #### Fixed
 - Osty's attacks from Bone Shards, Fetch, Flatten, High Five, Poke, Rattle, Right Hand Hand, Sic 'Em, Snap and Sweeping Gaze were predicted to deal no damage: the lethal tag, the Play Preview and what follows from the hit (Reaper Form's Doom) count their damage again.
 - A play that wins the fight no longer counts Right Hand Hand, Make It So or Whistling Arrows coming back to your hand: the game brings nothing back once the fight is over.
