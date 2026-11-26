@@ -206,6 +206,19 @@ public static class HookReader
         .Where(method => method.IsVirtual && !method.Attributes.HasFlag(MethodAttributes.NewSlot) && !method.IsSpecialName && !NotHooks.Contains(method.Name));
 
     /// <summary>
+    /// The hooks a class runs: its own, and those of the abstract game classes it's built on that it doesn't override (decision #400:
+    /// PiercingWailPower declares none, its TemporaryStrengthPower base gives the Strength back as its owner's turn ends).
+    /// </summary>
+    public static IEnumerable<MethodInfo> RunHooks(Type type)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        for (var current = type; current != null && (current == type || current.IsAbstract) && current.Namespace?.StartsWith("MegaCrit", StringComparison.Ordinal) == true
+             && current.Name is not ("PowerModel" or "RelicModel"); current = current.BaseType)
+            foreach (var hook in Hooks(current))
+                if (seen.Add(hook.Name)) yield return hook;
+    }
+
+    /// <summary>
     /// A class's own commands others can call: its public methods that aren't hooks, return a Task and take nothing (PoisonPower.Trigger, which
     /// Outbreak calls on each enemy's poison).
     /// </summary>
@@ -220,7 +233,7 @@ public static class HookReader
         var reader = new Translation(type, kind, read);
         var programs = new List<HookProgram>();
         var readings = new List<HookReading>();
-        foreach (var hook in Hooks(type).OrderBy(method => method.Name, StringComparer.Ordinal))
+        foreach (var hook in RunHooks(type).OrderBy(method => method.Name, StringComparer.Ordinal))
         {
             var (program, gap, notRun) = reader.Hook(hook);
             // A power's AfterRemoved runs only as it goes (PowerCmd.Remove): one that doesn't read is unknown there (UnknownStep: the simulation
@@ -255,7 +268,7 @@ public static class HookReader
             .ToHashSet(StringComparer.Ordinal);
         if (storedVars.Count > 0) programs = programs.Select(program => VarsAsState(program, storedVars)).ToList();
         // What it pays out after the play, on what (decision #239): read from its turn-end hooks and its next turn's start, which never run.
-        var nextTurn = Hooks(type).Where(hook => PlayersTurnStartHooks.Contains(hook.Name)).OrderBy(hook => hook.Name, StringComparer.Ordinal)
+        var nextTurn = RunHooks(type).Where(hook => PlayersTurnStartHooks.Contains(hook.Name)).OrderBy(hook => hook.Name, StringComparer.Ordinal)
             .Select(hook => (hook.Name, Steps: reader.NextTurnSteps(hook))).ToList();
         // Its tab, payouts and flags are what it does through the turn a play is in: the players' next turn's start, which only a projection runs
         // (decision #306), left out of them.
@@ -1126,6 +1139,11 @@ public static class HookReader
             _hook = hook.Name;
             UnknownWhereItRuns = null;
             if (NotRun.TryGetValue(hook.Name, out var why)) return (null, null, why);
+            // A temporary Strength or Dexterity power lands in a simulation as the power its BeforeApplied gives (decision #400: SimAdapter.PowerTo, the
+            // ApplyPowerStep a hook makes), never as itself: its own landing and its amount changing never run there. Only its turn's end does, for one
+            // already on the board.
+            if (hook.Name is "BeforeApplied" or "AfterPowerAmountChanged" && TemporaryOf(_type.Name) != null)
+                return (null, null, "a temporary power lands as the power it gives (SimAdapter.PowerTo), never as itself: its landing and amount changes never run");
             if (OutsideFights(hook.Name)) return (null, null, "it acts outside fights (Diagnostics/OutOfCombatHooks.txt)");
             try
             {
@@ -1232,7 +1250,8 @@ public static class HookReader
         /// <summary>A hook body's commands, each translated at its place (a let where the code keeps a local), or the gap where the reader stops.</summary>
         private (List<HookStep>? Steps, GapOf? Gap) BodySteps(MethodInfo hook)
         {
-            var program = ProgramReader.Read(_type, _read, hook.Name);
+            // A hook its class inherits from an abstract game class (RunHooks: TemporaryStrengthPower's) is that method, read with the class as its model.
+            var program = hook.DeclaringType == _type ? ProgramReader.Read(_type, _read, hook.Name) : ProgramReader.ReadMethod(_type, hook, _read);
             _stores = program.All().OfType<StoreStep>().ToList();
             _body = program;
             if (program.Unknowns.FirstOrDefault() is { } unknown) return (null, new GapOf(ReaderCapability.ValueNotFollowed, "gap: the reader can't follow it: " + unknown));
@@ -2431,6 +2450,15 @@ public static class HookReader
 
         private readonly HashSet<string> _inlining = new(StringComparer.Ordinal);
 
+        /// <summary>The getter of a get-only property declared on an abstract game class the model is built on (RunHooks' classes), or null.</summary>
+        private MethodInfo? InheritedGetter(string name)
+        {
+            for (var type = _type.BaseType; type != null && type.IsAbstract && type.Namespace?.StartsWith("MegaCrit", StringComparison.Ordinal) == true
+                 && type.Name is not ("PowerModel" or "RelicModel"); type = type.BaseType)
+                if (type.GetProperty(name, Declared) is { GetMethod: { } getter, SetMethod: null }) return getter;
+            return null;
+        }
+
         /// <summary>
         /// One of its own properties: state when it can be set (a counter it stores: HookField), else what its getter works out (TuningFork's
         /// SkillsThreshold, its Cards value), read from the getter's code.
@@ -2907,6 +2935,10 @@ public static class HookReader
                 // One of its own true-or-false properties (MiniRegent's UsedThisTurn): its state, 1 when set.
                 case QueryValue { Of: NamedValue { Name: "this" }, IsProperty: true, Name: var property, Type: var declaring } when declaring == _type.Name && IsOwnMember(property):
                     return new HookMath(HookOperation.NotEqual, OwnProperty(property), new HookConstant(0m));
+                // A true-or-false property of the abstract game class it's built on (decision #400: TemporaryStrengthPower's IsPositive), overridden by
+                // this class or not: what its getter works out for this class, 1 when true.
+                case QueryValue { Of: NamedValue { Name: "this" }, IsProperty: true, Name: var baseProperty } when InheritedGetter(baseProperty) is not null:
+                    return new HookMath(HookOperation.NotEqual, Value(test), new HookConstant(0m));
                 // One of its own plain fields (Conductor's Baton's _triggeredThisTurn): its state, 1 when set.
                 case var ownField when OwnPlainField(ownField) is { } fieldName:
                     return new HookMath(HookOperation.NotEqual, new HookField(fieldName), new HookConstant(0m));
@@ -3440,6 +3472,12 @@ public static class HookReader
                 // A base class's property its class overrides with a getter of its own (Insatiable Dominion's DisplayAmount): what its getter works out.
                 case QueryValue { Of: NamedValue { Name: "this" }, IsProperty: true, Name: var overridden } when _type.GetProperty(overridden, Declared) is { GetMethod: not null, SetMethod: null }:
                     return OwnProperty(overridden);
+                // A get-only property of the abstract game class it's built on (decision #400: TemporaryStrengthPower's Sign), what its getter works out
+                // for this class (its IsPositive, the class's own).
+                case QueryValue { Of: NamedValue { Name: "this" }, IsProperty: true, Name: var inherited } when InheritedGetter(inherited) is { } inheritedGetter:
+                    if (!_inlining.Add(inherited)) throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: the property {inherited}");
+                    try { return Pruned(Ways(ProgramReader.ReadReturnedWays(_type, inheritedGetter, _read))); }
+                    finally { _inlining.Remove(inherited); }
                 // One of its own plain fields (a count it keeps): simulator state, seeded from the game.
                 case var ownField when OwnPlainField(ownField) is { } fieldName:
                     return new HookField(fieldName);

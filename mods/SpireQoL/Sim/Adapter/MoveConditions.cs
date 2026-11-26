@@ -130,6 +130,12 @@ internal static class MoveConditions
             // this.Creature.HasPower<T>(): its amount of the power above 0.
             case QueryValue { Name: "HasPower", GenericArguments: [var power] } has when IsItsCreature(has.Of):
                 return new CountCondition(SimCounted.MonsterPower, SimCompare.Greater, Than: 0) { Power = PowerId.Of(power) };
+            // A local the code stored (a power it fetched: Pheromone Spit's personalHivePower): its own power, tested for being there.
+            case StoredValue stored when ItsPower(stored) is { } kept:
+                return new CountCondition(SimCounted.MonsterPower, SimCompare.Greater, Than: 0) { Power = PowerId.Of(kept) };
+            // Its own power fetched, tested for being there (Entomancer's Pheromone Spit: Powers.OfType<PersonalHivePower>().FirstOrDefault() not null).
+            case var fetched when ItsPower(fetched) is { } held:
+                return new CountCondition(SimCounted.MonsterPower, SimCompare.Greater, Than: 0) { Power = PowerId.Of(held) };
             // x == 0 of a true-or-false (the code's !x).
             case CompareValue { Op: Comparison.Equal or Comparison.NotEqual, Right: ConstantValue { Value: 0 } } flag when IsTrueOrFalse(flag.Left, monster, owner):
                 return Test(flag.Left, monster, owner, depth, ownState) is { } inner ? flag.Op == Comparison.Equal ? new NotCondition(inner) : inner : null;
@@ -203,6 +209,11 @@ internal static class MoveConditions
     private static CountCondition? Counted(ProgramValue value)
     {
         if (value is QueryValue { Name: "CurrentHp" } hp && IsItsCreature(hp.Of)) return new CountCondition(SimCounted.MonsterHp, SimCompare.Equal, Than: 0);
+        // Its own amount of a power: this.Creature.GetPowerAmount<T>(), or the Amount of the power it fetched (Pheromone Spit's Personal Hive below 3).
+        if (value is QueryValue { Name: "GetPowerAmount", GenericArguments: [var amountOf] } own && IsItsCreature(own.Of))
+            return new CountCondition(SimCounted.MonsterPower, SimCompare.Equal, Than: 0) { Power = PowerId.Of(amountOf) };
+        if (value is QueryValue { Name: "Amount", Of: { } fetched } && ItsPower(fetched) is { } held)
+            return new CountCondition(SimCounted.MonsterPower, SimCompare.Equal, Than: 0) { Power = PowerId.Of(held) };
         // Count(GetTeammatesOf(this.Creature), c => c.IsAlive [and c != this.Creature]).
         if (value is QueryValue { Name: "Count", Type: "Enumerable", Arguments: [QueryValue { Name: "GetTeammatesOf", Arguments: [var whose] }, LambdaValue lambda] }
             && IsItsCreature(whose))
@@ -217,6 +228,19 @@ internal static class MoveConditions
         }
         return null;
     }
+
+    /// <summary>
+    /// The power class of one of its own powers the code fetches (this.Creature.GetPower&lt;T&gt;(), or this.Creature.Powers.OfType&lt;T&gt;().FirstOrDefault()), or null.
+    /// </summary>
+    private static string? ItsPower(ProgramValue value) => value switch
+    {
+        // Kept in a local first (Pheromone Spit's personalHivePower): what was stored.
+        StoredValue stored => ItsPower(stored.Value),
+        QueryValue { Name: "GetPower", GenericArguments: [var power] } get when IsItsCreature(get.Of) => power,
+        QueryValue { Name: "FirstOrDefault", Arguments: [QueryValue { Name: "OfType", GenericArguments: [var power], Arguments: [QueryValue { Name: "Powers" } powers] }] }
+            when IsItsCreature(powers.Of) => power,
+        _ => null,
+    };
 
     /// <summary>this.Creature: the monster's own creature.</summary>
     private static bool IsItsCreature(ProgramValue? value) => value is QueryValue { Name: nameof(MonsterModel.Creature), Of: NamedValue { Name: "this" } };

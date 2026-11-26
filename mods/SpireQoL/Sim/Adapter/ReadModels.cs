@@ -206,7 +206,7 @@ public static partial class ReadModels
             return true;
         }
         foreach (var hook in hooks)
-            foreach (var method in HookReader.Hooks(type).Where(method => method.Name == hook))
+            foreach (var method in HookReader.RunHooks(type).Where(method => method.Name == hook))
                 if (!Ignores(method, depth: 0)) return false;
         return true;
     }
@@ -253,7 +253,7 @@ public static partial class ReadModels
         foreach (var type in HookReader.Powers(all).Concat(HookReader.Relics(all)).OrderBy(type => type.Name, StringComparer.Ordinal))
         {
             if (SimModels.IsHandWritten(type.Name) || ReadWholeAtReview.Contains(type.Name)) continue;
-            var turnEnds = HookReader.Hooks(type).Where(hook => HookReader.EndsATurn(hook.Name)).Select(hook => hook.Name).ToHashSet(StringComparer.Ordinal);
+            var turnEnds = HookReader.RunHooks(type).Where(hook => HookReader.EndsATurn(hook.Name)).Select(hook => hook.Name).ToHashSet(StringComparer.Ordinal);
             if (turnEnds.Count == 0) continue;
             ModelReading reading;
             try { reading = HookReader.Read(type, read); }
@@ -320,7 +320,7 @@ public static partial class ReadModels
         {
             var handWritten = SimModels.HandWritten(type.Name);
             if (handWritten == null && ReadWholeAtReview.Contains(type.Name)) continue;
-            var starts = HookReader.Hooks(type).Select(hook => hook.Name).Where(TurnStartRunOrder.Contains).ToHashSet(StringComparer.Ordinal);
+            var starts = HookReader.RunHooks(type).Select(hook => hook.Name).Where(TurnStartRunOrder.Contains).ToHashSet(StringComparer.Ordinal);
             if (starts.Count == 0) continue;
             ModelReading reading;
             try { reading = HookReader.Read(type, read); }

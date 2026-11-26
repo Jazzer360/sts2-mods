@@ -97,7 +97,11 @@ public sealed class ReadModel : SimModel
     private delegate decimal Evaluate(in HookArgs args);
 
     /// <summary>One compiled command: the condition its code runs it on (null: always), and what it does on one branch.</summary>
-    private sealed record CompiledStep(Evaluate? When, Func<HookArgs, IEnumerable<SimState>> Run);
+    private sealed record CompiledStep(Evaluate? When, Func<HookArgs, IEnumerable<SimState>> Run)
+    {
+        /// <summary>It takes its own power off (PowerCmd.Remove(this)): the steps after it read the amount it had (SimState.RemovedByItsHook).</summary>
+        public bool RemovesItself { get; init; }
+    }
 
     public ModelSpec Spec { get; }
 
@@ -516,7 +520,7 @@ public sealed class ReadModel : SimModel
                 var guarded = runner;
                 runner = args => SimEngine.FightOver(args.State) ? One(args.State) : guarded(args);
             }
-            compiled.Add(new CompiledStep(step.When == null ? null : Compile(step.When), runner));
+            compiled.Add(new CompiledStep(step.When == null ? null : Compile(step.When), runner) { RemovesItself = step is RemovePowerStep { Powers: null } && Spec.Kind == ModelKind.Power });
         }
         return compiled.ToArray();
     }
@@ -1445,6 +1449,21 @@ public sealed class ReadModel : SimModel
     /// <summary>Compiled steps in order on one branch (see Run).</summary>
     private static IEnumerable<SimState> RunSteps(CompiledStep[] steps, HookArgs args)
     {
+        foreach (var step in steps)
+            if (step.RemovesItself) return ClearedRemoval(RunInOrder(steps, args));
+        return RunInOrder(steps, args);
+    }
+
+    /// <summary>The hook's steps are over: what its own removal kept (SimState.RemovedByItsHook) goes, on every branch they left.</summary>
+    private static IEnumerable<SimState> ClearedRemoval(IEnumerable<SimState> states)
+    {
+        var list = states as IReadOnlyList<SimState> ?? states.ToList();
+        foreach (var state in list) state.RemovedByItsHook = null;
+        return list;
+    }
+
+    private static IEnumerable<SimState> RunInOrder(CompiledStep[] steps, HookArgs args)
+    {
         IEnumerable<SimState>? states = null;
         foreach (var step in steps)
         {
@@ -1973,7 +1992,11 @@ public sealed class ReadModel : SimModel
                 {
                     if (fires) args.State.LogFired(Name, amount: 0, args.Owner);
                     if (args.Copy > 0) ChangeCopy(args.State, args.Owner, args.Copy, delta: null);
-                    else SimEngine.RemovePower(args.State, args.Owner, ThisPower);
+                    else
+                    {
+                        args.State.RemovedByItsHook = (args.Owner, ThisPower, SimEngine.PowerOn(args.State, args.Owner, ThisPower));
+                        SimEngine.RemovePower(args.State, args.Owner, ThisPower);
+                    }
                     return One(args.State);
                 };
             case DecrementPowerStep decrement:
@@ -2543,7 +2566,11 @@ public sealed class ReadModel : SimModel
                 // As it comes off (AfterRemoved), the amount it had: it's off its owner by then.
                 return Spec.Kind == ModelKind.Power
                     ? (in HookArgs args) => args.Hook == HookName.AfterRemoved ? args.PowerAmount
-                        : args.Copy > 0 ? CopyOf(args.State, args.Owner, args.Copy).Amount : SimEngine.PowerOn(args.State, args.Owner, ThisPower)
+                        : args.Copy > 0 ? CopyOf(args.State, args.Owner, args.Copy).Amount
+                        // Taken off by its own hook: the amount it had, as the game's instance keeps it (decision #400).
+                        : args.State.RemovedByItsHook is { } removed && removed.Owner == args.Owner && removed.Power == ThisPower && !SimEngine.PowersOf(args.State, args.Owner).Has(ThisPower)
+                            ? removed.Amount
+                        : SimEngine.PowerOn(args.State, args.Owner, ThisPower)
                     : (in HookArgs args) => SimEngine.RelicsOf(args.State, args.Owner)[ThisRelic];
             case HookFact.PlayIsOwners: return (in HookArgs args) => args.Play?.Owner == args.Owner ? 1m : 0m;
             case HookFact.CardType: return (in HookArgs args) => (int)CardTypeOf(in args);

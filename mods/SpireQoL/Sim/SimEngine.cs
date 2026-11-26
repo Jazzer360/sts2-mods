@@ -1887,6 +1887,7 @@ public static partial class SimEngine
             {
                 // Its move as its code runs it (decision #195, MonsterModel.PerformMove): each step in turn, to the move's end even when your
                 // Thorns killed it during its attack (nothing in PerformMove or PowerCmd.Apply stops there), while the fight goes on.
+                Dictionary<WhenAction, bool?>? askedAtStart = null;
                 void MoveActions(IReadOnlyList<SimAction> actions)
                 {
                     foreach (var action in actions)
@@ -1920,13 +1921,17 @@ public static partial class SimEngine
                             case MoveStoreAction moveStoreAction when state.Forecasting: MoveStore(state, enemy, moveStoreAction); break;
                             // A step on its own state (Bowlbug Rock's IsOffBalance: decision #271), asked of it as the step runs.
                             case WhenAction whenAction:
-                                var holds = Holds(state, whenAction.Condition, enemy.Id);
+                                var holds = whenAction.AskedAtMoveStart && askedAtStart != null && askedAtStart.TryGetValue(whenAction, out var asked) ? asked
+                                    : Holds(state, whenAction.Condition, enemy.Id);
                                 if (holds == null) state.Unmodelled ??= $"{enemy.Name}'s move acts on a test the simulator can't tell";
                                 else if (holds.Value) MoveActions(whenAction.Then);
                                 break;
                         }
                     }
                 }
+                // The steps the code tested once before an earlier step changed what they test (WhenAction.AskedAtMoveStart): asked now, as the move starts.
+                foreach (var action in enemy.Move)
+                    if (action is WhenAction { AskedAtMoveStart: true } early) (askedAtStart ??= new Dictionary<WhenAction, bool?>(ReferenceEqualityComparer.Instance))[early] = Holds(state, early.Condition, enemy.Id);
                 MoveActions(enemy.Move);
             }
             if (landed > 0) if (state.Log) state.Blockable.Add((hitsLanded > 1 ? $"{enemy.Name} ({hitsLanded} hits)" : enemy.Name, landed));

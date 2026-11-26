@@ -1647,7 +1647,9 @@ public static partial class SimAdapter
         }
         if (to == ApplyPowerAction.Where.You && FocusSignOf(type) is var focusSign && focusSign != 0)
             return read == null ? unread : amount != 0 ? new FocusAction(focusSign * amount) : null;
-        var simulated = Simulated(simPowerName);
+        // A temporary Strength or Dexterity power has a read model for its turn's end (decision #400) but never lands as itself here: what it gives as it
+        // lands is its BeforeApplied's (on enemies, Strength above), so it lands as before, as a power the simulator doesn't read.
+        var simulated = Simulated(simPowerName) && !typeof(TemporaryStrengthPower).IsAssignableFrom(type) && !typeof(TemporaryDexterityPower).IsAssignableFrom(type);
         var debuff = SimReaders.IsDebuffType(type);
         if (debuff ? !toEnemies && !simulated : !simulated) return null;
         if (simPowerName == nameof(StretchPower) && to == ApplyPowerAction.Where.You && CardEffects.KeepsStretchForReplays(play.Type))

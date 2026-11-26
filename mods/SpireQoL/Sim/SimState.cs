@@ -1150,6 +1150,12 @@ public sealed class SimState
     /// whoever else dies (CombatManager.IsCombatEnding). Constant in a simulation.
     /// </summary>
     public bool HeldOpenByTheDead;
+    /// <summary>
+    /// A power its own hook took off its owner (PowerCmd.Remove(this)) and the amount it had: the game's instance keeps its Amount once it's off
+    /// (PowerModel.RemoveInternal), so the rest of that hook reads it (TemporaryStrengthPower.AfterSideTurnEnd removes itself, then gives back
+    /// -Sign * base.Amount: decision #400). The engine's scratch: set by the removal, read only while the power is off, cleared as the hook's steps end.
+    /// </summary>
+    public (int Owner, PowerId Power, int Amount)? RemovedByItsHook;
 
     /// <summary>
     /// The history ledger's questions (decision #191): every query of the game's log of the fight that the cards, relics and powers on this

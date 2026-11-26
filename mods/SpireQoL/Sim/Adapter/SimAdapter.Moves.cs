@@ -183,8 +183,12 @@ public static partial class SimAdapter
     /// Every test of the condition is of a power (HasPower, GetPowerAmount): what a move's own steps can't change before it's asked. A test of a field
     /// isn't taken (TestSubject's RespawnMove adds one to Respawns before its switch on it, which the simulated monster's field wouldn't have).
     /// </summary>
+    private static HashSet<string> TestedPowers(ProgramCondition condition) => condition.Literals.SelectMany(literal => literal.Test.Parts()).OfType<QueryValue>()
+        .Where(part => part.Name is "HasPower" or "GetPowerAmount" or "GetPower" or "OfType").SelectMany(part => part.GenericArguments).ToHashSet(StringComparer.Ordinal);
+
     private static bool OnItsPowers(ProgramCondition condition) =>
-        condition.Literals.Any() && condition.Literals.All(literal => literal.Test.Parts().Any(part => part is QueryValue { Name: "HasPower" or "GetPowerAmount" or "GetPower" }));
+        condition.Literals.Any() && condition.Literals.All(literal => literal.Test.Parts().Any(part => part is QueryValue { Name: "HasPower" or "GetPowerAmount" or "GetPower" }
+            || part is QueryValue { Name: "OfType", Arguments: [QueryValue { Name: "Powers" }] }));
 
     private static MonsterModel? SafeCanonical(Type monster)
     {
@@ -344,7 +348,12 @@ public static partial class SimAdapter
             {
                 var gapsBefore = context.Gaps.Count;
                 var then = MoveStep(step with { Condition = null }, context, each).ToList();
-                if (context.Gaps.Count == gapsBefore) return then.Count == 0 ? Array.Empty<SimAction>() : new SimAction[] { new WhenAction(asked, then) };
+                // The code tested it before an earlier step of the move applied a power it tests (Pheromone Spit's hive, then its Strength by the hive it
+                // had: decision #400): asked as the move starts.
+                var tested = TestedPowers(step.Condition);
+                var changedFirst = context.Program.All().OfType<CommandStep>().Any(earlier => earlier.Offset < step.Offset
+                    && earlier.Command is { FullName: "PowerCmd.Apply", GenericArguments: [var applied] } && tested.Contains(applied));
+                if (context.Gaps.Count == gapsBefore) return then.Count == 0 ? Array.Empty<SimAction>() : new SimAction[] { new WhenAction(asked, then) { AskedAtMoveStart = changedFirst } };
                 return Array.Empty<SimAction>();
             }
             if (step is CommandStep { Command.FullName: "PowerCmd.Apply" or "CreatureCmd.GainBlock" } or LoopStep) context.Gaps.Add("on a condition");

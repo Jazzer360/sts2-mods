@@ -1493,6 +1493,123 @@
     "HelpsOwner": false
   },
   {
+    "Name": "AnticipatePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DexterityPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryDexterityPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryDexterityPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "ArcheryPower",
     "Kind": "Power",
     "Hooks": [
@@ -9478,6 +9595,123 @@
     "HelpsOwner": false
   },
   {
+    "Name": "CoordinatePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryStrengthPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryStrengthPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "CorrosiveWavePower",
     "Kind": "Power",
     "Hooks": [
@@ -10244,6 +10478,123 @@
             "When": {
               "$kind": "HookFactValue",
               "Fact": "TakesPart"
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "CrushUnderPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryStrengthPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryStrengthPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
             }
           }
         ]
@@ -11442,6 +11793,123 @@
     "Starts": {
       "_evokeVal": 6
     }
+  },
+  {
+    "Name": "DarkShacklesPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryStrengthPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryStrengthPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
   },
   {
     "Name": "DaughterOfTheWind",
@@ -13748,6 +14216,123 @@
     "HelpsOwner": false
   },
   {
+    "Name": "DyingStarPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryStrengthPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryStrengthPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "EchoFormPower",
     "Kind": "Power",
     "Hooks": [
@@ -13938,6 +14523,123 @@
             "$kind": "UnknownStep",
             "Why": "EnergyNextTurnPower\u0027s AfterEnergyReset isn\u0027t read (gap: energy for someone else)",
             "ForecastIgnores": true
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "EnfeeblingTouchPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryStrengthPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryStrengthPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
           }
         ]
       }
@@ -14741,6 +15443,123 @@
     "HelpsOwner": false
   },
   {
+    "Name": "FadePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DexterityPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryDexterityPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryDexterityPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "FakeBloodVial",
     "Kind": "Relic",
     "Hooks": [
@@ -15218,6 +16037,123 @@
     "HelpsOwner": false
   },
   {
+    "Name": "FeedingFrenzyPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryStrengthPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryStrengthPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "FeelNoPainPower",
     "Kind": "Power",
     "Hooks": [
@@ -15615,6 +16551,123 @@
     ],
     "HelpsOwner": false,
     "Copies": "EachApplication"
+  },
+  {
+    "Name": "FlexPotionPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryStrengthPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryStrengthPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
   },
   {
     "Name": "FlutterPower",
@@ -21292,6 +22345,123 @@
     "HelpsOwner": false
   },
   {
+    "Name": "HelicalDartPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DexterityPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryDexterityPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryDexterityPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "HelloWorldPower",
     "Kind": "Power",
     "Hooks": [
@@ -26177,6 +27347,123 @@
     "Copies": "EachApplication"
   },
   {
+    "Name": "ManglePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryStrengthPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryStrengthPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "MasterPlannerPower",
     "Kind": "Power",
     "Hooks": [
@@ -26897,6 +28184,123 @@
       }
     ],
     "Tab": "Trigger",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "MonarchsGazeStrengthDownPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryStrengthPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryStrengthPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
     "HelpsOwner": false
   },
   {
@@ -35576,6 +36980,123 @@
     "HelpsOwner": false
   },
   {
+    "Name": "PiercingWailPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryStrengthPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryStrengthPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "PillarOfCreationPower",
     "Kind": "Power",
     "Hooks": [
@@ -39886,6 +41407,123 @@
     "HelpsOwner": false
   },
   {
+    "Name": "ReptileTrinketPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryStrengthPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryStrengthPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "Ringing",
     "Kind": "Affliction",
     "Hooks": [],
@@ -41615,6 +43253,240 @@
             }
           ]
         }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "SetupStrikePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryStrengthPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryStrengthPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "ShacklingPotionPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryStrengthPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryStrengthPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
       }
     ],
     "HelpsOwner": false
@@ -43609,6 +45481,123 @@
             "$kind": "UnknownStep",
             "Why": "SpectrumShiftPower\u0027s BeforeHandDraw isn\u0027t read (gap: CardPileCmd.AddGeneratedCardsToCombat isn\u0027t translated)",
             "ForecastIgnores": true
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "SpeedPotionPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "DexterityPower",
+            "Target": "Owner",
+            "Amount": {
+              "$kind": "HookMath",
+              "Operation": "Multiply",
+              "Left": {
+                "$kind": "HookMath",
+                "Operation": "Multiply",
+                "Left": {
+                  "$kind": "HookWays",
+                  "Ways": [
+                    {
+                      "When": {
+                        "$kind": "HookNot",
+                        "Inner": {
+                          "$kind": "HookTest",
+                          "At": "TemporaryDexterityPower.get_Sign:0006",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "NotEqual",
+                            "Left": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 0
+                            }
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": -1
+                      }
+                    },
+                    {
+                      "When": {
+                        "$kind": "HookTest",
+                        "At": "TemporaryDexterityPower.get_Sign:0006",
+                        "Test": {
+                          "$kind": "HookMath",
+                          "Operation": "NotEqual",
+                          "Left": {
+                            "$kind": "HookConstant",
+                            "Value": 1
+                          },
+                          "Right": {
+                            "$kind": "HookConstant",
+                            "Value": 0
+                          }
+                        }
+                      },
+                      "Value": {
+                        "$kind": "HookConstant",
+                        "Value": 1
+                      }
+                    }
+                  ]
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": -1
+                }
+              },
+              "Right": {
+                "$kind": "HookFactValue",
+                "Fact": "Amount"
+              }
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__22.MoveNext:0029",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
           }
         ]
       }

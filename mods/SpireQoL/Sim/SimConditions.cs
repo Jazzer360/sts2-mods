@@ -194,7 +194,14 @@ public sealed record AnyCondition(IReadOnlyList<SimCondition> Parts) : SimCondit
 /// The actions <paramref name="Then"/> run on the branches where <paramref name="Condition"/> holds, asked as this action runs (decision
 /// #190): any effect under any condition (Sunder's energy, Timber's attack on every enemy, Impatience's draws, Sacrifice's block).
 /// </summary>
-public sealed record WhenAction(SimCondition Condition, IReadOnlyList<SimAction> Then) : SimAction;
+public sealed record WhenAction(SimCondition Condition, IReadOnlyList<SimAction> Then) : SimAction
+{
+    /// <summary>
+    /// In an enemy's move: asked as the move starts, not as this step runs (decision #400): the code tested it once, before an earlier step of the
+    /// move changed what it tests (Entomancer's Pheromone Spit adds to its Personal Hive, then gives Strength by the hive it had).
+    /// </summary>
+    public bool AskedAtMoveStart { get; init; }
+}
 
 /// <summary>
 /// Asks a condition now and keeps its answer for the rest of the play (a local the card's code stores before later steps: Ki Hop's and Bow

@@ -17,14 +17,35 @@
     "ForecastIgnores": true
   },
   {
+    "Name": "ChoBarbsPower",
+    "Why": "ChoBarbsPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd (gap: PowerCmd.ModifyAmount of another power)",
+    "ActsForAnEnemy": true,
+    "ActsForAPlayer": true
+  },
+  {
     "Name": "EncorePower",
     "Why": "EncorePower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterApplied: gap: the value Max(0, (this.Amount sub this.GetInternalData\u003CData\u003E().numberOfCardsPlayedSinceApplied())))",
     "ActsForAnEnemy": true,
     "ForecastIgnores": true
   },
   {
+    "Name": "FocusedStrikePower",
+    "Why": "FocusedStrikePower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterPowerAmountChanged: gap: FocusPower applied by someone else)",
+    "ActsForAnEnemy": true
+  },
+  {
     "Name": "HellraiserPower",
     "Why": "HellraiserPower isn\u0027t modelled, and its turn\u0027s-end hooks never act as the enemies\u0027 turn ends"
+  },
+  {
+    "Name": "HotfixPower",
+    "Why": "HotfixPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterPowerAmountChanged: gap: FocusPower applied by someone else)",
+    "ActsForAnEnemy": true
+  },
+  {
+    "Name": "HyperbeamFocusDownPower",
+    "Why": "HyperbeamFocusDownPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterPowerAmountChanged: gap: FocusPower applied by someone else)",
+    "ActsForAnEnemy": true
   },
   {
     "Name": "NoDrawPower",
@@ -59,6 +80,11 @@
   {
     "Name": "ShrinkPower",
     "Why": "ShrinkPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterApplied: gap: changes a game object outside a command (Vantom.ScaleTo))",
+    "ActsForAnEnemy": true
+  },
+  {
+    "Name": "SynchronizePower",
+    "Why": "SynchronizePower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterPowerAmountChanged: gap: FocusPower applied by someone else)",
     "ActsForAnEnemy": true
   },
   {

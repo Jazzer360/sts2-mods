@@ -232,8 +232,6 @@ public class EnemyMoveTests
     /// <summary>Each move step the enemy turn can't build, and why it can't change a later hit this turn.</summary>
     private static readonly Dictionary<string, string> ReviewedGaps = new()
     {
-        ["Entomancer.SpitMove: PowerCmd.Apply<PersonalHivePower> (on a condition)"] = "its own Personal Hive below 3: a move with no attack",
-        ["Entomancer.SpitMove: PowerCmd.Apply<StrengthPower> (on a condition)"] = "its own Strength by its Personal Hive: a move with no attack",
         ["Fabricator.FabricateMove: CreatureCmd.Add (a monster picked: the projection's only)"] = "its two bots, each a random one of a set (RunRng.MonsterAi.NextItem) other than the last it made: a branch per bot in the projection (decision #379); after a play its HP among several is a roll the enemy turn's one state doesn't branch on (TRACKER: summons in a move), and they make no move this turn",
         ["Fabricator.FabricatingStrikeMove: CreatureCmd.Add (a monster picked: the projection's only)"] = "its bot after its attack, a random one of a set other than the last it made: a branch per bot in the projection (decision #379); after a play its HP is a roll (TRACKER: summons in a move), and it makes no move this turn",
         ["LivingFog.BloatMove: CreatureCmd.Add<GasBomb> (in a loop)"] = "its Gas Bombs, BloatAmount of them while a slot is free (a kill frees one), before its attack: not in the enemy turn's state (TRACKER: summons in a move); they make no move this turn",

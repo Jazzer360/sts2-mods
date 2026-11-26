@@ -385,7 +385,12 @@ public sealed partial class ProcAudit
                 var made = Most(CardEvent.Generated) + prediction.ChosenTransformsAtMost;
                 // A tab that counts the cards it makes (Personal Hive's Dazed) is held to them by MadeByTabs, which gives the card's own its
                 // range beyond: the budget would call them unexplained (a source read as a model explains only powers and summons: EffectsOf).
-                if (!sourceOf.Values.Any(tab => tab.Kind == TabAmount.CardsMade)) Budget(Effect.Generate, "created cards", generated, made);
+                // A play that won the fight: CardPileCmd.AddGeneratedCardsToCombat logs the card made (History.CardGenerated) before its add, which
+                // returns without adding it once the fight is ending (CardPileCmd.Add: IsEnding), so the log has cards no pile got (Collision Course's
+                // Debris after its killing hit). The simulation makes none then (decision #301).
+                if (window.FightEnded && generated > made)
+                    modelLines.Skip("unexplained created cards", FightEndedSkip + ": the game logs a card made before its add fails", $"{generated - made} more than the card's own {made}");
+                else if (!sourceOf.Values.Any(tab => tab.Kind == TabAmount.CardsMade)) Budget(Effect.Generate, "created cards", generated, made);
                 MadeByTabs(made);
                 Budget(Effect.Orb, "orbs channeled", orbs, predictedOrbs.Most);
             }
