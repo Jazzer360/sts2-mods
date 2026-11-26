@@ -9,7 +9,7 @@ namespace SpireQoL.Features;
 
 /// <summary>
 /// The powers a move applies, as small chips in a corner of the intent they belong to (a buff on its buff intent, a debuff on its debuff
-/// intent): bottom left, or top left on an intent that shows a number of its own (decisions #398, #401). Read as part of that intent, not as
+/// intent): bottom left, or just above the number on an intent that shows one (decisions #398, #401). Read as part of that intent, not as
 /// another one.
 /// Shared by Intent Details (the intent on screen) and Intent Forecast (later moves). Our node, under the intent's %IntentHolder,
 /// so it bobs with the icon; the game's nodes aren't changed.
@@ -19,6 +19,7 @@ internal static class IntentCorner
     private const string PowersName = "SpireQoLIntentPowers";
     private const int IconSize = 15;
     private const int FontSize = 11;
+    private static bool _layoutLogged;
 
     /// <summary>Each power with the index of the intent it goes on: the move's buff intent for a buff, its debuff intent for a debuff, else its last.</summary>
     public static Dictionary<int, List<MovePowers.Applied>> Assign(IReadOnlyList<AbstractIntent> intents, IReadOnlyList<MovePowers.Applied> powers)
@@ -90,7 +91,18 @@ internal static class IntentCorner
         var value = intent.GetNodeOrNull<RichTextLabel>(GodotNames.Path("%Value"));
         var box = value != null ? new Rect2(value.Position, value.Size) : new Rect2(Vector2.Zero, holder.Size);
         var showsNumber = value is { Visible: true } && !string.IsNullOrWhiteSpace(value.Text) || holder.GetNodeOrNull<Label>(GodotNames.Path(IntentDetailsFeature.BlockName)) != null;
-        row.Position = showsNumber ? Vector2.Zero : new Vector2(box.Position.X, box.End.Y - size.Y);
+        // On one with a number, just above the %Value box, at its left: the holder's top-left is the number's own (the Doormaker's 30 under its
+        // Strength chip, a dev review), the icon drawn above it.
+        row.Position = showsNumber ? new Vector2(box.Position.X, box.Position.Y - size.Y) : new Vector2(box.Position.X, box.End.Y - size.Y);
+        if (!_layoutLogged && showsNumber && value != null)
+        {
+            // Once a launch: where the game lays out an intent with a number, so the chip's place can be checked against it (dev logs).
+            _layoutLogged = true;
+            var sprite = intent.GetNodeOrNull<Node2D>(GodotNames.Path("%Intent"));
+            var spriteAt = sprite != null ? holder.GetGlobalTransform().AffineInverse() * sprite.GlobalPosition : (Vector2?)null;
+            ModEntry.Log.Detail($"[intent-corner] holder {holder.Position} size {holder.Size}; value box {box}, text \"{value.Text}\", content {value.GetContentWidth()}x{value.GetContentHeight()}, "
+                + $"align {value.HorizontalAlignment}/{value.VerticalAlignment}; icon centre {spriteAt}; chips at {row.Position} size {size}");
+        }
     }
 
     /// <summary>A power's icon with its amount beside it (the icon alone when the amount isn't a number the move keeps).</summary>
