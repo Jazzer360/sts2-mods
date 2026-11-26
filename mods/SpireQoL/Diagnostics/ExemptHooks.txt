@@ -1,6 +1,6 @@
 # Combat hooks a game class overriding them needs no ledger entry for, grouped by why. Every hook the
 # game dispatches is in CoverageHooks.txt, OutOfCombatHooks.txt or here (CoverageHookListTests, read
-# from the game's Hook class and PowerModel on both branches).
+# from the game's Hook class and each model kind's own hooks on both branches: decision #330).
 #
 # The game's own math the mod calls: the adapter reads it per hit and per play (Hook.ModifyDamage and
 # ModifyBlock: a term captured for a class with no model, SimReaders; a hand-written model answers the
@@ -20,5 +20,20 @@ ShouldEtherealTrigger
 # prediction reads, and nothing calls them again.
 BeforeCombatStart
 BeforeCombatStartLate
-# A visual effect only (a target that can't be hit was clicked).
+# A visual effect only (a target that can't be hit was clicked; a card's look as it's queued; a monster's
+# skins and its look in the compendium).
 AfterTargetingBlockedVfx
+OnEnqueuePlayVfx
+SetupSkins
+BeforeAnimPlayedInCompendium
+# Which cards an enchantment or affliction can go on, asked as the command putting it on a card runs
+# (CardCmd.Enchant, CardCmd.Afflict): that command is its caller's step, reviewed with its caller.
+CanEnchant
+CanEnchantCardType
+CanAfflict
+CanAfflictCardType
+# How models sort against each other (a kind's IComparable), not something it does.
+CompareTo
+# A power's amount scaled for the players as PowerCmd.Apply applies it: read for every power class from its
+# code (PowerRule, decision #234), not per class.
+GetScaledAmountForMultiplayer

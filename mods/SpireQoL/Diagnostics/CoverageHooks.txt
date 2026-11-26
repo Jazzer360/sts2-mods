@@ -138,3 +138,27 @@ AfterModifyingHpLostBeforeOsty
 AfterModifyingOrbPassiveTriggerCount
 AfterModifyingPowerAmountGiven
 AfterModifyingPowerAmountReceived
+# A monster's own (MonsterModel: a creature joining the fight, leaving it and dying of Doom call them; decision #330).
+AfterAddedToRoom
+BeforeRemovedFromRoom
+OnDieToDoom
+# An enchantment's own (EnchantmentModel: the game's damage, block and play-count math calls its terms first; a fight's start and a hover
+# recalculate its values). Its OnPlay is reviewed per class too (CoverageLedger.OnCardHooks).
+EnchantBlockAdditive
+EnchantBlockMultiplicative
+EnchantDamageAdditive
+EnchantDamageMultiplicative
+EnchantPlayCount
+RecalculateValues
+# An affliction's own (AfflictionModel: as it comes off its card).
+BeforeRemoved
+# An orb's own (OrbModel: OrbCmd's passive and evoke, and the turn's end and start).
+Passive
+Evoke
+BeforeTurnEndOrbTrigger
+AfterTurnStartOrbTrigger
+# A card's own (CardModel: as it's made, and on both sides of a transform; beta's one hook is main's two).
+AfterCreated
+AfterThisWasTransformedFrom
+AfterTransformedFrom
+AfterTransformedTo

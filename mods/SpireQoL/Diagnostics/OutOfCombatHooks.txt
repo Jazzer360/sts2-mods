@@ -40,7 +40,6 @@ ModifyMerchantPrice
 ModifyNextEvent
 ModifyOddsIncreaseForUnrolledRoomType
 ModifyRestSiteHealAmount
-ModifyRewards
 ModifyUnknownMapPointRoomTypes
 ShouldAddToDeck
 ShouldAllowAncient
@@ -64,3 +63,6 @@ TryModifyRewardsLate
 ModifyExtraRestSiteMendText
 TryReplaceDefaultRoomRewards
 TryModifyCardBeingAddedToDeckLate
+# A relic's own: whether it can be offered (at Neow on beta; anywhere on main).
+IsAllowedAtNeow
+IsAllowed

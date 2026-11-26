@@ -45,6 +45,9 @@ internal static partial class CoverageLedger
 
     internal static IReadOnlyList<string> ReviewedHooks => Hooks;
 
+    /// <summary>The hooks reviewed per class for enchantments and afflictions only (OnPlay: a card's own is its program).</summary>
+    internal static IReadOnlyList<string> ReviewedOnCardHooks => OnCardHooks;
+
     private static readonly Dictionary<string, string> Reviewed = new()
     {
         // ======== relics
@@ -501,12 +504,12 @@ internal static partial class CoverageLedger
         ["Regret"] = "covered: BeforeSideTurnEnd counts the hand (model RegretCard, a card listener after your powers and relics); its OnTurnEndInHand HP loss of that count is in the simulator (SimEngine.HandAtTurnEnd)",
         ["RightHandHand"] = "covered: AfterCardPlayedLate returns it from your discard pile when you play a card whose energy value is 2 or more: a return tab on those cards and your hand size after (Procs.ReturnToHand)",
         ["RocketPunch"] = "ignore: its own cost when statuses are created (read from the card)",
-        ["SovereignBlade"] = "ignore: AfterCardChangedPiles forge visuals",
+        ["SovereignBlade"] = "ignore: AfterCardChangedPiles forge visuals; main's AfterTransformedFrom only removes its blade's node (looks)",
         ["Stomp"] = "ignore: its own cost (read from the card)",
         ["Void"] = "covered: AfterCardDrawn energy loss when it's drawn (model VoidCard, a card listener after your powers' and relics' draw reactions: SimDrawCard.EnergyLostOnDraw, CardEnergy.LostWhenDrawn)",
         // v0.113.0
         ["EpicRetrieval"] = "covered: AfterArrowDislodged energy when its own hit dislodges your arrow (CardEnergy.Rules: SimCardPlay.ArrowEnergy)",
-        ["SpoilsMap"] = "ignore: AfterCardChangedPiles keeps its map quest (out of combat)",
+        ["SpoilsMap"] = "ignore: AfterCardChangedPiles keeps its map quest and AfterCreated sets the act it marks on the map (out of combat)",
         ["WhistlingArrows"] = "covered: AfterArrowShot returns it from your discard pile when you shoot an arrow: a return tab on shots with an arrow ready and your hand size after (Procs.ReturnToHand)",
         // Listed with the turn-start and cost hooks (decision #323).
         ["Bolas"] = "ignore: BeforeHandDraw returns it to its owner's hand as their turn starts when they played it last turn: the hand, which a projection leaves out",
@@ -516,31 +519,95 @@ internal static partial class CoverageLedger
         ["ThrummingHatchet"] = "ignore: BeforeHandDraw returns it to its owner's hand as their turn starts when they played it last turn: the hand, which a projection leaves out",
 
         // ======== monsters (each hook read as a program, decision #195: MonsterHookTests holds these entries to what its code does)
-        ["Aeonglass"] = "ignore: hooks set music and match created Withers to its upgrades",
-        ["Crusher"] = "ignore: hooks only change music",
-        ["DecimillipedeSegment"] = "ignore: hook only changes a texture (its revive is ReattachPower)",
+        // AfterAddedToRoom, BeforeRemovedFromRoom and OnDieToDoom (decision #330): what a monster's AfterAddedToRoom does as a fight starts is on
+        // the board the first decision reads; one a death adds mid-fight starts with the powers it gives itself (SimAdapter.StartingPowers, read
+        // from its code); one a move summons isn't in the enemy turn's state yet (TRACKER: summons in a move).
+        ["Aeonglass"] = "ignore: AfterAddedToRoom PowerCmd.Apply Withering Presence on each opponent and Artifact on itself at the fight's start (on the board the first decision reads); its other hooks set music and match created Withers to its upgrades",
+        ["Crusher"] = "ignore: AfterAddedToRoom PowerCmd.Apply Back Attack, Crab Rage and (beta) Plating to itself at the fight's start (on the board the first decision reads); its other hooks only change music",
+        ["DecimillipedeSegment"] = "ignore: AfterAddedToRoom sets its max HP (CreatureCmd.SetMaxAndCurrentHp) and PowerCmd.Apply Reattach to itself at the fight's start (on the board the first decision reads); AfterDeath only changes a texture (its revive is ReattachPower)",
         ["KinPriest"] = "ignore: AfterDeath of its last follower only calls AllFollowerDeathResponse, which plays a talk line; its move doesn't change",
-        ["LagavulinMatriarch"] = "ignore: AfterDamageReceived only marks its shell awake (visual)",
-        ["Queen"] = "ignore: AfterDeath of the Amalgam stores HasAmalgamDied (her conditional branches read it as it stands: MoveConditions) and calls SetMoveImmediate, swapping Burn Bright for Me (Strength to her allies, 20 block) for Enrage (2 Strength): neither attacks, so neither's block or Strength changes a hit this turn, and with the Amalgam dead Burn Bright's Strength has no one to land on",
-        ["Rocket"] = "ignore: hooks only change music",
+        ["LagavulinMatriarch"] = "ignore: AfterAddedToRoom puts it to sleep at the fight's start (PowerCmd.Apply Plating and Asleep, IsAwake: on the board the first decision reads); AfterDamageReceived only marks its shell awake (visual)",
+        ["Queen"] = "ignore: AfterAddedToRoom keeps the Amalgam at the fight's start (on the board); BeforeRemovedFromRoom only clears an animation; AfterDeath of the Amalgam stores HasAmalgamDied (her conditional branches read it as it stands: MoveConditions) and calls SetMoveImmediate, swapping Burn Bright for Me (Strength to her allies, 20 block) for Enrage (2 Strength): neither attacks, so neither's block or Strength changes a hit this turn, and with the Amalgam dead Burn Bright's Strength has no one to land on",
+        ["Rocket"] = "ignore: AfterAddedToRoom PowerCmd.Apply Surrounded on its opponents and Back Attack, Crab Rage and (beta) Plating on itself at the fight's start (on the board the first decision reads); its other hooks only change music and sound",
         ["SoulFysh"] = "ignore: hooks only change music",
-        ["TestSubject"] = "ignore: hooks only change color and music (its revive is AdaptablePower)",
+        ["TestSubject"] = "ignore: AfterAddedToRoom PowerCmd.Apply Adaptable and Enrage to itself at the fight's start (on the board the first decision reads) and listens for Intangible to change its color, which BeforeRemovedFromRoom stops; its other hooks only change color and music (its revive is AdaptablePower)",
         ["TheInsatiable"] = "ignore: hook only changes music",
-        ["Vantom"] = "ignore: hook only changes music",
-        ["WaterfallGiant"] = "ignore: hook only changes music",
+        ["Vantom"] = "ignore: AfterAddedToRoom PowerCmd.Apply Slippery to itself at the fight's start (on the board the first decision reads); AfterDeath only changes music",
+        ["WaterfallGiant"] = "ignore: AfterAddedToRoom sets its CurrentPressureGunDamage at the fight's start (on the board: its Pressure Gun intent reads it as it stands); its other hooks only change music and sound",
+        ["Axebot"] = "covered: AfterAddedToRoom PowerCmd.Apply Stock of its StockAmount while above 0: on the board at the fight's start, and an Axebot a Stock's death adds mid-fight starts with it (SimAdapter.StartingPowers, read from its code)",
+        ["BattleFriendV1"] = "ignore: AfterAddedToRoom PowerCmd.Apply 3 of Battleworn Dummy's time limit to itself at the fight's start (on the board the first decision reads)",
+        ["BattleFriendV2"] = "ignore: AfterAddedToRoom PowerCmd.Apply 3 of Battleworn Dummy's time limit to itself at the fight's start (on the board the first decision reads)",
+        ["BattleFriendV3"] = "ignore: AfterAddedToRoom PowerCmd.Apply 3 of Battleworn Dummy's time limit to itself at the fight's start (on the board the first decision reads)",
+        ["BowlbugEgg"] = "ignore: AfterAddedToRoom only runs MonsterModel's own (nothing)",
+        ["BowlbugRock"] = "ignore: AfterAddedToRoom PowerCmd.Apply Imbalanced to itself at the fight's start (on the board the first decision reads)",
+        ["BygoneEffigy"] = "ignore: AfterAddedToRoom PowerCmd.Apply Slow to itself at the fight's start (on the board the first decision reads)",
+        ["Byrdonis"] = "ignore: AfterAddedToRoom PowerCmd.Apply Territorial to itself at the fight's start (on the board the first decision reads)",
+        ["Chomper"] = "ignore: AfterAddedToRoom PowerCmd.Apply 2 Artifact to itself at the fight's start (on the board the first decision reads)",
+        ["CorpseSlug"] = "ignore: AfterAddedToRoom PowerCmd.Apply Ravenous to itself at the fight's start (on the board the first decision reads)",
+        ["CubexConstruct"] = "ignore: AfterAddedToRoom gains 13 block (CreatureCmd.GainBlock) and PowerCmd.Apply Artifact at the fight's start (on the board the first decision reads), and marks itself burrowed and listens for its HP falling, both for its looks and sound only; BeforeRemovedFromRoom stops them",
+        ["Entomancer"] = "ignore: AfterAddedToRoom PowerCmd.Apply Personal Hive to itself at the fight's start (on the board the first decision reads)",
+        ["Exoskeleton"] = "ignore: AfterAddedToRoom PowerCmd.Apply 9 Hard to Kill to itself at the fight's start (on the board the first decision reads)",
+        ["EyeWithTeeth"] = "gap: AfterAddedToRoom PowerCmd.Apply Illusion to itself as Fogmog's move summons it, which the enemy turn doesn't follow yet (TRACKER: summons in a move); on the board from the next decision",
+        ["FossilStalker"] = "ignore: AfterAddedToRoom PowerCmd.Apply 3 Suck to itself at the fight's start (on the board the first decision reads)",
+        ["FrogKnight"] = "ignore: AfterAddedToRoom PowerCmd.Apply Plating to itself and clears HasBeetleCharged (its conditional branch reads it as it stands) at the fight's start (on the board the first decision reads)",
+        ["GasBomb"] = "gap: AfterAddedToRoom PowerCmd.Apply Minion to itself as Living Fog's move summons it, which the enemy turn doesn't follow yet (TRACKER: summons in a move); on the board from the next decision",
+        ["GlobeHead"] = "ignore: AfterAddedToRoom PowerCmd.Apply Galvanic to itself at the fight's start (on the board the first decision reads)",
+        ["GremlinMerc"] = "ignore: AfterAddedToRoom PowerCmd.Apply Surprise to itself and Thievery for each player at the fight's start (on the board the first decision reads)",
+        ["Guardbot"] = "ignore: AfterAddedToRoom only places it where Fabricator's summon drops it (looks)",
+        ["InfestedPrism"] = "ignore: AfterAddedToRoom PowerCmd.Apply Vital Spark to itself at the fight's start (on the board the first decision reads)",
+        ["Inklet"] = "ignore: AfterAddedToRoom PowerCmd.Apply Slippery to itself at the fight's start (on the board the first decision reads)",
+        ["KinFollower"] = "ignore: AfterAddedToRoom PowerCmd.Apply Minion to itself at the fight's start (on the board the first decision reads)",
+        ["KnowledgeDemon"] = "ignore: BeforeRemovedFromRoom only changes music",
+        ["LivingShield"] = "ignore: AfterAddedToRoom PowerCmd.Apply 25 Rampart to itself at the fight's start (on the board the first decision reads)",
+        ["LouseProgenitor"] = "ignore: AfterAddedToRoom PowerCmd.Apply Curl Up to itself at the fight's start (on the board the first decision reads)",
+        ["MechaKnight"] = "ignore: AfterAddedToRoom PowerCmd.Apply 3 Artifact to itself at the fight's start (on the board the first decision reads)",
+        ["MysteriousKnight"] = "ignore: AfterAddedToRoom PowerCmd.Apply 6 Strength and 6 Plating to itself at the fight's start (on the board the first decision reads)",
+        ["Noisebot"] = "ignore: AfterAddedToRoom only places it where Fabricator's summon drops it (looks)",
+        ["Ovicopter"] = "ignore: AfterAddedToRoom and BeforeRemovedFromRoom only start and stop a sound",
+        ["OwlMagistrate"] = "ignore: BeforeRemovedFromRoom only stops a sound",
+        ["Parafright"] = "gap: AfterAddedToRoom PowerCmd.Apply Illusion to itself as The Obscura's move summons it, which the enemy turn doesn't follow yet (TRACKER: summons in a move); on the board from the next decision",
+        ["PhantasmalGardener"] = "ignore: AfterAddedToRoom PowerCmd.Apply Skittish to itself at the fight's start (on the board the first decision reads)",
+        ["PhrogParasite"] = "ignore: AfterAddedToRoom PowerCmd.Apply 4 Infested to itself at the fight's start (on the board the first decision reads)",
+        ["PunchConstruct"] = "ignore: AfterAddedToRoom PowerCmd.Apply Artifact to itself and takes its StartingHpReduction off its HP at the fight's start (on the board the first decision reads)",
+        ["ScrollOfBiting"] = "ignore: AfterAddedToRoom PowerCmd.Apply 2 Paper Cuts to itself at the fight's start (on the board the first decision reads)",
+        ["Seapunk"] = "ignore: AfterAddedToRoom only runs MonsterModel's own (nothing)",
+        ["SewerClam"] = "ignore: AfterAddedToRoom PowerCmd.Apply Plating to itself at the fight's start (on the board the first decision reads)",
+        ["SkulkingColony"] = "ignore: AfterAddedToRoom PowerCmd.Apply 20 Hardened Shell to itself at the fight's start (on the board the first decision reads)",
+        ["SlumberingBeetle"] = "ignore: AfterAddedToRoom PowerCmd.Apply Plating and 3 Slumber to itself at the fight's start (on the board the first decision reads); the rest is its sleep's look and sound",
+        ["SnappingJaxfruit"] = "ignore: AfterAddedToRoom and BeforeRemovedFromRoom only start and stop a sound",
+        ["SoulNexus"] = "ignore: AfterAddedToRoom listens for its death and BeforeRemovedFromRoom clears an animation: looks only",
+        ["Stabbot"] = "ignore: AfterAddedToRoom only places it where Fabricator's summon drops it (looks)",
+        ["TerrorEel"] = "ignore: AfterAddedToRoom PowerCmd.Apply Shriek to itself at the fight's start (on the board the first decision reads)",
+        ["TheAdversaryMkOne"] = "ignore: AfterAddedToRoom PowerCmd.Apply Artifact (0) to itself at the fight's start (on the board the first decision reads)",
+        ["TheAdversaryMkTwo"] = "ignore: AfterAddedToRoom PowerCmd.Apply 1 Artifact to itself at the fight's start (on the board the first decision reads)",
+        ["TheAdversaryMkThree"] = "ignore: AfterAddedToRoom PowerCmd.Apply 2 Artifact to itself at the fight's start (on the board the first decision reads)",
+        ["TheForgotten"] = "ignore: AfterAddedToRoom PowerCmd.Apply Possess Speed to itself at the fight's start (on the board the first decision reads)",
+        ["TheLost"] = "ignore: AfterAddedToRoom PowerCmd.Apply Possess Strength to itself at the fight's start (on the board the first decision reads)",
+        ["ThievingHopper"] = "ignore: AfterAddedToRoom PowerCmd.Apply 5 Escape Artist to itself at the fight's start (on the board the first decision reads); BeforeRemovedFromRoom only stops a sound",
+        ["TorchHeadAmalgam"] = "ignore: AfterAddedToRoom PowerCmd.Apply Minion to itself at the fight's start (on the board the first decision reads); OnDieToDoom only hides its torches (looks)",
+        ["ToughEgg"] = "gap: AfterAddedToRoom PowerCmd.Apply Hatch to itself (1 or 2 by whose turn it is) as Ovicopter's move summons it, or hatches it (CreatureCmd.SetMaxAndCurrentHp of a roll), which the enemy turn doesn't follow yet (TRACKER: summons in a move); on the board from the next decision",
+        ["TwoTailedRat"] = "ignore: AfterAddedToRoom only runs MonsterModel's own (nothing)",
+        ["Zapbot"] = "gap: AfterAddedToRoom PowerCmd.Apply 2 High Voltage to itself as Fabricator's move summons it, which the enemy turn doesn't follow yet (TRACKER: summons in a move); on the board from the next decision",
 
         // ======== potions, enchantments, afflictions
         ["FairyInABottle"] = "covered: ShouldDie (before Lizard Tail's ShouldDieLate)/AfterPreventingDeath heals you from 0 to 30% of max HP, used up (simulator: SimPlayer.Fairies; Incoming Damage's revive row)",
         // OnPlay: acts on every play of the card, after the card's own (CardModel: EnchantmentModel.OnPlay).
-        ["Adroit"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay block of its Amount (RecalculateValues) on every play, after the card's own",
-        ["Corrupted"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay 2 unblockable damage to its card's owner on every play (the HP a card costs); its 1.5× damage is the game's damage math, called live",
+        // Its EnchantDamage*, EnchantBlock* and EnchantPlayCount (decision #330): the game's damage and block math, and its play count
+        // (CardModel.GetEnchantedReplayCount, which CardPlays.Count takes), called live by the adapter for each play.
+        ["Adroit"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay block of its Amount on every play, after the card's own; RecalculateValues sets that block to its Amount (read with it)",
+        ["Corrupted"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay 2 unblockable damage to its card's owner on every play (the HP a card costs); its EnchantDamageMultiplicative 1.5× on a powered attack is the game's damage math, called live",
         ["Inky"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay Weak on the play's target, or every enemy for a card aimed at them all, on every play",
-        ["Momentum"] = "covered: OnPlay raises the card's damage by its Amount for its later plays; the game's math reads it on later turns, and a replay in the same play gets it (PlayGrowth, decision #160)",
-        ["Glam"] = "ignore: AfterCardPlayed only marks it used (its replay is read through the game: replay tab)",
-        ["Goopy"] = "covered: AfterCardPlayed grows its amount, so its block (Amount - 1) is read through the game on later turns and a replay in the same play gets 1 more (PlayGrowth, decision #160)",
+        ["Momentum"] = "covered: OnPlay raises the card's damage by its Amount for its later plays; its EnchantDamageAdditive is the game's math, called live, which reads it on later turns, and a replay in the same play gets it (PlayGrowth, decision #160)",
+        ["Glam"] = "covered: EnchantPlayCount plays its card Times more while it isn't Disabled: the game's play count, called live (CardModel.GetEnchantedReplayCount: replay tab); AfterCardPlayed only marks it used",
+        ["Goopy"] = "covered: AfterCardPlayed grows its amount, so its EnchantBlockAdditive (Amount - 1, the game's math, called live) is read through the game on later turns and a replay in the same play gets 1 more (PlayGrowth, decision #160)",
         ["Imbued"] = "ignore: auto-plays at the start of your turn",
+        ["Instinct"] = "covered: EnchantDamageMultiplicative doubles its card's powered attack damage: the game's damage math, called live",
+        ["Nimble"] = "covered: EnchantBlockAdditive adds its Amount to its card's block: the game's block math, called live",
+        ["Sharp"] = "covered: EnchantDamageAdditive adds its Amount to its card's powered attack damage: the game's damage math, called live",
         ["Slither"] = "ignore: AfterCardDrawn random cost on draw (costs read live)",
-        ["Vigorous"] = "covered: AfterCardPlayed disables it after the first play (its bonus is read through the game on later turns), so a replay in the same play loses the bonus (PlayGrowth: EnchantFirstPlayOnly, decision #160)",
+        ["Spiral"] = "covered: EnchantPlayCount plays its card Times more: the game's play count, called live (CardModel.GetEnchantedReplayCount: replay tab)",
+        ["TezcatarasEmber"] = "covered: EnchantDamageAdditive adds its Damage to its card's powered attack damage: the game's damage math, called live",
+        ["Vigorous"] = "covered: AfterCardPlayed disables it after the first play (its EnchantDamageAdditive bonus is the game's math, called live, on later turns), so a replay in the same play loses the bonus (PlayGrowth: EnchantFirstPlayOnly, decision #160)",
         // v0.113.0: OnPlay acts on every play of the card (replays too) until AfterCardPlayed disables it
         ["Sown"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay energy while Normal, after the card's own; AfterCardPlayed (beta) or OnPlay (main) disables it",
         ["Swift"] = "covered: read from its code (ReadModel, an enchantment: decision #217): OnPlay draws its amount while Normal; AfterCardPlayed (beta) or OnPlay (main) disables it; the Return tags count it from its OnPlay (ReadModel.DrawsOnPlay)",
@@ -548,6 +615,13 @@ internal static partial class CoverageLedger
         ["PerfectFit"] = "covered: read from its code (ReadModel): ModifyShuffleOrder puts its card on top of the draw pile when the discard pile is shuffled in (not the fight's first shuffle): the simulator's shuffle (SimDrawPile.Shuffled) reads it from its code",
         ["SlumberingEssence"] = "ignore: BeforeFlush makes its card in hand cost 1 less until played as its owner's hand is flushed: a cost for the next turn, after everything a simulation reads (HookReader: it only changes card costs at the flush)",
         ["Hexed"] = "covered: read from its code (ReadModel, an affliction: decision #225): AfterCardEnteredCombat clears it from its own card entering without Hex, which no simulated play plays; its Ethereal is HexPower's (SimAdapter.EtherealOnlyFromHex)",
+
+        // ======== orbs (OrbModel's own hooks, decision #330; each read from its code: decision #214)
+        ["DarkOrb"] = "covered: read from its code (ReadModel, OrbKind.Dark): Passive adds its passive value to its evoke value, BeforeTurnEndOrbTrigger runs it as its owner's turn ends; Evoke damages the hittable enemy with the least HP",
+        ["FrostOrb"] = "covered: read from its code (ReadModel, OrbKind.Frost): Passive block for its owner (every player under Hibernate), BeforeTurnEndOrbTrigger runs it as its owner's turn ends; Evoke the same with its evoke value",
+        ["GlassOrb"] = "covered: read from its code (ReadModel, OrbKind.Glass): Passive damages every hittable enemy and loses 1 of its value, BeforeTurnEndOrbTrigger runs it as its owner's turn ends; Evoke damages every hittable enemy",
+        ["LightningOrb"] = "covered: read from its code (ReadModel, OrbKind.Lightning): Passive damages a random enemy (a branch each), BeforeTurnEndOrbTrigger runs it as its owner's turn ends; Evoke the same with its evoke value",
+        ["PlasmaOrb"] = "covered: read from its code (ReadModel, OrbKind.Plasma): Passive energy, AfterTurnStartOrbTrigger runs it as its owner's turn starts; Evoke energy",
     };
 
     private static readonly string[] Folders = { "Relics", "Powers", "Cards", "Monsters", "Orbs", "Potions", "Enchantments", "Afflictions" };

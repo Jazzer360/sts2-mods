@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using SpireQoL.Diagnostics;
@@ -233,9 +234,35 @@ public class HookGapTests
         return (category, $"{(how.Count == 0 ? category : string.Join(" and ", how))}; ledger: {review}");
     }
 
-    /// <summary>A hook the adapter calls on the game's own object (the enchantment's damage and block math): the game's code runs it live.</summary>
+    /// <summary>
+    /// A hook the adapter calls on the game's own object (the enchantment's damage and block math), or a card's method of the game's whose code
+    /// calls it, called by the adapter or by the play count SimAdapter.Play takes (Procs/CardPlays.cs: CardModel.GetEnchantedReplayCount, which
+    /// calls EnchantPlayCount): the game's code runs it live.
+    /// </summary>
     private static bool CalledLive(string hook, Dictionary<string, string> sources) =>
-        sources.Where(source => source.Key.StartsWith("Sim/Adapter/", StringComparison.Ordinal)).Any(source => source.Value.Contains(hook, StringComparison.Ordinal) && Regex.IsMatch(source.Value, $@"\.{hook}\("));
+        CardMethodsCalling(hook).Prepend(hook).Any(name => sources
+            .Where(source => source.Key.StartsWith("Sim/Adapter/", StringComparison.Ordinal) || source.Key == "Procs/CardPlays.cs")
+            .Any(source => source.Value.Contains(name, StringComparison.Ordinal) && Regex.IsMatch(source.Value, $@"\.{name}\(")));
+
+    /// <summary>The game's CardModel methods (beta's) whose code calls an enchantment's <paramref name="hook"/>.</summary>
+    private static IEnumerable<string> CardMethodsCalling(string hook)
+    {
+        if (!File.Exists(BranchCode.BetaPath)) return Array.Empty<string>();
+        var callers = BranchCode.Of(BranchCode.BetaPath).Reading("card methods calling enchantment hooks", code =>
+        {
+            var byHook = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            var card = code.Assembly.GetTypes().Single(type => type.FullName == "MegaCrit.Sts2.Core.Models.CardModel");
+            foreach (var method in card.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                foreach (var instruction in code.Read(method))
+                    if (instruction.IsCall && instruction.Member is { DeclaringType: "EnchantmentModel" } member)
+                    {
+                        if (!byHook.TryGetValue(member.Name, out var names)) byHook[member.Name] = names = new List<string>();
+                        if (!names.Contains(method.Name)) names.Add(method.Name);
+                    }
+            return byHook;
+        });
+        return callers.TryGetValue(hook, out var found) ? found : Array.Empty<string>();
+    }
 
     /// <summary>
     /// The adapter's per-class readings (SimReaders.Read's powers, SimReaders.Relics') and every other per-class name in the adapter

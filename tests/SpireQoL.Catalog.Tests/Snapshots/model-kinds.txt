@@ -8,30 +8,30 @@ beta relics: 316 classes, 310 with hooks; read from code 123, hand-written 7, ne
 main powers: 265 classes, 235 with hooks; read from code 155, hand-written 22, neither 60 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 110, hand-written 7, neither 176 (each by its first gap: Snapshots/hook-readings.txt)
 
-## Enchantments: 23 classes (beta 23, main 23); handled: not modelled by name 7, read from its code 6, the game's own code, called live 6, a per-name rule 3, no hooks 1
+## Enchantments: 23 classes (beta 23, main 23); handled: the game's own code, called live 8, read from its code 6, not modelled by name 5, a per-name rule 3, no hooks 1
 
 Adroit (both; read from its code (ReadModel); not modelled by name; ledger: covered): OnPlay: read | RecalculateValues: read
 Clone (both; not modelled by name; ledger: no review): TryModifyRestSiteOptions: [the engine runs no read enchantment (its bodies read whole but for that)] gap: the engine runs no read EnchantmentModel's TryModifyRestSiteOptions
 Corrupted (both; read from its code (ReadModel); not modelled by name; ledger: covered): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageMultiplicative: called live (the adapter runs the game's own code) | OnPlay: read
 DeprecatedEnchantment (both; not modelled by name; ledger: no review): no hooks
-Glam (both; not modelled by name; ledger: ignore): AfterCardPlayed: read | EnchantPlayCount: [the engine runs no read enchantment (its bodies read whole but for that)] gap: the engine runs no read EnchantmentModel's EnchantPlayCount
+Glam (both; not modelled by name; ledger: covered): AfterCardPlayed: read | EnchantPlayCount: called live (the adapter runs the game's own code)
 Goopy (both; not modelled by name; ledger: covered): AfterCardPlayed: [another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount)] gap: sets EnchantmentModel.Amount where the reader reads no store | CanEnchant: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantBlockAdditive: called live (the adapter runs the game's own code) | OnEnchant: not run (it changes its card as it's enchanted (EnchantmentModel.ModifyCard): the card the adapter reads already shows it; a card enchanted in a fight is its command's (CardCmd.Enchant))
 Imbued (both; not modelled by name; ledger: ignore): AfterAutoPrePlayPhaseEntered: [the engine runs no read enchantment (its bodies read whole but for that)] gap: the engine runs no read EnchantmentModel's AfterAutoPrePlayPhaseEntered | CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted)
 Inky (both; read from its code (ReadModel); not modelled by name; ledger: covered): OnPlay: read
-Instinct (both; not modelled by name; ledger: no review): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageMultiplicative: called live (the adapter runs the game's own code)
+Instinct (both; not modelled by name; ledger: covered): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageMultiplicative: called live (the adapter runs the game's own code)
 Momentum (both; not modelled by name; ledger: covered): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageAdditive: called live (the adapter runs the game's own code) | OnPlay: read
-Nimble (both; named in Data/CardAffinity.cs; ledger: no review): CanEnchant: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantBlockAdditive: called live (the adapter runs the game's own code)
+Nimble (both; named in Data/CardAffinity.cs; ledger: covered): CanEnchant: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantBlockAdditive: called live (the adapter runs the game's own code)
 PerfectFit (both; read from its code (ReadModel); not modelled by name; ledger: covered): ModifyShuffleOrder: read
 RoyallyApproved (both; not modelled by name; ledger: no review): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | OnEnchant: not run (it changes its card as it's enchanted (EnchantmentModel.ModifyCard): the card the adapter reads already shows it; a card enchanted in a fight is its command's (CardCmd.Enchant))
-Sharp (both; not modelled by name; ledger: no review): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageAdditive: called live (the adapter runs the game's own code)
+Sharp (both; not modelled by name; ledger: covered): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageAdditive: called live (the adapter runs the game's own code)
 Slither (both; named in Sim/Adapter/SimAdapter.cs; ledger: ignore): AfterCardDrawn: [the engine runs no read enchantment (its bodies read whole but for that)] gap: the engine runs no read EnchantmentModel's AfterCardDrawn | CanEnchant: not run (it decides which cards it can enchant, as a card is enchanted)
 SlumberingEssence (both; not modelled by name; ledger: ignore): BeforeFlush: not run (it only changes card costs as the hand is flushed (Hook.BeforeFlush: after the turn's auto-plays and its end steps), which nothing a simulation reads after it)
 SoulsPower (both; not modelled by name; ledger: no review): CanEnchant: not run (it decides which cards it can enchant, as a card is enchanted) | OnEnchant: not run (it changes its card as it's enchanted (EnchantmentModel.ModifyCard): the card the adapter reads already shows it; a card enchanted in a fight is its command's (CardCmd.Enchant))
 Sown (both; read from its code (ReadModel); not modelled by name; ledger: covered): AfterCardPlayed: read | OnPlay: read
-Spiral (both; not modelled by name; ledger: no review): CanEnchant: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantPlayCount: [the engine runs no read enchantment (its bodies read whole but for that)] gap: the engine runs no read EnchantmentModel's EnchantPlayCount
+Spiral (both; not modelled by name; ledger: covered): CanEnchant: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantPlayCount: called live (the adapter runs the game's own code)
 Steady (both; named in Features/CardIndicatorsFeature.cs; ledger: no review): OnEnchant: not run (it changes its card as it's enchanted (EnchantmentModel.ModifyCard): the card the adapter reads already shows it; a card enchanted in a fight is its command's (CardCmd.Enchant))
 Swift (both; read from its code (ReadModel); not modelled by name; ledger: covered): AfterCardPlayed: read | OnPlay: read
-TezcatarasEmber (both; not modelled by name; ledger: no review): EnchantDamageAdditive: called live (the adapter runs the game's own code) | OnEnchant: not run (it changes its card as it's enchanted (EnchantmentModel.ModifyCard): the card the adapter reads already shows it; a card enchanted in a fight is its command's (CardCmd.Enchant))
+TezcatarasEmber (both; not modelled by name; ledger: covered): EnchantDamageAdditive: called live (the adapter runs the game's own code) | OnEnchant: not run (it changes its card as it's enchanted (EnchantmentModel.ModifyCard): the card the adapter reads already shows it; a card enchanted in a fight is its command's (CardCmd.Enchant))
 Vigorous (both; not modelled by name; ledger: covered): AfterCardPlayed: read | CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageAdditive: called live (the adapter runs the game's own code)
 
 ## Afflictions: 7 classes (beta 7, main 7); handled: read from its code 7
@@ -117,11 +117,11 @@ WeakPotion (both; not modelled by name; ledger: no review): OnUse: [a potion's c
 
 ## Orbs: 5 classes (beta 5, main 5); handled: read from its code 5
 
-DarkOrb (both; read from its code (ReadModel); OrbKind.Dark; ledger: no review): BeforeTurnEndOrbTrigger: read | Evoke: read | Passive: read
-FrostOrb (both; read from its code (ReadModel); OrbKind.Frost; ledger: no review): BeforeTurnEndOrbTrigger: read | Evoke: read | Passive: read
-GlassOrb (both; read from its code (ReadModel); OrbKind.Glass; ledger: no review): BeforeTurnEndOrbTrigger: read | Evoke: read | Passive: read
-LightningOrb (both; read from its code (ReadModel); OrbKind.Lightning; ledger: no review): BeforeTurnEndOrbTrigger: read | Evoke: read | Passive: read
-PlasmaOrb (both; read from its code (ReadModel); OrbKind.Plasma; ledger: no review): AfterTurnStartOrbTrigger: read | Evoke: read | Passive: read
+DarkOrb (both; read from its code (ReadModel); OrbKind.Dark; ledger: covered): BeforeTurnEndOrbTrigger: read | Evoke: read | Passive: read
+FrostOrb (both; read from its code (ReadModel); OrbKind.Frost; ledger: covered): BeforeTurnEndOrbTrigger: read | Evoke: read | Passive: read
+GlassOrb (both; read from its code (ReadModel); OrbKind.Glass; ledger: covered): BeforeTurnEndOrbTrigger: read | Evoke: read | Passive: read
+LightningOrb (both; read from its code (ReadModel); OrbKind.Lightning; ledger: covered): BeforeTurnEndOrbTrigger: read | Evoke: read | Passive: read
+PlasmaOrb (both; read from its code (ReadModel); OrbKind.Plasma; ledger: covered): AfterTurnStartOrbTrigger: read | Evoke: read | Passive: read
 
 ## The adapter's per-class readings and name gates (what a read model's own fields and values would replace)
 
@@ -171,12 +171,12 @@ a potion's chosen target (OnUse's target, as a card play's): 28 classes, 27 alon
 commands: a card changed (ApplyKeyword, Upgrade, SetToFreeThisTurn): 10 classes, 10 alone: AttackPotion (potion)*, BottledSong (potion)*, ColorlessPotion (potion)*, LiquidMemories (potion)*, OrobicAcid (potion)*, PowerPotion (potion)*, SkillPotion (potion)*, SneckoOil (potion)*, SoldiersStew (potion)*, TouchOfInsanity (potion)*
 a command on another creature (the players, a card's owner, a roll's list): 8 classes, 8 alone: Clarity (potion)*, CureAll (potion)*, Duplicator (potion)*, EnergyPotion (potion)*, ExplosiveAmpoule (potion)*, FocusPotion (potion)*, RadiantTincture (potion)*, SwiftPotion (potion)*
 a loop over items (creatures, cards): 9 classes, 6 alone: ImpaledPower, PaelsEye, PossessSpeedPower*, PossessStrengthPower*, SmoggyPower, BlessingOfTheForge (potion)*, CosmicConcoction (potion)*, EntropicBrew (potion)*, GlowwaterPotion (potion)*
-the engine runs no read enchantment (its bodies read whole but for that): 5 classes, 5 alone: Clone (enchantment)*, Glam (enchantment)*, Imbued (enchantment)*, Slither (enchantment)*, Spiral (enchantment)*
 its own data: a card or a play kept, a field used directly: 6 classes, 4 alone: DampenPower*, ImitationLearningPower*, SandpitPower, SurroundedPower, WitheringPresencePower*, Ashwater (potion)*
 another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 4 classes, 4 alone: CoveredPower*, SurprisePower*, Goopy (enchantment)*, FoulPotion (potion)*
 a pick: 3 classes, 3 alone: StratagemPower*, DropletOfPrecognition (potion)*, GamblersBrew (potion)*
 commands: a card made (AddGeneratedCardToCombat, a made card): 3 classes, 3 alone: CrystallineEuphoria (potion)*, CunningPotion (potion)*, PotOfGhouls (potion)*
 commands: another command (no translation): 3 classes, 3 alone: BottledPotential (potion)*, FruitJuice (potion)*, KingsCourage (potion)*
+the engine runs no read enchantment (its bodies read whole but for that): 3 classes, 3 alone: Clone (enchantment)*, Imbued (enchantment)*, Slither (enchantment)*
 the simulator's own model (no game class by its name): 3 classes, 3 alone: ImpaledPowerOther*, Regret*, Void*
 a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 6 classes, 2 alone: FeralPower*, ImpaledPower, PaelsEye, SkittishPower*, SmoggyPower, SurroundedPower
 card costs and keywords (cards' own hooks, Part B3): 3 classes, 2 alone: ChemicalX*, CorruptionPower*, PhantomBladesPower
