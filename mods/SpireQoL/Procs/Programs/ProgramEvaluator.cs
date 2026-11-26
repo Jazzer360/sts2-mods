@@ -229,6 +229,8 @@ public static class ProgramEvaluator
                 ArithmeticValue arithmetic => Arithmetic(arithmetic, context),
                 ArrayValue array => array.Items.Select(item => Evaluate(item, context)).ToList() is var items && items.Any(item => item == Unknown) ? Unknown : items,
                 LambdaValue lambda => new Closure(lambda, context),
+                // An array's length (ldlen), its items as read.
+                QueryValue { Type: "Array", Name: "Length", Of: { } array } => Evaluate(array, context) is IList items ? (decimal)items.Count : Unknown,
                 QueryValue query => Query(query, context),
                 ResultValue result when IsShot(result) => Shot(context.Board),
                 _ => Unknown,

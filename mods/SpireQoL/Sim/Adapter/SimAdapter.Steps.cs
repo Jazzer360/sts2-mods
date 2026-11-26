@@ -1798,6 +1798,8 @@ public static partial class SimAdapter
         if (found.Command.Command.Name == "AddGeneratedCardsToCombat" && make.PerCall == null && make.FilledBy == null)
             return Unknown(play, $"{found.Command.Command.FullName} of a list whose count its code doesn't give");
         var (count, from) = MadeCount(make, play);
+        // A count its code gives that the board can't work out (a value the evaluator can't read): unknown where it runs, never one.
+        if (count < 0) return Unknown(play, $"{found.Command.Command.FullName} of a count this board can't work out ({make.CountValue})");
         if (count <= 0 && from == SimCount.Given) return new List<SimAction>();
         var intoHand = MadeCards.IntoHand(make, play.Type);
         var takenBy = MadeTakenBy(play.Model);
@@ -1839,7 +1841,7 @@ public static partial class SimAdapter
             var takes = CardEffects.ExhaustsOfOthers(play.Type).Concat(CardEffects.Discards(play.Type));
             if (play.Takes.Count > 0 && takes.Any(take => CardEffects.CountsTaken(value, take))) return (0, SimCount.CardsTaken);
         }
-        return (MadeCards.CountOn(make, play.Board, play.Program) ?? 1, SimCount.Given);
+        return (MadeCards.CountOn(make, play.Board, play.Program) ?? -1, SimCount.Given);
     }
 
     /// <summary>

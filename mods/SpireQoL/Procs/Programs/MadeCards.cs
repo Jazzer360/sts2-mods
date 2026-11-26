@@ -55,7 +55,7 @@ public static class MadeCards
         var named = new HashSet<string>();
         foreach (var found in CardEffects.Find(program, Makes))
         {
-            var make = Read(found, cardType);
+            var make = Read(found, cardType, program);
             makes.Add(make);
             if (make.Card != null) named.Add(make.Card);
         }
@@ -66,7 +66,7 @@ public static class MadeCards
         return makes;
     }
 
-    private static Make Read(CardEffects.Found found, Type cardType)
+    private static Make Read(CardEffects.Found found, Type cardType, ModelProgram program)
     {
         var command = found.Command;
         ProgramValue? Value(int index) => index < command.Values.Count ? Unstored(command.Values[index]) : null;
@@ -112,9 +112,74 @@ public static class MadeCards
                 // Whose they are: the player each was made for (CreateCard<T>(owner): Self-Deprecate's Joy for each teammate, Shiv.CreateInHand's owner).
                 if (maker == null && creates[0].Values is [var owner, ..]) whose = Unstored(owner);
             }
+            // A list the code made and filled before the call (Orobic Acid's three AddRanges of a factory's one, Bottled Song's Add in a loop over its three
+            // melody tags): what its fills add up to (decision #339).
+            if (perCall == null && filledBy == null && command.Values.Count > 0 && command.Values[0] is StoredValue list) perCall = FillsOf(list, program, command.Offset);
         }
         return new Make(found, Way.Added, perCall, filledBy, card, whose, Value(2), PileOf(Value(1)));
     }
+
+    /// <summary>
+    /// How many cards the fills of a list the code made itself put in it before <paramref name="before"/> (its DataSteps: ProgramReader.LocalKey), as a value
+    /// of the code: each Add one, each AddRange a card factory's count (ProgramEvaluator.FactoryCount), times the rounds of each loop it's in (a counter's
+    /// bound: i &lt; n, an array's length). An Add on its card being there (Bottled Song's `if (cardModel != null)` of a factory's FirstOrDefault) counts
+    /// one, as a factory's count is taken as what it makes. Null when there's none, or any fill's count, its condition or a loop's rounds can't be read.
+    /// </summary>
+    private static ProgramValue? FillsOf(StoredValue list, ModelProgram program, int before)
+    {
+        var key = ProgramReader.LocalKey(list);
+        ProgramValue? total = null;
+        var readable = true;
+        void Walk(IEnumerable<ProgramStep> steps, ProgramValue? rounds)
+        {
+            foreach (var step in steps)
+            {
+                if (step.Offset >= before) return;
+                switch (step)
+                {
+                    case DataStep fill when fill.Data == key:
+                        var count = FillCount(fill);
+                        if (count == null || rounds == null) readable = false;
+                        else total = total == null ? Times(count, rounds) : new ArithmeticValue("add", total, Times(count, rounds));
+                        break;
+                    case LoopStep loop:
+                        Walk(loop.Body, rounds == null || LoopRounds(loop) is not { } inner ? null : Times(rounds, inner));
+                        break;
+                }
+            }
+        }
+        Walk(program.Steps, new ConstantValue(1));
+        return readable ? total : null;
+    }
+
+    private static ProgramValue Times(ProgramValue count, ProgramValue rounds) =>
+        rounds is ConstantValue { Value: 1 } ? count : count is ConstantValue { Value: 1 } ? rounds : new ArithmeticValue("mul", count, rounds);
+
+    /// <summary>One fill's cards: an Add's one (always, or on its card being there), an AddRange's factory count; null for any other.</summary>
+    private static ProgramValue? FillCount(DataStep fill)
+    {
+        if (fill.Values is not [var added]) return null;
+        if (fill.Operation == "AddRange") return fill.Condition is null || fill.Condition.IsAlways ? ProgramEvaluator.FactoryCount(added) : null;
+        if (fill.Operation != "Add") return null;
+        if (fill.Condition is null || fill.Condition.IsAlways) return new ConstantValue(1);
+        var item = Unstored(added);
+        // The same local (where it was stored), or the same value as the code reads it.
+        bool IsItem(ProgramValue value) => value is StoredValue stored && added is StoredValue local
+            ? stored.Offset == local.Offset && stored.Name == local.Name
+            : Unstored(value)?.ToString() == item?.ToString();
+        // Its card being there, a factory's card (FirstOrDefault of one): holds as the factory's count is taken.
+        var factoryCard = item is QueryValue { Name: "FirstOrDefault", Arguments: [var factory] } && ProgramEvaluator.FactoryCount(factory) != null;
+        return factoryCard && fill.Condition.Terms is [var only] && only.All(literal =>
+            literal.Holds && IsItem(literal.Test)
+            || literal.Test is CompareValue { Left: var left, Right: NullValue } compare && IsItem(left) && (compare.Op == Comparison.NotEqual) == literal.Holds)
+            ? new ConstantValue(1) : null;
+    }
+
+    /// <summary>A loop's rounds as a value of the code: a counter's bound (i &lt; n, i &lt;= n), else null.</summary>
+    private static ProgramValue? LoopRounds(LoopStep loop) =>
+        loop.While is { Terms: [[{ Holds: true, Test: CompareValue { Op: Comparison.Less or Comparison.LessOrEqual } bound }]] }
+            ? bound.Op == Comparison.LessOrEqual ? new ArithmeticValue("add", bound.Right, new ConstantValue(1)) : bound.Right
+            : null;
 
 
     /// <summary>What a card's makes give on the board before its play, its own (the ones it makes as their creator): for the card scan and your hand after.</summary>

@@ -584,6 +584,9 @@ public static class ProgramReader
     /// <summary>The prefix of a collection the code makes itself, in a local ("Local.wrigglers"), changed by a DataStep.</summary>
     public const string LocalPrefix = "Local.";
 
+    /// <summary>The DataStep key of a collection the code made in a local: its name, or where it was stored when the code keeps no name ("Local.@12").</summary>
+    public static string LocalKey(StoredValue local) => LocalPrefix + (local.Name.Length > 0 ? local.Name : "@" + local.Offset.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
     /// <summary>
     /// The class of a monster the code makes to add to the fight ((Wriggler)ModelDb.Monster&lt;Wriggler&gt;().ToMutable(), in a local or not), or null.
     /// </summary>
@@ -744,6 +747,9 @@ public static class ProgramReader
                 // there): both, each on its condition (decision #322), where its value is read. Only that shape: any other helper's ways stay unread.
                 var returned = flow.ReturnedValue() ?? (flow.ReturnedWays() is { Ways.Count: 2 } ways && ConditionReader.Chained(ways) is { } chained && !chained.Parts().Any(part => part is UnknownValue) ? ways : null);
                 if (returned == null) return null;
+                // A list it makes and fills (Soul.Create's Souls, a CreateCard each round of a loop): the call itself, which says what's in it
+                // (MadeCards reads Soul.Create(owner, amount)'s count), where the list it returns would say only that it was made.
+                if (returned is StoredValue { Value: QueryValue { Name: ".ctor" } list } && list.Type.StartsWith("List", StringComparison.Ordinal)) return null;
                 var names = found.GetParameters();
                 // A parameter, or a lambda's capture of it (a closure's field named after it: Spite's creature in its Any).
                 return returned.Map(value => value is ParameterValue or NamedValue && Array.FindIndex(names, name => name.Name == (value as ParameterValue)?.Name || name.Name == (value as NamedValue)?.Name) is var index and >= 0 && index < passed.Count
@@ -922,12 +928,15 @@ public static class ProgramReader
                     continue;
                 }
                 // A change to a collection the code makes itself (List<Creature> wrigglers = new(): Infested's, its Wrigglers kept to show them once its death's
-                // animation ends), whose result isn't used: a step on it, "Local.wrigglers", which the hook reader translates or names as a gap.
-                if (IsPowerOrRelic && member is { Kind: CodeMemberKind.Method, HasThis: true } && member.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)
+                // animation ends), whose result isn't used: a step on it, "Local.wrigglers", which the hook reader translates or names as a gap. In a
+                // card's or a potion's code only its fills (Add, AddRange: Orobic Acid's three factories' cards, Bottled Song's melodies), which the
+                // made cards' count reads (MadeCards.FillsOf, decision #339).
+                if ((IsPowerOrRelic || member.Name is "Add" or "AddRange") && member is { Kind: CodeMemberKind.Method, HasThis: true } && member.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)
                     && (!member.ReturnsValue || i + 1 < ops.Count && ops[i + 1].OpCode == OpCodes.Pop)
-                    && flow.ReceiverValue(i, member.ParameterCount) is StoredValue { Name: { Length: > 0 } madeList, Value: QueryValue { Name: ".ctor" } made } && made.Type.StartsWith("List", StringComparison.Ordinal))
+                    && flow.ReceiverValue(i, member.ParameterCount) is StoredValue { Value: QueryValue { Name: ".ctor" } made } madeList && made.Type.StartsWith("List", StringComparison.Ordinal)
+                    && (madeList.Name.Length > 0 || !IsPowerOrRelic))
                 {
-                    into.Add(new DataStep(instruction.Offset, LocalPrefix + madeList, member.Name, flow.ArgumentValues(i, member)) { Condition = condition });
+                    into.Add(new DataStep(instruction.Offset, LocalKey(madeList), member.Name, flow.ArgumentValues(i, member)) { Condition = condition });
                     continue;
                 }
                 // One of the model's own values set (base.DynamicVars["CardsLeft"].BaseValue = 5m, base.DynamicVars.Damage.BaseValue--): a store to
@@ -1927,6 +1936,12 @@ public static class ProgramReader
             {
                 var length = ReadBack(at, depth + 1);
                 return (new ArrayValue(Array.Empty<ProgramValue>()), length.Start);
+            }
+            // An array's length (ldlen: a for loop over an array's items, Bottled Song's melody tags), its count where the array is read.
+            if (name == "ldlen")
+            {
+                var array = ReadBack(at, depth + 1);
+                return array.Start < 0 ? (new UnknownValue(name), -1) : (new QueryValue("Array", "Length", array.Value, Array.Empty<ProgramValue>(), "Int32"), array.Start);
             }
             if (name.StartsWith("stelem", StringComparison.Ordinal))
             {

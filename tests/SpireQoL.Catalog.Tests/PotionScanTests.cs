@@ -157,6 +157,35 @@ public class PotionScanTests
         });
     }
 
+    /// <summary>
+    /// The cards a list holds that the code filled itself (decision #339): Orobic Acid's three AddRanges of a factory's one card make 3; Pot of Ghouls'
+    /// Soul.CreateInHand makes its Cards value of Souls (read through Soul.Create's count); Bottled Song's loop over its melody tags, an array the
+    /// reader can't size, stays unknown rather than one.
+    /// </summary>
+    [Fact]
+    public void ACardListsFillsAreItsCount()
+    {
+        GameModels.EnsureLoaded();
+        var fight = new GameFight();
+        var enemy = fight.Combat.CreateCreature(ModelDb.Monster<Axebot>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(enemy);
+        var start = SimAdapter.Build(fight.Me, fight.Combat, out var ids);
+        CardEventAction Made<T>() where T : PotionModel
+        {
+            var potion = ModelDb.Potion<T>().ToMutable();
+            fight.Me.AddPotionInternal(potion);
+            return Assert.IsType<CardEventAction>(Assert.Single(SimAdapter.Potion(potion, fight.Me, fight.Combat, ids, Who.You).Body));
+        }
+        Assert.Equal(3, Made<MegaCrit.Sts2.Core.Models.Potions.OrobicAcid>().Count);
+        var souls = Made<MegaCrit.Sts2.Core.Models.Potions.PotOfGhouls>();
+        Assert.Equal(nameof(MegaCrit.Sts2.Core.Models.Cards.Soul), souls.Card?.Name);
+        Assert.Equal(2, souls.Count);
+        var song = ModelDb.Potion<MegaCrit.Sts2.Core.Models.Potions.BottledSong>().ToMutable();
+        fight.Me.AddPotionInternal(song);
+        Assert.IsType<NotModelledAction>(SimAdapter.Potion(song, fight.Me, fight.Combat, ids, Who.You).Body[0]);
+        Assert.NotNull(start);
+    }
+
     private static string AimName(int aim) => aim switch
     {
         Who.You => "you",
