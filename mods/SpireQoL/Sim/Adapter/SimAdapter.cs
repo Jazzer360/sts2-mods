@@ -300,6 +300,12 @@ public static partial class SimAdapter
     internal static int? LocalStarCostOf(CardModel card) => card.HasStarCostX || card.CurrentStarCost < 0 ? null : card.CurrentStarCost;
 
     /// <summary>
+    /// A card's cost before any modifier (CardEnergyCost.GetWithModifiers(CostModifiers.None)) or its base star cost is above 0: Mummified Hand's first
+    /// narrowing (SimHandCard.CostsBeforeModifiers, decision #389).
+    /// </summary>
+    internal static bool CostsBeforeModifiersOf(CardModel card) => card.EnergyCost.GetWithModifiers(CostModifiers.None) > 0 || card.BaseStarCost > 0;
+
+    /// <summary>
     /// Why a hand card's live cost isn't known on this board (SimState.CostsUnknown, decision #334): the first of the game's hook listeners
     /// (CombatState.IterateHookListeners) whose class has a cost pass (TryModifyEnergyCostInCombat, its Late pass, TryModifyStarCost: decision #386)
     /// the simulator doesn't run: a class not read whole (Tangled's, whose AfterApplied loop doesn't read yet), a card's own hook (Cho Limbs, Coda).
@@ -368,7 +374,7 @@ public static partial class SimAdapter
                         Name = card.GetType().Name,
                         IsAttack = card.Type == CardType.Attack,
                         Cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved(),
-                        LocalCost = LocalCostOf(card), LocalStarCost = LocalStarCostOf(card), Card = SimReaders.CostedFacts(card),
+                        LocalCost = LocalCostOf(card), LocalStarCost = LocalStarCostOf(card), CostsBeforeModifiers = CostsBeforeModifiersOf(card), Card = SimReaders.CostedFacts(card),
                         Plays = AutoPlays(card, me, combat, ids, owner),
                         AutoPlayedBy = AutoPlayedBy(card, sources),
                         Upgraded = handUpgraded ? UpgradedHandCard(card, me, combat, ids, owner, sources) : null,
@@ -424,7 +430,7 @@ public static partial class SimAdapter
             {
                 Id = id, Name = card.GetType().Name, IsAttack = copy.Type == CardType.Attack,
                 Cost = copy.EnergyCost.CostsX ? 999999999 : copy.EnergyCost.GetResolved(),
-                LocalCost = LocalCostOf(copy), LocalStarCost = LocalStarCostOf(copy), Card = SimReaders.CostedFacts(copy), Plays = plays, AutoPlayedBy = AutoPlayedBy(copy, sources),
+                LocalCost = LocalCostOf(copy), LocalStarCost = LocalStarCostOf(copy), CostsBeforeModifiers = CostsBeforeModifiersOf(copy), Card = SimReaders.CostedFacts(copy), Plays = plays, AutoPlayedBy = AutoPlayedBy(copy, sources),
             };
         }
         catch { return null; }
@@ -637,7 +643,7 @@ public static partial class SimAdapter
                     // An upgraded copy plays as the card it stands for (its id in your hand).
                     if (original != null) foreach (var play in plays) if (play.HandCard == HandId(card)) play.HandCard = id;
                     if (card.Pile?.Type == PileType.Draw) foreach (var play in plays) { play.HandDelta -= 1; play.HandCard = id; }
-                    auto = new SimHandCard { Id = id, Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, LocalCost = LocalCostOf(card), LocalStarCost = LocalStarCostOf(card),
+                    auto = new SimHandCard { Id = id, Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, LocalCost = LocalCostOf(card), LocalStarCost = LocalStarCostOf(card), CostsBeforeModifiers = CostsBeforeModifiersOf(card),
                         Card = SimReaders.CostedFacts(card), Plays = plays, AutoPlayedBy = autoPlayedBy };
                     autoByKey[key] = auto;
                 }

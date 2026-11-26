@@ -298,6 +298,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Star costs are worked out by the same cost rule as energy costs: with Brilliant Scarf, Simpleton's end-of-turn card and what Mummified Hand's free card changes are predicted (they showed `?`), and Mummified Hand's free card can be one that costs only stars, as in the game. Void Form still leaves them `?`.
 
 - A card played from your hand under Rebound or Nostalgia goes on top of your draw pile in the predictions: a draw after it in the same play (Unceasing Top's, when it was your last card) draws it, where the predictions drew another card, or none.
+- Mummified Hand's free card is picked as the game picks it: first among the cards that cost something before any modifier, so a 0-cost card that costs only through Borrowed Time no longer shares the chance with them (Simpleton's end-of-turn card).
 
 #### Removed
 - Biiig Hug's tag and its settings row: the Soot it adds on a shuffle never makes a shuffle worth avoiding. The Soot is still worked out (a later draw can find it, and your relics and powers that react to a card you make hear it).

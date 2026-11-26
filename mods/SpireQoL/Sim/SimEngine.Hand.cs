@@ -133,7 +133,8 @@ public static partial class SimEngine
     /// <summary>
     /// CardModel.SetToFreeThisTurn on the game's random pick among the cards in <paramref name="player"/>'s hand that cost energy or stars
     /// (CostsEnergyOrStars: an X cost doesn't), each at its live cost (HandCost) and live star cost (HandStarCost), as Mummified Hand picks
-    /// (FreeInHandStep). What reads a hand card's cost in a simulation is the pick of the cheapest at the turn's end (SimpletonPower), from the hand
+    /// (FreeInHandStep): first among those whose cost before any modifier or base star cost is above 0 (SimHandCard.CostsBeforeModifiers, decision
+    /// #389), else among them all. What reads a hand card's cost in a simulation is the pick of the cheapest at the turn's end (SimpletonPower), from the hand
     /// as AutoHand holds it, which is then every playable card: a branch per card there that costs energy or stars, each equally likely, that card
     /// free (its local cost and star cost 0, the listeners' passes still on them). Otherwise nothing a simulation reads changes. A cost that isn't
     /// known makes the branch unknown (SimState.CostsUnknown).
@@ -143,6 +144,7 @@ public static partial class SimEngine
     {
         if (state.AutoPlaysUnknown || state.Player(player) is not { Simpleton: > 0, AutoHand: { } hand }) return new[] { state };
         var costing = new List<SimHandCard>();
+        var narrowed = new List<SimHandCard>();
         foreach (var card in hand)
         {
             if (card.Id == played) continue;
@@ -151,8 +153,14 @@ public static partial class SimEngine
                 state.Unmodelled ??= state.CostsUnknown;
                 return new[] { state };
             }
-            if (cost is > 0 and < XCost || stars > 0) costing.Add(card);
+            if (cost is not (> 0 and < XCost) && stars <= 0) continue;
+            costing.Add(card);
+            if (card.CostsBeforeModifiers != false) narrowed.Add(card);
         }
+        // Its pick looks first among the cards that cost before any modifier (CostsBeforeModifiers: a card that costs only through a global modifier,
+        // Borrowed Time's, isn't one), then among every card that costs now; its last two fallbacks pick a card that costs nothing now, whose being
+        // free changes nothing a simulation reads.
+        if (narrowed.Count > 0) costing = narrowed;
         if (costing.Count == 0) return new[] { state };
         var result = new List<SimState>(costing.Count);
         foreach (var free in costing)

@@ -158,6 +158,31 @@ public class HandCostTests
     }
 
     [Fact]
+    public void MummifiedHandsPickLooksFirstAmongCardsThatCostBeforeModifiers()
+    {
+        // MummifiedHand.AfterCardPlayed (decision #389): it narrows its pick to the cards whose cost before any modifier
+        // (GetWithModifiers(CostModifiers.None)) or base star cost is above 0, among those that cost energy or stars now. A 0-cost card that
+        // costs 1 only through Borrowed Time isn't one of them: the Strike is the free one, in the one branch.
+        var state = WithPowers((PowerId.BorrowedTime, 1));
+        state.You.Simpleton = 1;
+        var raised = Card(id: 11, "Raised", SimCardType.Attack, cost: 0);
+        raised.Cost = 1;
+        raised.CostsBeforeModifiers = false;
+        var strike = Card(id: 12, "Strike", SimCardType.Attack, cost: 1);
+        strike.Cost = 2;
+        strike.CostsBeforeModifiers = true;
+        state.You.AutoHand = new() { raised, strike };
+        var branch = Assert.Single(SimEngine.FreeInHand(state, Who.You, played: 7));
+        Assert.Equal(0, branch.You.AutoHand!.Single(card => card.Id == 12).LocalCost);
+        Assert.Equal(1, branch.You.AutoHand!.Single(card => card.Id == 11).Cost); // not made free
+        // None of them costs before modifiers: the pick falls back to every card that costs now, a branch each.
+        var other = Card(id: 13, "Other", SimCardType.Skill, cost: 0);
+        other.CostsBeforeModifiers = false;
+        state.You.AutoHand = new() { raised, other };
+        Assert.Equal(2, SimEngine.FreeInHand(state, Who.You, played: 7).Count());
+    }
+
+    [Fact]
     public void ACardReadBeforeTheRuleCostsWhatTheGameShowed()
     {
         // A replay case's hand card with no local cost: the cost the game showed when it was read.

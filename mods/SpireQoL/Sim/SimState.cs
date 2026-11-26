@@ -852,16 +852,17 @@ public sealed class SimHandCard
     /// <remarks>Its own plays become the copy's (SimPlay.HandCard): played, it's the copy that leaves your hand.</remarks>
     public SimHandCard CopyWithId(int id) => new()
     {
-        Id = id, Name = Name, IsAttack = IsAttack, Cost = Cost, LocalCost = LocalCost, LocalStarCost = LocalStarCost, Card = Card, AutoPlayedBy = AutoPlayedBy, Upgraded = Upgraded?.CopyWithId(id), _key = Key,
+        Id = id, Name = Name, IsAttack = IsAttack, Cost = Cost, LocalCost = LocalCost, LocalStarCost = LocalStarCost, CostsBeforeModifiers = CostsBeforeModifiers, Card = Card, AutoPlayedBy = AutoPlayedBy, Upgraded = Upgraded?.CopyWithId(id), _key = Key,
         Plays = Id == 0 ? Plays : Plays.Select(play => play.HandCard == Id ? play.AsHandCard(id) : play).ToList(),
     };
 
     /// <summary>
     /// This card made free this turn (CardModel.SetToFreeThisTurn: EnergyCost.SetThisTurnOrUntilPlayed(0), a local modifier of 0 after its others, and
     /// SetStarCostThisTurn(0)): its cost before global modifiers 0 and its star cost 0 (one with no star cost keeps none: CurrentStarCost), the listeners'
-    /// passes still on them (SimEngine.HandCost, HandStarCost), the rest the same (its key its own).
+    /// passes still on them (SimEngine.HandCost, HandStarCost), its base costs as they were (CostsBeforeModifiers), the rest the same (its key its own).
     /// </summary>
-    public SimHandCard FreeCopy() => new() { Id = Id, Name = Name, IsAttack = IsAttack, Cost = 0, LocalCost = LocalCost == null ? null : 0, LocalStarCost = LocalStarCost == null ? null : 0, Card = Card,
+    public SimHandCard FreeCopy() => new() { Id = Id, Name = Name, IsAttack = IsAttack, Cost = 0, LocalCost = LocalCost == null ? null : 0, LocalStarCost = LocalStarCost == null ? null : 0,
+        CostsBeforeModifiers = CostsBeforeModifiers, Card = Card,
         AutoPlayedBy = AutoPlayedBy, Upgraded = Upgraded?.FreeCopy(), Plays = Plays };
 
     public string Name = "";
@@ -882,6 +883,12 @@ public sealed class SimHandCard
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? LocalStarCost;
+    /// <summary>
+    /// Its cost before any modifier (CardEnergyCost.GetWithModifiers(CostModifiers.None): its base, a free copy's too) or its base star cost (BaseStarCost)
+    /// is above 0: Mummified Hand's pick looks among these first (SimEngine.FreeInHand). Null for a card read before the rule (counted as one).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? CostsBeforeModifiers;
     /// <summary>What the cost hooks test of it (its class, type, Ethereal, affliction: SimCostedCard), with LocalCost.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public SimCard? Card;
