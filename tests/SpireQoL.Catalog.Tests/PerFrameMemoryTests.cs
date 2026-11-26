@@ -13,12 +13,21 @@ namespace SpireQoL.Catalog.Tests;
 [Collection(GameFightCollection.Name)]
 public class PerFrameMemoryTests
 {
+    /// <summary>
+    /// The fewest bytes a call over three rounds: garbage the call makes lands in every round, a one-off of the runtime's in one (a
+    /// method compiled again at a higher tier while Harmony's patching hook is in the process: another test patches a game method).
+    /// </summary>
     private static long BytesPerCall(Action call, int calls = 200)
     {
         call();
-        var start = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 0; i < calls; i++) call();
-        return (GC.GetAllocatedBytesForCurrentThread() - start) / calls;
+        var fewest = long.MaxValue;
+        for (var round = 0; round < 3; round++)
+        {
+            var start = GC.GetAllocatedBytesForCurrentThread();
+            for (var i = 0; i < calls; i++) call();
+            fewest = Math.Min(fewest, (GC.GetAllocatedBytesForCurrentThread() - start) / calls);
+        }
+        return fewest;
     }
 
     [Fact]

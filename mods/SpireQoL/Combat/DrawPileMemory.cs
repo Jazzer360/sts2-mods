@@ -1,3 +1,4 @@
+using System.Reflection;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Commands;
 using MegaCrit.Sts2.Core.Entities.Cards;
@@ -20,27 +21,36 @@ namespace SpireQoL.Combat;
 /// </summary>
 internal static class DrawPileMemory
 {
-    private static bool _patched;
     private static readonly List<(List<(CardModel Card, CardPile? From)> Cards, CardPilePosition Position, int Frames)> Pending = new();
     private static readonly List<CardModel> Top = new();
     private static object? _combat;
     private static readonly HashSet<string> Warned = new();
 
-    /// <summary>Patches once, whichever feature asks first (Incoming Damage, Proc Indicators, Death Skull all use it).</summary>
+    /// <summary>The game method whose prefix records what's put on your draw pile (null: not in this game version).</summary>
+    internal static MethodInfo? AddMethod => AccessTools.Method(typeof(CardPileCmd), nameof(CardPileCmd.Add),
+        new[] { typeof(IEnumerable<CardModel>), typeof(CardPile), typeof(CardPilePosition), typeof(AbstractModel), typeof(bool), typeof(bool) });
+
+    /// <summary>Whether the prefix is on the game's method now, under any feature's Harmony id: Harmony's own record of it.</summary>
+    internal static bool IsPatched(MethodBase? add) =>
+        add != null && (Harmony.GetPatchInfo(add)?.Prefixes.Any(patch => patch.PatchMethod.DeclaringType == typeof(DrawPileMemory)) ?? false);
+
+    /// <summary>
+    /// Patches under the Harmony id of the feature that asks while it isn't patched (Incoming Damage, Proc Indicators and the
+    /// Death Skull all use it). Whether it is comes from the method's patches, not a flag of ours: when that feature's apply fails,
+    /// the host undoes its patches, these with them, and the next feature that asks patches again (decision #382).
+    /// </summary>
     public static void Patch(Harmony harmony)
     {
-        if (_patched) return;
-        _patched = true;
-        var add = AccessTools.Method(typeof(CardPileCmd), nameof(CardPileCmd.Add),
-            new[] { typeof(IEnumerable<CardModel>), typeof(CardPile), typeof(CardPilePosition), typeof(AbstractModel), typeof(bool), typeof(bool) });
+        var add = AddMethod;
         if (add == null)
         {
             ModEntry.Log.Warn("[draws] CardPileCmd.Add(cards, pile, position, ...) not found: cards placed on top of your draw pile aren't tracked");
             return;
         }
+        if (IsPatched(add)) return;
         harmony.Patch(add, prefix: new HarmonyMethod(typeof(DrawPileMemory), nameof(BeforeAdd)));
         // A shuffle (CardPileCmd.Shuffle: your discard pile and what's left of your draw pile, in a new order; Reboot calls it
-        // with cards still in the pile) forgets the top.
+        // with cards still in the pile) forgets the top. Patched with the add, under the same id, so the two are undone together.
         var shuffle = AccessTools.Method(typeof(CardPileCmd), nameof(CardPileCmd.Shuffle), new[] { typeof(MegaCrit.Sts2.Core.GameActions.Multiplayer.PlayerChoiceContext), typeof(Player) });
         if (shuffle != null) harmony.Patch(shuffle, prefix: new HarmonyMethod(typeof(DrawPileMemory), nameof(BeforeShuffle)));
         else ModEntry.Log.Warn("[draws] CardPileCmd.Shuffle not found: a shuffle won't clear the known top of your draw pile");

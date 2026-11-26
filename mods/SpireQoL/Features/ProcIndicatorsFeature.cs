@@ -31,7 +31,7 @@ public sealed class ProcIndicatorsFeature : IFeature, IFrameFeature
 
     public void Apply(Harmony harmony)
     {
-        // Frame-driven. The predictions remember the cards placed on top of your draw pile (observe-only; patched once).
+        // Frame-driven. The predictions remember the cards placed on top of your draw pile (observe-only; patched by the first feature that applies, again if its apply was undone).
         DrawPileMemory.Patch(harmony);
     }
 
