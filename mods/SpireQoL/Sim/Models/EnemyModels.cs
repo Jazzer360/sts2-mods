@@ -9,7 +9,7 @@ namespace SpireQoL.Sim.Models;
 /// PossessStrengthPower and PossessSpeedPower (The Lost's, decision #326): AfterPowerAmountChanged counts what its owner took of the power from each
 /// player (an application by its owner, on a player, of less than 0: stolen[player] += amount), and AfterDeath, as its owner dies, gives each player
 /// back what was taken (PowerCmd.Apply of -stolen, no applier). Hand-written: the reader doesn't read a dictionary of its own data keyed by creature,
-/// nor a loop over it; the adapter reads each player's entry into the fields (CreatureKeyedData).
+/// nor a loop over it; the adapter reads each player's entry into the fields (OwnData).
 /// </summary>
 public abstract class PossessPowerModel : SimModel
 {
@@ -19,7 +19,7 @@ public abstract class PossessPowerModel : SimModel
     /// <summary>Its own data's dictionary of what it took from each player.</summary>
     protected abstract string StolenData { get; }
 
-    public override IReadOnlyList<string> CreatureKeyedData => new[] { StolenData };
+    public override IReadOnlyList<string> OwnData => new[] { StolenData };
 
     public override IEnumerable<SimState> AfterPowerApplied(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff)
     {
@@ -39,6 +39,39 @@ public abstract class PossessPowerModel : SimModel
             var stolen = SimEngine.FieldsOf(state, owner)[SimKeys.PerCreature(Name, StolenData, player)];
             if (stolen != 0) SimEngine.ApplyInHit(state, Who.None, player, Taken, -stolen, debuff: -stolen < 0);
         }
+    }
+}
+
+/// <summary>
+/// DampenPower (Magi Knight's, on a player, decision #328): its AfterDeath, as one of its casters dies (unless the removal is prevented: a dead enemy
+/// kept in the fight is already unknown), takes it off its casters, and with none left PowerCmd.Remove(this); its AfterRemoved upgrades again each
+/// card its AfterApplied took the upgrades off (CardCmd.Upgrade, as many times as it had). A card upgraded mid-play isn't followed (its later plays,
+/// its cost, what it does in your hand as the turn ends), so with any card to give back, what follows is unknown, never the cards as they were.
+/// Its AfterApplied (the downgrade as it lands, in the enemies' turn) changes only cards, which nothing after it in a simulation plays. Hand-written:
+/// the reader reads neither its own data (a set of casters, a dictionary of cards) nor the loops over them; the adapter reads both (OwnData).
+/// </summary>
+public sealed class DampenPower : SimModel
+{
+    private const string Casters = "casters";
+    private const string Downgraded = "downgradedCardsToOldUpgradeLevels";
+
+    public override IReadOnlyList<string> OwnData => new[] { Casters, Downgraded };
+
+    public override void AfterDeath(SimState state, int owner, int dead)
+    {
+        // if (casters.Contains(creature)) { casters.Remove(creature); if (casters.Count == 0) await PowerCmd.Remove(this); }
+        var casterKey = SimKeys.PerCreature(Name, Casters, dead);
+        if (SimEngine.FieldsOf(state, owner)[casterKey] == 0) return;
+        SimEngine.SetField(state, owner, casterKey, 0);
+        foreach (var enemy in state.Enemies)
+            if (SimEngine.FieldsOf(state, owner)[SimKeys.PerCreature(Name, Casters, enemy.Id)] != 0) return;
+        SimEngine.RemovePower(state, owner, ThisPower);
+    }
+
+    public override void AfterRemoved(SimState state, int owner, int amount)
+    {
+        if (SimEngine.FieldsOf(state, owner)[SimKeys.OwnDataCount(Name, Downgraded)] > 0)
+            state.Unmodelled ??= "Dampen goes and upgrades again the cards it took the upgrades off: a card upgraded mid-play isn't followed";
     }
 }
 

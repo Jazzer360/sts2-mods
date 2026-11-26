@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 29 engine rules naming 186 game methods; 3 adapter rules; 33 hand-written models.
+# 29 engine rules naming 186 game methods; 3 adapter rules; 34 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -112,6 +112,8 @@ CorruptionPower: CorruptionPower.AfterModifyingCardPlayResultLocation, Corruptio
   model: ModifyCardPlayResultLocation
 CoveredPower: CoveredPower.AfterApplied, CoveredPower.AfterDeath, CoveredPower.AfterRemoved, CoveredPower.AfterSideTurnEnd, CoveredPower.ModifyDamageMultiplicative
   model: AfterApplied, AfterSideTurnEnd, ModifyDamageMultiplicative
+DampenPower: DampenPower.AfterApplied, DampenPower.AfterDeath, DampenPower.AfterRemoved, DampenPower.InitInternalData
+  model: AfterDeath, AfterRemoved
 FeralPower: FeralPower.AfterApplied, FeralPower.AfterModifyingCardPlayResultLocation, FeralPower.AfterSideTurnStart, FeralPower.InitInternalData, FeralPower.ModifyCardPlayResultLocation
   model: AfterApplied, AfterModifyingCardPlayResultLocation, ModifyCardPlayResultLocation
 ImitationLearningPower: ImitationLearningPower.AfterCardPlayed, ImitationLearningPower.BeforeCardPlayed, ImitationLearningPower.InitInternalData

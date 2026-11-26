@@ -299,10 +299,11 @@ public abstract class SimModel
     public virtual bool Instanced => false;
 
     /// <summary>
-    /// The dictionaries of its game class's own data keyed by creature that a hand-written model keeps (decision #326: Possess Strength's
-    /// stolenStrength), each entry read by the adapter into its holder's fields (SimKeys.PerCreature) with the entry's amount.
+    /// The collections of its game class's own data a hand-written model keeps (decisions #326, #328), read by the adapter into its holder's fields:
+    /// one keyed by creature, each entry under its creature (SimKeys.PerCreature: a dictionary's amount, Possess Strength's stolenStrength; a set's
+    /// 1, Dampen's casters); any other by its count (SimKeys.OwnDataCount: Dampen's downgraded cards).
     /// </summary>
-    public virtual IReadOnlyList<string> CreatureKeyedData => Array.Empty<string>();
+    public virtual IReadOnlyList<string> OwnData => Array.Empty<string>();
 
     /// <summary>
     /// Its tab on a card whose play makes it fire (from the play log; the amount from what it logged): a trigger, or the block,

@@ -414,14 +414,26 @@ public static class SimReaders
                 var aimedKey = SimKeys.Aimed(ModelName(model), aimId);
                 fields = fields.With(aimedKey, fields[aimedKey] + aimed.Amount);
             }
-            // A hand-written model's own data kept by creature (decision #326: Possess Strength's stolenStrength): each entry under its creature.
-            if (SimModels.Get(ModelName(model)) is { CreatureKeyedData.Count: > 0 } keyed
+            // A hand-written model's own data (decisions #326, #328): a collection keyed by creature, each entry under its creature (Possess Strength's
+            // stolenStrength: its amount; Dampen's casters: 1); any other collection by its count (Dampen's downgraded cards).
+            if (SimModels.Get(ModelName(model)) is { OwnData.Count: > 0 } keyed
                 && Sts2State.Private<object?>(model, "_internalData", fallback: null) is { } ownData)
-                foreach (var data in keyed.CreatureKeyedData)
-                    if (Sts2State.Private<object?>(ownData, data, fallback: null) is System.Collections.IDictionary entries)
-                        foreach (System.Collections.DictionaryEntry entry in entries)
-                            if (entry.Key is Creature keyCreature && idOf?.Invoke(keyCreature) is { } keyId && entry.Value is decimal or int)
-                                fields = fields.With(SimKeys.PerCreature(keyed.Name, data, keyId), Convert.ToInt32(entry.Value, System.Globalization.CultureInfo.InvariantCulture));
+                foreach (var data in keyed.OwnData)
+                    switch (Sts2State.Private<object?>(ownData, data, fallback: null))
+                    {
+                        case System.Collections.IDictionary entries when entries.Keys.Cast<object>().All(key => key is Creature):
+                            foreach (System.Collections.DictionaryEntry entry in entries)
+                                if (idOf?.Invoke((Creature)entry.Key) is { } keyId && entry.Value is decimal or int)
+                                    fields = fields.With(SimKeys.PerCreature(keyed.Name, data, keyId), Convert.ToInt32(entry.Value, System.Globalization.CultureInfo.InvariantCulture));
+                            break;
+                        case IEnumerable<Creature> creatures:
+                            foreach (var listed in creatures)
+                                if (idOf?.Invoke(listed) is { } listedId) fields = fields.With(SimKeys.PerCreature(keyed.Name, data, listedId), 1);
+                            break;
+                        case System.Collections.ICollection collection:
+                            fields = fields.With(SimKeys.OwnDataCount(keyed.Name, data), collection.Count);
+                            break;
+                    }
             if (SimModels.Get(ModelName(model)) is not ReadModel read) continue;
             // A power kept in copies: each instance on the creature, in the game's order, is a copy of its own (its amount, its applier, its state).
             var copy = 0;

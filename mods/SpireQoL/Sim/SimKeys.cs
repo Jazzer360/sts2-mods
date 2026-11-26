@@ -62,11 +62,14 @@ public static class SimKeys
     private static readonly ConcurrentDictionary<(string Model, string Data, int Creature), string> PerCreatureNames = new();
 
     /// <summary>
-    /// An entry of a hand-written model's own data kept by creature (SimModel.CreatureKeyedData, decision #326: Possess Strength's stolen Strength
+    /// An entry of a hand-written model's own data kept by creature (SimModel.OwnData, decision #326: Possess Strength's stolen Strength
     /// from each player), in its holder's fields: "Name.data>id", its amount the entry's.
     /// </summary>
     public static string PerCreature(string model, string data, int creature) =>
         PerCreatureNames.GetOrAdd((model, data, creature), key => key.Model + "." + key.Data + ">" + key.Creature);
+
+    /// <summary>The count of a collection of a hand-written model's own data (SimModel.OwnData, decision #328: Dampen's downgraded cards): "Name.data.Count".</summary>
+    public static string OwnDataCount(string model, string data) => model + "." + data + ".Count";
 
     /// <summary>Every play of the turn at this stage: "Started", "Finished".</summary>
     public static string Plays(PlayStage stage) => stage == PlayStage.Started ? "Started" : "Finished";
