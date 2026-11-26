@@ -185,8 +185,13 @@ public sealed partial class ProcAudit
         // The play won the fight: the simulator stops each command there, and CreatureCmd.Kill has no guard of its own (Bone Shards' Osty dies
         // after its winning hit), but nothing reads Osty's HP once the fight is over (as OstyCmd.Summon's: FightEndTests' reviewed list).
         const string OstyHp = "after play Osty HP";
+        // So are your orbs' values: Focus reaches them through ModifyOrbValue, a combat hook that reaches no one once the fight is ending, so the
+        // game's orbs read at their base then (Dualcast's second evoke on the last Nibbit: Lightning 3/8 with Focus 1). Which orbs you have still counts.
+        const string Orbs = "after play orbs";
+        static bool SameKinds(SimState pred, SimState game) => pred.You.Orbs.Select(orb => orb.Kind).SequenceEqual(game.You.Orbs.Select(orb => orb.Kind));
         List<string> Diff(SimState pred) => StateDifferences(pred, after, sim.Ids, afterIds, startP, drawn, "after play")
-            .Where(difference => !(window.FightEnded && difference.StartsWith(OstyHp, StringComparison.Ordinal))).ToList();
+            .Where(difference => !(window.FightEnded && difference.StartsWith(OstyHp, StringComparison.Ordinal)))
+            .Where(difference => !(window.FightEnded && difference.StartsWith(Orbs, StringComparison.Ordinal) && SameKinds(pred, after))).ToList();
         if (window.FightEnded && branches.All(branch => branch.You.OstyHp != after.You.OstyHp)) model.Skip("Osty HP", FightEndedSkip, $"Osty at {after.You.OstyHp} as it ended");
 
         var best = branches.Select(Diff).OrderBy(differences => differences.Count).First();

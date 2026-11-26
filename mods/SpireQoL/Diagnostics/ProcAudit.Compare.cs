@@ -136,6 +136,13 @@ public sealed partial class ProcAudit
                 modelLines.Add($"{otherModel.GetType().Name} fired with nothing to draw (empty piles or a full hand): nothing happened");
                 continue;
             }
+            // A relic reviewed as having no tab (RelicTracking: "none: ...", written from its code: Biiig Hug's Soot on each shuffle): its firing is
+            // no missing tab; what it does is held by the play's other checks (the state after it, cards made).
+            if (otherModel is RelicModel && RelicTracking.Reasons.TryGetValue(otherModel.GetType().Name, out var reviewed) && reviewed.StartsWith("none:", StringComparison.Ordinal))
+            {
+                modelLines.Add($"{otherModel.GetType().Name} fired (no tab by review: {reviewed})");
+                continue;
+            }
             issues.Add($"no tab: {otherModel.GetType().Name} fired");
         }
 
