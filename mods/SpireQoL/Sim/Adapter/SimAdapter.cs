@@ -830,6 +830,10 @@ public static partial class SimAdapter
         var play = Play(card, me, combat, ids, target, owner);
         play.AutoPlay = true;
         if (play.Card != null) play.Card = play.Card with { AutoPlay = true };
+        // It costs nothing (CardCmd.AutoPlay: no SpendResources, its ResourceInfo's EnergySpent and StarsSpent 0; decision #361): none of its energy or
+        // stars is spent, and nothing that reacts to a spend hears of one.
+        play.Before.RemoveAll(action => action is CardEventAction { Event: CardEvent.EnergySpent });
+        play.Body.RemoveAll(action => action is CardEventAction { Event: CardEvent.StarsSpent, FirstPlayOnly: true });
         return play;
     }
 

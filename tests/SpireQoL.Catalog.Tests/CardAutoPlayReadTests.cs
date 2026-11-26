@@ -90,5 +90,7 @@ public class CardAutoPlayReadTests
         Assert.Null(branch.Unmodelled);
         Assert.Equal(100 - 12 - 6, branch.Enemy(ids[enemy])!.Hp);
         Assert.Equal(2, branch.You.Draw!.Count);
+        // Uproar's own 2 spent; the Strike it plays costs nothing (CardCmd.AutoPlay spends no resources: decision #361).
+        Assert.Equal(1, branch.You.Energy);
     }
 }
