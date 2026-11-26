@@ -39,7 +39,7 @@ public sealed partial class SettingsMenu
         Section("How to read Spire QoL");
         Paragraph("Everything the mod shows is something you could work out yourself from what's on screen and the game's rules. "
             + "It never looks ahead: not the draw pile's order, not a random roll, not an enemy's move beyond its intent. "
-            + "When a roll decides something, you see the range or the worst case, never the result. "
+            + "When a roll decides something, you see its chance, the most likely outcome or a range, never the result. "
             + "The other pages say exactly what each tag and row covers; this page shows how the pieces look.");
 
         // In the order of the pages and their sections (decision #186): each feature's entry where its switch is.
@@ -143,8 +143,8 @@ public sealed partial class SettingsMenu
 
         Paragraph("Teammates' tags: in multiplayer, a teammate's power or relic that your card sets off gets a tag like your own, "
             + "with their icon (Rally's block setting off their Juggernaut). One you both have shares a tag, the amounts added.");
-        Paragraph("Powers that act on every card you play and never run out (Afterimage, Serpent Form, Oblivion...) would tag every card, so their tags start off: "
-            + "switch each on in the Tags by source page. Tender's and Slow's start on.");
+        Paragraph("Powers that act on every card you play and never run out (Afterimage, Serpent Form, Oblivion...) would tag every card, so their tags start off, "
+            + "and so do Cloak Clasp's and Obsidian Vice's warnings, which would be on nearly every card: switch each on in the Tags by source page. Tender's and Slow's start on.");
     }
 
     // ------------------------------------------------------------------ beside you: potion tags
@@ -245,7 +245,7 @@ public sealed partial class SettingsMenu
             damageMathPanel => damageMathPanel.ShowExtraTurn(Relic<PaelsEye>(), progress: null));
         _rows!.AddChild(flow);
         Paragraph("Teammate Incoming Damage: in multiplayer, hover a teammate to see theirs beside their HP bar, worked out the same way "
-            + "from what you can see of them (their block, powers, orbs and relics; not the cards in their hand).");
+            + "from what you can see of them (their block, powers, orbs and relics; not the cards in their hand, unless Count teammates' hands is on).");
     }
 
     private static void IncomingCell(HFlowContainer flow, string title, string text, Action<DamageMathPanel> show)
@@ -421,9 +421,10 @@ public sealed partial class SettingsMenu
             "On each enemy's intent during your turn: the block it gains as a number on its defend intent (like an attack's damage), and each buff or debuff its move applies, "
             + "with its icon and amount (Strength 3, Weak 2), small in the corner of its buff or debuff intent. Read from the move's own code; when the move only sometimes applies a power and what decides it can't be seen yet, a ? in place of the amount. Nothing while the intent is hidden.");
         GuideRow(example: null, "Intent Forecast",
-            "Hover an enemy's intent: above it, its next moves after the one on screen (next turn just above it, later turns higher), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, "
+            "Hover an enemy's intent: above it, its next moves after the one on screen (next turn just above it, later turns higher), with what each buff or debuff applies (Frail 2). Every turn its rules make certain, up to three turns ahead, "
             + "then the moves a random pick can make, side by side with their chances above. Worked out from its move rules and the moves it has made, never a roll. "
-            + "Each later attack shows what it will hit you for then if you play nothing: Strength an enemy gains every turn, Weak and Vulnerable wearing off and a move's own buff count; where a roll decides it, its damage as things stand now.");
+            + "Each later attack shows what it will hit you for then if you play nothing: Strength an enemy gains every turn, Weak and Vulnerable wearing off and a move's own buff count; "
+            + "where another enemy's random move changes it, only what's certain counts, and where it can't be followed, its damage as things stand now.");
         var skull = UiKit.Icon(GameIcons.Skull(), IconSize * 0.7f);
         var example = UiKit.Row(separation: 4);
         example.AddChild(skull);
@@ -467,7 +468,7 @@ public sealed partial class SettingsMenu
     {
         Section("Quick setup");
         GuideRow(example: null, "Quick setup",
-            "The first page of this menu, which opens on it at your first launch: card tags as four levels shown on real cards, then a switch for each group of features "
+            "The first page of this menu, which opens on it at your first launch: card tags as four levels shown on real cards (with Amounts on tags and Target marker under them), then a switch for each group of features "
             + "(On enemies, Beside you, Play Preview, Ethereal Fade, Between fights), Show chances, and Everything for every default.");
     }
 

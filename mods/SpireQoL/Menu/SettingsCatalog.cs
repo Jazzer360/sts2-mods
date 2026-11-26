@@ -72,7 +72,7 @@ public static class SettingsCatalog
         new TabEntry("retain", "Retain", "Cards that stay in your hand at end of turn (permanently or this turn only). Steady icon.", Feature: "card-indicators"),
         new TabEntry("sly", "Sly", "Cards with Sly (permanently or this turn only). Master Planner icon.", Feature: "card-indicators"),
         new TabEntry("replay", "Replay", "Cards that replay themselves (Hidden Gem, Transfigure, Sword Sage, enchantments): a \"2×\" tag with the total plays.", Feature: "card-indicators"),
-        new TabEntry("lethal", "Lethal", "Skull on cards that kill an enemy before it acts, or make it surely more likely than ending your turn now: the card's hits, orbs it evokes, procs it sets off, and your end of turn (Juggernaut, orb passives, poison...). When a roll decides it, the tag carries the chance (the Death chances setting, under Show chances; a range while the outcomes are still being explored). The aim marker (the targeting arrow head in the corner) means only some targets give it."),
+        new TabEntry("lethal", "Lethal", "Skull on cards that kill an enemy before it acts, or make it surely more likely than ending your turn now: the card's hits, orbs it evokes, procs it sets off, and your end of turn (Juggernaut, orb passives, poison...). When a roll decides it, the tag carries the chance (the Death chances setting, under Show chances; with a ? when not every outcome could be worked out). The aim marker (the targeting arrow head in the corner) means only some targets give it."),
         new TabEntry("drawn", "Draw chance", "Cards whose effect depends on what they draw: Escape Plan shows the chance it draws a Skill (its block); Pillage the most likely number of Attacks it draws, Scrape the most likely number of cards it draws that cost 0, each with its chance (ties go to the higher number). Worked out from your draw pile, never its order.", Chance: true),
         new TabEntry("shuffle", "Reshuffle", "Discard pile icon on cards whose draw would shuffle your discard pile back into your draw pile.", Feature: "shuffle-warning"),
     };
@@ -86,7 +86,7 @@ public static class SettingsCatalog
         new TabEntry("proc:*", "All proc tags", "Every tag for a relic or power a card sets off. Off: none, whatever each one's own switch."),
         new TabEntry("return:*", "All return tags", "Tags on cards whose play brings a card back to your hand (Make It So, Right Hand Hand, Whistling Arrows). Off: none, whatever each one's own switch."),
         new TabEntry("potion:*", "All potion tags", "Tags under your potions (Reptile Trinket, Belt Buckle, White Beast Statue). Off: none, whatever each one's own switch.", Feature: "potion-tabs", OnCards: false),
-        new TabEntry("free:*", "All free-card tags", "Tags on cards that would use up a free card (Tune, Unrelenting, Pounce, Synthesis): the energy saved, or crossed when it's wasted. Off: none, whatever each one's own switch."),
+        new TabEntry("free:*", "All free-card tags", "Tags on cards that would use up a free card (Unrelenting, Pounce, Synthesis): the energy saved, or crossed when it's wasted. Off: none, whatever each one's own switch."),
         new TabEntry("double-play:*", "All double-play tags", "Tags on cards that will play more than once (Echo Form, Burst, Duplication, Throwing Axe, Tag Team...). Off: none, whatever each one's own switch.", Feature: "card-indicators"),
     };
 
@@ -353,8 +353,8 @@ public static class SettingsCatalog
         new(nameof(ShriekPower), SourceGroup.EnemyPower, "Attacks that bring it to its threshold"),
         new(nameof(TheGambitPower), SourceGroup.EnemyPower, "Attacks that deal it unblocked damage: it dies"),
         new(nameof(EnragePower), SourceGroup.EnemyPower, Crossed + "skills: it gains Strength"),
-        new(nameof(SneakyPower), SourceGroup.EnemyPower, Crossed + "attacks"),
-        new(nameof(ImbalancedPower), SourceGroup.EnemyPower, "Cards after which its first hit is fully blocked in every outcome, when it isn't now (it's stunned)"),
+        new(nameof(SneakyPower), SourceGroup.EnemyPower, "A teammate's (multiplayer). Your attacks: they gain block"),
+        new(nameof(ImbalancedPower), SourceGroup.EnemyPower, "Cards after which a block takes one of its hits whole in every outcome (yours or a teammate's), when none would now (it's stunned)"),
         new(nameof(SkittishPower), SourceGroup.EnemyPower, Crossed + "attacks (first unblocked hit): it gains block"),
         new(nameof(ImitationLearningPower), SourceGroup.YourPower, "your Power cards a teammate's Imitation Learning will copy"),
         new(nameof(WitheringPresencePower), SourceGroup.EnemyPower, Crossed + "the card that completes its count: Wither in your hand", "Your cards, toward the next Wither (red)"),
