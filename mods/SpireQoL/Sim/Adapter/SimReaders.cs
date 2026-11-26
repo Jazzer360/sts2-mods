@@ -89,17 +89,6 @@ public static class SimReaders
             // Feral: its zeroCostAttacksPlayed (its own count: the model compares it with its amount, which more Feral raises).
             case nameof(FeralPower): data = Sts2State.Private<object?>(power, "_internalData", fallback: null) is { } feral ? Sts2State.Private(feral, "zeroCostAttacksPlayed", fallback: 0) : Math.Max(0, power.Amount - power.DisplayAmount); break;
             case nameof(WitheringPresencePower): data = Math.Max(1, Sts2State.Var(power, "CardsLeft", fallback: 5)); break;
-            // Whose plays it acts on (DataCreature: 0 is no one).
-            // One copy per player it copies (ImitationLearning adds to the copy already copying its target), merged into one entry:
-            // you when any copy copies you, so your Power cards set it off whichever copy is read last.
-            case nameof(ImitationLearningPower):
-            {
-                int? CopiedBy(PowerModel copy) => copy is MegaCrit.Sts2.Core.Models.Powers.ImitationLearningPower imitationLearningPower
-                    && Combat.CardPredictions.CopiesFrom(imitationLearningPower)?.Creature is { } copied ? idOf(copied) : null;
-                var copiesYou = power.Owner.Powers.Any(copy => copy is MegaCrit.Sts2.Core.Models.Powers.ImitationLearningPower && CopiedBy(copy) == Who.You);
-                data = DataCreature.Of(copiesYou ? Who.You : CopiedBy(power));
-                break;
-            }
         }
         // A power read from its code that asks who applied it (base.Applier: Constrict's AfterDeath) keeps its applier as its Data (decision #195).
         if (SimModels.Get(name) is ReadModel { UsesApplier: true }) data = DataCreature.Of(power.Applier is { } applier ? idOf(applier) : null);
@@ -419,6 +408,12 @@ public static class SimReaders
         var copies = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (var model in models)
         {
+            // A copy of a power aimed at a player (decision #321): its amount under that player, beside every copy's together in the power's entry.
+            if (model is PowerModel aimed && AimOf(aimed) is { } aim && idOf?.Invoke(aim) is { } aimId && Who.IsPlayer(aimId))
+            {
+                var aimedKey = SimKeys.Aimed(ModelName(model), aimId);
+                fields = fields.With(aimedKey, fields[aimedKey] + aimed.Amount);
+            }
             if (SimModels.Get(ModelName(model)) is not ReadModel read) continue;
             // A power kept in copies: each instance on the creature, in the game's order, is a copy of its own (its amount, its applier, its state).
             var copy = 0;
@@ -492,6 +487,22 @@ public static class SimReaders
 
     /// <summary>The name a game model has in the simulator (temporary Thorns is Thorns).</summary>
     public static string ModelName(AbstractModel model) => model is PowerModel ? SimAdapter.SimPowerName(model.GetType()) : model.GetType().Name;
+
+    /// <summary>
+    /// The player's creature a power's instance is aimed at (decision #321): its Target (PowerModel.Target: The Insatiable's Sandpit, one per player)
+    /// when that's a player, else the Player its class keeps (a property of its own of the game's Player type: Imitation Learning's PlayerTarget, which
+    /// the game keeps apart from Target); null for one aimed at no player, or one whose player isn't set.
+    /// </summary>
+    internal static Creature? AimOf(PowerModel power)
+    {
+        if (power.Target is { IsPlayer: true } target) return target;
+        if (AimProperty.GetOrAdd(power.GetType(), type => type.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                .FirstOrDefault(property => property.PropertyType == typeof(Player) && property.CanRead)) is not { } property) return null;
+        try { return (property.GetValue(power) as Player)?.Creature; }
+        catch (TargetInvocationException) { return null; } // its player not set yet (ImitationLearningPower.PlayerTarget throws)
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, PropertyInfo?> AimProperty = new();
 
     public static SimProps Props(ValueProp valueProp) => (SimProps)(int)valueProp;
 

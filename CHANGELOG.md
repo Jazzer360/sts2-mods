@@ -236,6 +236,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - Memento Mori, Dredge, Optimism, Storm of Steel and The Moon replayed: the later play no longer shows `?`. Each test is worked out as that play runs, from the room in your hand, the cards the play took or the enemies left to hit. Dredge picks at most the room your hand has as it plays, so a replay that filled your hand takes none.
 - Feed shows `?` for its max HP only when its attack kills an enemy whose death sets off Fatal (not a Minion's), instead of on every play. The Hunt's reward follows the same test.
 - An Axebot's death brings in the next Axebot as its Stock stands when it dies: a play that changed its Stock first shows `?` instead of the Axebot its Stock on the board would bring.
+- The Insatiable's Sandpit counts down as the enemies' turn starts, and when it runs out it kills the player it's aimed at (and their Osty) before any enemy moves: Incoming Damage and Play Preview now show that death with the skull, where they showed only the attack. In multiplayer each player's Sandpit counts down on its own.
 
 #### Removed
 - Biiig Hug's tag and its settings row: the Soot it adds on a shuffle never makes a shuffle worth avoiding. The Soot is still worked out (a later draw can find it, and your relics and powers that react to a card you make hear it).

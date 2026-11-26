@@ -49,6 +49,16 @@ public static class SimKeys
     /// <summary>The play log's entry for a source: "Name" for yours, "Name@id" for anyone else's (an enemy's is also under "Name").</summary>
     public static string Logged(string name, int? owner) => owner is { } id && id != Who.You ? Owned(name, id) : name;
 
+    private static readonly ConcurrentDictionary<(string Power, int Player), string> AimedNames = new();
+
+    /// <summary>
+    /// A holder's copy of a power aimed at a player (decision #321: SimEngine.AimedAmount), in the holder's fields: "Aim:Name>id", its amount the copy's.
+    /// </summary>
+    public static string Aimed(string power, int player) => AimedNames.GetOrAdd((power, player), powerPlayer => AimedPrefix + powerPlayer.Power + ">" + powerPlayer.Player);
+
+    /// <summary>What every aimed copy's name (Aimed) starts with.</summary>
+    public const string AimedPrefix = "Aim:";
+
     /// <summary>Every play of the turn at this stage: "Started", "Finished".</summary>
     public static string Plays(PlayStage stage) => stage == PlayStage.Started ? "Started" : "Finished";
 

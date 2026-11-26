@@ -123,13 +123,16 @@ public sealed class CorruptionPower : SimModel
 
 // Nostalgia is read from its code (ReadModel, decision #290): the fight's log asked for its owner's Attacks and Skills started this turn, a count each.
 
-/// <summary>ImitationLearningPower (a teammate's, Data = the player it copies + 100): a Power card that player plays is copied and played for its owner.</summary>
+/// <summary>
+/// ImitationLearningPower (a teammate's): a Power card the player one of its copies is aimed at plays (its PlayerTarget: decision #321's aimed copies)
+/// is copied and played for its owner.
+/// </summary>
 public sealed class ImitationLearningPower : ProcModel
 {
-    /// <summary>One copy per player it copies; the adapter reads you into Data when any copy copies you (SimReaders.Read).</summary>
+    /// <summary>One copy per player it copies, each aimed at that player (SimEngine.AimedAmount).</summary>
     public override bool Instanced => true;
     public override IEnumerable<SimState> AfterCardPlayed(SimState state, int owner, SimCardPlay play) =>
-        play.Owner != owner && DataCreature.In(Data(state, owner)) == play.Owner && play.Card.Type == SimCardType.Power ? Fire(state, owner) : One(state);
+        play.Owner != owner && SimEngine.AimedAmount(state, owner, ThisPower, play.Owner) != 0 && play.Card.Type == SimCardType.Power ? Fire(state, owner) : One(state);
 }
 
 // ---- the Fool (v0.113.0): melodies (card tags Wah, Cho, Ki) and arrows

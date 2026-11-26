@@ -57,10 +57,6 @@
     "ForecastIgnores": true
   },
   {
-    "Name": "SandpitPower",
-    "Why": "SandpitPower isn\u0027t modelled, and its turn\u0027s-end hooks never act as the enemies\u0027 turn ends"
-  },
-  {
     "Name": "ShowOffPower",
     "Why": "ShowOffPower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (AfterDeath: gap: changes a game object outside a command (ShowOff.IncreaseAim))",
     "ActsForAnEnemy": true,

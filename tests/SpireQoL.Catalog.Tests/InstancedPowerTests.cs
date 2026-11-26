@@ -18,7 +18,7 @@ namespace SpireQoL.Catalog.Tests;
 /// Powers whose every application is a copy of its own (PowerInstanceType.Instanced), each with its own amount and values: every
 /// such power the simulator models says so (SimModel.Instanced) and says how its copies act, and the adapter reads each the way its
 /// model needs, from the game's own objects (Monologue's values totalled over its copies, The Bomb's copies one by one, the players
-/// covering a Covered teammate, the player any Imitation Learning copies).
+/// covering a Covered teammate, each copy aimed at a player under that player: decision #321).
 /// </summary>
 [Collection(GameFightCollection.Name)]
 public class InstancedPowerTests
@@ -103,15 +103,24 @@ public class InstancedPowerTests
     }
 
     [Fact]
-    public void ImitationLearningIsReadAsCopyingYouWhenAnyCopyDoes()
+    public void EachCopyIsReadWithThePlayerItsAimedAt()
     {
-        // Teammate 0 imitates you, then teammate 1 (a copy per player: ImitationLearning.OnPlay): your Power cards set it off,
-        // whichever copy is read last.
+        // Decision #321: a copy of a power aimed at a player (its Target, or the Player its class keeps) is read under that player with its own amount.
+        // Teammate 0 imitates you, then teammate 1 (a copy per player: ImitationLearning.OnPlay's PlayerTarget); The Insatiable's Sandpit, a copy aimed
+        // at each player (TheInsatiable's Liquify sets its Target), one of them raised by a Frantic Escape.
         var (players, idOf) = ThreePlayers();
         var imitator = players[1].Creature;
         var playerTarget = AccessTools.Field(typeof(ImitationLearningPower), "_playerTarget");
         playerTarget.SetValue(Power<ImitationLearningPower>(imitator, amount: 2), players[0]);
-        playerTarget.SetValue(Power<ImitationLearningPower>(imitator, amount: 2), players[2]);
-        Assert.Equal(DataCreature.Of(Who.You), SimReaders.Powers(imitator, idOf).DataOf(PowerId.ImitationLearning));
+        playerTarget.SetValue(Power<ImitationLearningPower>(imitator, amount: 3), players[2]);
+        var imitating = SimReaders.Fields(imitator.Powers, idOf);
+        Assert.Equal(2, imitating[SimKeys.Aimed(PowerId.ImitationLearning.Name, Who.You)]);
+        Assert.Equal(3, imitating[SimKeys.Aimed(PowerId.ImitationLearning.Name, Who.Teammate(teammateIndex: 1))]);
+        Assert.Equal(5, SimReaders.Powers(imitator, idOf)[PowerId.ImitationLearning]);
+        var holder = players[0].Creature.CombatState!.Enemies[0];
+        foreach (var (player, amount) in new[] { (players[0], 4), (players[1], 5), (players[2], 4) })
+            Power<SandpitPower>(holder, amount).Target = player.Creature;
+        var sandpit = SimReaders.Fields(holder.Powers, idOf);
+        Assert.Equal(new[] { 4, 5, 4 }, new[] { Who.You, Who.Teammate(teammateIndex: 0), Who.Teammate(teammateIndex: 1) }.Select(player => sandpit[SimKeys.Aimed(PowerId.Sandpit.Name, player)]));
     }
 }

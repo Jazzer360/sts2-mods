@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 28 engine rules naming 181 game methods; 3 adapter rules; 30 hand-written models.
+# 29 engine rules naming 182 game methods; 3 adapter rules; 31 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -28,6 +28,9 @@ Block: the block math, its hooks, a power's or relic's block, block lost
 A power lands: the amount given, Artifact, the players' scaling of a new one on an enemy (its class's own scaling read from its code: decision #234), its instances and copies, the listeners told; a power changed, decremented or removed, gone at the amount its class's AllowNegative says, its AfterRemoved told as it goes; a duration tick skipped once for a debuff new on the players' side (SkipNextDurationTick)
   game: PowerCmd.Apply, PowerCmd.ModifyAmount, PowerModel.ShouldRemoveDueToAmount, PowerModel.ApplyInternal, PowerCmd.FindExistingInstanceForStacking, PowerCmd.Decrement, PowerCmd.Remove, PowerModel.AfterRemoved, PowerCmd.TickDownDuration, Hook.ModifyPowerAmountGiven, Hook.AfterModifyingPowerAmountGiven, Hook.BeforePowerAmountChanged, Hook.AfterPowerAmountChanged, Creature.ApplyPowerInternal, Creature.CanReceivePowers, Hook.ShouldAllowHitting
   simulator: SimEngine.ApplyPower, SimEngine.AmountGiven, SimEngine.ApplyAndTell, SimEngine.ApplyInHit, SimEngine.Tell, SimEngine.RunApplyPower, SimEngine.ApplyPowerOf, SimEngine.AmountOf, SimEngine.MovePowers, SimEngine.DecrementPower, SimEngine.RemovePower, SimEngine.TellRemoved, SimEngine.CanReceivePowers, SimEngine.NewInstanceTickSkip, SimEngine.SpendsTickSkip
+A power's copies aimed at players (decision #321): one instance per player it's aimed at (its Target, or the Player its class keeps), each with its own amount; one copy changed (PowerCmd.ModifyAmount of that instance: the amount given, the listeners told), gone at 0 with its own AfterRemoved
+  game: PowerModel.Target, PowerCmd.ModifyAmount, PowerCmd.Remove, PowerModel.ShouldRemoveDueToAmount
+  simulator: SimEngine.AimedAmount, SimEngine.AimedAt, SimEngine.AimNewCopy, SimEngine.ModifyAimedCopy, SimEngine.RemoveAimedCopy
 A play's spread of its target's debuffs onto the other enemies (its loops read from the card's code, decision #293): each power whose amount is a debuff (its class's Type, StackType and AllowNegative read from its code), taken where the code takes them, onto every other hittable enemy as PowerCmd applies it
   game: PowerModel.GetTypeForAmount
   simulator: SimEngine.KeepTargetDebuffs, SimEngine.SpreadKeptDebuffs
@@ -135,6 +138,8 @@ RedSkull: RedSkull.AfterCombatEnd, RedSkull.AfterCurrentHpChanged, RedSkull.Afte
   model: AfterDamageReceived, OutcomeTab
 Regret: no game class by its name (the simulator's own)
   model: BeforeSideTurnEnd, MayActOnTheEnemiesSide
+SandpitPower: SandpitPower.AfterApplied, SandpitPower.AfterCreatureAddedToCombat, SandpitPower.AfterOstyRevived, SandpitPower.AfterPowerAmountChanged, SandpitPower.AfterRemoved, SandpitPower.AfterSideTurnStartLate, SandpitPower.BeforeSideTurnEnd
+  model: AfterAimedCopyRemoved, AfterSideTurnStartLate
 SeekingEdgePower: no hooks of its own
   model: nothing it overrides
 SkittishPower: SkittishPower.AfterAttack, SkittishPower.AfterSideTurnEnd, SkittishPower.GetScaledAmountForMultiplayer, SkittishPower.InitInternalData

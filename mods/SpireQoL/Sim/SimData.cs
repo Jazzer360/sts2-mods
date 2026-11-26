@@ -15,7 +15,7 @@ public enum RelicUse { None = 0, Armed = 1, UsedThisTurn = 2 }
 public enum PowerUse { None = 0, UsedThisTurn = 1 }
 
 /// <summary>
-/// A creature a power's Data names (its applier, the player it copies): its id + 100, so 0 is no one. Osty's id (-100) would be
+/// A creature a power's Data names (its applier): its id + 100, so 0 is no one. Osty's id (-100) would be
 /// 0 too: he applies none of these powers.
 /// </summary>
 public static class DataCreature

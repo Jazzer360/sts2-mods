@@ -185,7 +185,7 @@ public class EnemyMoveTests
         ["Ovicopter.LayEggsMove: PowerCmd.Apply<MinionPower> (on a condition)"] = "Minion on each egg it lays, which joins for its next turn",
         ["TestSubject.RespawnMove: PowerCmd.Apply<NemesisPower> (on a condition)"] = "its own power on its second respawn: a move with no attack (Nemesis acts at the turn's end)",
         ["TestSubject.RespawnMove: PowerCmd.Apply<PainfulStabsPower> (on a condition)"] = "its own power on its first respawn: a move with no attack (Painful Stabs acts after its own attacks)",
-        ["TheInsatiable.LiquifyMove: PowerCmd.Apply (a power made first)"] = "Sandpit on itself, one for each target: it acts at your turn's start and end, not in this enemy turn",
+        ["TheInsatiable.LiquifyMove: PowerCmd.Apply (a power made first)"] = "Sandpit on itself, one for each target: it counts down as the enemies' next turn starts (SandpitPower's model), not in this enemy turn",
         ["ThievingHopper.ThieveryMove: PowerCmd.Apply (a power made first)"] = "Swipe on itself for each card it stole: it gives the card back when it dies, no damage hook",
     };
 }

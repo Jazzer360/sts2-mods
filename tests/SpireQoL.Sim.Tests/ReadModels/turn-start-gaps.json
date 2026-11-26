@@ -156,10 +156,6 @@
     "ForecastIgnores": true
   },
   {
-    "Name": "SandpitPower",
-    "Why": "SandpitPower isn\u0027t modelled, and its turn\u0027s-start hooks never act as your turn starts"
-  },
-  {
     "Name": "SelfFormingClayPower",
     "Why": "SelfFormingClayPower acts as your turn starts and isn\u0027t simulated there: AfterBlockCleared (gap: the simulator runs no read model\u0027s AfterBlockCleared)",
     "ActsForAnEnemy": true,

@@ -542,6 +542,14 @@ public abstract class SimModel
     /// with <paramref name="amount"/> the amount it had (RemoveInternal leaves it). Deterministic, on the state given (SimEngine.RemovePower).
     /// </summary>
     public virtual void AfterRemoved(SimState state, int owner, int amount) { }
+    /// <summary>
+    /// This power's copy aimed at <paramref name="aimedAt"/> came off <paramref name="owner"/> (decision #321: PowerCmd.Remove of that instance), with the
+    /// amount it had: its AfterRemoved, for the copy whose Target that player is. A model that doesn't tell its copies apart hears it as AfterRemoved.
+    /// </summary>
+    public virtual void AfterAimedCopyRemoved(SimState state, int owner, int aimedAt, int amount)
+    {
+        if (Overrides(nameof(AfterRemoved))) AfterRemoved(state, owner, amount);
+    }
     /// <summary>After a block amount it changed was gained (the game's AfterModifyingBlockAmount): Pael's Legion, Vambrace, Stretch.</summary>
     public virtual void AfterModifyingBlockAmount(SimState state, int owner, int amount, SimCardPlay? play) { }
     /// <summary>After a damage amount it changed (the game's AfterModifyingDamageAmount): most only flash (FlashesOnDamageModified).</summary>

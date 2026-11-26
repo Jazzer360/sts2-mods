@@ -242,12 +242,6 @@ public sealed class CardPredictions
     private sealed record Prepared(CardPrediction F, List<AbstractModel> Sources, SimBatch? Sim);
 
 
-    /// <summary>The player whose Power cards a teammate's Imitation Learning copies (ImitationLearningPower.PlayerTarget).</summary>
-    internal static Player? CopiesFrom(ImitationLearningPower imitationLearningPower)
-    {
-        try { return imitationLearningPower.PlayerTarget; } catch { return null; }
-    }
-
     /// <summary>
     /// The proc sources (each with a tab when its model fires): your powers and relics, powers on every living enemy, and every
     /// living teammate's powers and relics (decision #75: what your card sets off for a teammate gets a tab like your own).
