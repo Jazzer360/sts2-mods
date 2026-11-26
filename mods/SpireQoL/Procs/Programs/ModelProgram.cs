@@ -1038,9 +1038,9 @@ public static class ProgramReader
                     else
                     {
                         // Its parameters are what this call passes (MadScience.ExecuteRider(TinkerTimeRider, ...): its tests of rider are tests
-                        // of the card's rider).
+                        // of the card's rider). A generic one's type parameters are what this call names (Self-Help Book's SelectAndEnchant<Sharp>).
                         var passed = PassedTo(own.Called, flow.ArgumentValues(i, member));
-                        var inner = new Reader(_card, _read).Steps(own.Body, depth + 1).Select(step => Bound(step, passed));
+                        var inner = new Reader(_card, Instantiated(own.Called, member, _read)).Steps(own.Body, depth + 1).Select(step => Bound(step, passed));
                         into.AddRange(condition == null ? inner : inner.Select(step => step with { Condition = And(condition, step.Condition) }));
                     }
                     continue;
@@ -1111,6 +1111,28 @@ public static class ProgramReader
 
         /// <summary>A step's condition inside the loop it's in (null when it holds on every way).</summary>
         private static ProgramCondition? Relative(ProgramCondition reached, ProgramCondition? outer) => reached.Without(outer) is { IsAlways: false } relative ? relative : null;
+
+        /// <summary>
+        /// The code of a generic method of the model's own, read with the type arguments its call names (SelectAndEnchant&lt;Sharp&gt;) in place of
+        /// its type parameters (its T, or the !!0 and !0 a branch's file names them by): its Enchant&lt;T&gt; reads as Enchant&lt;Sharp&gt;. Any other
+        /// call's code is read as it is.
+        /// </summary>
+        private static Func<MethodBase, List<CodeOp>> Instantiated(MethodBase called, CodeMember call, Func<MethodBase, List<CodeOp>> read)
+        {
+            if (!called.IsGenericMethodDefinition || called.GetGenericArguments() is not { Length: > 0 } parameters || parameters.Length != call.GenericArguments.Count) return read;
+            var named = new Dictionary<string, string>();
+            for (var i = 0; i < parameters.Length; i++)
+            {
+                named[parameters[i].Name] = call.GenericArguments[i];
+                named["!!" + i] = call.GenericArguments[i];
+                // An async method's state machine holds them as its own type's parameters.
+                if (called.DeclaringType is not { IsGenericType: true }) named["!" + i] = call.GenericArguments[i];
+            }
+            string Name(string name) => named.TryGetValue(name, out var argument) ? argument : name;
+            return method => read(method).Select(instruction => instruction.Member is { } member && (member.GenericArguments.Any(named.ContainsKey) || member.TypeArguments.Any(named.ContainsKey))
+                ? instruction with { Member = member with { GenericArguments = member.GenericArguments.Select(Name).ToArray(), TypeArguments = member.TypeArguments.Select(Name).ToArray() } }
+                : instruction).ToList();
+        }
 
         /// <summary>Steps that do something: a command or a choice (a helper or delegate with neither only asks or shows).</summary>
         private static bool Acts(List<ProgramStep> steps) => new ModelProgram("", steps).All().Any(step => step is CommandStep or ChoiceStep or UnknownStep);
