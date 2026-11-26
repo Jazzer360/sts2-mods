@@ -52,13 +52,15 @@ public class TraceRecorderTests
     [Fact]
     public void TheToolIsFoundOnPathOrInTheGlobalTools()
     {
-        var onPath = Path.Combine("C:", "bin", "dotnet-trace.exe");
-        var inTools = Path.Combine("C:", "Users", "dev", ".dotnet", "tools", "dotnet-trace.exe");
-        var pathVariable = string.Join(Path.PathSeparator, Path.Combine("C:", "nothing"), Path.Combine("C:", "bin"));
-        Assert.Equal(onPath, TraceTool.Find(pathVariable, Path.Combine("C:", "Users", "dev"), file => file == onPath || file == inTools, "dotnet-trace.exe"));
-        Assert.Equal(inTools, TraceTool.Find(pathVariable, Path.Combine("C:", "Users", "dev"), file => file == inTools, "dotnet-trace.exe"));
-        Assert.Equal(inTools, TraceTool.Find(pathVariable: null, Path.Combine("C:", "Users", "dev"), file => file == inTools, "dotnet-trace.exe"));
-        Assert.Null(TraceTool.Find(pathVariable, Path.Combine("C:", "Users", "dev"), file => false, "dotnet-trace.exe"));
+        // A root with no PATH separator in it (Linux's is ':', so a "C:" root would split there: GitHub runs these on Linux).
+        var root = Path.Combine(Path.GetTempPath(), "trace-tool");
+        var onPath = Path.Combine(root, "bin", "dotnet-trace.exe");
+        var inTools = Path.Combine(root, "Users", "dev", ".dotnet", "tools", "dotnet-trace.exe");
+        var pathVariable = string.Join(Path.PathSeparator, Path.Combine(root, "nothing"), Path.Combine(root, "bin"));
+        Assert.Equal(onPath, TraceTool.Find(pathVariable, Path.Combine(root, "Users", "dev"), file => file == onPath || file == inTools, "dotnet-trace.exe"));
+        Assert.Equal(inTools, TraceTool.Find(pathVariable, Path.Combine(root, "Users", "dev"), file => file == inTools, "dotnet-trace.exe"));
+        Assert.Equal(inTools, TraceTool.Find(pathVariable: null, Path.Combine(root, "Users", "dev"), file => file == inTools, "dotnet-trace.exe"));
+        Assert.Null(TraceTool.Find(pathVariable, Path.Combine(root, "Users", "dev"), file => false, "dotnet-trace.exe"));
     }
 
     [Fact]
