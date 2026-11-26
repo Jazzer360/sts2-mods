@@ -2877,6 +2877,12 @@ public static class HookReader
                 // The play is its card play's last (cardPlay.IsLastInSeries: Black Hole's).
                 case QueryValue { Name: "IsLastInSeries", Of: NamedValue { Name: "cardPlay" } or ParameterValue { Name: "cardPlay" } } when IsPlayHook(_hook):
                     return new HookFactValue(HookFact.PlayIsLast);
+                // The play is an auto-play (cardPlay.IsAutoPlay: Brilliant Scarf's, Void Form's).
+                case QueryValue { Name: "IsAutoPlay", Of: NamedValue { Name: "cardPlay" } or ParameterValue { Name: "cardPlay" } } when IsPlayHook(_hook):
+                    return new HookFactValue(HookFact.PlayIsAutoPlay);
+                // The play tested as there (cardPlay != null: Void Form's): a play hook is always given one.
+                case NamedValue { Name: "cardPlay" } or ParameterValue { Name: "cardPlay" } when IsPlayHook(_hook):
+                    return new HookConstant(1m);
                 // The card played can still be upgraded (Razor Tooth's cardPlay.Card.IsUpgradable).
                 case QueryValue { Name: "IsUpgradable", Of: { } upgradableOf } when IsPlayCard(upgradableOf):
                     return new HookFactValue(HookFact.CardUpgradable);

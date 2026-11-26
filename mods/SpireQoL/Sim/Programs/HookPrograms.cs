@@ -476,6 +476,8 @@ public enum HookFact
     PlayStars,
     /// <summary>The play is its card play's last (cardPlay.IsLastInSeries: PlayIndex == PlayCount - 1).</summary>
     PlayIsLast,
+    /// <summary>The play is an auto-play (cardPlay.IsAutoPlay: a card a card or a power played, SimCardPlay.AutoPlay).</summary>
+    PlayIsAutoPlay,
     /// <summary>
     /// The HP of the creature named in Creature (creature.CurrentHp: Shriek's target.CurrentHp &lt;= base.Amount), 0 for one dead or gone; a player
     /// whose HP the simulation doesn't know makes it unknown.

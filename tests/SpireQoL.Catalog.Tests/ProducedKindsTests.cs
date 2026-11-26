@@ -21,6 +21,7 @@ public class ProducedKindsTests
     {
         // Facts the reader translates for code only the hand-written models hold today (their conversions are queued: decision #195).
         ["fact CreatureIsMonster"] = "the reader's Creature.IsMonster test: asked by monster-side hooks the hand-written models hold (the monster-state conversions)",
+        ["fact PlayIsAutoPlay"] = "the reader's cardPlay.IsAutoPlay test: asked by Brilliant Scarf's and Void Form's AfterCardPlayed and Pael's Eye's BeforeCardPlayed, none read whole yet (their star cost pass, Void Form's BeforeApplied, Pael's Eye's loop: decision #384)",
         // Conditions of a monster's move rules (MoveConditions), not of a card's steps.
         ["condition KnownCondition"] = "MoveConditions: a monster move rule's condition the adapter settles on the board (always, never, or worked out)",
         // Actions the engine or the adapter makes, not a card's program.

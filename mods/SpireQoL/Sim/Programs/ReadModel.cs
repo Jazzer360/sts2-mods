@@ -2534,6 +2534,7 @@ public sealed class ReadModel : SimModel
                 return (in HookArgs args) => args.Play is { } first && (first.FirstThisTurn & bit) != 0 ? 1m : 0m;
             }
             case HookFact.PlayIsLast: return (in HookArgs args) => args.Play is { } last && last.PlayIndex == last.PlayCount - 1 ? 1m : 0m;
+            case HookFact.PlayIsAutoPlay: return (in HookArgs args) => args.Play is { AutoPlay: true } ? 1m : 0m;
             // The card play the hook names (a play hook's, a block's or damage's: HookArgs.Play, none for a gain from no play), by its identity (decision #269).
             case HookFact.PlaySerial: return (in HookArgs args) => args.Play?.Serial ?? 0;
             case HookFact.Dread: return (in HookArgs args) => args.State.Dread ? 1m : 0m;

@@ -182,9 +182,9 @@ hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
 orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first): 2 classes, 2 alone: TrashToTreasurePower*, PotionOfCapacity (potion)*
 the engine runs no read potion (its bodies read whole but for that): 2 classes, 2 alone: PotionOfBinding (potion)*, ShacklingPotion (potion)*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*
-queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 4 classes, 1 alone: PaelsEye, PhantomBladesPower, TagTeamPower*, UnsettlingLamp
 hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...): 3 classes, 1 alone: SandpitPower, SmoggyPower, UnceasingTop*
 queries: a creature's side or presence: 3 classes, 1 alone: SurroundedPower, EssenceOfDarkness (potion)*, FairyInABottle (potion)
+queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 3 classes, 1 alone: PhantomBladesPower, TagTeamPower*, UnsettlingLamp
 card costs and keywords (cards' own hooks, Part B3): 2 classes, 1 alone: ChemicalX*, PhantomBladesPower
 commands: GainStars: 1 classes, 1 alone: StarPotion (potion)*
 commands: OstyCmd.Summon: 1 classes, 1 alone: BoneBrew (potion)*

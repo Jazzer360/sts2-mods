@@ -35,7 +35,7 @@
   },
   {
     "Name": "BrilliantScarf",
-    "Why": "BrilliantScarf acts as your turn starts and isn\u0027t simulated there: BeforeSideTurnStart, its other hooks not read (AfterCardPlayed: gap: tests cardPlay.IsAutoPlay)",
+    "Why": "BrilliantScarf acts as your turn starts and isn\u0027t simulated there: BeforeSideTurnStart, its other hooks not read (TryModifyStarCost: gap: its body reads, but no simulation reads a hand card\u0027s star cost (TryModifyStarCost))",
     "ActsForAPlayer": true,
     "ForecastIgnores": true
   },
@@ -182,7 +182,7 @@
   },
   {
     "Name": "VoidFormPower",
-    "Why": "VoidFormPower acts as your turn starts and isn\u0027t simulated there: BeforeSideTurnStart, its other hooks not read (AfterCardPlayed: gap: tests cardPlay)",
+    "Why": "VoidFormPower acts as your turn starts and isn\u0027t simulated there: BeforeSideTurnStart, its other hooks not read (BeforeApplied: gap: the simulator runs no read model\u0027s BeforeApplied)",
     "ActsForAPlayer": true,
     "ForecastIgnores": true
   }
