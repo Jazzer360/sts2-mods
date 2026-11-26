@@ -1,0 +1,24 @@
+# Combat hooks a game class overriding them needs no ledger entry for, grouped by why. Every hook the
+# game dispatches is in CoverageHooks.txt, OutOfCombatHooks.txt or here (CoverageHookListTests, read
+# from the game's Hook class and PowerModel on both branches).
+#
+# The game's own math the mod calls: the adapter reads it per hit and per play (Hook.ModifyDamage and
+# ModifyBlock: a term captured for a class with no model, SimReaders; a hand-written model answers the
+# hooks its class overrides, ModifyHookCoverageTests; a read model answers each hook its code has),
+# Hook.ModifyCardPlayCount, ModifyXValue, ModifyOrbPassiveTriggerCount and ShouldEtherealTrigger.
+ModifyDamageAdditive
+ModifyDamageMultiplicative
+ModifyDamageMultiplicativeLate
+ModifyDamageCap
+ModifyBlockAdditive
+ModifyBlockMultiplicative
+ModifyCardPlayCount
+ModifyXValue
+ModifyOrbPassiveTriggerCounts
+ShouldEtherealTrigger
+# Before the fight's first decision (CombatManager's setup): what they do is on the board the first
+# prediction reads, and nothing calls them again.
+BeforeCombatStart
+BeforeCombatStartLate
+# A visual effect only (a target that can't be hit was clicked).
+AfterTargetingBlockedVfx

@@ -1,8 +1,11 @@
-# Game hooks (AbstractModel overrides) that can change what happens in a fight and aren't covered by
-# the game's own math the mod calls (Hook.ModifyDamage, ModifyBlock, ModifyCardPlayCount,
-# ModifyXValue, ModifyOrbPassiveTriggerCounts, ShouldEtherealTrigger). A game class overriding any of
-# these needs a rule or a reviewed reason (CoverageLedger). Out-of-combat hooks (map, shop, rewards,
-# rest sites, gold, deck) aren't listed. Used by scripts/coverage-ledger.mjs and CoverageLedger.cs.
+# Game hooks (AbstractModel overrides, and a power's own: PowerModel's) that can change what happens in
+# a fight. A game class overriding any of these needs a rule or a reviewed reason (CoverageLedger). The
+# hooks the game's own math the mod calls runs (Hook.ModifyDamage, ModifyBlock, ModifyCardPlayCount,
+# ModifyXValue, ModifyOrbPassiveTriggerCounts, ShouldEtherealTrigger) and the others that need no
+# review are in ExemptHooks.txt; the out-of-combat ones (map, shop, rewards, rest sites, gold, deck) in
+# OutOfCombatHooks.txt. Every hook the game dispatches is in one of the three (CoverageHookListTests,
+# read from the game's Hook class and PowerModel on both branches). Used by scripts/coverage-ledger.mjs
+# and CoverageLedger.cs.
 AfterAttack
 AfterAutoPostPlayPhaseEntered
 AfterAutoPrePlayPhaseEntered
@@ -81,3 +84,57 @@ AfterTakingExtraTurn
 ModifyPreBlockDamageTarget
 ShouldTakeExtraTurn
 ShouldTakeExtraTurnEarly
+# Turn starts: the enemies' turn, and the players' next turn in a projection (SimState.SideStarting).
+BeforeSideTurnStart
+AfterSideTurnStart
+AfterSideTurnStartLate
+AfterEnergyReset
+AfterEnergyResetLate
+BeforeHandDraw
+BeforeHandDrawLate
+AfterPlayerTurnStart
+AfterPlayerTurnStartEarly
+AfterPlayerTurnStartLate
+ModifyEnergyGain
+ModifyHandDraw
+ModifyHandDrawLate
+ModifyMaxEnergy
+ShouldPlayerResetEnergy
+# The hand at the turn's end (CombatManager's flush).
+BeforeFlush
+BeforeFlushLate
+ShouldFlush
+AfterFlush
+# Potions.
+BeforePotionUsed
+AfterPotionUsed
+AfterPotionDiscarded
+# A power's own (PowerModel: PowerCmd and a death call them).
+BeforeApplied
+AfterApplied
+AfterRemoved
+ShouldPowerBeRemovedAfterOwnerDeath
+ShouldOwnerDeathTriggerFatal
+ShouldCreatureBeRemovedFromCombatAfterDeath
+# Costs, keywords and afflictions in combat.
+TryModifyEnergyCostInCombat
+TryModifyEnergyCostInCombatLate
+TryModifyStarCost
+ShouldPayExcessEnergyCostWithStars
+TryModifyKeywordsInCombat
+ShouldAfflict
+# Shuffles and powers received.
+ModifyShuffleOrder
+TryModifyPowerAmountReceived
+# Told to the listeners whose term changed an amount: a flash, or state (Pael's Legion keeps the card play).
+AfterModifyingBlockAmount
+AfterModifyingCardPlayCount
+AfterModifyingCardPlayResultLocation
+AfterModifyingDamageAmount
+AfterModifyingEnergyGain
+AfterModifyingHandDraw
+AfterModifyingHpLostAfterOsty
+AfterModifyingHpLostBeforeOsty
+AfterModifyingOrbPassiveTriggerCount
+AfterModifyingPowerAmountGiven
+AfterModifyingPowerAmountReceived

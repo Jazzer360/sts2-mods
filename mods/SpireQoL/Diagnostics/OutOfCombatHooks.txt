@@ -63,3 +63,4 @@ TryModifyRewards
 TryModifyRewardsLate
 ModifyExtraRestSiteMendText
 TryReplaceDefaultRoomRewards
+TryModifyCardBeingAddedToDeckLate

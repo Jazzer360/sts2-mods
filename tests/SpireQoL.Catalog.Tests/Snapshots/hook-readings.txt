@@ -1,14 +1,19 @@
 power AdaptablePower: AfterDeath: gap: changes a game object outside a command (TestSubject.TriggerDeadState) | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ShouldAllowHitting: read | ShouldCreatureBeRemovedFromCombatAfterDeath: read | ShouldPowerBeRemovedAfterOwnerDeath: read | ShouldStopCombatFromEnding: read
+power AeonglassDominionPower: BeforeHandDraw: unknown where it runs: gap: makes a Wither
 power AfterimagePower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
+power AggressionPower: BeforeSideTurnStart: gap: a loop
 power AimPower: AfterAttack: read | BeforeAttack: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyDamageAdditive: read
 power AllIsWellPower: AfterCardGeneratedForCombat: read
 power AmnesiaPower: AfterPlayerTurnStart: unknown where it runs: gap: PlayerCmd.LoseEnergy isn't translated | AfterSideTurnEnd: read | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
+power ArcheryPower: AfterSideTurnStart: read
 power ArsenalPower: AfterCardGeneratedForCombat: read
+power ArtifactPower: AfterModifyingPowerAmountReceived: gap: the simulator runs no read model's AfterModifyingPowerAmountReceived | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply's scaling for the players: read into the class's PowerRule and run by the engine as it lands one (decision #234) | TryModifyPowerAmountReceived: gap: the simulator runs no read model's TryModifyPowerAmountReceived
 power AsleepPower: AfterDamageReceived: read | AfterSideTurnEnd: read | BeforeSideTurnEndVeryEarly: read
 power AutomationPower: AfterCardDrawn: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power BarricadePower: AfterApplied: read | ShouldClearBlock: read
 power BattlewornDummyTimeLimitPower: AfterSideTurnEnd: gap: sets BattlewornDummyEventEncounter.RanOutOfTime where the reader reads no store
 power BeaconOfHopePower: AfterBlockGained: gap: the simulator runs no read model's AfterBlockGained
+power BiasedCognitionPower: AfterSideTurnStart: read
 power BlackHolePower: AfterCardPlayed: read | AfterStarsGained: read
 power BlockNextTurnPower: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
 power BlurPower: AfterPreventingBlockClear: gap: the simulator runs no read model's AfterPreventingBlockClear | AfterSideTurnStart: read | ShouldClearBlock: read
@@ -18,54 +23,75 @@ power BurrowedPower: AfterBlockBroken: read | AfterRemoved: read | ShouldClearBl
 power BurstPower: AfterModifyingCardPlayCount: read | AfterSideTurnEnd: read | ModifyCardPlayCount: read
 power CacophonyPower: AfterCardDrawn: read
 power CalamityPower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
+power CallOfTheVoidPower: BeforeHandDraw: unknown where it runs: gap: a keyword on First(GetDistinctForCombat(player, ToList(Where(this.Owner.Player.Character.CardPool.GetUnlockedCards(player.UnlockState, player.RunState.CardMultiplayerConstraint), c => (c.Rarity == 1 or c.Rarity == 5) == 0)), 1, this.Owner.Player.RunState.Rng.CombatCardGeneration)), not the card played
 power ChainsOfBindingPower: AfterCardDrawn: gap: CardCmd.AfflictAndPreview<Bound> isn't translated | BeforeCardPlayed: gap: tests cardPlay.Card.IsDupe | BeforeSideTurnEnd: gap: changes a collection (IEnumerator`1.get_Current) where the reader reads no step | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
 power ChildOfTheStarsPower: AfterStarsSpent: read
+power ClarityPower: AfterSideTurnStart: read | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 power ColossusPower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power CompostPower: AfterDeath: read
 power ConcoctPower: AfterDamageGiven: read | AfterSideTurnEnd: read
+power ConductorsBatonPower: AfterSideTurnStart: read | ModifyDamageMultiplicative: read
 power ConfusedPower: AfterCardDrawn: gap: changes a game object outside a command (CardEnergyCost.SetThisCombat)
 power ConquerorPower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power ConstrictPower: AfterDeath: read | AfterSideTurnEnd: read
 power ConsumingShadowPower: AfterSideTurnEnd: read
+power CoolantPower: AfterSideTurnStart: gap: the value Count(GroupBy(this.Owner.Player.PlayerCombatState.OrbQueue.Orbs, orb => orb.Id))
 power CorrosiveWavePower: AfterCardDrawn: read | AfterSideTurnEnd: read
 power CorruptionPower: AfterModifyingCardPlayResultLocation: read | ModifyCardPlayResultLocation: read | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
+power CountdownPower: AfterSideTurnStart: gap: DoomPower on this.Owner.Player.RunState.Rng.CombatTargets.NextItem<Creature>(this.CombatState.HittableEnemies)
 power CoveredPower: AfterApplied: gap: changes a game object outside a command (InterceptPower.AddCoveredCreature) | AfterDeath: read | AfterRemoved: unknown where it runs: gap: changes a game object outside a command (InterceptPower.RemoveCoveredCreature) | AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power CoveringFirePower: AfterArrowShot: read
 power CrabRagePower: AfterDeath: read
+power CreativeAiPower: BeforeHandDraw: unknown where it runs: gap: makes FirstOrDefault(GetDistinctForCombat(player, Where(player.Character.CardPool.GetUnlockedCards(player.UnlockState, player.RunState.CardMultiplayerConstraint), c => c.Type == Power), 1, player.RunState.Rng.CombatCardGeneration))
+power CrimsonMantlePower: AfterPlayerTurnStart: read
+power CuriousPower: TryModifyEnergyCostInCombat: gap: the simulator runs no read model's TryModifyEnergyCostInCombat
 power CurlUpPower: AfterCardPlayed: read | AfterDamageReceived: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power DampenPower: AfterApplied: gap: changes a collection (IEnumerator`1.get_Current) where the reader reads no step | AfterDeath: gap: changes its own data (casters.Remove) by creature | AfterRemoved: unknown where it runs: gap: changes a collection (KeyValuePair`2.Deconstruct) where the reader reads no step | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power DanseMacabrePower: BeforeCardPlayed: read
 power DarkEmbracePower: AfterCardExhausted: read | AfterSideTurnEnd: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power DebilitatePower: AfterSideTurnEnd: read
+power DemesnePower: ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
 power DemisePower: AfterSideTurnEnd: read
+power DemonFormPower: AfterApplied: read | AfterRemoved: read | AfterSideTurnStart: read
 power DevourLifePower: AfterCardPlayed: read
 power DieForYouPower: ModifyUnblockedDamageTarget: read | ShouldAllowHitting: read | ShouldCreatureBeRemovedFromCombatAfterDeath: read | ShouldPowerBeRemovedAfterOwnerDeath: read
 power DisintegrationPower: AfterSideTurnEndLate: read
 power DislikeYouPower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power DoomPower: AfterSideTurnEnd: read | BeforeSideTurnEnd: read
 power DoubleDamagePower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
+power DrawCardsNextTurnPower: AfterModifyingHandDraw: gap: the simulator runs no read model's AfterModifyingHandDraw | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 power DuplicationPower: AfterModifyingCardPlayCount: read | AfterSideTurnEnd: read | ModifyCardPlayCount: read
 power EchoFormPower: AfterApplied: read | AfterCardPlayed: read | AfterModifyingCardPlayCount: read | AfterRemoved: read | BeforeSideTurnStart: not run: nothing in its body acts | ModifyCardPlayCount: read
+power EcstasyPower: AfterPlayerTurnStart: unknown where it runs: gap: a loop
 power EncorePower: AfterApplied: gap: the value Max(0, (this.Amount sub this.GetInternalData<Data>().numberOfCardsPlayedSinceApplied())) | AfterCardPlayed: gap: changes a collection (List`1.Remove) where the reader reads no step | AfterSideTurnEnd: read | BeforeCardPlayed: gap: changes its own data (cardsBeingPlayed.Add) | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
+power EnergyNextTurnPower: AfterEnergyReset: unknown where it runs: gap: energy for someone else
+power EnnuiPower: BeforeHandDraw: unknown where it runs: gap: makes a Sadness | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 power EnragePower: AfterCardPlayed: read
 power EnsemblePower: AfterCardPlayed: read | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
+power EntropyPower: AfterPlayerTurnStart: unknown where it runs: gap: a pick
 power EnvenomPower: AfterDamageGiven: read
 power EscapeArtistPower: AfterSideTurnEnd: read
 power ExplosiveArrowsPower: AfterArrowImpaled: read
 power ExplosivePower: AfterDeath: read
 power ExtraTurnPower: AfterTakingExtraTurn: not run: as the extra turn it gave begins: past the simulation's horizon, which ends where the extra turn is decided | ShouldTakeExtraTurn: read
+power FastenPower: AfterModifyingBlockAmount: read | ModifyBlockAdditive: gap: tests Contains(cardSource.Tags, 2)
 power FeelNoPainPower: AfterCardExhausted: read
 power FeralPower: AfterApplied: read | AfterModifyingCardPlayResultLocation: read | AfterSideTurnStart: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyCardPlayResultLocation: gap: the value resources.EnergyValue
 power FlameBarrierPower: AfterDamageReceived: read | AfterSideTurnEnd: read
 power FlankingPower: AfterApplied: read | AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power FlutterPower: AfterDamageReceived: read | ModifyDamageMultiplicative: read
 power FocusPower: ModifyOrbValue: read
+power ForegoneConclusionPower: BeforeHandDraw: unknown where it runs: gap: CardPileCmd.ShuffleIfNecessary isn't translated
 power FrailPower: AfterSideTurnEnd: read | ModifyBlockMultiplicative: read
 power FreeAttackPower: BeforeCardPlayed: gap: tests {cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Type == Attack and not cardPlay.Card.Pile: null; cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Type == Attack and cardPlay.Card.Pile: new Nullable`1(cardPlay.Card.Pile.Type)}.HasValue | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
 power FreePowerPower: BeforeCardPlayed: gap: tests {cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Type == Power and not cardPlay.Card.Pile: null; cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Type == Power and cardPlay.Card.Pile: new Nullable`1(cardPlay.Card.Pile.Type)}.HasValue | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
 power FreeSkillPower: BeforeCardPlayed: gap: tests {cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Type == Skill and not cardPlay.Card.Pile: null; cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Type == Skill and cardPlay.Card.Pile: new Nullable`1(cardPlay.Card.Pile.Type)}.HasValue | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
+power FriendshipPower: ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+power FurnacePower: AfterSideTurnStart: gap: ForgeCmd.Forge isn't translated
 power GalvanicPower: AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterCardPlayed: read | BeforeCombatStart: not run: before the fight: the state is read after it
+power GenesisPower: AfterEnergyReset: read
 power GigantificationPower: AfterAttack: read | BeforeAttack: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyDamageMultiplicative: read
+power GodByrdPower: AfterPlayerTurnStart: unknown where it runs: gap: tests this.AmountOnTurnStart
 power GravityPower: AfterCardPlayed: read | AfterSideTurnEnd: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power GuardedPower: AfterApplied: read | AfterDeath: read | ModifyDamageMultiplicative: read
 power HailstormPower: BeforeSideTurnEnd: read
@@ -74,8 +100,11 @@ power HardenedShellPower: AfterDamageReceived: read | AfterModifyingHpLostBefore
 power HatchPower: AfterSideTurnEnd: read
 power HauntPower: AfterCardPlayed: read
 power HeistPower: BeforeDeath: gap: the simulator runs no read model's BeforeDeath
+power HelloWorldPower: BeforeHandDraw: unknown where it runs: gap: CardPileCmd.AddGeneratedCardsToCombat isn't translated
 power HellraiserPower: AfterCardDrawnEarly: gap: the simulator runs no read model's AfterCardDrawnEarly | AfterSideTurnEnd: read | BeforeAttack: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power HexPower: AfterApplied: gap: a loop | AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterDeath: read | AfterRemoved: unknown where it runs: gap: a loop | TryModifyKeywordsInCombat: gap: the simulator runs no read model's TryModifyKeywordsInCombat
+power HibernatePower: AfterPlayerTurnStart: unknown where it runs: gap: compares the owner with player.Creature
+power HiddenRootsPower: AfterSideTurnStart: read
 power HighVoltagePower: AfterSideTurnEnd: read
 power IllusionPower: AfterApplied: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterDeath: gap: the reader can't follow it: commands in a callback | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ShouldAllowHitting: read | ShouldCreatureBeRemovedFromCombatAfterDeath: read | ShouldPowerBeRemovedOnDeath: gap: the simulator runs no read model's ShouldPowerBeRemovedOnDeath
 power ImbalancedPower: AfterDamageGiven: read
@@ -83,6 +112,7 @@ power ImitationLearningPower: AfterCardPlayed: gap: changes a collection (List`1
 power ImpaledPower: AfterApplied: read | AfterDamageReceived: gap: tests source | AfterDeath: gap: a loop | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power InfernoPower: AfterDamageReceived: read | AfterPlayerTurnStart: read
 power InfestedPower: AfterDeath: read | ShouldStopCombatFromEnding: read
+power InfiniteBladesPower: BeforeHandDraw: unknown where it runs: gap: makes a Shiv
 power InsatiableDominionPower: AfterApplied: read | AfterSideTurnEndLate: read | AfterSideTurnStart: read
 power IntangiblePower: AfterModifyingDamageAmount: read | AfterModifyingHpLostAfterOsty: read | AfterSideTurnEnd: read | ModifyDamageCap: read | ModifyHpLostAfterOsty: read
 power InterceptPower: AfterRemoved: unknown where it runs: gap: a loop | AfterSideTurnEnd: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyDamageMultiplicative: read
@@ -92,20 +122,29 @@ power JugglingPower: AfterApplied: read | AfterCardPlayed: read | AfterSideTurnE
 power KiVersePower: AfterModifyingCardPlayCount: read | AfterSideTurnEnd: read | ModifyCardPlayCount: read
 power KnockdownPower: AfterApplied: read | AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power LagavulinMatriarchDominionPower: AfterSideTurnEnd: read
+power LightningRodPower: AfterEnergyReset: read
+power LoopPower: AfterPlayerTurnStart: unknown where it runs: gap: OrbCmd.Passive isn't translated
 power LostLutePower: AfterCardPlayed: gap: CardPileCmd.AutoPlayFromDrawPile isn't translated
 power LullabyPower: AfterApplied: read | AfterCardPlayed: read | BeforeSideTurnStart: read
+power MachineLearningPower: ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 power MagicBombPower: AfterDeath: read | AfterSideTurnEnd: read
 power MasterPlannerPower: AfterCardPlayed: read
 power MayhemPower: AfterAutoPrePlayPhaseEntered: gap: the simulator runs no read model's AfterAutoPrePlayPhaseEntered
+power MindRotPower: AfterModifyingHandDraw: gap: the simulator runs no read model's AfterModifyingHandDraw | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
+power MinionPower: ShouldOwnerDeathTriggerFatal: gap: the simulator runs no read model's ShouldOwnerDeathTriggerFatal | ShouldPowerBeRemovedAfterOwnerDeath: read
 power MonarchsGazePower: AfterDamageGiven: read
 power MonologuePower: AfterCardPlayed: read | AfterSideTurnEnd: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power MotifPower: AfterCardPlayed: read
+power MythicFormPower: BeforeHandDraw: unknown where it runs: gap: makes combatState.CreateCard(player.RunState.Rng.CombatCardSelection.NextItem<CardModel>(Where(All, {player == this.Owner.Player and <>9__0: <>9__0; player == this.Owner.Player and not <>9__0: c => c.IsAllowedInRun(player.RunState)})), player)
 power NecroMasteryPower: AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged
 power NemesisPower: AfterSideTurnEnd: read
+power NeurosurgePower: AfterSideTurnStart: read
+power NightmarePower: BeforeHandDraw: unknown where it runs: gap: makes card=this.GetInternalData<Data>().selectedCard().CreateClone() | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power NoBlockPower: AfterSideTurnEnd: read | ModifyBlockMultiplicative: read
 power NoDrawPower: AfterSideTurnEnd: read | ShouldDraw: gap: the simulator runs no read model's ShouldDraw
 power NoEnergyGainPower: AfterModifyingEnergyGain: gap: the simulator runs no read model's AfterModifyingEnergyGain | AfterSideTurnEnd: read | ModifyEnergyGain: gap: the simulator runs no read model's ModifyEnergyGain
 power NostalgiaPower: AfterModifyingCardPlayResultLocation: read | ModifyCardPlayResultLocation: read
+power NoxiousFumesPower: AfterSideTurnStart: read
 power OblivionPower: AfterCardPlayed: read | AfterSideTurnEnd: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power OneTwoPunchPower: AfterModifyingCardPlayCount: read | AfterSideTurnEnd: read | ModifyCardPlayCount: read
 power OrbitPower: AfterEnergySpent: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
@@ -115,13 +154,19 @@ power PaleBlueDotPower: AfterCardPlayed: read | AfterSideTurnEnd: read | AfterSi
 power PanachePower: AfterCardPlayed: read | AfterSideTurnEnd: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power PaperCutsPower: AfterDamageGiven: gap: CreatureCmd.LoseMaxHp isn't translated
 power PersonalHivePower: AfterDamageReceived: read
+power PhantomBladesPower: AfterApplied: read | AfterRemoved: read | ModifyDamageAdditive: gap: tests Contains(cardSource.Tags, 5) | TryModifyKeywordsInCombat: gap: the simulator runs no read model's TryModifyKeywordsInCombat
 power PillarOfCreationPower: AfterCardGeneratedForCombat: read
 power PlatingPower: AfterApplied: read | AfterSideTurnStart: read | BeforeSideTurnEndEarly: read | BeforeSideTurnStart: read | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply's scaling for the players: read into the class's PowerRule and run by the engine as it lands one (decision #234)
 power PlowPower: AfterDamageReceived: read
+power PoisonPower: AfterSideTurnStart: read
 power PossessSpeedPower: AfterDeath: gap: a loop | AfterPowerAmountChanged: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power PossessStrengthPower: AfterDeath: gap: a loop | AfterPowerAmountChanged: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
+power PrepTimePower: AfterSideTurnStart: read
+power PyrePower: ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
 power QuietusPower: AfterAttack: read | AfterSideTurnEnd: read | BeforeAttack: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyDamageMultiplicative: read
+power RadiancePower: AfterEnergyReset: unknown where it runs: gap: energy for someone else
 power RagePower: AfterCardPlayed: read | AfterSideTurnEnd: read
+power RampartPower: AfterSideTurnStart: gap: a loop
 power RavenousPower: AfterDeath: read
 power ReaperFormPower: AfterApplied: read | AfterDamageGiven: read | AfterRemoved: read
 power ReattachPower: AfterDeath: gap: changes a game object outside a command (MonsterModel.SetMoveImmediate) | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ShouldAllowHitting: read | ShouldCreatureBeRemovedFromCombatAfterDeath: read | ShouldOwnerDeathTriggerFatal: gap: the simulator runs no read model's ShouldOwnerDeathTriggerFatal | ShouldPowerBeRemovedAfterOwnerDeath: read
@@ -131,16 +176,20 @@ power RegenPower: BeforeSideTurnEndEarly: read
 power RetainHandPower: AfterSideTurnEnd: read | ShouldFlush: gap: the simulator runs no read model's ShouldFlush
 power RingingPower: AfterApplied: gap: a loop | AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterRemoved: unknown where it runs: gap: tests oldOwner.Player.PlayerCombatState.AllCards | AfterSideTurnEnd: read | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
 power RitualPower: AfterApplied: read | AfterSideTurnEnd: read
+power RollingBoulderPower: AfterPlayerTurnStart: unknown where it runs: gap: the reader can't follow it: commands in a callback
 power RupturePower: AfterCardPlayed: read | AfterDamageReceived: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power SandpitPower: AfterApplied: gap: uses its own field (_initialTargetPosition) directly: what a call on it changes isn't read | AfterCreatureAddedToCombat: gap: the simulator runs no read model's AfterCreatureAddedToCombat | AfterOstyRevived: gap: the simulator runs no read model's AfterOstyRevived | AfterPowerAmountChanged: read | AfterRemoved: unknown where it runs: gap: a loop | AfterSideTurnStartLate: read | BeforeSideTurnEnd: read
 power SelfFormingClayPower: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
+power SentryModePower: BeforeHandDraw: unknown where it runs: gap: a SweepingGaze made into another pile
 power SerpentFormPower: AfterApplied: read | AfterCardPlayed: read | AfterRemoved: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
+power ShadowStepPower: AfterSideTurnStart: read
 power ShadowmeldPower: AfterSideTurnEnd: read | ModifyBlockMultiplicative: read
 power ShowOffPower: AfterDeath: gap: changes a game object outside a command (ShowOff.IncreaseAim) | AfterSideTurnEnd: read
 power ShriekPower: AfterDamageReceived: read
 power ShrinkPower: AfterApplied: gap: changes a game object outside a command (Vantom.ScaleTo) | AfterDeath: read | AfterRemoved: unknown where it runs: gap: changes a game object outside a command (Vantom.ScaleTo) | AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power ShroudPower: AfterPowerAmountChanged: read
 power SicEmPower: AfterDamageGiven: read | AfterSideTurnEnd: read
+power SignalBoostPower: AfterModifyingCardPlayCount: read | ModifyCardPlayCount: read
 power SimpletonPower: AfterAutoPostPlayPhaseEntered: gap: the simulator runs no read model's AfterAutoPostPlayPhaseEntered
 power SkittishPower: AfterAttack: gap: tests FirstOrDefault(SelectMany(command.Results, r => r), r => r.Receiver == this.Owner) | AfterSideTurnEnd: read | GetScaledAmountForMultiplayer: not run: PowerCmd.Apply's scaling for the players: read into the class's PowerRule and run by the engine as it lands one (decision #234) | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power SleightOfFleshPower: AfterPowerAmountChanged: read
@@ -153,9 +202,12 @@ power SmokestackPower: AfterCardGeneratedForCombat: read
 power SneakyPower: AfterCardPlayed: read
 power SongPathPower: AfterCardPlayed: read
 power SoulboundPower: AfterCardGeneratedForCombat: gap: the value creator.Creature
+power SpectrumShiftPower: BeforeHandDraw: unknown where it runs: gap: CardPileCmd.AddGeneratedCardsToCombat isn't translated
 power SpeedsterPower: AfterCardDrawn: read
+power SpinnerPower: AfterEnergyReset: read
 power SpiritOfAshPower: BeforeCardPlayed: read
 power StampedePower: AfterAutoPostPlayPhaseEntered: gap: the simulator runs no read model's AfterAutoPostPlayPhaseEntered
+power StarNextTurnPower: AfterEnergyReset: unknown where it runs: gap: stars for someone else
 power SteamEruptionPower: AfterDeath: read | ShouldCreatureBeRemovedFromCombatAfterDeath: read | ShouldPowerBeRemovedAfterOwnerDeath: read | ShouldStopCombatFromEnding: read
 power StockPower: AfterDeath: read | ShouldStopCombatFromEnding: read
 power StormPower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
@@ -164,12 +216,15 @@ power StratagemPower: AfterShuffle: gap: a pick
 power StretchPower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyBlockAdditive: read
 power SubroutinePower: AfterCardPlayed: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power SuckPower: AfterAttack: gap: the value command.TargetSide
+power SummonNextTurnPower: AfterPlayerTurnStart: unknown where it runs: gap: tests this.AmountOnTurnStart
 power SurprisePower: AfterDeath: gap: sets PowerModel.Target where the reader reads no store | ShouldStopCombatFromEnding: read
 power SurroundedPower: AfterDeath: gap: tests All(this.Owner.CombatState.HittableEnemies, e => e.HasPower<BackAttackLeftPower>()) | BeforeCardPlayed: gap: tests cardPlay.Target | BeforePotionUsed: gap: tests target | ModifyDamageMultiplicative: read
 power SwipePower: BeforeDeath: gap: the simulator runs no read model's BeforeDeath
 power SwordSagePower: AfterCardEnteredCombat: gap: the simulator runs no read model's AfterCardEnteredCombat | AfterPowerAmountChanged: read | AfterRemoved: unknown where it runs: gap: sets CardModel.BaseReplayCount where the reader reads no store
+power TagTeamPower: AfterModifyingCardPlayCount: read | ModifyCardPlayCount: gap: the value card.Owner.Creature
 power TaintedPower: AfterSideTurnEnd: read | ModifyDamageAdditive: read
 power TangledPower: AfterApplied: gap: a loop | AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterRemoved: unknown where it runs: gap: a loop | AfterSideTurnEnd: read | TryModifyEnergyCostInCombat: gap: the simulator runs no read model's TryModifyEnergyCostInCombat
+power TankPower: AfterApplied: gap: a loop | AfterRemoved: unknown where it runs: gap: a loop | ModifyDamageMultiplicative: read
 power TenderPower: AfterCardPlayed: read | AfterSideTurnEnd: read
 power TerritorialPower: AfterSideTurnEnd: read
 power TheBombPower: BeforeSideTurnEnd: read
@@ -177,9 +232,11 @@ power TheGambitPower: AfterDamageReceived: read
 power TheSealedThronePower: BeforeCardPlayed: read
 power ThornsPower: BeforeDamageReceived: read
 power ThunderPower: AfterOrbEvoked: read
+power ToolsOfTheTradePower: AfterPlayerTurnStart: unknown where it runs: gap: a pick | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 power ToricToughnessPower: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
 power TrashToTreasurePower: AfterCardGeneratedForCombat: gap: an orb made first
 power TunePower: AfterCardPlayed: read
+power TyrannyPower: AfterPlayerTurnStart: unknown where it runs: gap: a pick | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 power UnderworldPower: AfterDamageGiven: read | AfterSideTurnEnd: read
 power VeilpiercerPower: BeforeCardPlayed: gap: tests {cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Keywords.Contains(2) and not cardPlay.Card.Pile: null; cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Keywords.Contains(2) and cardPlay.Card.Pile: new Nullable`1(cardPlay.Card.Pile.Type)}.HasValue | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
 power ViciousPower: AfterPowerAmountChanged: read
@@ -188,51 +245,93 @@ power ViolentChordPower: AfterCardPlayed: read
 power VitalSparkPower: AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterCardPlayed: read | AfterPowerAmountChanged: not run: it only sets what its cards show (an affliction's amount): no code a fight runs reads it | AfterRemoved: unknown where it runs: gap: a loop | BeforeCombatStart: not run: before the fight: the state is read after it
 power VoidFormPower: AfterApplied: read | AfterCardPlayed: gap: tests cardPlay | AfterRemoved: read | BeforeApplied: gap: the simulator runs no read model's BeforeApplied | BeforePowerAmountChanged: gap: the simulator runs no read model's BeforePowerAmountChanged | BeforeSideTurnStart: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate | TryModifyStarCost: gap: the simulator runs no read model's TryModifyStarCost
 power VulnerablePower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
+power WasteAwayPower: ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
 power WeakPower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
+power WellLaidPlansPower: ShouldFlush: gap: the simulator runs no read model's ShouldFlush
 power WitheringPresencePower: AfterCardPlayed: gap: the value cardPlay.Card.Owner
+power WraithFormPower: AfterSideTurnStart: read
 power WuppysLoyaltyPower: ModifyPreBlockDamageTarget: read | ShouldAllowHitting: read | ShouldCreatureBeRemovedFromCombatAfterDeath: read | ShouldPowerBeRemovedAfterOwnerDeath: read
 power YahPower: AfterArrowDislodged: read | BeforeSideTurnStart: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
+power YouAreMinePower: AfterPlayerTurnStart: unknown where it runs: gap: acts on player.Creature
+relic Akabeko: AfterSideTurnStart: read
 relic ArtOfWar: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterEnergyReset: read | AfterSideTurnEnd: read
+relic BagOfMarbles: BeforeSideTurnStart: read
+relic BagOfPreparation: ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
+relic BathTowel: AfterPlayerTurnStartLate: read
 relic BeatingRemnant: AfterDamageReceived: read | AfterModifyingHpLostAfterOsty: read | BeforeSideTurnStart: read | ModifyHpLostAfterOsty: read
+relic Bellows: AfterPlayerTurnStart: unknown where it runs: gap: upgrades GetPile(2, this.Owner).Cards, not the card played
+relic BeltBuckle: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterCombatVictory: not run: after the fight: no prediction reaches it | AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterPotionDiscarded: not run: a potion discarded: no simulated decision discards one | AfterPotionProcured: not run: a potion procured: no simulated decision procures one without its outcome being unknown where this hook is overridden | AfterPotionUsed: read | BeforeCombatStart: not run: before the fight: the state is read after it
+relic BigHat: AfterSideTurnStart: unknown where it runs: gap: CardPileCmd.AddGeneratedCardsToCombat isn't translated
+relic BigMushroom: AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterRoomEntered: not run: entering a room: outside the fight's turns | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 relic BiiigHug: AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterShuffle: read
 relic BingBong: AfterCardChangedPiles: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
+relic BizarreLamp: BeforeHandDraw: unknown where it runs: gap: makes a Joy
+relic BlessedAntler: BeforeHandDraw: unknown where it runs: gap: makes a Dazed | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+relic BloodSoakedRose: AfterObtained: not run: when the relic is obtained: outside the fight's turns | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+relic BloodVial: AfterPlayerTurnStartLate: read
 relic BoneFlute: AfterAttack: read
+relic BoneTea: AfterPlayerTurnStart: unknown where it runs: gap: a loop
 relic BookOfFiveRings: AfterCardChangedPiles: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic BookRepairKnife: AfterDiedToDoom: read
+relic Bookmark: AfterFlush: gap: the simulator runs no read model's AfterFlush
+relic BoomingConch: AfterSideTurnStart: unknown where it runs: gap: tests combatState.RunState.CurrentRoom | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
+relic BoundPhylactery: AfterEnergyResetLate: read | BeforeCombatStart: not run: before the fight: the state is read after it
+relic Bread: AfterSideTurnStart: unknown where it runs: gap: PlayerCmd.LoseEnergy isn't translated | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
 relic BrilliantScarf: AfterCardPlayed: gap: tests cardPlay.IsAutoPlay | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: read | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate | TryModifyStarCost: gap: the simulator runs no read model's TryModifyStarCost
+relic Brimstone: AfterSideTurnStart: read
 relic BurningSticks: AfterCardExhausted: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns
 relic Byrdpip: AfterCardPlayed: read | AfterObtained: not run: when the relic is obtained: outside the fight's turns | BeforeCombatStart: not run: before the fight: the state is read after it | TryModifyRestSiteOptions: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
+relic Candelabra: AfterSideTurnStart: read
 relic CaptainsWheel: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
 relic CentennialPuzzle: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterDamageReceived: read
+relic Chandelier: AfterSideTurnStart: read
 relic CharonsAshes: AfterCardExhausted: read
 relic ChemicalX: BeforeCardPlayed: read | ModifyXValue: gap: the simulator runs no read model's ModifyXValue
+relic ChoicesParadox: AfterPlayerTurnStart: unknown where it runs: gap: a loop
 relic CloakClasp: BeforeSideTurnEnd: read
 relic ConductorsBaton: AfterCardPlayed: read | BeforeSideTurnStart: read
+relic CrackedCore: BeforeSideTurnStart: read
+relic Crossbow: AfterSideTurnStart: unknown where it runs: gap: a loop
 relic DarkstonePeriapt: AfterCardChangedPiles: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic DaughterOfTheWind: AfterCardPlayed: read
 relic DemonTongue: AfterDamageReceived: read | BeforeSideTurnStart: read
+relic DiamondDiadem: AfterSideTurnStart: read
+relic DivineDestiny: AfterSideTurnStart: read
+relic Ectoplasm: AfterModifyingGoldGained: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | ModifyGoldGained: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
 relic EmotionChip: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterDamageReceived: read | AfterPlayerTurnStart: unknown where it runs: gap: a loop
+relic ExerciseMat: AfterSideTurnStart: read
+relic FakeBloodVial: AfterPlayerTurnStartLate: read
+relic FakeHappyFlower: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterPlayerTurnStartEarly: read | BeforeSideTurnStart: unknown where it runs: gap: sets RelicModel.Status where the reader reads no store
 relic FakeOrichalcum: BeforeSideTurnEnd: read | BeforeSideTurnEndVeryEarly: read | BeforeSideTurnStart: read
+relic FakeVenerableTeaSet: AfterEnergyReset: read | AfterRoomEntered: not run: entering a room: outside the fight's turns
+relic FencingManual: AfterSideTurnStart: unknown where it runs: gap: ForgeCmd.Forge isn't translated
 relic Fertilizer: AfterCardGeneratedForCombat: read
+relic FestivePopper: AfterPlayerTurnStart: read
 relic Fiddle: AfterPreventingDraw: gap: the simulator runs no read model's AfterPreventingDraw | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw | ShouldDraw: gap: the simulator runs no read model's ShouldDraw
 relic ForgottenSoul: AfterCardExhausted: read
+relic FuneraryMask: BeforeHandDraw: unknown where it runs: gap: makes combatState.CreateCard(Card<Soul>(), this.Owner)
 relic FurCoat: AfterCreatureAddedToCombat: gap: the simulator runs no read model's AfterCreatureAddedToCombat | AfterObtained: not run: when the relic is obtained: outside the fight's turns | BeforeCombatStart: not run: before the fight: the state is read after it | ModifyGeneratedMapLate: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic GalacticDust: AfterStarsSpent: read
+relic GamblingChip: AfterPlayerTurnStart: unknown where it runs: gap: a pick
 relic GamePiece: AfterCardPlayed: read
 relic GhostSeed: AfterCardEnteredCombat: gap: the simulator runs no read model's AfterCardEnteredCombat | AfterRoomEntered: not run: entering a room: outside the fight's turns
 relic GoldPlatedCables: AfterModifyingOrbPassiveTriggerCount: read | ModifyOrbPassiveTriggerCounts: read
 relic GremlinHorn: AfterDeath: read
 relic HandDrill: AfterBlockBroken: read
+relic HappyFlower: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterPlayerTurnStartEarly: read | BeforeSideTurnStart: unknown where it runs: gap: sets RelicModel.Status where the reader reads no store
 relic HelicalDart: AfterCardPlayed: read
 relic HistoryCourse: AfterAutoPrePlayPhaseEntered: gap: the simulator runs no read model's AfterAutoPrePlayPhaseEntered
 relic HornCleat: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
+relic IceCream: ShouldPlayerResetEnergy: gap: the simulator runs no read model's ShouldPlayerResetEnergy
 relic InfusedCore: AfterSideTurnStart: read | ModifyOrbValue: read
 relic IntimidatingHelmet: BeforeCardPlayed: read
 relic IronClub: AfterCardPlayed: read
 relic IvoryTile: AfterCardPlayed: read
+relic JeweledMask: BeforeHandDraw: unknown where it runs: gap: changes player.RunState.Rng.CombatCardSelection.NextItem<CardModel>({(player == this.Owner and this.Owner.PlayerCombatState.TurnNumber <= 1 and not ToList(Where(GetPile(1, player).Cards, c => c.Type == Power)).Count) or (player == this.Owner and this.Owner.PlayerCombatState.TurnNumber <= 1 and ToList(Where(ToList(Where(GetPile(1, player).Cards, c => c.Type == Power)), c => c.Keywords.Contains(3) == 0)).Count <= 0): ToList(Where(GetPile(1, player).Cards, c => c.Type == Power)); player == this.Owner and this.Owner.PlayerCombatState.TurnNumber <= 1 and ToList(Where(GetPile(1, player).Cards, c => c.Type == Power)).Count and ToList(Where(ToList(Where(GetPile(1, player).Cards, c => c.Type == Power)), c => c.Keywords.Contains(3) == 0)).Count > 0: ToList(Where(ToList(Where(GetPile(1, player).Cards, c => c.Type == Power)), c => c.Keywords.Contains(3) == 0))}) (CardModel.SetToFreeThisCombat)
 relic JossPaper: AfterCardExhausted: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterSideTurnEnd: read
 relic Kunai: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: read
 relic Kusarigama: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterSideTurnEnd: read | BeforeCombatStart: not run: before the fight: the state is read after it
+relic Lantern: AfterSideTurnStart: read
 relic LavaLamp: AfterDamageReceived: gap: tests this.Owner.RunState.CurrentRoom is CombatRoom | AfterRoomEntered: not run: entering a room: outside the fight's turns | TryModifyCardRewardOptionsLate: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic LetterOpener: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterSideTurnStart: read | BeforeCombatStart: not run: before the fight: the state is read after it
 relic LizardTail: AfterPreventingDeath: gap: the simulator runs no read model's AfterPreventingDeath | ShouldDieLate: gap: the simulator runs no read model's ShouldDieLate
@@ -240,48 +339,84 @@ relic LostWisp: AfterCardPlayed: read
 relic LuckyFysh: AfterCardChangedPiles: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic LunarPastry: AfterSideTurnEnd: read
 relic MeatOnTheBone: AfterCombatVictoryEarly: not run: after the fight: no prediction reaches it | AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged | BeforeCombatStart: not run: before the fight: the state is read after it
+relic MercuryHourglass: AfterPlayerTurnStart: read
 relic Metronome: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterOrbChanneled: read | AfterRoomEntered: not run: entering a room: outside the fight's turns
 relic MightyWings: AfterDamageGiven: read
 relic MiniRegent: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterStarsSpent: read | BeforeSideTurnStart: read
+relic MrStruggles: AfterPlayerTurnStart: read
 relic MummifiedHand: AfterCardPlayed: read
 relic MusicBox: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeCardPlayed: read | BeforeSideTurnStart: read
+relic NinjaScroll: BeforeHandDraw: unknown where it runs: gap: makes a Shiv
 relic Nunchaku: AfterCardPlayed: read
 relic ObsidianVice: BeforeSideTurnEnd: read
+relic Ocarina: BeforeHandDraw: unknown where it runs: gap: CardPileCmd.AddGeneratedCardsToCombat isn't translated
+relic OrangeDough: AfterSideTurnStart: unknown where it runs: gap: CardPileCmd.AddGeneratedCardsToCombat isn't translated
 relic Orichalcum: BeforeSideTurnEnd: read | BeforeSideTurnEndVeryEarly: read | BeforeSideTurnStart: read
 relic OrnamentalFan: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: read
+relic PaelsBlood: ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 relic PaelsEye: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterSideTurnStart: read | AfterTakingExtraTurn: not run: as the extra turn it gave begins: past the simulation's horizon, which ends where the extra turn is decided | BeforeCardPlayed: gap: tests cardPlay.IsAutoPlay | BeforeSideTurnEndEarly: gap: a loop | ShouldTakeExtraTurnEarly: gap: tests this.Owner.PlayerCombatState
+relic PaelsFlesh: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterSideTurnStart: unknown where it runs: gap: the value this.Status | BeforeCombatStart: not run: before the fight: the state is read after it | BeforeSideTurnStart: not run: nothing in its body acts | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
 relic PaelsLegion: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingBlockAmount: read | AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterSideTurnStart: read | BeforeCombatStart: not run: before the fight: the state is read after it | ModifyBlockMultiplicative: read
 relic PaelsTears: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterSideTurnStart: read | BeforeSideTurnEnd: gap: the value this.Owner.PlayerCombatState.Energy
 relic ParryingShield: AfterSideTurnEnd: read
 relic PenNib: AfterCardPlayed: read | BeforeCardPlayed: read | ModifyDamageMultiplicative: read
+relic Pendulum: AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeHandDraw: unknown where it runs: gap: sets RelicModel.Status where the reader reads no store | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 relic Permafrost: AfterCardPlayed: read | AfterRoomEntered: not run: entering a room: outside the fight's turns
 relic PhilosophersStone: AfterCreatureAddedToCombat: gap: the simulator runs no read model's AfterCreatureAddedToCombat | AfterRoomEntered: not run: entering a room: outside the fight's turns | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+relic PhylacteryUnbound: AfterSideTurnStart: read | BeforeCombatStart: not run: before the fight: the state is read after it
 relic Pocketwatch: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingHandDraw: gap: the simulator runs no read model's AfterModifyingHandDraw | AfterSideTurnStart: not run: nothing in its body acts | BeforeSideTurnStart: read | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
+relic PollinousCore: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingHandDraw: gap: the simulator runs no read model's AfterModifyingHandDraw | BeforeHandDraw: read | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
+relic PowerCell: BeforeSideTurnStart: unknown where it runs: gap: CardPileCmd.Add isn't translated
+relic PrismaticGem: ModifyCardRewardCreationOptions: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+relic PumpkinCandle: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterObtained: not run: when the relic is obtained: outside the fight's turns | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy | TryModifyRestSiteOptions: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
+relic RadiantPearl: BeforeHandDraw: unknown where it runs: gap: makes a Luminesce
 relic RainbowRing: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: read
 relic RazorTooth: AfterCardPlayed: read
+relic RedMask: BeforeSideTurnStart: read
 relic RedSkull: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged | AfterRoomEntered: not run: entering a room: outside the fight's turns
 relic Regalite: AfterCardGeneratedForCombat: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: read
+relic ReptileTrinket: AfterPotionUsed: read
+relic RingOfTheDrake: ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
+relic RingOfTheSnake: ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 relic RippleBasin: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnEnd: read | BeforeSideTurnStart: read
+relic RoyalPoison: AfterPlayerTurnStart: read
+relic RuinedHelmet: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingPowerAmountReceived: gap: the simulator runs no read model's AfterModifyingPowerAmountReceived | TryModifyPowerAmountReceived: gap: the simulator runs no read model's TryModifyPowerAmountReceived
+relic RunicCapacitor: AfterSideTurnStart: unknown where it runs: gap: OrbCmd.AddSlots isn't translated
+relic RunicPyramid: ShouldFlush: gap: the simulator runs no read model's ShouldFlush
+relic Sai: AfterSideTurnStart: read
 relic ScreamingFlagon: BeforeSideTurnEnd: read
+relic SealOfGold: AfterSideTurnStart: unknown where it runs: gap: the value this.Owner.Gold
 relic SelfFormingClay: AfterDamageReceived: read
 relic Shuriken: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: read
+relic SneckoEye: AfterObtained: not run: when the relic is obtained: outside the fight's turns | BeforeCombatStart: not run: before the fight: the state is read after it | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 relic SneckoSkull: AfterModifyingPowerAmountGiven: read | ModifyPowerAmountGivenAdditive: read
+relic Sozu: ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy | ShouldProcurePotion: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic SparklingRouge: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
+relic SpikedGauntlets: ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy | TryModifyEnergyCostInCombat: gap: the simulator runs no read model's TryModifyEnergyCostInCombat
 relic StoneCalendar: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns | AfterSideTurnStart: read | BeforeSideTurnEnd: read
 relic Storyteller: AfterRoomEntered: not run: entering a room: outside the fight's turns | BeforeSideTurnEnd: read
 relic SturdyClamp: AfterPreventingBlockClear: gap: the simulator runs no read model's AfterPreventingBlockClear | ShouldClearBlock: read
+relic SymbioticVirus: AfterSideTurnStart: read
 relic TheAbacus: AfterShuffle: read
 relic TheBoot: AfterModifyingHpLostAfterOsty: read | ModifyHpLostAfterOstyLate: read
+relic ThrowingAxe: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingCardPlayCount: read | AfterRoomEntered: not run: entering a room: outside the fight's turns | ModifyCardPlayCount: read
 relic Thumbscrew: ModifyAttackHitCount: gap: the simulator runs no read model's ModifyAttackHitCount
 relic Tingsha: AfterCardDiscarded: read
+relic ToastyMittens: AfterPlayerTurnStart: unknown where it runs: gap: a pick
+relic Toolbox: BeforeHandDraw: unknown where it runs: gap: a pick
+relic TormentousCollar: BeforeSideTurnStart: unknown where it runs: gap: tests this.Owner.RunState.CurrentRoom
 relic ToughBandages: AfterCardDiscarded: read
 relic TungstenRod: AfterModifyingHpLostAfterOsty: read | ModifyHpLostAfterOsty: read
 relic TuningFork: AfterCardPlayed: read
 relic Twine: AfterArrowDislodged: read
+relic TwistedFunnel: BeforeSideTurnStart: unknown where it runs: gap: PoisonPower on each
 relic UnceasingTop: AfterHandEmptied: gap: the simulator runs no read model's AfterHandEmptied
 relic UnsettlingLamp: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeCombatStart: not run: before the fight: the state is read after it | BeforePowerAmountChanged: gap: the simulator runs no read model's BeforePowerAmountChanged | ModifyPowerAmountGivenMultiplicative: gap: the value cardSource
 relic Vambrace: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingBlockAmount: read | BeforeCombatStart: not run: before the fight: the state is read after it | ModifyBlockMultiplicative: read
 relic VelvetChoker: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns | BeforeSideTurnStart: not run: nothing in its body acts | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
+relic VenerableTeaSet: AfterEnergyReset: read | AfterRoomEntered: not run: entering a room: outside the fight's turns
+relic VeryHotCocoa: AfterSideTurnStart: read
+relic VexingPuzzlebox: AfterPlayerTurnStart: unknown where it runs: gap: changes First(GetDistinctForCombat(this.Owner, this.Owner.Character.CardPool.GetUnlockedCards(this.Owner.UnlockState, this.Owner.RunState.CardMultiplayerConstraint), 1, this.Owner.RunState.Rng.CombatCardGeneration)) (CardModel.SetToFreeThisTurn)
 relic WhisperingEarring: AfterAutoPrePlayPhaseEnteredLate: gap: the simulator runs no read model's AfterAutoPrePlayPhaseEnteredLate | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
 relic WhittlingKnife: AfterShuffle: read
 relic Wuppy: AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged | AfterObtained: not run: when the relic is obtained: outside the fight's turns | BeforeCombatStart: not run: before the fight: the state is read after it | TryModifyRestSiteOptions: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)

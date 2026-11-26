@@ -35,11 +35,11 @@ internal static class RelicTracking
         // ---- start of your turn (on screen before your decisions that turn)
         ["Akabeko"] = "none: Vigor on turn 1 (the Vigor tab marks the attack that spends it)",
         ["BagOfMarbles"] = "none: Vulnerable to all enemies on turn 1",
-        ["Bellows"] = "none: upgrades your hand from turn 2",
+        ["Bellows"] = "none: upgrades your hand on turn 1",
         ["BigHat"] = "none: cards into your hand on turn 1",
         ["BloodVial"] = "none: heals on turn 1",
         ["FakeBloodVial"] = "none: heals on turn 1",
-        ["BoneTea"] = "none: upgrades a card from turn 2 for its combats (its counter shows combats left)",
+        ["BoneTea"] = "none: upgrades your hand on turn 1 for its combats (its counter shows combats left)",
         ["BoomingConch"] = "none: draw and energy on turn 1 of elite fights",
         ["Bread"] = "none: max energy, less energy on turn 1",
         ["Brimstone"] = "none: Strength to you and enemies each turn (intents and powers show it)",
