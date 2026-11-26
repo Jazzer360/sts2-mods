@@ -725,7 +725,7 @@ public static class ConditionReader
         "Owner", "Creature", "Player", "Target", "CombatState", "RunState", "Instance",
         // Facts of the fight a play can't change: its room (a combat room for every play), the fight going on (the simulator stops at its end),
         // the owner's character, unlocks and card pools.
-        "CurrentRoom", "is", "IsOverOrEnding", "Character", "CardPool", "UnlockState", "CardMultiplayerConstraint", "GetUnlockedCards",
+        "CurrentRoom", "is", "IsOverOrEnding", "IsInProgress", "Character", "CardPool", "UnlockState", "CardMultiplayerConstraint", "GetUnlockedCards",
         // A card's kind, asked of a card a collection gives (the collection is read in turn): its type, tags, targeting, whether it upgrades.
         "Type", "Tags", "TargetType", "IsUpgradable", "Rarity",
         // A roll: what it picks from is its argument (read in turn); its source of randomness is left out before (ChangeableInput).

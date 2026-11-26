@@ -183,15 +183,24 @@ public sealed record ModelProgram(string Owner, IReadOnlyList<ProgramStep> Steps
     public override string ToString() => Owner + ": " + string.Join(", ", Steps);
 }
 
-/// <summary>The loaded game's card programs, read once per card type, and what they say about order.</summary>
+/// <summary>
+/// The loaded game's programs of what you play or use, read once per type (decision #335): a card's OnPlay, a potion's OnUse as a play (its
+/// target the play's: PotionPrograms.AsPlay), so every reading of a card's program (CardEffects, MadeCards, the step translation) reads a
+/// potion's use the same way. And what they say about order.
+/// </summary>
 public static class CardPrograms
 {
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, ModelProgram> Cache = new();
 
-    /// <summary>The card's program (empty when its code can't be read).</summary>
+    /// <summary>The card's program, or a potion's use as a play (empty when its code can't be read).</summary>
     public static ModelProgram Of(Type cardType) => Cache.GetOrAdd(cardType, type =>
     {
-        try { return ProgramReader.Read(type, RuntimeCode.Read); }
+        try
+        {
+            return typeof(MegaCrit.Sts2.Core.Models.PotionModel).IsAssignableFrom(type)
+                ? PotionPrograms.AsPlay(ProgramReader.Read(type, RuntimeCode.Read, "OnUse"))
+                : ProgramReader.Read(type, RuntimeCode.Read);
+        }
         catch { return ModelProgram.Empty; }
     });
 
@@ -227,17 +236,49 @@ public static class CardPrograms
     }
 }
 
-/// <summary>The loaded game's potion programs (decision #313): each potion's OnUse read once per potion type, as a card's OnPlay is.</summary>
+/// <summary>
+/// The loaded game's potion programs (decisions #313, #335): each potion's OnUse read once per potion type, as a card's OnPlay is, and read as
+/// a play: the creature it's used on (OnUse's target) is the play's target (cardPlay.Target), so the card translation reads whom each step acts
+/// on the same way (the play's target, its player, its owner).
+/// </summary>
 public static class PotionPrograms
 {
-    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, ModelProgram> Cache = new();
+    /// <summary>The potion's use (its OnUse) as a play, or an empty program when its code can't be read.</summary>
+    public static ModelProgram Of(Type potionType) => CardPrograms.Of(potionType);
 
-    /// <summary>The potion's use (its OnUse), or an empty program when its code can't be read.</summary>
-    public static ModelProgram Of(Type potionType) => Cache.GetOrAdd(potionType, type =>
+    /// <summary>The play's target as a card's code reads it: cardPlay.Target.</summary>
+    private static readonly QueryValue PlayTarget = new("CardPlay", "Target", new NamedValue("cardPlay"), Array.Empty<ProgramValue>(), "Creature") { IsProperty = true };
+
+    /// <summary>
+    /// A potion's OnUse read as a play (decision #335): its target parameter (a field of its state machine, or the parameter itself) is the play's
+    /// target, in every value and in each argument's source ("target.Player" is "cardPlay.Target.Player").
+    /// </summary>
+    public static ModelProgram AsPlay(ModelProgram use) => use with { Steps = use.Steps.Select(AsPlay).ToList() };
+
+    private static ProgramValue? Target(ProgramValue value) => value is NamedValue { Name: "target" } or ParameterValue { Name: "target" } ? PlayTarget : null;
+
+    private static string Argument(string argument) =>
+        argument == "target" ? "cardPlay.Target" : argument.StartsWith("target.", StringComparison.Ordinal) ? "cardPlay.Target" + argument["target".Length..] : argument;
+
+    private static ProgramStep AsPlay(ProgramStep step)
     {
-        try { return ProgramReader.Read(type, RuntimeCode.Read, "OnUse"); }
-        catch { return ModelProgram.Empty; }
-    });
+        var mapped = step with { Condition = step.Condition?.Map(Target) };
+        return mapped switch
+        {
+            LoopStep loop => loop with { While = loop.While?.Map(Target), Items = loop.Items?.Map(Target), Body = loop.Body.Select(AsPlay).ToList() },
+            ChoiceStep choice => choice with { Values = choice.Values.Select(value => value.Map(Target)).ToList(), Arguments = choice.Arguments.Select(Argument).ToList() },
+            CreateStep create => create with { Values = create.Values.Select(value => value.Map(Target)).ToList() },
+            StoreStep store => store with { Value = store.Value.Map(Target) },
+            CommandStep command => command with
+            {
+                Arguments = command.Arguments.Select(Argument).ToList(), Values = command.Values.Select(value => value.Map(Target)).ToList(),
+                Inner = command.Inner.Select(AsPlay).ToList(), HitCountValue = command.HitCountValue?.Map(Target), TargetValue = command.TargetValue?.Map(Target),
+            },
+            CardActionStep action => action with { Card = action.Card.Map(Target), Values = action.Values.Select(value => value.Map(Target)).ToList() },
+            DataStep data => data with { Values = data.Values.Select(value => value.Map(Target)).ToList() },
+            _ => mapped,
+        };
+    }
 }
 
 /// <summary>

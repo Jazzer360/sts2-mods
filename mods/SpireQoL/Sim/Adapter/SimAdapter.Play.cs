@@ -66,7 +66,8 @@ public static partial class SimAdapter
         play.ByOsty = Procs.Programs.CardEffects.Attacks(card.GetType()).Any(attack => attack.Command.Builder.Contains("FromOsty"));
 
         // ---- what one play does, step by step from its program (decision #193)
-        var steps = StepPlayOf(card, me, combat, ids, play, card.TargetType == TargetType.AnyEnemy ? aimedAt : null, owner, ally, allyId, plays);
+        var aimedEnemy = card.TargetType == TargetType.AnyEnemy ? aimedAt : null;
+        var steps = StepPlayOf(card, me, combat, ids, play, aimedEnemy, owner, ally, allyId, plays, boardTarget: aimedEnemy);
         play.Body = BodyFromSteps(steps);
         // A replay of a card whose numbers change with each play in a way its code doesn't show (decision #160: Thrash).
         if (plays > 1 && PlayGrowth.Of(card).Unmodelled is { } growthUnknown) play.Body.Add(new NotModelledAction(growthUnknown));
@@ -200,13 +201,13 @@ public static partial class SimAdapter
     /// The filtered takes from your hand of a card's play (TakesFromHand's keys, in its order), each with the test a card in your hand
     /// passes to be taken: what a card joining your hand during the play counts for (SimDrawCard.TakenBy, CardEventAction.TakenBy).
     /// </summary>
-    internal static List<(string Key, Func<CardModel, bool, bool?> Takes)> TakeFiltersOf(CardModel card)
+    internal static List<(string Key, Func<CardModel, bool, bool?> Takes)> TakeFiltersOf(AbstractModel model)
     {
-        var type = card.GetType();
+        var type = model.GetType();
         var program = Procs.Programs.CardPrograms.Of(type);
-        var board = new Procs.Programs.ProgramBoard(card);
+        var board = Procs.Programs.ProgramBoard.For(model);
         var filters = new List<(string, Func<CardModel, bool, bool?>)>();
-        foreach (var (take, key, _, eventIfNot, _) in Procs.Programs.BoardCounts.TakesInOrder(card))
+        foreach (var (take, key, _, eventIfNot, _) in Procs.Programs.BoardCounts.TakesInOrder(model))
             switch (take.Way)
             {
                 case Procs.Programs.CardEffects.TakeWay.Picked when take.PickPile is null or MegaCrit.Sts2.Core.Entities.Cards.PileType.Hand:
@@ -229,11 +230,11 @@ public static partial class SimAdapter
     /// The filtered takes a card the play makes would be taken by (each of the card's CreateSteps, read on its canonical card), every
     /// pile's take as well as its hand's share; null when what it makes can't be told (a helper's cards) or a test can't be read on it.
     /// </summary>
-    private static IReadOnlyList<string>? MadeTakenBy(CardModel card)
+    private static IReadOnlyList<string>? MadeTakenBy(AbstractModel model)
     {
-        var filters = TakeFiltersOf(card);
+        var filters = TakeFiltersOf(model);
         if (filters.Count == 0) return Array.Empty<string>();
-        if (MadeCardOf(card) is not { } madeCard) return null;
+        if (MadeCardOf(model) is not { } madeCard) return null;
         var keys = new List<string>();
         foreach (var (key, takes) in filters)
         {
@@ -248,9 +249,9 @@ public static partial class SimAdapter
     }
 
     /// <summary>The one card the play makes, the game's own (its program's CreateSteps all make it); null for none, several or one not read.</summary>
-    internal static CardModel? MadeCardOf(CardModel card)
+    internal static CardModel? MadeCardOf(AbstractModel model)
     {
-        var made = Procs.Programs.CardPrograms.Of(card.GetType()).All().OfType<Procs.Programs.CreateStep>().Select(create => create.Card).Distinct().ToList();
+        var made = Procs.Programs.CardPrograms.Of(model.GetType()).All().OfType<Procs.Programs.CreateStep>().Select(create => create.Card).Distinct().ToList();
         return made.Count == 1 ? ModelDb.AllCards.FirstOrDefault(canonical => canonical.GetType().Name == made[0]) : null;
     }
 
@@ -265,9 +266,9 @@ public static partial class SimAdapter
     }
 
     /// <summary>Cards in the owner's draw pile; 0 with none read.</summary>
-    private static int DrawPileOfCard(CardModel card)
+    private static int DrawPileOf(AbstractModel model)
     {
-        try { return card.Owner is { } owner ? MegaCrit.Sts2.Core.Entities.Cards.PileType.Draw.GetPile(owner).Cards.Count : 0; } catch { return 0; }
+        try { return Procs.Programs.BoardCounts.OwnerOf(model) is { } owner ? MegaCrit.Sts2.Core.Entities.Cards.PileType.Draw.GetPile(owner).Cards.Count : 0; } catch { return 0; }
     }
     /// <summary>
     /// The attack's hit count's ways when its code works it out on a test the simulator asks (WithHitCount's argument a value two ways
@@ -307,13 +308,13 @@ public static partial class SimAdapter
     /// World's discard pile), or each card of one (All For One's 0-cost cards, Summon Forth's Sovereign Blades from every pile), all on
     /// the first play. Null when it takes none, or you choose how many (Neow's Fury), or what it takes from can't be read.
     /// </summary>
-    internal static HandTake? HandTakeOf(CardModel card)
+    internal static HandTake? HandTakeOf(AbstractModel model)
     {
-        var takes = Procs.Programs.CardEffects.TakesIntoHandOf(card.GetType());
+        var takes = Procs.Programs.CardEffects.TakesIntoHandOf(model.GetType());
         if (takes.Count == 0 || takes.Any(take => take.ChoosesHowMany)) return null;
         var take = takes[0];
-        var program = Procs.Programs.CardPrograms.Of(card.GetType());
-        var board = new Procs.Programs.ProgramBoard(card);
+        var program = Procs.Programs.CardPrograms.Of(model.GetType());
+        var board = Procs.Programs.ProgramBoard.For(model);
         switch (take.Way)
         {
             case Procs.Programs.CardEffects.TakeWay.Picked when take.PickPile is { } pile && pile != PileType.Hand:
@@ -323,7 +324,7 @@ public static partial class SimAdapter
             case Procs.Programs.CardEffects.TakeWay.Random or Procs.Programs.CardEffects.TakeWay.Each when take.Items != null
                                                                                                        && Procs.Programs.ProgramEvaluator.Items(take.Items, board, program) is { } items:
             {
-                var cards = items.OfType<CardModel>().Where(other => !ReferenceEquals(other, card)).ToHashSet(ReferenceEqualityComparer.Instance);
+                var cards = items.OfType<CardModel>().Where(other => !ReferenceEquals(other, model)).ToHashSet(ReferenceEqualityComparer.Instance);
                 // The piles its collection is over (a pile's cards, or every pile: All Cards).
                 var piles = take.Items.Parts().OfType<Procs.Programs.QueryValue>().Where(value => value is { Name: "GetPile", Arguments: [Procs.Programs.ConstantValue, ..] })
                     .Select(value => (PileType)((Procs.Programs.ConstantValue)value.Arguments[0]).Value).Distinct().ToList();
@@ -341,16 +342,16 @@ public static partial class SimAdapter
     /// How many a play takes: a pick's most, a roll's count (read as it runs when it counts your hand's room: The World, Anointed), every
     /// card of a collection (All For One; a later play finds them gone). None with no pile read.
     /// </summary>
-    private static IEnumerable<SimAction> TakesToHand(CardModel card, Player me)
+    private static IEnumerable<SimAction> TakesToHand(AbstractModel model, Player me)
     {
-        if (HandTakeOf(card) is not { } take) yield break;
-        var (count, from) = Procs.Programs.BoardCounts.HandTakeCount(card);
+        if (HandTakeOf(model) is not { } take) yield break;
+        var (count, from) = Procs.Programs.BoardCounts.HandTakeCount(model);
         foreach (var pile in take.Piles)
         {
             if (pile is not (PileType.Draw or PileType.Discard)) continue;
             var counts = Eligible(me, pile == PileType.Discard, take.Eligible);
             // A play that shuffles your discard pile in first when your draw pile is short (Ki Chant) can take from what it shuffles in.
-            if (pile == PileType.Draw && Procs.Programs.CardEffects.ShufflesWhenShort(card.GetType()))
+            if (pile == PileType.Draw && Procs.Programs.CardEffects.ShufflesWhenShort(model.GetType()))
                 foreach (var (key, inDiscard) in Eligible(me, fromDiscard: true, take.Eligible)) counts[key] = counts.GetValueOrDefault(key) + inDiscard;
             if (counts.Count == 0) continue;
             yield return new TakeToHandAction(take.Piles.Count > 1 ? int.MaxValue : count, counts)

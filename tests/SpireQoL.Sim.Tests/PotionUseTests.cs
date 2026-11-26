@@ -176,6 +176,80 @@ public class PotionUseTests
     }
 
     [Fact]
+    public void ACardAPotionMakesJoinsYourHand()
+    {
+        // Attack Potion (decision #335, the card translation's make): CardSelectCmd.FromChooseACardScreen of three random Attacks, then
+        // CardPileCmd.AddGeneratedCardToCombat(the one you pick, Hand): a card made into your hand, its class a pick (unknown), heard once.
+        var state = Fight();
+        state.You.HandCount = 4;
+        var made = new CardEventAction(CardEvent.Generated, Count: 1) { Indirect = true, JoinsHand = true };
+        SimEngine.ApplyPlayTo(state, Potion("AttackPotion", Who.You, made), out var after, out _);
+        var branch = Assert.Single(after);
+        Assert.Equal(5, branch.You.HandCount);
+        Assert.Equal(1, branch.You.Potions);
+        Assert.Null(branch.Unmodelled);
+    }
+
+    [Fact]
+    public void ACardAPotionMakesIntoAFullHandGoesToTheDiscardPile()
+    {
+        var state = Fight();
+        state.You.HandCount = 10;
+        var made = new CardEventAction(CardEvent.Generated, Count: 1) { Indirect = true, JoinsHand = true };
+        SimEngine.ApplyPlayTo(state, Potion("SkillPotion", Who.You, made), out var after, out _);
+        Assert.Equal(10, Assert.Single(after).You.HandCount);
+    }
+
+    [Fact]
+    public void APickOfHowManyToDiscardTakesTheMostAsACardsDoesAndDrawsAsManyAsItDiscarded()
+    {
+        // Gambler's Brew: CardSelectCmd.FromHandForDiscard(0 to any), then CardCmd.DiscardAndDraw(the cards picked, their count): a pick of up to
+        // any is the card translation's (Purity's up to 3): the most it can take, each a Discarded event; then it draws what it discarded (the
+        // cards the take took, read as it runs), so your hand keeps its size.
+        var state = Fight();
+        state.You.HandCount = 2;
+        state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(new SimDrawCard("plain"), 5) } };
+        var play = Potion("GamblersBrew", Who.You,
+            new TakeFromHandAction(HandTakeWay.Pick) { Event = CardEvent.Discarded, Most = 999999999 },
+            new CardEventAction(CardEvent.Drawn, Count: 0) { Indirect = true, JoinsHand = true, CountFrom = SimCount.CardsTaken });
+        SimEngine.ApplyPlayTo(state, play, out var after, out _);
+        var branch = Assert.Single(after);
+        Assert.Equal(2, branch.You.HandCount);
+        Assert.Equal(3, branch.You.Draw!.Count);
+    }
+
+    [Fact]
+    public void AHealThrownAtATeammateHealsThem()
+    {
+        // Blood Potion thrown at a teammate: CreatureCmd.Heal(target, a share of their max HP): their HP, not yours.
+        var state = Fight();
+        state.You.Hp = 30;
+        state.Teammates.Add(new SimPlayer { Hp = 20, MaxHp = 60 });
+        var heal = Potion("BloodPotion", Who.Teammate(teammateIndex: 0), new HealAction(Amount: 12) { Player = Who.Teammate(teammateIndex: 0) });
+        SimEngine.ApplyPlayTo(state, heal, out var after, out _);
+        var branch = Assert.Single(after);
+        Assert.Equal(32, branch.Teammates[0].Hp);
+        Assert.Equal(30, branch.You.Hp);
+    }
+
+    [Fact]
+    public void APowerItsTargetAppliesToThemselvesIsTheirs()
+    {
+        // Duplicator and Focus Potion thrown at a teammate: PowerCmd.Apply(target, amount, applier: target): the teammate applies it, so what
+        // answers a power its holder applies is theirs (ShroudPower.AfterPowerAmountChanged: Doom applied by its owner), never yours.
+        var state = Fight();
+        state.Teammates.Add(new SimPlayer { Hp = 40, MaxHp = 40 });
+        state.You.Powers = state.You.Powers.With(PowerId.Shroud, amount: 2);
+        state.Teammates[0].Powers = state.Teammates[0].Powers.With(PowerId.Shroud, amount: 2);
+        var doom = new ApplyPowerAction(PowerId.Doom, Amount: 3) { To = ApplyPowerAction.Where.Creature, Creature = 0, Debuff = true, Applier = Who.Teammate(teammateIndex: 0) };
+        SimEngine.ApplyPlayTo(state, Potion("PotionOfDoom", target: 0, doom), out var after, out _);
+        var branch = Assert.Single(after);
+        Assert.Equal(3, branch.Enemy(id: 0)!.Powers[PowerId.Doom]);
+        Assert.Equal(2, branch.Teammates[0].Block);
+        Assert.Equal(0, branch.You.Block);
+    }
+
+    [Fact]
     public void APotionPlaysNoCard()
     {
         // Nothing of a card play's runs: your hand keeps its size, no card play is counted.

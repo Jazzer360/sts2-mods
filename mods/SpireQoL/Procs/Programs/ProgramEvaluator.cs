@@ -22,6 +22,18 @@ public sealed record ProgramBoard(CardModel Card, Creature? Target = null, int P
     /// card value and no play (what asks one of them is unknown).
     /// </summary>
     public static ProgramBoard Of(object model) => new(Card: null!) { Self = model };
+
+    /// <summary>
+    /// The board of a model you play or use (decision #335): a card's, or a potion's (its use: "this" is the potion, its values the potion's,
+    /// with no card and no card play).
+    /// </summary>
+    public static ProgramBoard For(AbstractModel model) => model is CardModel card ? new ProgramBoard(card) : Of(model);
+
+    /// <summary>The model whose code is evaluated: the card, or the model that isn't one (a potion, a power); null for neither.</summary>
+    public AbstractModel? Model => (AbstractModel?)Card ?? Self as AbstractModel;
+
+    /// <summary>The values of the card, or of the potion whose use is evaluated; null for any other model.</summary>
+    public DynamicVarSet? Vars => Card?.DynamicVars ?? (Self as PotionModel)?.DynamicVars;
 }
 
 /// <summary>
@@ -109,7 +121,7 @@ public static class ProgramEvaluator
         if (loop.While is { Terms: [[{ Holds: true, Test: QueryValue { Name: "op_LessThan" or "op_LessThanOrEqual", Arguments: [_, var limit] } decimalBound }]] }
             && Number(limit, board, program) is { } decimalMost)
             return Math.Max(0, (int)decimalMost + (decimalBound.Name == "op_LessThanOrEqual" ? 1 : 0));
-        return board.Card.DynamicVars.ContainsKey(loop.Over) ? Sts2Mods.Core.Game.Sts2State.Var(board.Card, loop.Over) : 1;
+        return board.Vars?.ContainsKey(loop.Over) == true ? Sts2Mods.Core.Game.Sts2State.Var(board.Model!, loop.Over) : 1;
     }
 
     /// <summary>
@@ -257,7 +269,7 @@ public static class ProgramEvaluator
     private static object CardNumber(string key, ProgramBoard board)
     {
         // A potion's own value where the model evaluated is a potion (its OnUse: decision #313), else the card's.
-        var vars = board.Card?.DynamicVars ?? (board.Self as PotionModel)?.DynamicVars;
+        var vars = board.Vars;
         if (vars == null || !vars.TryGetValue(key, out var dynamicVar)) return Unknown;
         return dynamicVar is CalculatedVar calculated ? calculated.Calculate(board.Target) : dynamicVar.BaseValue;
     }

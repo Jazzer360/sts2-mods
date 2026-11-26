@@ -121,7 +121,7 @@ public static partial class SimEngine
 
     private static void RunHeal(BranchSet branches, HealAction heal) => branches.Do(branch =>
     {
-        var player = branch.CurrentPlay?.Owner ?? Who.You;
+        var player = heal.Player ?? branch.CurrentPlay?.Owner ?? Who.You;
         if (heal.Osty) HealOsty(branch, player, heal.Amount);
         else Heal(branch, player, heal.Amount);
     });

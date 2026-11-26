@@ -169,7 +169,7 @@ public static class MadeCards
     /// <summary>The players of your side a make in a loop over them makes cards for, as their creator: all of them when you are, else only you.</summary>
     private static int PlayersByYou(Make make, ProgramBoard board, ModelProgram program)
     {
-        if (make.Found?.Loops.LastOrDefault(CardEffects.OverYourSide) is not { Items: { } players } || !StepValues.IsOwner(make.Creator) || board.Card.IsCanonical) return 1;
+        if (make.Found?.Loops.LastOrDefault(CardEffects.OverYourSide) is not { Items: { } players } || !StepValues.IsOwner(make.Creator) || board.Model is not { IsCanonical: false }) return 1;
         return ProgramEvaluator.Items(players, board, program)?.Count ?? 1;
     }
 
@@ -177,12 +177,12 @@ public static class MadeCards
     /// The card's owner has a Sovereign Blade in the fight outside the exhaust pile: a forge makes none then (ForgeCmd.Forge only adds
     /// damage). The game's template card (no owner) has none.
     /// </summary>
-    public static bool HasBlade(CardModel card)
+    public static bool HasBlade(AbstractModel model)
     {
-        if (card.IsCanonical) return false;
+        if (model.IsCanonical || BoardCounts.OwnerOf(model) is not { } owner) return false;
         try
         {
-            return card.Owner.PlayerCombatState?.AllCards.Any(other => other is MegaCrit.Sts2.Core.Models.Cards.SovereignBlade && !other.IsDupe && other.Pile?.Type != PileType.Exhaust) ?? true;
+            return owner.PlayerCombatState?.AllCards.Any(other => other is MegaCrit.Sts2.Core.Models.Cards.SovereignBlade && !other.IsDupe && other.Pile?.Type != PileType.Exhaust) ?? true;
         }
         catch
         {

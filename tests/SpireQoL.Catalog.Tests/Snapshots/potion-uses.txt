@@ -1,56 +1,56 @@
-Ambergris [you]: HealAction { Amount = 500, Osty = False }; ExtraTurnPower 1 on You
-Ambergris [teammate]: ? Ambergris: a heal of a creature other than you; ExtraTurnPower 1 on teammate
-Ashwater [you]: ? Ashwater: a loop the simulator can't count (each of GetResult)
-Ashwater [teammate]: ? Ashwater: a loop the simulator can't count (each of GetResult)
-AttackPotion [you]: ? AttackPotion: a step on what a pick of yours or a roll gives (CardPileCmd.AddGeneratedCardToCombat)
-AttackPotion [teammate]: ? AttackPotion: a step on what a pick of yours or a roll gives (CardPileCmd.AddGeneratedCardToCombat)
+Ambergris [you]: HealAction { Amount = 500, Osty = False, Player =  }; ExtraTurnPower 1 on You
+Ambergris [teammate]: HealAction { Amount = 500, Osty = False, Player = -2 }; ExtraTurnPower 1 on teammate
+Ashwater [you]: ExhaustFromHandAction { Pick = Chosen, Only = None, Except = None, FromDrawPile = False }; TakeFromHandAction { Way = Pick, Event = Exhausted, Made = , EventIfNot = , Most = 999999999, Filter = , Matching = 0, Leaves = True, FromDrawPile = False, EachCard = SpireQoL.Sim.SimAction[] }
+Ashwater [teammate]: ? Ashwater: CardCmd.Exhaust on a teammate's cards: not followed
+AttackPotion [you]: Generated 1
+AttackPotion [teammate]: ? AttackPotion: CardPileCmd.AddGeneratedCardToCombat on a teammate's cards: not followed
 BeetleJuice [enemy]: ShrinkPower 4 on enemy
-BlessingOfTheForge [you]: nothing
-BlessingOfTheForge [teammate]: nothing
+BlessingOfTheForge [you]: ? CardCmd.Upgrade: a card upgraded mid-play: its numbers after it aren't followed
+BlessingOfTheForge [teammate]: ? BlessingOfTheForge: CardCmd.Upgrade on a teammate's cards: not followed
 BlockPotion [you]: block 12 Unpowered to you
 BlockPotion [teammate]: block 12 Unpowered to teammate
-BloodPotion [you]: HealAction { Amount = 200, Osty = False }
-BloodPotion [teammate]: ? BloodPotion: a heal of a creature other than you
+BloodPotion [you]: HealAction { Amount = 200, Osty = False, Player =  }
+BloodPotion [teammate]: HealAction { Amount = 200, Osty = False, Player = -2 }
 BoneBrew [you]: SummonAction { Amount = 15, Player = -1 }
 BoneBrew [teammate]: SummonAction { Amount = 15, Player = -2 }
-BottledPotential [you]: ? CardPileCmd.Add: a use of it the simulator doesn't follow; ? CardPileCmd.Shuffle: a use of it the simulator doesn't follow; Drawn 5
-BottledPotential [teammate]: ? CardPileCmd.Add: a use of it the simulator doesn't follow; ? CardPileCmd.Shuffle: a use of it the simulator doesn't follow
-BottledSong [you]: ? CardPileCmd.AddGeneratedCardsToCombat: a use of it the simulator doesn't follow
-BottledSong [teammate]: ? CardPileCmd.AddGeneratedCardsToCombat: a use of it the simulator doesn't follow
+BottledPotential [you]: TakeFromHandAction { Way = Each, Event = , Made = , EventIfNot = , Most = 1, Filter = , Matching = 0, Leaves = True, FromDrawPile = False, EachCard = SpireQoL.Sim.SimAction[] }; ShuffleDrawPileAction { HandIn = System.Collections.Generic.List`1[SpireQoL.Sim.SimDrawGroup], WhenShorterThan = 0 }; Drawn 5
+BottledPotential [teammate]: ? BottledPotential: CardPileCmd.Add on a teammate's cards: not followed; ? BottledPotential: CardPileCmd.Shuffle on a teammate's cards: not followed
+BottledSong [you]: ? BottledSong: CardPileCmd.AddGeneratedCardsToCombat of a list whose count its code doesn't give
+BottledSong [teammate]: ? BottledSong: CardPileCmd.AddGeneratedCardsToCombat on a teammate's cards: not followed
 Clarity [you]: Drawn 1
 Clarity [teammate]: nothing
-ColorlessPotion [you]: ? ColorlessPotion: a step on what a pick of yours or a roll gives (CardPileCmd.AddGeneratedCardToCombat)
-ColorlessPotion [teammate]: ? ColorlessPotion: a step on what a pick of yours or a roll gives (CardPileCmd.AddGeneratedCardToCombat)
-CosmicConcoction [you]: ? CosmicConcoction: a loop the simulator can't count (each of GetDistinctForCombat)
-CosmicConcoction [teammate]: ? CosmicConcoction: a loop the simulator can't count (each of GetDistinctForCombat)
-CrystallineEuphoria [you]: ? CrystallineEuphoria: a loop the simulator can't count (Cards); ? CardPileCmd.AddGeneratedCardsToCombat: a use of it the simulator doesn't follow; ? CardPileCmd.AddGeneratedCardsToCombat: a use of it the simulator doesn't follow
-CrystallineEuphoria [teammate]: ? CrystallineEuphoria: a loop the simulator can't count (Cards); ? CardPileCmd.AddGeneratedCardsToCombat: a use of it the simulator doesn't follow; ? CardPileCmd.AddGeneratedCardsToCombat: a use of it the simulator doesn't follow
-CunningPotion [you]: ? CardPileCmd.AddGeneratedCardsToCombat: a use of it the simulator doesn't follow; ? CunningPotion: a loop the simulator can't count (each of GetResult)
-CunningPotion [teammate]: ? CardPileCmd.AddGeneratedCardsToCombat: a use of it the simulator doesn't follow; ? CunningPotion: a loop the simulator can't count (each of GetResult)
+ColorlessPotion [you]: Generated 1
+ColorlessPotion [teammate]: ? ColorlessPotion: CardPileCmd.AddGeneratedCardToCombat on a teammate's cards: not followed
+CosmicConcoction [you]: ? CardCmd.Upgrade: a card upgraded mid-play: its numbers after it aren't followed; Generated 3
+CosmicConcoction [teammate]: ? CosmicConcoction: CardCmd.Upgrade on a teammate's cards: not followed; ? CosmicConcoction: CardPileCmd.AddGeneratedCardToCombat on a teammate's cards: not followed
+CrystallineEuphoria [you]: Generated 3; Generated 2147483647
+CrystallineEuphoria [teammate]: ? CrystallineEuphoria: CardPileCmd.AddGeneratedCardsToCombat on a teammate's cards: not followed; ? CrystallineEuphoria: CardPileCmd.AddGeneratedCardsToCombat on a teammate's cards: not followed
+CunningPotion [you]: Generated 3; ? CardCmd.Upgrade: a card upgraded mid-play: its numbers after it aren't followed
+CunningPotion [teammate]: ? CunningPotion: CardPileCmd.AddGeneratedCardsToCombat on a teammate's cards: not followed; ? CunningPotion: CardCmd.Upgrade on a teammate's cards: not followed
 CureAll [you]: EnergyGained 1 for you; Drawn 2
 CureAll [teammate]: EnergyGained 1 for teammate
 DeprecatedPotion [enemy]: nothing
 DexterityPotion [you]: DexterityPower 2 on You
 DexterityPotion [teammate]: DexterityPower 2 on teammate
-DistilledChaos [you]: ? CardPileCmd.AutoPlayFromDrawPile: a use of it the simulator doesn't follow
-DistilledChaos [teammate]: ? CardPileCmd.AutoPlayFromDrawPile: a use of it the simulator doesn't follow
-DropletOfPrecognition [you]: ? DropletOfPrecognition: a step on what a pick of yours or a roll gives (CardPileCmd.Add)
-DropletOfPrecognition [teammate]: ? DropletOfPrecognition: a step on what a pick of yours or a roll gives (CardPileCmd.Add)
+DistilledChaos [you]: AutoPlayFromDrawAction { Count = 3, ForceExhaust = False, Upgrade = False, CountFrom = Given }
+DistilledChaos [teammate]: ? DistilledChaos: CardPileCmd.AutoPlayFromDrawPile on a teammate's cards: not followed
+DropletOfPrecognition [you]: nothing
+DropletOfPrecognition [teammate]: ? DropletOfPrecognition: CardPileCmd.Add on a teammate's cards: not followed
 Duplicator [you]: DuplicationPower 1 on You
-Duplicator [teammate]: ? Duplicator: DuplicationPower applied by someone other than you
+Duplicator [teammate]: DuplicationPower 1 on teammate
 EnergyPotion [you]: EnergyGained 2 for you
 EnergyPotion [teammate]: EnergyGained 2 for teammate
-EntropicBrew [you]: ? EntropicBrew: a loop the simulator can't count (?)
-EntropicBrew [teammate]: ? EntropicBrew: a loop the simulator can't count (?)
-EssenceOfDarkness [you]: nothing
-EssenceOfDarkness [teammate]: nothing
+EntropicBrew [you]: nothing
+EntropicBrew [teammate]: nothing
+EssenceOfDarkness [you]: orb Channel Dark 0 to you
+EssenceOfDarkness [teammate]: orb Channel Dark 0 to teammate
 ExplosiveAmpoule [no one]: damage 10 Unpowered to every enemy
 FairyInABottle: not drunk (Automatic)
 FirePotion [enemy]: damage 20 Unpowered to enemy
 FlexPotion [you]: nothing
 FlexPotion [teammate]: nothing
 FocusPotion [you]: FocusAction { Delta = 2 }
-FocusPotion [teammate]: ? FocusPotion: FocusPower applied by someone other than you
+FocusPotion [teammate]: FocusPower 2 on teammate
 Fortifier [you]: block 0 Unpowered to you
 Fortifier [teammate]: block 0 Unpowered to teammate
 FoulPotion [no one]: ? FoulPotion: damage to a creature the simulator doesn't name (Where(this.Owner.Creature.CombatState.Creatures, c => c.IsPet == 0))
@@ -58,39 +58,39 @@ FruitJuice [you]: ? CreatureCmd.GainMaxHp: max HP gained: not followed
 FruitJuice [teammate]: ? CreatureCmd.GainMaxHp: max HP gained: not followed
 FyshOil [you]: StrengthPower 1 on You; DexterityPower 1 on You
 FyshOil [teammate]: StrengthPower 1 on teammate; DexterityPower 1 on teammate
-GamblersBrew [you]: ? GamblersBrew: CardCmd.DiscardAndDraw on cards a pick or a roll gives
-GamblersBrew [teammate]: ? GamblersBrew: CardCmd.DiscardAndDraw on cards a pick or a roll gives
+GamblersBrew [you]: TakeFromHandAction { Way = Pick, Event = Discarded, Made = , EventIfNot = , Most = 999999999, Filter = , Matching = 0, Leaves = True, FromDrawPile = False, EachCard = SpireQoL.Sim.SimAction[] }; Drawn 0
+GamblersBrew [teammate]: ? GamblersBrew: CardCmd.DiscardAndDraw on a teammate's cards: not followed
 GhostInAJar [you]: IntangiblePower 1 on You
 GhostInAJar [teammate]: IntangiblePower 1 on teammate
 GigantificationPotion [you]: GigantificationPower 1 on You
 GigantificationPotion [teammate]: GigantificationPower 1 on teammate
-GlowwaterPotion [you]: Drawn 10
-GlowwaterPotion [teammate]: nothing
+GlowwaterPotion [you]: ExhaustFromHandAction { Pick = All, Only = None, Except = None, FromDrawPile = False }; TakeFromHandAction { Way = Each, Event = Exhausted, Made = , EventIfNot = , Most = 1, Filter = , Matching = 0, Leaves = True, FromDrawPile = False, EachCard = System.Collections.Generic.List`1[SpireQoL.Sim.SimAction] }; Drawn 10
+GlowwaterPotion [teammate]: ? GlowwaterPotion: CardCmd.Exhaust on a teammate's cards: not followed
 HeartOfIron [you]: PlatingPower 7 on You
 HeartOfIron [teammate]: PlatingPower 7 on teammate
-KingsCourage [you]: ? ForgeCmd.Forge: a use of it the simulator doesn't follow
-KingsCourage [teammate]: ? ForgeCmd.Forge: a use of it the simulator doesn't follow
+KingsCourage [you]: FirstPlayOnly { Actions = SpireQoL.Sim.SimAction[], LaterPlays =  }
+KingsCourage [teammate]: ? KingsCourage: ForgeCmd.Forge on a teammate's cards: not followed
 LiquidBronze [you]: ThornsPower 3 on You
 LiquidBronze [teammate]: ThornsPower 3 on teammate
-LiquidMemories [you]: ? LiquidMemories: a step on what a pick of yours or a roll gives (CardPileCmd.Add)
-LiquidMemories [teammate]: ? LiquidMemories: a step on what a pick of yours or a roll gives (CardPileCmd.Add)
+LiquidMemories [you]: nothing
+LiquidMemories [teammate]: ? LiquidMemories: CardPileCmd.Add on a teammate's cards: not followed
 LuckyTonic [you]: BufferPower 1 on You
 LuckyTonic [teammate]: BufferPower 1 on teammate
 MazalethsGift [you]: RitualPower 1 on You
 MazalethsGift [teammate]: RitualPower 1 on teammate
-OrobicAcid [you]: ? CardPileCmd.AddGeneratedCardsToCombat: a use of it the simulator doesn't follow
-OrobicAcid [teammate]: ? CardPileCmd.AddGeneratedCardsToCombat: a use of it the simulator doesn't follow
+OrobicAcid [you]: ? OrobicAcid: CardPileCmd.AddGeneratedCardsToCombat of a list whose count its code doesn't give
+OrobicAcid [teammate]: ? OrobicAcid: CardPileCmd.AddGeneratedCardsToCombat on a teammate's cards: not followed
 PoisonPotion [enemy]: PoisonPower 6 on enemy
-PotOfGhouls [you]: ? CardPileCmd.AddGeneratedCardsToCombat: a use of it the simulator doesn't follow
-PotOfGhouls [teammate]: ? CardPileCmd.AddGeneratedCardsToCombat: a use of it the simulator doesn't follow
+PotOfGhouls [you]: ? PotOfGhouls: CardPileCmd.AddGeneratedCardsToCombat of a list whose count its code doesn't give
+PotOfGhouls [teammate]: ? PotOfGhouls: CardPileCmd.AddGeneratedCardsToCombat on a teammate's cards: not followed
 PotionOfBinding [no one]: WeakPower 1 on AllEnemies; VulnerablePower 1 on AllEnemies
 PotionOfCapacity [you]: orb Slots Lightning 2 to you
-PotionOfCapacity [teammate]: ? PotionOfCapacity: orb slots for another player, or by an amount the simulator doesn't read
+PotionOfCapacity [teammate]: ? PotionOfCapacity: orb slots for a teammate: not followed
 PotionOfDoom [enemy]: DoomPower 33 on enemy
 PotionShapedRock [enemy]: damage 15 Unpowered to enemy
 PowderedDemise [enemy]: DemisePower 9 on enemy
-PowerPotion [you]: ? PowerPotion: a step on what a pick of yours or a roll gives (CardPileCmd.AddGeneratedCardToCombat)
-PowerPotion [teammate]: ? PowerPotion: a step on what a pick of yours or a roll gives (CardPileCmd.AddGeneratedCardToCombat)
+PowerPotion [you]: Generated 1
+PowerPotion [teammate]: ? PowerPotion: CardPileCmd.AddGeneratedCardToCombat on a teammate's cards: not followed
 PrecisionPotion [you]: AimPower 21 on You
 PrecisionPotion [teammate]: AimPower 21 on teammate
 RadiantTincture [you]: EnergyGained 1 for you; RadiancePower 3 on You
@@ -100,8 +100,8 @@ RegenPotion [teammate]: RegenPower 5 on teammate
 ShacklingPotion [no one]: StrengthPower -7 on AllEnemies
 ShipInABottle [you]: block 10 Unpowered to you
 ShipInABottle [teammate]: block 10 Unpowered to teammate
-SkillPotion [you]: ? SkillPotion: a step on what a pick of yours or a roll gives (CardPileCmd.AddGeneratedCardToCombat)
-SkillPotion [teammate]: ? SkillPotion: a step on what a pick of yours or a roll gives (CardPileCmd.AddGeneratedCardToCombat)
+SkillPotion [you]: Generated 1
+SkillPotion [teammate]: ? SkillPotion: CardPileCmd.AddGeneratedCardToCombat on a teammate's cards: not followed
 SneckoOil [you]: Drawn 7
 SneckoOil [teammate]: nothing
 SoldiersStew [you]: ? SoldiersStew's OnUse isn't read
@@ -111,7 +111,7 @@ SpeedPotion [teammate]: nothing
 StableSerum [you]: nothing
 StableSerum [teammate]: nothing
 StarPotion [you]: StarsGained 1
-StarPotion [teammate]: ? StarPotion: stars for a player other than you
+StarPotion [teammate]: StarsGained 1 for teammate
 StrengthPotion [you]: StrengthPower 2 on You
 StrengthPotion [teammate]: StrengthPower 2 on teammate
 SwiftPotion [you]: Drawn 3

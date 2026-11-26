@@ -192,6 +192,11 @@ public sealed record ApplyPowerAction(PowerId Power, int Amount) : SimAction
     /// PowerCmd.Apply): its amount kept under that player (SimEngine.AimNewCopy). Null: not aimed.
     /// </summary>
     public AimedPlayer? AimedAt { get; init; }
+    /// <summary>
+    /// Who applies it, when it isn't the play's player (decision #335): the player a potion is thrown at applying it to themselves (Duplicator,
+    /// Focus Potion: PowerCmd.Apply's applier the target). Null: the play's player.
+    /// </summary>
+    public int? Applier { get; init; }
 }
 
 /// <summary>
@@ -498,4 +503,6 @@ public sealed record HealAction(int Amount) : SimAction
 {
     /// <summary>The play's player's Osty, not the player.</summary>
     public bool Osty { get; init; }
+    /// <summary>The player healed (a potion thrown at a teammate: decision #335); null: the play's player.</summary>
+    public int? Player { get; init; }
 }

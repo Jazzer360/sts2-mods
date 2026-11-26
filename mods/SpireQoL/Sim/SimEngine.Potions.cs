@@ -18,6 +18,8 @@ public static partial class SimEngine
             var player = branch.MutablePlayer(use.Owner);
             player.Potions = Math.Max(0, player.Potions - 1);
             if (use.Fairy) player.Fairies = Math.Max(0, player.Fairies - 1);
+            // Its own takes and tests (decision #335: its body is the card translation's), as a play's start clears a card play's.
+            branch.PlayTaken = 0; branch.TakeMatching = NamedCounts.Empty; branch.AttackKilled = false; branch.PlayTests = NamedCounts.Empty;
         });
         HookStep(branches, nameof(SimModel.BeforePotionUsed), (model, owner, branch) => model.BeforePotionUsed(branch, owner, use));
         foreach (var action in potionUseAction.Body) Run(branches, action);

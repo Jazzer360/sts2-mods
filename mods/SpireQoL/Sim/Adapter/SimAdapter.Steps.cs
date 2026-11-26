@@ -20,7 +20,8 @@ namespace SpireQoL.Sim;
 /// step on a condition is its action under that condition (decision #190): asked by the simulator as it runs when it's translated, decided
 /// on the board when nothing in the play can change it, and (a gap the card scan lists) unknown where it runs when it isn't translated yet and
 /// the play can change it (decision #311; the board's for a first play that reads it before any command).
-/// Nothing decides on the board whether a step's action exists: its condition does, where the code puts it.
+/// Nothing decides on the board whether a step's action exists: its condition does, where the code puts it. It's the one translator of what
+/// you play or use (decision #335): a card's OnPlay, or a potion's OnUse read as a play (SimAdapter.Potions).
 /// </summary>
 public static partial class SimAdapter
 {
@@ -36,7 +37,7 @@ public static partial class SimAdapter
         ["CreatureCmd.Kill"] = "KillOstyAction (your Osty); KillEachAction (each hittable enemy a power's own question picks: End of Days' DoomPower.DoomKill)",
         ["Hook.AfterDiedToDoom"] = "KillEachAction's tell: the listeners told the list its kill went over (DoomPower.DoomKill, after its foreach)",
         ["OstyCmd.Summon"] = "SummonAction: its amount for the player its second argument names (you, or each player its loop goes over), as OstyCmd.Summon runs (SimEngine.Summon)",
-        ["CreatureCmd.Heal"] = "HealAction: its amount on you or your Osty, up to max HP",
+        ["CreatureCmd.Heal"] = "HealAction: its amount on you, your Osty or the player it's aimed at, up to max HP",
         ["CreatureCmd.SetCurrentHp"] = "ExecuteAction (the target, on its condition)",
         ["CreatureCmd.Stun"] = "StunTargetAction (the target: its next move the stunned move)",
         ["CreatureCmd.LoseBlock"] = "StripBlockAction (the target's block, and its Artifact when the play removes it)",
@@ -59,7 +60,7 @@ public static partial class SimAdapter
         ["CardCmd.Transform"] = "TakeFromHandAction(Generated) in your hand, or a made card in its pile",
         ["CardCmd.TransformTo"] = "the same as Transform",
         ["PlayerCmd.GainEnergy"] = "CardEventAction(EnergyGained) to the player its second argument names; GainEnergyAsHeldAction for your own energy",
-        ["PlayerCmd.GainStars"] = "CardEventAction(StarsGained)",
+        ["PlayerCmd.GainStars"] = "CardEventAction(StarsGained), for the card's owner or the player it's aimed at",
         ["OrbCmd.Channel"] = "OrbAction(Channel) of its orb, into the orbs of the player its argument names",
         ["OrbCmd.EvokeNext"] = "OrbAction(EvokeFront), keeping the orb when its dequeue argument says so; every orb twice (EvokeAllTwice)",
         ["OrbCmd.AddSlots"] = "OrbAction(Slots)",
@@ -103,23 +104,38 @@ public static partial class SimAdapter
         ["PlayerCmd.EndTurn"] = "the turn ended by the card: what follows is the turn's end, which the forecast simulates from the state after the play",
     };
 
-    /// <summary>One play being translated: the card, its board, its program and what the steps have decided so far.</summary>
+    /// <summary>
+    /// One play being translated (decision #335): the model whose code it is (the card played, or the potion used: its OnUse read as a play), its
+    /// board, its program and what the steps have decided so far. What only a card has (its type, its preview's numbers, its replays, its own
+    /// place in your piles) is absent for a potion, answered as the game answers it with no card.
+    /// </summary>
     private sealed class StepPlay
     {
-        public required CardModel Card { get; init; }
+        /// <summary>The card played or the potion used.</summary>
+        public required AbstractModel Model { get; init; }
         public required ModelProgram Program { get; init; }
         public required ProgramBoard Board { get; init; }
         public required Player Me { get; init; }
         public required ICombatState Combat { get; init; }
         public required IReadOnlyDictionary<Creature, int> Ids { get; init; }
         public required SimPlay Play { get; init; }
-        /// <summary>The enemy the card is aimed at (null: none).</summary>
+        /// <summary>The enemy the card or potion is aimed at (null: none).</summary>
         public Creature? Aimed { get; init; }
-        /// <summary>Whose card it is (Who.You, or a teammate's auto-play).</summary>
+        /// <summary>Whose card it is (Who.You, or a teammate's auto-play); a potion's is yours.</summary>
         public int Owner { get; init; }
-        /// <summary>The teammate it's aimed at (null, Who.None: none).</summary>
+        /// <summary>The player it's aimed at (null, Who.None: none): a card's teammate, or the player a potion is used on (you, or a teammate it's thrown at).</summary>
         public Creature? Ally { get; init; }
         public int AllyId { get; init; } = Who.None;
+        /// <summary>The creature the board's play target is (cardPlay.Target): the enemy a card is aimed at, or whomever a potion is used on.</summary>
+        public Creature? BoardTarget { get; init; }
+        /// <summary>The card played; null for a potion's use.</summary>
+        public CardModel? Card => Model as CardModel;
+        /// <summary>Its values (DynamicVars): the card's, or the potion's.</summary>
+        public DynamicVarSet Vars => Card?.DynamicVars ?? ((PotionModel)Model).DynamicVars;
+        /// <summary>Whom it can be aimed at: the card's targeting, or the potion's.</summary>
+        public TargetType TargetType => Card?.TargetType ?? ((PotionModel)Model).TargetType;
+        /// <summary>Its target is a player (a card aimed at a teammate; a potion used on you or a teammate): what lands on its target goes to them.</summary>
+        public bool AimsAtPlayer => TargetType == TargetType.AnyAlly || Card == null && Who.IsPlayer(AllyId);
         /// <summary>The plays the adapter describes (decision #189: one, repeated by the simulator).</summary>
         public int Plays { get; init; } = 1;
         /// <summary>Each command step with everything it runs on (CardEffects.Find).</summary>
@@ -134,8 +150,10 @@ public static partial class SimAdapter
         public List<SimCondition> Asks { get; } = new();
         /// <summary>A spread of the target's debuffs onto the other enemies its code makes (Misery), or null.</summary>
         public DebuffSpread? Spread { get; set; }
-        public Type Type => Card.GetType();
-        public string Name => Card.GetType().Name;
+        public Type Type => Model.GetType();
+        public string Name => Model.GetType().Name;
+        /// <summary>The board as the play's target sees it (cardPlay.Target: BoardTarget).</summary>
+        public ProgramBoard Aiming => Board with { Target = BoardTarget };
     }
 
     /// <summary>The play's body from its program's steps, in its code's order: the asks first, then each step's actions.</summary>
@@ -178,6 +196,10 @@ public static partial class SimAdapter
                     if (actions.Count == 0) break;
                     Guard(command, inner ? command.Condition ?? ProgramCondition.Always : guard ?? play.Found[command].Condition, actions, play, into);
                     break;
+                // Code the reader couldn't follow: what it does is unknown where it runs, never left out.
+                case Procs.Programs.UnknownStep unknown:
+                    into.Add(new NotModelledAction($"{play.Name}: {unknown.Reason}"));
+                    break;
             }
     }
 
@@ -190,7 +212,7 @@ public static partial class SimAdapter
     /// </summary>
     private static void Guard(CommandStep command, ProgramCondition condition, List<SimAction> actions, StepPlay play, List<SimAction> into)
     {
-        var decision = Decide(play.Card, command, condition, play.Board with { Target = play.Aimed }, play.Found.GetValueOrDefault(command));
+        var decision = Decide(play.Model, command, condition, play.Aiming, play.Found.GetValueOrDefault(command));
         switch (decision.Way)
         {
             case StepDecision.Always:
@@ -234,6 +256,14 @@ public static partial class SimAdapter
     /// <summary>A step's condition as the play takes it (its own tests of a roll or a take it acts on left out): how, whether it holds on the board, and the input the play can change.</summary>
     internal sealed record StepDecisionReading(StepDecision Way, ProgramCondition Condition, ConditionReading Reading, bool? Holds = null, string? Input = null);
 
+    /// <summary>Whom a card or a potion can be aimed at (its TargetType).</summary>
+    private static TargetType TargetTypeOf(AbstractModel model) => model switch
+    {
+        CardModel card => card.TargetType,
+        PotionModel potion => potion.TargetType,
+        _ => TargetType.None,
+    };
+
     /// <summary>
     /// How the step's condition is taken (decision #311): asked by the simulator when it's translated; otherwise decided on the board, which only
     /// a test of what the play can't change may be (ConditionReader.ChangeableInput: the card's own values and upgrade, a pick, the fight's
@@ -243,10 +273,10 @@ public static partial class SimAdapter
     /// a test that a count the action reads as it runs is above none (TestsOwnCount: your hand's room, the cards a take took), or that there's
     /// an enemy to hit for an attack that finds its targets among them as it runs (TestsOwnTargets).
     /// </summary>
-    internal static StepDecisionReading Decide(CardModel card, CommandStep command, ProgramCondition condition, ProgramBoard board, CardEffects.Found? found)
+    internal static StepDecisionReading Decide(AbstractModel model, CommandStep command, ProgramCondition condition, ProgramBoard board, CardEffects.Found? found)
     {
-        var type = card.GetType();
-        var reading = PlayConditions.Reading(card, condition);
+        var type = model.GetType();
+        var reading = PlayConditions.Reading(model, condition);
         if (reading.Way is ConditionWay.Decided or ConditionWay.NotRead)
         {
             var take = CardEffects.ExhaustsOfOthers(type).Concat(CardEffects.Discards(type)).Concat(CardEffects.Transforms(type))
@@ -254,8 +284,8 @@ public static partial class SimAdapter
             var takenFrom = command.Values.Concat(found?.Loops.Select(loop => loop.Items).OfType<ProgramValue>() ?? Array.Empty<ProgramValue>()).ToList();
             var counts = CountsReadAsItRuns(type, command);
             var withoutOwn = Without(condition, literal => TestsOwnRoll(literal, command) || TestsOwnTake(literal, takenFrom, take)
-                                                           || TestsOwnCount(literal, counts) || TestsOwnTargets(literal, command, card));
-            if (!ReferenceEquals(withoutOwn, condition)) reading = PlayConditions.Reading(card, condition = withoutOwn);
+                                                           || TestsOwnCount(literal, counts) || TestsOwnTargets(literal, command, TargetTypeOf(model)));
+            if (!ReferenceEquals(withoutOwn, condition)) reading = PlayConditions.Reading(model, condition = withoutOwn);
         }
         var holds = reading.Way switch
         {
@@ -266,7 +296,7 @@ public static partial class SimAdapter
         };
         if (reading.Way == ConditionWay.Always) return new StepDecisionReading(StepDecision.Always, condition, reading);
         if (reading.Way == ConditionWay.Simulated) return new StepDecisionReading(StepDecision.Asked, condition, reading);
-        if (PlayConditions.ChangeableInput(card, command, condition, board) is not { } changeable) return new StepDecisionReading(StepDecision.Fixed, condition, reading, holds);
+        if (PlayConditions.ChangeableInput(model, command, condition, board) is not { } changeable) return new StepDecisionReading(StepDecision.Fixed, condition, reading, holds);
         return new StepDecisionReading(changeable.BeforeAnyCommand ? StepDecision.FirstPlayOnTheBoard : StepDecision.Unknown, condition, reading, holds, changeable.Input);
     }
 
@@ -312,9 +342,9 @@ public static partial class SimAdapter
     /// The test is that there's an enemy to hit (HittableEnemies' Count, Any: Memento Mori's), on an attack whose targets its action finds
     /// among the hittable enemies as it runs (every one, or a random one: ModeOf), which with none hits no one (decision #316).
     /// </summary>
-    private static bool TestsOwnTargets(ConditionLiteral literal, CommandStep command, CardModel card)
+    private static bool TestsOwnTargets(ConditionLiteral literal, CommandStep command, TargetType targeting)
     {
-        if (command.Command.FullName != "DamageCmd.Attack" || ModeOf(command, card) is not (SimPlay.Target.Random or SimPlay.Target.All or SimPlay.Target.LeastHp)) return false;
+        if (command.Command.FullName != "DamageCmd.Attack" || ModeOf(command, targeting) is not (SimPlay.Target.Random or SimPlay.Target.All or SimPlay.Target.LeastHp)) return false;
         var (counted, any) = literal.Test switch
         {
             CompareValue { Op: Comparison.NotEqual or Comparison.Greater, Right: ConstantValue { Value: 0 } } some => (some.Left, literal.Holds),
@@ -341,6 +371,8 @@ public static partial class SimAdapter
         var none = (new List<SimAction>(), (ProgramCondition?)null);
         // A shape of a translated command its translation doesn't follow (a creature other than the one its case reads): unknown where it runs.
         if (ShapeNotFollowed(command, play.Program) is { } shape) return (new List<SimAction> { new NotModelledAction($"{command.Command.FullName}: {shape}") }, null);
+        // A potion thrown at a teammate acting on their cards: their piles aren't simulated (ActsOnCards).
+        if (play.Card == null && Who.TeammateIndex(play.AllyId) >= 0 && ActsOnCards(command)) return (Unknown(play, $"{command.Command.FullName} on a teammate's cards: not followed"), null);
         switch (command.Command.DeclaringType, command.Command.Name)
         {
             case ("DamageCmd", "Attack"):
@@ -396,7 +428,9 @@ public static partial class SimAdapter
             case ("PlayerCmd", "GainEnergy"):
                 return (EnergyFrom(found, play), null);
             case ("PlayerCmd", "GainStars"):
-                return (new List<SimAction> { new CardEventAction(CardEvent.StarsGained, Count: 1) }, null);
+                return (Argument(command, 1) != "cardPlay.Target.Player" ? new List<SimAction> { new CardEventAction(CardEvent.StarsGained, Count: 1) }
+                    // The player it's aimed at (a potion used on you or thrown at a teammate: Star Potion's target.Player); none with no player to aim at.
+                    : Who.IsPlayer(play.AllyId) ? new List<SimAction> { new CardEventAction(CardEvent.StarsGained, Count: 1) { Player = play.AllyId == Who.You ? null : play.AllyId } } : new List<SimAction>(), null);
             case ("OrbCmd", "Channel" or "EvokeNext" or "AddSlots" or "RemoveSlots"):
                 return OrbsFrom(found, play);
             case ("CardCmd", "Exhaust" or "Discard" or "Transform" or "TransformTo"):
@@ -444,7 +478,7 @@ public static partial class SimAdapter
         ["CreatureCmd.SetCurrentHp"] = "the HP of a creature other than the card's target set: not followed",
         ["CreatureCmd.Stun"] = "a creature other than the card's target stunned: not followed",
         ["CreatureCmd.LoseBlock"] = "block taken from a creature other than the card's target: not followed",
-        ["PlayerCmd.GainStars"] = "stars gained by a player other than the card's owner: not followed",
+        ["PlayerCmd.GainStars"] = "stars gained by a player other than the card's owner or its target's player: not followed",
         ["PowerCmd.Remove"] = "a power taken off a creature other than the card's owner (bar the target's Artifact with its block): not followed",
         ["DamageCmd.Attack"] = "an attack aimed at a creature its code picks by an order other than the enemy you can hit with the least HP: not followed",
     };
@@ -460,7 +494,7 @@ public static partial class SimAdapter
             "ArrowCmd.DislodgeArrow" or "CreatureCmd.SetCurrentHp" or "CreatureCmd.Stun" => Argument(command, 0) == "cardPlay.Target",
             "CreatureCmd.Kill" => Argument(command, 0) == "Owner.Osty" || program.All().OfType<LoopStep>().Any(loop => KillsEachItem(loop) && loop.Body.Contains(command)),
             "CreatureCmd.LoseBlock" => Argument(command, 1) == "cardPlay.Target",
-            "PlayerCmd.GainStars" => Argument(command, 1) == "Owner",
+            "PlayerCmd.GainStars" => Argument(command, 1) is "Owner" or "cardPlay.Target.Player",
             "PowerCmd.Remove" => RemovesTargetsArtifact(command, program) || command.Command.GenericArguments.Count == 1 && IsYou(ValueAt(command, 0)),
             // Its Targeting's creature: one its code picks by an order is read only as the least-HP enemy (SimPlay.Target.LeastHp).
             "DamageCmd.Attack" => command.TargetValue is not { } aimedAt || !PicksByOrder(aimedAt) || IsLeastHpEnemy(aimedAt),
@@ -487,7 +521,7 @@ public static partial class SimAdapter
     {
         var told = play.Program.Commands.FirstOrDefault(command => ProgramReader.IsHookTold(command.Command) && command.Values.Any(value => Equals(StepValues.Unstored(value), StepValues.Unstored(loop.Items!))));
         if (told != null) play.Consumed.Add(told);
-        if (DoomedFilter(loop.Items!, play.Card.GetType().Assembly) is not { } filter) return new NotModelledAction($"CreatureCmd.Kill: each of {loop.Items}, a list the simulator doesn't read");
+        if (DoomedFilter(loop.Items!, play.Type.Assembly) is not { } filter) return new NotModelledAction($"CreatureCmd.Kill: each of {loop.Items}, a list the simulator doesn't read");
         if (told != null && told.Command.Name != nameof(HookName.AfterDiedToDoom)) return new NotModelledAction($"{told.Command.FullName}: told by the card, which the simulator doesn't run");
         return new KillEachAction(filter.Power, filter.Question) { TellsDiedToDoom = told != null };
     }
@@ -570,15 +604,19 @@ public static partial class SimAdapter
 
     // ---------------------------------------------------------------- the play's context
 
-    /// <summary>The play's steps found once, the shots' attacks, the takes and the steps another stands for.</summary>
-    private static StepPlay StepPlayOf(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, SimPlay play,
-        Creature? aimed, int owner, Creature? ally, int allyId, int plays)
+    /// <summary>
+    /// The play's steps found once, the shots' attacks, the takes and the steps another stands for: of a card played, or of a potion used (its
+    /// OnUse read as a play, decision #335). <paramref name="boardTarget"/>: the creature its code's target is on the board (a card's enemy; whom a
+    /// potion is used on).
+    /// </summary>
+    private static StepPlay StepPlayOf(AbstractModel model, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, SimPlay play,
+        Creature? aimed, int owner, Creature? ally, int allyId, int plays, Creature? boardTarget)
     {
-        var program = CardPrograms.Of(card.GetType());
+        var program = CardPrograms.Of(model.GetType());
         var stepPlay = new StepPlay
         {
-            Card = card, Program = program, Board = new ProgramBoard(card), Me = me, Combat = combat, Ids = ids, Play = play,
-            Aimed = aimed, Owner = owner, Ally = ally, AllyId = allyId, Plays = plays,
+            Model = model, Program = program, Board = ProgramBoard.For(model), Me = me, Combat = combat, Ids = ids, Play = play,
+            Aimed = aimed, Owner = owner, Ally = ally, AllyId = allyId, Plays = plays, BoardTarget = boardTarget,
             Found = CardEffects.Find(program, _ => true).ToDictionary(found => found.Command, found => found, ReferenceEqualityComparer.Instance as IEqualityComparer<CommandStep>),
         };
         // A shot given an attack (ShootArrowAtTarget(target, owner, the attack's builder, ...)): the attack runs inside it.
@@ -598,7 +636,7 @@ public static partial class SimAdapter
         foreach (var command in program.Commands)
             if (command.Command is { DeclaringType: "PowerCmd", Name: "Apply", GenericArguments: [nameof(StretchPower)] } && command.Values.Count > 2 && ReadsResults(command.Values[2]))
                 stepPlay.Consumed.Add(command);
-        stepPlay.Takes = TakesOf(card, stepPlay);
+        stepPlay.Takes = TakesOf(model, stepPlay);
         stepPlay.Spread = DebuffSpreadOf(program);
         return stepPlay;
     }
@@ -638,7 +676,7 @@ public static partial class SimAdapter
     private static List<int> PlayersOf(CardEffects.Found found, StepPlay play) => PlayersIn(found.Loops.LastOrDefault(OverPlayers)?.Items, play);
 
     private static int Number(StepPlay play, ProgramValue? value, int fallback, Creature? target = null) =>
-        value != null && ProgramEvaluator.Number(value, play.Board with { Target = target ?? play.Aimed }, play.Program) is { } read ? (int)read : fallback;
+        value != null && ProgramEvaluator.Number(value, play.Board with { Target = target ?? play.BoardTarget }, play.Program) is { } read ? (int)read : fallback;
 
     // ---------------------------------------------------------------- attacks and damage
 
@@ -651,8 +689,9 @@ public static partial class SimAdapter
     private static List<SimAction> AttacksFrom(CardEffects.Found found, StepPlay play, bool inShot)
     {
         var command = found.Command;
-        var card = play.Card;
-        var mode = ModeOf(command, card);
+        // A card's attack (DamageCmd.Attack builds from a card): a model that isn't one attacks with none of it to read.
+        if (play.Card is not { } card) return new List<SimAction> { new NotModelledAction($"{play.Name} attacks with no card to attack from ({command.Builder})") };
+        var mode = ModeOf(command, card.TargetType);
         if (mode == SimPlay.Target.None) return new List<SimAction> { new NotModelledAction($"{card.GetType().Name} attacks by a targeting its translation doesn't read ({command.Builder})") };
         var byOsty = command.Builder.Contains("FromOsty");
         var aimed = mode == SimPlay.Target.Single ? play.Aimed : null;
@@ -685,14 +724,14 @@ public static partial class SimAdapter
     /// Mori's MinBy); another creature its code picks by an order isn't read; else a roll's target on a card aimed at a random enemy, or the card's
     /// target); with none of those, or several on different ways (Shiv's every enemy with Fan of Knives), the card's own targeting.
     /// </summary>
-    private static SimPlay.Target ModeOf(CommandStep command, CardModel card)
+    private static SimPlay.Target ModeOf(CommandStep command, TargetType targeting)
     {
         if (command.Builder.Contains("Targeting") && command.TargetValue is { } aimedAt)
         {
             if (IsLeastHpEnemy(aimedAt)) return SimPlay.Target.LeastHp;
             if (PicksByOrder(aimedAt)) return SimPlay.Target.None;
         }
-        var byCard = card.TargetType switch
+        var byCard = targeting switch
         {
             TargetType.AnyEnemy => SimPlay.Target.Single,
             TargetType.AllEnemies => SimPlay.Target.All,
@@ -808,12 +847,12 @@ public static partial class SimAdapter
     /// <summary>
     /// CreatureCmd.Damage: on its owner, the HP the card costs (LoseHpAction, its amount its third argument); on the target, inside a shot,
     /// the shot's hit (Rain Shot: with the splash its next damage gives every other enemy); on the target otherwise, damage that isn't an
-    /// attack (DamageAction: Capture Spirit).
+    /// attack (DamageAction: Capture Spirit). With no card (a potion's), the damage as CreatureCmd.Damage deals it with none (DamageWithoutCard).
     /// </summary>
     private static List<SimAction> DamageFrom(CardEffects.Found found, StepPlay play)
     {
         var command = found.Command;
-        var card = play.Card;
+        if (play.Card is not { } card) return DamageWithoutCard(command, play);
         var whom = ValueAt(command, 1);
         // Its HP cost: the engine lands it with the props every card's code passes (SimEngine.HpCostProps); one that passes others isn't that.
         if (IsYou(whom))
@@ -840,6 +879,91 @@ public static partial class SimAdapter
         };
     }
 
+    /// <summary>
+    /// CreatureCmd.Damage with no card (a potion's use: decision #313): to the enemy it names, or to every hittable enemy (a list given whole), its
+    /// amount and props the damage value given whole or the amount and props its code passes, dealt by you, through the game's damage math with no
+    /// card. Anything else (another dealer, a creature it doesn't name) is unknown where it runs.
+    /// </summary>
+    private static List<SimAction> DamageWithoutCard(CommandStep command, StepPlay play)
+    {
+        var whom = ValueAt(command, 1);
+        var (amount, props) = DamageOf(command, play);
+        if (amount == null || props == null) return Unknown(play, "damage by an amount the simulator doesn't read");
+        // The dealer: the potion's owner (its creature), as every potion's code gives it.
+        if (DealerOf(command, play) != Who.You) return Unknown(play, "damage dealt by someone other than you");
+        var valueProp = (ValueProp)(int)props.Value;
+        if (IsEveryEnemy(whom))
+        {
+            var captured = new Dictionary<int, CapturedTerms>();
+            foreach (var (enemy, id) in play.Ids)
+                if (enemy.IsAlive) captured[id] = SimReaders.Damage(play.Me.RunState, play.Combat, card: null, play.Me.Creature, enemy, amount.Value, valueProp);
+            return new List<SimAction> { new DamageAction(new DamageSpec(amount.Value, SimReaders.Props(valueProp)) { Captured = captured }) { EveryEnemy = true } };
+        }
+        if (OnBoard(play, whom) is not Creature target || IdOf(target, play) is not { } targetId || !Who.IsEnemy(targetId))
+            return Unknown(play, $"damage to a creature the simulator doesn't name ({whom})");
+        return new List<SimAction>
+        {
+            new DamageAction(new DamageSpec(amount.Value, SimReaders.Props(valueProp))
+                { Captured = new Dictionary<int, CapturedTerms> { [targetId] = SimReaders.Damage(play.Me.RunState, play.Combat, card: null, play.Me.Creature, target, amount.Value, valueProp) } }) { TargetId = targetId },
+        };
+    }
+
+    /// <summary>A damage command's amount and props: a damage value given whole (its BaseValue and Props), or an amount and the props after it.</summary>
+    private static (decimal? Amount, decimal? Props) DamageOf(CommandStep command, StepPlay play)
+    {
+        if (OnBoard(play, ValueAt(command, 2)) is DynamicVar dynamicVar) return (dynamicVar.BaseValue, (int)PropsOf(dynamicVar));
+        var amount = NumberOnBoard(play, ValueAt(command, 2));
+        var props = OnBoard(play, ValueAt(command, 3)) switch
+        {
+            ValueProp valueProp => (decimal?)(int)valueProp,
+            decimal number => number,
+            _ => null,
+        };
+        return (amount, props);
+    }
+
+    /// <summary>A damage or block value's props (DamageVar, BlockVar: their Props), Move for any other.</summary>
+    private static ValueProp PropsOf(DynamicVar dynamicVar) => dynamicVar switch
+    {
+        DamageVar damage => damage.Props,
+        BlockVar block => block.Props,
+        _ => ValueProp.Move,
+    };
+
+    /// <summary>The damage's dealer (the creature argument after its amount and props, or after a value given whole), as the simulator names it.</summary>
+    private static int? DealerOf(CommandStep command, StepPlay play) =>
+        IdOf(OnBoard(play, ValueAt(command, OnBoard(play, ValueAt(command, 2)) is DynamicVar ? 3 : 4)), play);
+
+    /// <summary>A value on the board as the play's target sees it (a number as a decimal, a creature, a value object); null when it can't be told.</summary>
+    private static object? OnBoard(StepPlay play, ProgramValue? value) => value == null ? null : ProgramEvaluator.Value(value, play.Aiming, play.Program);
+
+    /// <summary>A number on the board as the play's target sees it (a value object's BaseValue); null when it can't be told.</summary>
+    private static decimal? NumberOnBoard(StepPlay play, ProgramValue? value) => OnBoard(play, value) switch
+    {
+        decimal number => number,
+        int number => number,
+        DynamicVar dynamicVar => dynamicVar.BaseValue,
+        _ => null,
+    };
+
+    /// <summary>The simulator's id for a creature or a player (an enemy's id, you, a teammate); null for any other.</summary>
+    private static int? IdOf(object? who, StepPlay play)
+    {
+        var creature = who switch
+        {
+            Creature direct => direct,
+            Player player => player.Creature,
+            _ => null,
+        };
+        if (creature == null) return null;
+        if (ReferenceEquals(creature, play.Me.Creature)) return Who.You;
+        if (play.Ids.TryGetValue(creature, out var enemyId)) return enemyId;
+        var index = Teammates(play.Me, play.Combat).FindIndex(mate => ReferenceEquals(mate.Creature, creature));
+        return index >= 0 ? Who.Teammate(index) : null;
+    }
+
+    private static List<SimAction> Unknown(StepPlay play, string why) => new() { new NotModelledAction($"{play.Name}: {why}") };
+
     /// <summary>The step runs inside a shot's delegate (ArrowCmd.ImpaleTarget's or ShootArrowAtTarget's), only with an arrow.</summary>
     private static bool InsideShot(CommandStep command, StepPlay play) =>
         play.Program.Commands.Any(other => other.Command.DeclaringType == "ArrowCmd" && other.Inner.Contains(command));
@@ -849,7 +973,7 @@ public static partial class SimAdapter
     {
         foreach (var literal in found.Condition.Literals)
             if (literal is { Holds: true, Test: CompareValue { Op: Comparison.LessOrEqual, Left: QueryValue { Name: "CurrentHp" }, Right: var threshold } })
-                return Number(play, threshold, Sts2State.Var(play.Card, "Threshold"));
+                return Number(play, threshold, Sts2State.Var(play.Model, "Threshold"));
         return int.MaxValue;
     }
 
@@ -863,7 +987,6 @@ public static partial class SimAdapter
     private static List<SimAction> BlocksFrom(CardEffects.Found found, StepPlay play, int? times)
     {
         var command = found.Command;
-        var card = play.Card;
         var gainer = ValueAt(command, 0);
         var gains = times ?? RoundsOf(found, play, loop => IsEach(gainer) && OverPlayers(loop));
         if (gains <= 0) return new List<SimAction>();
@@ -884,12 +1007,12 @@ public static partial class SimAdapter
         if (toTarget && play.AllyId != Who.None && play.Ally != null)
             return BlockFor(found, play, gains, play.AllyId, play.Ally) is { } allyBlock ? new List<SimAction> { allyBlock } : new List<SimAction>();
         // Block to anyone else (an enemy, a creature its code picks): unknown where it runs, never left out.
-        return toTarget ? new List<SimAction>() : new List<SimAction> { new NotModelledAction($"{card.GetType().Name} gives block to a creature its translation doesn't name ({gainer})") };
+        return toTarget ? new List<SimAction>() : new List<SimAction> { new NotModelledAction($"{play.Name} gives block to a creature its translation doesn't name ({gainer})") };
     }
 
-    private static GainBlockAction? BlockFor(CardEffects.Found found, StepPlay play, int gains, int to, Creature gainer)
+    private static SimAction? BlockFor(CardEffects.Found found, StepPlay play, int gains, int to, Creature gainer)
     {
-        var card = play.Card;
+        if (play.Card is not { } card) return BlockWithoutCard(found.Command, play, gains, to, gainer);
         var combat = play.Combat;
         var me = play.Me;
         // What its amount reads as it runs, from its code (CardEffects.BlockBaseOf), through the block pipeline with the props its code gives.
@@ -931,6 +1054,21 @@ public static partial class SimAdapter
         };
     }
 
+    /// <summary>
+    /// A block gain with no card (a potion's use: decision #313): its amount a block value given whole (its BaseValue and Props) or a number on the
+    /// board with the props after it, through the game's block math with no card; unknown where it runs when the amount can't be read.
+    /// </summary>
+    private static SimAction BlockWithoutCard(CommandStep command, StepPlay play, int gains, int to, Creature gainer)
+    {
+        decimal amount;
+        ValueProp props;
+        if (OnBoard(play, ValueAt(command, 1)) is DynamicVar dynamicVar) (amount, props) = (dynamicVar.BaseValue, PropsOf(dynamicVar));
+        else if (NumberOnBoard(play, ValueAt(command, 1)) is { } number && OnBoard(play, ValueAt(command, 2)) is ValueProp or decimal)
+            (amount, props) = (number, OnBoard(play, ValueAt(command, 2)) is ValueProp given ? given : (ValueProp)(int)(decimal)OnBoard(play, ValueAt(command, 2))!);
+        else return new NotModelledAction($"{play.Name}: block by an amount the simulator doesn't read");
+        return new GainBlockAction(gains, amount, SimReaders.Props(props)) { To = to, Captured = SimReaders.Block(play.Combat, card: null, gainer, amount, props) };
+    }
+
     /// <summary>The props a block gain's code gives it (its third argument: a constant, or a card value's Props); Move when it can't be read.</summary>
     private static ValueProp BlockPropsOf(CommandStep gain, CardModel card) => ValueAt(gain, 2) switch
     {
@@ -952,18 +1090,29 @@ public static partial class SimAdapter
     private static List<SimAction> PowersFrom(CardEffects.Found found, StepPlay play)
     {
         var command = found.Command;
-        var card = play.Card;
-        if (command.Command.GenericArguments is not [var powerName] || PowerType(card.GetType(), powerName) is not { } type)
-            return new List<SimAction> { new NotModelledAction($"{card.GetType().Name} applies a power its translation can't name ({(command.Command.GenericArguments.Count > 0 ? command.Command.GenericArguments[0] : ValueAt(command, 1)?.ToString())})") };
+        if (command.Command.GenericArguments is not [var powerName] || PowerType(play.Type, powerName) is not { } type)
+            return new List<SimAction> { new NotModelledAction($"{play.Name} applies a power its translation can't name ({(command.Command.GenericArguments.Count > 0 ? command.Command.GenericArguments[0] : ValueAt(command, 1)?.ToString())})") };
         var whom = ValueAt(command, 1);
-        var amount = ValueAt(command, 2) is { } given && ProgramEvaluator.Number(given, play.Board with { Target = play.Aimed }, play.Program) is { } read ? (int?)read : null;
+        var amount = ValueAt(command, 2) is { } given && ProgramEvaluator.Number(given, play.Aiming, play.Program) is { } read ? (int?)read : null;
+        // Who applies it (its fourth argument): you, or the player it lands on applying it to themselves (Duplicator, Focus Potion thrown at a
+        // teammate: the target its own applier); anyone else isn't followed.
+        int? appliedBy = null;
+        if (ValueAt(command, 3) is var applier && !IsYou(applier))
+        {
+            if (!(IsTarget(applier) && IsTarget(whom) && play.AimsAtPlayer))
+                return new List<SimAction> { new NotModelledAction($"{play.Name} applies {powerName} by a creature its translation doesn't name ({applier})") };
+            if (play.AllyId != Who.You) appliedBy = play.AllyId;
+        }
         // Whom it lands on: (where, which creature) for each.
         var targets = new List<(ApplyPowerAction.Where To, int Creature)>();
         var times = 1;
         if (IsYou(whom)) targets.Add((ApplyPowerAction.Where.You, 0));
         else if (IsTarget(whom))
         {
-            if (card.TargetType != TargetType.AnyAlly) targets.Add((ApplyPowerAction.Where.Target, 0));
+            // A potion's target (no card play to aim at): the enemy, you or the teammate it's used on, by name.
+            if (play.Card == null && play.Aimed != null && play.Ids.TryGetValue(play.Aimed, out var enemyId)) targets.Add((ApplyPowerAction.Where.Creature, enemyId));
+            else if (play.Card == null && play.AllyId == Who.You) targets.Add((ApplyPowerAction.Where.You, 0));
+            else if (!play.AimsAtPlayer) targets.Add((ApplyPowerAction.Where.Target, 0));
             else if (play.AllyId != Who.None) targets.Add((ApplyPowerAction.Where.Creature, play.AllyId));
         }
         else if (IsEveryEnemy(whom) || IsEach(whom) && found.Loops.Any(OverEnemies)) targets.Add((ApplyPowerAction.Where.AllEnemies, 0));
@@ -979,12 +1128,16 @@ public static partial class SimAdapter
         // On anyone else (a creature its code picks other than these): unknown where it runs, never left out, when the power is one the
         // simulator reads (one it doesn't changes nothing it predicts on anyone: PowerTo's rule).
         else if (Simulated(SimPowerName(type)) || SimReaders.IsDebuffType(type) || type == typeof(StrengthPower) || typeof(TemporaryStrengthPower).IsAssignableFrom(type) || FocusSignOf(type) != 0)
-            return new List<SimAction> { new NotModelledAction($"{card.GetType().Name} applies {powerName} to a creature its translation doesn't name ({whom})") };
+            return new List<SimAction> { new NotModelledAction($"{play.Name} applies {powerName} to a creature its translation doesn't name ({whom})") };
         var actions = new List<SimAction>();
         var aimedAt = AimSetOn(command, play, type);
         foreach (var (to, creature) in targets)
-            if (PowerTo(found, play, type, powerName, amount, to, creature, times) is { } action)
-                actions.Add(aimedAt is { } aim && action is ApplyPowerAction applied ? applied with { AimedAt = aim } : action);
+        {
+            if (PowerTo(found, play, type, powerName, amount, to, creature, times) is not { } action) continue;
+            if (action is ApplyPowerAction applied)
+                action = applied with { AimedAt = aimedAt ?? applied.AimedAt, Applier = appliedBy ?? applied.Applier };
+            actions.Add(action);
+        }
         return actions;
     }
 
@@ -1017,7 +1170,7 @@ public static partial class SimAdapter
         var command = found.Command;
         var notFollowed = new NotModelledAction($"{play.Name}: PowerCmd.ModifyAmount of a power its translation can't find ({ValueAt(command, 1)})");
         if (ValueAt(command, 1) is not { } instance || ConditionReader.AimedCopyOf(instance) is not { } copy) return notFollowed;
-        if (ValueAt(command, 2) is not { } offset || ProgramEvaluator.Number(offset, play.Board with { Target = play.Aimed }, play.Program) is not { } amount)
+        if (ValueAt(command, 2) is not { } offset || ProgramEvaluator.Number(offset, play.Aiming, play.Program) is not { } amount)
             return new NotModelledAction($"{PowerAmountUnread} ({copy.Power.Name}: {ValueAt(command, 2)})");
         var applier = ValueAt(command, 3);
         var byHolder = copy.Holder == AimHolder.FirstEnemyWithPower && applier != null && ConditionReader.FirstEnemyWith(applier) == copy.HolderPower?.Name;
@@ -1033,23 +1186,22 @@ public static partial class SimAdapter
     private static SimAction? PowerTo(CardEffects.Found found, StepPlay play, Type type, string powerName, int? read, ApplyPowerAction.Where to, int creature, int times)
     {
         var command = found.Command;
-        var card = play.Card;
         var unread = new NotModelledAction($"{PowerAmountUnread} ({powerName}: {ValueAt(command, 2)})");
         var amount = read ?? 0;
         var simPowerName = SimPowerName(type);
-        var toEnemies = to is ApplyPowerAction.Where.Target or ApplyPowerAction.Where.AllEnemies or ApplyPowerAction.Where.RandomEnemy;
+        var toEnemies = to is ApplyPowerAction.Where.Target or ApplyPowerAction.Where.AllEnemies or ApplyPowerAction.Where.RandomEnemy || to == ApplyPowerAction.Where.Creature && Who.IsEnemy(creature);
         if (toEnemies && (type == typeof(StrengthPower) || typeof(TemporaryStrengthPower).IsAssignableFrom(type)))
         {
             if (read == null) return unread;
             var sign = typeof(TemporaryStrengthPower).IsAssignableFrom(type) && SimReaders.IsDebuffType(type) ? -1 : 1;
-            return new ApplyPowerAction(PowerId.Strength, sign * amount) { To = to, Debuff = sign * amount < 0 };
+            return new ApplyPowerAction(PowerId.Strength, sign * amount) { To = to, Creature = creature, Debuff = sign * amount < 0 };
         }
         if (to == ApplyPowerAction.Where.You && FocusSignOf(type) is var focusSign && focusSign != 0)
             return read == null ? unread : amount != 0 ? new FocusAction(focusSign * amount) : null;
         var simulated = Simulated(simPowerName);
         var debuff = SimReaders.IsDebuffType(type);
         if (debuff ? !toEnemies && !simulated : !simulated) return null;
-        if (simPowerName == nameof(StretchPower) && to == ApplyPowerAction.Where.You && CardEffects.KeepsStretchForReplays(card.GetType()))
+        if (simPowerName == nameof(StretchPower) && to == ApplyPowerAction.Where.You && CardEffects.KeepsStretchForReplays(play.Type))
             return new ApplyPowerAction(new PowerId(simPowerName), Amount: 0) { To = to, CopiesOwn = true };
         var amountOf = command.Values.Count > 2 ? ConditionReader.TargetPowerAmountOf(command.Values[2]) : null;
         var fromAttack = AttackDealtTo(command, play, to);
@@ -1181,7 +1333,7 @@ public static partial class SimAdapter
         if (ValueAt(command, 2) is not { } amount || !CardEffects.ReadsAttackResults(amount)) return false;
         if (amount.Parts().Any(part => part is QueryValue { Name: "OverkillDamage" })) return true;
         var attack = play.Program.Commands.TakeWhile(step => !ReferenceEquals(step, command)).LastOrDefault(step => step.Command is { DeclaringType: "DamageCmd", Name: "Attack" });
-        return to == ApplyPowerAction.Where.Target && attack != null && ModeOf(attack, play.Card) == SimPlay.Target.Single;
+        return to == ApplyPowerAction.Where.Target && attack != null && ModeOf(attack, play.TargetType) == SimPlay.Target.Single;
     }
 
     /// <summary>Focus a power gives (+1) or takes (-1): FocusPower, or a temporary Focus power (its IsPositive: Hyperbeam's is negative); 0 for any other.</summary>
@@ -1214,9 +1366,11 @@ public static partial class SimAdapter
         var actions = new List<SimAction>();
         var forEach = command.Values.Any(IsEach) && found.Loops.Any(OverPlayers);
         var players = forEach ? PlayersOf(found, play) : null;
-        var yours = CardEffects.DrawsForYou(play.Type).FirstOrDefault(draw => ReferenceEquals(draw.Command, command));
+        var yours = CardEffects.DrawsForYou(play.Type).FirstOrDefault(draw => ReferenceEquals(draw.Command, command))
+            // A draw for the play's target's player when that's you (a potion you drink: Swift Potion's target.Player): yours.
+            ?? (play.AllyId == Who.You && IsTarget(ValueAt(command, 2)) ? new CardEffects.DrawForYou(command, found.Condition, found.Loops.Where(loop => !OverPlayers(loop)).ToList()) : null);
         if (yours != null && (players == null || players.Contains(Who.You))) actions.AddRange(YourDraws(yours, play));
-        var cards = Number(play, ValueAt(command, 1), Sts2State.Var(play.Card, "Cards"));
+        var cards = Number(play, ValueAt(command, 1), Sts2State.Var(play.Model, "Cards"));
         var mates = Teammates(play.Me, play.Combat);
         for (var teammateIndex = 0; teammateIndex < mates.Count; teammateIndex++)
         {
@@ -1242,11 +1396,20 @@ public static partial class SimAdapter
         if (drawn > 0) yield return new CardEventAction(CardEvent.Drawn, drawn) { Player = who, Indirect = true };
     }
 
+    /// <summary>
+    /// The draws of a CardCmd.DiscardAndDraw count the cards it discards (its count the Count of its own cards argument: Gambler's Brew's
+    /// DiscardAndDraw(list, list.Count)): what its take took, read as it runs.
+    /// </summary>
+    private static bool CountsItsOwnCards(CardEffects.DrawForYou draw) =>
+        draw.Command.Command.Name == "DiscardAndDraw" && ValueAt(draw.Command, 1) is { } discarded
+        && Unstored(draw.Count) is QueryValue { Name: "Count" } count && (count.Of ?? (count.Arguments.Count > 0 ? count.Arguments[0] : null)) is { } counted && Unstored(counted).ToString() == discarded.ToString();
+
     /// <summary>One draw of yours: a count of the cards the play took (Calculated Gamble) or of your hand's room (Scrawl) read as it runs; else its own count.</summary>
     private static IEnumerable<SimAction> YourDraws(CardEffects.DrawForYou draw, StepPlay play)
     {
         var takes = CardEffects.ExhaustsOfOthers(play.Type).Concat(CardEffects.Discards(play.Type)).ToList();
-        if (takes.Any(take => CardEffects.CountsTaken(draw.Count, take)))
+        // Or the cards it discards itself (CardCmd.DiscardAndDraw(cards, cards.Count): Gambler's Brew's pick).
+        if (takes.Any(take => CardEffects.CountsTaken(draw.Count, take)) || CountsItsOwnCards(draw))
         {
             yield return new CardEventAction(CardEvent.Drawn, Count: 0) { Indirect = true, JoinsHand = true, CountFrom = SimCount.CardsTaken };
             yield break;
@@ -1256,7 +1419,7 @@ public static partial class SimAdapter
             yield return new CardEventAction(CardEvent.Drawn, int.MaxValue) { Indirect = true, JoinsHand = true, CountFrom = SimCount.HandRoom };
             yield break;
         }
-        var drawn = BoardCounts.DrawCount(play.Card, draw);
+        var drawn = BoardCounts.DrawCount(play.Model, draw);
         if (drawn > 0) yield return new CardEventAction(CardEvent.Drawn, drawn) { Indirect = true, JoinsHand = true };
     }
 
@@ -1269,12 +1432,12 @@ public static partial class SimAdapter
         var command = found.Command;
         var amountValue = ValueAt(command, 0);
         if (amountValue is QueryValue { Name: "Energy", Of: QueryValue { Name: "PlayerCombatState" } }) return new List<SimAction> { new GainEnergyAsHeldAction() };
-        var amount = Number(play, amountValue, Sts2State.Var(play.Card, "Energy")) * RoundsOf(found, play, OverPlayers);
+        var amount = Number(play, amountValue, Sts2State.Var(play.Model, "Energy")) * RoundsOf(found, play, OverPlayers);
         if (amount <= 0) return new List<SimAction>();
         var whom = ValueAt(command, 1);
         CardEventAction Gain(int to) => new(CardEvent.EnergyGained, amount) { Player = to };
         if (IsOwnerPlayer(whom)) return new List<SimAction> { Gain(play.Owner) };
-        if (IsTarget(whom)) return Who.KindOf(play.AllyId) == CreatureKind.Teammate ? new List<SimAction> { Gain(play.AllyId) } : new List<SimAction>();
+        if (IsTarget(whom)) return Who.IsPlayer(play.AllyId) ? new List<SimAction> { Gain(play.AllyId) } : new List<SimAction>();
         if (!IsEach(whom) || !found.Loops.Any(OverPlayers)) return new List<SimAction> { new NotModelledAction($"{play.Name} gives energy to a player its translation doesn't name ({whom})") };
         // Teammates are numbered from your side: a teammate's own card (Howl from Beyond) giving you energy isn't followed (it'd need their
         // numbering of the players).
@@ -1292,13 +1455,19 @@ public static partial class SimAdapter
     private static List<SimAction> SummonsFrom(CardEffects.Found found, StepPlay play)
     {
         var command = found.Command;
-        var amount = Number(play, ValueAt(command, 2), Sts2State.Var(play.Card, "Summon"));
+        var amount = Number(play, ValueAt(command, 2), Sts2State.Var(play.Model, "Summon"));
         var summoner = ValueAt(command, 1);
         var overPlayers = IsEach(summoner) ? found.Loops.LastOrDefault(loop => OverPlayers(loop) || OverPlayerCreatures(loop)) : null;
         var rounds = RoundsOf(found, play, loop => ReferenceEquals(loop, overPlayers));
         var actions = new List<SimAction>();
         if (IsOwnerPlayer(summoner))
             for (var round = 0; round < rounds; round++) actions.Add(new SummonAction(amount));
+        // The player it's aimed at (a potion used on you or thrown at a teammate: Bone Brew's target.Player); none with no player to aim at.
+        else if (IsTarget(summoner))
+        {
+            if (Who.IsPlayer(play.AllyId))
+                for (var round = 0; round < rounds; round++) actions.Add(new SummonAction(amount) { Player = play.AllyId });
+        }
         else if (overPlayers != null)
             foreach (var player in PlayersIn(overPlayers.Items, play).Where(player => player == Who.You || play.Owner == Who.You))
                 for (var round = 0; round < rounds; round++) actions.Add(new SummonAction(amount) { Player = player == Who.You ? play.Owner : player });
@@ -1309,13 +1478,18 @@ public static partial class SimAdapter
     /// <summary>The loop goes over the fight's players (CombatState.PlayerCreatures, its own filter applied: Legion of Bone's living ones).</summary>
     private static bool OverPlayerCreatures(LoopStep loop) => loop.Items?.Parts().Any(part => part is QueryValue { Name: "PlayerCreatures" }) == true;
 
-    /// <summary>CreatureCmd.Heal(creature, amount): its amount on you (base.Owner.Creature: Not Yet) or your Osty (base.Owner.Osty: Spur).</summary>
+    /// <summary>
+    /// CreatureCmd.Heal(creature, amount): its amount on you (base.Owner.Creature: Not Yet), your Osty (base.Owner.Osty: Spur), or the player it's
+    /// aimed at (a potion used on you or thrown at a teammate: Blood Potion's share of their max HP).
+    /// </summary>
     private static List<SimAction> HealsFrom(CardEffects.Found found, StepPlay play)
     {
         var command = found.Command;
-        var amount = Number(play, ValueAt(command, 1), Sts2State.Var(play.Card, "Heal"));
+        var amount = Number(play, ValueAt(command, 1), Sts2State.Var(play.Model, "Heal"));
         if (IsYou(ValueAt(command, 0))) return new List<SimAction> { new HealAction(amount) };
         if (Argument(command, 0) == "Owner.Osty") return new List<SimAction> { new HealAction(amount) { Osty = true } };
+        if (IsTarget(ValueAt(command, 0)) && play.AimsAtPlayer)
+            return Who.IsPlayer(play.AllyId) ? new List<SimAction> { new HealAction(amount) { Player = play.AllyId == Who.You ? null : play.AllyId } } : new List<SimAction>();
         return new List<SimAction> { new NotModelledAction($"{play.Name} heals a creature its translation doesn't name ({ValueAt(command, 0)})") };
     }
 
@@ -1340,7 +1514,7 @@ public static partial class SimAdapter
                 if (to == Who.None) return none;
                 var times = RoundsOf(found, play);
                 // A loop whose bound is a calculated value on the fight's log (Voltaic's Lightning channeled this fight) follows the ledger.
-                var logged = found.Loops.Select(LoopBoundKey).OfType<string>().Select(key => HistoryLedger.LoggedOf(play.Card, key, play.Combat)).FirstOrDefault(amount => amount != null);
+                var logged = found.Loops.Select(LoopBoundKey).OfType<string>().Select(key => (play.Card is { } card ? HistoryLedger.LoggedOf(card, key, play.Combat) : null)).FirstOrDefault(amount => amount != null);
                 return times > 0 || logged != null ? (new List<SimAction> { new OrbAction(OrbAction.Op.Channel) { Orb = kind, Times = times, To = to, TimesLogged = logged } }, null) : none;
             }
             case "EvokeNext":
@@ -1359,6 +1533,9 @@ public static partial class SimAdapter
             }
             case "AddSlots" or "RemoveSlots":
             {
+                // Slots for the player it's aimed at (Potion of Capacity's target.Player): yours when that's you; a teammate's orb slots aren't followed.
+                if (IsTarget(ValueAt(command, 0)) && play.AllyId != Who.You)
+                    return Who.IsPlayer(play.AllyId) ? (Unknown(play, "orb slots for a teammate: not followed"), null) : none;
                 var slots = (command.Command.Name == "RemoveSlots" ? -1 : 1) * Number(play, ValueAt(command, 1), fallback: 1) * RoundsOf(found, play);
                 return slots != 0 ? (new List<SimAction> { new OrbAction(OrbAction.Op.Slots) { Slots = slots } }, null) : none;
             }
@@ -1375,17 +1552,16 @@ public static partial class SimAdapter
         var actions = play.Takes.TryGetValue(command, out var taken) ? new List<SimAction>(taken) : new List<SimAction>();
         var take = CardEffects.ExhaustsOfOthers(play.Type).Concat(CardEffects.Discards(play.Type)).Concat(CardEffects.Transforms(play.Type))
             .FirstOrDefault(candidate => ReferenceEquals(candidate.Command, command));
-        var card = play.Card;
         // The cards it discards that aren't in your hand: the ones it looked at on top of your draw pile (Ki Chant), on the board.
-        if (take is { Way: CardEffects.TakeWay.LookedAt } && command.Command.Name == "Discard" && BoardCounts.DiscardedOutsideHand(card) is > 0 and var looked)
+        if (take is { Way: CardEffects.TakeWay.LookedAt } && command.Command.Name == "Discard" && BoardCounts.DiscardedOutsideHand(play.Model) is > 0 and var looked)
             actions.Add(new CardEventAction(CardEvent.Discarded, looked) { Indirect = true });
         // Transformed outside your hand (Charge, Seance: your draw pile): a created card each, in place; none certain when you choose how many.
         if (take is { PickPile: not (null or PileType.Hand) } && command.Command.Name.StartsWith("Transform", StringComparison.Ordinal) && !take.ChoosesHowMany
-            && BoardCounts.TransformsOutsideHand(card) is > 0 and var transformed)
+            && BoardCounts.TransformsOutsideHand(play.Model) is > 0 and var transformed)
             actions.Add(new CardEventAction(CardEvent.Generated, transformed) { Indirect = true, Card = MadeSimCard(MadeCards.TransformedInto(command, play.Program)) });
         // A Sly card it discards without a choice (the whole hand: CardCmd.Discard's AutoPlay) plays itself: not simulated yet (tracker). One
         // you pick is a card, never a particular one (decision #188).
-        if (take is { Way: CardEffects.TakeWay.Each } && command.Command.Name is "Discard" or "DiscardAndDraw" && BoardCounts.DiscardsSlyWithoutPick(play.Card))
+        if (take is { Way: CardEffects.TakeWay.Each } && command.Command.Name is "Discard" or "DiscardAndDraw" && BoardCounts.DiscardsSlyWithoutPick(play.Model))
             actions.Add(new NotModelledAction("a Sly card in your hand it discards plays itself"));
         return (actions, take?.PlayTest ?? found.Condition);
     }
@@ -1399,15 +1575,15 @@ public static partial class SimAdapter
     /// every pile's. A loop's other commands run after each card (Second Wind's block). The exhausts' first is after the pick of what acts
     /// when exhausted (ExhaustFromHandAction: Drum of Battle).
     /// </summary>
-    private static Dictionary<CommandStep, List<SimAction>> TakesOf(CardModel card, StepPlay play)
+    private static Dictionary<CommandStep, List<SimAction>> TakesOf(AbstractModel model, StepPlay play)
     {
-        var type = card.GetType();
+        var type = model.GetType();
         var program = play.Program;
         var board = play.Board;
         var result = new Dictionary<CommandStep, List<SimAction>>(ReferenceEqualityComparer.Instance);
         int Count(ProgramValue? value) => value != null && ProgramEvaluator.Number(value, board, program) is { } read ? Math.Max(0, (int)read) : 1;
         var exhausts = CardEffects.ExhaustsOfOthers(type);
-        foreach (var (take, key, cardEvent, eventIfNot, leaves) in BoardCounts.TakesInOrder(card))
+        foreach (var (take, key, cardEvent, eventIfNot, leaves) in BoardCounts.TakesInOrder(model))
         {
             var actions = result.TryGetValue(take.Command, out var already) ? already : result[take.Command] = new List<SimAction>();
             // A transform's made card, when its code names it: the created-card event's card.
@@ -1417,7 +1593,7 @@ public static partial class SimAdapter
             {
                 case CardEffects.TakeWay.Picked when take.PickPile is PileType.Draw:
                     if (cardEvent == CardEvent.Exhausted)
-                        actions.Add(new TakeFromHandAction(HandTakeWay.Pick) { Event = cardEvent, FromDrawPile = true, Most = Count(take.PerPick), Matching = BoardCounts.ExhaustOthers(card, new List<CardModel>(), DrawPileOfCard(card)) });
+                        actions.Add(new TakeFromHandAction(HandTakeWay.Pick) { Event = cardEvent, FromDrawPile = true, Most = Count(take.PerPick), Matching = BoardCounts.ExhaustOthers(model, new List<CardModel>(), DrawPileOf(model)) });
                     break;
                 case CardEffects.TakeWay.Picked when take.PickPile is null or PileType.Hand:
                 {
@@ -1425,7 +1601,7 @@ public static partial class SimAdapter
                     actions.Add(new TakeFromHandAction(HandTakeWay.Pick)
                     {
                         Event = cardEvent, Made = made, EventIfNot = eventIfNot, Leaves = leaves, Most = Count(take.PerPick),
-                        Filter = filtered ? key : null, Matching = filtered ? BoardCounts.MatchingAtStart(card, take, everyPile: false) : 0,
+                        Filter = filtered ? key : null, Matching = filtered ? BoardCounts.MatchingAtStart(model, take, everyPile: false) : 0,
                     });
                     break;
                 }
@@ -1435,23 +1611,23 @@ public static partial class SimAdapter
                     var most = take.Way == CardEffects.TakeWay.Random ? Count(take.RollCount) : 1;
                     if (CardEffects.IsYourWholeHand(take.Items) && take.ItemTest.IsAlways)
                         actions.Add(new TakeFromHandAction(way) { Event = cardEvent, Made = made, Leaves = leaves, Most = most, EachCard = EachCardOf(take, play) });
-                    else if (BoardCounts.TakesFromEveryPile(card, take))
+                    else if (BoardCounts.TakesFromEveryPile(model, take))
                     {
                         // Every pile's (Flak Cannon): its hand's share leaves first, then each card of every pile sets off its event.
-                        actions.Add(new TakeFromHandAction(way) { Leaves = leaves, Most = most, Filter = key, Matching = BoardCounts.MatchingAtStart(card, take, everyPile: false) });
-                        actions.Add(new TakeFromHandAction(way) { Event = cardEvent, Made = made, Leaves = false, Most = most, Filter = "all:" + key, Matching = BoardCounts.MatchingAtStart(card, take, everyPile: true), EachCard = EachCardOf(take, play) });
+                        actions.Add(new TakeFromHandAction(way) { Leaves = leaves, Most = most, Filter = key, Matching = BoardCounts.MatchingAtStart(model, take, everyPile: false) });
+                        actions.Add(new TakeFromHandAction(way) { Event = cardEvent, Made = made, Leaves = false, Most = most, Filter = "all:" + key, Matching = BoardCounts.MatchingAtStart(model, take, everyPile: true), EachCard = EachCardOf(take, play) });
                     }
                     else
                         actions.Add(new TakeFromHandAction(way)
                         {
-                            Event = cardEvent, Made = made, Leaves = leaves, Most = most, Filter = key, Matching = BoardCounts.MatchingAtStart(card, take, everyPile: false), EachCard = EachCardOf(take, play),
+                            Event = cardEvent, Made = made, Leaves = leaves, Most = most, Filter = key, Matching = BoardCounts.MatchingAtStart(model, take, everyPile: false), EachCard = EachCardOf(take, play),
                         });
                     break;
                 }
             }
         }
         // What acts when exhausted among the cards the play's exhausts take from your hand (Drum of Battle), before the first.
-        if (exhausts.Select(exhaust => result.GetValueOrDefault(exhaust.Command)).FirstOrDefault(actions => actions is { Count: > 0 }) is { } firstActions && ExhaustPickOf(card) is { FromDrawPile: false } exhaustPick)
+        if (exhausts.Select(exhaust => result.GetValueOrDefault(exhaust.Command)).FirstOrDefault(actions => actions is { Count: > 0 }) is { } firstActions && ExhaustPickOf(model) is { FromDrawPile: false } exhaustPick)
             firstActions.Insert(0, exhaustPick);
         return result;
     }
@@ -1482,17 +1658,16 @@ public static partial class SimAdapter
     private static (List<SimAction> Actions, ProgramCondition? Guard) AddsFrom(CardEffects.Found found, StepPlay play)
     {
         var command = found.Command;
-        var card = play.Card;
         var actions = new List<SimAction>();
         var intoHand = CardEffects.TakesIntoHandOf(play.Type).FirstOrDefault(take => ReferenceEquals(take.Command, command));
         if (intoHand != null)
         {
             if (intoHand.ChoosesHowMany)
             {
-                if (BoardCounts.HandTakeChosenOf(play.Card, Sts2State.Hand(play.Me).Count)) actions.Add(new NotModelledAction("you choose how many cards it takes into your hand"));
+                if (BoardCounts.HandTakeChosenOf(play.Model, Sts2State.Hand(play.Me).Count)) actions.Add(new NotModelledAction("you choose how many cards it takes into your hand"));
                 return (actions, intoHand.PlayTest);
             }
-            if (ReferenceEquals(CardEffects.TakesIntoHandOf(play.Type)[0].Command, command)) actions.AddRange(TakesToHand(play.Card, play.Me));
+            if (ReferenceEquals(CardEffects.TakesIntoHandOf(play.Type)[0].Command, command)) actions.AddRange(TakesToHand(play.Model, play.Me));
             return (actions, intoHand.PlayTest);
         }
         var pile = Argument(command, 1);
@@ -1503,13 +1678,20 @@ public static partial class SimAdapter
             actions.Add(new TakeFromHandAction(HandTakeWay.Pick) { Most = Number(play, take.PerPick, fallback: 1) });
             return (actions, ProgramCondition.Always);
         }
-        if (IsEach(ValueAt(command, 0)) && found.Loops.Count > 0 && found.Loops[^1] is var loop && CardEffects.IsYourWholeHand(loop.Items))
+        if (MovesYourWholeHand(command, play))
         {
             actions.Add(new TakeFromHandAction(HandTakeWay.Each));
             return (actions, null);
         }
         return (actions, null);
     }
+
+    /// <summary>
+    /// The CardPileCmd.Add moves your whole hand: each card of a loop over it (Reboot), or its cards given whole (Bottled Potential's
+    /// Add(hand.Cards, Draw)).
+    /// </summary>
+    private static bool MovesYourWholeHand(CommandStep add, StepPlay play) =>
+        IsEach(ValueAt(add, 0)) && play.Found[add].Loops is [.., var loop] && CardEffects.IsYourWholeHand(loop.Items) || CardEffects.IsYourWholeHand(ValueAt(add, 0));
 
     /// <summary>
     /// CardPileCmd.Shuffle: your discard pile into your draw pile, with the hand the play put into your draw pile first (Reboot); on its test
@@ -1527,7 +1709,7 @@ public static partial class SimAdapter
                 return (new List<SimAction> { new ShuffleDrawPileAction(Array.Empty<SimDrawGroup>()) { WhenShorterThan = Number(play, bound, fallback: 1) } }, ProgramCondition.Always);
         // The hand the play moved into your draw pile before it (Reboot), by profile.
         var handIn = play.Program.Commands.TakeWhile(other => !ReferenceEquals(other, command))
-            .Any(other => other.Command is { DeclaringType: "CardPileCmd", Name: "Add" } && IsEach(ValueAt(other, 0)) && play.Found[other].Loops is [.., var loop] && CardEffects.IsYourWholeHand(loop.Items))
+            .Any(other => other.Command is { DeclaringType: "CardPileCmd", Name: "Add" } && MovesYourWholeHand(other, play))
             ? PileType.Hand.GetPile(play.Me).Cards.Where(other => other != play.Card).Select(other => DrawProfiles.GetValueOrDefault(other)).OfType<SimDrawCard>()
                 .GroupBy(profile => profile.Key).Select(sameProfile => new SimDrawGroup(sameProfile.First(), sameProfile.Count())).ToList()
             : new List<SimDrawGroup>();
@@ -1540,7 +1722,7 @@ public static partial class SimAdapter
     /// </summary>
     private static List<SimAction> AutoPlayFrom(CardEffects.Found found, StepPlay play)
     {
-        var (count, exhausts, upgrades) = BoardCounts.AutoPlayOf(found.Command, play.Card);
+        var (count, exhausts, upgrades) = BoardCounts.AutoPlayOf(found.Command, play.Model);
         var countsTaken = found.Command.Values.Count > 2 && CardEffects.ExhaustsOfOthers(play.Type).Any(take => CardEffects.CountsTaken(found.Command.Values[2], take));
         return new List<SimAction> { new AutoPlayFromDrawAction(count) { ForceExhaust = exhausts, Upgrade = upgrades, CountFrom = countsTaken ? SimCount.CardsTaken : SimCount.Given } };
     }
@@ -1553,11 +1735,11 @@ public static partial class SimAdapter
     /// that acts when exhausted unless one passes it, evaluated on the board: then none is followed. Null for a card that exhausts no
     /// other card.
     /// </summary>
-    internal static ExhaustFromHandAction? ExhaustPickOf(CardModel card)
+    internal static ExhaustFromHandAction? ExhaustPickOf(AbstractModel model)
     {
-        var program = CardPrograms.Of(card.GetType());
-        var board = new ProgramBoard(card);
-        foreach (var exhaust in CardEffects.ExhaustsOfOthers(card.GetType()))
+        var program = CardPrograms.Of(model.GetType());
+        var board = ProgramBoard.For(model);
+        foreach (var exhaust in CardEffects.ExhaustsOfOthers(model.GetType()))
         {
             if (ProgramEvaluator.Holds(exhaust.PlayTest, board, program) == false) continue;
             var pick = exhaust.Way switch
@@ -1589,13 +1771,17 @@ public static partial class SimAdapter
         if (MadeCards.Of(play.Type).FirstOrDefault(make => ReferenceEquals(make.Found?.Command, found.Command)) is not { } make)
             return new List<SimAction> { new NotModelledAction($"{play.Name} makes cards its translation can't read ({found.Command.Command.FullName})") };
         if (make.By == MadeCards.Way.Forged)
-            return MadeCards.HasBlade(play.Card) ? new List<SimAction>()
+            return MadeCards.HasBlade(play.Model) ? new List<SimAction>()
                 : new List<SimAction> { new FirstPlayOnly(new SimAction[] { new CardEventAction(CardEvent.Generated, Count: 1) { Indirect = true, JoinsHand = true, Card = MadeSimCard(make.Card) } }) };
+        // A list of cards whose count its code doesn't give (filled by calls that aren't steps: Orobic Acid's AddRange of three factories' cards):
+        // unknown where it runs, never one.
+        if (found.Command.Command.Name == "AddGeneratedCardsToCombat" && make.PerCall == null && make.FilledBy == null)
+            return Unknown(play, $"{found.Command.Command.FullName} of a list whose count its code doesn't give");
         var (count, from) = MadeCount(make, play);
         if (count <= 0 && from == SimCount.Given) return new List<SimAction>();
         var intoHand = MadeCards.IntoHand(make, play.Type);
-        var takenBy = MadeTakenBy(play.Card);
-        var madeCard = MadeCardOf(play.Card)?.GetType().Name;
+        var takenBy = MadeTakenBy(play.Model);
+        var madeCard = MadeCardOf(play.Model)?.GetType().Name;
         var actions = new List<SimAction>();
         foreach (var player in MadeFor(make, found, play))
         {
@@ -1643,7 +1829,7 @@ public static partial class SimAdapter
     private static IEnumerable<int> MadeFor(MadeCards.Make make, CardEffects.Found found, StepPlay play)
     {
         if (IsEach(make.For) && found.Loops.Any(OverPlayers)) return PlayersOf(found, play);
-        if (IsTarget(make.For)) return Who.KindOf(play.AllyId) == CreatureKind.Teammate ? new[] { play.AllyId } : Array.Empty<int>();
+        if (IsTarget(make.For)) return Who.IsPlayer(play.AllyId) ? new[] { play.AllyId } : Array.Empty<int>();
         return new[] { play.Owner };
     }
 

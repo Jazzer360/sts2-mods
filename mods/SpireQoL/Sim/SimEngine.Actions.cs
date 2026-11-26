@@ -946,13 +946,13 @@ public static partial class SimEngine
                 return copy;
             }).ToList();
         }
-        var applier = branch.CurrentPlay?.Owner ?? Who.You;
+        var applier = applyPowerAction.Applier ?? branch.CurrentPlay?.Owner ?? Who.You;
         var targets = applyPowerAction.To switch
         {
             // The play's target: a living enemy, or a teammate (Ignition, Covered); aimed at no one, no one (never you: Who.None).
             ApplyPowerAction.Where.Target => branch.CurrentPlay?.Target is { } aimed && (Who.KindOf(aimed) == CreatureKind.Teammate || branch.Enemy(aimed) is { Alive: true }) ? new List<int> { aimed } : new List<int>(),
             ApplyPowerAction.Where.AllEnemies => branch.Targetable.Select(enemy => enemy.Id).ToList(),
-            ApplyPowerAction.Where.You => new List<int> { applier },
+            ApplyPowerAction.Where.You => new List<int> { branch.CurrentPlay?.Owner ?? Who.You },
             _ => new List<int> { applyPowerAction.Creature },
         };
         IEnumerable<SimState> states = new[] { branch };

@@ -11,7 +11,7 @@ namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
 /// The potion scan (decision #313), as CardScanTests is the cards': every potion's use read from its code (its OnUse) on both branches, each
-/// command it calls one the potion translation follows (SimAdapter.PotionCommandsTranslated) or a named gap (the card lists' commands not
+/// command it calls one the card translation follows (SimAdapter.CommandsTranslated: potions are translated by it, decision #335) or a named gap (the card lists' commands not
 /// followed, outside the fight, or hook-only); and on the installed game, what each usable potion's use is built into, in a fight made of the
 /// game's own objects (Snapshots/potion-uses.txt: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates). Every `?` there is an open TRACKER item.
 /// </summary>
@@ -28,7 +28,7 @@ public class PotionScanTests
 
     /// <summary>A command a potion's step can call that a list names: followed, a named gap, outside the fight, or one whose only effect is a hook.</summary>
     private static bool Named(string command) =>
-        SimAdapter.PotionCommandsTranslated.Contains(command) || SimAdapter.CommandsNotTranslated.ContainsKey(command) || SimAdapter.CommandsOutsideTheFight.ContainsKey(command)
+        SimAdapter.CommandsNotTranslated.ContainsKey(command) || SimAdapter.CommandsOutsideTheFight.ContainsKey(command)
         || SimAdapter.CommandsTranslated.ContainsKey(command);
 
     [Theory]
@@ -48,7 +48,7 @@ public class PotionScanTests
             foreach (var unknown in program.Unknowns) unnamed.Add($"{potion.Name}: the reader can't follow {unknown}");
         }
         Assert.True(read >= 60, $"only {read} potions' uses read on {branch}");
-        Assert.True(unnamed.Count == 0, $"Potion commands no list names ({branch}): translate each (SimAdapter.Potions) or name it as a gap:\n" + string.Join("\n", unnamed));
+        Assert.True(unnamed.Count == 0, $"Potion commands no list names ({branch}): translate each (SimAdapter.Steps, the one translator: decision #335) or name it as a gap:\n" + string.Join("\n", unnamed));
     }
 
     /// <summary>

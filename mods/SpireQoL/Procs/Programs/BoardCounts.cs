@@ -19,22 +19,27 @@ public static class BoardCounts
 {
 
     /// <summary>
-    /// The card's owner; null for the game's template card (ModelDb, read by the coverage scan), whose Owner
-    /// throws (CardModel.Owner asserts a mutable model).
+    /// The owner of the card played or the potion used (decision #335); null for the game's template model (ModelDb, read by the coverage scan),
+    /// whose Owner throws (CardModel.Owner and PotionModel.Owner assert a mutable model), and for any other model.
     /// </summary>
-    private static Player? OwnerOf(CardModel card) => card.IsCanonical ? null : card.Owner;
+    internal static Player? OwnerOf(AbstractModel model) => model.IsCanonical ? null : model switch
+    {
+        CardModel card => card.Owner,
+        PotionModel potion => potion.Owner,
+        _ => null,
+    };
 
     /// <summary>
     /// The play shuffles your discard pile into your draw pile before its draws, read from its program (decision #182): on every play
     /// (CardEffects.ShufflesDiscardPileIn: Reboot), or when the draw pile is short (CardEffects.ShufflesWhenShort: Ki Chant).
     /// </summary>
-    internal static bool ShufflesFirst(CardModel card)
+    internal static bool ShufflesFirst(AbstractModel model)
     {
-        if (Programs.CardEffects.ShufflesDiscardPileIn(card.GetType())) return true;
-        if (!Programs.CardEffects.ShufflesWhenShort(card.GetType()) || OwnerOf(card) is not { } me) return false;
+        if (Programs.CardEffects.ShufflesDiscardPileIn(model.GetType())) return true;
+        if (!Programs.CardEffects.ShufflesWhenShort(model.GetType()) || OwnerOf(model) is not { } me) return false;
         // KiChant.OnPlay: an empty draw pile shuffles if it must; a short one shuffles when the discard pile has cards.
         var draw = Sts2State.DrawPileCount(me);
-        return draw < Sts2State.Var(card, "Cards", fallback: 3) && Sts2State.DiscardPileCount(me) > 0;
+        return draw < Sts2State.Var(model, "Cards", fallback: 3) && Sts2State.DiscardPileCount(me) > 0;
     }
 
     /// <summary>
@@ -45,41 +50,41 @@ public static class BoardCounts
     /// game calculates) and its loops' rounds. A draw whose condition asks the target (Ki Hop, Wrest) counts what the worst target it
     /// could be aimed at would draw. <paramref name="handCount"/> isn't read: the hand is the board's.
     /// </summary>
-    public static int CardsDrawn(CardModel card, int handCount) => DrawsOnPlay(card, target: null, playsBefore: 0);
+    public static int CardsDrawn(AbstractModel model, int handCount) => DrawsOnPlay(model, target: null, playsBefore: 0);
 
     /// <summary>
-    /// Draws of one play of <paramref name="card"/> aimed at <paramref name="target"/>, after <paramref name="playsBefore"/> of its replay's
+    /// Draws of one play of <paramref name="model"/> (a card, or a potion's use) aimed at <paramref name="target"/>, after <paramref name="playsBefore"/> of its replay's
     /// plays: each draw its condition lets through, its count times its loops' rounds (DrawCount). A draw whose condition asks the target
     /// with none given (Ki Hop, Wrest) counts what it would draw at the worst target it could be aimed at; with no fight to aim at (the
     /// game's template card), its condition counts as holding.
     /// </summary>
-    private static int DrawsOnPlay(CardModel card, Creature? target, int playsBefore)
+    private static int DrawsOnPlay(AbstractModel model, Creature? target, int playsBefore)
     {
-        var program = Programs.CardPrograms.Of(card.GetType());
+        var program = Programs.CardPrograms.Of(model.GetType());
         var total = 0;
         foreach (var draw in Programs.CardEffects.DrawsForYou(program))
         {
-            if (target == null && Programs.ProgramEvaluator.AsksTarget(draw.Condition) && Targets(card) is { } targets)
+            if (target == null && Programs.ProgramEvaluator.AsksTarget(draw.Condition) && Targets(model) is { } targets)
             {
-                total += targets.Count > 0 ? targets.Min(enemy => DrawOnPlay(card, draw, enemy, playsBefore)) : 0;
+                total += targets.Count > 0 ? targets.Min(enemy => DrawOnPlay(model, draw, enemy, playsBefore)) : 0;
                 continue;
             }
-            total += DrawOnPlay(card, draw, target, playsBefore);
+            total += DrawOnPlay(model, draw, target, playsBefore);
         }
         return total;
     }
 
     /// <summary>One draw of a play, on the board as that play starts: none when its condition fails there, else its count.</summary>
-    private static int DrawOnPlay(CardModel card, Programs.CardEffects.DrawForYou draw, Creature? target, int playsBefore)
+    private static int DrawOnPlay(AbstractModel model, Programs.CardEffects.DrawForYou draw, Creature? target, int playsBefore)
     {
-        var program = Programs.CardPrograms.Of(card.GetType());
-        return Programs.ProgramEvaluator.Holds(draw.Condition, new Programs.ProgramBoard(card, target, playsBefore), program) == false ? 0 : DrawCount(card, draw);
+        var program = Programs.CardPrograms.Of(model.GetType());
+        return Programs.ProgramEvaluator.Holds(draw.Condition, Programs.ProgramBoard.For(model) with { Target = target, PlaysBefore = playsBefore }, program) == false ? 0 : DrawCount(model, draw);
     }
 
-    /// <summary>The enemies the card could be aimed at; null when it isn't in a fight (the game's template card).</summary>
-    private static List<Creature>? Targets(CardModel card)
+    /// <summary>The enemies the card or potion could be aimed at; null when it isn't in a fight (the game's template model).</summary>
+    private static List<Creature>? Targets(AbstractModel model)
     {
-        try { return card.CombatState?.HittableEnemies.Where(creature => creature.IsAlive).ToList(); }
+        try { return ((model as CardModel)?.CombatState ?? OwnerOf(model)?.Creature.CombatState)?.HittableEnemies.Where(creature => creature.IsAlive).ToList(); }
         catch { return null; }
     }
 
@@ -99,13 +104,13 @@ public static class BoardCounts
     /// What one draw of the play (a DrawForYou) draws when it runs: its count its own argument on the board, times its loops' rounds. Its
     /// condition isn't asked here: the simulator asks it of each play as it runs (decision #190: a WhenAction).
     /// </summary>
-    internal static int DrawCount(CardModel card, Programs.CardEffects.DrawForYou draw)
+    internal static int DrawCount(AbstractModel model, Programs.CardEffects.DrawForYou draw)
     {
-        var program = Programs.CardPrograms.Of(card.GetType());
-        var board = new Programs.ProgramBoard(card);
+        var program = Programs.CardPrograms.Of(model.GetType());
+        var board = Programs.ProgramBoard.For(model);
         var count = Programs.ProgramEvaluator.Number(draw.Count, board, program) is { } read ? (int)read
-            : card.DynamicVars.ContainsKey("Cards") ? Sts2State.Var(card, "Cards") : 1;
-        foreach (var loop in draw.Loops) count *= card.DynamicVars.ContainsKey(loop.Over) ? Sts2State.Var(card, loop.Over) : 1;
+            : board.Vars?.ContainsKey("Cards") == true ? Sts2State.Var(model, "Cards") : 1;
+        foreach (var loop in draw.Loops) count *= board.Vars?.ContainsKey(loop.Over) == true ? Sts2State.Var(model, loop.Over) : 1;
         return Math.Max(0, count);
     }
 
@@ -121,8 +126,8 @@ public static class BoardCounts
     /// (True Grit's pick when upgraded, its roll when not). A collection that can't be told on the board (the game's template card) is
     /// <paramref name="others"/>.
     /// </summary>
-    internal static int ExhaustOthers(CardModel card, List<CardModel> others, int drawPile) =>
-        Taken(card, Programs.CardEffects.ExhaustsOfOthers(card.GetType()), others, drawPile, draws: 0, fromHandOnly: false);
+    internal static int ExhaustOthers(AbstractModel model, List<CardModel> others, int drawPile) =>
+        Taken(model, Programs.CardEffects.ExhaustsOfOthers(model.GetType()), others, drawPile, draws: 0, fromHandOnly: false);
 
     /// <summary>
     /// Cards the play discards, read from its program (CardEffects.Discards: CardCmd.Discard and DiscardAndDraw), counted on the board
@@ -135,18 +140,18 @@ public static class BoardCounts
         Taken(card, Programs.CardEffects.Discards(card.GetType()), others, DrawPileOf(card), draws, fromHandOnly: false);
 
     /// <summary>Of those, the ones from your hand: not the cards it drew (Scrape's: the simulator's), nor the ones it looked at (Ki Chant's).</summary>
-    internal static int DiscardedFromHand(CardModel card, List<CardModel> others, int draws) =>
-        Taken(card, Programs.CardEffects.Discards(card.GetType()), others, DrawPileOf(card), draws, fromHandOnly: true);
+    internal static int DiscardedFromHand(AbstractModel model, List<CardModel> others, int draws) =>
+        Taken(model, Programs.CardEffects.Discards(model.GetType()), others, DrawPileOf(model), draws, fromHandOnly: true);
 
     /// <summary>
     /// It discards from your hand without a pick (its whole hand: Storm of Steel, Calculated Gamble) while a Sly card is there
     /// (CardModel.IsSlyThisTurn): the Sly card plays itself (CardCmd.Discard). A discard you pick is a card, never a particular one (decision #188).
     /// </summary>
-    internal static bool DiscardsSlyWithoutPick(CardModel card)
+    internal static bool DiscardsSlyWithoutPick(AbstractModel model)
     {
-        if (!Programs.CardEffects.Discards(card.GetType()).Any(discard => discard.Way == Programs.CardEffects.TakeWay.Each) || OwnerOf(card) is not { } me) return false;
-        var others = Sts2State.Hand(me).Where(other => !ReferenceEquals(other, card)).ToList();
-        return DiscardedFromHand(card, others, CardsDrawn(card, others.Count + 1)) > 0 && others.Any(other => other.IsSlyThisTurn);
+        if (!Programs.CardEffects.Discards(model.GetType()).Any(discard => discard.Way == Programs.CardEffects.TakeWay.Each) || OwnerOf(model) is not { } me) return false;
+        var others = Sts2State.Hand(me).Where(other => !ReferenceEquals(other, model)).ToList();
+        return DiscardedFromHand(model, others, CardsDrawn(model, others.Count + 1)) > 0 && others.Any(other => other.IsSlyThisTurn);
     }
 
     /// <summary>
@@ -173,11 +178,11 @@ public static class BoardCounts
     /// each card comes, a full hand sending it to the discard pile: CardPileCmd.Add). None when you choose how many (Neow's Fury:
     /// HandTakeChosen). Which cards is a pick or a roll; how many is in the piles now.
     /// </summary>
-    internal static int TakenToHandCount(CardModel card)
+    internal static int TakenToHandCount(AbstractModel model)
     {
-        var takes = Programs.CardEffects.TakesIntoHandOf(card.GetType());
+        var takes = Programs.CardEffects.TakesIntoHandOf(model.GetType());
         if (takes.Count == 0 || takes.Any(take => take.ChoosesHowMany)) return 0;
-        return Taken(card, takes, new List<CardModel>(), DrawPileOf(card), draws: 0, fromHandOnly: false);
+        return Taken(model, takes, new List<CardModel>(), DrawPileOf(model), draws: 0, fromHandOnly: false);
     }
 
     /// <summary>
@@ -185,46 +190,46 @@ public static class BoardCounts
     /// or its test on the picked card: The Hermit's Curse), for the simulator to follow from there (TakeFromHandAction.Matching). A collection
     /// over more than your hand (Flak Cannon's statuses in every pile) counts every card of it.
     /// </summary>
-    internal static int MatchingAtStart(CardModel card, Programs.CardEffects.CardsTaken take, bool everyPile)
+    internal static int MatchingAtStart(AbstractModel model, Programs.CardEffects.CardsTaken take, bool everyPile)
     {
-        var program = Programs.CardPrograms.Of(card.GetType());
-        var board = new Programs.ProgramBoard(card);
-        var others = OwnerOf(card) is { } me ? Sts2State.Hand(me).Where(other => !ReferenceEquals(other, card)).ToList() : new List<CardModel>();
+        var program = Programs.CardPrograms.Of(model.GetType());
+        var board = Programs.ProgramBoard.For(model);
+        var others = OwnerOf(model) is { } me ? Sts2State.Hand(me).Where(other => !ReferenceEquals(other, model)).ToList() : new List<CardModel>();
         if (take.Way == Programs.CardEffects.TakeWay.Picked)
             return others.Count(other => Programs.ProgramEvaluator.HoldsFor(take.ItemTest, other, board, program) != false);
         return Collection(take, others, board, program, fromHandOnly: !everyPile, _ => true);
     }
 
     /// <summary>The take's collection holds cards outside your hand (Flak Cannon's: every pile), on the board.</summary>
-    internal static bool TakesFromEveryPile(CardModel card, Programs.CardEffects.CardsTaken take)
+    internal static bool TakesFromEveryPile(AbstractModel model, Programs.CardEffects.CardsTaken take)
     {
-        if (take.Items == null || Programs.ProgramEvaluator.Items(take.Items, new Programs.ProgramBoard(card), Programs.CardPrograms.Of(card.GetType())) is not { } items) return false;
+        if (take.Items == null || Programs.ProgramEvaluator.Items(take.Items, Programs.ProgramBoard.For(model), Programs.CardPrograms.Of(model.GetType())) is not { } items) return false;
         return take.Items.Parts().Any(part => part is Programs.QueryValue { Name: "AllCards" }) || items.OfType<CardModel>().Any(item => item.Pile?.Type is not (null or PileType.Hand));
     }
 
     /// <summary>The cards one play transforms outside your hand (Charge, Seance: a pick from your draw pile), on the board: they stay in place.</summary>
-    internal static int TransformsOutsideHand(CardModel card) =>
-        Taken(card, Programs.CardEffects.Transforms(card.GetType()).Where(transform => transform.PickPile is not (null or PileType.Hand)).ToList(),
-            new List<CardModel>(), DrawPileOf(card), draws: 0, fromHandOnly: false, Transformable);
+    internal static int TransformsOutsideHand(AbstractModel model) =>
+        Taken(model, Programs.CardEffects.Transforms(model.GetType()).Where(transform => transform.PickPile is not (null or PileType.Hand)).ToList(),
+            new List<CardModel>(), DrawPileOf(model), draws: 0, fromHandOnly: false, Transformable);
 
     /// <summary>The play discards cards it looked at on top of your draw pile, less the one it took (Ki Chant), on the board: one play's.</summary>
-    internal static int DiscardedOutsideHand(CardModel card) =>
-        Taken(card, Programs.CardEffects.Discards(card.GetType()).Where(discard => discard.Way == Programs.CardEffects.TakeWay.LookedAt).ToList(),
-            new List<CardModel>(), DrawPileOf(card), draws: 0, fromHandOnly: false);
+    internal static int DiscardedOutsideHand(AbstractModel model) =>
+        Taken(model, Programs.CardEffects.Discards(model.GetType()).Where(discard => discard.Way == Programs.CardEffects.TakeWay.LookedAt).ToList(),
+            new List<CardModel>(), DrawPileOf(model), draws: 0, fromHandOnly: false);
 
     /// <summary>
     /// The play takes cards into your hand and you choose how many (a selector whose least and most differ: Neow's Fury), with cards to
     /// take and room in your hand (<paramref name="handCount"/> with the card played): your hand after it is your later decision.
     /// </summary>
-    internal static bool HandTakeChosenOf(CardModel card, int handCount)
+    internal static bool HandTakeChosenOf(AbstractModel model, int handCount)
     {
-        var chosen = Programs.CardEffects.TakesIntoHandOf(card.GetType()).Where(take => take.ChoosesHowMany).ToList();
+        var chosen = Programs.CardEffects.TakesIntoHandOf(model.GetType()).Where(take => take.ChoosesHowMany).ToList();
         if (chosen.Count == 0 || handCount - 1 >= CardPile.MaxCardsInHand) return false;
-        return Taken(card, chosen, new List<CardModel>(), DrawPileOf(card), draws: 0, fromHandOnly: false) > 0;
+        return Taken(model, chosen, new List<CardModel>(), DrawPileOf(model), draws: 0, fromHandOnly: false) > 0;
     }
 
-    /// <summary>Cards in your draw pile; 0 for the game's template card.</summary>
-    private static int DrawPileOf(CardModel card) => OwnerOf(card) is { } me ? Sts2State.DrawPileCount(me) : 0;
+    /// <summary>Cards in your draw pile; 0 for the game's template model.</summary>
+    private static int DrawPileOf(AbstractModel model) => OwnerOf(model) is { } me ? Sts2State.DrawPileCount(me) : 0;
 
     /// <summary>
     /// How many cards the play's <paramref name="takes"/> take on the board, each whose condition holds:
@@ -239,12 +244,12 @@ public static class BoardCounts
     /// <paramref name="fromHandOnly"/>: only the cards that leave your hand. <paramref name="eligible"/>: the cards the command itself can
     /// take. A collection that can't be told on the board (the game's template card) is <paramref name="others"/>.
     /// </summary>
-    private static int Taken(CardModel card, IReadOnlyList<Programs.CardEffects.CardsTaken> takes, List<CardModel> others, int drawPile, int draws,
+    private static int Taken(AbstractModel model, IReadOnlyList<Programs.CardEffects.CardsTaken> takes, List<CardModel> others, int drawPile, int draws,
         bool fromHandOnly, Func<CardModel, bool>? eligible = null)
     {
         if (takes.Count == 0) return 0;
-        var program = Programs.CardPrograms.Of(card.GetType());
-        var board = new Programs.ProgramBoard(card);
+        var program = Programs.CardPrograms.Of(model.GetType());
+        var board = Programs.ProgramBoard.For(model);
         bool Eligible(object? item) => eligible == null || item is not CardModel cardItem || eligible(cardItem);
         int Number(Programs.ProgramValue? value, int fallback) => value != null && Programs.ProgramEvaluator.Number(value, board, program) is { } read ? (int)read : fallback;
         var total = 0;
@@ -258,8 +263,8 @@ public static class BoardCounts
                     var pile = take.PickPile ?? PileType.Hand;
                     if (fromHandOnly && pile != PileType.Hand) break;
                     var pool = pile == PileType.Hand
-                        ? others.Count(other => Eligible(other) && Programs.ProgramEvaluator.HoldsFor(take.ItemTest, other, board, program) != false) + DrawsBefore(card, program, take, draws)
-                        : PileCount(card, pile, take, board, program, Eligible, otherwise: pile == PileType.Draw ? drawPile : others.Count);
+                        ? others.Count(other => Eligible(other) && Programs.ProgramEvaluator.HoldsFor(take.ItemTest, other, board, program) != false) + DrawsBefore(model, program, take, draws)
+                        : PileCount(model, pile, take, board, program, Eligible, otherwise: pile == PileType.Draw ? drawPile : others.Count);
                     total += Math.Min(pool, Number(take.PerPick, fallback: 1));
                     break;
                 }
@@ -270,7 +275,7 @@ public static class BoardCounts
                     if (!fromHandOnly) total += draws;
                     break;
                 case Programs.CardEffects.TakeWay.LookedAt:
-                    if (!fromHandOnly) total += Math.Max(0, LooksAt(card) - Number(take.PerPick, fallback: 1));
+                    if (!fromHandOnly) total += Math.Max(0, LooksAt(model) - Number(take.PerPick, fallback: 1));
                     break;
                 default:
                     var each = Collection(take, others, board, program, fromHandOnly, Eligible);
@@ -282,13 +287,13 @@ public static class BoardCounts
     }
 
     /// <summary>The cards a pick from your hand also has to pick from: the ones the play draws before it (Acrobatics), when it draws first.</summary>
-    private static int DrawsBefore(CardModel card, Programs.ModelProgram program, Programs.CardEffects.CardsTaken take, int draws)
+    private static int DrawsBefore(AbstractModel model, Programs.ModelProgram program, Programs.CardEffects.CardsTaken take, int draws)
     {
         if (draws <= 0 || take.Pick == null) return 0;
         foreach (var step in program.All())
         {
             if (ReferenceEquals(step, take.Pick)) return 0;
-            if (step is Programs.CommandStep command && Programs.CardEffects.DrawsForYou(card.GetType()).Any(draw => ReferenceEquals(draw.Command, command))) return draws;
+            if (step is Programs.CommandStep command && Programs.CardEffects.DrawsForYou(model.GetType()).Any(draw => ReferenceEquals(draw.Command, command))) return draws;
         }
         return 0;
     }
@@ -297,12 +302,12 @@ public static class BoardCounts
     /// The cards of yours in <paramref name="pile"/> a pick can take: its filter's and its test's, read on the board; a draw pile with the
     /// discard pile the play shuffles in first when it's short (Ki Chant). <paramref name="otherwise"/> when the pile can't be read.
     /// </summary>
-    private static int PileCount(CardModel card, PileType pile, Programs.CardEffects.CardsTaken take, Programs.ProgramBoard board, Programs.ModelProgram program,
+    private static int PileCount(AbstractModel model, PileType pile, Programs.CardEffects.CardsTaken take, Programs.ProgramBoard board, Programs.ModelProgram program,
         Func<object?, bool> eligible, int otherwise)
     {
-        if (OwnerOf(card) is not { } me) return otherwise;
+        if (OwnerOf(model) is not { } me) return otherwise;
         var cards = PileCards(me, pile);
-        if (pile == PileType.Draw && ShufflesFirst(card)) cards.AddRange(PileCards(me, PileType.Discard));
+        if (pile == PileType.Draw && ShufflesFirst(model)) cards.AddRange(PileCards(me, PileType.Discard));
         return cards.Count(other => eligible(other)
                                     && (take.PickFilter is not { } filter || Programs.ProgramEvaluator.Passes(filter, other, board, program) != false)
                                     && Programs.ProgramEvaluator.HoldsFor(take.ItemTest, other, board, program) != false);
@@ -324,13 +329,13 @@ public static class BoardCounts
     /// The top cards of your draw pile the play looks at (a LookedAt take's count: Take(drawPile, Cards), Ki Chant), as many as the pile
     /// holds after the shuffle its play makes first when it's short.
     /// </summary>
-    private static int LooksAt(CardModel card)
+    private static int LooksAt(AbstractModel model)
     {
-        var take = Programs.CardEffects.Discards(card.GetType()).FirstOrDefault(discard => discard.Way == Programs.CardEffects.TakeWay.LookedAt);
-        var count = take?.Looks is { } looks && Programs.ProgramEvaluator.Number(looks, new Programs.ProgramBoard(card), Programs.CardPrograms.Of(card.GetType())) is { } read
-            ? (int)read : Sts2State.Var(card, "Cards", fallback: 3);
-        if (OwnerOf(card) is not { } me) return count; // the game's template card (the scan)
-        var available = Sts2State.DrawPileCount(me) + (ShufflesFirst(card) ? Sts2State.DiscardPileCount(me) : 0);
+        var take = Programs.CardEffects.Discards(model.GetType()).FirstOrDefault(discard => discard.Way == Programs.CardEffects.TakeWay.LookedAt);
+        var count = take?.Looks is { } looks && Programs.ProgramEvaluator.Number(looks, Programs.ProgramBoard.For(model), Programs.CardPrograms.Of(model.GetType())) is { } read
+            ? (int)read : Sts2State.Var(model, "Cards", fallback: 3);
+        if (OwnerOf(model) is not { } me) return count; // the game's template card (the scan)
+        var available = Sts2State.DrawPileCount(me) + (ShufflesFirst(model) ? Sts2State.DiscardPileCount(me) : 0);
         return Math.Min(count, available);
     }
     /// <summary>
@@ -515,11 +520,11 @@ public static class BoardCounts
     /// The value is a card value calculated as the count of a take's collection and nothing more (Flak Cannon's CalculatedHits: its
     /// multiplier counts the statuses its loop exhausts, its base 0 and extra 1): what that take took, read as it runs (SimCount.CardsTaken).
     /// </summary>
-    internal static bool CountsTakenByItsValue(CardModel card, ProgramValue? value, CardEffects.CardsTaken take)
+    internal static bool CountsTakenByItsValue(AbstractModel model, ProgramValue? value, CardEffects.CardsTaken take)
     {
         if (value == null || take.Items == null || value.Parts().OfType<CardValue>().FirstOrDefault() is not { } cardValue) return false;
-        if (Sts2State.Var(card, "CalculationBase", fallback: -1) != 0 || Sts2State.Var(card, "CalculationExtra", fallback: -1) != 1) return false;
-        var multipliers = ProgramReader.CalculatedMultipliers(card.GetType(), RuntimeCode.Read);
+        if (Sts2State.Var(model, "CalculationBase", fallback: -1) != 0 || Sts2State.Var(model, "CalculationExtra", fallback: -1) != 1) return false;
+        var multipliers = ProgramReader.CalculatedMultipliers(model.GetType(), RuntimeCode.Read);
         if (!multipliers.TryGetValue(cardValue.Key, out var multiplier) || multiplier is not QueryValue { Name: "Count", Arguments: [var counted] }) return false;
         // The multiplier's lambda names the card "card" where its play names it "this".
         static string Collection(ProgramValue items) => (items is QueryValue { Name: "ToList" or "ToArray", Arguments: [var inner] } ? inner : items).ToString()!;
@@ -538,10 +543,10 @@ public static class BoardCounts
     }
 
     /// <summary>An auto-play step's count on the board, its exhaust argument and whether its callback upgrades the cards (on its condition).</summary>
-    internal static (int Count, bool ForceExhaust, bool Upgrade) AutoPlayOf(CommandStep command, CardModel card)
+    internal static (int Count, bool ForceExhaust, bool Upgrade) AutoPlayOf(CommandStep command, AbstractModel model)
     {
-        var program = CardPrograms.Of(card.GetType());
-        var board = new ProgramBoard(card);
+        var program = CardPrograms.Of(model.GetType());
+        var board = ProgramBoard.For(model);
         var count = command.Values.Count > 2 && ProgramEvaluator.Number(command.Values[2], board, program) is { } read ? (int)read : 1;
         var exhausts = (command.Values.Count > 4 && command.Values[4] is ConstantValue { Value: not 0 });
         var upgrades = command.Inner.OfType<CommandStep>().Any(inner => inner.Command is { DeclaringType: "CardCmd", Name: "Upgrade" }
@@ -555,11 +560,11 @@ public static class BoardCounts
             ? AutoPlayOf(autoPlay, card) : null;
 
     /// <summary>How many cards one play takes into your hand (its take's pick, roll or collection), and whether the simulator reads it as it runs.</summary>
-    internal static (int Count, SimCount From) HandTakeCount(CardModel card)
+    internal static (int Count, SimCount From) HandTakeCount(AbstractModel model)
     {
-        var take = CardEffects.TakesIntoHandOf(card.GetType())[0];
-        var program = CardPrograms.Of(card.GetType());
-        var board = new ProgramBoard(card);
+        var take = CardEffects.TakesIntoHandOf(model.GetType())[0];
+        var program = CardPrograms.Of(model.GetType());
+        var board = ProgramBoard.For(model);
         int Number(ProgramValue value) => ProgramEvaluator.Number(value, board, program) is { } read ? Math.Max(0, (int)read) : 1;
         switch (take.Way)
         {
@@ -583,11 +588,11 @@ public static class BoardCounts
     /// play holds on the board: the exhausts of other cards (a pick shared with a discard by a test on the card sends the others to the
     /// discard: The Hermit), the discards, the transforms in your hand (made in place; none when you choose how many).
     /// </summary>
-    internal static List<(CardEffects.CardsTaken Take, string Key, CardEvent? Event, CardEvent? EventIfNot, bool Leaves)> TakesInOrder(CardModel card)
+    internal static List<(CardEffects.CardsTaken Take, string Key, CardEvent? Event, CardEvent? EventIfNot, bool Leaves)> TakesInOrder(AbstractModel model)
     {
-        var type = card.GetType();
+        var type = model.GetType();
         var program = CardPrograms.Of(type);
-        var board = new ProgramBoard(card);
+        var board = ProgramBoard.For(model);
         var exhausts = CardEffects.ExhaustsOfOthers(type);
         var discards = CardEffects.Discards(type);
         var ordered = new List<(CardEffects.CardsTaken, CardEvent?, CardEvent?, bool)>();
