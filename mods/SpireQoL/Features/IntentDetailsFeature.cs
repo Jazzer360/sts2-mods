@@ -61,7 +61,15 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
             var drawnFor = new HashCode();
             drawnFor.Add(probe);
             drawnFor.Add(playerTurn);
-            for (var i = 0; i < container.GetChildCount(); i++) drawnFor.Add(container.GetChild(i).GetInstanceId());
+            // Each intent node and the intent it holds: the game reuses its nodes for the next move (NIntent.UpdateIntent), so the same nodes can show
+            // another move (the Seapunk's Bubble Burp, its block missing, drawn as the Spinning Kick before it).
+            for (var i = 0; i < container.GetChildCount(); i++)
+            {
+                var child = container.GetChild(i);
+                drawnFor.Add(child.GetInstanceId());
+                if (child is NIntent shownIntent && Sts2State.Private<AbstractIntent?>(shownIntent, "_intent", fallback: null) is { } held)
+                    drawnFor.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(held));
+            }
             var drawnKey = drawnFor.ToHashCode();
             if (_drawnFor.TryGetValue(node, out var drawn) && drawn == drawnKey) continue;
             _drawnFor[node] = drawnKey;
@@ -72,15 +80,13 @@ public sealed class IntentDetailsFeature : IFeature, IFrameFeature
             var shown = playerTurn && !hidden && node.Entity is { } creature ? For(creature) : null;
             var onScreen = intents.Select(nIntent => Sts2State.Private<AbstractIntent?>(nIntent, "_intent", fallback: null)).ToList();
             var corners = shown != null && onScreen.All(abstractIntent => abstractIntent != null) ? IntentCorner.Assign(onScreen!, shown.Powers) : new();
+            // Every block number, then each power in its intent's bottom-left corner (IntentCorner.Place).
             for (var intentIndex = 0; intentIndex < intents.Count; intentIndex++)
-            {
-                var intent = intents[intentIndex];
-                var holder = intent.GetNodeOrNull<Control>(GodotNames.Path("%IntentHolder"));
-                if (holder == null) continue;
-                Block(holder, intent, onScreen[intentIndex] is DefendIntent && shown?.Block is > 0 ? shown.Block : null);
-                // Each power in the corner of the intent it belongs to (decision #99).
-                IntentCorner.Place(intent, corners.TryGetValue(intentIndex, out var mine) ? mine : null);
-            }
+                if (intents[intentIndex].GetNodeOrNull<Control>(GodotNames.Path("%IntentHolder")) is { } holder)
+                    Block(holder, intents[intentIndex], onScreen[intentIndex] is DefendIntent && shown?.Block is > 0 ? shown.Block : null);
+            // Each power in the corner of the intent it belongs to (decision #99).
+            for (var intentIndex = 0; intentIndex < intents.Count; intentIndex++)
+                IntentCorner.Place(intents[intentIndex], corners.TryGetValue(intentIndex, out var mine) ? mine : null);
         }
     }
 

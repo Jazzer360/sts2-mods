@@ -81,11 +81,11 @@ internal static class IntentCorner
         }
         var size = row.GetCombinedMinimumSize();
         row.Size = size;
-        // The bottom-right corner, as the game's %Value label (an attack's damage); else the holder's own corner.
-        if (intent.GetNodeOrNull<Control>(GodotNames.Path("%Value")) is { } value)
-            row.Position = new Vector2(value.Position.X + value.Size.X - size.X, value.Position.Y + value.Size.Y - size.Y);
-        else
-            row.Position = new Vector2(holder.Size.X - size.X, holder.Size.Y - size.Y);
+        // The bottom-left corner of the game's %Value box (else the holder's), where a status intent shows its count: an attack's damage and a
+        // defend intent's block (Intent Details) are bottom right, so neither the intent's own number nor the one beside it covers the chip (the
+        // Haunted Ship's Haunt: Weak beside its Dazed count).
+        var box = intent.GetNodeOrNull<Control>(GodotNames.Path("%Value")) is { } value ? new Rect2(value.Position, value.Size) : new Rect2(Vector2.Zero, holder.Size);
+        row.Position = new Vector2(box.Position.X, box.End.Y - size.Y);
     }
 
     /// <summary>A power's icon with its amount beside it (the icon alone when the amount isn't a number the move keeps).</summary>
