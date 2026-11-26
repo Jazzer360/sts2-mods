@@ -166,7 +166,7 @@ internal sealed class BranchCode
                     var field = _reader.GetFieldDefinition((FieldDefinitionHandle)handle);
                     var (declaring, space) = _names.Type(field.GetDeclaringType());
                     return new CodeMember(CodeMemberKind.Field, declaring, _reader.GetString(field.Name))
-                        { ValueType = field.DecodeSignature(_names, null), HasThis = (field.Attributes & FieldAttributes.Static) == 0, Namespace = space };
+                        { ValueType = field.DecodeSignature(_names, null), HasThis = (field.Attributes & FieldAttributes.Static) == 0, Namespace = space, Data = DataOf(field) };
                 }
                 case HandleKind.TypeDefinition or HandleKind.TypeReference or HandleKind.TypeSpecification:
                 {
@@ -181,6 +181,28 @@ internal sealed class BranchCode
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// The bytes the compiler keeps a constant array's data in (an RVA field: its type's size from its class layout, or a primitive's), read from the file's
+    /// section at its address, as RuntimeCode reads the loaded game's; null for any other field.
+    /// </summary>
+    private byte[]? DataOf(FieldDefinition field)
+    {
+        if ((field.Attributes & FieldAttributes.HasFieldRVA) == 0) return null;
+        var blob = _reader.GetBlobReader(field.Signature);
+        blob.ReadSignatureHeader();
+        var size = blob.ReadSignatureTypeCode() switch
+        {
+            SignatureTypeCode.Byte or SignatureTypeCode.SByte or SignatureTypeCode.Boolean => 1,
+            SignatureTypeCode.Int16 or SignatureTypeCode.UInt16 or SignatureTypeCode.Char => 2,
+            SignatureTypeCode.Int32 or SignatureTypeCode.UInt32 or SignatureTypeCode.Single => 4,
+            SignatureTypeCode.Int64 or SignatureTypeCode.UInt64 or SignatureTypeCode.Double => 8,
+            SignatureTypeCode.TypeHandle when blob.ReadTypeHandle() is { Kind: HandleKind.TypeDefinition } type => _reader.GetTypeDefinition((TypeDefinitionHandle)type).GetLayout().Size,
+            _ => 0,
+        };
+        if (size <= 0) return null;
+        return _portable.GetSectionData(field.GetRelativeVirtualAddress()).GetContent(0, size).ToArray();
     }
 
     private static CodeMember MethodMember(string declaring, string space, string name, MethodSignature<string> signature, string[] generic) =>

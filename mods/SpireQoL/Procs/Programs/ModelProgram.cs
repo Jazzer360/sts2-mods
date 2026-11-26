@@ -937,11 +937,12 @@ public static class ProgramReader
                 // A change to a collection the code makes itself (List<Creature> wrigglers = new(): Infested's, its Wrigglers kept to show them once its death's
                 // animation ends), whose result isn't used: a step on it, "Local.wrigglers", which the hook reader translates or names as a gap. In a
                 // card's or a potion's code only its fills (Add, AddRange: Orobic Acid's three factories' cards, Bottled Song's melodies), which the
-                // made cards' count reads (MadeCards.FillsOf, decision #339).
+                // made cards' count reads (MadeCards.FillsOf, decision #339); a power's or relic's fills of a list it keeps in no named local too (Glass
+                // Eye's card rewards, one a round of its loop over its constant array of rarities: decision #369).
                 if ((IsPowerOrRelic || member.Name is "Add" or "AddRange") && member is { Kind: CodeMemberKind.Method, HasThis: true } && member.Namespace.StartsWith("System.Collections", StringComparison.Ordinal)
                     && (!member.ReturnsValue || i + 1 < ops.Count && ops[i + 1].OpCode == OpCodes.Pop)
                     && flow.ReceiverValue(i, member.ParameterCount) is StoredValue { Value: QueryValue { Name: ".ctor" } made } madeList && made.Type.StartsWith("List", StringComparison.Ordinal)
-                    && (madeList.Name.Length > 0 || !IsPowerOrRelic))
+                    && (madeList.Name.Length > 0 || !IsPowerOrRelic || member.Name is "Add" or "AddRange"))
                 {
                     into.Add(new DataStep(instruction.Offset, LocalKey(madeList), member.Name, flow.ArgumentValues(i, member)) { Condition = condition });
                     continue;
@@ -1992,6 +1993,8 @@ public static class ProgramReader
                 return (MethodGroup(new UnknownValue("delegate"), Ops[at - 1].Member, target.Value), target.Start);
             }
             if (!instruction.IsCall || instruction.Member is not { } member) return (new UnknownValue(name), -1);
+            // A constant array (newarr; dup; ldtoken data; call RuntimeHelpers.InitializeArray, a void call on the copy): its items, from the data.
+            if (member is { Name: "InitializeArray", DeclaringType: "RuntimeHelpers" }) return ConstantArray(at, depth);
             if (member.Name == "GetResult") return AwaitedResult(at, depth);
             if (member.Name is "op_Implicit" or "op_Explicit") return ReadBack(at, depth + 1);
             var cursor = at;
@@ -2031,6 +2034,35 @@ public static class ProgramReader
             // A constructor of a generic type keeps the type's arguments (new PowerVar<AimPower>(12): AimPower).
             return (new QueryValue(member.DeclaringType, property ? member.Name[4..] : member.Name, of, arguments, member.ValueType)
                 { IsProperty = property && arguments.Length == 0, GenericArguments = member.Name == ".ctor" && member.GenericArguments.Count == 0 ? member.TypeArguments : member.GenericArguments }, cursor);
+        }
+
+        /// <summary>
+        /// The array a RuntimeHelpers.InitializeArray at <paramref name="initialize"/> fills (decision #369: newarr of a constant length; dup; ldtoken of the
+        /// field the compiler keeps its data in; the call): its items as constants, each the data's little-endian number of the array's element size (the
+        /// data's length over the array's), signed but for an unsigned element type. Unknown when the shape, the length, the data or its element size can't be
+        /// read, or its items aren't whole numbers (Single, Double).
+        /// </summary>
+        private (ProgramValue Value, int Start) ConstantArray(int initialize, int depth)
+        {
+            if (initialize < 3 || Ops[initialize - 1].OpCode != OpCodes.Ldtoken || Ops[initialize - 2].OpCode != OpCodes.Dup || Ops[initialize - 3].OpCode != OpCodes.Newarr
+                || Ops[initialize - 1].Member?.Data is not { } data || Ops[initialize - 3].Member?.Name is not { } element || element is "Single" or "Double")
+                return (new UnknownValue("array"), -1);
+            var length = ReadBack(initialize - 3, depth + 1);
+            if (length is not { Start: >= 0, Value: ConstantValue { Value: > 0 and <= 1024 and var count } } || data.Count % count != 0)
+                return (new UnknownValue("array"), -1);
+            var size = (int)(data.Count / count);
+            if (size is not (1 or 2 or 4 or 8)) return (new UnknownValue("array"), -1);
+            var unsigned = element is "Byte" or "UInt16" or "UInt32" or "UInt64" or "Char" or "Boolean";
+            var items = new ProgramValue[count];
+            for (var i = 0; i < count; i++)
+            {
+                ulong number = 0;
+                for (var byteIndex = size - 1; byteIndex >= 0; byteIndex--) number = number << 8 | data[i * size + byteIndex];
+                // Signed: the top bit of its size carries the sign.
+                var value = unsigned || size == 8 ? unchecked((long)number) : (long)number >= 1L << (size * 8 - 1) ? (long)number - (1L << (size * 8)) : (long)number;
+                items[i] = new ConstantValue(value);
+            }
+            return (new ArrayValue(items), length.Start);
         }
 
         /// <summary>What an await gave back (the call GetAwaiter was asked of, before the suspend): the command's result.</summary>

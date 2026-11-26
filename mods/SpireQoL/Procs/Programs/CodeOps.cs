@@ -30,6 +30,11 @@ public sealed record CodeMember(CodeMemberKind Kind, string DeclaringType, strin
     public string ValueType { get; init; } = "";
     /// <summary>The declaring type's namespace.</summary>
     public string Namespace { get; init; } = "";
+    /// <summary>
+    /// A field's initial bytes, for one the compiler keeps a constant array's data in (an RVA field: ldtoken of it, then RuntimeHelpers.InitializeArray);
+    /// null for any other.
+    /// </summary>
+    public IReadOnlyList<byte>? Data { get; init; }
 
     /// <summary>"CreatureCmd.GainBlock".</summary>
     public string FullName => DeclaringType + "." + Name;
@@ -267,8 +272,21 @@ public static class RuntimeCode
             Namespace = method.DeclaringType?.Namespace ?? "",
         },
         FieldInfo field => new CodeMember(CodeMemberKind.Field, field.DeclaringType?.Name ?? "", field.Name)
-            { ValueType = field.FieldType.Name, HasThis = !field.IsStatic, Namespace = field.DeclaringType?.Namespace ?? "" },
+            { ValueType = field.FieldType.Name, HasThis = !field.IsStatic, Namespace = field.DeclaringType?.Namespace ?? "", Data = DataOf(field) },
         Type type => new CodeMember(CodeMemberKind.Type, type.DeclaringType?.Name ?? "", type.Name) { Namespace = type.Namespace ?? "" },
         _ => null,
     };
+
+    /// <summary>The bytes the compiler keeps a constant array's data in (an RVA field, read as the game reads it: InitializeArray); null for any other field.</summary>
+    private static byte[]? DataOf(FieldInfo field)
+    {
+        if ((field.Attributes & FieldAttributes.HasFieldRVA) == 0 || !field.IsStatic) return null;
+        try
+        {
+            var bytes = new byte[System.Runtime.InteropServices.Marshal.SizeOf(field.FieldType)];
+            System.Runtime.CompilerServices.RuntimeHelpers.InitializeArray(bytes, field.FieldHandle);
+            return bytes;
+        }
+        catch { return null; }
+    }
 }

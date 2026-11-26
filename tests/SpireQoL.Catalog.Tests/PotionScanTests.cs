@@ -180,9 +180,8 @@ public class PotionScanTests
         var souls = Made<MegaCrit.Sts2.Core.Models.Potions.PotOfGhouls>();
         Assert.Equal(nameof(MegaCrit.Sts2.Core.Models.Cards.Soul), souls.Card?.Name);
         Assert.Equal(2, souls.Count);
-        var song = ModelDb.Potion<MegaCrit.Sts2.Core.Models.Potions.BottledSong>().ToMutable();
-        fight.Me.AddPotionInternal(song);
-        Assert.IsType<NotModelledAction>(SimAdapter.Potion(song, fight.Me, fight.Combat, ids, Who.You).Body[0]);
+        // Bottled Song: one a round of its loop over its three melody tags, a constant array the compiler fills from its data (decision #369).
+        Assert.Equal(3, Made<MegaCrit.Sts2.Core.Models.Potions.BottledSong>().Count);
         Assert.NotNull(start);
     }
 

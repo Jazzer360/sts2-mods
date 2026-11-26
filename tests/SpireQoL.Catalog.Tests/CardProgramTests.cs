@@ -133,6 +133,41 @@ public class CardProgramTests
         }
     }
 
+    [Theory]
+    [MemberData(nameof(Branches))]
+    public void ALocalTheLoopsRoundStoresBeforeItsReadIsRead(string branch)
+    {
+        // Catastrophe: cardModel = a random playable card of the draw pile, then any card when that's null, each round, then played: the play's card is
+        // each way's value (decision #368), never an earlier round's. A loop's counter, stored at the round's end and read by the for's test at the
+        // bottom (entered there from before the loop), stays unread there.
+        if (!File.Exists(PathOf(branch))) return;
+        var code = BranchCode.Of(PathOf(branch));
+        if (code.Cards().FirstOrDefault(type => type.Name == "Catastrophe") is not { } catastrophe) return;
+        var autoPlay = ProgramReader.Read(catastrophe, code.Read).Commands.Single(command => command.Command.FullName == "CardCmd.AutoPlay");
+        var ways = Assert.IsType<WaysValue>(autoPlay.Values[1]);
+        Assert.Equal(2, ways.Ways.Count);
+        Assert.DoesNotContain(ways.Parts(), part => part is UnknownValue);
+    }
+
+    [Theory]
+    [MemberData(nameof(Branches))]
+    public void AConstantArrayIsItsItems(string branch)
+    {
+        // An array the compiler fills from its data (newarr; dup; ldtoken; RuntimeHelpers.InitializeArray: decision #369), which a foreach goes over by
+        // its index up to its length (ldlen): Glass Eye's rarities as the code lists them (its card rewards' fills a step of its own: a relic's list it
+        // makes and fills), Bottled Song's three melody tags (beta).
+        if (!File.Exists(PathOf(branch))) return;
+        var code = BranchCode.Of(PathOf(branch));
+        ArrayValue ItemsOf(string model, string method) =>
+            Assert.IsType<ArrayValue>(Procs.Programs.StepValues.Unstored(Assert.Single(ProgramReader.Read(code.Models().Single(type => type.Name == model), code.Read, method)
+                .All().OfType<LoopStep>().SelectMany(loop => loop.While?.Literals.SelectMany(literal => literal.Test.Parts()) ?? Array.Empty<ProgramValue>())
+                .OfType<QueryValue>(), query => query is { Type: "Array", Name: "Length" }).Of));
+        var rarities = ItemsOf("GlassEye", "AfterObtained").Items.Select(item => code.EnumName("CardRarity", ((ConstantValue)item).Value)).ToList();
+        Assert.Equal(new[] { "Common", "Common", "Uncommon", "Uncommon", "Rare" }, rarities);
+        if (code.Models().Any(type => type.Name == "BottledSong"))
+            Assert.Equal(new[] { "Wah", "Cho", "Ki" }, ItemsOf("BottledSong", "OnUse").Items.Select(item => code.EnumName("CardTag", ((ConstantValue)item).Value)));
+    }
+
     [Fact]
     public void ConditionsRejoinWhereTheWaysMeet()
     {

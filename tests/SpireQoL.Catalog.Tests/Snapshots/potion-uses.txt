@@ -15,7 +15,7 @@ BoneBrew [you]: SummonAction { Amount = 15, Player = -1 }
 BoneBrew [teammate]: SummonAction { Amount = 15, Player = -2 }
 BottledPotential [you]: TakeFromHandAction { Way = Each, Event = , Made = , EventIfNot = , Most = 1, Filter = , Matching = 0, Leaves = True, FromDrawPile = False, EachCard = SpireQoL.Sim.SimAction[] }; ShuffleDrawPileAction { HandIn = System.Collections.Generic.List`1[SpireQoL.Sim.SimDrawGroup], WhenShorterThan = 0 }; Drawn 5
 BottledPotential [teammate]: ? BottledPotential: CardPileCmd.Add on a teammate's cards: not followed; ? BottledPotential: CardPileCmd.Shuffle on a teammate's cards: not followed
-BottledSong [you]: ? BottledSong: CardPileCmd.AddGeneratedCardsToCombat of a count this board can't work out (melodyTags.Length())
+BottledSong [you]: Generated 3
 BottledSong [teammate]: ? BottledSong: CardPileCmd.AddGeneratedCardsToCombat on a teammate's cards: not followed
 Clarity [you]: Drawn 1
 Clarity [teammate]: nothing
