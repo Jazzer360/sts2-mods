@@ -71,7 +71,7 @@ internal static class MoveBranches
     }
 
     /// <summary>
-    /// The powers that land, read from the move's code (decision #382): its program's PowerCmd.Apply&lt;T&gt; steps, one for each power applied in the
+    /// The powers that land, read from the move's code (decision #377): its program's PowerCmd.Apply&lt;T&gt; steps, one for each power applied in the
     /// same order, each on its condition asked of the monster now (ProgramEvaluator.Holds: its own powers, its side, the run's ascension), as the
     /// rules picked them; an amount the IL reading couldn't give (a local) is its argument worked out now. Null where a condition can't be told
     /// now or reads a field of its own the move stores first (Test Subject's Respawns), or the steps don't match: the rule, or Maybe, then.
@@ -107,7 +107,7 @@ internal static class MoveBranches
     }
 
     /// <summary>
-    /// A move whose branch powers FromCode reads (decision #382), known from its code alone (the scan's: MoveBranchTests): its program read whole, each
+    /// A move whose branch powers FromCode reads (decision #377), known from its code alone (the scan's: MoveBranchTests): its program read whole, each
     /// PowerCmd.Apply&lt;T&gt; outside a loop, one for each of <paramref name="powers"/> in order, no condition reading a field of its own the move stores.
     /// </summary>
     internal static bool Readable(MethodInfo perform, IReadOnlyList<string> powers) => ReadableSteps(perform, powers) != null;

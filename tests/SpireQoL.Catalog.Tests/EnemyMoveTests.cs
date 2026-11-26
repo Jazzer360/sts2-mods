@@ -62,7 +62,7 @@ public class EnemyMoveTests
     public void FogmogsIllusionAddsAnEyeWithTeethToTheEnemyTurn()
     {
         // Fogmog's Illusion: CreatureCmd.Add<EyeWithTeeth> while the fight is live (CombatState.IsLiveCombat: true on a live fight), read as a death's
-        // spawn is (decision #381): its HP (6) and its AfterAddedToRoom's Illusion, with the Minion Illusion's AfterApplied gives it. It joins in the
+        // spawn is (decision #376): its HP (6) and its AfterAddedToRoom's Illusion, with the Minion Illusion's AfterApplied gives it. It joins in the
         // enemy turn, after Fogmog, and makes no move then; Byrdonis' Swoop after it lands as shown.
         var fight = new GameFight();
         var fogmog = Enemy<Fogmog>(fight, "ILLUSION_MOVE");

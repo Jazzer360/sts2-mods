@@ -11,7 +11,7 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// The powers a move with branches gives, read from its code (decision #382: MoveBranches.FromCode, each PowerCmd.Apply on its condition asked of the
+/// The powers a move with branches gives, read from its code (decision #377: MoveBranches.FromCode, each PowerCmd.Apply on its condition asked of the
 /// monster now), against what the per-move rules picked by hand, on real monsters in each state that decides it. A move whose condition reads a field
 /// of its own the move stores first (Test Subject's Respawns) isn't read: its rule stands.
 /// </summary>

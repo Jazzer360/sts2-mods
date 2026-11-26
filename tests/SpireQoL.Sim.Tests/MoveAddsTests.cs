@@ -3,7 +3,7 @@ using Xunit;
 namespace SpireQoL.Sim.Tests;
 
 /// <summary>
-/// What an enemy's move adds to the fight, read from code (decision #381): Fogmog's Illusion move (CreatureCmd.Add&lt;EyeWithTeeth&gt;), The Obscura's
+/// What an enemy's move adds to the fight, read from code (decision #376): Fogmog's Illusion move (CreatureCmd.Add&lt;EyeWithTeeth&gt;), The Obscura's
 /// (CreatureCmd.Add&lt;Parafright&gt;). The creature joins as the step runs, with the HP it starts with and its AfterAddedToRoom's powers (Illusion, and
 /// the Minion Illusion's AfterApplied gives it); the enemies that act were listed as the turn started (CombatManager.ExecuteEnemyTurn's
 /// Enemies.ToList()), so it makes no move this turn, and it's in the fight for the rest of the turn (Hook.AfterCreatureAddedToCombat, the turn's end).

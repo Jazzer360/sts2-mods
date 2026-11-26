@@ -1906,7 +1906,7 @@ public static partial class SimEngine
                                 break;
                             // CreatureCmd.Stun of itself (Creature.StunInternal: nothing once it's dead): its next move is the stunned move.
                             case MoveStunAction when enemy.Alive: Stun(enemy); break;
-                            // CreatureCmd.Add of a creature its code names (decision #381): it joins now, after the turn's list of who acts.
+                            // CreatureCmd.Add of a creature its code names (decision #376): it joins now, after the turn's list of who acts.
                             case MoveSpawnAction moveSpawnAction: MoveSpawn(state, enemy, moveSpawnAction.Spawn); break;
                             // A property of its own its attack's damage reads (decision #337): only a projection has a later turn to read it.
                             case MoveStoreAction moveStoreAction when state.Forecasting: MoveStore(state, enemy, moveStoreAction); break;
@@ -1930,7 +1930,7 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// A creature an enemy's move adds (CreatureCmd.Add, decision #381): the next id, its HP, the powers its AfterAddedToRoom gives it (scaled for the
+    /// A creature an enemy's move adds (CreatureCmd.Add, decision #376): the next id, its HP, the powers its AfterAddedToRoom gives it (scaled for the
     /// players as PowerCmd.Apply scales a new one on an enemy), then Hook.AfterCreatureAddedToCombat's listeners, on the one state the enemy turn runs
     /// on. An HP it could start with among several (a roll), or a listener that branches there, leaves the turn unknown from here: never a pick.
     /// </summary>

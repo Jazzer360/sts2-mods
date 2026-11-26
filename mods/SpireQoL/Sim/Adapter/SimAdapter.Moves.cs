@@ -244,7 +244,7 @@ public static partial class SimAdapter
             context.Gaps.Add("on a condition");
             return Array.Empty<SimAction>();
         }
-        // CreatureCmd.Add<T> outside a loop (decision #381): the monster joins, read as a death's spawn is; one it can't read (MoveSpawnGap) isn't followed.
+        // CreatureCmd.Add<T> outside a loop (decision #376): the monster joins, read as a death's spawn is; one it can't read (MoveSpawnGap) isn't followed.
         if (step is CommandStep { Command.FullName: "CreatureCmd.Add" } add && each == null) return MoveSpawn(add, context);
         if (step.Condition != null)
         {
