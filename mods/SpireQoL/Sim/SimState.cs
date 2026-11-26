@@ -355,6 +355,13 @@ public sealed record TurnEndCard(string Card, string Title, int Amount)
     [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public SimCard? Source { get; init; }
 
+    /// <summary>
+    /// What it does as the turn ends once upgraded (its upgraded copy's, read at the board while a card of yours upgrades every card of your hand:
+    /// decision #363); null when that isn't read (an upgrade of it then is unknown: SimPlayer.UpgradableAtTurnEnd counts it).
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public TurnEndCard? Upgraded { get; init; }
+
     /// <summary>Its class, title and amount, as the record printed them before it carried its card: what tells two apart (a draw profile's key).</summary>
     public override string ToString() => $"TurnEndCard {{ Card = {Card}, Title = {Title}, Amount = {Amount} }}";
 }
@@ -843,7 +850,7 @@ public sealed class SimHandCard
     /// <remarks>Its own plays become the copy's (SimPlay.HandCard): played, it's the copy that leaves your hand.</remarks>
     public SimHandCard CopyWithId(int id) => new()
     {
-        Id = id, Name = Name, IsAttack = IsAttack, Cost = Cost, LocalCost = LocalCost, Card = Card, AutoPlayedBy = AutoPlayedBy, _key = Key,
+        Id = id, Name = Name, IsAttack = IsAttack, Cost = Cost, LocalCost = LocalCost, Card = Card, AutoPlayedBy = AutoPlayedBy, Upgraded = Upgraded?.CopyWithId(id), _key = Key,
         Plays = Id == 0 ? Plays : Plays.Select(play => play.HandCard == Id ? play.AsHandCard(id) : play).ToList(),
     };
 
@@ -851,7 +858,7 @@ public sealed class SimHandCard
     /// This card made free this turn (CardModel.SetToFreeThisTurn: EnergyCost.SetThisTurnOrUntilPlayed(0), a local modifier of 0 after its others):
     /// its cost before global modifiers 0, the listeners' passes still on it (SimEngine.HandCost), the rest the same (its key its own).
     /// </summary>
-    public SimHandCard FreeCopy() => new() { Id = Id, Name = Name, IsAttack = IsAttack, Cost = 0, LocalCost = LocalCost == null ? null : 0, Card = Card, AutoPlayedBy = AutoPlayedBy, Plays = Plays };
+    public SimHandCard FreeCopy() => new() { Id = Id, Name = Name, IsAttack = IsAttack, Cost = 0, LocalCost = LocalCost == null ? null : 0, Card = Card, AutoPlayedBy = AutoPlayedBy, Upgraded = Upgraded?.FreeCopy(), Plays = Plays };
 
     public string Name = "";
     public bool IsAttack;
@@ -879,6 +886,12 @@ public sealed class SimHandCard
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public IReadOnlyList<string>? AutoPlayedBy;
+    /// <summary>
+    /// The card once upgraded (its upgraded copy, read at the board while a card of yours upgrades every card of your hand: decision #363), its own id; null
+    /// when that isn't read (an upgrade of it then makes the auto-plays from your hand unknown).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SimHandCard? Upgraded;
 }
 
 /// <summary>One branch of the simulation: the state plus what happened so far.</summary>

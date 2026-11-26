@@ -5,7 +5,7 @@ Ashwater [teammate]: ? Ashwater: CardCmd.Exhaust on a teammate's cards: not foll
 AttackPotion [you]: Generated 1
 AttackPotion [teammate]: ? AttackPotion: CardPileCmd.AddGeneratedCardToCombat on a teammate's cards: not followed
 BeetleJuice [enemy]: ShrinkPower 4 on enemy
-BlessingOfTheForge [you]: UpgradeCardsAction { Piles = Hand, Source = BlessingOfTheForge }
+BlessingOfTheForge [you]: UpgradeCardsAction { Piles = Hand, Source = BlessingOfTheForge, Random = False }
 BlessingOfTheForge [teammate]: ? BlessingOfTheForge: CardCmd.Upgrade on a teammate's cards: not followed
 BlockPotion [you]: block 12 Unpowered to you
 BlockPotion [teammate]: block 12 Unpowered to teammate

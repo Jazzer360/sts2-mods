@@ -484,7 +484,7 @@ public static partial class SimAdapter
                 if (UpgradeTargetOf(command, play.Program) is not { Target: UpgradeTarget.Piles, Piles: var piles }) return none;
                 // A card's upgrade of the piles of the teammate it's aimed at: their piles aren't simulated.
                 if (play.Card != null && UpgradesTargetsPiles(command, play.Program)) return (Unknown(play, "CardCmd.Upgrade of a teammate's cards: not followed"), null);
-                return (new List<SimAction> { new UpgradeCardsAction(piles, play.Name) }, Without(found.Condition, literal => literal.Test.Parts().Any(part => part is NamedValue { Name: "each" })));
+                return (new List<SimAction> { new UpgradeCardsAction(piles, play.Name) { Random = UpgradesRandomCards(command, play.Program) } }, Without(found.Condition, literal => literal.Test.Parts().Any(part => part is NamedValue { Name: "each" })));
             case ("CardPileCmd", "AddGeneratedCardToCombat" or "AddGeneratedCardsToCombat" or "AddToCombatAndPreview"):
             case ("ForgeCmd", "Forge"):
                 return (MadeFrom(found, play), null);
@@ -862,6 +862,13 @@ public static partial class SimAdapter
         return (new List<SimAction> { action }, Without(found.Condition, literal => literal.Test.Parts().Any(part =>
             part is NamedValue { Name: "each" } or QueryValue { Name: "StableShuffle" or "IsOverOrEnding" or "TargetType" })));
     }
+
+    /// <summary>
+    /// A CardCmd.Upgrade of your piles' cards upgrades random ones (decision #363): its card argument is a roll's (TakeRandom, NextItem, a shuffle's: Drain
+    /// Power's discard pile), not every card a loop goes over. Pure on the step's code.
+    /// </summary>
+    internal static bool UpgradesRandomCards(CommandStep command, ModelProgram program) =>
+        UpgradedValue(command, program)?.Parts().Any(part => part is QueryValue { Name: "TakeRandom" or "NextItem" or "StableShuffle" or "UnstableShuffle" }) == true;
 
     /// <summary>The value names a card the play makes: a maker's query (CreateCard, a card factory, Soul.Create) or a making command's result (Shiv.CreateInHand, a transform).</summary>
     private static bool MakesCards(List<ProgramValue> parts) => parts.Any(part => part is QueryValue { Name: var maker, Type: var makerType } && (CardMakers.Contains(maker) || maker == "Create" && makerType != "CombatState")

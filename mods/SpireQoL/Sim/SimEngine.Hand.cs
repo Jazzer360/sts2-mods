@@ -11,15 +11,22 @@ public static partial class SimEngine
     /// turn ends (Howl from Beyond: SimPlayer.ExhaustAutoPlays) that can be upgraded. I Am Invincible's block on top of the draw pile is read at the
     /// board, so an upgrade of that pile with it there is unknown.
     /// </summary>
-    internal static void UpgradeCards(SimState state, int player, UpgradedPiles piles, string source)
+    internal static void UpgradeCards(SimState state, int player, UpgradedPiles piles, string source, bool random = false)
     {
         if (state.Player(player) is not { } simPlayer) return;
-        if (piles.HasFlag(UpgradedPiles.Hand)) UpgradeInHand(state, player, source);
+        if (piles.HasFlag(UpgradedPiles.Hand)) UpgradeInHand(state, player, source, every: !random);
         if ((piles & (UpgradedPiles.Draw | UpgradedPiles.Discard)) != 0)
         {
             if (piles.HasFlag(UpgradedPiles.Draw) && simPlayer.InvincibleBlock > 0)
                 state.Unmodelled ??= $"{source} upgrades your draw pile, and I Am Invincible plays from its top as the turn ends";
-            if (simPlayer.Draw != null && !simPlayer.PilesUpgraded) state.MutablePlayer(player).PilesUpgraded = true;
+            // Every card there upgraded, each one an upgrade could change read upgraded at the board (decision #363: SimDrawCard.UpgradedTo): its profile
+            // now that one. Random cards, or one whose upgrade isn't read: what's drawn, taken or played from there that could have been isn't known.
+            if (simPlayer.Draw != null && !simPlayer.PilesUpgraded)
+            {
+                if (!random && simPlayer.Draw.WithUpgraded(piles.HasFlag(UpgradedPiles.Draw), piles.HasFlag(UpgradedPiles.Discard)) is { } upgraded)
+                    state.MutablePlayer(player).Draw = upgraded;
+                else state.MutablePlayer(player).PilesUpgraded = true;
+            }
         }
         if (piles.HasFlag(UpgradedPiles.Exhaust) && simPlayer.ExhaustAutoPlays.Any(play => play.Card?.Card.Upgradable != false))
             state.Unmodelled ??= $"{source} upgrades your exhaust pile, and a card there that can be upgraded plays itself as the turn ends";
@@ -49,12 +56,28 @@ public static partial class SimEngine
     /// acting in hand as the turn ends: Burn), and no card Stampede or Simpleton could auto-play from it can be (their plays are built at the
     /// board: SimState.AutoPlaysUnknown then). Anything else of a hand card's (its numbers) is read when it's played, a later decision.
     /// </summary>
-    internal static void UpgradeInHand(SimState state, int player, string source)
+    internal static void UpgradeInHand(SimState state, int player, string source, bool every = false)
     {
         if (state.Player(player) is not { } simPlayer) return;
         if (simPlayer.UpgradableAtTurnEnd > 0)
             state.Unmodelled ??= $"{source} upgrades cards in hand, and one that acts as the turn ends could be one";
-        if (simPlayer.AutoHand?.Any(card => card.Card?.Upgradable != false) == true) state.AutoPlaysUnknown = true;
+        if (!every)
+        {
+            // Random ones (Tune's): which isn't known, so one whose upgrade changes what it does as the turn ends (read at the board) isn't either.
+            if (simPlayer.TurnEndCards.Any(card => card.Upgraded is { } upgraded && upgraded.Amount != card.Amount))
+                state.Unmodelled ??= $"{source} upgrades random cards in hand, and one that acts as the turn ends could be one";
+            if (simPlayer.AutoHand?.Any(card => card.Card?.Upgradable != false) == true) state.AutoPlaysUnknown = true;
+            return;
+        }
+        // Every card (decision #363): each read upgraded at the board is that one now (TurnEndCard.Upgraded, SimHandCard.Upgraded); an auto-play's pick
+        // among cards one of which could be upgraded but isn't read isn't known.
+        var changed = state.MutablePlayer(player);
+        if (simPlayer.TurnEndCards.Any(card => card.Upgraded != null)) changed.TurnEndCards = simPlayer.TurnEndCards.Select(card => card.Upgraded ?? card).ToList();
+        if (simPlayer.AutoHand is { } hand)
+        {
+            if (hand.Any(card => card.Upgraded == null && card.Card?.Upgradable != false)) state.AutoPlaysUnknown = true;
+            else changed.AutoHand = hand.Select(card => card.Upgraded ?? card).ToList();
+        }
     }
 
     /// <summary>

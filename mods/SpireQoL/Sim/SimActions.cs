@@ -568,7 +568,11 @@ public enum UpgradedPiles { None = 0, Hand = 1, Draw = 2, Discard = 4, Exhaust =
 /// nor a card the play makes (its class, type and tags are what's followed of it, and an upgrade changes none of them).
 /// </summary>
 /// <param name="Source">The card or potion whose code upgrades them (its class name), for what isn't followed.</param>
-public sealed record UpgradeCardsAction(UpgradedPiles Piles, string Source) : SimAction;
+public sealed record UpgradeCardsAction(UpgradedPiles Piles, string Source) : SimAction
+{
+    /// <summary>Random cards of those piles (a roll: Drain Power's), not every one: which ones isn't known, so an upgrade read at the board for every card isn't followed (decision #363).</summary>
+    public bool Random { get; init; }
+}
 
 /// <summary>
 /// A card of the play's owner's hand you pick made Ethereal (CardCmd.ApplyKeyword of CardKeyword.Ethereal: Sculpting Strike's, on a card not Ethereal on its

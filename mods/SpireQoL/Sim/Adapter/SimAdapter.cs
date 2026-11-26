@@ -347,6 +347,8 @@ public static partial class SimAdapter
             // The cards in your hand that auto-play cards of your piles (decision #360): what the board reads for them.
             var sources = owner == Who.You ? PileAutoPlaySources(me) : new List<PileAutoPlaySource>();
             var fromHand = sources.Any(source => source.Read.Pile == SimPile.Hand);
+            // A card of yours upgrading every card in your hand (decision #363): each hand card's upgraded play read too (SimHandCard.Upgraded).
+            var handUpgraded = owner == Who.You && PilesYourCardsUpgrade(me).HasFlag(UpgradedPiles.Hand);
             if (sources.Count > 0) player.PileAutoPlays = new SimPileAutoPlays(sources.Where(source => source.Readable).Select(source => source.Key).ToList()) { FromHand = fromHand };
             if (player.Stampede > 0 || player.Simpleton > 0 || fromHand)
             {
@@ -363,6 +365,7 @@ public static partial class SimAdapter
                         LocalCost = LocalCostOf(card), Card = SimReaders.CostedFacts(card),
                         Plays = AutoPlays(card, me, combat, ids, owner),
                         AutoPlayedBy = AutoPlayedBy(card, sources),
+                        Upgraded = handUpgraded ? UpgradedHandCard(card, me, combat, ids, owner, sources) : null,
                     });
                 }
             }
@@ -392,6 +395,34 @@ public static partial class SimAdapter
     /// AutoHand, are the playable ones), as Cho Chorus' tags alone would.
     /// </summary>
     internal sealed record PileAutoPlaySource(string Key, CardAutoPlayRead Read, CardModel Card, Procs.Programs.ProgramBoard Board, Procs.Programs.ModelProgram Program, bool Readable);
+
+    /// <summary>
+    /// A hand card as an auto-play picks it once upgraded (decision #363): its upgraded copy's cost, facts and plays, played as the card in your hand (its id);
+    /// null when it can't be upgraded or its copy can't be read.
+    /// </summary>
+    private static SimHandCard? UpgradedHandCard(CardModel card, Player me, ICombatState combat, IReadOnlyDictionary<Creature, int> ids, int owner, IReadOnlyList<PileAutoPlaySource> sources)
+    {
+        if (!SafeBool(() => card.IsUpgradable)) return null;
+        try
+        {
+            var copy = SpireQoL.Cards.UpgradedCopy.Of(card);
+            var id = HandId(card);
+            var plays = AutoPlays(copy, me, combat, ids, owner);
+            foreach (var play in plays)
+                if (play.HandCard == HandId(copy))
+                {
+                    play.HandCard = id;
+                    if (play.Card != null) play.Card = play.Card with { Card = play.Card.Card with { HandId = id } };
+                }
+            return new SimHandCard
+            {
+                Id = id, Name = card.GetType().Name, IsAttack = copy.Type == CardType.Attack,
+                Cost = copy.EnergyCost.CostsX ? 999999999 : copy.EnergyCost.GetResolved(),
+                LocalCost = LocalCostOf(copy), Card = SimReaders.CostedFacts(copy), Plays = plays, AutoPlayedBy = AutoPlayedBy(copy, sources),
+            };
+        }
+        catch { return null; }
+    }
 
     /// <summary>The auto-plays of <paramref name="cards"/>' plays that upgrade each card first on the board (Knife Trap+: its upgrade step's condition holds), by key.</summary>
     private static HashSet<string> CardAutoPlaysUpgrading(IEnumerable<CardModel> cards) =>
@@ -545,11 +576,14 @@ public static partial class SimAdapter
                               || sources.Any(source => source.Read.Pile is SimPile.Draw or SimPile.Discard && upgradingSources.Contains(source.Key));
             var exhaustPlays = sources.Any(source => source.Read.Pile == SimPile.Exhaust);
             var exhaustUpgrades = sources.Any(source => source.Read.Pile == SimPile.Exhaust && upgradingSources.Contains(source.Key));
+            // A card of yours that upgrades every card of your hand, draw or discard pile (decision #363): each profile an upgrade could change gets its upgraded
+            // one (SimDrawCard.UpgradedTo), read from the card's upgraded copy.
+            var everyUpgraded = PilesYourCardsUpgrade(me);
             var fromPileByKey = new Dictionary<string, (SimHandCard? Plain, SimHandCard? Upgraded, bool Exhausts)>();
             // The filtered takes of the cards in your hand (decision #189): a card drawn or taken into your hand during a play counts for
             // the ones it would be taken by (Second Wind's non-Attacks, The Hermit's Curse).
             var takeFilters = handCards.SelectMany(TakeFiltersOf).ToList();
-            SimDrawCard Profile(CardModel card, bool exhausted = false)
+            SimDrawCard Profile(CardModel card, bool exhausted = false, CardModel? original = null)
             {
                 var turnEnd = TurnEndOf(card);
                 var fading = IsFading(card, combat);
@@ -587,7 +621,9 @@ public static partial class SimAdapter
                     // not in your hand there (its hand delta 0, no hand card): played once drawn, it's from your hand, so one less, and
                     // its plays are its own (each copy drawn takes them as its own: SimHandCard.CopyWithId).
                     var plays = AutoPlays(card, me, combat, ids);
-                    var id = HandId(card);
+                    var id = HandId(original ?? card);
+                    // An upgraded copy plays as the card it stands for (its id in your hand).
+                    if (original != null) foreach (var play in plays) if (play.HandCard == HandId(card)) play.HandCard = id;
                     if (card.Pile?.Type == PileType.Draw) foreach (var play in plays) { play.HandDelta -= 1; play.HandCard = id; }
                     auto = new SimHandCard { Id = id, Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, LocalCost = LocalCostOf(card), Card = SimReaders.CostedFacts(card), Plays = plays, AutoPlayedBy = autoPlayedBy };
                     autoByKey[key] = auto;
@@ -606,8 +642,18 @@ public static partial class SimAdapter
                     TurnEnd = turnEnd, Fading = fading, HexFading = hexFading, Status = status, Ethereal = ethereal, Strike = strike,
                     Pickable = pickable, Auto = auto, InvincibleBlock = invincible, OnTopWhenShuffled = perfectFit, Type = type, Free = free, Sly = sly, TakenBy = takenBy, AutoPlayedBy = autoPlayedBy,
                 };
-                // One an upgrade could change (something about it is followed): an upgrade of its pile or its hand makes what it does unknown.
-                return !drawCard.Plain && Safe(() => card.IsUpgradable) ? drawCard with { Key = key + "|upgradable", Upgradable = true } : drawCard;
+                // One an upgrade could change (something about it is followed): an upgrade of its pile or its hand makes what it does unknown, unless its upgraded
+                // profile is read (decision #363: a card of yours upgrades every card there).
+                if (drawCard.Plain || !Safe(() => card.IsUpgradable)) return drawCard;
+                drawCard = drawCard with { Key = key + "|upgradable", Upgradable = true };
+                if (original != null || everyUpgraded == UpgradedPiles.None) return drawCard;
+                try
+                {
+                    var upgraded = Profile(SpireQoL.Cards.UpgradedCopy.Of(card), exhausted, original: card);
+                    if (auto != null) auto.Upgraded = upgraded.Auto;
+                    return drawCard with { UpgradedTo = upgraded, TurnEnd = drawCard.TurnEnd is { } acts ? acts with { Upgraded = upgraded.TurnEnd } : null };
+                }
+                catch { return drawCard; }
             }
             var profiles = new Dictionary<CardModel, SimDrawCard>(ReferenceEqualityComparer.Instance);
             SimDrawCard Remembered(CardModel card)
@@ -748,6 +794,54 @@ public static partial class SimAdapter
         ["Slither"] = "a random cost on draw (Simpleton: the cost it had in the pile)",
         ["MockRemoveDrawnCardsFromCombatPower"] = "the game's test mock: never in a real fight",
     };
+
+    /// <summary>
+    /// The piles a card of yours upgrades every card of when played or used (decision #363: CardCmd.Upgrade of each card of your hand, draw or discard pile,
+    /// not random ones; the cards in your hand and the potions in your belt), read from their code: what the board reads each card's upgraded copy for.
+    /// </summary>
+    internal static UpgradedPiles PilesYourCardsUpgrade(Player me)
+    {
+        try
+        {
+            var models = Sts2State.Hand(me).Cast<AbstractModel>().Concat(me.Potions);
+            return models.Aggregate(UpgradedPiles.None, (piles, model) => piles | PilesEveryCardUpgraded(model.GetType()));
+        }
+        catch { return UpgradedPiles.None; }
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, UpgradedPiles> EveryCardUpgraded = new();
+
+    /// <summary>The piles a card's or potion's code upgrades every card of (UpgradeTargetOf's piles, not a roll's: UpgradesRandomCards).</summary>
+    internal static UpgradedPiles PilesEveryCardUpgraded(Type type) => EveryCardUpgraded.GetOrAdd(type, modelType =>
+    {
+        var program = Procs.Programs.CardPrograms.Of(modelType);
+        var piles = UpgradedPiles.None;
+        foreach (var command in program.All().OfType<Procs.Programs.CommandStep>().Where(step => step.Command.FullName == "CardCmd.Upgrade"))
+            if (UpgradeTargetOf(command, program) is { Target: UpgradeTarget.Piles, Piles: var upgraded } && !UpgradesRandomCards(command, program)) piles |= upgraded;
+        return piles;
+    });
+
+    /// <summary>
+    /// A card in your hand whose upgrade is read for what it does as the turn ends (decision #363): one acting in hand then whose upgraded copy does too
+    /// (TurnEndCard.Upgraded), or an Ethereal one whose upgraded copy still is.
+    /// </summary>
+    private static bool UpgradeReadAtTurnEnd(CardModel card, ICombatState combat)
+    {
+        try
+        {
+            var copy = SpireQoL.Cards.UpgradedCopy.Of(card);
+            if (TurnEndOf(card) != null && TurnEndOf(copy)?.Card != card.GetType().Name) return false;
+            return !IsFading(card, combat) || copy.Keywords.Contains(CardKeyword.Ethereal);
+        }
+        catch { return false; }
+    }
+
+    /// <summary>The card's turn-end action once upgraded (its upgraded copy's), or null where it can't be read or it can't be upgraded.</summary>
+    private static TurnEndCard? UpgradedTurnEnd(CardModel card)
+    {
+        try { return SafeBool(() => card.IsUpgradable) ? TurnEndOf(SpireQoL.Cards.UpgradedCopy.Of(card)) : null; }
+        catch { return null; }
+    }
 
     /// <summary>A card that acts in hand at the end of your turn (SimEngine.HandAtTurnEnd), with its amount; null otherwise.</summary>
     private static TurnEndCard? TurnEndOf(CardModel card)
@@ -891,7 +985,11 @@ public static partial class SimAdapter
         player.Energy = pcs.Energy;
         player.Arrows = SpireQoL.Procs.Fool.ArrowsAvailable(me);
         player.Fading = hand.Count(card => IsFading(card, combat));
-        player.UpgradableAtTurnEnd = hand.Count(card => !SafeBool(() => !card.IsUpgradable) && (IsFading(card, combat) || TurnEndOf(card) != null));
+        // A card of yours that upgrades every card in your hand (decision #363: Armaments+, Apotheosis): each card's upgraded copy is read here, so what an
+        // upgrade changes of one acting as the turn ends is followed (its TurnEndCard.Upgraded); one an upgrade leaves Ethereal changes nothing then.
+        var handUpgraded = PilesYourCardsUpgrade(me).HasFlag(UpgradedPiles.Hand);
+        player.UpgradableAtTurnEnd = hand.Count(card => !SafeBool(() => !card.IsUpgradable) && (IsFading(card, combat) || TurnEndOf(card) != null)
+            && !(handUpgraded && UpgradeReadAtTurnEnd(card, combat)));
         player.ExhaustingInHand = hand.Where(card => CardEnergy.WhenExhausted(card) > 0)
             .Select(card => new ExhaustingCard(HandId(card), CardEnergy.WhenExhausted(card), SimReaders.TypeOf(card))).ToList();
         // Hex (decision #85): its cards' Ethereal goes when its caster dies.
@@ -902,7 +1000,7 @@ public static partial class SimAdapter
         }
         // Cards that act in hand at the end of the turn (the simulator's list): their Damage or HpLoss as the card shows it.
         foreach (var card in hand)
-            if (TurnEndOf(card) is { } turnEnd) player.TurnEndCards.Add(turnEnd);
+            if (TurnEndOf(card) is { } turnEnd) player.TurnEndCards.Add(handUpgraded ? turnEnd with { Upgraded = UpgradedTurnEnd(card) } : turnEnd);
 
         // Focus and Thunder are in their powers (read from their code: ModifyOrbValue, AfterOrbEvoked); Gold-Plated Cables in its relic.
         player.OrbCapacity = pcs.OrbQueue.Capacity;

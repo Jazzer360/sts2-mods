@@ -1284,7 +1284,7 @@ public static partial class SimEngine
                 branches.Do(branch => { if (branch.Player(branch.CurrentPlay?.Owner ?? Who.You) != null) branch.MutablePlayer(branch.CurrentPlay?.Owner ?? Who.You).Arrows += gainArrowSlotsAction.Count; });
                 break;
             case EtherealInHandAction: branches.Do(branch => EtherealInHand(branch, branch.CurrentPlay?.Owner ?? Who.You)); break;
-            case UpgradeCardsAction upgradeCardsAction: branches.Do(branch => UpgradeCards(branch, branch.CurrentPlay?.Owner ?? Who.You, upgradeCardsAction.Piles, upgradeCardsAction.Source)); break;
+            case UpgradeCardsAction upgradeCardsAction: branches.Do(branch => UpgradeCards(branch, branch.CurrentPlay?.Owner ?? Who.You, upgradeCardsAction.Piles, upgradeCardsAction.Source, upgradeCardsAction.Random)); break;
             case SummonAction summonAction: RunSummon(branches, summonAction); break;
             case HealAction healAction: RunHeal(branches, healAction); break;
             case GainMaxHpAction gainMaxHpAction: RunGainMaxHp(branches, gainMaxHpAction); break;

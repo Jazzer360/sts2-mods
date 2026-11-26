@@ -118,4 +118,68 @@ public class UpgradeCardsTests
         var outcome = SimEngine.Run(state, Upgrades(UpgradedPiles.Draw));
         Assert.Contains("I Am Invincible", Assert.Single(outcome.Branches).Unmodelled);
     }
+
+    // ---- an upgrade of every card read at the board (decision #363)
+
+    private static readonly TurnEndCard Burn = new("Burn", "Burn", Amount: 2) { Upgraded = new TurnEndCard("Burn", "Burn+", Amount: 4) };
+
+    [Fact]
+    public void EveryCardInHandUpgradedTurnsABurnReadUpgradedIntoItsUpgradedCopy()
+    {
+        // Armaments+ with a Burn in hand whose upgraded copy was read at the board: it deals Burn+'s 4 as the turn ends, known.
+        var state = You();
+        state.You.TurnEndCards = new List<TurnEndCard> { Burn };
+        var outcome = SimEngine.Run(state, Upgrades(UpgradedPiles.Hand));
+        var branch = Assert.Single(outcome.Branches);
+        Assert.Null(branch.Unmodelled);
+        Assert.Equal(4, branch.You.Taken);
+        Assert.Equal(2, SimEngine.Run(state).Branches.Single().You.Taken); // not upgraded: Burn's 2
+    }
+
+    [Fact]
+    public void RandomCardsUpgradedInHandWithABurnTheyCouldChangeIsUnknown()
+    {
+        var state = You();
+        state.You.TurnEndCards = new List<TurnEndCard> { Burn };
+        var play = new SimPlay { Name = "DrainPower", HandCard = 7, HandDelta = -1, Body = { new UpgradeCardsAction(UpgradedPiles.Hand, Source: "DrainPower") { Random = true } } };
+        Assert.Contains("random cards in hand", Assert.Single(SimEngine.Run(state, play).Branches).Unmodelled);
+    }
+
+    [Fact]
+    public void EveryCardInHandUpgradedGivesStampedeTheUpgradedPlays()
+    {
+        // Stampede picks the Strike; upgraded at the board (its SimHandCard.Upgraded), it hits for 9, not 6.
+        static SimPlay Strike(int damage) => new()
+        {
+            Name = "StrikeIronclad", IsAttack = true, AutoPlay = true, HandCard = 3, HandDelta = -1, TargetId = 1,
+            Card = new SimCardPlay(new SimCard("StrikeIronclad", SimCardType.Attack) { HandId = 3 }, Who.You, Target: 1, PlayIndex: 0, PlayCount: 1, AutoPlay: true),
+            Body = { new AttackAction(Hits: 1, SimPlay.Target.Single, new DamageSpec(Base: 0m, SimProps.Move) { BaseOn = new Dictionary<int, decimal> { [1] = damage }, Fixed = true }) },
+        };
+        var state = You();
+        state.You.Stampede = 1;
+        var facts = new SimCard("StrikeIronclad", SimCardType.Attack) { Upgradable = true };
+        state.You.AutoHand = new List<SimHandCard>
+        {
+            new() { Id = 3, Name = "StrikeIronclad", IsAttack = true, Card = facts, Plays = { Strike(damage: 6) }, Upgraded = new SimHandCard { Id = 3, Name = "StrikeIronclad", IsAttack = true, Card = facts with { Upgradable = false, Upgraded = true }, Plays = { Strike(damage: 9) } } },
+        };
+        var branch = Assert.Single(SimEngine.Run(state, Upgrades(UpgradedPiles.Hand)).Branches);
+        Assert.False(branch.AutoPlaysUnknown);
+        Assert.Equal(41, branch.Enemy(id: 1)!.Hp);
+    }
+
+    [Fact]
+    public void EveryCardOfTheDrawPileUpgradedTakesEachProfilesUpgradedOne()
+    {
+        // Apotheosis with an upgradable Burn to draw whose upgraded profile was read: the pile holds Burn+ now, and a draw of it is known.
+        var upgradedBurn = new SimDrawCard("burn+") { TurnEnd = new TurnEndCard("Burn", "Burn+", Amount: 4) };
+        var state = You();
+        state.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(UpgradableBurn with { UpgradedTo = upgradedBurn }, Count: 1), new SimDrawGroup(Plain, Count: 2) } };
+        var branch = Assert.Single(SimEngine.Run(state, Upgrades(UpgradedPiles.Draw | UpgradedPiles.Discard)).Branches);
+        Assert.False(branch.You.PilesUpgraded);
+        Assert.Contains(branch.You.Draw!.Rest, group => group.Card.Key == "burn+");
+        // One whose upgraded profile isn't read leaves the pile unknown once drawn from (as before).
+        var unread = You();
+        unread.You.Draw = new SimDrawPile { Rest = { new SimDrawGroup(UpgradableBurn, Count: 1) } };
+        Assert.True(Assert.Single(SimEngine.Run(unread, Upgrades(UpgradedPiles.Draw)).Branches).You.PilesUpgraded);
+    }
 }

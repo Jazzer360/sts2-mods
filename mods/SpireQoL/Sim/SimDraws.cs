@@ -68,6 +68,11 @@ public sealed record SimDrawCard(string Key)
     /// while a card on the board auto-plays cards from a pile this one can be in (decision #360); null otherwise.
     /// </summary>
     public IReadOnlyList<string>? AutoPlayedBy { get; init; }
+    /// <summary>
+    /// Its profile once upgraded (its upgraded copy's, read at the board while a card of yours upgrades every card of your draw or discard pile: decision
+    /// #363), for one an upgrade could change (Upgradable); null when that isn't read (an upgrade of its pile then makes it unknown: SimPlayer.PilesUpgraded).
+    /// </summary>
+    public SimDrawCard? UpgradedTo { get; init; }
 
     /// <summary>
     /// Nothing about it is followed (every field but its key at its default: the adapter's plain profile): moving it changes only a
@@ -144,6 +149,31 @@ public sealed class SimDrawPile
         Discard = Discard,
         Picked = Picked,
     };
+
+    /// <summary>
+    /// Every card of the draw pile (<paramref name="draw"/>) and the discard pile (<paramref name="discard"/>) upgraded (decision #363): each profile an
+    /// upgrade could change as its upgraded one (SimDrawCard.UpgradedTo), the rest as they are; null when one of them has no upgraded profile read.
+    /// </summary>
+    internal SimDrawPile? WithUpgraded(bool draw, bool discard)
+    {
+        static SimDrawCard? Upgrade(SimDrawCard card) => card.Upgradable ? card.UpgradedTo : card;
+        static List<SimDrawGroup>? Groups(List<SimDrawGroup> groups)
+        {
+            var upgraded = new List<SimDrawGroup>(groups.Count);
+            foreach (var group in groups)
+            {
+                if (Upgrade(group.Card) is not { } card) return null;
+                upgraded.Add(group with { Card = card });
+            }
+            return upgraded.GroupBy(group => group.Card.Key).Select(same => new SimDrawGroup(same.First().Card, same.Sum(group => group.Count)))
+                .OrderBy(group => group.Card.Key, StringComparer.Ordinal).ToList();
+        }
+        var top = draw ? Top.Select(Upgrade).ToList() : Top.Select(card => (SimDrawCard?)card).ToList();
+        var rest = draw ? Groups(Rest) : Rest;
+        var discarded = discard ? Groups(Discard) : Discard;
+        if (top.Any(card => card == null) || rest == null || discarded == null) return null;
+        return new SimDrawPile { Top = top.Select(card => card!).ToList(), Rest = rest, Discard = discarded, Picked = Picked };
+    }
 
     /// <summary>Some I Am Invincible in the pile.</summary>
     public bool HasInvincible => Top.Any(drawn => drawn.InvincibleBlock > 0) || Rest.Any(group => group.Card.InvincibleBlock > 0);

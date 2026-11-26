@@ -229,7 +229,10 @@ public static partial class SimEngine
     {
         JoinsTakes(state, card.TakenBy, known: true, intoHand: true, made: false);
         if (card.Upgradable && simPlayer.PilesUpgraded) state.Unmodelled ??= "a card that could have been upgraded in its pile joined your hand";
-        if (card.Upgradable && (card.TurnEnd != null || card.Fading)) simPlayer.UpgradableAtTurnEnd++;
+        // One whose upgrade is read for what it does as the turn ends (decision #363: its TurnEnd's Upgraded, Ethereal still once upgraded) isn't one an
+        // upgrade of your hand could change unknown.
+        var upgradeRead = card.UpgradedTo is { } upgraded && (card.TurnEnd == null || card.TurnEnd.Upgraded != null) && (!card.Fading || upgraded.Fading);
+        if (card.Upgradable && (card.TurnEnd != null || card.Fading) && !upgradeRead) simPlayer.UpgradableAtTurnEnd++;
         if (card.TurnEnd != null) simPlayer.TurnEndCards = new List<TurnEndCard>(simPlayer.TurnEndCards) { card.TurnEnd };
         if (card.Exhausting != null) simPlayer.ExhaustingInHand = new List<ExhaustingCard>(simPlayer.ExhaustingInHand) { card.Exhausting with { HandCard = id } };
         if (card.Fading) simPlayer.Fading++;

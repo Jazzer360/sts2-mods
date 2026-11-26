@@ -188,8 +188,10 @@ public class SimJsonTests
         if (type.IsAbstract || type.IsInterface || type.IsPrimitive) throw new InvalidOperationException($"teach Sample to make a {type.Name}");
         var constructor = type.GetConstructors().OrderByDescending(candidate => candidate.GetParameters().Length).First();
         var sample = constructor.Invoke(constructor.GetParameters().Select(parameter => Sample(parameter.ParameterType, depth + 1)).ToArray());
-        foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public).Where(field => !field.IsInitOnly)) field.SetValue(sample, Sample(field.FieldType, depth + 1));
-        foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public).Where(property => property.CanWrite && property.GetIndexParameters().Length == 0))
+        // A member of its own type (an upgraded copy: SimHandCard.Upgraded, SimDrawCard.UpgradedTo) is sampled once, not forever.
+        bool Nested(Type member) => member == type && depth > 0;
+        foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public).Where(field => !field.IsInitOnly && !Nested(field.FieldType))) field.SetValue(sample, Sample(field.FieldType, depth + 1));
+        foreach (var property in type.GetProperties(BindingFlags.Instance | BindingFlags.Public).Where(property => property.CanWrite && property.GetIndexParameters().Length == 0 && !Nested(property.PropertyType)))
             property.SetValue(sample, Sample(property.PropertyType, depth + 1));
         return sample;
     }
