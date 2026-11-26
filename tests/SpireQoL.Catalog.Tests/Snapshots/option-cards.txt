@@ -1,0 +1,357 @@
+# The cards each event option and relic's obtaining can give, for a new Ironclad run (OptionCardsSnapshotTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #353).
+AbyssalBaths.Immerse: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+AbyssalBaths.Abstain: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+AbyssalBaths.Linger: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+AbyssalBaths.ExitBaths: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Amalgamator.CombineStrikes: groups Certain/Uniform/?: 1 [UltimateStrike]; cards 1 [UltimateStrike]; changes []; attack 1; rare 0; cannon 0; lighter no
+Amalgamator.CombineDefends: groups Certain/Uniform/?: 1 [UltimateDefend]; cards 1 [UltimateDefend]; changes []; attack 0; rare 0; cannon 0; lighter no
+AromaOfChaos.LetGo: groups Transform/Uniform/1: 80 #65d074b2; cards 80 #65d074b2; changes [] picks transform; attack 0.425; rare 0.3125; cannon 0; lighter no
+AromaOfChaos.MaintainControl: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+BattlewornDummy.Setting1: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+BattlewornDummy.Setting2: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+BattlewornDummy.Setting3: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+BrainLeech.ShareKnowledge: groups Reward/RegularEncounter/5: 80 #65d074b2; cards 85 #712ae6c6; changes []; attack 0.9854; rare 0.1413; cannon 0; lighter no
+BrainLeech.Rip: groups Reward/RegularEncounter/3: 54 #7a345a81; cards 54 #7a345a81; changes []; attack 0.687; rare 0.0873; cannon 0; lighter no
+Bugslayer.Extermination: groups Certain/Uniform/?: 1 [Exterminate]; cards 1 [Exterminate]; changes []; attack 1; rare 0; cannon 0; lighter no
+Bugslayer.Squash: groups Certain/Uniform/?: 1 [Squash]; cards 1 [Squash]; changes []; attack 1; rare 0; cannon 0; lighter no
+ByrdonisNest.Eat: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+ByrdonisNest.Take: groups Certain/Uniform/?: 1 [ByrdonisEgg]; cards 1 [ByrdonisEgg]; changes []; attack 0; rare 0; cannon 0; lighter no
+ColorfulPhilosophers.<GenerateInitialOptions>b__0: groups ?; cards ?; changes []; attack ?; rare ?; cannon ?; lighter no
+ColossalFlower.ExtractCurrentPrize: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+ColossalFlower.ReachDeeper: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+ColossalFlower.ExtractInstead: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+ColossalFlower.ObtainPollinousCore: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+CrystalSphere.UncoverFuture: groups Reward/Uniform/3: 80 #65d074b2; cards 85 #712ae6c6; changes []; attack 0.8152; rare 0.6807; cannon 0; lighter no
+CrystalSphere.PaymentPlan: groups Reward/Uniform/3: 80 #65d074b2; cards 85 #712ae6c6; changes []; attack 0.8152; rare 0.6807; cannon 0; lighter no
+Darv.<RelicOption>g__OnChosen|0 [DustyTome]: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+Darv.<RelicOption>g__OnChosen|0 [Astrolabe]: groups Transform/Uniform/1/up: 80 #65d074b2; cards 80 #65d074b2; changes [] gives upgraded picks transform; attack 0.425; rare 0.3125; cannon 0.425; lighter no
+Darv.<RelicOption>g__OnChosen|0 [BlackStar]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Darv.<RelicOption>g__OnChosen|0 [CallingBell]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Darv.<RelicOption>g__OnChosen|0 [EmptyCage]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Darv.<RelicOption>g__OnChosen|0 [PandorasBox]: groups ?; cards 80 #65d074b2; changes []; attack 0.425; rare 0.3125; cannon 0; lighter no
+Darv.<RelicOption>g__OnChosen|0 [RunicPyramid]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Darv.<RelicOption>g__OnChosen|0 [SneckoEye]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Darv.<RelicOption>g__OnChosen|0 [Ectoplasm]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Darv.<RelicOption>g__OnChosen|0 [Sozu]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Darv.<RelicOption>g__OnChosen|0 [PhilosophersStone]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Darv.<RelicOption>g__OnChosen|0 [VelvetChoker]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+DenseVegetation.TrudgeOn: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+DenseVegetation.Rest: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+DenseVegetation.Fight: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+DollRoom.ChooseRandom: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+DollRoom.TakeSomeTime: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+DollRoom.Examine: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+DollRoom.<OptionFromChoice>g__Func|0: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+DoorsOfLightAndDark.Light: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+DoorsOfLightAndDark.Dark: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+DrowningBeacon.BottleOption: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+DrowningBeacon.ClimbOption: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+EndlessConveyor.ObserveChef: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+EndlessConveyor.GrabSomethingOffTheBelt: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+EndlessConveyor.Leave: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+FieldOfManSizedHoles.Resist: groups Certain/Uniform/?: 1 [Normality]; cards 1 [Normality]; changes []; attack 0; rare 0; cannon 0; lighter no
+FieldOfManSizedHoles.EnterYourHole: groups ?; cards ?; changes [PerfectFit]; attack 0; rare 0; cannon 0; lighter reaches
+GraveOfTheForgotten.Confront: groups ?; cards ?; changes [SoulsPower]; attack 0; rare 0; cannon 0; lighter no
+GraveOfTheForgotten.Accept: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+HungryForMushrooms.BigMushroom: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+HungryForMushrooms.FragrantMushroom: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+InfestedAutomaton.Study: groups Reward/RegularEncounter/1: 18 #979f5cc9; cards 19 #3a03633e; changes []; attack 0; rare 0.03; cannon 0; lighter no
+InfestedAutomaton.TouchCore: groups Reward/RegularEncounter/1: 10 #5d12ca4f; cards 10 #5d12ca4f; changes []; attack 0.7555; rare 0.03; cannon 0; lighter no
+JungleMazeAdventure.DontNeedHelp: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+JungleMazeAdventure.SafetyInNumbers: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+LostWisp.Claim: groups Certain/Uniform/?: 1 [Decay]; cards 1 [Decay]; changes []; attack 0; rare 0; cannon 0; lighter no
+LostWisp.Search: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+LuminousChoir.ReachIntoTheFlesh: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+LuminousChoir.OfferTribute: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+MorphicGrove.Group: groups Transform/Uniform/1: 80 #65d074b2; cards 80 #65d074b2; changes [] picks transform; attack 0.425; rare 0.3125; cannon 0; lighter no
+MorphicGrove.Loner: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+MuseumOfTorture.EnterMuseum: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+MuseumOfTorture.ViewDisplay: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+MuseumOfTorture.TakeRelic: groups Pool/Uniform/?: 18 #c4d33548; cards 18 #c4d33548; changes []; attack 0; rare 0; cannon 0; lighter no
+MuseumOfTorture.BreakOut: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.OnBlitzOptionSelected: groups Reward/BlitzNeow/10: 80 #65d074b2; cards 85 #712ae6c6; changes []; attack 0.9998; rare 0.4013; cannon 0; lighter no
+Neow.<GenerateNeowModifiers>b__0: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [ArcaneScroll]: groups Reward/Uniform/1: 25 #5a747e33; cards 25 #5a747e33; changes []; attack 0.28; rare 1; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [BoomingConch]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [FishingRod]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [GoldenPearl]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [Kaleidoscope]: groups ?; cards ?; changes []; attack ?; rare ?; cannon ?; lighter no
+Neow.<RelicOption>g__OnChosen|0 [LeadPaperweight]: groups Reward/RegularEncounter/2: 54 #7a345a81; cards 54 #7a345a81; changes []; attack 0.5322; rare 0.0591; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [LostCoffer]: groups Reward/RegularEncounter/3: 80 #65d074b2; cards 85 #712ae6c6; changes []; attack 0.9138; rare 0.0873; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [MassiveScroll]: groups Reward/RegularEncounter/3: 0 []; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [NeowsTorment]: groups Certain/Uniform/?: 1 [NeowsFury]; cards 1 [NeowsFury]; changes []; attack 1; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [NewLeaf]: groups Transform/Uniform/1: 80 #65d074b2; cards 80 #65d074b2; changes [] picks transform; attack 0.425; rare 0.3125; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [PhialHolster]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [PreciseScissors]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [ScrollBoxes]: groups ?; cards ?; changes []; attack 1; rare ?; cannon ?; lighter no
+Neow.<RelicOption>g__OnChosen|0 [WingedBoots]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [LavaRock]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [NeowsTalisman]: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+Neow.<RelicOption>g__OnChosen|0 [NutritiousOyster]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [Pomander]: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+Neow.<RelicOption>g__OnChosen|0 [SmallCapsule]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [StoneHumidifier]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [CursedPearl]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [DowsingRod]: groups Certain/Uniform/?: 1 [Dowsing]; cards 1 [Dowsing]; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [HeftyTablet]: groups Certain/Uniform/?: 1 [Injury] + Reward/Uniform/3: 25 #5a747e33; cards 26 #0a4ea4bc; changes []; attack 0.6452; rare 1; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [LargeCapsule]: groups Certain/Uniform/?: 2 [DefendIronclad,StrikeIronclad] + Pool/Uniform/?: 80 #65d074b2 + Pool/Uniform/?: 80 #65d074b2; cards 85 #712ae6c6; changes []; attack 1; rare ?; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [LeafyPoultice]: groups ?; cards 80 #65d074b2; changes []; attack 0.425; rare 0.3125; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [NeowsBones]: groups Pool/Uniform/?: 18 #c4d33548; cards 18 #c4d33548; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [NeowsSacrifice]: groups Certain/Uniform/?: 1 [Guilty]; cards 1 [Guilty]; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [PrecariousShears]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [SilkenTress]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Neow.<RelicOption>g__OnChosen|0 [SilverCrucible]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Nonupeipe.<RelicOption>g__OnChosen|0 [BlessedAntler]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Nonupeipe.<RelicOption>g__OnChosen|0 [BrilliantScarf]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Nonupeipe.<RelicOption>g__OnChosen|0 [DelicateFrond]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Nonupeipe.<RelicOption>g__OnChosen|0 [DiamondDiadem]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Nonupeipe.<RelicOption>g__OnChosen|0 [FurCoat]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Nonupeipe.<RelicOption>g__OnChosen|0 [Glitter]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Nonupeipe.<RelicOption>g__OnChosen|0 [JewelryBox]: groups Certain/Uniform/?: 1 [Apotheosis]; cards 1 [Apotheosis]; changes []; attack 0; rare 0; cannon 0; lighter no
+Nonupeipe.<RelicOption>g__OnChosen|0 [LoomingFruit]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Nonupeipe.<RelicOption>g__OnChosen|0 [SignetRing]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Nonupeipe.<RelicOption>g__OnChosen|0 [BeautifulBracelet]: groups ?; cards ?; changes [Swift]; attack 0; rare 0; cannon 0; lighter reaches
+Orobas.<RelicOption>g__OnChosen|0 [ElectricShrymp]: groups ?; cards ?; changes [Imbued]; attack 0; rare 0; cannon 0; lighter no
+Orobas.<RelicOption>g__OnChosen|0 [GlassEye]: groups Reward/Uniform/3: 20 #1b5d1668 + Reward/Uniform/3: 20 #1b5d1668 + Reward/Uniform/3: 35 #b414317b + Reward/Uniform/3: 35 #b414317b + Reward/Uniform/3: 25 #5a747e33; cards 80 #65d074b2; changes []; attack 1; rare 1; cannon 0; lighter no
+Orobas.<RelicOption>g__OnChosen|0 [AlchemicalCoffer]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Orobas.<RelicOption>g__OnChosen|0 [Driftwood]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Orobas.<RelicOption>g__OnChosen|0 [RadiantPearl]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Orobas.<RelicOption>g__OnChosen|0 [SandCastle]: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+Orobas.<RelicOption>g__OnChosen|0 [SeaGlass]: groups ?; cards ?; changes []; attack ?; rare ?; cannon ?; lighter no
+Orobas.<RelicOption>g__OnChosen|0 [PrismaticGem]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Orobas.<RelicOption>g__OnChosen|0 [TouchOfOrobas]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Orobas.<RelicOption>g__OnChosen|0 [ArchaicTooth]: groups Certain/Uniform/?/up: 13 #f012f6ed; cards 13 #f012f6ed; changes [] gives upgraded; attack 1; rare 0; cannon 1; lighter reaches
+Pael.<RelicOption>g__OnChosen|0 [PaelsClaw]: groups ?; cards ?; changes [Goopy]; attack 0; rare 0; cannon 0; lighter no
+Pael.<RelicOption>g__OnChosen|0 [PaelsTooth]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Pael.<RelicOption>g__OnChosen|0 [PaelsGrowth]: groups ?; cards ?; changes [Clone]; attack 0; rare 0; cannon 0; lighter reaches
+Pael.<RelicOption>g__OnChosen|0 [PaelsLegion]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Pael.<RelicOption>g__OnChosen|0 [PaelsFlesh]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Pael.<RelicOption>g__OnChosen|0 [PaelsHorn]: groups Certain/Uniform/?: 1 [Relax]; cards 1 [Relax]; changes []; attack 0; rare 0; cannon 0; lighter no
+Pael.<RelicOption>g__OnChosen|0 [PaelsTears]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Pael.<RelicOption>g__OnChosen|0 [PaelsWing]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Pael.<RelicOption>g__OnChosen|0 [PaelsEye]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Pael.<RelicOption>g__OnChosen|0 [PaelsBlood]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+PotionCourier.GrabPotions: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+PotionCourier.Ransack: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+PunchOff.Nab: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+PunchOff.TakeThem: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+PunchOff.Fight: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+RanwidTheElder.<GenerateInitialOptions>b__0: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+RanwidTheElder.GiveGold: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+RanwidTheElder.<GenerateInitialOptions>b__2: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Reflections.TouchAMirror: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+Reflections.Shatter: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+RelicTrader.Top: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+RelicTrader.Middle: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+RelicTrader.Bottom: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+RelicTrader.Done: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+RoomFullOfCheese.Gorge: groups Reward/Uniform/8: 20 #1b5d1668; cards 20 #1b5d1668; changes []; attack 1; rare 0; cannon 0; lighter no
+RoomFullOfCheese.Search: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+RoundTeaParty.EnjoyTea: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+RoundTeaParty.PickFight: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+RoundTeaParty.ContinueFight: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+SapphireSeed.Eat: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+SapphireSeed.Plant: groups ?; cards ?; changes [Sown]; attack 0; rare 0; cannon 0; lighter reaches
+SelfHelpBook.ReadTheBack: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter reaches
+SelfHelpBook.ReadPassage: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+SelfHelpBook.ReadEntireBook: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+SelfHelpBook.SkipBook: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+ShrineOfTheWarlord.TakeWeapon: groups Certain/Uniform/?: 1 [MightyWeapon]; cards 1 [MightyWeapon]; changes []; attack 1; rare 0; cannon 0; lighter no
+ShrineOfTheWarlord.TakeShield: groups Certain/Uniform/?: 1 [MightyShield]; cards 1 [MightyShield]; changes []; attack 0; rare 0; cannon 0; lighter no
+ShrineOfTheWarlord.TakeWings: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+SlipperyBridge.Overcome: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+SlipperyBridge.HoldOn: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+SpiralingWhirlpool.ObserveTheSpiral: groups ?; cards ?; changes [Spiral]; attack 0; rare 0; cannon 0; lighter reaches
+SpiralingWhirlpool.Drink: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+SpiritGrafter.LetItIn: groups Certain/Uniform/?: 1 [Metamorphosis]; cards 1 [Metamorphosis]; changes []; attack 0; rare 0; cannon 0; lighter no
+SpiritGrafter.Rejection: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+StoneOfAllTime.Lift: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+StoneOfAllTime.Push: groups ?; cards ?; changes [Vigorous]; attack 0; rare 0; cannon 0; lighter reaches
+SunkenStatue.GrabSword: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+SunkenStatue.DiveIntoWater: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+SunkenTreasury.FirstChest: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+SunkenTreasury.SecondChest: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Symbiote.Approach: groups ?; cards ?; changes [Corrupted]; attack 0; rare 0; cannon 0; lighter reaches
+Symbiote.KillWithFire: groups Transform/Uniform/1: 80 #65d074b2; cards 80 #65d074b2; changes [] picks transform; attack 0.425; rare 0.3125; cannon 0; lighter no
+TabletOfTruth.Decipher: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+TabletOfTruth.Smash: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+TabletOfTruth.GiveUp: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tanx.<RelicOption>g__OnChosen|0 [Claws]: groups Certain/Uniform/?/up: 1 [Maul] + Transform/Uniform/1/up: 80 #65d074b2; cards 81 #2ba331f1; changes [] gives upgraded picks transform; attack 1; rare 0.3125; cannon 1; lighter reaches
+Tanx.<RelicOption>g__OnChosen|0 [Crossbow]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tanx.<RelicOption>g__OnChosen|0 [IronClub]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tanx.<RelicOption>g__OnChosen|0 [MeatCleaver]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tanx.<RelicOption>g__OnChosen|0 [Sai]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tanx.<RelicOption>g__OnChosen|0 [SpikedGauntlets]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tanx.<RelicOption>g__OnChosen|0 [TanxsWhistle]: groups Certain/Uniform/?: 1 [Whistle]; cards 1 [Whistle]; changes []; attack 1; rare 0; cannon 0; lighter no
+Tanx.<RelicOption>g__OnChosen|0 [ThrowingAxe]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tanx.<RelicOption>g__OnChosen|0 [WarHammer]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tanx.<RelicOption>g__OnChosen|0 [TriBoomerang]: groups ?; cards ?; changes [Instinct]; attack 0; rare 0; cannon 0; lighter reaches
+TeaMaster.BoneTea: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+TeaMaster.EmberTea: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+TeaMaster.TeaOfDiscourtesy: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tezcatara.<RelicOption>g__OnChosen|0 [NutritiousSoup]: groups ?; cards ?; changes [TezcatarasEmber]; attack 0; rare 0; cannon 0; lighter reaches
+Tezcatara.<RelicOption>g__OnChosen|0 [VeryHotCocoa]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tezcatara.<RelicOption>g__OnChosen|0 [YummyCookie]: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+Tezcatara.<RelicOption>g__OnChosen|0 [BiiigHug]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tezcatara.<RelicOption>g__OnChosen|0 [Storybook]: groups Certain/Uniform/?: 1 [BrightestFlame]; cards 1 [BrightestFlame]; changes []; attack 0; rare 0; cannon 0; lighter no
+Tezcatara.<RelicOption>g__OnChosen|0 [ToastyMittens]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tezcatara.<RelicOption>g__OnChosen|0 [GoldenCompass]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tezcatara.<RelicOption>g__OnChosen|0 [PumpkinCandle]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tezcatara.<RelicOption>g__OnChosen|0 [ToyBox]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Tezcatara.<RelicOption>g__OnChosen|0 [SealOfGold]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+TheArchitect.AdvanceDialogue: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+TheArchitect.WinRun: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+TheFutureOfPotions.<GenerateInitialOptions>b__0: groups Reward/Uniform/3/up: 80 #65d074b2; cards 85 #712ae6c6; changes [] gives upgraded; attack 0.8152; rare 0.6807; cannon 0.8152; lighter no
+TheLanternKey.ReturnTheKey: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+TheLanternKey.KeepTheKey: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+TheLanternKey.Fight: groups Certain/Uniform/?: 1 [LanternKey]; cards 1 [LanternKey]; changes []; attack 0; rare 0; cannon 0; lighter no
+TheLegendsWereTrue.NabTheMap: groups Certain/Uniform/?: 1 [SpoilsMap]; cards 1 [SpoilsMap]; changes []; attack 0; rare 0; cannon 0; lighter no
+TheLegendsWereTrue.SlowlyFindAnExit: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+ThermaeNonupeipe.ThermalBaths: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+ThermaeNonupeipe.PrivateOasis: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+ThermaeNonupeipe.DrinkWaters: groups Certain/Uniform/?: 1 [Guilty]; cards 1 [Guilty]; changes []; attack 0; rare 0; cannon 0; lighter no
+ThisOrThat.Plain: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+ThisOrThat.Ornate: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+TinkerTime.ChooseCardType: groups Certain/Uniform/?: 1 [MadScience]; cards 1 [MadScience]; changes []; attack 0; rare 0; cannon 0; lighter no
+TinkerTime.Attack: groups Certain/Uniform/?: 1 [MadScience]; cards 1 [MadScience]; changes []; attack 0; rare 0; cannon 0; lighter no
+TinkerTime.Skill: groups Certain/Uniform/?: 1 [MadScience]; cards 1 [MadScience]; changes []; attack 0; rare 0; cannon 0; lighter no
+TinkerTime.Power: groups Certain/Uniform/?: 1 [MadScience]; cards 1 [MadScience]; changes []; attack 0; rare 0; cannon 0; lighter no
+TinkerTime.<ChooseRiderEffect>b__0: groups Certain/Uniform/?: 1 [MadScience]; cards 1 [MadScience]; changes []; attack 0; rare 0; cannon 0; lighter no
+TinkerTime.<ChooseRiderEffect>b__1: groups Certain/Uniform/?: 1 [MadScience]; cards 1 [MadScience]; changes []; attack 0; rare 0; cannon 0; lighter no
+TrashHeap.DiveIn: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+TrashHeap.Grab: groups Certain/Uniform/?: 10 #1353f1cc; cards 10 #1353f1cc; changes []; attack 1; rare 0; cannon 0; lighter no
+Trial.Accept: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Trial.Reject: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Trial.MerchantGuilty: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Trial.MerchantInnocent: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+Trial.NobleGuilty: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Trial.NobleInnocent: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Trial.NondescriptGuilty: groups Reward/RegularEncounter/3: 80 #65d074b2; cards 85 #712ae6c6; changes []; attack 0.9138; rare 0.0873; cannon 0; lighter no
+Trial.NondescriptInnocent: groups Transform/Uniform/1: 80 #65d074b2; cards 80 #65d074b2; changes [] picks transform; attack 0.425; rare 0.3125; cannon 0; lighter no
+Trial.DoubleDown: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+UnrestSite.Rest: groups Certain/Uniform/?: 1 [PoorSleep]; cards 1 [PoorSleep]; changes []; attack 0; rare 0; cannon 0; lighter no
+UnrestSite.Kill: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Vakuu.<RelicOption>g__OnChosen|0 [BloodSoakedRose]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Vakuu.<RelicOption>g__OnChosen|0 [WhisperingEarring]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Vakuu.<RelicOption>g__OnChosen|0 [Fiddle]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Vakuu.<RelicOption>g__OnChosen|0 [PreservedFog]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Vakuu.<RelicOption>g__OnChosen|0 [SereTalon]: groups Certain/Uniform/?: 1 [Wish]; cards 1 [Wish]; changes []; attack 0; rare 0; cannon 0; lighter no
+Vakuu.<RelicOption>g__OnChosen|0 [DistinguishedCape]: groups Certain/Uniform/?: 1 [Apparition] + Pool/Uniform/?: 18 #c4d33548; cards 19 #0200aa07; changes []; attack 0; rare 0; cannon 0; lighter no
+Vakuu.<RelicOption>g__OnChosen|0 [ChoicesParadox]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Vakuu.<RelicOption>g__OnChosen|0 [MusicBox]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Vakuu.<RelicOption>g__OnChosen|0 [LordsParasol]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Vakuu.<RelicOption>g__OnChosen|0 [JeweledMask]: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+WarHistorianRepy.InitialUnlockCage: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+WarHistorianRepy.InitialUnlockChest: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+WarHistorianRepy.SecondUnlockChest: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+WarHistorianRepy.SecondUnlockCage: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+WaterfallOfObviousSecrets.EnterWaterfall: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+WaterfallOfObviousSecrets.BeNice: groups Certain/Uniform/?: 1 [DingyDagger]; cards 1 [DingyDagger]; changes []; attack 1; rare 0; cannon 0; lighter no
+WaterfallOfObviousSecrets.BeatUp: groups Certain/Uniform/?: 1 [Guilty]; cards 1 [Guilty]; changes []; attack 0; rare 0; cannon 0; lighter no
+WaterfallOfObviousSecrets.Negotiate: groups Reward/Uniform/1: 25 #5a747e33; cards 25 #5a747e33; changes []; attack 0.28; rare 1; cannon 0; lighter no
+WaterloggedScriptorium.BloodyInk: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+WaterloggedScriptorium.TentacleQuill: groups ?; cards ?; changes [Steady]; attack 0; rare 0; cannon 0; lighter reaches
+WaterloggedScriptorium.PricklySponge: groups ?; cards ?; changes [Steady]; attack 0; rare 0; cannon 0; lighter reaches
+WelcomeToWongos.BuyBargainBin: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+WelcomeToWongos.BuyFeaturedItem: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+WelcomeToWongos.BuyMysteryBox: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+WelcomeToWongos.Leave: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Wellspring.Bottle: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+Wellspring.Bathe: groups Certain/Uniform/?: 1 [Guilty]; cards 1 [Guilty]; changes []; attack 0; rare 0; cannon 0; lighter no
+WhisperingHollow.Gold: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+WhisperingHollow.Hug: groups Transform/Uniform/1: 80 #65d074b2; cards 80 #65d074b2; changes [] picks transform; attack 0.425; rare 0.3125; cannon 0; lighter no
+WoodCarvings.Snake: groups ?; cards ?; changes [Slither]; attack 0; rare 0; cannon 0; lighter reaches
+WoodCarvings.Bird: groups Certain/Uniform/?: 1 [Peck]; cards 1 [Peck]; changes []; attack 1; rare 0; cannon 0; lighter no
+WoodCarvings.Torus: groups Certain/Uniform/?: 1 [ToricToughness]; cards 1 [ToricToughness]; changes []; attack 0; rare 0; cannon 0; lighter no
+WuppyInTrouble.HelpImmediately: groups Certain/Uniform/?: 1 [Injury]; cards 1 [Injury]; changes []; attack 0; rare 0; cannon 0; lighter no
+WuppyInTrouble.BeCautious: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+WuppyInTrouble.Ignore: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+ZenWeaver.BreathingTechniques: groups Certain/Uniform/?: 1 [Enlightenment]; cards 1 [Enlightenment]; changes []; attack 0; rare 0; cannon 0; lighter no
+ZenWeaver.EmotionalAwareness: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+ZenWeaver.ArachnidAcupuncture: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic AlchemicalCoffer: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic ArcaneScroll: groups Reward/Uniform/1: 25 #5a747e33; cards 25 #5a747e33; changes []; attack 0.28; rare 1; cannon 0; lighter no
+relic ArchaicTooth: groups Certain/Uniform/?/up: 13 #f012f6ed; cards 13 #f012f6ed; changes [] gives upgraded; attack 1; rare 0; cannon 1; lighter reaches
+relic Astrolabe: groups Transform/Uniform/1/up: 80 #65d074b2; cards 80 #65d074b2; changes [] gives upgraded picks transform; attack 0.425; rare 0.3125; cannon 0.425; lighter no
+relic BeautifulBracelet: groups ?; cards ?; changes [Swift]; attack 0; rare 0; cannon 0; lighter reaches
+relic BeltBuckle: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic BigMushroom: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic BiiigHug: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic BloodSoakedRose: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic Byrdine: groups Certain/Uniform/?/up: 1 [GodByrd]; cards 1 [GodByrd]; changes [] gives upgraded; attack 0; rare 0; cannon 0; lighter no
+relic Byrdpip: groups Certain/Uniform/?: 1 [ByrdSwoop]; cards 1 [ByrdSwoop]; changes []; attack 1; rare 0; cannon 0; lighter no
+relic CallingBell: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic Cauldron: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic Claws: groups Certain/Uniform/?/up: 1 [Maul] + Transform/Uniform/1/up: 80 #65d074b2; cards 81 #2ba331f1; changes [] gives upgraded picks transform; attack 1; rare 0.3125; cannon 1; lighter reaches
+relic CursedPearl: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic DistinguishedCape: groups Certain/Uniform/?: 1 [Apparition] + Pool/Uniform/?: 18 #c4d33548; cards 19 #0200aa07; changes []; attack 0; rare 0; cannon 0; lighter no
+relic DollysMirror: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic DowsingRod: groups Certain/Uniform/?: 1 [Dowsing]; cards 1 [Dowsing]; changes []; attack 0; rare 0; cannon 0; lighter no
+relic DustyTome: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+relic ElectricShrymp: groups ?; cards ?; changes [Imbued]; attack 0; rare 0; cannon 0; lighter no
+relic EmptyCage: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic FakeLeesWaffle: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic FakeMango: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic FakeSneckoEye: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic FragrantMushroom: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+relic FurCoat: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic GlassEye: groups Reward/Uniform/3: 20 #1b5d1668 + Reward/Uniform/3: 20 #1b5d1668 + Reward/Uniform/3: 35 #b414317b + Reward/Uniform/3: 35 #b414317b + Reward/Uniform/3: 25 #5a747e33; cards 80 #65d074b2; changes []; attack 1; rare 1; cannon 0; lighter no
+relic GnarledHammer: groups ?; cards ?; changes [Sharp]; attack 0; rare 0; cannon 0; lighter reaches
+relic GoldenCompass: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic GoldenPearl: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic HeftyTablet: groups Certain/Uniform/?: 1 [Injury] + Reward/Uniform/3: 25 #5a747e33; cards 26 #0a4ea4bc; changes []; attack 0.6452; rare 1; cannon 0; lighter no
+relic JewelryBox: groups Certain/Uniform/?: 1 [Apotheosis]; cards 1 [Apotheosis]; changes []; attack 0; rare 0; cannon 0; lighter no
+relic Kaleidoscope: groups ?; cards ?; changes []; attack ?; rare ?; cannon ?; lighter no
+relic Kifuda: groups ?; cards ?; changes [Adroit]; attack 0; rare 0; cannon 0; lighter reaches
+relic LargeCapsule: groups Certain/Uniform/?: 2 [DefendIronclad,StrikeIronclad] + Pool/Uniform/?: 80 #65d074b2 + Pool/Uniform/?: 80 #65d074b2; cards 85 #712ae6c6; changes []; attack 1; rare ?; cannon 0; lighter no
+relic LeadPaperweight: groups Reward/RegularEncounter/2: 54 #7a345a81; cards 54 #7a345a81; changes []; attack 0.5322; rare 0.0591; cannon 0; lighter no
+relic LeafyPoultice: groups ?; cards 80 #65d074b2; changes []; attack 0.425; rare 0.3125; cannon 0; lighter no
+relic LeesWaffle: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic LoomingFruit: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic LostCoffer: groups Reward/RegularEncounter/3: 80 #65d074b2; cards 85 #712ae6c6; changes []; attack 0.9138; rare 0.0873; cannon 0; lighter no
+relic Mango: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic MassiveScroll: groups Reward/RegularEncounter/3: 0 []; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic NeowsBones: groups Pool/Uniform/?: 18 #c4d33548; cards 18 #c4d33548; changes []; attack 0; rare 0; cannon 0; lighter no
+relic NeowsSacrifice: groups Certain/Uniform/?: 1 [Guilty]; cards 1 [Guilty]; changes []; attack 0; rare 0; cannon 0; lighter no
+relic NeowsTalisman: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+relic NeowsTorment: groups Certain/Uniform/?: 1 [NeowsFury]; cards 1 [NeowsFury]; changes []; attack 1; rare 0; cannon 0; lighter no
+relic NewLeaf: groups Transform/Uniform/1: 80 #65d074b2; cards 80 #65d074b2; changes [] picks transform; attack 0.425; rare 0.3125; cannon 0; lighter no
+relic NutritiousOyster: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic NutritiousSoup: groups ?; cards ?; changes [TezcatarasEmber]; attack 0; rare 0; cannon 0; lighter reaches
+relic OldCoin: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic Orrery: groups Reward/RegularEncounter/3: 80 #65d074b2; cards 85 #712ae6c6; changes []; attack 0.9138; rare 0.0873; cannon 0; lighter no
+relic PaelsClaw: groups ?; cards ?; changes [Goopy]; attack 0; rare 0; cannon 0; lighter no
+relic PaelsEye: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic PaelsGrowth: groups ?; cards ?; changes [Clone]; attack 0; rare 0; cannon 0; lighter reaches
+relic PaelsHorn: groups Certain/Uniform/?: 1 [Relax]; cards 1 [Relax]; changes []; attack 0; rare 0; cannon 0; lighter no
+relic PaelsLegion: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic PaelsTooth: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic PandorasBox: groups ?; cards 80 #65d074b2; changes []; attack 0.425; rare 0.3125; cannon 0; lighter no
+relic Pear: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic PhialHolster: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic Pomander: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+relic PotionBelt: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic PrecariousShears: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic PreciseScissors: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic PreservedFog: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic PumpkinCandle: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic PunchDagger: groups ?; cards ?; changes [Momentum]; attack 0; rare 0; cannon 0; lighter reaches
+relic RoyalStamp: groups ?; cards ?; changes [RoyallyApproved]; attack 0; rare 0; cannon 0; lighter reaches
+relic SandCastle: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+relic ScrollBoxes: groups ?; cards ?; changes []; attack 1; rare ?; cannon ?; lighter no
+relic SeaGlass: groups ?; cards ?; changes []; attack ?; rare ?; cannon ?; lighter no
+relic SereTalon: groups Certain/Uniform/?: 1 [Wish]; cards 1 [Wish]; changes []; attack 0; rare 0; cannon 0; lighter no
+relic SignetRing: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic SilkenTress: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic SmallCapsule: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic SneckoEye: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic Storybook: groups Certain/Uniform/?: 1 [BrightestFlame]; cards 1 [BrightestFlame]; changes []; attack 0; rare 0; cannon 0; lighter no
+relic Strawberry: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic TanxsWhistle: groups Certain/Uniform/?: 1 [Whistle]; cards 1 [Whistle]; changes []; attack 1; rare 0; cannon 0; lighter no
+relic TouchOfOrobas: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic ToyBox: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic TriBoomerang: groups ?; cards ?; changes [Instinct]; attack 0; rare 0; cannon 0; lighter reaches
+relic WarPaint: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+relic Whetstone: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no
+relic Wuppy: groups ?; cards ?; changes []; attack 0; rare 0; cannon 0; lighter no
+relic YummyCookie: groups ?; cards ?; changes [] upgrades deck; attack 0; rare 0; cannon 0 reaches; lighter no

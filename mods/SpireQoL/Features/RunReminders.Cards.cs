@@ -657,7 +657,14 @@ public sealed partial class RunReminders
             // A reward (CreateForReward) never offers Basic or Ancient cards: uniform odds leave them out, and a rarity roll only
             // lands on Common, Uncommon or Rare (Infested Automaton's Study listed Lost Lute).
             if (odds != CardRarityOddsType.None) list = list.Where(card => card.Rarity != CardRarity.Basic && card.Rarity != CardRarity.Ancient);
-            return list.OrderBy(card => card.Rarity).ThenBy(card => card.Title, StringComparer.CurrentCultureIgnoreCase).ToList();
+            return list.OrderBy(card => card.Rarity).ThenBy(TitleOf, StringComparer.CurrentCultureIgnoreCase).ToList();
+        }
+
+        /// <summary>A card's title, or its class's name where its text can't be read (outside the game: the tests).</summary>
+        private static string TitleOf(CardModel card)
+        {
+            try { return card.Title; }
+            catch { return card.GetType().Name; }
         }
 
         /// <summary>What one card can transform into (CardFactory.GetDefaultTransformationOptions), as the Inspect screen lists it.</summary>
