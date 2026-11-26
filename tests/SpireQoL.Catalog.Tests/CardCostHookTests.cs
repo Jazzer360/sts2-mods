@@ -50,7 +50,7 @@ public class CardCostHookTests
     public void ThePlayedCardsPileReadsAsThePlayPile(Type type)
     {
         // BeforeCardPlayed's switch (cardPlay.Card.Pile?.Type) { case Hand: case Play: PowerCmd.Decrement }: the played card is in the play pile as its
-        // play begins (CardModel.OnPlayWrapper), so the test holds and the class reads whole (decision #384).
+        // play begins (CardModel.OnPlayWrapper), so the test holds and the class reads whole (decision #380).
         GameModels.EnsureLoaded();
         Assert.Null(GapOf(type, "BeforeCardPlayed"));
         var before = HookReader.Read(type, RuntimeCode.Read).Spec.Hooks.Single(program => program.Hook == HookName.BeforeCardPlayed);

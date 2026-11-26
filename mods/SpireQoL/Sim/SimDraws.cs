@@ -55,7 +55,7 @@ public sealed record SimDrawCard(string Key)
     /// <summary>
     /// It costs 0 as the game showed it before the play (CostModifiers.All in its pile, not X), while a card in your hand acts on that (Scrape discards
     /// the rest: decision #118); null otherwise. Where <see cref="LocalCost"/> and <see cref="Costed"/> are read, what it costs once drawn is worked
-    /// out in your hand as the state stands then (SimEngine.LiveCost, decision #385), and this stands only for a card read before that rule.
+    /// out in your hand as the state stands then (SimEngine.LiveCost, decision #381), and this stands only for a card read before that rule.
     /// <see cref="Sly"/>: it's Sly then (a Sly card plays itself when discarded: not simulated).
     /// </summary>
     public bool? Free { get; init; }

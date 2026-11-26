@@ -81,7 +81,7 @@ public class SimDrawnCardTests
     [Fact]
     public void ScrapeAsksWhatTheDrawnCardCostsInYourHand()
     {
-        // Scrape asks GetWithModifiers(All) once the card is in your hand (decision #385): an Attack that cost 1 in your draw pile costs 0 there under
+        // Scrape asks GetWithModifiers(All) once the card is in your hand (decision #381): an Attack that cost 1 in your draw pile costs 0 there under
         // Free Attack (its Late pass: the card in hand), so it's kept; without it, it's discarded.
         var attack = new SimDrawCard("attack 1") { Free = false, LocalCost = 1, Costed = new SimCard("Strike", SimCardType.Attack) };
         var freeAttack = You(Pile((attack, 1)));

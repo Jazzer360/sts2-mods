@@ -96,7 +96,7 @@ public static partial class SimEngine
     }
 
     /// <summary>
-    /// A drawn card costs 0 in your hand (Scrape's GetWithModifiers(CostModifiers.All) != 0 || CostsX, asked once the draw is done: decision #385): its
+    /// A drawn card costs 0 in your hand (Scrape's GetWithModifiers(CostModifiers.All) != 0 || CostsX, asked once the draw is done: decision #381): its
     /// cost before global modifiers through the listeners' passes as the state stands then (LiveCost), the card in your hand. A card read before the rule
     /// (no LocalCost) is as the game showed it before the play; one whose cost isn't known (SimState.CostsUnknown) too, the branch unknown. Null where it
     /// isn't asked of the card.

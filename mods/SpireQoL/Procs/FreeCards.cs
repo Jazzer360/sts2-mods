@@ -145,7 +145,7 @@ internal static class FreeCards
     /// <summary>
     /// What the card would cost without the free powers: its own cost modifiers, then every model's cost hooks
     /// (Hook.ModifyEnergyCostInCombat, both passes) except the free powers'. Worked out through the simulator's cost rule (SimEngine.HandCost,
-    /// decision #385) on the board's start state; the game's own passes where that isn't known (a pass the simulator doesn't run:
+    /// decision #381) on the board's start state; the game's own passes where that isn't known (a pass the simulator doesn't run:
     /// SimState.CostsUnknown) or there's no start state.
     /// </summary>
     public static int CostWithoutFree(CardModel card, Sim.SimState? start = null)

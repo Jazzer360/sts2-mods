@@ -3,7 +3,7 @@ using Xunit;
 namespace SpireQoL.Sim.Tests;
 
 /// <summary>
-/// The free-card powers read from their code (decision #384): Free Attack's, Free Skill's, Free Power's and Veilpiercer's BeforeCardPlayed takes a
+/// The free-card powers read from their code (decision #380): Free Attack's, Free Skill's, Free Power's and Veilpiercer's BeforeCardPlayed takes a
 /// charge (PowerCmd.Decrement) for each play of their owner's card of their kind, whose pile (cardPlay.Card.Pile?.Type is Hand or Play) is the
 /// play pile as its play begins (CardModel.OnPlayWrapper moves it there first), and their Late cost pass makes such a card in hand cost 0 while a
 /// charge is left (SimEngine.HandCost).

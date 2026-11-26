@@ -74,7 +74,7 @@ public class FreeCardTabParityTests
             var mutable = (PowerModel)ModelDb.AllPowers.First(canon => canon.GetType() == power).ToMutable();
             mutable.ApplyInternal(gameFight.Me.Creature, amount);
         }
-        // The board's start state, as the card tags have it (TurnEndModel.ForecastStart.State): the saving through the simulator's cost rule (decision #385).
+        // The board's start state, as the card tags have it (TurnEndModel.ForecastStart.State): the saving through the simulator's cost rule (decision #381).
         var start = SpireQoL.Sim.SimAdapter.Build(gameFight.Me, gameFight.Combat, out _);
         Assert.Null(start.CostsUnknown);
         foreach (var card in hand)

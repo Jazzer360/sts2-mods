@@ -608,7 +608,7 @@ public static partial class SimAdapter
                 var perfectFit = SimReaders.OnTopWhenShuffled(card);
                 var type = readsType ? SimReaders.TypeOf(card) : SimCardType.None;
                 bool? free = readsCost ? !card.EnergyCost.CostsX && card.EnergyCost.GetWithModifiers(CostModifiers.All) == 0 : null;
-                // What it costs once drawn, worked out in your hand as the state stands then (decision #385): its cost before global modifiers and the
+                // What it costs once drawn, worked out in your hand as the state stands then (decision #381): its cost before global modifiers and the
                 // facts the cost passes test (its type, Ethereal, affliction: no pass reads a card's class, so cards that cost alike stay one profile).
                 var localCost = readsCost ? LocalCostOf(card) : null;
                 var costed = localCost != null ? SimReaders.CostedFacts(card) with { Name = "" } : null;
