@@ -453,6 +453,11 @@ public abstract class SimModel
     public virtual void BeforeDamageReceived(SimState state, int owner, DamageCtx damage, int amount) { }
     public virtual void AfterDamageGiven(SimState state, int owner, DamageEvent hit) { }
     public virtual void AfterDamageReceived(SimState state, int owner, DamageEvent hit) { }
+    /// <summary>
+    /// Hook.AfterCurrentHpChanged as a heal tells it (CreatureCmd.Heal, its amount asked when above 0, however much it healed: decision #342): a card's,
+    /// a potion's, a max HP gain's heal. A hit's HP loss is told to AfterDamageReceived (each model's reaction to a loss lives there).
+    /// </summary>
+    public virtual void AfterCurrentHpChanged(SimState state, int owner, int creature, int delta) { }
     /// <summary>A creature's block went from above 0 to 0 (AfterBlockBroken: Burrowed).</summary>
     /// <param name="breaker">Who dealt the damage that broke it (null: no one).</param>
     public virtual void AfterBlockBroken(SimState state, int owner, int target, int? breaker) { }

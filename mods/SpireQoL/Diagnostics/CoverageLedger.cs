@@ -113,7 +113,7 @@ internal static partial class CoverageLedger
         ["Pocketwatch"] = "covered: AfterCardPlayed counts cards this turn (tracker); the play that takes it past CardThreshold gives up ModifyHandDraw's extra cards next turn (crossed tab, model Pocketwatch)",
         ["RainbowRing"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed Strength and Dexterity on attack + skill + power in a turn (proc tab)",
         ["RazorTooth"] = "covered: read from its code (ReadModel, decision #195): AfterCardPlayed upgrades the played card (CardCmd.Upgrade: a replay's later plays are its upgraded copy's, decision #218; proc tab)",
-        ["RedSkull"] = "covered: AfterCurrentHpChanged Strength at low HP (proc tab on HP-loss cards)",
+        ["RedSkull"] = "covered: AfterCurrentHpChanged Strength at low HP (proc tab on HP-loss cards), taken back by a heal above its threshold (decision #342)",
         ["Regalite"] = "covered: read from its code (ReadModel, decision #195): AfterCardGeneratedForCombat block on the first created card per turn (proc block)",
         ["RippleBasin"] = "covered: read from its code (ReadModel, decision #239): BeforeSideTurnEnd gains its Block when the fight's log has no Attack of its owner's this turn; the play that logs one gives it up: its crossed tab, checked by the relic going dark (its AfterCardPlayed sets Status Normal)",
         ["ScreamingFlagon"] = "covered: read from its code (ReadModel, decision #195): BeforeSideTurnEnd damages all enemies with an empty hand; its tab, plain on a play that leaves your hand empty (its payout set up, decisions #239, #244)",

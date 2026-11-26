@@ -147,7 +147,7 @@ PossessSpeedPower: PossessSpeedPower.AfterDeath, PossessSpeedPower.AfterPowerAmo
 PossessStrengthPower: PossessStrengthPower.AfterDeath, PossessStrengthPower.AfterPowerAmountChanged, PossessStrengthPower.InitInternalData
   model: nothing it overrides
 RedSkull: RedSkull.AfterCombatEnd, RedSkull.AfterCurrentHpChanged, RedSkull.AfterRoomEntered
-  model: AfterDamageReceived, OutcomeTab
+  model: AfterCurrentHpChanged, AfterDamageReceived, OutcomeTab
 Regret: no game class by its name (the simulator's own)
   model: BeforeSideTurnEnd, MayActOnTheEnemiesSide
 SandpitPower: SandpitPower.AfterApplied, SandpitPower.AfterCreatureAddedToCombat, SandpitPower.AfterOstyRevived, SandpitPower.AfterPowerAmountChanged, SandpitPower.AfterRemoved, SandpitPower.AfterSideTurnStartLate, SandpitPower.BeforeSideTurnEnd

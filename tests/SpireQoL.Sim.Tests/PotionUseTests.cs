@@ -269,6 +269,36 @@ public class PotionUseTests
         Assert.Equal(0, branch.You.Block);
     }
 
+    /// <summary>You at <paramref name="hp"/> of 50 with Red Skull (its threshold 25), its Strength given when at or below it.</summary>
+    private static SimState WithRedSkull(int hp)
+    {
+        var state = Fight();
+        state.You.Hp = hp;
+        var given = hp <= 25;
+        state.You.Relics = state.You.Relics.With(RelicId.RedSkull, amount: 25, data: given ? Models.RedSkull.StrengthGiven : 0);
+        if (given) state.You.Powers = state.You.Powers.With(PowerId.Strength, amount: 3);
+        return state;
+    }
+
+    [Fact]
+    public void AHealAboveRedSkullsThresholdTakesItsStrengthBack()
+    {
+        // CreatureCmd.Heal → Hook.AfterCurrentHpChanged (decision #342): RedSkull.ModifyStrengthIfNecessary finds your HP above 50% with its Strength
+        // given, so PowerCmd.Apply of -3 Strength and StrengthApplied cleared; a heal that stays at or below it changes nothing.
+        SimEngine.ApplyPlayTo(WithRedSkull(hp: 20), Potion("BloodPotion", Who.You, new HealAction(Amount: 10)), out var after, out _);
+        var branch = Assert.Single(after);
+        Assert.Equal(30, branch.You.Hp);
+        Assert.Equal(0, branch.You.Powers[PowerId.Strength]);
+        Assert.Equal(0, branch.You.Relics.DataOf(RelicId.RedSkull));
+
+        SimEngine.ApplyPlayTo(WithRedSkull(hp: 10), Potion("BloodPotion", Who.You, new HealAction(Amount: 10)), out var still, out _);
+        Assert.Equal(3, Assert.Single(still).You.Powers[PowerId.Strength]);
+
+        // A max HP gain's heal tells it too (CreatureCmd.GainMaxHp: SetMaxHp, then Heal).
+        SimEngine.ApplyPlayTo(WithRedSkull(hp: 22), Potion("FruitJuice", Who.You, new GainMaxHpAction(Amount: 5)), out var raised, out _);
+        Assert.Equal(0, Assert.Single(raised).You.Powers[PowerId.Strength]);
+    }
+
     [Fact]
     public void MaxHpGainedRaisesTheMaxThenHealsAsMuch()
     {

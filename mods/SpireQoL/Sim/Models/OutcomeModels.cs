@@ -87,4 +87,24 @@ public sealed class RedSkull : SimModel
         SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], StrengthGiven));
         SimEngine.ApplyInHit(state, owner, owner, PowerId.Strength, SimEngine.Var(state, owner, Name, "StrengthPower", fallback: 3), debuff: false);
     }
+
+    /// <summary>
+    /// RedSkull.AfterCurrentHpChanged as a heal tells it (any creature's: ModifyStrengthIfNecessary asks its owner's HP, decision #342): its owner's HP
+    /// back above its threshold with its Strength given takes the Strength off (PowerCmd.Apply of minus it) and clears StrengthApplied, so a later
+    /// hit loses it; at or below with none given, gives it.
+    /// </summary>
+    public override void AfterCurrentHpChanged(SimState state, int owner, int creature, int delta)
+    {
+        if (!Who.IsPlayer(owner) || state.Player(owner) is not { } player || player.Hp == int.MaxValue) return;
+        var relics = SimEngine.RelicsOf(state, owner);
+        var above = player.Hp > relics[ThisRelic];
+        var given = relics.DataOf(ThisRelic) != 0;
+        if (above == given)
+        {
+            var strength = SimEngine.Var(state, owner, Name, "StrengthPower", fallback: 3);
+            SimEngine.SetRelics(state, owner, relics.With(ThisRelic, relics[ThisRelic], above ? 0 : StrengthGiven));
+            // Minus its Strength lands as Strength's type at that amount: a debuff (PowerModel.GetTypeForAmount of a power that can go below 0).
+            SimEngine.ApplyInHit(state, owner, owner, PowerId.Strength, above ? -strength : strength, debuff: above);
+        }
+    }
 }
