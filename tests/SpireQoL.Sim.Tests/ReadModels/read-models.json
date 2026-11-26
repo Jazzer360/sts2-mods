@@ -4038,6 +4038,105 @@
     "HelpsOwner": false
   },
   {
+    "Name": "BorrowedTimePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnEnd",
+        "Steps": [
+          {
+            "$kind": "RemovePowerStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "\u003CAfterSideTurnEnd\u003Ed__7.MoveNext:0022",
+              "Test": {
+                "$kind": "HookFactValue",
+                "Fact": "TakesPart"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "TryModifyEnergyCostInCombat",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "BorrowedTimePower.TryModifyEnergyCostInCombat:0018",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Add",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CostSoFar"
+                },
+                "Right": {
+                  "$kind": "HookFactValue",
+                  "Fact": "Amount"
+                }
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "BorrowedTimePower.TryModifyEnergyCostInCombat:0018",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookConstant",
+                "Value": 1
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "Bound",
     "Kind": "Affliction",
     "Hooks": [],
@@ -7851,6 +7950,579 @@
     "HelpsOwner": false
   },
   {
+    "Name": "CuriousPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "TryModifyEnergyCostInCombat",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "CuriousPower.TryModifyEnergyCostInCombat:0018",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "CuriousPower.TryModifyEnergyCostInCombat:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "CuriousPower.TryModifyEnergyCostInCombat:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "CuriousPower.TryModifyEnergyCostInCombat:0032",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CostSoFar"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "CuriousPower.TryModifyEnergyCostInCombat:0023",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardType"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 3
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "CuriousPower.TryModifyEnergyCostInCombat:0032",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "LessOrEqual",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CostSoFar"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "CuriousPower.TryModifyEnergyCostInCombat:005D",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Less",
+                      "Left": {
+                        "$kind": "HookWays",
+                        "Ways": [
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "Or",
+                              "Left": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "CuriousPower.TryModifyEnergyCostInCombat:0023",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "Equal",
+                                    "Left": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CardType"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 3
+                                    }
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookTest",
+                                "At": "CuriousPower.TryModifyEnergyCostInCombat:0032",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "LessOrEqual",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CostSoFar"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 0
+                                  }
+                                }
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CostSoFar"
+                            }
+                          },
+                          {
+                            "When": {
+                              "$kind": "HookMath",
+                              "Operation": "And",
+                              "Left": {
+                                "$kind": "HookTest",
+                                "At": "CuriousPower.TryModifyEnergyCostInCombat:0023",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardType"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 3
+                                  }
+                                }
+                              },
+                              "Right": {
+                                "$kind": "HookNot",
+                                "Inner": {
+                                  "$kind": "HookTest",
+                                  "At": "CuriousPower.TryModifyEnergyCostInCombat:0032",
+                                  "Test": {
+                                    "$kind": "HookMath",
+                                    "Operation": "LessOrEqual",
+                                    "Left": {
+                                      "$kind": "HookFactValue",
+                                      "Fact": "CostSoFar"
+                                    },
+                                    "Right": {
+                                      "$kind": "HookConstant",
+                                      "Value": 0
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "Value": {
+                              "$kind": "HookMath",
+                              "Operation": "Subtract",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CostSoFar"
+                              },
+                              "Right": {
+                                "$kind": "HookFactValue",
+                                "Fact": "Amount"
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Subtract",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CostSoFar"
+                },
+                "Right": {
+                  "$kind": "HookFactValue",
+                  "Fact": "Amount"
+                }
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookMath",
+                  "Operation": "And",
+                  "Left": {
+                    "$kind": "HookTest",
+                    "At": "CuriousPower.TryModifyEnergyCostInCombat:0023",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardType"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 3
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookTest",
+                      "At": "CuriousPower.TryModifyEnergyCostInCombat:0032",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "LessOrEqual",
+                        "Left": {
+                          "$kind": "HookFactValue",
+                          "Fact": "CostSoFar"
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "CuriousPower.TryModifyEnergyCostInCombat:005D",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Less",
+                    "Left": {
+                      "$kind": "HookWays",
+                      "Ways": [
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "Or",
+                            "Left": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "CuriousPower.TryModifyEnergyCostInCombat:0023",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "Equal",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CardType"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 3
+                                  }
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookTest",
+                              "At": "CuriousPower.TryModifyEnergyCostInCombat:0032",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "LessOrEqual",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CostSoFar"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 0
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookFactValue",
+                            "Fact": "CostSoFar"
+                          }
+                        },
+                        {
+                          "When": {
+                            "$kind": "HookMath",
+                            "Operation": "And",
+                            "Left": {
+                              "$kind": "HookTest",
+                              "At": "CuriousPower.TryModifyEnergyCostInCombat:0023",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "Equal",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardType"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 3
+                                }
+                              }
+                            },
+                            "Right": {
+                              "$kind": "HookNot",
+                              "Inner": {
+                                "$kind": "HookTest",
+                                "At": "CuriousPower.TryModifyEnergyCostInCombat:0032",
+                                "Test": {
+                                  "$kind": "HookMath",
+                                  "Operation": "LessOrEqual",
+                                  "Left": {
+                                    "$kind": "HookFactValue",
+                                    "Fact": "CostSoFar"
+                                  },
+                                  "Right": {
+                                    "$kind": "HookConstant",
+                                    "Value": 0
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "Value": {
+                            "$kind": "HookMath",
+                            "Operation": "Subtract",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CostSoFar"
+                            },
+                            "Right": {
+                              "$kind": "HookFactValue",
+                              "Fact": "Amount"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "CuriousPower.TryModifyEnergyCostInCombat:0018",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "CuriousPower.TryModifyEnergyCostInCombat:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "CuriousPower.TryModifyEnergyCostInCombat:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookTest",
+                  "At": "CuriousPower.TryModifyEnergyCostInCombat:0032",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "LessOrEqual",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CostSoFar"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 0
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "And",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "CuriousPower.TryModifyEnergyCostInCombat:0023",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "CuriousPower.TryModifyEnergyCostInCombat:0032",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "LessOrEqual",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CostSoFar"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "CurlUpPower",
     "Kind": "Power",
     "Hooks": [
@@ -10970,6 +11642,362 @@
     ],
     "Tab": "Trigger",
     "HelpsOwner": true
+  },
+  {
+    "Name": "EnsemblePower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterCardPlayed",
+        "Steps": [
+          {
+            "$kind": "DecrementPowerStep",
+            "When": {
+              "$kind": "HookMath",
+              "Operation": "And",
+              "Left": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__5.MoveNext:0027",
+                "Test": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                }
+              },
+              "Right": {
+                "$kind": "HookTest",
+                "At": "\u003CAfterCardPlayed\u003Ed__5.MoveNext:0039",
+                "Test": {
+                  "$kind": "HookFactValue",
+                  "Fact": "PlayIsLast"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "Hook": "TryModifyEnergyCostInCombatLate",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "EnsemblePower.TryModifyEnergyCostInCombatLate:000E",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "EnsemblePower.ShouldSkip:0017",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "EventIsOwners"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "EnsemblePower.ShouldSkip:0060:stored",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "Or",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "EnsemblePower.ShouldSkip:004D",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "EnsemblePower.ShouldSkip:0051",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardPile"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 2
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "EnsemblePower.ShouldSkip:0015:stored",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "EventIsOwners"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "EnsemblePower.TryModifyEnergyCostInCombatLate:000E",
+                  "Test": {
+                    "$kind": "HookTest",
+                    "At": "EnsemblePower.ShouldSkip:0060:stored",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "Or",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "EnsemblePower.ShouldSkip:004D",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "EnsemblePower.ShouldSkip:0051",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "EnsemblePower.TryModifyEnergyCostInCombatLate:000E",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Or",
+                  "Left": {
+                    "$kind": "HookMath",
+                    "Operation": "And",
+                    "Left": {
+                      "$kind": "HookNot",
+                      "Inner": {
+                        "$kind": "HookTest",
+                        "At": "EnsemblePower.ShouldSkip:0017",
+                        "Test": {
+                          "$kind": "HookFactValue",
+                          "Fact": "EventIsOwners"
+                        }
+                      }
+                    },
+                    "Right": {
+                      "$kind": "HookTest",
+                      "At": "EnsemblePower.ShouldSkip:0060:stored",
+                      "Test": {
+                        "$kind": "HookMath",
+                        "Operation": "Equal",
+                        "Left": {
+                          "$kind": "HookMath",
+                          "Operation": "Or",
+                          "Left": {
+                            "$kind": "HookTest",
+                            "At": "EnsemblePower.ShouldSkip:004D",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "Equal",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 1
+                              }
+                            }
+                          },
+                          "Right": {
+                            "$kind": "HookNot",
+                            "Inner": {
+                              "$kind": "HookTest",
+                              "At": "EnsemblePower.ShouldSkip:0051",
+                              "Test": {
+                                "$kind": "HookMath",
+                                "Operation": "NotEqual",
+                                "Left": {
+                                  "$kind": "HookFactValue",
+                                  "Fact": "CardPile"
+                                },
+                                "Right": {
+                                  "$kind": "HookConstant",
+                                  "Value": 2
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookConstant",
+                          "Value": 0
+                        }
+                      }
+                    }
+                  },
+                  "Right": {
+                    "$kind": "HookTest",
+                    "At": "EnsemblePower.ShouldSkip:0015:stored",
+                    "Test": {
+                      "$kind": "HookFactValue",
+                      "Fact": "EventIsOwners"
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "EnsemblePower.TryModifyEnergyCostInCombatLate:000E",
+                  "Test": {
+                    "$kind": "HookTest",
+                    "At": "EnsemblePower.ShouldSkip:0060:stored",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookMath",
+                        "Operation": "Or",
+                        "Left": {
+                          "$kind": "HookTest",
+                          "At": "EnsemblePower.ShouldSkip:004D",
+                          "Test": {
+                            "$kind": "HookMath",
+                            "Operation": "Equal",
+                            "Left": {
+                              "$kind": "HookFactValue",
+                              "Fact": "CardPile"
+                            },
+                            "Right": {
+                              "$kind": "HookConstant",
+                              "Value": 1
+                            }
+                          }
+                        },
+                        "Right": {
+                          "$kind": "HookNot",
+                          "Inner": {
+                            "$kind": "HookTest",
+                            "At": "EnsemblePower.ShouldSkip:0051",
+                            "Test": {
+                              "$kind": "HookMath",
+                              "Operation": "NotEqual",
+                              "Left": {
+                                "$kind": "HookFactValue",
+                                "Fact": "CardPile"
+                              },
+                              "Right": {
+                                "$kind": "HookConstant",
+                                "Value": 2
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 0
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
   },
   {
     "Name": "Entangled",
@@ -37748,6 +38776,163 @@
       }
     ],
     "Tab": "Damage",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "SpikedGauntlets",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "TryModifyEnergyCostInCombat",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "SpikedGauntlets.TryModifyEnergyCostInCombat:001D",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "SpikedGauntlets.TryModifyEnergyCostInCombat:0028",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "SpikedGauntlets.TryModifyEnergyCostInCombat:0028",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 3
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookMath",
+                "Operation": "Add",
+                "Left": {
+                  "$kind": "HookFactValue",
+                  "Fact": "CostSoFar"
+                },
+                "Right": {
+                  "$kind": "HookConstant",
+                  "Value": 1
+                }
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "SpikedGauntlets.TryModifyEnergyCostInCombat:001D",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "EventIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "SpikedGauntlets.TryModifyEnergyCostInCombat:0028",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 3
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "SpikedGauntlets.TryModifyEnergyCostInCombat:0028",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 3
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
     "HelpsOwner": false
   },
   {

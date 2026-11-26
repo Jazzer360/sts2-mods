@@ -228,6 +228,7 @@ Reads state only (CLAUDE.md: rules live in the simulator):
 - **Proc check** (`ProcAudit`): compares the game's flashes and effects with the simulated play's event log (the same
   vocabulary on both sides).
 - **Forecast check**: unchanged interface (it compares the simulator's end-of-turn and enemy-turn outcome with the game's).
+- **Hand cost check** (`HandCostAudit`, decision #334): on each new board, every playable hand card's live cost as the simulator works it out (`SimEngine.HandCost`: its cost before global modifiers through every listener's cost pass, then every Late pass) against the game's `GetWithModifiers(CostModifiers.All)`; a board with a cost pass the simulator doesn't run is skipped and counted by its reason.
 
 ## Coverage
 - Every damage, block and HP-loss modifier source in the game has a reviewed classification in the coverage ledger:

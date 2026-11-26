@@ -117,6 +117,15 @@ public sealed class CorruptionPower : SimModel
 {
     public override SimResultLocation ModifyCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location) =>
         play.Owner == owner && play.Card.Type == SimCardType.Skill ? SimResultLocation.Exhaust : location;
+
+    /// <summary>CorruptionPower.TryModifyEnergyCostInCombatLate: its owner's Skills cost 0 (its body reads as a Try hook: decision #332).</summary>
+    public override bool TryModifyEnergyCostInCombatLate(SimState state, int owner, SimCostedCard costed, int cost, out int modified)
+    {
+        modified = cost;
+        if (costed.Owner != owner || costed.Card.Type != SimCardType.Skill) return false;
+        modified = 0;
+        return true;
+    }
 }
 
 // Rebound is read from its code (ReadModel: ModifyCardPlayResultLocation and AfterModifyingCardPlayResultLocation, decision #286).

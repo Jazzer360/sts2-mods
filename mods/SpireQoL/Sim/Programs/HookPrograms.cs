@@ -143,7 +143,8 @@ public enum HookName
     /// <summary>
     /// Hook.ModifyEnergyCostInCombat's two passes (CardEnergyCost.GetWithModifiers, after the card's local modifiers) and Hook.ModifyStarCost's:
     /// each listener's Try on the cost so far (HookFact.CostSoFar), its out value the cost where it answers true (HookProgram.Modifies); its card the
-    /// one costed. Read (decision #332); no simulation runs them yet (a hand card's live cost: TRACKER), so a class that has one isn't read whole.
+    /// one costed (its pile HookFact.CardPile). The energy passes run wherever a simulation reads a hand card's cost (SimEngine.HandCost: decision
+    /// #334); no simulation reads a star cost, so TryModifyStarCost's body stays a gap.
     /// </summary>
     TryModifyEnergyCostInCombat,
     TryModifyEnergyCostInCombatLate,
@@ -283,6 +284,8 @@ public enum HookFact
     PowerVisible,
     /// <summary>The cost a card's cost hook is asked about so far (TryModifyEnergyCostInCombat's, its Late pass's and TryModifyStarCost's originalCost).</summary>
     CostSoFar,
+    /// <summary>The pile of the card a cost hook is asked about (card.Pile.Type), as SimCardPile's number: your hand, or the play pile as it's played.</summary>
+    CardPile,
     /// <summary>The stars a spend took (AfterStarsSpent's amount): the stars of the play spending them, as the simulator spends stars (one event a play).</summary>
     StarsSpent,
     /// <summary>The power landed on an enemy (power.Owner.IsEnemy).</summary>

@@ -283,6 +283,17 @@ public static class SimReaders
         return tags;
     }
 
+    /// <summary>
+    /// What the cost passes test of a card (SimCostedCard, decision #334): its class name, type, Ethereal and affliction; nothing else, so copies
+    /// that cost alike stay one hand card.
+    /// </summary>
+    public static SimCard CostedFacts(CardModel card) => new(card.GetType().Name, TypeOf(card))
+    {
+        Ethereal = card.Keywords.Contains(CardKeyword.Ethereal),
+        Affliction = card.Affliction == null ? SimAffliction.None
+            : Enum.TryParse<SimAffliction>(card.Affliction.GetType().Name, out var simAffliction) ? simAffliction : SimAffliction.Other,
+    };
+
     /// <summary>The card as models see it: its class name, type, tags, values, and flags.</summary>
     public static SimCard Card(CardModel card, int energy)
     {

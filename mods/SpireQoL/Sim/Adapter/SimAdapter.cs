@@ -218,6 +218,7 @@ public static partial class SimAdapter
         foreach (var power in me.Creature.Powers) SimReaders.AddVars(state, Who.You, power);
         foreach (var relic in me.Relics) SimReaders.AddVars(state, Who.You, relic);
         FillAutoPlays(state.You, me, combat, ids);
+        state.CostsUnknown = CostPassesNotRun(combat);
         FillDrawPile(state.You, me, combat, ids, state.History);
         state.You.BeaconOfHope = me.Creature.HasPower<BeaconOfHopePower>();
         FillSurvival(state.You, me);
@@ -282,6 +283,46 @@ public static partial class SimAdapter
             : 0;
     }
 
+    /// <summary>
+    /// A card's cost before global modifiers (CardEnergyCost.GetWithModifiers(CostModifiers.Local): SimHandCard.LocalCost, decision #334); null for
+    /// an X cost.
+    /// </summary>
+    internal static int? LocalCostOf(CardModel card) => card.EnergyCost.CostsX ? null : card.EnergyCost.GetWithModifiers(CostModifiers.Local);
+
+    /// <summary>
+    /// Why a hand card's live cost isn't known on this board (SimState.CostsUnknown, decision #334): the first of the game's hook listeners
+    /// (CombatState.IterateHookListeners) whose class has an energy cost pass (TryModifyEnergyCostInCombat, its Late pass) the simulator doesn't
+    /// run: a class not read whole (Free Attack's, whose BeforeCardPlayed doesn't read yet), a card's own hook (Cho Limbs, Coda). Null when every
+    /// one runs.
+    /// </summary>
+    internal static string? CostPassesNotRun(ICombatState combat)
+    {
+        try
+        {
+            foreach (var model in combat.IterateHookListeners())
+            {
+                var type = model.GetType();
+                foreach (var pass in CostPassesOf(type))
+                    if (SimModels.Get(type.Name) is not { } simModel || !simModel.Overrides(pass))
+                        return $"{type.Name}'s {pass} changes what cards cost, and the simulator doesn't run it";
+            }
+            return null;
+        }
+        catch (Exception exception)
+        {
+            return $"the cost passes on the board couldn't be read ({exception.GetType().Name})";
+        }
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, string[]> CostPasses = new();
+
+    /// <summary>The energy cost passes a class overrides (its own or a base class's below AbstractModel).</summary>
+    private static string[] CostPassesOf(Type type) => CostPasses.GetOrAdd(type, modelType =>
+        new[] { nameof(SimModel.TryModifyEnergyCostInCombat), nameof(SimModel.TryModifyEnergyCostInCombatLate) }
+            .Where(pass => modelType.GetMethod(pass, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance) is { } method
+                           && method.DeclaringType != typeof(AbstractModel))
+            .ToArray());
+
     /// <summary>A potion SimPlayer.Fairies counts: one whose revive the simulator follows (Fairy in a Bottle).</summary>
     internal static bool CountsAsFairy(PotionModel potion) => potion.GetType().Name == "FairyInABottle";
 
@@ -311,6 +352,7 @@ public static partial class SimAdapter
                         Name = card.GetType().Name,
                         IsAttack = card.Type == CardType.Attack,
                         Cost = card.EnergyCost.CostsX ? 999999999 : card.EnergyCost.GetResolved(),
+                        LocalCost = LocalCostOf(card), Card = SimReaders.CostedFacts(card),
                         Plays = AutoPlays(card, me, combat, ids, owner),
                     });
                 }
@@ -455,7 +497,7 @@ public static partial class SimAdapter
                     var plays = AutoPlays(card, me, combat, ids);
                     var id = HandId(card);
                     if (card.Pile?.Type == PileType.Draw) foreach (var play in plays) { play.HandDelta -= 1; play.HandCard = id; }
-                    auto = new SimHandCard { Id = id, Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, Plays = plays };
+                    auto = new SimHandCard { Id = id, Name = card.GetType().Name, IsAttack = card.Type == CardType.Attack, Cost = cost, LocalCost = LocalCostOf(card), Card = SimReaders.CostedFacts(card), Plays = plays };
                     autoByKey[key] = auto;
                 }
                 (SimHandCard? Plain, SimHandCard? Upgraded, bool Exhausts) fromPile = default;

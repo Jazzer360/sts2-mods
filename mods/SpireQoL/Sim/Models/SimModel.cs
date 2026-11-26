@@ -420,6 +420,22 @@ public abstract class SimModel
     }
     /// <summary>Hook.AfterModifyingPowerAmountReceived: told to the models whose Try changed a power's amount received (Ruined Helmet's flag spent).</summary>
     public virtual void AfterModifyingPowerAmountReceived(SimState state, int owner, PowerId power) { }
+    /// <summary>
+    /// Hook.ModifyEnergyCostInCombat's first pass (CardEnergyCost.GetWithModifiers, after the card's local modifiers): true when the model changes the
+    /// cost of <paramref name="costed"/> so far, the cost it leaves in <paramref name="modified"/> (Curious' Powers 1 less), each listener in turn on
+    /// the cost so far. Pure (SimEngine.HandCost).
+    /// </summary>
+    public virtual bool TryModifyEnergyCostInCombat(SimState state, int owner, SimCostedCard costed, int cost, out int modified)
+    {
+        modified = cost;
+        return false;
+    }
+    /// <summary>Hook.ModifyEnergyCostInCombat's second pass, after every listener's first (Corruption's Skills, the free-card powers: 0). Pure.</summary>
+    public virtual bool TryModifyEnergyCostInCombatLate(SimState state, int owner, SimCostedCard costed, int cost, out int modified)
+    {
+        modified = cost;
+        return false;
+    }
 
     // ---- hooks (may branch)
 
@@ -605,6 +621,15 @@ public abstract class SimModel
 /// nowhere (a Power, a copy made by a replay).
 /// </summary>
 public enum SimResultLocation { Default, HandTop, DrawTop, Exhaust, Nowhere }
+
+/// <summary>The pile of a card whose cost is asked (card.Pile.Type): your hand, the play pile as it's played, or another.</summary>
+public enum SimCardPile { Other, Hand, Play }
+
+/// <summary>
+/// A card whose energy cost the cost hooks are asked about (Hook.ModifyEnergyCostInCombat's card): its facts the hooks test (its type, keywords,
+/// affliction), its owner and its pile.
+/// </summary>
+public readonly record struct SimCostedCard(SimCard Card, int Owner, SimCardPile Pile);
 
 /// <summary>
 /// A card's own hooks (its class's overrides of the game's hooks), listening from its owner's piles: the game lists every card in

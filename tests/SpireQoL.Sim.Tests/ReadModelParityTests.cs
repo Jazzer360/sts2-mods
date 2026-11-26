@@ -338,6 +338,7 @@ public class ReadModelParityTests
         nameof(SimModel.ModifyCardPlayResultLocation), nameof(SimModel.AfterModifyingCardPlayResultLocation),
         nameof(SimModel.ModifyPowerAmountGivenAdditive), nameof(SimModel.ModifyPowerAmountGivenMultiplicative), nameof(SimModel.ModifyPowerAmountGiven), nameof(SimModel.AfterModifyingPowerAmountGiven),
         nameof(SimModel.TryModifyPowerAmountReceived), nameof(SimModel.AfterModifyingPowerAmountReceived),
+        nameof(SimModel.TryModifyEnergyCostInCombat), nameof(SimModel.TryModifyEnergyCostInCombatLate),
         nameof(SimModel.AfterCreatureAddedToCombat),
         nameof(SimModel.AfterRemoved),
         nameof(SimModel.AfterEnergyReset), nameof(SimModel.AfterEnergyResetLate), nameof(SimModel.BeforeHandDraw), nameof(SimModel.BeforeHandDrawLate),
@@ -730,6 +731,25 @@ public class ReadModelParityTests
                                     }
                                     return text.ToString();
                                 });
+                break;
+            case nameof(SimModel.TryModifyEnergyCostInCombat) or nameof(SimModel.TryModifyEnergyCostInCombatLate):
+                // A card of each type, Ethereal or not, Entangled or not, in your hand or being played, yours or a teammate's, at each cost so far
+                // (SimEngine.HandCost): both passes' answers and the costs they leave.
+                foreach (var type in new[] { SimCardType.Attack, SimCardType.Skill, SimCardType.Power })
+                    foreach (var ethereal in new[] { false, true })
+                        foreach (var affliction in new[] { SimAffliction.None, SimAffliction.Entangled })
+                            foreach (var pile in new[] { SimCardPile.Hand, SimCardPile.Play })
+                                foreach (var player in new[] { Who.You, Who.Teammate(0) })
+                                    foreach (var cost in new[] { 0, 1, 3 })
+                                    {
+                                        var costed = new SimCostedCard(new SimCard("Costed", type) { Ethereal = ethereal, Affliction = affliction }, player, pile);
+                                        yield return ($"{type} ethereal {ethereal} {affliction} in {pile} of {player} at {cost}", (model, state) =>
+                                        {
+                                            var first = model.TryModifyEnergyCostInCombat(state, owner, costed, cost, out var afterFirst);
+                                            var late = model.TryModifyEnergyCostInCombatLate(state, owner, costed, cost, out var afterLate);
+                                            return $"{first} {afterFirst} / {late} {afterLate}";
+                                        });
+                                    }
                 break;
             case nameof(SimModel.AfterCreatureAddedToCombat):
                 // A creature joining the fight on either side: an enemy (one of the board's), and you (a player's side).

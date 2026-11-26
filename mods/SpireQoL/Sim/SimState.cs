@@ -777,17 +777,30 @@ public sealed class SimHandCard
     /// <remarks>Its own plays become the copy's (SimPlay.HandCard): played, it's the copy that leaves your hand.</remarks>
     public SimHandCard CopyWithId(int id) => new()
     {
-        Id = id, Name = Name, IsAttack = IsAttack, Cost = Cost, _key = Key,
+        Id = id, Name = Name, IsAttack = IsAttack, Cost = Cost, LocalCost = LocalCost, Card = Card, _key = Key,
         Plays = Id == 0 ? Plays : Plays.Select(play => play.HandCard == Id ? play.AsHandCard(id) : play).ToList(),
     };
 
-    /// <summary>This card made free this turn (CardModel.SetToFreeThisTurn): its cost 0, the rest the same (its key its own).</summary>
-    public SimHandCard FreeCopy() => new() { Id = Id, Name = Name, IsAttack = IsAttack, Cost = 0, Plays = Plays };
+    /// <summary>
+    /// This card made free this turn (CardModel.SetToFreeThisTurn: EnergyCost.SetThisTurnOrUntilPlayed(0), a local modifier of 0 after its others):
+    /// its cost before global modifiers 0, the listeners' passes still on it (SimEngine.HandCost), the rest the same (its key its own).
+    /// </summary>
+    public SimHandCard FreeCopy() => new() { Id = Id, Name = Name, IsAttack = IsAttack, Cost = 0, LocalCost = LocalCost == null ? null : 0, Card = Card, Plays = Plays };
 
     public string Name = "";
     public bool IsAttack;
-    /// <summary>Its cost now (X costs: 999999999, as SimpletonPower orders them).</summary>
+    /// <summary>Its cost as the game showed it when read (GetResolved; X costs: 999999999, as SimpletonPower orders them).</summary>
     public int Cost;
+    /// <summary>
+    /// Its cost before global modifiers (CardEnergyCost.GetWithModifiers(CostModifiers.Local): its own modifiers, a free copy's 0), from which
+    /// SimEngine.HandCost works out its live cost through the listeners' passes; null for an X cost, or a card read before the rule (an old
+    /// replay case: Cost stands).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? LocalCost;
+    /// <summary>What the cost hooks test of it (its class, type, Ethereal, affliction: SimCostedCard), with LocalCost.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public SimCard? Card;
     /// <summary>
     /// Its play when auto-played: one per hittable enemy for a card aimed at one (CardCmd.AutoPlay picks a random
     /// target), else one. Empty: its play can't be simulated (it changes the hand: draws, generates); nothing is
@@ -830,6 +843,14 @@ public sealed class SimState
     /// isn't, so it's kept apart from <see cref="Unmodelled"/>, which a branch unknown before then still carries.
     /// </summary>
     public string? UnmodelledAtTheirTurnEnd;
+
+    /// <summary>
+    /// Why a hand card's live cost isn't known in this simulation (decision #334): a listener of the game's cost passes on the board whose pass the
+    /// simulator doesn't run (a class not read whole, a card's own hook: Cho Limbs, Coda), or null. A read of a cost (SimEngine.HandCost) is
+    /// unknown then, and so is the branch that asks it (Unmodelled).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? CostsUnknown;
 
     /// <summary>The enemies' turn's end is running on a branch known until then: an unknown it meets is <see cref="UnmodelledAtTheirTurnEnd"/>'s.</summary>
     [JsonIgnore] internal bool TheirTurnEndKeptApart;

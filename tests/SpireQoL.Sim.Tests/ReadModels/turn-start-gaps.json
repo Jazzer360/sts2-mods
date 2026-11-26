@@ -35,7 +35,9 @@
   },
   {
     "Name": "BrilliantScarf",
-    "Why": "BrilliantScarf isn\u0027t modelled, and its turn\u0027s-start hooks never act as your turn starts"
+    "Why": "BrilliantScarf acts as your turn starts and isn\u0027t simulated there: BeforeSideTurnStart, its other hooks not read (AfterCardPlayed: gap: tests cardPlay.IsAutoPlay)",
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   },
   {
     "Name": "CaptainsWheel",
@@ -180,6 +182,8 @@
   },
   {
     "Name": "VoidFormPower",
-    "Why": "VoidFormPower isn\u0027t modelled, and its turn\u0027s-start hooks never act as your turn starts"
+    "Why": "VoidFormPower acts as your turn starts and isn\u0027t simulated there: BeforeSideTurnStart, its other hooks not read (AfterCardPlayed: gap: tests cardPlay)",
+    "ActsForAPlayer": true,
+    "ForecastIgnores": true
   }
 ]

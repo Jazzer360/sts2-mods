@@ -3,10 +3,10 @@
 
 ## Powers and relics
 
-beta powers: 303 classes, 272 with hooks; read from code 185, hand-written 24, neither 65 (each by its first gap: Snapshots/hook-readings.txt)
-beta relics: 316 classes, 310 with hooks; read from code 123, hand-written 7, neither 180 (each by its first gap: Snapshots/hook-readings.txt)
-main powers: 265 classes, 235 with hooks; read from code 156, hand-written 22, neither 59 (each by its first gap: Snapshots/hook-readings.txt)
-main relics: 299 classes, 293 with hooks; read from code 110, hand-written 7, neither 176 (each by its first gap: Snapshots/hook-readings.txt)
+beta powers: 303 classes, 272 with hooks; read from code 188, hand-written 24, neither 62 (each by its first gap: Snapshots/hook-readings.txt)
+beta relics: 316 classes, 310 with hooks; read from code 124, hand-written 7, neither 179 (each by its first gap: Snapshots/hook-readings.txt)
+main powers: 265 classes, 235 with hooks; read from code 158, hand-written 22, neither 57 (each by its first gap: Snapshots/hook-readings.txt)
+main relics: 299 classes, 293 with hooks; read from code 111, hand-written 7, neither 175 (each by its first gap: Snapshots/hook-readings.txt)
 
 ## Enchantments: 23 classes (beta 23, main 23); handled: the game's own code, called live 8, read from its code 6, not modelled by name 5, a per-name rule 3, no hooks 1
 
@@ -179,7 +179,6 @@ commands: another command (no translation): 3 classes, 3 alone: BottledPotential
 the engine runs no read enchantment (its bodies read whole but for that): 3 classes, 3 alone: Clone (enchantment)*, Imbued (enchantment)*, Slither (enchantment)*
 the simulator's own model (no game class by its name): 3 classes, 3 alone: ImpaledPowerOther*, Regret*, Void*
 a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 6 classes, 2 alone: FeralPower*, ImpaledPower, PaelsEye, SkittishPower*, SmoggyPower, SurroundedPower
-card costs and keywords (cards' own hooks, Part B3): 3 classes, 2 alone: ChemicalX*, CorruptionPower*, PhantomBladesPower
 commands: AutoPlayFromDrawPile: 2 classes, 2 alone: LostLutePower*, DistilledChaos (potion)*
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
 orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first): 2 classes, 2 alone: TrashToTreasurePower*, PotionOfCapacity (potion)*
@@ -188,10 +187,12 @@ the simulator's own model (its game class has no hooks: another class's code rea
 queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 4 classes, 1 alone: PaelsEye, PhantomBladesPower, TagTeamPower*, UnsettlingLamp
 hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...): 3 classes, 1 alone: SandpitPower, SmoggyPower, UnceasingTop*
 queries: a creature's side or presence: 3 classes, 1 alone: SurroundedPower, EssenceOfDarkness (potion)*, FairyInABottle (potion)
+card costs and keywords (cards' own hooks, Part B3): 2 classes, 1 alone: ChemicalX*, PhantomBladesPower
 commands: GainStars: 1 classes, 1 alone: StarPotion (potion)*
 commands: OstyCmd.Summon: 1 classes, 1 alone: BoneBrew (potion)*
 hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*
 hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
+read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 1 classes, 1 alone: CorruptionPower*
 the fight's log (the history ledger, decision #191): 1 classes, 1 alone: UnmovablePower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*
 a model's own method (its body read where it's called): 1 classes, 0 alone: FairyInABottle (potion)

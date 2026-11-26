@@ -1362,13 +1362,13 @@ public static partial class SimEngine
             var stampedeIndex = i;
             branches.Each(branch => stampedeIndex < P(branch).Stampede && Alive(branch) ? AutoPlayFromHand(branch, player, hand => hand.Where(handCard => handCard.IsAttack).ToList()) : new[] { branch });
         }
-        // Simpleton: a random card among their cheapest, each time.
+        // Simpleton: a random card among their cheapest at its live cost (Cheapest: SimEngine.HandCost), each time.
         var simpleton = branches.States.Max(branch => P(branch).Simpleton);
         for (var i = 0; i < simpleton; i++)
         {
             var simpletonIndex = i;
             branches.Each(branch => simpletonIndex < P(branch).Simpleton && Alive(branch)
-                ? AutoPlayFromHand(branch, player, hand => hand.Count == 0 ? hand : hand.Where(handCard => handCard.Cost == hand.Min(simHandCard => simHandCard.Cost)).ToList())
+                ? AutoPlayFromHand(branch, player, hand => Cheapest(branch, player, hand))
                 : new[] { branch });
         }
         // I Am Invincible on top of their draw pile: its block. With your draw pile (decision #91): certain when it's known to be

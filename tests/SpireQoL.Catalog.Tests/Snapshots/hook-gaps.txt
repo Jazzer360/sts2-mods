@@ -7,17 +7,18 @@ its own data: a card or a play kept, a field used directly: 5 classes, 3 alone: 
 the simulator's own model (no game class by its name): 3 classes, 3 alone: ImpaledPowerOther*, Regret*, Void*
 a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place): 6 classes, 2 alone: FeralPower*, ImpaledPower, PaelsEye, SkittishPower*, SmoggyPower, SurroundedPower
 a loop over items (creatures, cards): 5 classes, 2 alone: ImpaledPower, PaelsEye, PossessSpeedPower*, PossessStrengthPower*, SmoggyPower
-card costs and keywords (cards' own hooks, Part B3): 3 classes, 2 alone: ChemicalX*, CorruptionPower*, PhantomBladesPower
 another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount): 2 classes, 2 alone: CoveredPower*, SurprisePower*
 hooks: AfterCurrentHpChanged: 2 classes, 2 alone: NecroMasteryPower*, RedSkull*
 the simulator's own model (its game class has no hooks: another class's code reads it): 2 classes, 2 alone: ParryPower*, SeekingEdgePower*
 queries: the card's facts (its pile, tags, keywords, class; an auto-play; an Ethereal exhaust): 4 classes, 1 alone: PaelsEye, PhantomBladesPower, TagTeamPower*, UnsettlingLamp
 hooks: other (AfterHandEmptied, ShouldPlay, BeforePotionUsed...): 3 classes, 1 alone: SandpitPower, SmoggyPower, UnceasingTop*
+card costs and keywords (cards' own hooks, Part B3): 2 classes, 1 alone: ChemicalX*, PhantomBladesPower
 a pick: 1 classes, 1 alone: StratagemPower*
 commands: AutoPlayFromDrawPile: 1 classes, 1 alone: LostLutePower*
 hooks: AfterCardEnteredCombat: 1 classes, 1 alone: SwordSagePower*
 hooks: the hand draw: 1 classes, 1 alone: Pocketwatch*
 orbs (AfterOrbEvoked, ModifyOrbValue, EvokeLast, an orb made first): 1 classes, 1 alone: TrashToTreasurePower*
+read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule): 1 classes, 1 alone: CorruptionPower*
 the fight's log (the history ledger, decision #191): 1 classes, 1 alone: UnmovablePower*
 the owner's energy: 1 classes, 1 alone: PaelsTears*
 hooks: the power amount given: 1 classes, 0 alone: UnsettlingLamp
@@ -26,7 +27,7 @@ queries: a creature's side or presence: 1 classes, 0 alone: SurroundedPower
 ## Classes, each hook body's gap in reading order
 
 ChemicalX: [card costs and keywords (cards' own hooks, Part B3)] ModifyXValue: gap: the simulator runs no read model's ModifyXValue
-CorruptionPower: [card costs and keywords (cards' own hooks, Part B3)] TryModifyEnergyCostInCombatLate: gap: its body reads, but no simulation works out a hand card's live cost through the listeners' TryModifyEnergyCostInCombatLate yet
+CorruptionPower: [read whole: a parity proof (its hand-written model does more than its hooks: a tab, a rule)] read whole
 CoveredPower: [another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount)] AfterApplied: gap: changes a game object outside a command (InterceptPower.AddCoveredCreature)
 DampenPower: [its own data: a card or a play kept, a field used directly] AfterApplied: gap: changes a collection (IEnumerator`1.get_Current) where the reader reads no step | [its own data: a card or a play kept, a field used directly] AfterDeath: gap: changes its own data (casters.Remove) by creature
 FeralPower: [a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)] ModifyCardPlayResultLocation: gap: the value resources.EnergyValue

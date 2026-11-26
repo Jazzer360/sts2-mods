@@ -1171,15 +1171,17 @@ public static class HookReader
                     var amounts = ProgramReader.ReadOutWays(_type, hook, outName, _read) ?? throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: no out parameter {outName}");
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(Ways(amounts)), Modifies = answers }, null, null);
                 }
-                // A card's cost as a Try hook (decision #332): read the same way, its answer and its out cost each way, the card the one costed and
-                // originalCost the cost so far (HookFact.CostSoFar). No simulation works out a hand card's live cost through the listeners yet
-                // (TRACKER: mid-play card costs), so a body that reads is still a gap of the engine's, never run as a read model's.
+                // A card's cost as a Try hook (decisions #332, #334): read the same way, its answer and its out cost each way, the card the one costed
+                // (HookFact.CardPile its pile) and originalCost the cost so far (HookFact.CostSoFar); the engine runs the energy passes wherever a
+                // simulation reads a hand card's cost (SimEngine.HandCost). No simulation reads a star cost, so a star cost hook that reads stays a gap.
                 if (name is HookName.TryModifyEnergyCostInCombat or HookName.TryModifyEnergyCostInCombatLate or HookName.TryModifyStarCost && hook.ReturnType.Name == "Boolean"
                     && hook.GetParameters().SingleOrDefault(parameter => parameter.IsOut) is { Name: { } costName })
                 {
-                    _ = Pruned(TestWays(ProgramReader.ReadReturnedWays(_type, hook, _read)));
-                    _ = Pruned(Ways(ProgramReader.ReadOutWays(_type, hook, costName, _read) ?? throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: no out parameter {costName}")));
-                    return (null, new GapOf(ReaderCapability.CardCosts, $"gap: its body reads, but no simulation works out a hand card's live cost through the listeners' {hook.Name} yet"), null);
+                    var answers = Pruned(TestWays(ProgramReader.ReadReturnedWays(_type, hook, _read)));
+                    var costs = Pruned(Ways(ProgramReader.ReadOutWays(_type, hook, costName, _read) ?? throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: no out parameter {costName}")));
+                    if (name == HookName.TryModifyStarCost)
+                        return (null, new GapOf(ReaderCapability.CardCosts, $"gap: its body reads, but no simulation reads a hand card's star cost ({hook.Name})"), null);
+                    return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = costs, Modifies = answers }, null, null);
                 }
                 if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name is HookName.ModifyCardPlayCount or HookName.ModifyOrbPassiveTriggerCounts)
                 {
@@ -2660,6 +2662,14 @@ public static class HookReader
                 // The run on the Dread ascension, tested (Ceremonial Beast's RitualAmount: IsDread() ? 2 : 0): decision #275.
                 case QueryValue { Type: "AscensionHelper", Name: "IsDread", Arguments.Count: 0 }:
                     return new HookFactValue(HookFact.Dread);
+                // A nullable tested for a value (switch (card.Pile?.Type) tests HasValue first): none where a way is null, one where it's made, way
+                // by way.
+                case QueryValue { Name: "HasValue", Of: { } nullable } when HasValueOf(Unstored(nullable)) is { } hasValue:
+                    return Test(hasValue);
+                // The costed card's pile tested as there (card.Pile?.Type: Free Attack's, Veilpiercer's): every card whose cost a simulation asks is in
+                // one (your hand, or the play pile as it's played: SimEngine.HandCost).
+                case QueryValue { Name: "Pile", Of: { } costedPileOf } when IsCostHook(_hook) && IsEventCard(Unstored(costedPileOf)):
+                    return new HookConstant(1m);
                 // A pick from the owner's hand tested as there, in the condition of the step it guards (FreeInHandStep: the step acts on what the
                 // hand holds).
                 case QueryValue { Name: "NextItem", Arguments: [var picked] } when _handPickHolds && FromOwnersHand(picked):
@@ -3059,6 +3069,7 @@ public static class HookReader
             }
             if (AttackCompare(compare) is { } attacks) return attacks;
             if (SourceCompare(compare) is { } sources) return sources;
+            if (CostedPileCompare(compare) is { } costedPile) return costedPile;
             if (FirstPlayCompare(compare) is { } firstPlay) return firstPlay;
             // The stars a gain gave against none (AfterStarsGained's amount > 0: Black Hole's): the simulator raises a stars-gained event for a
             // PlayerCmd.GainStars alone, and every one in the game gains a Stars value or a power's amount, at least 1 (StarsGainTests holds it to the
@@ -3715,6 +3726,53 @@ public static class HookReader
             WaysValue ways => new WaysValue(ways.Ways.Select(way => (way.When, OrDefault(Unstored(way.Value)))).ToList()),
             _ => throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: the nullable {nullable}"),
         };
+
+        /// <summary>
+        /// A nullable value's HasValue: false for a null, true for a value made a nullable (new Nullable&lt;T&gt;(x)), each way of several so; null
+        /// for anything else.
+        /// </summary>
+        private static ProgramValue? HasValueOf(ProgramValue nullable) => nullable switch
+        {
+            NullValue => new ConstantValue(0),
+            QueryValue { Type: "Nullable`1", Name: ".ctor", Arguments: [_] } => new ConstantValue(1),
+            WaysValue ways when ways.Ways.Select(way => HasValueOf(Unstored(way.Value))).ToList() is var values && values.All(value => value != null) =>
+                new WaysValue(ways.Ways.Select((way, at) => (way.When, values[at]!)).ToList()),
+            _ => null,
+        };
+
+        /// <summary>
+        /// The costed card's pile (card.Pile.Type, or the nullable a switch on card.Pile?.Type makes of it) in a card's cost hook (decision #334).
+        /// </summary>
+        private bool IsCostedPileType(ProgramValue value) => Unstored(value) switch
+        {
+            QueryValue { Name: "Type", Of: QueryValue { Name: "Pile", Of: { } pileOf } } => IsCostHook(_hook) && IsEventCard(Unstored(pileOf)),
+            QueryValue { Name: "GetValueOrDefault", Arguments.Count: 0, Of: { } nullable } => IsCostedPileType(OrDefault(Unstored(nullable))),
+            // The switch's nullable, its null way the pile not there (no card a simulation costs is in no pile): the way that's made.
+            WaysValue ways => ways.Ways.Any(way => IsCostedPileType(way.Value)) && ways.Ways.All(way => way.Value is ConstantValue { Value: 0 } || IsCostedPileType(way.Value)),
+            _ => false,
+        };
+
+        /// <summary>
+        /// The costed card's pile against one of the game's piles (case PileType.Hand: case PileType.Play: Free Attack's): the simulator's
+        /// SimCardPile, any pile other than the hand or the play pile its Other. Null for any other compare.
+        /// </summary>
+        private HookValue? CostedPileCompare(CompareValue compare)
+        {
+            if (compare.Op is not (Comparison.Equal or Comparison.NotEqual)) return null;
+            foreach (var (one, other) in new[] { (compare.Left, compare.Right), (compare.Right, compare.Left) })
+            {
+                if (!IsCostedPileType(one) || other is not ConstantValue pile) continue;
+                var simPile = EnumName(_type.Assembly, "PileType", pile.Value) switch
+                {
+                    "Hand" => SimCardPile.Hand,
+                    "Play" => SimCardPile.Play,
+                    null => throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's pile is {pile.Value}"),
+                    _ => SimCardPile.Other,
+                };
+                return new HookMath(OperationOf(compare.Op), new HookFactValue(HookFact.CardPile), new HookConstant((int)simPile));
+            }
+            return null;
+        }
 
         /// <summary>A Modify hook's returns: each way's test and value, the first that holds.</summary>
         private HookValue Ways(WaysValue ways)

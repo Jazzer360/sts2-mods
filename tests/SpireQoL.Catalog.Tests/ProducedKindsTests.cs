@@ -21,8 +21,6 @@ public class ProducedKindsTests
     {
         // Facts the reader translates for code only the hand-written models hold today (their conversions are queued: decision #195).
         ["fact CreatureIsMonster"] = "the reader's Creature.IsMonster test: asked by monster-side hooks the hand-written models hold (the monster-state conversions)",
-        // A card's cost hooks read (decision #332), not yet run: no simulation works out a hand card's live cost (TRACKER: mid-play card costs).
-        ["fact CostSoFar"] = "the reader's originalCost of a card's cost hook (Curious's, Borrowed Time's), read into a program no simulation runs yet",
         // Conditions of a monster's move rules (MoveConditions), not of a card's steps.
         ["condition KnownCondition"] = "MoveConditions: a monster move rule's condition the adapter settles on the board (always, never, or worked out)",
         // Actions the engine or the adapter makes, not a card's program.

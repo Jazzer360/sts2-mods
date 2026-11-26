@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 29 engine rules naming 186 game methods; 3 adapter rules; 34 hand-written models.
+# 30 engine rules naming 190 game methods; 3 adapter rules; 34 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -13,6 +13,9 @@ A card play: its shape (play count, result location), each play's hooks and its 
 A card changed during its play: an upgrade of the card in play makes its later plays its upgraded copy's (read by the adapter from an upgraded copy), a keyword added stays on it
   game: CardCmd.Upgrade, CardModel.UpgradeInternal, CardModel.FinalizeUpgradeInternal, CardCmd.ApplyKeyword, CardModel.AddKeyword
   simulator: SimEngine.UpgradeCardInPlay, SimEngine.KeywordCardInPlay, SimEngine.WithKeywords
+A hand card's live energy cost (decision #334): its cost before global modifiers, then every listener's cost pass, then every Late pass, at least 0; Simpleton's cheapest by it
+  game: CardEnergyCost.GetWithModifiers, CardEnergyCost.GetResolved, Hook.ModifyEnergyCostInCombat, SimpletonPower.AfterAutoPostPlayPhaseEntered (beta only)
+  simulator: SimEngine.HandCost, SimEngine.Cheapest
 A card in a hand made free this turn: the game's random pick among the cards that cost, what a simulation reads of it (the cheapest card at the turn's end)
   game: CardModel.SetToFreeThisTurn, CardModel.CostsEnergyOrStars
   simulator: SimEngine.FreeInHand
@@ -109,7 +112,7 @@ Fairy in a Bottle and Lizard Tail: a death held back, healed from 0
 ChemicalX: ChemicalX.BeforeCardPlayed, ChemicalX.ModifyXValue
   model: BeforeCardPlayed
 CorruptionPower: CorruptionPower.AfterModifyingCardPlayResultLocation, CorruptionPower.ModifyCardPlayResultLocation, CorruptionPower.TryModifyEnergyCostInCombatLate
-  model: ModifyCardPlayResultLocation
+  model: ModifyCardPlayResultLocation, TryModifyEnergyCostInCombatLate
 CoveredPower: CoveredPower.AfterApplied, CoveredPower.AfterDeath, CoveredPower.AfterRemoved, CoveredPower.AfterSideTurnEnd, CoveredPower.ModifyDamageMultiplicative
   model: AfterApplied, AfterSideTurnEnd, ModifyDamageMultiplicative
 DampenPower: DampenPower.AfterApplied, DampenPower.AfterDeath, DampenPower.AfterRemoved, DampenPower.InitInternalData

@@ -419,6 +419,8 @@ public sealed class TurnEndModel
         // The game state rarely changes between frames: rerun only when it did.
         var key = ReferenceEquals(state, full) ? fullKey : state.FullKey();
         if (probeCheck != null) CheckProbe(probeCheck, full, key, fullKey);
+        // The live cost rule held to the game's costs once a board (decision #334).
+        if (key != _lastKey) Diagnostics.HandCostAudit.Check(me, full);
         var job = Explore(ref _lastKey, ref _lastJob, key, state, "the turn forecast");
         return new ForecastStart(state, key, full, fullKey, ids, SimAdapter.Teammates(me, combat), me.Creature.CurrentHp, probe, job, Reused: null);
     }

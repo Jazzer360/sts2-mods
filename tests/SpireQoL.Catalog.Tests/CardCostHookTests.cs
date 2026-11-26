@@ -7,9 +7,10 @@ using Xunit;
 namespace SpireQoL.Catalog.Tests;
 
 /// <summary>
-/// A card's cost hooks read as Try hooks (decision #332): TryModifyEnergyCostInCombat, its Late pass and TryModifyStarCost, each its answer and the
-/// cost its out parameter holds, the costed card's owner, type and affliction and originalCost (the cost so far) read. No simulation works out a hand
-/// card's live cost through the listeners yet (TRACKER: mid-play card costs), so a body that reads is still the engine's gap, never run.
+/// A card's cost hooks read as Try hooks (decisions #332, #334): TryModifyEnergyCostInCombat and its Late pass, each its answer and the cost its out
+/// parameter holds, the costed card's owner, type, keywords, affliction and pile (card.Pile?.Type is Hand or Play) and originalCost (the cost so far)
+/// read, run by the engine wherever a simulation reads a hand card's cost (SimEngine.HandCost). No simulation reads a star cost, so TryModifyStarCost
+/// stays a gap.
 /// </summary>
 public class CardCostHookTests
 {
@@ -22,17 +23,29 @@ public class CardCostHookTests
     [InlineData(typeof(TangledPower), "TryModifyEnergyCostInCombat")]
     [InlineData(typeof(CorruptionPower), "TryModifyEnergyCostInCombatLate")]
     [InlineData(typeof(SpikedGauntlets), "TryModifyEnergyCostInCombat")]
-    public void ACostHooksBodyReadsAndWaitsForTheLiveCostRule(Type type, string hook)
+    [InlineData(typeof(EnsemblePower), "TryModifyEnergyCostInCombatLate")]
+    [InlineData(typeof(VeilpiercerPower), "TryModifyEnergyCostInCombatLate")]
+    [InlineData(typeof(VoidFormPower), "TryModifyEnergyCostInCombatLate")]
+    [InlineData(typeof(BrilliantScarf), "TryModifyEnergyCostInCombatLate")]
+    public void ACostPassReads(Type type, string hook)
     {
         GameModels.EnsureLoaded();
-        Assert.Equal($"gap: its body reads, but no simulation works out a hand card's live cost through the listeners' {hook} yet", GapOf(type, hook));
+        Assert.Null(GapOf(type, hook));
     }
 
     [Fact]
-    public void ACostHookThatTestsTheCardsPileStopsThere()
+    public void TheCostedCardsPileReads()
     {
-        // card.Pile?.Type is Hand or Play (Free Attack's, Veilpiercer's, Void Form's): the next capability the live cost rule needs read.
+        // switch (card.Pile?.Type) { case Hand: case Play: ... }: its HasValue (every costed card is in a pile), then the pile against each.
         GameModels.EnsureLoaded();
-        Assert.Contains("card.Pile", GapOf(typeof(FreeAttackPower), "TryModifyEnergyCostInCombatLate"));
+        var late = HookReader.Read(typeof(FreeAttackPower), RuntimeCode.Read).Spec.Hooks.Single(program => program.Hook == HookName.TryModifyEnergyCostInCombatLate);
+        Assert.Contains(new ModelSpec("FreeAttackPower", ModelKind.Power, new[] { late }).Values(), value => value is HookFactValue { Fact: HookFact.CardPile });
+    }
+
+    [Fact]
+    public void AStarCostPassIsAGap()
+    {
+        GameModels.EnsureLoaded();
+        Assert.Equal("gap: its body reads, but no simulation reads a hand card's star cost (TryModifyStarCost)", GapOf(typeof(VoidFormPower), "TryModifyStarCost"));
     }
 }

@@ -14,6 +14,9 @@ internal readonly struct HookArgs
     public SimCardPlay? Play { get; init; }
     /// <summary>The card whose enchantment runs (ModelKind.Enchantment: its base.Card), or null.</summary>
     public SimCard? Card { get; init; }
+    /// <summary>The card a cost hook is asked about (TryModifyEnergyCostInCombat and its Late pass: SimEngine.HandCost), and its cost so far.</summary>
+    public SimCostedCard? Costed { get; init; }
+    public int CostSoFar { get; init; }
     /// <summary>A card event and who it happened to (AfterCardEvent).</summary>
     public CardEvent Event { get; init; }
     public int Player { get; init; }
@@ -232,8 +235,8 @@ public sealed class ReadModel : SimModel
     private readonly Dictionary<string, int> _testSlots = new(StringComparer.Ordinal);
     private readonly Evaluate?[] _returns = new Evaluate?[Enum.GetValues<HookName>().Length];
 
-    /// <summary>Its TryModifyPowerAmountReceived's answer (HookProgram.Modifies): 1 when its out value is the amount; null with no such hook.</summary>
-    private readonly Evaluate? _modifies;
+    /// <summary>Each Try hook's answer (HookProgram.Modifies: TryModifyPowerAmountReceived's, the cost passes'): 1 when its out value is the result.</summary>
+    private readonly Evaluate?[] _modifies = new Evaluate?[Enum.GetValues<HookName>().Length];
 
     /// <summary>The hooks whose program takes back what the model bound to the play: each run gets a slot for it (HookArgs.Taken).</summary>
     private readonly bool[] _takes = new bool[Enum.GetValues<HookName>().Length];
@@ -299,7 +302,7 @@ public sealed class ReadModel : SimModel
                 && (HasCopies || program.Steps.Any(step => step is not StoreFieldStep) || program.Hook is not (HookName.ModifyBlockAdditive or HookName.ModifyBlockMultiplicative)))
                 throw new InvalidOperationException($"{Name}: {program.Hook} changes its state as it works out its value, which the engine doesn't run there");
             if (program.Returns != null) _returns[(int)program.Hook] = Compile(program.Returns);
-            if (program.Modifies != null) _modifies = Compile(program.Modifies);
+            if (program.Modifies != null) _modifies[(int)program.Hook] = Compile(program.Modifies);
             _steps[(int)program.Hook] = CompileSteps(program.Steps, new List<HookStep>(), firstRound: true, program.Hook);
         }
         foreach (var (question, test) in spec.Tests ?? new Dictionary<string, HookValue>()) _tests[question] = Compile(test);
@@ -606,6 +609,10 @@ public sealed class ReadModel : SimModel
         HookName.AfterModifyingPowerAmountGiven => nameof(AfterModifyingPowerAmountGiven),
         HookName.TryModifyPowerAmountReceived => nameof(TryModifyPowerAmountReceived),
         HookName.AfterModifyingPowerAmountReceived => nameof(AfterModifyingPowerAmountReceived),
+        HookName.TryModifyEnergyCostInCombat => nameof(TryModifyEnergyCostInCombat),
+        HookName.TryModifyEnergyCostInCombatLate => nameof(TryModifyEnergyCostInCombatLate),
+        // No simulation reads a star cost: a read one is never run (its body stays a gap: HookReader).
+        HookName.TryModifyStarCost => "",
         // Its power's own question as its owner dies (Creature.RemoveAllPowersAfterDeath): asked of it, never of every listener.
         HookName.ShouldPowerBeRemovedAfterOwnerDeath => nameof(StaysOnDeadOwner),
         // An orb's own programs: the engine runs them where OrbCmd and OrbQueue do (RunOrb), never as a listener's hook; an enchantment's OnPlay
@@ -1087,12 +1094,31 @@ public sealed class ReadModel : SimModel
     public override bool TryModifyPowerAmountReceived(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff, int? powerTarget, out int modified)
     {
         modified = amount;
-        if (_modifies is not { } modifies || _returns[(int)HookName.TryModifyPowerAmountReceived] is not { } returns) return false;
+        if (_modifies[(int)HookName.TryModifyPowerAmountReceived] is not { } modifies || _returns[(int)HookName.TryModifyPowerAmountReceived] is not { } returns) return false;
         var args = new HookArgs
         {
             State = state, Owner = owner, Hook = HookName.TryModifyPowerAmountReceived, Play = state.CurrentPlay, Power = power, PowerAmount = amount, Applier = applier,
             Target = target, Debuff = debuff, PowerTarget = powerTarget,
         };
+        if (modifies(in args) == 0m) return false;
+        modified = (int)returns(in args);
+        return true;
+    }
+
+    /// <summary>Hook.ModifyEnergyCostInCombat's first pass: its code's answer (true: its out value is the cost from here on: Curious' Powers 1 less).</summary>
+    public override bool TryModifyEnergyCostInCombat(SimState state, int owner, SimCostedCard costed, int cost, out int modified) =>
+        TryCost(HookName.TryModifyEnergyCostInCombat, state, owner, costed, cost, out modified);
+
+    /// <summary>Hook.ModifyEnergyCostInCombat's second pass (Free Attack's Attacks in your hand or being played: 0).</summary>
+    public override bool TryModifyEnergyCostInCombatLate(SimState state, int owner, SimCostedCard costed, int cost, out int modified) =>
+        TryCost(HookName.TryModifyEnergyCostInCombatLate, state, owner, costed, cost, out modified);
+
+    private bool TryCost(HookName hook, SimState state, int owner, SimCostedCard costed, int cost, out int modified)
+    {
+        modified = cost;
+        if (_modifies[(int)hook] is not { } modifies || _returns[(int)hook] is not { } returns) return false;
+        // The costed card's owner is the hook's player (card.Owner == base.Owner: HookFact.EventIsOwners).
+        var args = new HookArgs { State = state, Owner = owner, Hook = hook, Play = state.CurrentPlay, Costed = costed, CostSoFar = cost, Player = costed.Owner };
         if (modifies(in args) == 0m) return false;
         modified = (int)returns(in args);
         return true;
@@ -2450,7 +2476,10 @@ public sealed class ReadModel : SimModel
             case HookFact.CardType: return (in HookArgs args) => (int)CardTypeOf(in args);
             // Ethereal: the card drawn as its profile has it, the card played, or another event's card (one exhausted, made).
             case HookFact.CardEthereal: return (in HookArgs args) => (args.Hook == HookName.AfterCardDrawn ? args.State.DrawnCard?.Ethereal
-                : IsCardEventHook(args.Hook) ? args.State.EventCard?.Ethereal : args.Play?.Card.Ethereal) == true ? 1m : 0m;
+                : IsCardEventHook(args.Hook) ? args.State.EventCard?.Ethereal : IsCostHook(args.Hook) ? args.Costed?.Card.Ethereal : args.Play?.Card.Ethereal) == true ? 1m : 0m;
+            // A cost hook's card (SimEngine.HandCost): its cost so far, its pile.
+            case HookFact.CostSoFar: return (in HookArgs args) => args.CostSoFar;
+            case HookFact.CardPile: return (in HookArgs args) => (int)(args.Costed?.Pile ?? SimCardPile.Other);
             case HookFact.CardEnergy: return (in HookArgs args) => args.Play?.Card.Energy ?? 0;
             case HookFact.PlayStars: return (in HookArgs args) => args.Play?.Card.Stars ?? 0;
             case HookFact.PlayIsFirst:
@@ -2508,7 +2537,7 @@ public sealed class ReadModel : SimModel
             {
                 // The card played's affliction, by the simulator's name for its class (SimCard.Affliction).
                 var affliction = Enum.TryParse<SimAffliction>(named, out var parsed) ? parsed : throw new InvalidOperationException($"{Name}: no affliction {named}");
-                return (in HookArgs args) => args.Play?.Card.Affliction == affliction ? 1m : 0m;
+                return (in HookArgs args) => (IsCostHook(args.Hook) ? args.Costed?.Card : args.Play?.Card)?.Affliction == affliction ? 1m : 0m;
             }
             case HookFact.CardIs:
                 // The card played (a play hook's: cardPlay.Card is Soul), or the event's card; a card made at random has a class only its roll knows.
@@ -2812,6 +2841,9 @@ public sealed class ReadModel : SimModel
         or HookName.AfterCardGeneratedForCombat or HookName.AfterShuffle or HookName.AfterStarsSpent or HookName.AfterStarsGained or HookName.AfterEnergySpent
         or HookName.AfterArrowDislodged;
 
+    /// <summary>A card's energy cost pass (SimEngine.HandCost): its card the one costed (HookArgs.Costed).</summary>
+    private static bool IsCostHook(HookName hook) => hook is HookName.TryModifyEnergyCostInCombat or HookName.TryModifyEnergyCostInCombatLate;
+
     /// <summary>A hook whose card is the card played (its play's or its count's), not an event's.</summary>
     private static bool IsPlayHook(HookName hook) =>
         hook is HookName.BeforeCardPlayed or HookName.AfterCardPlayed or HookName.ModifyCardPlayCount or HookName.AfterModifyingCardPlayCount
@@ -2823,6 +2855,7 @@ public sealed class ReadModel : SimModel
     /// </summary>
     private static SimCardType CardTypeOf(in HookArgs args)
     {
+        if (IsCostHook(args.Hook)) return args.Costed?.Card.Type ?? SimCardType.None;
         if (args.Hook is HookName.BeforeAttack or HookName.AfterAttack) return args.Attack?.Card?.Type ?? SimCardType.None;
         if (IsPlayHook(args.Hook)) return args.Play?.Card.Type ?? SimCardType.None;
         return args.Event switch
