@@ -110,7 +110,11 @@ public static partial class SimAdapter
             hitsPerAttack.Add(repeats);
             // Damage that's a property of its own a move of its sets (decision #337: About to Blow's SteamEruptionDamage) reads what that move set.
             var baseFrom = DamageField(monster.GetType(), attack);
-            for (var i = 0; i < repeats; i++) intent.Add(new IntentHit(damageCalc) { Captured = terms, BaseFrom = baseFrom });
+            // Damage that adds its own power (decision #344: The Forgotten's Dread, 13 plus its Dexterity) is worked out on that power as it stands then.
+            var powerType = DamagePower(monster.GetType(), attack);
+            var basePower = powerType != null ? PowerId.Of(SimPowerName(powerType)) : (PowerId?)null;
+            var atRead = powerType != null ? creature.Powers.Where(power => power.GetType() == powerType).Sum(power => power.Amount) : 0;
+            for (var i = 0; i < repeats; i++) intent.Add(new IntentHit(damageCalc) { Captured = terms, BaseFrom = baseFrom, BasePower = basePower, BasePowerAtRead = atRead });
         }
         return new ProjectedMove(move.Id)
         {

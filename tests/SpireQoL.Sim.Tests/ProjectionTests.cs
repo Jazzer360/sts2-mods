@@ -234,6 +234,25 @@ public class ProjectionTests
     }
 
     [Fact]
+    public void AnAttackThatAddsItsOwnPowerReadsItAfterTheMoveBeforeIt()
+    {
+        // Decision #344: The Forgotten's Dread is 13 + its own Dexterity (DreadDamage), read now with none; its Miasma the turn before gives it 2
+        // Dexterity (PowerCmd.Apply<DexterityPower> on itself), so the Dread after it hits for 15, and the Dread after another Miasma for 17.
+        var forgotten = Attacker(id: 0, hp: 200, hit: 0);
+        var miasma = new ProjectedMove("MIASMA") { Actions = new SimAction[] { new MovePowerAction(PowerId.Dexterity, Amount: 2, To: new[] { 0 }, Debuff: false) } };
+        var dread = new ProjectedMove("DREAD")
+        {
+            Intent = new[] { new IntentHit(Base: 13) { BasePower = PowerId.Dexterity, BasePowerAtRead = 0 } },
+            Actions = new SimAction[] { new MoveAttackAction(FirstHit: 0, Hits: 1) },
+            OnlyAttacks = true,
+        };
+        var projection = SimEngine.Project(Fight(forgotten), Turns(new[] { Certain(enemyId: 0, miasma) }, new[] { Certain(enemyId: 0, dread) },
+            new[] { Certain(enemyId: 0, miasma) }, new[] { Certain(enemyId: 0, dread) }));
+        Assert.Equal(new[] { 15 }, projection.Of(turn: 1, enemyId: 0, move: "DREAD")!.Lands);
+        Assert.Equal(new[] { 17 }, projection.Of(turn: 3, enemyId: 0, move: "DREAD")!.Lands);
+    }
+
+    [Fact]
     public void AnotherEnemysRandomPickCountsOnlyWhatsCertain()
     {
         // The first enemy picks at random between giving the second 3 Strength and attacking; the second, acting after it, hits for 7 or 10: a roll

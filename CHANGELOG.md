@@ -100,6 +100,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - No garbage in a fight's quiet frames from the board check every display asks (it made a closure for each power it read, about 0.1 KB a frame).
 - Rest Site Preview makes no garbage while you sit at the fire: the boss fight's start (Pantograph, Bath Robes) is worked out again only when your HP or relics change, not every frame (1.7 KB each), and the panels' placement no longer builds a text key each frame.
 - Intent Forecast makes no garbage while you hover an enemy whose forecast shows a move's powers (their icons' key was rebuilt as text every frame).
+- Intent Forecast: The Forgotten's Dread after a Miasma in the later turns counts the Dexterity the Miasma gives it (it showed 2 too little each time).
 - Intent Forecast: a Waterfall Giant about to blow shows its Explode's damage, the Steam Eruption it has then, where it showed 0; a second Pressure Gun in the later turns hits 5 more than the first.
 - The forecast audit holds the Intent Forecast's later turns to the moves the game rolls for your new turn, not to the moves just made, when your turn's start takes more than a frame; and it doesn't hold them to a turn after a Waterfall Giant died and came back about to blow.
 - The Play audit holds Play Preview to the HP the play itself took from you (an enemy's Thorns as you hit, a card's HP cost) as well as the turn after it, as the preview counts it.

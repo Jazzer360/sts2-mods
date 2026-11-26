@@ -52,4 +52,26 @@ public class MoveStoreTests
         Assert.Equal(("Monster.WaterfallGiant.CurrentPressureGunDamage", true, 5), (store.Field, store.Adds, store.Amount));
         Assert.Null(store.Unknown);
     }
+
+    [Fact]
+    public void TheForgottensDreadAfterMiasmaHitsForItsNewDexterity()
+    {
+        // Decision #344: Dread is () => DreadDamage, 13 (or its Ascension value) + base.Creature.GetPowerAmount<DexterityPower>(); Miasma before it gives
+        // it DebilitatingSmogDexStealAmount Dexterity. On screen Miasma, the projected Dread reads its Dexterity after it, not the 0 it has now.
+        var fight = new GameFight();
+        var creature = fight.Combat.CreateCreature(ModelDb.Monster<TheForgotten>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(creature);
+        var monster = creature.Monster!;
+        monster.SetUpForCombat();
+        var miasma = (MoveState)monster.MoveStateMachine!.States["MIASMA"];
+        typeof(MonsterModel).GetProperty(nameof(MonsterModel.NextMove))!.SetValue(monster, miasma);
+        monster.MoveStateMachine.ForceCurrentState(miasma);
+        var dread = (MoveState)monster.MoveStateMachine.States["DREAD"];
+        Assert.Equal(typeof(DexterityPower), SimAdapter.DamagePower(typeof(TheForgotten), dread.Intents.OfType<MegaCrit.Sts2.Core.MonsterMoves.Intents.AttackIntent>().Single()));
+        var input = SimAdapter.ProjectionStart(fight.Me, fight.Combat)!;
+        var projection = SimEngine.Project(input.State, input.Turns, input.Rules);
+        var now = (int)dread.Intents.OfType<MegaCrit.Sts2.Core.MonsterMoves.Intents.AttackIntent>().Single().DamageCalc!();
+        var lands = projection.Of(turn: 0, input.Ids[creature], "DREAD")!.AtYourTurnStart!;
+        Assert.True(lands[0] > now, $"Dread after Miasma {string.Join(",", lands)}, read now {now}");
+    }
 }

@@ -250,6 +250,43 @@ public static partial class SimAdapter
     }
 
     /// <summary>
+    /// The power of its own an attack intent's damage adds (decision #344): its DamageCalc a lambda on the monster returning a getter of its own whose
+    /// code is a sum with one term its own creature's amount of a power (The Forgotten's DreadDamage: 13 + base.Creature.GetPowerAmount&lt;DexterityPower&gt;()),
+    /// the other terms reading no power. The projection works the hit's base out on that power as it stands then (IntentHit.BasePower). Null for any
+    /// other damage; read once per monster class and getter.
+    /// </summary>
+    internal static Type? DamagePower(Type monster, AttackIntent attack)
+    {
+        if (attack.DamageCalc?.Method is not { } calc || calc.IsStatic || calc.DeclaringType is not { } declaring || !declaring.IsAssignableFrom(monster)) return null;
+        var ops = RuntimeCode.Read(calc).Where(instruction => instruction.OpCode != System.Reflection.Emit.OpCodes.Nop).ToList();
+        if (ops.Count is < 3 or > 4 || ops[0].OpCode != System.Reflection.Emit.OpCodes.Ldarg_0 || ops[^1].OpCode != System.Reflection.Emit.OpCodes.Ret) return null;
+        if (ops[1] is not { IsCall: true, Member: { Kind: CodeMemberKind.Method, Name: var getter } } || !getter.StartsWith("get_", StringComparison.Ordinal)) return null;
+        if (ops.Count == 4 && ops[2].Member?.Name != "op_Implicit") return null;
+        return DamagePowers.GetOrAdd((monster, getter), key =>
+        {
+            var property = key.Monster.GetProperty(key.Getter[4..], System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+            if (property?.GetMethod is not { } method || property.DeclaringType is not { } owner) return null;
+            try
+            {
+                if (ProgramReader.ReadReturnedValue(owner, method, RuntimeCode.Read) is not { } returned) return null;
+                var terms = new List<ProgramValue>();
+                void Terms(ProgramValue value)
+                {
+                    if (StepValues.Unstored(value) is ArithmeticValue { Op: "add" } sum) { Terms(sum.Left); Terms(sum.Right); }
+                    else terms.Add(StepValues.Unstored(value)!);
+                }
+                Terms(returned);
+                var own = terms.Where(term => term is QueryValue { Name: "GetPowerAmount", GenericArguments: [_], Of: QueryValue { Name: "Creature", Of: NamedValue { Name: "this" } } }).ToList();
+                if (own is not [QueryValue { GenericArguments: [var powerName] }] || terms.Except(own).Any(ReadsAPower)) return null;
+                return PowerType(powerName);
+            }
+            catch (Exception exception) when (exception is InvalidOperationException or NotSupportedException) { return null; }
+        });
+    }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type Monster, string Getter), Type?> DamagePowers = new();
+
+    /// <summary>
     /// A monster's own property with a setter under its key in an enemy's fields ("Monster.WaterfallGiant.SteamEruptionDamage": the class declaring
     /// it, as a power's store to its owner's monster names it), or null for one it doesn't have.
     /// </summary>

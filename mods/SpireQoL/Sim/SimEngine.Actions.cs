@@ -1129,7 +1129,10 @@ public static partial class SimEngine
     /// else as the adapter read it.
     /// </summary>
     internal static decimal BaseOf(SimEnemy? enemy, IntentHit hit) =>
-        hit.BaseFrom is { } field && enemy != null && enemy.Fields.Has(field) ? enemy.Fields[field] : hit.Base;
+        hit.BaseFrom is { } field && enemy != null && enemy.Fields.Has(field) ? enemy.Fields[field]
+        // Its own power it adds, as it stands now (decision #344: Dread after Miasma's Dexterity).
+        : hit.BasePower is { } power && enemy != null ? hit.Base - hit.BasePowerAtRead + enemy.Powers[power]
+        : hit.Base;
 
     /// <summary>
     /// A move's store to its monster's own property that a hit's damage reads (MoveStoreAction, decision #337), in a projection: its value as the step

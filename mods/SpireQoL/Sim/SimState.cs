@@ -1528,5 +1528,14 @@ public sealed record IntentHit(decimal Base)
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? BaseFrom { get; init; }
+
+    /// <summary>
+    /// The power of its own its damage adds (The Forgotten's Dread: 13 plus its Dexterity), with its amount when <see cref="Base"/> was read: in a
+    /// projection the hit's base is <see cref="Base"/> less that, plus the power as it stands then (decision #344). Null for any other damage.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PowerId? BasePower { get; init; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public int BasePowerAtRead { get; init; }
     public CapturedTerms TermsOn(int player) => Captured != null && Captured.TryGetValue(player, out var terms) ? terms : CapturedTerms.None;
 }
