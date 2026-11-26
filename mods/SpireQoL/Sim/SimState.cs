@@ -1009,7 +1009,12 @@ public sealed class SimState
     public List<(string Name, int Amount)> Unblockable = new();
     public List<(string Name, int Amount)> EndOfTurnDamage = new();
 
-    public SimEnemy? Enemy(int id) => Enemies.FirstOrDefault(enemy => enemy.Id == id);
+    /// <summary>The enemy with this id, or null. A loop rather than a query: it's asked many times a step, and a query's closure is made each time.</summary>
+    public SimEnemy? Enemy(int id)
+    {
+        foreach (var enemy in Enemies) if (enemy.Id == id) return enemy;
+        return null;
+    }
 
     [JsonIgnore]
     public IEnumerable<SimEnemy> Targetable => Enemies.Where(enemy => enemy.Hittable && enemy.Alive);

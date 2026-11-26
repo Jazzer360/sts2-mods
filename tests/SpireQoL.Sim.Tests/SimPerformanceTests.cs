@@ -151,7 +151,10 @@ public class SimPerformanceTests
         // it; the change itself (a creature joining runs its listeners, a power's received pass) adds about 10 KB.
         // branch-heavy hand's time 150 ms from 60 (2026-11-26): it measures about 31 ms, but failed its 60 ms once while two test suites ran at
         // once on the machine; its copies, steps and bytes are what hold it (decision #31).
-        new object[] { "branch-heavy hand", 3_600, 6_000, 34, 335_000_000L, 150 },               // 2,874, 5,701, 34, 329.7 MB, 31 ms (was cut off at 128 branches: 926 copies)
+        // branch-heavy hand's bytes 300 MB from 335 (2026-11-26, decision #380): hot paths make no closure, enumerator, merge table or box they don't
+        // use (a read model's step, a hook no one listens to, Enemy(id), a chain left with one branch, a props flag); 334,510,344 bytes to 237,300,344.
+        // Four Defects 875.3 MB to 743.6, Beacon of Hope and Juggernaut 16.79 to 14.33, typical 556 KB to 417; copies, steps and branches stepped unchanged.
+        new object[] { "branch-heavy hand", 3_600, 6_000, 34, 300_000_000L, 150 },               // 2,874, 5,701, 34, 237.3 MB, 24 ms (was cut off at 128 branches: 926 copies)
         // four Defects' bytes: 1,170 MB from 1,140 (2026-11-24, decision #195): each SimPlayer and SimEnemy holds its models' fields (a reference more
         // in each copy), 1,144.6 MB measured, 1.3% more.
         // Bytes measured 2026-11-24 (decision #216: the branch key made by reference, nothing sorted that has no order to choose): branch-heavy

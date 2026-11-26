@@ -380,7 +380,19 @@ public static partial class SimEngine
     /// <summary>A hook on every branch as one step, or nothing when no branch has a listener (so fights without models cost the same).</summary>
     private static void HookStep(BranchSet branches, string hook, Func<SimModel, int, SimState, IEnumerable<SimState>> call)
     {
-        if (!branches.States.Any(branch => Listens(branch, hook))) return;
+        if (!AnyListens(branches, hook)) return;
+        HookOnEach(branches, hook, call);
+    }
+
+    private static bool AnyListens(BranchSet branches, string hook)
+    {
+        foreach (var branch in branches.States) if (Listens(branch, hook)) return true;
+        return false;
+    }
+
+    /// <summary>HookStep's step, a method of its own so that a hook no branch listens to makes no closure.</summary>
+    private static void HookOnEach(BranchSet branches, string hook, Func<SimModel, int, SimState, IEnumerable<SimState>> call)
+    {
         // A combat hook reaches no one once the fight is ending (Hook.IterateCombatHookListeners, decision #301); the few the game dispatches to
         // every listener whatever the fight's state still run.
         if (!HooksAfterTheFightEnds.ContainsKey(hook) && AnyEnding(branches)) WhileFighting(branches, () => branches.Each(branch => Hook(branch, hook, call)));

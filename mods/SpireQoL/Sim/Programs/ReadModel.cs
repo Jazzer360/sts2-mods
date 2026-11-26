@@ -1272,9 +1272,15 @@ public sealed class ReadModel : SimModel
             Hook = hook, Asked = _asksOnce[(int)hook] ? new int[_testSlots.Count] : null, Taken = _takes[(int)hook] ? new int[1] : null,
             Locals = _localSlots.Count > 0 ? new decimal[_localSlots.Count] : null,
         };
-        if (!HasCopies) return RunSteps(steps, args);
-        // Each copy runs the hook on its own, in the order they landed (each a listener of its own in the game), on every branch the one before
-        // it left; a copy a branch no longer has (it went) runs nothing there.
+        return HasCopies ? RunCopies(steps, args) : RunSteps(steps, args);
+    }
+
+    /// <summary>
+    /// Each copy runs the hook on its own, in the order they landed (each a listener of its own in the game), on every branch the one before it
+    /// left; a copy a branch no longer has (it went) runs nothing there. A method of its own so that a model kept as one makes no closure.
+    /// </summary>
+    private IEnumerable<SimState> RunCopies(CompiledStep[] steps, HookArgs args)
+    {
         var copies = CopiesOrOne(args.State, args.Owner);
         IEnumerable<SimState> states = One(args.State);
         foreach (var copy in copies)
@@ -1422,16 +1428,20 @@ public sealed class ReadModel : SimModel
                 if (after.Count == 1 && step == steps[^1]) return after;
                 continue;
             }
-            var current = args;
-            var compiled = step;
-            states = SimEngine.Then(states, branch =>
-            {
-                var branchArgs = current.On(branch);
-                return compiled.When != null && compiled.When(in branchArgs) == 0m ? new[] { branch } : compiled.Run(branchArgs);
-            });
+            states = StepOnEach(states, step, args);
         }
         return states ?? One(args.State);
     }
+
+    /// <summary>
+    /// One compiled step on every branch the ones before it left (RunSteps), its condition asked on each. A method of its own so that the closure (a
+    /// copy of the hook's arguments) is made only once a step has branches to run on, not for every step of every hook run.
+    /// </summary>
+    private static List<SimState> StepOnEach(IEnumerable<SimState> states, CompiledStep step, HookArgs args) => SimEngine.Then(states, branch =>
+    {
+        var branchArgs = args.On(branch);
+        return step.When != null && step.When(in branchArgs) == 0m ? One(branch) : step.Run(branchArgs);
+    });
 
     // ---- commands
 
@@ -1596,7 +1606,7 @@ public sealed class ReadModel : SimModel
             {
                 // CreatureCmd.Damage of its card's owner, unblockable: the HP its card costs (a card program's LoseHpAction), named by its card
                 // (the damage's cardSource is base.Card).
-                if (enchantmentDamage.Target != HookTarget.Owner || enchantmentDamage.Props is not HookConstant { Value: var hpProps } || !((SimProps)(int)hpProps).HasFlag(SimProps.Unblockable))
+                if (enchantmentDamage.Target != HookTarget.Owner || enchantmentDamage.Props is not HookConstant { Value: var hpProps } || !((SimProps)(int)hpProps).Has(SimProps.Unblockable))
                     throw new InvalidOperationException($"{Name}: no enchantment damage to {enchantmentDamage.Target}");
                 var amount = Compile(enchantmentDamage.Amount);
                 return args =>

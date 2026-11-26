@@ -197,7 +197,7 @@ public static partial class SimEngine
         // first (MainRule.ReceivedBeforeTheResults).
         var receivedFirst = (state.MainRules & MainRule.ReceivedBeforeTheResults) != 0;
         if (receivedFirst) foreach (var (model, listener) in Listeners(state)) model.BeforeDamageReceived(state, listener, damage, amount);
-        var blocked = props.HasFlag(SimProps.Unblockable) ? 0 : Math.Min(state.Player(player)!.Block, amount);
+        var blocked = props.Has(SimProps.Unblockable) ? 0 : Math.Min(state.Player(player)!.Block, amount);
         var notes = default(HpLossNotes);
         var rest = amount - blocked;
         var lost = rest <= 0 ? 0 : Listeners(state).Count == 0 ? rest : Math.Max(0, (int)HpLossFor(state, damage, rest, out notes));

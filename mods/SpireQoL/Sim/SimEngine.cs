@@ -377,12 +377,34 @@ public static partial class SimEngine
     /// </summary>
     internal static List<SimState> Then(IEnumerable<SimState> states, Func<SimState, IEnumerable<SimState>> f)
     {
+        // Lists are walked by index and the merge table is made at the second branch: most chains run on one branch and leave one, and this is
+        // run for every listener of every hook, so neither an enumerator nor a table is made for them.
         var next = new List<SimState>();
-        var seen = new Dictionary<long, SimState>();
-        foreach (var state in states)
-            foreach (var branch in f(state))
-                Merge(next, seen, branch);
+        Dictionary<long, SimState>? seen = null;
+        if (states is IReadOnlyList<SimState> list)
+            for (var i = 0; i < list.Count; i++) MergeAll(next, ref seen, f(list[i]));
+        else
+            foreach (var state in states) MergeAll(next, ref seen, f(state));
         return next;
+    }
+
+    private static void MergeAll(List<SimState> next, ref Dictionary<long, SimState>? seen, IEnumerable<SimState> branches)
+    {
+        if (branches is IReadOnlyList<SimState> list)
+            for (var i = 0; i < list.Count; i++) MergeLater(next, ref seen, list[i]);
+        else
+            foreach (var branch in branches) MergeLater(next, ref seen, branch);
+    }
+
+    /// <summary>Merge, with the table made only once a second branch comes (the first is keyed then: nothing changes it in between).</summary>
+    private static void MergeLater(List<SimState> next, ref Dictionary<long, SimState>? seen, SimState state)
+    {
+        if (seen == null)
+        {
+            if (next.Count == 0) { next.Add(state); return; }
+            seen = new Dictionary<long, SimState> { [next[0].Key()] = next[0] };
+        }
+        Merge(next, seen, state);
     }
 
     /// <summary>Adds a branch to a step's results, or merges it into the identical one there (both shares of the rolls).</summary>
@@ -444,7 +466,9 @@ public static partial class SimEngine
                 mine.Clear();
                 try
                 {
-                    foreach (var state in step(parent)) mine.Add(state);
+                    var stepped = step(parent);
+                    if (stepped is IReadOnlyList<SimState> list) for (var j = 0; j < list.Count; j++) mine.Add(list[j]); // no enumerator for a list
+                    else foreach (var state in stepped) mine.Add(state);
                 }
                 catch (SimCapped) when (!_nested)
                 {
@@ -517,7 +541,7 @@ public static partial class SimEngine
             if (!enemy.Alive) return 0;
         }
         var hadBlock = enemy.Block > 0;
-        var absorbed = props.HasFlag(SimProps.Unblockable) ? 0 : Math.Min(enemy.Block, amount);
+        var absorbed = props.Has(SimProps.Unblockable) ? 0 : Math.Min(enemy.Block, amount);
         var notes = default(HpLossNotes);
         var toHp = amount - absorbed > 0 ? Math.Max(0, (int)HpLossFor(state, ctx, amount - absorbed, out notes)) : 0;
         if (!receivedFirst)
@@ -540,7 +564,7 @@ public static partial class SimEngine
         // own powers too: the game kills it after these hooks.
         if (blockBroken) foreach (var (model, o) in ListenersWith(state, enemy.Id)) model.AfterBlockBroken(state, o, enemy.Id, dealer);
         // DamageResult.WasFullyBlocked (CreatureCmd.GetDamageResults): not Unblockable, block before it or block that took some, no HP past the pipeline.
-        var fullyBlocked = !props.HasFlag(SimProps.Unblockable) && (hadBlock || absorbed > 0) && toHp == 0;
+        var fullyBlocked = !props.Has(SimProps.Unblockable) && (hadBlock || absorbed > 0) && toHp == 0;
         var hit = new DamageEvent(dealer, enemy.Id, props, card, absorbed + Math.Min(toHp, Math.Max(0, hpBefore)), absorbed, toHp, hpBefore > 0 && enemy.Hp <= 0, fullyBlocked);
         if (props.IsPoweredAttack() && dealer is Who.You or Who.YourOsty) BiggestHit(state, hit.Total);
         foreach (var (m, o) in ListenersWith(state, enemy.Id)) m.AfterDamageGiven(state, o, hit);
@@ -558,7 +582,7 @@ public static partial class SimEngine
     private static int PlainDamage(SimState state, SimEnemy enemy, int amount, int? dealer, SimProps props)
     {
         var hadBlock = enemy.Block > 0;
-        var absorbed = props.HasFlag(SimProps.Unblockable) ? 0 : Math.Min(enemy.Block, amount);
+        var absorbed = props.Has(SimProps.Unblockable) ? 0 : Math.Min(enemy.Block, amount);
         enemy.Block -= absorbed;
         if (hadBlock && enemy.Block == 0) enemy.BlockBroken = true;
         var hpBefore = enemy.Hp;
@@ -885,7 +909,7 @@ public static partial class SimEngine
     {
         var listeners = Listeners(state);
         var yours = player == Who.You;
-        var unblockable = props.HasFlag(SimProps.Unblockable);
+        var unblockable = props.Has(SimProps.Unblockable);
         // What the hit does, worked out first (beta, v0.114.0: CreatureCmd.GetDamageResults, a dry run): Wuppy's share, the block's, Osty's, the HP
         // the pipeline leaves; then Hook.BeforeDamageReceived (Thorns hits the dealer back), then the results applied as worked out
         // (ApplyDamageResults). Main (MainRule.ReceivedBeforeTheResults): BeforeDamageReceived first, then the same worked out on what it left.

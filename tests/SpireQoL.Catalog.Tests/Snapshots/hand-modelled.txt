@@ -102,7 +102,7 @@ The fight's log: what each event adds, the counts the questions to it read
   simulator: SimEngine.Record, SimEngine.HistoryCount, SimEngine.RecordCardEvent, SimEngine.RecordPlay, SimEngine.DrawnType, SimEngine.RecordDamageReceived, SimEngine.TurnCountsStartOver
 The listeners: who hears a hook, in the game's order, a dead enemy's powers left out
   game: CombatState.IterateHookListeners
-  simulator: SimEngine.Listeners, SimEngine.ListenersWith, SimEngine.BuildListeners, SimEngine.ListenerOrder, SimEngine.DeadMask, SimEngine.Listening, SimEngine.CurrentSets, SimEngine.SameSets, SimEngine.AnyModelled, SimEngine.Hook, SimEngine.HookStep, SimEngine.Listens
+  simulator: SimEngine.Listeners, SimEngine.ListenersWith, SimEngine.BuildListeners, SimEngine.ListenerOrder, SimEngine.DeadMask, SimEngine.Listening, SimEngine.CurrentSets, SimEngine.SameSets, SimEngine.AnyModelled, SimEngine.Hook, SimEngine.HookStep, SimEngine.HookOnEach, SimEngine.Listens
 
 ## The adapter's per-class rules (HandModelled.Adapter)
 

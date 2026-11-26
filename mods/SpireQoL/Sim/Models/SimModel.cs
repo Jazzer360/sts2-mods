@@ -30,11 +30,13 @@ public enum SimProps
 
 public static class SimPropsExtensions
 {
+    /// <summary>Enum.HasFlag's test without its box (HasFlag boxes where the code isn't optimised, and props are asked on every hit).</summary>
+    public static bool Has(this SimProps simProps, SimProps flag) => (simProps & flag) == flag;
     /// <summary>ValuePropExtensions.IsPoweredAttack: a Move that isn't Unpowered.</summary>
-    public static bool IsPoweredAttack(this SimProps simProps) => simProps.HasFlag(SimProps.Move) && !simProps.HasFlag(SimProps.Unpowered);
+    public static bool IsPoweredAttack(this SimProps simProps) => simProps.Has(SimProps.Move) && !simProps.Has(SimProps.Unpowered);
     /// <summary>ValuePropExtensions.IsPoweredCardOrMonsterMoveBlock (the same test, for block).</summary>
-    public static bool IsPoweredBlock(this SimProps simProps) => simProps.HasFlag(SimProps.Move) && !simProps.HasFlag(SimProps.Unpowered);
-    public static bool IsCardOrMonsterMove(this SimProps simProps) => simProps.HasFlag(SimProps.Move);
+    public static bool IsPoweredBlock(this SimProps simProps) => simProps.Has(SimProps.Move) && !simProps.Has(SimProps.Unpowered);
+    public static bool IsCardOrMonsterMove(this SimProps simProps) => simProps.Has(SimProps.Move);
 }
 
 public enum SimCardType { None, Attack, Skill, Power, Status, Curse }

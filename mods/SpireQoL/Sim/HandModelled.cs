@@ -138,7 +138,7 @@ public static class HandModelled
             new[] { "SimEngine.Record", "SimEngine.HistoryCount", "SimEngine.RecordCardEvent", "SimEngine.RecordPlay", "SimEngine.DrawnType", "SimEngine.RecordDamageReceived", "SimEngine.TurnCountsStartOver" },
             new[] { "CombatHistory.Add" }),
         new("The listeners: who hears a hook, in the game's order, a dead enemy's powers left out",
-            new[] { "SimEngine.Listeners", "SimEngine.ListenersWith", "SimEngine.BuildListeners", "SimEngine.ListenerOrder", "SimEngine.DeadMask", "SimEngine.Listening", "SimEngine.CurrentSets", "SimEngine.SameSets", "SimEngine.AnyModelled", "SimEngine.Hook", "SimEngine.HookStep", "SimEngine.Listens" },
+            new[] { "SimEngine.Listeners", "SimEngine.ListenersWith", "SimEngine.BuildListeners", "SimEngine.ListenerOrder", "SimEngine.DeadMask", "SimEngine.Listening", "SimEngine.CurrentSets", "SimEngine.SameSets", "SimEngine.AnyModelled", "SimEngine.Hook", "SimEngine.HookStep", "SimEngine.HookOnEach", "SimEngine.Listens" },
             new[] { "CombatState.IterateHookListeners" }),
     };
 
@@ -165,7 +165,7 @@ public static class HandModelled
     /// </summary>
     public static readonly IReadOnlyList<string> Plumbing = new[]
     {
-        "SimEngine.Run", "SimEngine.RunAction", "SimEngine.RunWithout", "SimEngine.Owner", "SimEngine.Lists", "SimEngine.ReadFor", "SimEngine.Candidates", "SimEngine.Listed", "SimEngine.AnyMayActOnTheEnemiesSide", "SimEngine.Then", "SimEngine.AnyListens", "SimEngine.OrbLabel", "SimEngine.Merge", "SimEngine.Detached", "SimEngine.Scratch", "SimEngine.Capped", "SimEngine.MarkUnread", "SimEngine.PlayResults", "SimEngine.Breakdown",
+        "SimEngine.Run", "SimEngine.RunAction", "SimEngine.RunWithout", "SimEngine.Owner", "SimEngine.Lists", "SimEngine.ReadFor", "SimEngine.Candidates", "SimEngine.Listed", "SimEngine.AnyMayActOnTheEnemiesSide", "SimEngine.Then", "SimEngine.AnyListens", "SimEngine.OrbLabel", "SimEngine.Merge", "SimEngine.MergeAll", "SimEngine.MergeLater", "SimEngine.Detached", "SimEngine.Scratch", "SimEngine.Capped", "SimEngine.MarkUnread", "SimEngine.PlayResults", "SimEngine.Breakdown",
         "SimEngine.Title", "SimEngine.Var", "SimEngine.VarValue", "SimEngine.VarTotal", "SimEngine.PowersOf", "SimEngine.SetPowers", "SimEngine.RelicsOf", "SimEngine.SetRelics", "SimEngine.PowerOn",
         "SimEngine.HasPower", "SimEngine.FieldsOf", "SimEngine.SetField", "SimEngine.SetFields", "SimEngine.TurnOf", "SimEngine.TallyFor", "SimEngine.CountOf", "SimEngine.MostOf", "SimEngine.RunWhen",
         "SimEngine.RunAsk", "SimEngine.Holds", "SimEngine.HoldsNow", "SimEngine.Compares", "SimEngine.IsConditionFilter", "SimEngine.HandFilters", "SimEngine.Flattened", "SimEngine.ConditionParts",
