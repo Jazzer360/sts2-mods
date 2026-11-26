@@ -303,6 +303,13 @@ public static class ProgramReader
     }
 
     /// <summary>
+    /// One method as its code runs it, read with <paramref name="owner"/> as the model whose code it is (an event option's handler, a lambda or a
+    /// local function nested in the event's class or a base class's: decision #350), so its calls into the owner's own methods are followed.
+    /// </summary>
+    public static ModelProgram ReadMethod(Type owner, MethodBase method, Func<MethodBase, List<CodeOp>> read) =>
+        new(owner.Name, new Reader(owner, read).Steps(BodyOf(method), depth: 0));
+
+    /// <summary>
     /// A model's constructor (the one taking nothing), as its code runs it: its field initializers' stores (GlassOrb's _passiveVal = 4m), the
     /// fields a new instance starts with.
     /// </summary>

@@ -3,7 +3,7 @@ using MegaCrit.Sts2.Core.Models.Relics;
 
 namespace SpireQoL.Data;
 
-/// <summary>What choosing an event option does, as far as relics care (read from the option's code).</summary>
+/// <summary>What choosing an event option does, as far as relics and the event check care (read from the option's code as a program: decision #350).</summary>
 [Flags]
 public enum ChoiceEffect
 {
@@ -26,6 +26,25 @@ public enum ChoiceEffect
     EnchantCard = 128,
     /// <summary>A card in your deck is upgraded (CardCmd.Upgrade, an upgrade pick from your deck).</summary>
     UpgradeCard = 256,
+    // What else an option can do, read and checked like the rest (decision #350); no reminder looks at these today.
+    /// <summary>You heal (CreatureCmd.Heal; a max HP gain heals as much).</summary>
+    Heal = 512,
+    /// <summary>Your max HP rises (CreatureCmd.GainMaxHp).</summary>
+    MaxHpGain = 1024,
+    /// <summary>Your max HP falls (CreatureCmd.LoseMaxHp).</summary>
+    MaxHpLoss = 2048,
+    /// <summary>You lose gold (PlayerCmd.LoseGold).</summary>
+    GoldLoss = 4096,
+    /// <summary>You lose a potion (PotionCmd.Discard).</summary>
+    PotionLoss = 8192,
+    /// <summary>A card leaves your deck (CardPileCmd.RemoveFromDeck, a removal pick, a transform's card).</summary>
+    CardRemoval = 16384,
+    /// <summary>You obtain a relic (RelicCmd.Obtain).</summary>
+    RelicGain = 32768,
+    /// <summary>You lose a relic (RelicCmd.Remove).</summary>
+    RelicLoss = 65536,
+    /// <summary>A fight starts (the event's EnterCombatWithoutExitingEvent).</summary>
+    Fight = 131072,
 }
 
 /// <param name="Relic">The relic's class name.</param>
@@ -212,8 +231,9 @@ public static class ChoiceReminders
     public const string CurseMade = "(curse card)";
 
     /// <summary>
-    /// Game calls ("Type.Method", "Type.Prefix*", constructors as "Type..ctor") and what they mean.
-    /// Events only (combat never shows event options).
+    /// Game calls ("Type.Method", "Type.Prefix*", constructors as "Type..ctor") and what they mean, for the flag-level scan of an option's
+    /// calls. What an option does is its program reading's (OptionReader.Steps, decision #350); the scan is the check that the reading
+    /// misses nothing it finds (OptionProgramTests). Events only (combat never shows event options).
     /// </summary>
     public static readonly IReadOnlyList<(string Call, ChoiceEffect Effect)> Calls = new[]
     {

@@ -1,0 +1,348 @@
+# Event options read as programs on main (OptionProgramTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #350).
+# Options: 252; read whole 215; whole once shown (a delegate the event holds) 2; with a gap 35.
+#   13 obtains a relic its code picks as you choose
+#   10 obtains a reward's relic
+#   9 runs a delegate from property CardRewardAlternative.OnSelect
+#   4 obtains a relic the event holds
+#   1 commands in a callback
+# Relics' AfterObtained: 84; read whole 74; with a gap 10.
+#   4 obtains a reward's relic
+#   4 runs a delegate from property CardRewardAlternative.OnSelect
+#   1 commands in a callback
+#   1 obtains a relic its code picks as you choose
+AbyssalBaths.Immerse: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp); HpLoss CreatureCmd.Damage(this.DynamicVars.Damage)
+AbyssalBaths.Abstain: Heal CreatureCmd.Heal(Heal)
+AbyssalBaths.Linger: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp); HpLoss CreatureCmd.Damage(this.DynamicVars.Damage)
+AbyssalBaths.ExitBaths: nothing
+Amalgamator.CombineStrikes: CardRemoval CardSelectCmd.FromDeckForRemoval; CardRemoval CardPileCmd.RemoveFromDeck; CardToDeck CardPileCmd.Add
+Amalgamator.CombineDefends: CardRemoval CardSelectCmd.FromDeckForRemoval; CardRemoval CardPileCmd.RemoveFromDeck; CardToDeck CardPileCmd.Add
+AromaOfChaos.LetGo: CardToDeck, CardRemoval CardCmd.TransformToRandom if FirstOrDefault(result of CardSelectCmd.FromDeckForTransformation); other: CardSelectCmd.FromDeckForTransformation
+AromaOfChaos.MaintainControl: UpgradeCard CardSelectCmd.FromDeckForUpgrade; UpgradeCard CardCmd.Upgrade if FirstOrDefault(result of CardSelectCmd.FromDeckForUpgrade)
+BattlewornDummy.Setting1: Fight EventModel.EnterCombatWithoutExitingEvent
+BattlewornDummy.Setting2: Fight EventModel.EnterCombatWithoutExitingEvent
+BattlewornDummy.Setting3: Fight EventModel.EnterCombatWithoutExitingEvent
+BrainLeech.ShareKnowledge: CardToDeck CardPileCmd.Add; other: CardSelectCmd.FromSimpleGridForRewards
+BrainLeech.Rip: HpLoss CreatureCmd.Damage(this.DynamicVars.Item("RipHpLoss")); CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: CardSelectCmd.get_Selector, RewardsCmd.OfferCustom
+Bugslayer.Extermination: CardToDeck CardPileCmd.Add
+Bugslayer.Squash: CardToDeck CardPileCmd.Add
+ByrdonisNest.Eat: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
+ByrdonisNest.Take: CardToDeck CardPileCmd.Add
+ColorfulPhilosophers.GenerateInitialOptions lambda: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: CardSelectCmd.get_Selector, RewardsCmd.OfferCustom
+ColossalFlower.ExtractCurrentPrize: GoldGain PlayerCmd.GainGold(?ldelem.i4)
+ColossalFlower.ReachDeeper: HpLoss CreatureCmd.Damage(?ldelem.i4)
+ColossalFlower.ExtractInstead: GoldGain PlayerCmd.GainGold(?ldelem.i4)
+ColossalFlower.ObtainPollinousCore: HpLoss CreatureCmd.Damage(?ldelem.i4); RelicGain RelicCmd.Obtain
+CrystalSphere.UncoverFuture: GoldLoss PlayerCmd.LoseGold(UncoverFutureCost); RelicGain RelicCmd.Obtain(-1) via part CrystalSphereRelic, reward RelicReward; Potion PotionCmd.TryToProcure(-1) via part CrystalSpherePotion, reward PotionReward; CardToDeck CardPileCmd.Add via part CrystalSphereCardReward, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; CurseToDeck CardPileCmd.AddCurseToDeck via part CrystalSphereCurse; GoldGain PlayerCmd.GainGold(this.Amount) via part CrystalSphereGold, reward GoldReward; ? obtains a reward's relic via part CrystalSphereRelic, reward RelicReward; ? runs a delegate from property CardRewardAlternative.OnSelect via part CrystalSphereCardReward, reward CardReward; other: CardSelectCmd.get_Selector
+CrystalSphere.PaymentPlan: CurseToDeck CardPileCmd.AddCurseToDeck; RelicGain RelicCmd.Obtain(-1) via part CrystalSphereRelic, reward RelicReward; Potion PotionCmd.TryToProcure(-1) via part CrystalSpherePotion, reward PotionReward; CardToDeck CardPileCmd.Add via part CrystalSphereCardReward, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; CurseToDeck CardPileCmd.AddCurseToDeck via part CrystalSphereCurse; GoldGain PlayerCmd.GainGold(this.Amount) via part CrystalSphereGold, reward GoldReward; ? obtains a reward's relic via part CrystalSphereRelic, reward RelicReward; ? runs a delegate from property CardRewardAlternative.OnSelect via part CrystalSphereCardReward, reward CardReward; other: CardSelectCmd.get_Selector
+Darv.RelicOption.OnChosen [DustyTome]: RelicGain RelicCmd.Obtain(-1); UpgradeCard CardCmd.Upgrade via DustyTome; CardToDeck CardPileCmd.Add via DustyTome
+Darv.RelicOption.OnChosen [Astrolabe]: RelicGain RelicCmd.Obtain(-1); UpgradeCard CardCmd.Upgrade via Astrolabe; CardToDeck, CardRemoval CardCmd.Transform via Astrolabe; other: CardSelectCmd.FromDeckForTransformation
+Darv.RelicOption.OnChosen [BlackStar]: RelicGain RelicCmd.Obtain(-1)
+Darv.RelicOption.OnChosen [CallingBell]: RelicGain RelicCmd.Obtain(-1); CurseToDeck CardPileCmd.AddCurseToDeck via CallingBell; RelicGain RelicCmd.Obtain(-1) via CallingBell, reward RelicReward if IsOn; ? obtains a reward's relic via CallingBell, reward RelicReward; other: RewardsCmd.OfferCustom
+Darv.RelicOption.OnChosen [EmptyCage]: RelicGain RelicCmd.Obtain(-1); CardRemoval CardSelectCmd.FromDeckForRemoval via EmptyCage; CardRemoval CardPileCmd.RemoveFromDeck via EmptyCage
+Darv.RelicOption.OnChosen [PandorasBox]: RelicGain RelicCmd.Obtain(-1); CardToDeck, CardRemoval CardCmd.Transform via PandorasBox
+Darv.RelicOption.OnChosen [RunicPyramid]: RelicGain RelicCmd.Obtain(-1)
+Darv.RelicOption.OnChosen [SneckoEye]: RelicGain RelicCmd.Obtain(-1); other: PowerCmd.Apply
+Darv.RelicOption.OnChosen [Ectoplasm]: RelicGain RelicCmd.Obtain(-1)
+Darv.RelicOption.OnChosen [Sozu]: RelicGain RelicCmd.Obtain(-1)
+Darv.RelicOption.OnChosen [PhilosophersStone]: RelicGain RelicCmd.Obtain(-1)
+Darv.RelicOption.OnChosen [VelvetChoker]: RelicGain RelicCmd.Obtain(-1)
+DenseVegetation.TrudgeOn: HpLoss CreatureCmd.Damage(HpLoss); GoldGain PlayerCmd.GainGold(Gold)
+DenseVegetation.Rest: RestHeal, Heal PlayerCmd.MimicRestSiteHeal
+DenseVegetation.Fight: Fight EventModel.EnterCombatWithoutExitingEvent
+DollRoom.ChooseRandom: RelicGain RelicCmd.Obtain(-1); ? obtains a relic its code picks as you choose
+DollRoom.TakeSomeTime: HpLoss CreatureCmd.Damage(this.DynamicVars.Item("TakeTimeHpLoss"))
+DollRoom.Examine: HpLoss CreatureCmd.Damage(this.DynamicVars.Item("ExamineHpLoss"))
+DollRoom.OptionFromChoice.Func: RelicGain RelicCmd.Obtain(-1); ? obtains a relic its code picks as you choose
+DoorsOfLightAndDark.Light: UpgradeCard CardCmd.Upgrade
+DoorsOfLightAndDark.Dark: CardRemoval CardSelectCmd.FromDeckForRemoval; CardRemoval CardPileCmd.RemoveFromDeck
+DrowningBeacon.BottleOption: Potion PotionCmd.TryToProcure(-1) via reward PotionReward; other: RewardsCmd.OfferCustom
+DrowningBeacon.ClimbOption: MaxHpLoss CreatureCmd.LoseMaxHp(HpLoss); RelicGain RelicCmd.Obtain(-1)
+EndlessConveyor.ObserveChef: UpgradeCard CardCmd.Upgrade if Any({Where(this.Owner.Deck.Cards, c => c.IsUpgradable) is CardModel: Where(this.Owner.Deck.Cards, c => c.IsUpgradable...
+EndlessConveyor.GrabSomethingOffTheBelt: GoldLoss PlayerCmd.LoseGold(Gold) if op_Inequality(this._currentDish().id(), "GOLDEN_FYSH"); ? runs a delegate the event holds
+EndlessConveyor.Leave: nothing
+FieldOfManSizedHoles.Resist: CardRemoval CardSelectCmd.FromDeckForRemoval; CardRemoval CardPileCmd.RemoveFromDeck; CurseToDeck CardPileCmd.AddCursesToDeck
+FieldOfManSizedHoles.EnterYourHole: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(Decimal.One) if FirstOrDefault(result of CardSelectCmd.FromDeckForEnchantment)
+GraveOfTheForgotten.Confront: CurseToDeck CardPileCmd.AddCurseToDeck; EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(Decimal.One) if FirstOrDefault(result of CardSelectCmd.FromDeckForEnchantment)
+GraveOfTheForgotten.Accept: RelicGain RelicCmd.Obtain
+HungryForMushrooms.BigMushroom: RelicGain RelicCmd.Obtain; Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp) via BigMushroom
+HungryForMushrooms.FragrantMushroom: RelicGain RelicCmd.Obtain; HpLoss CreatureCmd.Damage(HpLoss) via FragrantMushroom; UpgradeCard CardCmd.Upgrade via FragrantMushroom
+InfestedAutomaton.Study: CardToDeck CardPileCmd.Add if {not FirstOrDefault(CreateForReward(this.Owner, 1, ForNonCombatWithDefaultOdds(new <>z__ReadOnlySingleElementList`1(t...
+InfestedAutomaton.TouchCore: CardToDeck CardPileCmd.Add if {not FirstOrDefault(CreateForReward(this.Owner, 1, ForNonCombatWithDefaultOdds(new <>z__ReadOnlySingleElementList`1(t...
+JungleMazeAdventure.DontNeedHelp: HpLoss CreatureCmd.Damage(SoloHp); GoldGain PlayerCmd.GainGold(SoloGold)
+JungleMazeAdventure.SafetyInNumbers: GoldGain PlayerCmd.GainGold(JoinForcesGold)
+LostWisp.Claim: CurseToDeck CardPileCmd.AddCursesToDeck; RelicGain RelicCmd.Obtain
+LostWisp.Search: GoldGain PlayerCmd.GainGold(Gold)
+LuminousChoir.ReachIntoTheFlesh: CardRemoval CardSelectCmd.FromDeckForRemoval; CardRemoval CardPileCmd.RemoveFromDeck; CurseToDeck CardPileCmd.AddCurseToDeck
+LuminousChoir.OfferTribute: GoldLoss PlayerCmd.LoseGold(Gold); RelicGain RelicCmd.Obtain(-1); ? obtains a relic its code picks as you choose
+MorphicGrove.Group: GoldLoss PlayerCmd.LoseGold(this.Owner.Gold); CardToDeck, CardRemoval CardCmd.TransformToRandom; other: CardSelectCmd.FromDeckForTransformation
+MorphicGrove.Loner: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
+Neow.GenerateInitialOptions lambda: ? runs a delegate the event holds
+Neow.RelicOption.OnChosen [ArcaneScroll]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via ArcaneScroll if ToList(Select(CreateForReward(this.Owner, Cards, new CardCreationOptions(new <>z__ReadOnlySingleElementList`1(this.Ow...
+Neow.RelicOption.OnChosen [BoomingConch]: RelicGain RelicCmd.Obtain(-1)
+Neow.RelicOption.OnChosen [FishingRod]: RelicGain RelicCmd.Obtain(-1)
+Neow.RelicOption.OnChosen [GoldenPearl]: RelicGain RelicCmd.Obtain(-1); GoldGain PlayerCmd.GainGold(Gold) via GoldenPearl
+Neow.RelicOption.OnChosen [Kaleidoscope]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via Kaleidoscope, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via Kaleidoscope, reward CardReward; other: CardSelectCmd.get_Selector, RewardsCmd.OfferCustom
+Neow.RelicOption.OnChosen [LeadPaperweight]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via LeadPaperweight if chosenCard=result of CardSelectCmd.FromChooseACardScreen; other: CardSelectCmd.FromChooseACardScreen
+Neow.RelicOption.OnChosen [LostCoffer]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via LostCoffer, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; Potion PotionCmd.TryToProcure(-1) via LostCoffer, reward PotionReward; ? runs a delegate from property CardRewardAlternative.OnSelect via LostCoffer, reward CardReward; other: CardSelectCmd.get_Selector, RewardsCmd.OfferCustom
+Neow.RelicOption.OnChosen [MassiveScroll]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via MassiveScroll if chosenCard=result of CardSelectCmd.FromChooseACardScreen; other: CardSelectCmd.FromChooseACardScreen
+Neow.RelicOption.OnChosen [NeowsTorment]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via NeowsTorment
+Neow.RelicOption.OnChosen [NewLeaf]: RelicGain RelicCmd.Obtain(-1); CardToDeck, CardRemoval CardCmd.TransformToRandom via NewLeaf; other: CardSelectCmd.FromDeckForTransformation
+Neow.RelicOption.OnChosen [PhialHolster]: RelicGain RelicCmd.Obtain(-1); Potion PotionCmd.TryToProcure(-1) via PhialHolster; other: PlayerCmd.GainMaxPotionCount
+Neow.RelicOption.OnChosen [PreciseScissors]: RelicGain RelicCmd.Obtain(-1); CardRemoval CardSelectCmd.FromDeckForRemoval via PreciseScissors; CardRemoval CardPileCmd.RemoveFromDeck via PreciseScissors
+Neow.RelicOption.OnChosen [ScrollBoxes]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via ScrollBoxes; other: CardSelectCmd.FromChooseABundleScreen
+Neow.RelicOption.OnChosen [WingedBoots]: RelicGain RelicCmd.Obtain(-1)
+Neow.RelicOption.OnChosen [LavaRock]: RelicGain RelicCmd.Obtain(-1)
+Neow.RelicOption.OnChosen [NeowsTalisman]: RelicGain RelicCmd.Obtain(-1); UpgradeCard CardCmd.Upgrade via NeowsTalisman if each
+Neow.RelicOption.OnChosen [NutritiousOyster]: RelicGain RelicCmd.Obtain(-1); Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp) via NutritiousOyster
+Neow.RelicOption.OnChosen [Pomander]: RelicGain RelicCmd.Obtain(-1); UpgradeCard CardSelectCmd.FromDeckForUpgrade via Pomander; UpgradeCard CardCmd.Upgrade via Pomander
+Neow.RelicOption.OnChosen [SmallCapsule]: RelicGain RelicCmd.Obtain(-1); RelicGain RelicCmd.Obtain(-1) via SmallCapsule, reward RelicReward; ? obtains a reward's relic via SmallCapsule, reward RelicReward; other: RewardsCmd.OfferCustom
+Neow.RelicOption.OnChosen [StoneHumidifier]: RelicGain RelicCmd.Obtain(-1)
+Neow.RelicOption.OnChosen [CursedPearl]: RelicGain RelicCmd.Obtain(-1); CurseToDeck CardPileCmd.AddCurseToDeck via CursedPearl; GoldGain PlayerCmd.GainGold(Gold) via CursedPearl
+Neow.RelicOption.OnChosen [DowsingRod]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via DowsingRod
+Neow.RelicOption.OnChosen [HeftyTablet]: RelicGain RelicCmd.Obtain(-1); CurseToDeck create Injury via HeftyTablet; CardToDeck CardPileCmd.Add via HeftyTablet; CurseToDeck CardPileCmd.Add via HeftyTablet; other: CardSelectCmd.FromChooseACardScreen
+Neow.RelicOption.OnChosen [LargeCapsule]: RelicGain RelicCmd.Obtain(-1); RelicGain RelicCmd.Obtain(-1) via LargeCapsule; CardToDeck CardPileCmd.Add via LargeCapsule; ? obtains a relic its code picks as you choose via LargeCapsule
+Neow.RelicOption.OnChosen [LeafyPoultice]: RelicGain RelicCmd.Obtain(-1); MaxHpLoss CreatureCmd.LoseMaxHp(MaxHp) via LeafyPoultice; CardToDeck, CardRemoval CardCmd.Transform via LeafyPoultice
+Neow.RelicOption.OnChosen [NeowsBones]: RelicGain RelicCmd.Obtain(-1); RelicGain RelicCmd.Obtain(-1) via NeowsBones, reward RelicReward; CardToDeck CardPileCmd.Add via NeowsBones; CurseToDeck CardPileCmd.Add via NeowsBones; ? obtains a reward's relic via NeowsBones, reward RelicReward; other: Enumerable.Select
+Neow.RelicOption.OnChosen [NeowsSacrifice]: RelicGain RelicCmd.Obtain(-1); Potion PotionCmd.TryToProcure via NeowsSacrifice; CurseToDeck create Guilty via NeowsSacrifice; CardToDeck CardPileCmd.Add via NeowsSacrifice; CurseToDeck CardPileCmd.Add via NeowsSacrifice
+Neow.RelicOption.OnChosen [PrecariousShears]: RelicGain RelicCmd.Obtain(-1); CardRemoval CardSelectCmd.FromDeckForRemoval via PrecariousShears; CardRemoval CardPileCmd.RemoveFromDeck via PrecariousShears; HpLoss CreatureCmd.Damage(this.DynamicVars.Damage) via PrecariousShears
+Neow.RelicOption.OnChosen [SilkenTress]: RelicGain RelicCmd.Obtain(-1); GoldLoss PlayerCmd.LoseGold(this.Owner.Gold) via SilkenTress
+Neow.RelicOption.OnChosen [SilverCrucible]: RelicGain RelicCmd.Obtain(-1)
+Nonupeipe.RelicOption.OnChosen [BlessedAntler]: RelicGain RelicCmd.Obtain(-1)
+Nonupeipe.RelicOption.OnChosen [BrilliantScarf]: RelicGain RelicCmd.Obtain(-1)
+Nonupeipe.RelicOption.OnChosen [DelicateFrond]: RelicGain RelicCmd.Obtain(-1)
+Nonupeipe.RelicOption.OnChosen [DiamondDiadem]: RelicGain RelicCmd.Obtain(-1)
+Nonupeipe.RelicOption.OnChosen [FurCoat]: RelicGain RelicCmd.Obtain(-1)
+Nonupeipe.RelicOption.OnChosen [Glitter]: RelicGain RelicCmd.Obtain(-1)
+Nonupeipe.RelicOption.OnChosen [JewelryBox]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via JewelryBox
+Nonupeipe.RelicOption.OnChosen [LoomingFruit]: RelicGain RelicCmd.Obtain(-1); Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp) via LoomingFruit
+Nonupeipe.RelicOption.OnChosen [SignetRing]: RelicGain RelicCmd.Obtain(-1); GoldGain PlayerCmd.GainGold(Gold) via SignetRing
+Nonupeipe.RelicOption.OnChosen [BeautifulBracelet]: RelicGain RelicCmd.Obtain(-1); EnchantCard CardCmd.Enchant(Swift) via BeautifulBracelet
+Orobas.RelicOption.OnChosen [ElectricShrymp]: RelicGain RelicCmd.Obtain(-1); EnchantCard CardSelectCmd.FromDeckForEnchantment via ElectricShrymp; EnchantCard CardCmd.Enchant(Decimal.One) via ElectricShrymp
+Orobas.RelicOption.OnChosen [GlassEye]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via GlassEye, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via GlassEye, reward CardReward; other: CardSelectCmd.get_Selector, RewardsCmd.OfferCustom
+Orobas.RelicOption.OnChosen [AlchemicalCoffer]: RelicGain RelicCmd.Obtain(-1); Potion PotionCmd.TryToProcure((originalSlotCount=this.Owner.MaxPotionCount add i)) via AlchemicalCoffer; other: PlayerCmd.GainMaxPotionCount
+Orobas.RelicOption.OnChosen [Driftwood]: RelicGain RelicCmd.Obtain(-1)
+Orobas.RelicOption.OnChosen [RadiantPearl]: RelicGain RelicCmd.Obtain(-1)
+Orobas.RelicOption.OnChosen [SandCastle]: RelicGain RelicCmd.Obtain(-1); UpgradeCard CardCmd.Upgrade via SandCastle
+Orobas.RelicOption.OnChosen [SeaGlass]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via SeaGlass; other: CardSelectCmd.FromSimpleGridForRewards
+Orobas.RelicOption.OnChosen [PrismaticGem]: RelicGain RelicCmd.Obtain(-1)
+Orobas.RelicOption.OnChosen [TouchOfOrobas]: RelicGain RelicCmd.Obtain(-1); other: RelicCmd.Replace
+Orobas.RelicOption.OnChosen [ArchaicTooth]: RelicGain RelicCmd.Obtain(-1); UpgradeCard CardCmd.Upgrade via ArchaicTooth if TranscendenceUpgrades.TryGetValue(FirstOrDefault(this.Owner.Deck.Cards, c => TranscendenceUpgrades.ContainsKey(c.Id))...; EnchantCard CardCmd.Enchant(FirstOrDefault(this.Owner.Deck.Cards, c => TranscendenceUpgrades.ContainsKey(c.Id)).Enchantment.MutableClone().Amount) via ArchaicTooth if TranscendenceUpgrades.TryGetValue(FirstOrDefault(this.Owner.Deck.Cards, c => TranscendenceUpgrades.ContainsKey(c.Id))...; CurseToDeck create Doubt via ArchaicTooth if not TranscendenceUpgrades.TryGetValue(FirstOrDefault(this.Owner.Deck.Cards, c => TranscendenceUpgrades.ContainsKey(c....; CardToDeck, CardRemoval CardCmd.Transform via ArchaicTooth
+Pael.RelicOption.OnChosen [PaelsClaw]: RelicGain RelicCmd.Obtain(-1); EnchantCard CardCmd.Enchant(Decimal.One) via PaelsClaw if Enchantment<Goopy>().CanEnchant(each)
+Pael.RelicOption.OnChosen [PaelsTooth]: RelicGain RelicCmd.Obtain(-1); CardRemoval CardSelectCmd.FromDeckForRemoval via PaelsTooth; CardRemoval CardPileCmd.RemoveFromDeck via PaelsTooth
+Pael.RelicOption.OnChosen [PaelsGrowth]: RelicGain RelicCmd.Obtain(-1); EnchantCard CardSelectCmd.FromDeckForEnchantment via PaelsGrowth; EnchantCard CardCmd.Enchant(new Decimal(4)) via PaelsGrowth
+Pael.RelicOption.OnChosen [PaelsLegion]: RelicGain RelicCmd.Obtain(-1); other: PlayerCmd.AddPet
+Pael.RelicOption.OnChosen [PaelsFlesh]: RelicGain RelicCmd.Obtain(-1)
+Pael.RelicOption.OnChosen [PaelsHorn]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via PaelsHorn
+Pael.RelicOption.OnChosen [PaelsTears]: RelicGain RelicCmd.Obtain(-1)
+Pael.RelicOption.OnChosen [PaelsWing]: RelicGain RelicCmd.Obtain(-1)
+Pael.RelicOption.OnChosen [PaelsEye]: RelicGain RelicCmd.Obtain(-1)
+Pael.RelicOption.OnChosen [PaelsBlood]: RelicGain RelicCmd.Obtain(-1)
+PotionCourier.GrabPotions: Potion PotionCmd.TryToProcure(-1) via reward PotionReward; other: RewardsCmd.OfferCustom
+PotionCourier.Ransack: Potion PotionCmd.TryToProcure(-1) via reward PotionReward if this.Owner.PlayerRng.Rewards.NextItem<PotionModel>(Where(Concat(this.Owner.Character.PotionPool.GetUnlockedPotions(th...; other: RewardsCmd.OfferCustom
+PunchOff.Nab: CurseToDeck CardPileCmd.AddCurseToDeck; RelicGain RelicCmd.Obtain(-1) via reward RelicReward; ? obtains a reward's relic via reward RelicReward; other: RewardsCmd.OfferCustom
+PunchOff.TakeThem: nothing
+PunchOff.Fight: RelicGain RelicCmd.Obtain(-1) via reward RelicReward; Potion PotionCmd.TryToProcure(-1) via reward PotionReward; Fight EventModel.EnterCombatWithoutExitingEvent; ? obtains a reward's relic via reward RelicReward
+RanwidTheElder.GenerateInitialOptions lambda: PotionLoss PotionCmd.Discard; RelicGain RelicCmd.Obtain(-1); ? obtains a relic its code picks as you choose
+RanwidTheElder.GiveGold: GoldLoss PlayerCmd.LoseGold(Gold); RelicGain RelicCmd.Obtain(-1); ? obtains a relic its code picks as you choose
+RanwidTheElder.GenerateInitialOptions lambda #2: RelicLoss RelicCmd.Remove; RelicGain RelicCmd.Obtain(-1); ? obtains a relic its code picks as you choose
+Reflections.TouchAMirror: UpgradeCard CardCmd.Upgrade; other: CardCmd.Downgrade
+Reflections.Shatter: CardToDeck CardPileCmd.Add; CurseToDeck CardPileCmd.AddCurseToDeck
+RelicTrader.Top: RelicLoss RelicCmd.Remove; RelicGain RelicCmd.Obtain(-1); ? obtains a relic the event holds
+RelicTrader.Middle: RelicLoss RelicCmd.Remove; RelicGain RelicCmd.Obtain(-1); ? obtains a relic the event holds
+RelicTrader.Bottom: RelicLoss RelicCmd.Remove; RelicGain RelicCmd.Obtain(-1); ? obtains a relic the event holds
+RelicTrader.Done: nothing
+RoomFullOfCheese.Gorge: CardToDeck CardPileCmd.Add; other: CardSelectCmd.FromSimpleGridForRewards
+RoomFullOfCheese.Search: HpLoss CreatureCmd.Damage(this.DynamicVars.Damage); RelicGain RelicCmd.Obtain
+RoundTeaParty.EnjoyTea: RelicGain RelicCmd.Obtain; Heal CreatureCmd.Heal((targetCreature=this.Owner.Creature.MaxHp sub targetCreature=this.Owner.Creature.CurrentHp))
+RoundTeaParty.PickFight: nothing
+RoundTeaParty.ContinueFight: HpLoss CreatureCmd.Damage(this.DynamicVars.Damage); RelicGain RelicCmd.Obtain(-1); ? obtains a relic its code picks as you choose
+SapphireSeed.Eat: Heal CreatureCmd.Heal(Heal); UpgradeCard CardSelectCmd.FromDeckForUpgrade; UpgradeCard CardCmd.Upgrade if FirstOrDefault(result of CardSelectCmd.FromDeckForUpgrade)
+SapphireSeed.Plant: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(Decimal.One) if FirstOrDefault(result of CardSelectCmd.FromDeckForEnchantment)
+SelfHelpBook.ReadTheBack: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(2) if FirstOrDefault(result of CardSelectCmd.FromDeckForEnchantment)
+SelfHelpBook.ReadPassage: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(2) if FirstOrDefault(result of CardSelectCmd.FromDeckForEnchantment)
+SelfHelpBook.ReadEntireBook: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(2) if FirstOrDefault(result of CardSelectCmd.FromDeckForEnchantment)
+SelfHelpBook.SkipBook: nothing
+SlipperyBridge.Overcome: CardRemoval CardPileCmd.RemoveFromDeck
+SlipperyBridge.HoldOn: HpLoss CreatureCmd.Damage(this.CurrentHpLoss)
+SpiralingWhirlpool.ObserveTheSpiral: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(Decimal.One) if FirstOrDefault(result of CardSelectCmd.FromDeckForEnchantment)
+SpiralingWhirlpool.Drink: Heal CreatureCmd.Heal(Heal)
+SpiritGrafter.LetItIn: Heal CreatureCmd.Heal(LetItInHealAmount); CardToDeck CardPileCmd.Add
+SpiritGrafter.Rejection: UpgradeCard CardSelectCmd.FromDeckForUpgrade; UpgradeCard CardCmd.Upgrade if FirstOrDefault(result of CardSelectCmd.FromDeckForUpgrade); HpLoss CreatureCmd.Damage(RejectionHpLoss)
+StoneOfAllTime.Lift: PotionLoss PotionCmd.Discard; Heal, MaxHpGain CreatureCmd.GainMaxHp(DrinkMaxHpGain)
+StoneOfAllTime.Push: HpLoss CreatureCmd.Damage(PushHpLoss); EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(PushVigorousAmount)
+SunkenStatue.GrabSword: RelicGain RelicCmd.Obtain
+SunkenStatue.DiveIntoWater: GoldGain PlayerCmd.GainGold(Gold); HpLoss CreatureCmd.Damage(HpLoss)
+SunkenTreasury.FirstChest: GoldGain PlayerCmd.GainGold(SmallChestGold)
+SunkenTreasury.SecondChest: GoldGain PlayerCmd.GainGold(LargeChestGold); CurseToDeck CardPileCmd.AddCurseToDeck
+Symbiote.Approach: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(Decimal.One) if FirstOrDefault(result of CardSelectCmd.FromDeckForEnchantment)
+Symbiote.KillWithFire: CardToDeck, CardRemoval CardCmd.TransformToRandom; other: CardSelectCmd.FromDeckForTransformation
+TabletOfTruth.Decipher: MaxHpLoss CreatureCmd.LoseMaxHp(DecipherMaxHpLoss) if op_LessThan(DecipherMaxHpLoss, this.Owner.Creature.MaxHp); MaxHpLoss CreatureCmd.LoseMaxHp((this.Owner.Creature.MaxHp sub 1)) if not op_LessThan(DecipherMaxHpLoss, this.Owner.Creature.MaxHp); UpgradeCard CardCmd.Upgrade if op_LessThan(DecipherMaxHpLoss, this.Owner.Creature.MaxHp) and this._decipherCount() == 4; UpgradeCard CardCmd.Upgrade if op_LessThan(DecipherMaxHpLoss, this.Owner.Creature.MaxHp) and this._decipherCount() != 4 and ToList(Where(GetPile(6, ...; other: CreatureCmd.Kill
+TabletOfTruth.Smash: Heal CreatureCmd.Heal(SmashHPGain)
+TabletOfTruth.GiveUp: nothing
+Tanx.RelicOption.OnChosen [Claws]: RelicGain RelicCmd.Obtain(-1); CardToDeck, CardRemoval CardCmd.Transform via Claws; UpgradeCard CardCmd.Upgrade via Claws if original.IsUpgraded and {not 0: this.Owner.RunState.CreateCard<Maul>(this.Owner); 0: Card<Maul>().ToMutable()}.IsUpgr...; EnchantCard CardCmd.Enchant(original.Enchantment.MutableClone().Amount) via Claws if original.Enchantment and original.Enchantment.MutableClone().CanEnchant({not 0: this.Owner.RunState.CreateCard<Maul>(...; ? commands in a callback via Claws; other: CardSelectCmd.FromDeckForTransformation
+Tanx.RelicOption.OnChosen [Crossbow]: RelicGain RelicCmd.Obtain(-1)
+Tanx.RelicOption.OnChosen [IronClub]: RelicGain RelicCmd.Obtain(-1)
+Tanx.RelicOption.OnChosen [MeatCleaver]: RelicGain RelicCmd.Obtain(-1)
+Tanx.RelicOption.OnChosen [Sai]: RelicGain RelicCmd.Obtain(-1)
+Tanx.RelicOption.OnChosen [SpikedGauntlets]: RelicGain RelicCmd.Obtain(-1)
+Tanx.RelicOption.OnChosen [TanxsWhistle]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via TanxsWhistle
+Tanx.RelicOption.OnChosen [ThrowingAxe]: RelicGain RelicCmd.Obtain(-1)
+Tanx.RelicOption.OnChosen [WarHammer]: RelicGain RelicCmd.Obtain(-1)
+Tanx.RelicOption.OnChosen [TriBoomerang]: RelicGain RelicCmd.Obtain(-1); EnchantCard CardSelectCmd.FromDeckForEnchantment via TriBoomerang; EnchantCard CardCmd.Enchant(Decimal.One) via TriBoomerang
+TeaMaster.BoneTea: GoldLoss PlayerCmd.LoseGold(BoneTeaCost); RelicGain RelicCmd.Obtain
+TeaMaster.EmberTea: GoldLoss PlayerCmd.LoseGold(EmberTeaCost); RelicGain RelicCmd.Obtain
+TeaMaster.TeaOfDiscourtesy: RelicGain RelicCmd.Obtain
+Tezcatara.RelicOption.OnChosen [NutritiousSoup]: RelicGain RelicCmd.Obtain(-1); EnchantCard CardCmd.Enchant(Decimal.One) via NutritiousSoup if each.Rarity == Basic and Contains(each.Tags, 1) and Enchantment<TezcatarasEmber>().CanEnchant(each)
+Tezcatara.RelicOption.OnChosen [VeryHotCocoa]: RelicGain RelicCmd.Obtain(-1)
+Tezcatara.RelicOption.OnChosen [YummyCookie]: RelicGain RelicCmd.Obtain(-1); UpgradeCard CardSelectCmd.FromDeckForUpgrade via YummyCookie; UpgradeCard CardCmd.Upgrade via YummyCookie
+Tezcatara.RelicOption.OnChosen [BiiigHug]: RelicGain RelicCmd.Obtain(-1); CardRemoval CardSelectCmd.FromDeckForRemoval via BiiigHug; CardRemoval CardPileCmd.RemoveFromDeck via BiiigHug
+Tezcatara.RelicOption.OnChosen [Storybook]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via Storybook
+Tezcatara.RelicOption.OnChosen [ToastyMittens]: RelicGain RelicCmd.Obtain(-1)
+Tezcatara.RelicOption.OnChosen [GoldenCompass]: RelicGain RelicCmd.Obtain(-1)
+Tezcatara.RelicOption.OnChosen [PumpkinCandle]: RelicGain RelicCmd.Obtain(-1)
+Tezcatara.RelicOption.OnChosen [ToyBox]: RelicGain RelicCmd.Obtain(-1); RelicGain RelicCmd.Obtain(-1) via ToyBox, reward RelicReward; ? obtains a reward's relic via ToyBox, reward RelicReward; other: RewardsCmd.OfferCustom
+Tezcatara.RelicOption.OnChosen [SealOfGold]: RelicGain RelicCmd.Obtain(-1)
+TheArchitect.AdvanceDialogue: nothing
+TheArchitect.WinRun: nothing
+TheFutureOfPotions.GenerateInitialOptions lambda: PotionLoss PotionCmd.Discard; CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; UpgradeCard CardCmd.Upgrade; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: CardSelectCmd.get_Selector, RewardsCmd.OfferCustom
+TheLanternKey.ReturnTheKey: GoldGain PlayerCmd.GainGold(Gold)
+TheLanternKey.KeepTheKey: nothing
+TheLanternKey.Fight: CardToDeck CardPileCmd.Add via reward SpecialCardReward; Fight EventModel.EnterCombatWithoutExitingEvent
+TheLegendsWereTrue.NabTheMap: CardToDeck CardPileCmd.Add
+TheLegendsWereTrue.SlowlyFindAnExit: HpLoss CreatureCmd.Damage(this.DynamicVars.Damage); Potion PotionCmd.TryToProcure(-1) via reward PotionReward if this.Owner.PlayerRng.Rewards.NextItem<PotionModel>(Concat(this.Owner.Character.PotionPool.GetUnlockedPotions(this.Own...; other: RewardsCmd.OfferCustom
+ThisOrThat.Plain: HpLoss CreatureCmd.Damage(HpLoss); GoldGain PlayerCmd.GainGold(Gold)
+ThisOrThat.Ornate: RelicGain RelicCmd.Obtain(-1); CurseToDeck CardPileCmd.AddCurseToDeck; ? obtains a relic its code picks as you choose
+TinkerTime.ChooseCardType: nothing
+TinkerTime.Attack: nothing
+TinkerTime.Skill: nothing
+TinkerTime.Power: nothing
+TinkerTime.ChooseRiderEffect lambda: CardToDeck CardPileCmd.Add
+TinkerTime.ChooseRiderEffect lambda #2: CardToDeck CardPileCmd.Add
+TrashHeap.DiveIn: HpLoss CreatureCmd.Damage(HpLoss); RelicGain RelicCmd.Obtain(-1); ? obtains a relic its code picks as you choose
+TrashHeap.Grab: GoldGain PlayerCmd.GainGold(Gold); CardToDeck CardPileCmd.Add
+Trial.Accept: nothing
+Trial.Reject: nothing
+Trial.MerchantGuilty: CurseToDeck CardPileCmd.AddCurseToDeck; RelicGain RelicCmd.Obtain(-1); ? obtains a relic its code picks as you choose
+Trial.MerchantInnocent: CurseToDeck CardPileCmd.AddCurseToDeck; UpgradeCard CardSelectCmd.FromDeckForUpgrade; UpgradeCard CardCmd.Upgrade
+Trial.NobleGuilty: Heal CreatureCmd.Heal(new Decimal(10))
+Trial.NobleInnocent: CurseToDeck CardPileCmd.AddCurseToDeck; GoldGain PlayerCmd.GainGold(new Decimal(300))
+Trial.NondescriptGuilty: CurseToDeck CardPileCmd.AddCurseToDeck; CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: CardSelectCmd.get_Selector, RewardsCmd.OfferCustom
+Trial.NondescriptInnocent: CurseToDeck CardPileCmd.AddCurseToDeck; CardToDeck, CardRemoval CardCmd.TransformToRandom; other: CardSelectCmd.FromDeckForTransformation
+Trial.DoubleDown: nothing
+UnrestSite.Rest: Heal CreatureCmd.Heal(Heal); CurseToDeck CardPileCmd.AddCursesToDeck
+UnrestSite.Kill: MaxHpLoss CreatureCmd.LoseMaxHp(MaxHpLoss); RelicGain RelicCmd.Obtain(-1); ? obtains a relic its code picks as you choose
+Vakuu.RelicOption.OnChosen [BloodSoakedRose]: RelicGain RelicCmd.Obtain(-1); CurseToDeck CardPileCmd.AddCurseToDeck via BloodSoakedRose
+Vakuu.RelicOption.OnChosen [WhisperingEarring]: RelicGain RelicCmd.Obtain(-1)
+Vakuu.RelicOption.OnChosen [Fiddle]: RelicGain RelicCmd.Obtain(-1)
+Vakuu.RelicOption.OnChosen [PreservedFog]: RelicGain RelicCmd.Obtain(-1); CardRemoval CardSelectCmd.FromDeckForRemoval via PreservedFog; CardRemoval CardPileCmd.RemoveFromDeck via PreservedFog; CurseToDeck CardPileCmd.AddCurseToDeck via PreservedFog
+Vakuu.RelicOption.OnChosen [SereTalon]: RelicGain RelicCmd.Obtain(-1); MaxHpLoss CreatureCmd.LoseMaxHp(HpLoss) via SereTalon; CardToDeck CardPileCmd.Add via SereTalon
+Vakuu.RelicOption.OnChosen [DistinguishedCape]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via DistinguishedCape; CurseToDeck CardPileCmd.Add via DistinguishedCape
+Vakuu.RelicOption.OnChosen [ChoicesParadox]: RelicGain RelicCmd.Obtain(-1)
+Vakuu.RelicOption.OnChosen [MusicBox]: RelicGain RelicCmd.Obtain(-1)
+Vakuu.RelicOption.OnChosen [LordsParasol]: RelicGain RelicCmd.Obtain(-1)
+Vakuu.RelicOption.OnChosen [JeweledMask]: RelicGain RelicCmd.Obtain(-1)
+WarHistorianRepy.InitialUnlockCage: CardRemoval CardPileCmd.RemoveFromDeck if this.Owner.RunState.Players.Count > 1; CardRemoval CardPileCmd.RemoveFromDeck if FirstOrDefault(this.Owner.Deck.Cards, c => c is LanternKey != null) and not this.Owner.RunState.Players.Count > 1; RelicGain RelicCmd.Obtain; other: PlayerCmd.CompleteQuest
+WarHistorianRepy.InitialUnlockChest: CardRemoval CardPileCmd.RemoveFromDeck if this.Owner.RunState.Players.Count > 1; CardRemoval CardPileCmd.RemoveFromDeck if FirstOrDefault(this.Owner.Deck.Cards, c => c is LanternKey != null) and not this.Owner.RunState.Players.Count > 1; Potion PotionCmd.TryToProcure(-1) via reward PotionReward; RelicGain RelicCmd.Obtain(-1) via reward RelicReward; ? obtains a reward's relic via reward RelicReward; other: PlayerCmd.CompleteQuest, RewardsCmd.OfferCustom
+WarHistorianRepy.SecondUnlockChest: CardRemoval CardPileCmd.RemoveFromDeck; Potion PotionCmd.TryToProcure(-1) via reward PotionReward; RelicGain RelicCmd.Obtain(-1) via reward RelicReward; ? obtains a reward's relic via reward RelicReward; other: PlayerCmd.CompleteQuest, RewardsCmd.OfferCustom
+WarHistorianRepy.SecondUnlockCage: CardRemoval CardPileCmd.RemoveFromDeck; RelicGain RelicCmd.Obtain; other: PlayerCmd.CompleteQuest
+WaterloggedScriptorium.BloodyInk: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
+WaterloggedScriptorium.TentacleQuill: GoldLoss PlayerCmd.LoseGold(Gold); EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(Decimal.One) if FirstOrDefault(result of CardSelectCmd.FromDeckForEnchantment)
+WaterloggedScriptorium.PricklySponge: GoldLoss PlayerCmd.LoseGold(PricklySpongeGold); EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(Decimal.One)
+WelcomeToWongos.BuyBargainBin: GoldLoss PlayerCmd.LoseGold(BargainBinCost); RelicGain RelicCmd.Obtain(-1); RelicGain RelicCmd.Obtain if ((Instance.Progress.WongoPoints rem 2000) add 32) >= 2000; ? obtains a relic its code picks as you choose
+WelcomeToWongos.BuyFeaturedItem: GoldLoss PlayerCmd.LoseGold(FeaturedItemCost); RelicGain RelicCmd.Obtain(-1); RelicGain RelicCmd.Obtain if ((Instance.Progress.WongoPoints rem 2000) add 16) >= 2000; ? obtains a relic the event holds
+WelcomeToWongos.BuyMysteryBox: GoldLoss PlayerCmd.LoseGold(MysteryBoxCost); RelicGain RelicCmd.Obtain; RelicGain RelicCmd.Obtain if ((Instance.Progress.WongoPoints rem 2000) add 8) >= 2000
+WelcomeToWongos.Leave: other: CardCmd.Downgrade
+Wellspring.Bottle: Potion PotionCmd.TryToProcure(-1) via reward PotionReward if this.Owner.PlayerRng.Rewards.NextItem<PotionModel>(Concat(this.Owner.Character.PotionPool.GetUnlockedPotions(this.Own...; other: RewardsCmd.OfferCustom
+Wellspring.Bathe: CardRemoval CardSelectCmd.FromDeckForRemoval; CardRemoval CardPileCmd.RemoveFromDeck; CurseToDeck CardPileCmd.AddCursesToDeck
+WhisperingHollow.Gold: GoldLoss PlayerCmd.LoseGold(Gold); Potion PotionCmd.TryToProcure(-1) via reward PotionReward; other: RewardsCmd.OfferCustom
+WhisperingHollow.Hug: CardToDeck, CardRemoval CardCmd.TransformToRandom; HpLoss CreatureCmd.Damage(HpLoss); other: CardSelectCmd.FromDeckForTransformation
+WoodCarvings.Snake: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(Decimal.One) if FirstOrDefault(result of CardSelectCmd.FromDeckForEnchantment)
+WoodCarvings.Bird: CardToDeck, CardRemoval CardCmd.TransformTo if FirstOrDefault(result of CardSelectCmd.FromDeckGeneric); other: CardSelectCmd.FromDeckGeneric
+WoodCarvings.Torus: CardToDeck, CardRemoval CardCmd.TransformTo if FirstOrDefault(result of CardSelectCmd.FromDeckGeneric); other: CardSelectCmd.FromDeckGeneric
+ZenWeaver.BreathingTechniques: GoldLoss PlayerCmd.LoseGold(BreathingTechniquesCost); CardToDeck CardPileCmd.Add
+ZenWeaver.EmotionalAwareness: CardRemoval CardSelectCmd.FromDeckForRemoval; CardRemoval CardPileCmd.RemoveFromDeck; GoldLoss PlayerCmd.LoseGold(EmotionalAwarenessCost)
+ZenWeaver.ArachnidAcupuncture: CardRemoval CardSelectCmd.FromDeckForRemoval; CardRemoval CardPileCmd.RemoveFromDeck; GoldLoss PlayerCmd.LoseGold(ArachnidAcupunctureCost)
+relic AlchemicalCoffer: Potion PotionCmd.TryToProcure((originalSlotCount=this.Owner.MaxPotionCount add i)); other: PlayerCmd.GainMaxPotionCount
+relic ArcaneScroll: CardToDeck CardPileCmd.Add if ToList(Select(CreateForReward(this.Owner, Cards, new CardCreationOptions(new <>z__ReadOnlySingleElementList`1(this.Ow...
+relic ArchaicTooth: UpgradeCard CardCmd.Upgrade if TranscendenceUpgrades.TryGetValue(FirstOrDefault(this.Owner.Deck.Cards, c => TranscendenceUpgrades.ContainsKey(c.Id))...; EnchantCard CardCmd.Enchant(FirstOrDefault(this.Owner.Deck.Cards, c => TranscendenceUpgrades.ContainsKey(c.Id)).Enchantment.MutableClone().Amount) if TranscendenceUpgrades.TryGetValue(FirstOrDefault(this.Owner.Deck.Cards, c => TranscendenceUpgrades.ContainsKey(c.Id))...; CurseToDeck create Doubt if not TranscendenceUpgrades.TryGetValue(FirstOrDefault(this.Owner.Deck.Cards, c => TranscendenceUpgrades.ContainsKey(c....; CardToDeck, CardRemoval CardCmd.Transform
+relic Astrolabe: UpgradeCard CardCmd.Upgrade; CardToDeck, CardRemoval CardCmd.Transform; other: CardSelectCmd.FromDeckForTransformation
+relic BeautifulBracelet: EnchantCard CardCmd.Enchant(Swift)
+relic BeltBuckle: other: PowerCmd.Apply
+relic BigMushroom: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
+relic BiiigHug: CardRemoval CardSelectCmd.FromDeckForRemoval; CardRemoval CardPileCmd.RemoveFromDeck
+relic BloodSoakedRose: CurseToDeck CardPileCmd.AddCurseToDeck
+relic Byrdpip: CardToDeck, CardRemoval CardCmd.TransformTo; other: PlayerCmd.AddPet
+relic CallingBell: CurseToDeck CardPileCmd.AddCurseToDeck; RelicGain RelicCmd.Obtain(-1) via reward RelicReward if IsOn; ? obtains a reward's relic via reward RelicReward; other: RewardsCmd.OfferCustom
+relic Cauldron: Potion PotionCmd.TryToProcure(-1) via reward PotionReward if IsOn; other: RewardsCmd.OfferCustom
+relic Claws: CardToDeck, CardRemoval CardCmd.Transform; UpgradeCard CardCmd.Upgrade if original.IsUpgraded and {not 0: this.Owner.RunState.CreateCard<Maul>(this.Owner); 0: Card<Maul>().ToMutable()}.IsUpgr...; EnchantCard CardCmd.Enchant(original.Enchantment.MutableClone().Amount) if original.Enchantment and original.Enchantment.MutableClone().CanEnchant({not 0: this.Owner.RunState.CreateCard<Maul>(...; ? commands in a callback; other: CardSelectCmd.FromDeckForTransformation
+relic CursedPearl: CurseToDeck CardPileCmd.AddCurseToDeck; GoldGain PlayerCmd.GainGold(Gold)
+relic DistinguishedCape: CardToDeck CardPileCmd.Add; CurseToDeck CardPileCmd.Add
+relic DollysMirror: CardToDeck CardPileCmd.Add if FirstOrDefault(result of CardSelectCmd.FromDeckGeneric); other: CardSelectCmd.FromDeckGeneric
+relic DowsingRod: CardToDeck CardPileCmd.Add
+relic DustyTome: UpgradeCard CardCmd.Upgrade; CardToDeck CardPileCmd.Add
+relic ElectricShrymp: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(Decimal.One)
+relic EmptyCage: CardRemoval CardSelectCmd.FromDeckForRemoval; CardRemoval CardPileCmd.RemoveFromDeck
+relic FakeLeesWaffle: Heal CreatureCmd.Heal(op_Multiply(this.Owner.Creature.MaxHp, op_Division(Heal, new Decimal(100))))
+relic FakeMango: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
+relic FakeSneckoEye: other: PowerCmd.Apply
+relic FragrantMushroom: HpLoss CreatureCmd.Damage(HpLoss); UpgradeCard CardCmd.Upgrade
+relic FurCoat: nothing
+relic GlassEye: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: CardSelectCmd.get_Selector, RewardsCmd.OfferCustom
+relic GnarledHammer: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(SharpAmount)
+relic GoldenCompass: nothing
+relic GoldenPearl: GoldGain PlayerCmd.GainGold(Gold)
+relic HeftyTablet: CurseToDeck create Injury; CardToDeck CardPileCmd.Add; CurseToDeck CardPileCmd.Add; other: CardSelectCmd.FromChooseACardScreen
+relic JewelryBox: CardToDeck CardPileCmd.Add
+relic Kaleidoscope: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: CardSelectCmd.get_Selector, RewardsCmd.OfferCustom
+relic Kifuda: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(new Decimal(3))
+relic LargeCapsule: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add; ? obtains a relic its code picks as you choose
+relic LeadPaperweight: CardToDeck CardPileCmd.Add if chosenCard=result of CardSelectCmd.FromChooseACardScreen; other: CardSelectCmd.FromChooseACardScreen
+relic LeafyPoultice: MaxHpLoss CreatureCmd.LoseMaxHp(MaxHp); CardToDeck, CardRemoval CardCmd.Transform
+relic LeesWaffle: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp); Heal CreatureCmd.Heal((creature=this.Owner.Creature.MaxHp sub creature=this.Owner.Creature.CurrentHp))
+relic LoomingFruit: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
+relic LostCoffer: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; Potion PotionCmd.TryToProcure(-1) via reward PotionReward; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: CardSelectCmd.get_Selector, RewardsCmd.OfferCustom
+relic Mango: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
+relic MassiveScroll: CardToDeck CardPileCmd.Add if chosenCard=result of CardSelectCmd.FromChooseACardScreen; other: CardSelectCmd.FromChooseACardScreen
+relic NeowsBones: RelicGain RelicCmd.Obtain(-1) via reward RelicReward; CardToDeck CardPileCmd.Add; CurseToDeck CardPileCmd.Add; ? obtains a reward's relic via reward RelicReward; other: Enumerable.Select
+relic NeowsSacrifice: Potion PotionCmd.TryToProcure; CurseToDeck create Guilty; CardToDeck CardPileCmd.Add; CurseToDeck CardPileCmd.Add
+relic NeowsTalisman: UpgradeCard CardCmd.Upgrade if each
+relic NeowsTorment: CardToDeck CardPileCmd.Add
+relic NewLeaf: CardToDeck, CardRemoval CardCmd.TransformToRandom; other: CardSelectCmd.FromDeckForTransformation
+relic NutritiousOyster: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
+relic NutritiousSoup: EnchantCard CardCmd.Enchant(Decimal.One) if each.Rarity == Basic and Contains(each.Tags, 1) and Enchantment<TezcatarasEmber>().CanEnchant(each)
+relic OldCoin: GoldGain PlayerCmd.GainGold(Gold)
+relic Orrery: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: CardSelectCmd.get_Selector, RewardsCmd.OfferCustom
+relic PaelsClaw: EnchantCard CardCmd.Enchant(Decimal.One) if Enchantment<Goopy>().CanEnchant(each)
+relic PaelsEye: nothing
+relic PaelsGrowth: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(new Decimal(4))
+relic PaelsHorn: CardToDeck CardPileCmd.Add
+relic PaelsLegion: other: PlayerCmd.AddPet
+relic PaelsTooth: CardRemoval CardSelectCmd.FromDeckForRemoval; CardRemoval CardPileCmd.RemoveFromDeck
+relic PandorasBox: CardToDeck, CardRemoval CardCmd.Transform
+relic Pear: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
+relic PhialHolster: Potion PotionCmd.TryToProcure(-1); other: PlayerCmd.GainMaxPotionCount
+relic Pomander: UpgradeCard CardSelectCmd.FromDeckForUpgrade; UpgradeCard CardCmd.Upgrade
+relic PotionBelt: other: PlayerCmd.GainMaxPotionCount
+relic PrecariousShears: CardRemoval CardSelectCmd.FromDeckForRemoval; CardRemoval CardPileCmd.RemoveFromDeck; HpLoss CreatureCmd.Damage(this.DynamicVars.Damage)
+relic PreciseScissors: CardRemoval CardSelectCmd.FromDeckForRemoval; CardRemoval CardPileCmd.RemoveFromDeck
+relic PreservedFog: CardRemoval CardSelectCmd.FromDeckForRemoval; CardRemoval CardPileCmd.RemoveFromDeck; CurseToDeck CardPileCmd.AddCurseToDeck
+relic PumpkinCandle: nothing
+relic PunchDagger: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(Momentum)
+relic RoyalStamp: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(Decimal.One) if FirstOrDefault(result of CardSelectCmd.FromDeckForEnchantment)
+relic SandCastle: UpgradeCard CardCmd.Upgrade
+relic ScrollBoxes: CardToDeck CardPileCmd.Add; other: CardSelectCmd.FromChooseABundleScreen
+relic SeaGlass: CardToDeck CardPileCmd.Add; other: CardSelectCmd.FromSimpleGridForRewards
+relic SereTalon: MaxHpLoss CreatureCmd.LoseMaxHp(HpLoss); CardToDeck CardPileCmd.Add
+relic SignetRing: GoldGain PlayerCmd.GainGold(Gold)
+relic SilkenTress: GoldLoss PlayerCmd.LoseGold(this.Owner.Gold)
+relic SmallCapsule: RelicGain RelicCmd.Obtain(-1) via reward RelicReward; ? obtains a reward's relic via reward RelicReward; other: RewardsCmd.OfferCustom
+relic SneckoEye: other: PowerCmd.Apply
+relic Storybook: CardToDeck CardPileCmd.Add
+relic Strawberry: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
+relic TanxsWhistle: CardToDeck CardPileCmd.Add
+relic TouchOfOrobas: other: RelicCmd.Replace
+relic ToyBox: RelicGain RelicCmd.Obtain(-1) via reward RelicReward; ? obtains a reward's relic via reward RelicReward; other: RewardsCmd.OfferCustom
+relic TriBoomerang: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(Decimal.One)
+relic WarPaint: UpgradeCard CardCmd.Upgrade
+relic Whetstone: UpgradeCard CardCmd.Upgrade
+relic YummyCookie: UpgradeCard CardSelectCmd.FromDeckForUpgrade; UpgradeCard CardCmd.Upgrade

@@ -28,8 +28,10 @@ public class DecisionsIndexTests
         var wrong = expected.Zip(index).Where(pair => !pair.Second.StartsWith(pair.First, StringComparison.Ordinal)).Select(pair => pair.First).ToList();
         Assert.True(index.Count == expected.Count && wrong.Count == 0,
             $"docs/DECISIONS.md isn't the index of docs/decisions/ (run node scripts/decisions.mjs): {index.Count} lines for {expected.Count} decisions; first wrong: {wrong.FirstOrDefault()}");
-        // Numbered in order, none twice, each in its hundred's file.
-        Assert.Equal(Enumerable.Range(1, decisions.Count), decisions.Select(decision => decision.Number));
+        // Numbered in order, none twice (a number may be skipped), each in its hundred's file.
+        var numbers = decisions.Select(decision => decision.Number).ToList();
+        Assert.Equal(1, numbers[0]);
+        Assert.True(numbers.Zip(numbers.Skip(1)).All(pair => pair.Second > pair.First), "decisions out of order or numbered twice: " + string.Join(", ", numbers.Zip(numbers.Skip(1)).Where(pair => pair.Second <= pair.First)));
         Assert.All(decisions, decision => Assert.StartsWith(Math.Max(decision.Number / 100 * 100, 1).ToString("000", System.Globalization.CultureInfo.InvariantCulture), decision.File));
     }
 
