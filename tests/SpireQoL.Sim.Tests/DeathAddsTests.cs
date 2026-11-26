@@ -217,4 +217,48 @@ public class DeathAddsTests
         giant.SetMoves = new Dictionary<string, SimMove?> { ["AboutToBlowState"] = null };
         Assert.True(SimEngine.Run(Fight(giant), Strike(target: 0, damage: 6)).AnyUnmodelled);
     }
+
+    [Fact]
+    public void PhilosophersStoneGivesAnEnemyStrengthAsItJoinsMidFight()
+    {
+        // Hook.AfterCreatureAddedToCombat (CreatureCmd.Add, after the creature sets itself up): Philosopher's Stone, read from its code
+        // (creature.Side != base.Owner.Creature.Side: PowerCmd.Apply<StrengthPower> of its StrengthPower value, no applier), on the next Axebot.
+        Assert.IsType<ReadModel>(SimModels.Get(RelicId.PhilosophersStone.Name));
+        var axebot = AxebotReadAt(stock: 2);
+        axebot.Powers = axebot.Powers.With(PowerId.Strength, amount: 1); // the board's enemies have it already, as the adapter reads them
+        var state = Fight(axebot);
+        state.You.Relics = state.You.Relics.With(RelicId.PhilosophersStone, 0);
+        var branch = Assert.Single(SimEngine.Run(state, Strike(target: 0, damage: 6)).Branches);
+        Assert.Null(branch.Unmodelled);
+        Assert.Equal(1, branch.Enemy(id: 1)!.Powers[PowerId.Strength]);
+        Assert.Equal(1, branch.Enemy(id: 1)!.Powers[PowerId.Stock]);
+    }
+
+    [Fact]
+    public void ACreatureJoiningWithoutPhilosophersStoneHasNoStrength()
+    {
+        var branch = Assert.Single(SimEngine.Run(Fight(AxebotReadAt(stock: 2)), Strike(target: 0, damage: 6)).Branches);
+        Assert.Equal(0, branch.Enemy(id: 1)!.Powers[PowerId.Strength]);
+    }
+
+    [Fact]
+    public void EveryWrigglerJoiningGetsPhilosophersStonesStrength()
+    {
+        // Each creature a death adds is told on its own, as each CreatureCmd.Add runs the hook.
+        var state = Fight(Parasite());
+        state.You.Relics = state.You.Relics.With(RelicId.PhilosophersStone, 0);
+        var outcome = SimEngine.Run(state, Strike(target: 0, damage: 6));
+        Assert.All(outcome.Branches, branch => Assert.All(branch.Enemies.Skip(1), wriggler => Assert.Equal(1, wriggler.Powers[PowerId.Strength])));
+    }
+
+    [Fact]
+    public void ACreatureJoiningWhereAListenerIsntSimulatedIsUnknown()
+    {
+        // Fur Coat's AfterCreatureAddedToCombat (1 HP in a marked room) isn't read: the adapter names it on each spawn (SimSpawn.JoinUnread), and
+        // what follows the joining is unknown, never the creature as it joined.
+        var axebot = AxebotReadAt(stock: 2);
+        axebot.Spawns = axebot.Spawns!.Select(spawn => spawn with { JoinUnread = "FurCoat's AfterCreatureAddedToCombat isn't simulated" }).ToList();
+        var branch = Assert.Single(SimEngine.Run(Fight(axebot), Strike(target: 0, damage: 6)).Branches);
+        Assert.Equal("FurCoat's AfterCreatureAddedToCombat isn't simulated", branch.Unmodelled);
+    }
 }

@@ -146,7 +146,10 @@ public class SimPerformanceTests
         // the enemies' side's turn end runs its hooks (an enemy's Plating gains its block there; Orichalcum's BeforeSideTurnEnd waits on its own field,
         // which the engine can't tell is unset there), a step each: branch-heavy 33 steps, 5,234 stepped, 289.7 MB (32, 4,767, 266.1 MB with that turn end
         // switched off); Beacon of Hope and Juggernaut 28 steps, 356 stepped, 15.6 MB (27, 331, 15.2 MB switched off); copies unchanged.
-        new object[] { "branch-heavy hand", 3_600, 6_000, 34, 330_000_000L, 60 },                // 2,874, 5,234, 33, 289.7 MB, 26 ms (was cut off at 128 branches: 926 copies)
+        // branch-heavy hand's bytes 335 MB from 330 (2026-11-25, decision #325): measured 329,649,016 bytes before the round's changes and 329,656,520 to
+        // 329,662,256 after (alone; 330,005,984 once in the whole suite): the limit sat 0.1% above what it measured, so the suite's run-to-run noise crossed
+        // it; the change itself (a creature joining runs its listeners, a power's received pass) adds about 10 KB.
+        new object[] { "branch-heavy hand", 3_600, 6_000, 34, 335_000_000L, 60 },                // 2,874, 5,701, 34, 329.7 MB, 31 ms (was cut off at 128 branches: 926 copies)
         // four Defects' bytes: 1,170 MB from 1,140 (2026-11-24, decision #195): each SimPlayer and SimEnemy holds its models' fields (a reference more
         // in each copy), 1,144.6 MB measured, 1.3% more.
         // Bytes measured 2026-11-24 (decision #216: the branch key made by reference, nothing sorted that has no order to choose): branch-heavy

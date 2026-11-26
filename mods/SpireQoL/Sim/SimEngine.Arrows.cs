@@ -155,7 +155,7 @@ public static partial class SimEngine
         var taken = spawn.UniqueFromEarlier ? state.Enemies.Where(enemy => enemy.AddedBy == pending.Dead).Select(enemy => enemy.Hp).ToHashSet() : null;
         var free = Enumerable.Range(0, spawn.Hp.Count).Where(index => taken?.Contains(raw[index]) != true).ToList();
         if (free.Count == 0) free = Enumerable.Range(0, spawn.Hp.Count).ToList();
-        return free.Select((index, place) =>
+        var added = free.Select((index, place) =>
         {
             var copy = place == free.Count - 1 ? state : state.Clone();
             copy.Weight = state.Weight / free.Count;
@@ -166,6 +166,24 @@ public static partial class SimEngine
             });
             return copy;
         }).ToList();
+        return Then(added, branch => AddedToCombat(branch, branch.Enemies[^1].Id, spawn.JoinUnread));
+    }
+
+    /// <summary>
+    /// Hook.AfterCreatureAddedToCombat (CreatureCmd.Add, once the creature has joined and set itself up): every listener told in their order, each on
+    /// the states the ones before it left (Philosopher's Stone's Strength on the enemy, read from its code). A listener the simulator doesn't run
+    /// there (<paramref name="unread"/>: the adapter's SimSpawn.JoinUnread, Fur Coat's) makes what follows unknown.
+    /// </summary>
+    internal static IEnumerable<SimState> AddedToCombat(SimState state, int creature, string? unread = null)
+    {
+        if (unread != null) state.Unmodelled ??= unread;
+        IEnumerable<SimState> states = new[] { state };
+        foreach (var (model, owner) in Listeners(state))
+        {
+            if (!model.Overrides(nameof(SimModel.AfterCreatureAddedToCombat))) continue;
+            states = Then(states.ToList(), branch => model.AfterCreatureAddedToCombat(branch, owner, creature));
+        }
+        return states;
     }
 
     /// <summary>

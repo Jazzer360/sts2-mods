@@ -567,6 +567,7 @@ public sealed class ReadModel : SimModel
         HookName.AfterOrbChanneled => nameof(AfterOrbChanneled),
         HookName.BeforePotionUsed => nameof(BeforePotionUsed),
         HookName.AfterPotionUsed => nameof(AfterPotionUsed),
+        HookName.AfterCreatureAddedToCombat => nameof(AfterCreatureAddedToCombat),
         HookName.ModifyHpLostBeforeOsty => nameof(ModifyHpLostBeforeOsty),
         HookName.ModifyHpLostBeforeOstyLate => nameof(ModifyHpLostBeforeOstyLate),
         HookName.ModifyHpLostAfterOsty => nameof(ModifyHpLostAfterOsty),
@@ -678,6 +679,10 @@ public sealed class ReadModel : SimModel
     /// <summary>Hook.AfterPotionUsed (decision #313): a potion of <see cref="SimPotionUse.Owner"/>'s acted (Reptile Trinket, Belt Buckle).</summary>
     public override IEnumerable<SimState> AfterPotionUsed(SimState state, int owner, SimPotionUse use) =>
         Run(HookName.AfterPotionUsed, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Player = use.Owner, Target = use.Target });
+
+    /// <summary>Hook.AfterCreatureAddedToCombat: the creature added is the one its code is told (HookWho.Asked, HookTarget.Added).</summary>
+    public override IEnumerable<SimState> AfterCreatureAddedToCombat(SimState state, int owner, int creature) =>
+        Run(HookName.AfterCreatureAddedToCombat, new HookArgs { State = state, Owner = owner, Play = state.CurrentPlay, Target = creature });
 
     /// <summary>Hook.ModifyOrbValue: the value of its code's first way that holds (Focus: max(value + Amount, 0) on its owner's orbs).</summary>
     public override decimal ModifyOrbValue(SimState state, int owner, OrbCtx orb, decimal value)
@@ -1701,6 +1706,9 @@ public sealed class ReadModel : SimModel
                     return One(args.State);
                 };
             }
+            // Only a projection runs it, and nothing it does there is what a projection follows (decision #308): it goes on past it.
+            case UnknownStep { ForecastIgnores: true }:
+                return args => One(args.State);
             case UnknownStep unknown:
             {
                 var why = unknown.Why;
@@ -1774,7 +1782,7 @@ public sealed class ReadModel : SimModel
                                 SimEngine.ApplyInHit(state, applier, args.Owner, power, given, debuff);
                                 if (goesAtZero && SimEngine.PowersOf(state, args.Owner) is var inHitLeft && inHitLeft.Has(power) && inHitLeft[power] <= 0) SimEngine.RemovePower(state, args.Owner, power);
                                 break;
-                            case HookTarget.PowerOwner or HookTarget.HitTarget: SimEngine.ApplyInHit(state, applier, args.Target, power, given, debuff); break;
+                            case HookTarget.PowerOwner or HookTarget.HitTarget or HookTarget.Added: SimEngine.ApplyInHit(state, applier, args.Target, power, given, debuff); break;
                             case HookTarget.AllEnemies:
                                 foreach (var enemy in state.Targetable.ToList()) SimEngine.ApplyInHit(state, applier, enemy.Id, power, given, debuff);
                                 break;
@@ -1798,7 +1806,7 @@ public sealed class ReadModel : SimModel
                                 if (SimEngine.PowersOf(branch, owner) is var left && left.Has(power) && left[power] <= 0) SimEngine.RemovePower(branch, owner, power);
                             return changed;
                         }
-                        case HookTarget.PowerOwner or HookTarget.HitTarget: return SimEngine.ApplyAndTell(state, applier, args.Target, power, given, debuff);
+                        case HookTarget.PowerOwner or HookTarget.HitTarget or HookTarget.Added: return SimEngine.ApplyAndTell(state, applier, args.Target, power, given, debuff);
                         // The player who played the card (cardPlay.Card.Owner.Creature: Vital Spark's Tainted on whoever plays a Tainted card).
                         case HookTarget.PlayOwner: return args.Play is { } played ? SimEngine.ApplyAndTell(state, applier, played.Owner, power, given, debuff) : One(state);
                         // Every hittable enemy as the command starts; or every living one, hittable or not (a player's model's living opponents:

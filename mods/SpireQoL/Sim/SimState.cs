@@ -378,6 +378,13 @@ public sealed record SimSpawn(string Name, IReadOnlyList<int> Hp)
     public string? Monster { get; init; }
 
     /// <summary>
+    /// Why what follows its joining isn't simulated: a listener of Hook.AfterCreatureAddedToCombat on the board that the simulator runs no model for
+    /// (Fur Coat's 1 HP in a marked room), read by the adapter; null: every listener there is run (SimEngine.AddedToCombat).
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? JoinUnread { get; init; }
+
+    /// <summary>
     /// Each value of <see cref="Hp"/> before the multiplayer scaling, in the same order (what Creature.SetUniqueMonsterHpValue compares with the HP
     /// of the enemies in the fight); null: the same as Hp (one player).
     /// </summary>

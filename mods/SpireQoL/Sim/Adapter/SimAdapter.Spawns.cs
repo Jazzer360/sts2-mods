@@ -172,7 +172,31 @@ public static partial class SimAdapter
                 Unread("unread");
             }
         }
+        // What follows each one's joining: a listener of Hook.AfterCreatureAddedToCombat the simulator runs no model for makes it unknown.
+        if (spawns != null && JoinUnread(combat) is { } why)
+            for (var index = 0; index < spawns.Count; index++) spawns[index] = spawns[index] with { JoinUnread = why };
         return spawns;
+    }
+
+    /// <summary>
+    /// Why what follows a creature joining the fight mid-fight isn't simulated: the first of the fight's hook listeners (the hook's own loop) whose
+    /// class overrides AfterCreatureAddedToCombat and that the simulator has no model for (a hand-written one is reviewed for each hook it leaves
+    /// out: Sandpit's only moves creatures on screen); null when there's none.
+    /// </summary>
+    private static string? JoinUnread(ICombatState combat)
+    {
+        try
+        {
+            foreach (var model in combat.IterateHookListeners())
+                if (model.GetType().GetMethod(nameof(AbstractModel.AfterCreatureAddedToCombat), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public) is { } method
+                    && method.DeclaringType != typeof(AbstractModel) && !SimModels.Has(SimReaders.ModelName(model)))
+                    return $"{SimReaders.ModelName(model)}'s AfterCreatureAddedToCombat isn't simulated: what it does to a creature joining the fight isn't known";
+            return null;
+        }
+        catch
+        {
+            return "the fight's listeners couldn't be read for a creature joining it";
+        }
     }
 
 

@@ -528,6 +528,11 @@ public abstract class SimModel
     public virtual IEnumerable<SimState> BeforePotionUsed(SimState state, int owner, SimPotionUse use) => One(state);
     /// <summary>Hook.AfterPotionUsed: a potion acted and was logged (Reptile Trinket's Strength, Belt Buckle's Dexterity with none left).</summary>
     public virtual IEnumerable<SimState> AfterPotionUsed(SimState state, int owner, SimPotionUse use) => One(state);
+    /// <summary>
+    /// Hook.AfterCreatureAddedToCombat: a creature joined the fight mid-fight (CreatureCmd.Add, after its own set-up: SimEngine.Spawn), told to every
+    /// listener (Philosopher's Stone's Strength on an enemy).
+    /// </summary>
+    public virtual IEnumerable<SimState> AfterCreatureAddedToCombat(SimState state, int owner, int creature) => One(state);
     /// <summary>Hook.ModifyOrbValue: an orb's value as this listener leaves it (Focus, Infused Core). Pure: reads the state, changes nothing.</summary>
     public virtual decimal ModifyOrbValue(SimState state, int owner, OrbCtx orb, decimal value) => value;
     /// <summary>Hook.ModifyOrbPassiveTriggerCount: how many times an orb's passive goes off (Gold-Plated Cables on the front orb). Pure.</summary>

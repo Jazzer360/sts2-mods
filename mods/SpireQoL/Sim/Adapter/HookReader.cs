@@ -94,6 +94,9 @@ public static class HookReader
         // CombatManager.SwitchFromPlayerToEnemySide tells the source as the extra turn it gave begins: past every simulation's horizon, whose players'
         // turn ends where Hook.ShouldTakeExtraTurn is asked (SimEngine.ExtraTurns).
         ["AfterTakingExtraTurn"] = "as the extra turn it gave begins: past the simulation's horizon, which ends where the extra turn is decided",
+        // PlayerCombatState.MaxEnergy is read only as a player's turn starts (ResetEnergy, AddMaxEnergyToCurrent in CombatManager.SetupPlayerTurn), and a
+        // projection of a later turn doesn't follow energy (decision #308).
+        ["ModifyMaxEnergy"] = "a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy",
     };
 
     /// <summary>
@@ -1199,7 +1202,10 @@ public static class HookReader
             if (body.Gap is { } bodyGap)
             {
                 UnknownWhereItRuns = bodyGap.Text;
-                return (new HookProgram(name, new HookStep[] { new UnknownStep($"{_type.Name}'s {hook.Name} isn't read ({bodyGap.Text})") { When = when } }), null, null);
+                // Only a projection runs it; where what its code does there changes nothing a projection follows (decision #308: a player's energy,
+                // cards, HP, read as TurnStartGap.ForecastIgnores reads it), the projection goes on past it, as it does past a class with no model.
+                var ignored = ReadModels.ForecastIgnores(_type, new[] { hook.Name }, _read);
+                return (new HookProgram(name, new HookStep[] { new UnknownStep($"{_type.Name}'s {hook.Name} isn't read ({bodyGap.Text})") { When = when, ForecastIgnores = ignored } }), null, null);
             }
             var steps = body.Steps!;
             var never = steps.RemoveAll(step => step.When is HookConstant { Value: 0m });
@@ -2263,7 +2269,7 @@ public static class HookReader
                         : values[applierAt] is NullValue ? new HookCreature(HookWho.NoOne)
                         : throw new Gap(ReaderCapability.CommandOnAnotherCreature, $"gap: {power} applied by someone else");
                     var amount = Value(values[amountAt]);
-                    if (Targets(values[targetAt]) is not (HookTarget.Owner or HookTarget.PowerOwner or HookTarget.AllEnemies or HookTarget.HitTarget or HookTarget.PlayTarget or HookTarget.PlayOwner or HookTarget.LivingOpponents)) throw new Gap(Other(values[targetAt]), $"gap: {power} on {values[targetAt]}");
+                    if (Targets(values[targetAt]) is not (HookTarget.Owner or HookTarget.PowerOwner or HookTarget.AllEnemies or HookTarget.HitTarget or HookTarget.PlayTarget or HookTarget.PlayOwner or HookTarget.LivingOpponents or HookTarget.Added)) throw new Gap(Other(values[targetAt]), $"gap: {power} on {values[targetAt]}");
                     // A temporary Strength or Dexterity power (Helical Dart's) lands as the Strength or Dexterity its BeforeApplied applies, by its sign
                     // (TemporaryStrengthPower, TemporaryDexterityPower: IsPositive), as the card programs land it (SimAdapter.PowersFrom).
                     if (TemporaryOf(power) is { } underlying)
@@ -2485,6 +2491,8 @@ public static class HookReader
             if (value is QueryValue { Name: "HittableEnemies" }) return HookTarget.AllEnemies;
             if (value is QueryValue { Name: "NextItem", Arguments: [QueryValue { Name: "HittableEnemies" }] }) return HookTarget.RandomEnemy;
             if (value is QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } }) return HookTarget.PowerOwner;
+            // The creature added to the fight (AfterCreatureAddedToCombat's creature).
+            if (value is ParameterValue { Name: "creature" } or NamedValue { Name: "creature" } && _hook == nameof(HookName.AfterCreatureAddedToCombat)) return HookTarget.Added;
             throw new Gap(Other(value), $"gap: acts on {value}");
         }
 
@@ -2916,7 +2924,7 @@ public static class HookReader
             if (_hook == nameof(HookName.AfterBlockBroken) && value is ParameterValue { Name: "breaker" } or NamedValue { Name: "breaker" }) return new HookCreature(HookWho.Breaker);
             // The creature a Should hook asks about.
             if (value is ParameterValue { Name: "creature" } or NamedValue { Name: "creature" }
-                && _hook is nameof(HookName.ShouldAllowHitting) or nameof(HookName.ShouldCreatureBeRemovedFromCombatAfterDeath) or nameof(HookName.ShouldClearBlock))
+                && _hook is nameof(HookName.ShouldAllowHitting) or nameof(HookName.ShouldCreatureBeRemovedFromCombatAfterDeath) or nameof(HookName.ShouldClearBlock) or nameof(HookName.AfterCreatureAddedToCombat))
                 return new HookCreature(HookWho.Asked);
             if (IsApplier(value)) return new HookCreature(HookWho.Applier);
             if (value is QueryValue { Name: "Owner", Of: NamedValue { Name: "power" } } && _hook == "AfterPowerAmountChanged") return new HookCreature(HookWho.PowerOwner);

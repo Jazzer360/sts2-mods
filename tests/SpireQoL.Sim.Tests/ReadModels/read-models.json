@@ -32,7 +32,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "AeonglassDominionPower\u0027s BeforeHandDraw isn\u0027t read (gap: makes a Wither)"
+            "Why": "AeonglassDominionPower\u0027s BeforeHandDraw isn\u0027t read (gap: makes a Wither)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -2676,7 +2677,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "Bellows\u0027s AfterPlayerTurnStart isn\u0027t read (gap: upgrades GetPile(2, this.Owner).Cards, not the card played)"
+            "Why": "Bellows\u0027s AfterPlayerTurnStart isn\u0027t read (gap: upgrades GetPile(2, this.Owner).Cards, not the card played)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -2910,6 +2912,7 @@
           {
             "$kind": "UnknownStep",
             "Why": "BigHat\u0027s AfterSideTurnStart isn\u0027t read (gap: CardPileCmd.AddGeneratedCardsToCombat isn\u0027t translated)",
+            "ForecastIgnores": true,
             "When": {
               "$kind": "HookFactValue",
               "Fact": "TakesPart"
@@ -2977,7 +2980,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "BizarreLamp\u0027s BeforeHandDraw isn\u0027t read (gap: makes a Joy)"
+            "Why": "BizarreLamp\u0027s BeforeHandDraw isn\u0027t read (gap: makes a Joy)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -3168,6 +3172,23 @@
       }
     ],
     "Tab": "Damage",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "BlessedAntler",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "BeforeHandDraw",
+        "Steps": [
+          {
+            "$kind": "UnknownStep",
+            "Why": "BlessedAntler\u0027s BeforeHandDraw isn\u0027t read (gap: makes a Dazed)",
+            "ForecastIgnores": true
+          }
+        ]
+      }
+    ],
     "HelpsOwner": false
   },
   {
@@ -3704,7 +3725,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "BoneTea\u0027s AfterPlayerTurnStart isn\u0027t read (gap: a loop)"
+            "Why": "BoneTea\u0027s AfterPlayerTurnStart isn\u0027t read (gap: a loop)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -3916,6 +3938,27 @@
                   }
                 }
               }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
+    "Name": "Bread",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "UnknownStep",
+            "Why": "Bread\u0027s AfterSideTurnStart isn\u0027t read (gap: PlayerCmd.LoseEnergy isn\u0027t translated)",
+            "ForecastIgnores": true,
+            "When": {
+              "$kind": "HookFactValue",
+              "Fact": "TakesPart"
             }
           }
         ]
@@ -5450,7 +5493,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "CallOfTheVoidPower\u0027s BeforeHandDraw isn\u0027t read (gap: a keyword on First(GetDistinctForCombat(player, ToList(Where(this.Owner.Player.Character.CardPool.GetUnlockedCards(player.UnlockState, player.RunState.CardMultiplayerConstraint), c =\u003E (c.Rarity == 1 or c.Rarity == 5) == 0)), 1, this.Owner.Player.RunState.Rng.CombatCardGeneration)), not the card played)"
+            "Why": "CallOfTheVoidPower\u0027s BeforeHandDraw isn\u0027t read (gap: a keyword on First(GetDistinctForCombat(player, ToList(Where(this.Owner.Player.Character.CardPool.GetUnlockedCards(player.UnlockState, player.RunState.CardMultiplayerConstraint), c =\u003E (c.Rarity == 1 or c.Rarity == 5) == 0)), 1, this.Owner.Player.RunState.Rng.CombatCardGeneration)), not the card played)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -5962,7 +6006,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "ChoicesParadox\u0027s AfterPlayerTurnStart isn\u0027t read (gap: a loop)"
+            "Why": "ChoicesParadox\u0027s AfterPlayerTurnStart isn\u0027t read (gap: a loop)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -7567,7 +7612,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "CreativeAiPower\u0027s BeforeHandDraw isn\u0027t read (gap: makes FirstOrDefault(GetDistinctForCombat(player, Where(player.Character.CardPool.GetUnlockedCards(player.UnlockState, player.RunState.CardMultiplayerConstraint), c =\u003E c.Type == Power), 1, player.RunState.Rng.CombatCardGeneration)))"
+            "Why": "CreativeAiPower\u0027s BeforeHandDraw isn\u0027t read (gap: makes FirstOrDefault(GetDistinctForCombat(player, Where(player.Character.CardPool.GetUnlockedCards(player.UnlockState, player.RunState.CardMultiplayerConstraint), c =\u003E c.Type == Power), 1, player.RunState.Rng.CombatCardGeneration)))",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -7648,6 +7694,7 @@
           {
             "$kind": "UnknownStep",
             "Why": "Crossbow\u0027s AfterSideTurnStart isn\u0027t read (gap: a loop)",
+            "ForecastIgnores": true,
             "When": {
               "$kind": "HookFactValue",
               "Fact": "TakesPart"
@@ -10662,7 +10709,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "EcstasyPower\u0027s AfterPlayerTurnStart isn\u0027t read (gap: a loop)"
+            "Why": "EcstasyPower\u0027s AfterPlayerTurnStart isn\u0027t read (gap: a loop)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -10731,7 +10779,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "EnergyNextTurnPower\u0027s AfterEnergyReset isn\u0027t read (gap: energy for someone else)"
+            "Why": "EnergyNextTurnPower\u0027s AfterEnergyReset isn\u0027t read (gap: energy for someone else)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -10794,7 +10843,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "EntropyPower\u0027s AfterPlayerTurnStart isn\u0027t read (gap: a pick)"
+            "Why": "EntropyPower\u0027s AfterPlayerTurnStart isn\u0027t read (gap: a pick)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -11362,6 +11412,7 @@
           {
             "$kind": "UnknownStep",
             "Why": "FakeHappyFlower\u0027s BeforeSideTurnStart isn\u0027t read (gap: sets RelicModel.Status where the reader reads no store)",
+            "ForecastIgnores": true,
             "When": {
               "$kind": "HookFactValue",
               "Fact": "TakesPart"
@@ -11696,6 +11747,7 @@
           {
             "$kind": "UnknownStep",
             "Why": "FencingManual\u0027s AfterSideTurnStart isn\u0027t read (gap: ForgeCmd.Forge isn\u0027t translated)",
+            "ForecastIgnores": true,
             "When": {
               "$kind": "HookFactValue",
               "Fact": "TakesPart"
@@ -12371,7 +12423,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "ForegoneConclusionPower\u0027s BeforeHandDraw isn\u0027t read (gap: CardPileCmd.ShuffleIfNecessary isn\u0027t translated)"
+            "Why": "ForegoneConclusionPower\u0027s BeforeHandDraw isn\u0027t read (gap: CardPileCmd.ShuffleIfNecessary isn\u0027t translated)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -12672,7 +12725,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "FuneraryMask\u0027s BeforeHandDraw isn\u0027t read (gap: makes combatState.CreateCard(Card\u003CSoul\u003E(), this.Owner))"
+            "Why": "FuneraryMask\u0027s BeforeHandDraw isn\u0027t read (gap: makes combatState.CreateCard(Card\u003CSoul\u003E(), this.Owner))",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -12929,7 +12983,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "GamblingChip\u0027s AfterPlayerTurnStart isn\u0027t read (gap: a pick)"
+            "Why": "GamblingChip\u0027s AfterPlayerTurnStart isn\u0027t read (gap: a pick)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -14756,6 +14811,7 @@
           {
             "$kind": "UnknownStep",
             "Why": "HappyFlower\u0027s BeforeSideTurnStart isn\u0027t read (gap: sets RelicModel.Status where the reader reads no store)",
+            "ForecastIgnores": true,
             "When": {
               "$kind": "HookFactValue",
               "Fact": "TakesPart"
@@ -15192,7 +15248,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "HelloWorldPower\u0027s BeforeHandDraw isn\u0027t read (gap: CardPileCmd.AddGeneratedCardsToCombat isn\u0027t translated)"
+            "Why": "HelloWorldPower\u0027s BeforeHandDraw isn\u0027t read (gap: CardPileCmd.AddGeneratedCardsToCombat isn\u0027t translated)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -15214,7 +15271,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "HibernatePower\u0027s AfterPlayerTurnStart isn\u0027t read (gap: compares the owner with player.Creature)"
+            "Why": "HibernatePower\u0027s AfterPlayerTurnStart isn\u0027t read (gap: compares the owner with player.Creature)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -15667,7 +15725,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "InfiniteBladesPower\u0027s BeforeHandDraw isn\u0027t read (gap: makes a Shiv)"
+            "Why": "InfiniteBladesPower\u0027s BeforeHandDraw isn\u0027t read (gap: makes a Shiv)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -16846,7 +16905,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "JeweledMask\u0027s BeforeHandDraw isn\u0027t read (gap: changes player.RunState.Rng.CombatCardSelection.NextItem\u003CCardModel\u003E({(player == this.Owner and this.Owner.PlayerCombatState.TurnNumber \u003C= 1 and not ToList(Where(GetPile(1, player).Cards, c =\u003E c.Type == Power)).Count) or (player == this.Owner and this.Owner.PlayerCombatState.TurnNumber \u003C= 1 and ToList(Where(ToList(Where(GetPile(1, player).Cards, c =\u003E c.Type == Power)), c =\u003E c.Keywords.Contains(3) == 0)).Count \u003C= 0): ToList(Where(GetPile(1, player).Cards, c =\u003E c.Type == Power)); player == this.Owner and this.Owner.PlayerCombatState.TurnNumber \u003C= 1 and ToList(Where(GetPile(1, player).Cards, c =\u003E c.Type == Power)).Count and ToList(Where(ToList(Where(GetPile(1, player).Cards, c =\u003E c.Type == Power)), c =\u003E c.Keywords.Contains(3) == 0)).Count \u003E 0: ToList(Where(ToList(Where(GetPile(1, player).Cards, c =\u003E c.Type == Power)), c =\u003E c.Keywords.Contains(3) == 0))}) (CardModel.SetToFreeThisCombat))"
+            "Why": "JeweledMask\u0027s BeforeHandDraw isn\u0027t read (gap: changes player.RunState.Rng.CombatCardSelection.NextItem\u003CCardModel\u003E({(player == this.Owner and this.Owner.PlayerCombatState.TurnNumber \u003C= 1 and not ToList(Where(GetPile(1, player).Cards, c =\u003E c.Type == Power)).Count) or (player == this.Owner and this.Owner.PlayerCombatState.TurnNumber \u003C= 1 and ToList(Where(ToList(Where(GetPile(1, player).Cards, c =\u003E c.Type == Power)), c =\u003E c.Keywords.Contains(3) == 0)).Count \u003C= 0): ToList(Where(GetPile(1, player).Cards, c =\u003E c.Type == Power)); player == this.Owner and this.Owner.PlayerCombatState.TurnNumber \u003C= 1 and ToList(Where(GetPile(1, player).Cards, c =\u003E c.Type == Power)).Count and ToList(Where(ToList(Where(GetPile(1, player).Cards, c =\u003E c.Type == Power)), c =\u003E c.Keywords.Contains(3) == 0)).Count \u003E 0: ToList(Where(ToList(Where(GetPile(1, player).Cards, c =\u003E c.Type == Power)), c =\u003E c.Keywords.Contains(3) == 0))}) (CardModel.SetToFreeThisCombat))",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -24087,7 +24147,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "MythicFormPower\u0027s BeforeHandDraw isn\u0027t read (gap: makes combatState.CreateCard(player.RunState.Rng.CombatCardSelection.NextItem\u003CCardModel\u003E(Where(All, {player == this.Owner.Player and \u003C\u003E9__0: \u003C\u003E9__0; player == this.Owner.Player and not \u003C\u003E9__0: c =\u003E c.IsAllowedInRun(player.RunState)})), player))"
+            "Why": "MythicFormPower\u0027s BeforeHandDraw isn\u0027t read (gap: makes combatState.CreateCard(player.RunState.Rng.CombatCardSelection.NextItem\u003CCardModel\u003E(Where(All, {player == this.Owner.Player and \u003C\u003E9__0: \u003C\u003E9__0; player == this.Owner.Player and not \u003C\u003E9__0: c =\u003E c.IsAllowedInRun(player.RunState)})), player))",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -24294,7 +24355,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "NightmarePower\u0027s BeforeHandDraw isn\u0027t read (gap: makes card=this.GetInternalData\u003CData\u003E().selectedCard().CreateClone())"
+            "Why": "NightmarePower\u0027s BeforeHandDraw isn\u0027t read (gap: makes card=this.GetInternalData\u003CData\u003E().selectedCard().CreateClone())",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -24311,7 +24373,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "NinjaScroll\u0027s BeforeHandDraw isn\u0027t read (gap: makes a Shiv)"
+            "Why": "NinjaScroll\u0027s BeforeHandDraw isn\u0027t read (gap: makes a Shiv)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -25555,7 +25618,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "Ocarina\u0027s BeforeHandDraw isn\u0027t read (gap: CardPileCmd.AddGeneratedCardsToCombat isn\u0027t translated)"
+            "Why": "Ocarina\u0027s BeforeHandDraw isn\u0027t read (gap: CardPileCmd.AddGeneratedCardsToCombat isn\u0027t translated)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -25684,6 +25748,7 @@
           {
             "$kind": "UnknownStep",
             "Why": "OrangeDough\u0027s AfterSideTurnStart isn\u0027t read (gap: CardPileCmd.AddGeneratedCardsToCombat isn\u0027t translated)",
+            "ForecastIgnores": true,
             "When": {
               "$kind": "HookFactValue",
               "Fact": "TakesPart"
@@ -26478,6 +26543,27 @@
       }
     ],
     "Tab": "Block",
+    "HelpsOwner": false
+  },
+  {
+    "Name": "PaelsFlesh",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterSideTurnStart",
+        "Steps": [
+          {
+            "$kind": "UnknownStep",
+            "Why": "PaelsFlesh\u0027s AfterSideTurnStart isn\u0027t read (gap: the value this.Status)",
+            "ForecastIgnores": true,
+            "When": {
+              "$kind": "HookFactValue",
+              "Fact": "TakesPart"
+            }
+          }
+        ]
+      }
+    ],
     "HelpsOwner": false
   },
   {
@@ -29270,6 +29356,76 @@
     "HurtsPlayOwner": true
   },
   {
+    "Name": "PhilosophersStone",
+    "Kind": "Relic",
+    "Hooks": [
+      {
+        "Hook": "AfterCreatureAddedToCombat",
+        "Steps": [
+          {
+            "$kind": "FlashStep",
+            "When": {
+              "$kind": "HookTest",
+              "At": "PhilosophersStone.AfterCreatureAddedToCombat:0016",
+              "Test": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookFactValue",
+                  "Fact": "SameSide",
+                  "Creature": {
+                    "Who": "Asked",
+                    "PetOwner": false
+                  },
+                  "Other": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          },
+          {
+            "$kind": "ApplyPowerStep",
+            "Power": "StrengthPower",
+            "Target": "Added",
+            "Amount": {
+              "$kind": "HookVar",
+              "Key": "StrengthPower",
+              "Canonical": 1
+            },
+            "GoesAtZero": false,
+            "Debuff": false,
+            "DebuffWhenNegative": true,
+            "By": {
+              "Who": "NoOne",
+              "PetOwner": false
+            },
+            "When": {
+              "$kind": "HookTest",
+              "At": "PhilosophersStone.AfterCreatureAddedToCombat:0016",
+              "Test": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookFactValue",
+                  "Fact": "SameSide",
+                  "Creature": {
+                    "Who": "Asked",
+                    "PetOwner": false
+                  },
+                  "Other": {
+                    "Who": "Owner",
+                    "PetOwner": false
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "PhylacteryUnbound",
     "Kind": "Relic",
     "Hooks": [
@@ -30794,6 +30950,7 @@
           {
             "$kind": "UnknownStep",
             "Why": "PowerCell\u0027s BeforeSideTurnStart isn\u0027t read (gap: CardPileCmd.Add isn\u0027t translated)",
+            "ForecastIgnores": true,
             "When": {
               "$kind": "HookFactValue",
               "Fact": "TakesPart"
@@ -31552,7 +31709,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "RadiancePower\u0027s AfterEnergyReset isn\u0027t read (gap: energy for someone else)"
+            "Why": "RadiancePower\u0027s AfterEnergyReset isn\u0027t read (gap: energy for someone else)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -31568,7 +31726,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "RadiantPearl\u0027s BeforeHandDraw isn\u0027t read (gap: makes a Luminesce)"
+            "Why": "RadiantPearl\u0027s BeforeHandDraw isn\u0027t read (gap: makes a Luminesce)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -34878,6 +35037,7 @@
           {
             "$kind": "UnknownStep",
             "Why": "SealOfGold\u0027s AfterSideTurnStart isn\u0027t read (gap: the value this.Owner.Gold)",
+            "ForecastIgnores": true,
             "When": {
               "$kind": "HookFactValue",
               "Fact": "TakesPart"
@@ -34950,7 +35110,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "SentryModePower\u0027s BeforeHandDraw isn\u0027t read (gap: a SweepingGaze made into another pile)"
+            "Why": "SentryModePower\u0027s BeforeHandDraw isn\u0027t read (gap: a SweepingGaze made into another pile)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -37333,7 +37494,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "SpectrumShiftPower\u0027s BeforeHandDraw isn\u0027t read (gap: CardPileCmd.AddGeneratedCardsToCombat isn\u0027t translated)"
+            "Why": "SpectrumShiftPower\u0027s BeforeHandDraw isn\u0027t read (gap: CardPileCmd.AddGeneratedCardsToCombat isn\u0027t translated)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -37472,7 +37634,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "StarNextTurnPower\u0027s AfterEnergyReset isn\u0027t read (gap: stars for someone else)"
+            "Why": "StarNextTurnPower\u0027s AfterEnergyReset isn\u0027t read (gap: stars for someone else)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -42004,7 +42167,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "Toolbox\u0027s BeforeHandDraw isn\u0027t read (gap: a pick)"
+            "Why": "Toolbox\u0027s BeforeHandDraw isn\u0027t read (gap: a pick)",
+            "ForecastIgnores": true
           }
         ]
       }
@@ -43859,7 +44023,8 @@
         "Steps": [
           {
             "$kind": "UnknownStep",
-            "Why": "VexingPuzzlebox\u0027s AfterPlayerTurnStart isn\u0027t read (gap: changes First(GetDistinctForCombat(this.Owner, this.Owner.Character.CardPool.GetUnlockedCards(this.Owner.UnlockState, this.Owner.RunState.CardMultiplayerConstraint), 1, this.Owner.RunState.Rng.CombatCardGeneration)) (CardModel.SetToFreeThisTurn))"
+            "Why": "VexingPuzzlebox\u0027s AfterPlayerTurnStart isn\u0027t read (gap: changes First(GetDistinctForCombat(this.Owner, this.Owner.Character.CardPool.GetUnlockedCards(this.Owner.UnlockState, this.Owner.RunState.CardMultiplayerConstraint), 1, this.Owner.RunState.Rng.CombatCardGeneration)) (CardModel.SetToFreeThisTurn))",
+            "ForecastIgnores": true
           }
         ]
       }

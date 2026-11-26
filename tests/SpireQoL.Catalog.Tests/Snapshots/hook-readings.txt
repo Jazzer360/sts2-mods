@@ -50,7 +50,7 @@ power DampenPower: AfterApplied: gap: changes a collection (IEnumerator`1.get_Cu
 power DanseMacabrePower: BeforeCardPlayed: read
 power DarkEmbracePower: AfterCardExhausted: read | AfterSideTurnEnd: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power DebilitatePower: AfterSideTurnEnd: read
-power DemesnePower: ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+power DemesnePower: ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw | ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy
 power DemisePower: AfterSideTurnEnd: read
 power DemonFormPower: AfterApplied: read | AfterRemoved: read | AfterSideTurnStart: read
 power DevourLifePower: AfterCardPlayed: read
@@ -86,7 +86,7 @@ power FrailPower: AfterSideTurnEnd: read | ModifyBlockMultiplicative: read
 power FreeAttackPower: BeforeCardPlayed: gap: tests {cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Type == Attack and not cardPlay.Card.Pile: null; cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Type == Attack and cardPlay.Card.Pile: new Nullable`1(cardPlay.Card.Pile.Type)}.HasValue | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
 power FreePowerPower: BeforeCardPlayed: gap: tests {cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Type == Power and not cardPlay.Card.Pile: null; cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Type == Power and cardPlay.Card.Pile: new Nullable`1(cardPlay.Card.Pile.Type)}.HasValue | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
 power FreeSkillPower: BeforeCardPlayed: gap: tests {cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Type == Skill and not cardPlay.Card.Pile: null; cardPlay.Card.Owner.Creature == this.Owner and cardPlay.Card.Type == Skill and cardPlay.Card.Pile: new Nullable`1(cardPlay.Card.Pile.Type)}.HasValue | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
-power FriendshipPower: ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+power FriendshipPower: ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy
 power FurnacePower: AfterSideTurnStart: gap: ForgeCmd.Forge isn't translated
 power GalvanicPower: AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterCardPlayed: read | BeforeCombatStart: not run: before the fight: the state is read after it
 power GenesisPower: AfterEnergyReset: read
@@ -162,7 +162,7 @@ power PoisonPower: AfterSideTurnStart: read
 power PossessSpeedPower: AfterDeath: gap: a loop | AfterPowerAmountChanged: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power PossessStrengthPower: AfterDeath: gap: a loop | AfterPowerAmountChanged: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
 power PrepTimePower: AfterSideTurnStart: read
-power PyrePower: ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+power PyrePower: ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy
 power QuietusPower: AfterAttack: read | AfterSideTurnEnd: read | BeforeAttack: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | ModifyDamageMultiplicative: read
 power RadiancePower: AfterEnergyReset: unknown where it runs: gap: energy for someone else
 power RagePower: AfterCardPlayed: read | AfterSideTurnEnd: read
@@ -178,7 +178,7 @@ power RingingPower: AfterApplied: gap: a loop | AfterCardEnteredCombat: not run:
 power RitualPower: AfterApplied: read | AfterSideTurnEnd: read
 power RollingBoulderPower: AfterPlayerTurnStart: unknown where it runs: gap: the reader can't follow it: commands in a callback
 power RupturePower: AfterCardPlayed: read | AfterDamageReceived: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
-power SandpitPower: AfterApplied: gap: uses its own field (_initialTargetPosition) directly: what a call on it changes isn't read | AfterCreatureAddedToCombat: gap: the simulator runs no read model's AfterCreatureAddedToCombat | AfterOstyRevived: gap: the simulator runs no read model's AfterOstyRevived | AfterPowerAmountChanged: read | AfterRemoved: unknown where it runs: gap: a loop | AfterSideTurnStartLate: read | BeforeSideTurnEnd: read
+power SandpitPower: AfterApplied: gap: uses its own field (_initialTargetPosition) directly: what a call on it changes isn't read | AfterCreatureAddedToCombat: read | AfterOstyRevived: gap: the simulator runs no read model's AfterOstyRevived | AfterPowerAmountChanged: read | AfterRemoved: unknown where it runs: gap: a loop | AfterSideTurnStartLate: read | BeforeSideTurnEnd: read
 power SelfFormingClayPower: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
 power SentryModePower: BeforeHandDraw: unknown where it runs: gap: a SweepingGaze made into another pile
 power SerpentFormPower: AfterApplied: read | AfterCardPlayed: read | AfterRemoved: read | BeforeCardPlayed: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them
@@ -245,7 +245,7 @@ power ViolentChordPower: AfterCardPlayed: read
 power VitalSparkPower: AfterCardEnteredCombat: not run: it afflicts a card as it enters the fight: the cards the adapter reads show their afflictions, and no simulated play plays a card that entered the fight during the simulation | AfterCardPlayed: read | AfterPowerAmountChanged: not run: it only sets what its cards show (an affliction's amount): no code a fight runs reads it | AfterRemoved: unknown where it runs: gap: a loop | BeforeCombatStart: not run: before the fight: the state is read after it
 power VoidFormPower: AfterApplied: read | AfterCardPlayed: gap: tests cardPlay | AfterRemoved: read | BeforeApplied: gap: the simulator runs no read model's BeforeApplied | BeforePowerAmountChanged: gap: the simulator runs no read model's BeforePowerAmountChanged | BeforeSideTurnStart: read | InitInternalData: not run: makes the model's own data when it's added: its fields start as the adapter reads them | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate | TryModifyStarCost: gap: the simulator runs no read model's TryModifyStarCost
 power VulnerablePower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
-power WasteAwayPower: ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+power WasteAwayPower: ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy
 power WeakPower: AfterSideTurnEnd: read | ModifyDamageMultiplicative: read
 power WellLaidPlansPower: ShouldFlush: gap: the simulator runs no read model's ShouldFlush
 power WitheringPresencePower: AfterCardPlayed: gap: the value cardPlay.Card.Owner
@@ -266,8 +266,8 @@ relic BigMushroom: AfterObtained: not run: when the relic is obtained: outside t
 relic BiiigHug: AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterShuffle: read
 relic BingBong: AfterCardChangedPiles: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic BizarreLamp: BeforeHandDraw: unknown where it runs: gap: makes a Joy
-relic BlessedAntler: BeforeHandDraw: unknown where it runs: gap: makes a Dazed | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
-relic BloodSoakedRose: AfterObtained: not run: when the relic is obtained: outside the fight's turns | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+relic BlessedAntler: BeforeHandDraw: unknown where it runs: gap: makes a Dazed | ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy
+relic BloodSoakedRose: AfterObtained: not run: when the relic is obtained: outside the fight's turns | ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy
 relic BloodVial: AfterPlayerTurnStartLate: read
 relic BoneFlute: AfterAttack: read
 relic BoneTea: AfterPlayerTurnStart: unknown where it runs: gap: a loop
@@ -276,7 +276,7 @@ relic BookRepairKnife: AfterDiedToDoom: read
 relic Bookmark: AfterFlush: gap: the simulator runs no read model's AfterFlush
 relic BoomingConch: AfterSideTurnStart: unknown where it runs: gap: tests combatState.RunState.CurrentRoom | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 relic BoundPhylactery: AfterEnergyResetLate: read | BeforeCombatStart: not run: before the fight: the state is read after it
-relic Bread: AfterSideTurnStart: unknown where it runs: gap: PlayerCmd.LoseEnergy isn't translated | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+relic Bread: AfterSideTurnStart: unknown where it runs: gap: PlayerCmd.LoseEnergy isn't translated | ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy
 relic BrilliantScarf: AfterCardPlayed: gap: tests cardPlay.IsAutoPlay | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: read | TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate | TryModifyStarCost: gap: the simulator runs no read model's TryModifyStarCost
 relic Brimstone: AfterSideTurnStart: read
 relic BurningSticks: AfterCardExhausted: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns
@@ -297,7 +297,7 @@ relic DaughterOfTheWind: AfterCardPlayed: read
 relic DemonTongue: AfterDamageReceived: read | BeforeSideTurnStart: read
 relic DiamondDiadem: AfterSideTurnStart: read
 relic DivineDestiny: AfterSideTurnStart: read
-relic Ectoplasm: AfterModifyingGoldGained: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | ModifyGoldGained: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+relic Ectoplasm: AfterModifyingGoldGained: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | ModifyGoldGained: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy
 relic EmotionChip: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterDamageReceived: read | AfterPlayerTurnStart: unknown where it runs: gap: a loop
 relic ExerciseMat: AfterSideTurnStart: read
 relic FakeBloodVial: AfterPlayerTurnStartLate: read
@@ -310,7 +310,7 @@ relic FestivePopper: AfterPlayerTurnStart: read
 relic Fiddle: AfterPreventingDraw: gap: the simulator runs no read model's AfterPreventingDraw | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw | ShouldDraw: gap: the simulator runs no read model's ShouldDraw
 relic ForgottenSoul: AfterCardExhausted: read
 relic FuneraryMask: BeforeHandDraw: unknown where it runs: gap: makes combatState.CreateCard(Card<Soul>(), this.Owner)
-relic FurCoat: AfterCreatureAddedToCombat: gap: the simulator runs no read model's AfterCreatureAddedToCombat | AfterObtained: not run: when the relic is obtained: outside the fight's turns | BeforeCombatStart: not run: before the fight: the state is read after it | ModifyGeneratedMapLate: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
+relic FurCoat: AfterCreatureAddedToCombat: gap: CreatureCmd.SetCurrentHp isn't translated | AfterObtained: not run: when the relic is obtained: outside the fight's turns | BeforeCombatStart: not run: before the fight: the state is read after it | ModifyGeneratedMapLate: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic GalacticDust: AfterStarsSpent: read
 relic GamblingChip: AfterPlayerTurnStart: unknown where it runs: gap: a pick
 relic GamePiece: AfterCardPlayed: read
@@ -355,20 +355,20 @@ relic Orichalcum: BeforeSideTurnEnd: read | BeforeSideTurnEndVeryEarly: read | B
 relic OrnamentalFan: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: read
 relic PaelsBlood: ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 relic PaelsEye: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterSideTurnStart: read | AfterTakingExtraTurn: not run: as the extra turn it gave begins: past the simulation's horizon, which ends where the extra turn is decided | BeforeCardPlayed: gap: tests cardPlay.IsAutoPlay | BeforeSideTurnEndEarly: gap: a loop | ShouldTakeExtraTurnEarly: gap: tests this.Owner.PlayerCombatState
-relic PaelsFlesh: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterSideTurnStart: unknown where it runs: gap: the value this.Status | BeforeCombatStart: not run: before the fight: the state is read after it | BeforeSideTurnStart: not run: nothing in its body acts | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+relic PaelsFlesh: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterSideTurnStart: unknown where it runs: gap: the value this.Status | BeforeCombatStart: not run: before the fight: the state is read after it | BeforeSideTurnStart: not run: nothing in its body acts | ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy
 relic PaelsLegion: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingBlockAmount: read | AfterObtained: not run: when the relic is obtained: outside the fight's turns | AfterSideTurnStart: read | BeforeCombatStart: not run: before the fight: the state is read after it | ModifyBlockMultiplicative: read
 relic PaelsTears: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterSideTurnStart: read | BeforeSideTurnEnd: gap: the value this.Owner.PlayerCombatState.Energy
 relic ParryingShield: AfterSideTurnEnd: read
 relic PenNib: AfterCardPlayed: read | BeforeCardPlayed: read | ModifyDamageMultiplicative: read
 relic Pendulum: AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeHandDraw: unknown where it runs: gap: sets RelicModel.Status where the reader reads no store | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 relic Permafrost: AfterCardPlayed: read | AfterRoomEntered: not run: entering a room: outside the fight's turns
-relic PhilosophersStone: AfterCreatureAddedToCombat: gap: the simulator runs no read model's AfterCreatureAddedToCombat | AfterRoomEntered: not run: entering a room: outside the fight's turns | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+relic PhilosophersStone: AfterCreatureAddedToCombat: read | AfterRoomEntered: not run: entering a room: outside the fight's turns | ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy
 relic PhylacteryUnbound: AfterSideTurnStart: read | BeforeCombatStart: not run: before the fight: the state is read after it
 relic Pocketwatch: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingHandDraw: gap: the simulator runs no read model's AfterModifyingHandDraw | AfterSideTurnStart: not run: nothing in its body acts | BeforeSideTurnStart: read | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 relic PollinousCore: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingHandDraw: gap: the simulator runs no read model's AfterModifyingHandDraw | BeforeHandDraw: read | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 relic PowerCell: BeforeSideTurnStart: unknown where it runs: gap: CardPileCmd.Add isn't translated
-relic PrismaticGem: ModifyCardRewardCreationOptions: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
-relic PumpkinCandle: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterObtained: not run: when the relic is obtained: outside the fight's turns | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy | TryModifyRestSiteOptions: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
+relic PrismaticGem: ModifyCardRewardCreationOptions: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt) | ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy
+relic PumpkinCandle: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterObtained: not run: when the relic is obtained: outside the fight's turns | ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy | TryModifyRestSiteOptions: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic RadiantPearl: BeforeHandDraw: unknown where it runs: gap: makes a Luminesce
 relic RainbowRing: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: read
 relic RazorTooth: AfterCardPlayed: read
@@ -390,9 +390,9 @@ relic SelfFormingClay: AfterDamageReceived: read
 relic Shuriken: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeSideTurnStart: read
 relic SneckoEye: AfterObtained: not run: when the relic is obtained: outside the fight's turns | BeforeCombatStart: not run: before the fight: the state is read after it | ModifyHandDraw: gap: the simulator runs no read model's ModifyHandDraw
 relic SneckoSkull: AfterModifyingPowerAmountGiven: read | ModifyPowerAmountGivenAdditive: read
-relic Sozu: ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy | ShouldProcurePotion: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
+relic Sozu: ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy | ShouldProcurePotion: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)
 relic SparklingRouge: AfterBlockCleared: gap: the simulator runs no read model's AfterBlockCleared
-relic SpikedGauntlets: ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy | TryModifyEnergyCostInCombat: gap: the simulator runs no read model's TryModifyEnergyCostInCombat
+relic SpikedGauntlets: ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy | TryModifyEnergyCostInCombat: gap: the simulator runs no read model's TryModifyEnergyCostInCombat
 relic StoneCalendar: AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns | AfterSideTurnStart: read | BeforeSideTurnEnd: read
 relic Storyteller: AfterRoomEntered: not run: entering a room: outside the fight's turns | BeforeSideTurnEnd: read
 relic SturdyClamp: AfterPreventingBlockClear: gap: the simulator runs no read model's AfterPreventingBlockClear | ShouldClearBlock: read
@@ -413,10 +413,10 @@ relic TwistedFunnel: BeforeSideTurnStart: unknown where it runs: gap: PoisonPowe
 relic UnceasingTop: AfterHandEmptied: gap: the simulator runs no read model's AfterHandEmptied
 relic UnsettlingLamp: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | BeforeCombatStart: not run: before the fight: the state is read after it | BeforePowerAmountChanged: gap: the simulator runs no read model's BeforePowerAmountChanged | ModifyPowerAmountGivenMultiplicative: gap: the value cardSource
 relic Vambrace: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterModifyingBlockAmount: read | BeforeCombatStart: not run: before the fight: the state is read after it | ModifyBlockMultiplicative: read
-relic VelvetChoker: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns | BeforeSideTurnStart: not run: nothing in its body acts | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
+relic VelvetChoker: AfterCardPlayed: read | AfterCombatEnd: not run: after the fight: no prediction reaches it | AfterRoomEntered: not run: entering a room: outside the fight's turns | BeforeSideTurnStart: not run: nothing in its body acts | ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy | ShouldPlay: gap: the simulator runs no read model's ShouldPlay
 relic VenerableTeaSet: AfterEnergyReset: read | AfterRoomEntered: not run: entering a room: outside the fight's turns
 relic VeryHotCocoa: AfterSideTurnStart: read
 relic VexingPuzzlebox: AfterPlayerTurnStart: unknown where it runs: gap: changes First(GetDistinctForCombat(this.Owner, this.Owner.Character.CardPool.GetUnlockedCards(this.Owner.UnlockState, this.Owner.RunState.CardMultiplayerConstraint), 1, this.Owner.RunState.Rng.CombatCardGeneration)) (CardModel.SetToFreeThisTurn)
-relic WhisperingEarring: AfterAutoPrePlayPhaseEnteredLate: gap: the simulator runs no read model's AfterAutoPrePlayPhaseEnteredLate | ModifyMaxEnergy: gap: the simulator runs no read model's ModifyMaxEnergy
+relic WhisperingEarring: AfterAutoPrePlayPhaseEnteredLate: gap: the simulator runs no read model's AfterAutoPrePlayPhaseEnteredLate | ModifyMaxEnergy: not run: a player's max energy, read only to set their energy as a turn starts: no simulation follows a later turn's energy
 relic WhittlingKnife: AfterShuffle: read
 relic Wuppy: AfterCurrentHpChanged: gap: the simulator runs no read model's AfterCurrentHpChanged | AfterObtained: not run: when the relic is obtained: outside the fight's turns | BeforeCombatStart: not run: before the fight: the state is read after it | TryModifyRestSiteOptions: not run: it acts outside fights (Diagnostics/OutOfCombatHooks.txt)

@@ -179,6 +179,11 @@ public enum HookName
     /// </summary>
     ShouldTakeExtraTurnEarly,
     ShouldTakeExtraTurn,
+    /// <summary>
+    /// Hook.AfterCreatureAddedToCombat: a creature joined the fight mid-fight (CreatureCmd.Add: a death that brings creatures in, SimEngine.Spawn),
+    /// told to every listener; the creature added is HookWho.Asked and HookTarget.Added.
+    /// </summary>
+    AfterCreatureAddedToCombat,
 }
 
 /// <summary>When an orb's passive goes off: the OrbModel trigger hook its class overrides with a call of TriggerPassive (OrbQueue calls them).</summary>
@@ -693,6 +698,8 @@ public enum HookTarget
     /// enemies), hittable or not, in their order, each skipped once dead as the lazy filter reaches it.
     /// </summary>
     LivingOpponents,
+    /// <summary>The creature added to the fight (AfterCreatureAddedToCombat's creature: Philosopher's Stone's Strength on it).</summary>
+    Added,
 }
 
 /// <summary>One command of a hook's code, on the condition its code runs it on (null: always).</summary>
@@ -732,7 +739,15 @@ public sealed record EvokeLastStep : HookStep;
 /// A hook body the reader doesn't read, run where its hook runs as an unknown (SimState.Unmodelled, with why: decision #92): a power's AfterRemoved,
 /// which runs only as it goes.
 /// </summary>
-public sealed record UnknownStep(string Why) : HookStep;
+public sealed record UnknownStep(string Why) : HookStep
+{
+    /// <summary>
+    /// A body only a projection runs (the players' next turn's start) whose code changes nothing a projection follows there (decision #308: read as
+    /// TurnStartGap.ForecastIgnores reads it): the projection goes on past it, as past a class with no model.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ForecastIgnores { get; init; }
+}
 
 /// <summary>CreatureCmd.Heal of the owner: its amount, up to its max HP (no modifiers: the game's heal has none).</summary>
 public sealed record HealStep(HookValue Amount) : HookStep;

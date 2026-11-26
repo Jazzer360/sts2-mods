@@ -338,6 +338,7 @@ public class ReadModelParityTests
         nameof(SimModel.ModifyCardPlayResultLocation), nameof(SimModel.AfterModifyingCardPlayResultLocation),
         nameof(SimModel.ModifyPowerAmountGivenAdditive), nameof(SimModel.ModifyPowerAmountGivenMultiplicative), nameof(SimModel.ModifyPowerAmountGiven), nameof(SimModel.AfterModifyingPowerAmountGiven),
         nameof(SimModel.TryModifyPowerAmountReceived), nameof(SimModel.AfterModifyingPowerAmountReceived),
+        nameof(SimModel.AfterCreatureAddedToCombat),
         nameof(SimModel.AfterRemoved),
         nameof(SimModel.AfterEnergyReset), nameof(SimModel.AfterEnergyResetLate), nameof(SimModel.BeforeHandDraw), nameof(SimModel.BeforeHandDrawLate),
         nameof(SimModel.AfterPlayerTurnStartEarly), nameof(SimModel.AfterPlayerTurnStart), nameof(SimModel.AfterPlayerTurnStartLate),
@@ -729,6 +730,11 @@ public class ReadModelParityTests
                                     }
                                     return text.ToString();
                                 });
+                break;
+            case nameof(SimModel.AfterCreatureAddedToCombat):
+                // A creature joining the fight on either side: an enemy (one of the board's), and you (a player's side).
+                foreach (var creature in new[] { 1, Who.You })
+                    yield return ($"{creature} added", (model, state) => Branches(model.AfterCreatureAddedToCombat(state, owner, creature)));
                 break;
             case nameof(SimModel.ShouldTakeExtraTurnEarly) or nameof(SimModel.ShouldTakeExtraTurn):
                 // Asked of every player as the players' turn is over (SimEngine.ExtraTurns).

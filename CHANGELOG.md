@@ -240,6 +240,8 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - The Insatiable's Sandpit counts down as the enemies' turn starts, and when it runs out it kills the player it's aimed at (and their Osty) before any enemy moves: Incoming Damage and Play Preview now show that death with the skull, where they showed only the attack. In multiplayer each player's Sandpit counts down on its own.
 - Frantic Escape adds to the Sandpit aimed at you, so the turn it would run out shows you surviving it, and replayed it no longer shows `?`. Imitation Learning replayed no longer shows `?`: its later play raises the copy its first play aimed at your teammate.
 - Ruined Helmet doubles your first Strength gain of a fight in the predictions too (worked out from its own code): the hits after a card that gives you Strength showed the undoubled amount.
+- An enemy that joins the fight when another dies (Infested's Wrigglers, Stock's next Axebot, Surprise's gremlins) gets Philosopher's Stone's Strength, worked out from the relic's own code; with Fur Coat (whose 1 HP isn't worked out yet) what follows its joining shows `?` instead of the enemy at full HP.
+- The later turns' forecast no longer shows `?` for a relic or power whose effect as your next turn starts is only cards, energy or HP (Bellows, Big Hat, Ninja Scroll, Happy Flower...), which that forecast doesn't count, as it already didn't for ones not worked out from their code.
 
 #### Removed
 - Biiig Hug's tag and its settings row: the Soot it adds on a shuffle never makes a shuffle worth avoiding. The Soot is still worked out (a later draw can find it, and your relics and powers that react to a card you make hear it).

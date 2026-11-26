@@ -14,13 +14,6 @@
     "ForecastIgnores": true
   },
   {
-    "Name": "BlessedAntler",
-    "Why": "BlessedAntler acts as your turn starts and isn\u0027t simulated there: BeforeHandDraw (gap: makes a Dazed)",
-    "ActsForAnEnemy": true,
-    "ActsForAPlayer": true,
-    "ForecastIgnores": true
-  },
-  {
     "Name": "BlockNextTurnPower",
     "Why": "BlockNextTurnPower acts as your turn starts and isn\u0027t simulated there: AfterBlockCleared (gap: the simulator runs no read model\u0027s AfterBlockCleared)",
     "ActsForAnEnemy": true,
@@ -36,13 +29,6 @@
   {
     "Name": "BoomingConch",
     "Why": "BoomingConch acts as your turn starts and isn\u0027t simulated there: AfterSideTurnStart (gap: tests combatState.RunState.CurrentRoom)",
-    "ActsForAnEnemy": true,
-    "ActsForAPlayer": true,
-    "ForecastIgnores": true
-  },
-  {
-    "Name": "Bread",
-    "Why": "Bread acts as your turn starts and isn\u0027t simulated there: AfterSideTurnStart (gap: PlayerCmd.LoseEnergy isn\u0027t translated)",
     "ActsForAnEnemy": true,
     "ActsForAPlayer": true,
     "ForecastIgnores": true
@@ -115,13 +101,6 @@
     "Why": "MayhemPower acts as your turn starts and isn\u0027t simulated there: AfterAutoPrePlayPhaseEntered (gap: the simulator runs no read model\u0027s AfterAutoPrePlayPhaseEntered)",
     "ActsForAnEnemy": true,
     "ActsForAPlayer": true
-  },
-  {
-    "Name": "PaelsFlesh",
-    "Why": "PaelsFlesh acts as your turn starts and isn\u0027t simulated there: AfterSideTurnStart (gap: the value this.Status)",
-    "ActsForAnEnemy": true,
-    "ActsForAPlayer": true,
-    "ForecastIgnores": true
   },
   {
     "Name": "PaelsTears",
