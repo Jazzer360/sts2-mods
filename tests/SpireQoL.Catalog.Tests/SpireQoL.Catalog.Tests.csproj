@@ -17,9 +17,9 @@
     <Reference Include="Sentry" HintPath="$(Sts2DataDir)\Sentry.dll" Private="true" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
-    <PackageReference Include="xunit" Version="2.9.2" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" />
     <!-- Parses the main branch's decompiled source for GameBranchTests (the game members the mod names). -->
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <!-- Loads each branch's game assembly for reading only (card programs read main's code as the game reads beta's: decision #182). -->
