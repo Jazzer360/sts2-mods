@@ -33,6 +33,24 @@ public class DecisionsIndexTests
         Assert.All(decisions, decision => Assert.StartsWith(Math.Max(decision.Number / 100 * 100, 1).ToString("000", System.Globalization.CultureInfo.InvariantCulture), decision.File));
     }
 
+    /// <summary>
+    /// Every decision's heading has its anchor on the line above (<c>&lt;a id="dN"&gt;&lt;/a&gt;</c>), which the index's links go to: #387 to #394
+    /// were written without one, and their links went nowhere.
+    /// </summary>
+    [Fact]
+    public void EveryDecisionHasTheAnchorTheIndexLinksTo()
+    {
+        var missing = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(Path.Combine(RepoFiles.Root(), "docs", "decisions"), "*.md"))
+        {
+            var lines = File.ReadAllLines(file);
+            for (var i = 0; i < lines.Length; i++)
+                if (Heading.Match(lines[i]) is { Success: true } heading && (i == 0 || lines[i - 1] != $"<a id=\"d{heading.Groups[1].Value}\"></a>"))
+                    missing.Add($"{Path.GetFileName(file)}: #{heading.Groups[1].Value}");
+        }
+        Assert.True(missing.Count == 0, "Decisions without the anchor above their heading:\n" + string.Join("\n", missing));
+    }
+
     [Fact]
     public void EveryDecisionTheCodeCitesIsOne()
     {
