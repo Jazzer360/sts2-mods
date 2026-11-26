@@ -1171,6 +1171,16 @@ public static class HookReader
                     var amounts = ProgramReader.ReadOutWays(_type, hook, outName, _read) ?? throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: no out parameter {outName}");
                     return (new HookProgram(name, Array.Empty<HookStep>()) { Returns = Pruned(Ways(amounts)), Modifies = answers }, null, null);
                 }
+                // A card's cost as a Try hook (decision #332): read the same way, its answer and its out cost each way, the card the one costed and
+                // originalCost the cost so far (HookFact.CostSoFar). No simulation works out a hand card's live cost through the listeners yet
+                // (TRACKER: mid-play card costs), so a body that reads is still a gap of the engine's, never run as a read model's.
+                if (name is HookName.TryModifyEnergyCostInCombat or HookName.TryModifyEnergyCostInCombatLate or HookName.TryModifyStarCost && hook.ReturnType.Name == "Boolean"
+                    && hook.GetParameters().SingleOrDefault(parameter => parameter.IsOut) is { Name: { } costName })
+                {
+                    _ = Pruned(TestWays(ProgramReader.ReadReturnedWays(_type, hook, _read)));
+                    _ = Pruned(Ways(ProgramReader.ReadOutWays(_type, hook, costName, _read) ?? throw new Gap(ReaderCapability.ValueNotFollowed, $"gap: no out parameter {costName}")));
+                    return (null, new GapOf(ReaderCapability.CardCosts, $"gap: its body reads, but no simulation works out a hand card's live cost through the listeners' {hook.Name} yet"), null);
+                }
                 if (hook.ReturnType.Name is "Decimal" || hook.ReturnType.Name is "Int32" && name is HookName.ModifyCardPlayCount or HookName.ModifyOrbPassiveTriggerCounts)
                 {
                     var returns = Pruned(Ways(ProgramReader.ReadReturnedWays(_type, hook, _read)));
@@ -2839,8 +2849,9 @@ public static class HookReader
                 // The card played can still be upgraded (Razor Tooth's cardPlay.Card.IsUpgradable).
                 case QueryValue { Name: "IsUpgradable", Of: { } upgradableOf } when IsPlayCard(upgradableOf):
                     return new HookFactValue(HookFact.CardUpgradable);
-                // The card played's affliction is a class (Galvanic's cardPlay.Card.Affliction is Galvanized), by the simulator's name for it.
-                case QueryValue { Name: "is", Of: QueryValue { Name: "Affliction", Of: { } afflictedOf }, Type: var afflictionClass } when IsPlayCard(afflictedOf):
+                // The card played's affliction is a class (Galvanic's cardPlay.Card.Affliction is Galvanized), or the costed card's (Tangled's card.Affliction is
+                // Entangled), by the simulator's name for it.
+                case QueryValue { Name: "is", Of: QueryValue { Name: "Affliction", Of: { } afflictedOf }, Type: var afflictionClass } when IsPlayCard(afflictedOf) || IsCostHook(_hook) && IsEventCard(afflictedOf):
                     return Enum.TryParse<SimAffliction>(afflictionClass, out var affliction) && affliction is not (SimAffliction.None or SimAffliction.Other)
                         ? new HookFactValue(HookFact.CardAffliction) { Of = afflictionClass } : throw new Gap(ReaderCapability.CardFacts, $"gap: tests the card's affliction {afflictionClass}");
                 case QueryValue { Name: "Contains", Of: QueryValue { Name: "Keywords", Of: { } keywordsOf }, Arguments: [ConstantValue keyword] } when IsPlayCard(keywordsOf) || IsEventCard(keywordsOf):
@@ -3229,7 +3240,11 @@ public static class HookReader
             throw new Gap(ReaderCapabilities.OfValue(other, otherwise: ReaderCapability.CreatureSide), $"gap: compares the owner with {other}");
         }
 
-        /// <summary>The power a hook is told of (its power or canonicalPower parameter, or a local holding it).</summary>
+        /// <summary>A card's cost hook (decision #332): TryModifyEnergyCostInCombat, its Late pass, TryModifyStarCost.</summary>
+        private static bool IsCostHook(string? hook) =>
+            hook is nameof(HookName.TryModifyEnergyCostInCombat) or nameof(HookName.TryModifyEnergyCostInCombatLate) or nameof(HookName.TryModifyStarCost);
+
+        /// <summary>The power a hook is told of (its power or canonicalPower parameter).</summary>
         private static bool IsPowerTold(ProgramValue value) => value is NamedValue { Name: "power" or "canonicalPower" } or ParameterValue { Name: "power" or "canonicalPower" };
 
         private HookValue PowerIs(string powerClass)
@@ -3304,6 +3319,9 @@ public static class HookReader
                 // The amount a power lands with so far (TryModifyPowerAmountReceived's amount: after the amount given and the listeners before it).
                 case NamedValue { Name: "amount" } or ParameterValue { Name: "amount" } when _hook == nameof(HookName.TryModifyPowerAmountReceived):
                     return new HookFactValue(HookFact.PowerAmount);
+                // The cost so far a card's cost hook is asked about (originalCost: after the card's local modifiers and the listeners before it).
+                case NamedValue { Name: "originalCost" } or ParameterValue { Name: "originalCost" } when IsCostHook(_hook):
+                    return new HookFactValue(HookFact.CostSoFar);
                 // The block a gain came to (AfterModifyingBlockAmount's modifiedAmount).
                 case NamedValue { Name: "modifiedAmount" } or ParameterValue { Name: "modifiedAmount" } when _hook == nameof(HookName.AfterModifyingBlockAmount):
                     return new HookFactValue(HookFact.BlockModified);

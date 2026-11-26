@@ -26,7 +26,7 @@ queries: a creature's side or presence: 1 classes, 0 alone: SurroundedPower
 ## Classes, each hook body's gap in reading order
 
 ChemicalX: [card costs and keywords (cards' own hooks, Part B3)] ModifyXValue: gap: the simulator runs no read model's ModifyXValue
-CorruptionPower: [card costs and keywords (cards' own hooks, Part B3)] TryModifyEnergyCostInCombatLate: gap: the simulator runs no read model's TryModifyEnergyCostInCombatLate
+CorruptionPower: [card costs and keywords (cards' own hooks, Part B3)] TryModifyEnergyCostInCombatLate: gap: its body reads, but no simulation works out a hand card's live cost through the listeners' TryModifyEnergyCostInCombatLate yet
 CoveredPower: [another model's value set (PowerModel.Target, DynamicVar.BaseValue, AfflictionModel.Amount)] AfterApplied: gap: changes a game object outside a command (InterceptPower.AddCoveredCreature)
 DampenPower: [its own data: a card or a play kept, a field used directly] AfterApplied: gap: changes a collection (IEnumerator`1.get_Current) where the reader reads no step | [its own data: a card or a play kept, a field used directly] AfterDeath: gap: changes its own data (casters.Remove) by creature
 FeralPower: [a value the reader can't follow (a nullable's GetValueOrDefault, a local it can't place)] ModifyCardPlayResultLocation: gap: the value resources.EnergyValue

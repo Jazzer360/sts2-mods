@@ -141,6 +141,14 @@ public enum HookName
     /// <summary>Hook.AfterModifyingPowerAmountReceived: told to the listeners whose Try answered true (Ruined Helmet's flag spent).</summary>
     AfterModifyingPowerAmountReceived,
     /// <summary>
+    /// Hook.ModifyEnergyCostInCombat's two passes (CardEnergyCost.GetWithModifiers, after the card's local modifiers) and Hook.ModifyStarCost's:
+    /// each listener's Try on the cost so far (HookFact.CostSoFar), its out value the cost where it answers true (HookProgram.Modifies); its card the
+    /// one costed. Read (decision #332); no simulation runs them yet (a hand card's live cost: TRACKER), so a class that has one isn't read whole.
+    /// </summary>
+    TryModifyEnergyCostInCombat,
+    TryModifyEnergyCostInCombatLate,
+    TryModifyStarCost,
+    /// <summary>
     /// Hook.ShouldStopCombatFromEnding: whether the fight goes on with no primary enemy alive (CombatManager.IsEnding: Infested's, Stock's and Steam
     /// Eruption's, whose deaths bring creatures in): 1 it stops it ending.
     /// </summary>
@@ -273,6 +281,8 @@ public enum HookFact
     /// player other than you; unknown where its Target isn't known).
     /// </summary>
     PowerVisible,
+    /// <summary>The cost a card's cost hook is asked about so far (TryModifyEnergyCostInCombat's, its Late pass's and TryModifyStarCost's originalCost).</summary>
+    CostSoFar,
     /// <summary>The stars a spend took (AfterStarsSpent's amount): the stars of the play spending them, as the simulator spends stars (one event a play).</summary>
     StarsSpent,
     /// <summary>The power landed on an enemy (power.Owner.IsEnemy).</summary>

@@ -11,7 +11,7 @@
   },
   {
     "Name": "BorrowedTimePower",
-    "Why": "BorrowedTimePower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (TryModifyEnergyCostInCombat: gap: the simulator runs no read model\u0027s TryModifyEnergyCostInCombat)",
+    "Why": "BorrowedTimePower acts as the enemies\u0027 turn ends and isn\u0027t simulated there: AfterSideTurnEnd, its other hooks not read (TryModifyEnergyCostInCombat: gap: its body reads, but no simulation works out a hand card\u0027s live cost through the listeners\u0027 TryModifyEnergyCostInCombat yet)",
     "ActsForAnEnemy": true,
     "ForecastIgnores": true
   },
