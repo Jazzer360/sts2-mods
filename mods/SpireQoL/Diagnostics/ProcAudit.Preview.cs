@@ -32,7 +32,7 @@ public sealed partial class ProcAudit
         }
         if (window.FightEnded)
         {
-            FightEndPreviewIssues(window, sim, preview, issues, model);
+            FightEndPreviewIssues(window, entries, sim, preview, issues, model);
             return;
         }
         if (window.After == null || window.AfterIds == null)
@@ -45,8 +45,11 @@ public sealed partial class ProcAudit
             model.Skip("preview", "the board after the play: its search stopped at a cap or met something not modelled");
             return;
         }
-        if (post.TakenMin < preview.TakenMin || post.TakenMax > preview.TakenMax)
-            issues.Add($"Play Preview: damage taken at the end of the turn showed {Range(preview.TakenMin, preview.TakenMax)}, the board the play left gives {Range(post.TakenMin, post.TakenMax)}");
+        // The preview is the play's whole turn: what the play itself took from you (Thorns as you hit, a card's HP cost) is in it, and gone already
+        // from the board it left, so it's added back from the history.
+        var tookInPlay = TakenInPlay(window, entries);
+        if (post.TakenMin + tookInPlay < preview.TakenMin || post.TakenMax + tookInPlay > preview.TakenMax)
+            issues.Add($"Play Preview: HP lost by the end of the turn showed {Range(preview.TakenMin, preview.TakenMax)}, the play took {tookInPlay} and the board it left gives {Range(post.TakenMin, post.TakenMax)}");
         foreach (var (creature, id) in sim.Ids)
         {
             if (!preview.IntentsAfterPlay.TryGetValue(id, out var intent) || intent.DeadInSome) continue;
@@ -62,18 +65,31 @@ public sealed partial class ProcAudit
     /// must hold (some outcome of the play ends the fight); and an enemy dead as the fight ends died in this play, which its intent must have
     /// allowed (dead in some outcome). One the fight ended with you, or whose dead weren't read, isn't checked (counted).
     /// </summary>
-    private static void FightEndPreviewIssues(Window window, Combat.SimInputs sim, SimOutcome preview, List<string> issues, ModelLines model)
+    private static void FightEndPreviewIssues(Window window, List<CombatHistoryEntry> entries, Combat.SimInputs sim, SimOutcome preview, List<string> issues, ModelLines model)
     {
         if (window.DeadAtFightEnd == null || Sts2State.Me?.Creature is not { IsAlive: true })
         {
             model.Skip("preview", CheckSkip.FightEnded + (window.DeadAtFightEnd == null ? ": who it killed wasn't read" : ": it ended with you"));
             return;
         }
-        if (preview.TakenMin > 0)
-            issues.Add($"Play Preview: the play won the fight, but the preview showed {Range(preview.TakenMin, preview.TakenMax)} damage at the end of the turn in every outcome");
+        if (preview.TakenMin > TakenInPlay(window, entries))
+            issues.Add($"Play Preview: the play won the fight, but the preview showed {Range(preview.TakenMin, preview.TakenMax)} HP lost in every outcome, more than the {TakenInPlay(window, entries)} the play took");
         foreach (var (creature, id) in sim.Ids)
             if (window.DeadAtFightEnd.Contains(creature) && sim.Start.Enemy(id) is { Hp: > 0 } start && preview.IntentsAfterPlay.TryGetValue(id, out var intent) && !intent.DeadInSome)
                 issues.Add($"Play Preview: {start.Name} died in the play that won the fight, but its intent showed it alive in every outcome");
+    }
+
+    /// <summary>
+    /// The HP the play took from you (each damage to your creature in its history: an enemy's Thorns as you hit, a card's HP cost), which the
+    /// preview's turn counts (SimOutcome.TakenMin: every HP you lose from the play on) and the board the play left doesn't.
+    /// </summary>
+    private static int TakenInPlay(Window window, List<CombatHistoryEntry> entries)
+    {
+        var you = window.Card.Owner.Creature;
+        var taken = 0;
+        foreach (var entry in entries)
+            if (entry is DamageReceivedEntry hit && ReferenceEquals(hit.Receiver, you)) taken += hit.Result.UnblockedDamage;
+        return taken;
     }
 
     /// <summary>

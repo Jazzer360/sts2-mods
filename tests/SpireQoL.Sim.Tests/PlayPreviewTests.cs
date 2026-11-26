@@ -39,6 +39,24 @@ public class PlayPreviewTests
     }
 
     [Fact]
+    public void WhatThePlayTakesFromYouIsInThePreviewsTurnNotInTheBoardItLeaves()
+    {
+        // A dev review (Foolish Shot and Strike into a Toadpole's Thorns 2, its intent 4×3): the preview is the play's whole turn, so the 2 its Thorns
+        // takes as you hit is in its HP lost (14), where the board the play left, with that 2 gone already, gives 12. The play check adds back what the
+        // history shows the play took from you (ProcAudit.PreviewIssues).
+        var state = new SimState { Enemies = { Enemy(id: 0, hp: 23) } };
+        state.You.Hp = 59;
+        state.Enemies[0].Powers = PowerSet.Empty.With(PowerId.Thorns, amount: 2);
+        state.Enemies[0].Intent = new List<IntentHit> { new(Base: 4m), new(Base: 4m), new(Base: 4m) };
+        var strike = Play(Card("Strike"), target: 0, plays: 1, Attack(baseDamage: 6));
+        Assert.Equal(14, SimEngine.Run(state, strike).TakenMax);
+        var left = state.Clone();
+        left.You.Hp = 57;
+        left.Enemies[0].Hp = 17;
+        Assert.Equal(12, SimEngine.Run(left).TakenMax);
+    }
+
+    [Fact]
     public void APlayThatDoesntTouchTheEnemyLeavesItsIntent()
     {
         var block = Play(Card("Defend", SimCardType.Skill), target: Who.None, plays: 1, new GainBlockAction(Times: 1, Base: 5, SimProps.Move));

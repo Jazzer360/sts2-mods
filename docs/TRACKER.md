@@ -354,6 +354,7 @@ Against the three pillars: (1) incoming damage covers everything ending the turn
 - When a report is resolved, note here which layer it was: simulator rule / adapter / audit comparison.
   - [x] Dev review 2026-11-26, the Waterfall Giant and Memento Mori: the lethal check's "as good as dead" rule (audit, decision #336); the revived Giant's poison preview kept (simulator: the preview field only the state check reads); Explode projected at 0 (adapter and simulator: the projection read a damage its About to Blow sets as it stood, decision #337).
   - [x] Dev review 2026-11-26, five projected-move mismatches (Fuzzy Wurm Crawler, Phrog Parasite, Wrigglers): audit timing; the projection was checked on a frame before the game rolled your new turn's moves (its BeforeSideTurnStart still running), so it was held to the moves just made.
+  - [x] Dev review 2026-11-26, Play Preview with Thorns (Foolish Shot, Strike into a Toadpole): audit comparison; the preview counts the Thorns the play takes, the board after it doesn't (the replay reproduces 14 and 12: `PlayPreviewTests`).
 
 ---
 
