@@ -9,8 +9,12 @@ namespace SpireQoL.Catalog.Tests;
 /// enchantment...) has a card rule (Data/CardAffinity) or a reviewed reason, and every rule names a real relic. Read from the
 /// relics' compiled code, so relics new in a game update fail here before anyone holds one.
 /// </summary>
+[Collection(GameFightCollection.Name)]
 public class CardAffinityTests
 {
+    /// <summary>The relics' rules are read from their code with the game's cards made (Data/RelicReadings).</summary>
+    public CardAffinityTests() => GameModels.EnsureLoaded();
+
     private static List<Type> Relics() => typeof(RelicModel).Assembly.GetTypes()
         .Where(type => !type.IsAbstract && typeof(RelicModel).IsAssignableFrom(type)).ToList();
 

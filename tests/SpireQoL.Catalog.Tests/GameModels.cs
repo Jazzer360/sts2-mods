@@ -22,6 +22,8 @@ internal static class GameModels
         // No mods loaded (what the game's mod manager reports when mods are skipped), so lists that add mods' models work.
         typeof(MegaCrit.Sts2.Core.Modding.ModManager).GetProperty("State")!
             .SetValue(null, MegaCrit.Sts2.Core.Modding.ModManagerState.Skipped);
+        // The relics' rules, read with the game's cards as the load's worker reads them once the game has made its models (decision #359).
+        SpireQoL.Data.RelicReadings.ReadAll();
         return ModelDb.AllCards.Count();
     }, LazyThreadSafetyMode.ExecutionAndPublication);
 

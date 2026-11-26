@@ -94,94 +94,64 @@ public enum PathRoom
 }
 
 /// <summary>
-/// Out-of-combat reminders (docs/FEATURES.md "Run Reminders"): which relics change what a choice
-/// outside combat does. Written from each relic's hook bodies in the decompile; every relic with a
-/// choice hook has a rule here or a reviewed reason in Diagnostics/RelicChoiceTracking.cs.
+/// Out-of-combat reminders (docs/FEATURES.md "Run Reminders"): which relics change what a choice outside combat does. A relic's choices are
+/// read from its own hook code (Data/RelicReadings, decision #359): what it reacts to, plain or crossed, what the event check expects of it, its
+/// card rule; only the map legend's rooms are written here, from each relic's hook bodies. Every relic with a choice hook has a reading that
+/// reacts, a map rule here, or a reviewed reason in Diagnostics/RelicChoiceTracking.cs.
 /// </summary>
 public static class ChoiceReminders
 {
-    private const ChoiceEffect AnyCard = ChoiceEffect.CardToDeck | ChoiceEffect.CurseToDeck;
-
-    public static readonly IReadOnlyList<ReminderRule> Rules = new ReminderRule[]
+    /// <summary>
+    /// Pathing (decision #65, docs/PATHING.md): relics and quest cards that make a kind of room unusually good or bad, beside the map legend's rows,
+    /// and the rooms where they work against you. Read from each one's hooks (CoverageWatch.RoomTestingHooks); the rest are in MapReviewed.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, (PathRoom Rooms, PathRoom Crossed)> MapRules = new Dictionary<string, (PathRoom Rooms, PathRoom Crossed)>
     {
-        // AfterCardChangedPiles into your deck (transforms included, clones not for Bing Bong).
-        new(nameof(BingBong), AnyCard, CrossedOn: ChoiceEffect.CurseToDeck, OnCardReward: true, Expect: AnyCard),
-        new(nameof(BookOfFiveRings), AnyCard, OnCardReward: true),
-        new(nameof(LuckyFysh), AnyCard, OnCardReward: true, Expect: AnyCard),
-        new(nameof(DarkstonePeriapt), ChoiceEffect.CurseToDeck, Expect: ChoiceEffect.CurseToDeck),
-        // TryModifyCardRewardAlternatives: the sacrifice button, counting toward a relic.
-        // TryModifyCardBeingAddedToDeck: cards joining your deck from an event are upgraded or
-        // enchanted when they qualify (rewards and shops already show it on the offered cards).
-        new(nameof(MoltenEgg), ChoiceEffect.CardToDeck, ShopIcon: false),
-        new(nameof(FrozenEgg), ChoiceEffect.CardToDeck, ShopIcon: false),
-        new(nameof(ToxicEgg), ChoiceEffect.CardToDeck, ShopIcon: false),
-        new(nameof(FresnelLens), ChoiceEffect.CardToDeck, ShopIcon: false),
-        // Cards that are stronger in fights in a way their text doesn't show (Data/CardAffinity): options that give one, or
-        // that make the change they look for (Miniature Cannon: an upgrade; Mystic Lighter: an enchantment, Tezcatara's soup).
-        // On cards you're offered (rewards, event choices, the shop), a tab on the ones they apply to.
-        new(nameof(StrikeDummy), ChoiceEffect.CardToDeck, ShopIcon: false, CardTab: true),
-        new(nameof(FakeStrikeDummy), ChoiceEffect.CardToDeck, ShopIcon: false, CardTab: true),
-        new(nameof(MiniatureCannon), ChoiceEffect.CardToDeck | ChoiceEffect.UpgradeCard, ShopIcon: false, CardTab: true),
-        new(nameof(MysticLighter), ChoiceEffect.CardToDeck | ChoiceEffect.EnchantCard, ShopIcon: false, CardTab: true),
-        new(nameof(VitruvianMinion), ChoiceEffect.CardToDeck, ShopIcon: false, CardTab: true),
-        // HP loss outside combat (ModifyHpLostAfterOsty; Beating Remnant only caps in combat).
-        new(nameof(TungstenRod), ChoiceEffect.HpLoss, Expect: ChoiceEffect.HpLoss),
-        // Gold (ModifyGoldGained, AfterGoldGained).
-        new(nameof(BowlerHat), ChoiceEffect.GoldGain, Expect: ChoiceEffect.GoldGain),
-        new(nameof(DragonFruit), ChoiceEffect.GoldGain, Expect: ChoiceEffect.GoldGain),
-        new(nameof(Ectoplasm), ChoiceEffect.GoldGain, CrossedOn: ChoiceEffect.GoldGain),
-        // Potions (ShouldProcurePotion; Belt Buckle's Dexterity needs no potions at combat start).
-        new(nameof(Sozu), ChoiceEffect.Potion, CrossedOn: ChoiceEffect.Potion),
-        new(nameof(BeltBuckle), ChoiceEffect.Potion, CrossedOn: ChoiceEffect.Potion),
-        // Shops: buying anything ends Maw Bank's gold per room (AfterItemPurchased sets HasItemBeenBought).
-        // On the map, Maw Bank's gold per room ends at the first shop you buy in.
-        new(nameof(MawBank), ChoiceEffect.Purchase, CrossedOn: ChoiceEffect.Purchase, Map: PathRoom.Shop, MapCrossed: PathRoom.Shop),
-        // Rest-site heals, mimicked ones included (none of these check isMimicked); on the map, they make campfires better.
-        new(nameof(RegalPillow), ChoiceEffect.RestHeal, Map: PathRoom.RestSite),
-        new(nameof(StoneHumidifier), ChoiceEffect.RestHeal, Map: PathRoom.RestSite),
-        new(nameof(DreamCatcher), ChoiceEffect.RestHeal, Map: PathRoom.RestSite),
-        new(nameof(TinyMailbox), ChoiceEffect.RestHeal, Map: PathRoom.RestSite),
-
-        // ---- Pathing (decision #65): relics and quest cards that make a kind of room unusually good or bad, beside the map
-        // legend's rows. Read from each one's hooks (CoverageWatch.RoomTestingHooks); the rest are in MapReviewed.
+        // Shops: buying anything ends Maw Bank's gold per room (AfterItemPurchased sets HasItemBeenBought): it ends at the first shop you buy in.
+        [nameof(MawBank)] = (PathRoom.Shop, PathRoom.Shop),
+        // Rest-site heals; they make campfires better.
+        [nameof(RegalPillow)] = (PathRoom.RestSite, PathRoom.None),
+        [nameof(StoneHumidifier)] = (PathRoom.RestSite, PathRoom.None),
+        [nameof(DreamCatcher)] = (PathRoom.RestSite, PathRoom.None),
+        [nameof(TinyMailbox)] = (PathRoom.RestSite, PathRoom.None),
         // Elites: TryModifyRewards / AfterRoomEntered / turn hooks / AfterCombatVictory on RoomType.Elite.
-        new(nameof(BlackStar), ChoiceEffect.None, Map: PathRoom.Elite),
-        new(nameof(WhiteStar), ChoiceEffect.None, Map: PathRoom.Elite),
-        new(nameof(SlingOfCourage), ChoiceEffect.None, Map: PathRoom.Elite),
-        new(nameof(BoomingConch), ChoiceEffect.None, Map: PathRoom.Elite),
-        new(nameof(TormentousCollar), ChoiceEffect.None, Map: PathRoom.Elite),
-        new(nameof(SwordOfStone), ChoiceEffect.None, Map: PathRoom.Elite),
-        new(nameof(WarHammer), ChoiceEffect.None, Map: PathRoom.Elite),
+        [nameof(BlackStar)] = (PathRoom.Elite, PathRoom.None),
+        [nameof(WhiteStar)] = (PathRoom.Elite, PathRoom.None),
+        [nameof(SlingOfCourage)] = (PathRoom.Elite, PathRoom.None),
+        [nameof(BoomingConch)] = (PathRoom.Elite, PathRoom.None),
+        [nameof(TormentousCollar)] = (PathRoom.Elite, PathRoom.None),
+        [nameof(SwordOfStone)] = (PathRoom.Elite, PathRoom.None),
+        [nameof(WarHammer)] = (PathRoom.Elite, PathRoom.None),
         // Monsters: an extra card reward (Prayer Wheel), an upgrade every few monster fights (Fishing Rod, AfterCombatEnd).
-        new(nameof(PrayerWheel), ChoiceEffect.None, Map: PathRoom.Monster),
-        new(nameof(FishingRod), ChoiceEffect.None, Map: PathRoom.Monster),
+        [nameof(PrayerWheel)] = (PathRoom.Monster, PathRoom.None),
+        [nameof(FishingRod)] = (PathRoom.Monster, PathRoom.None),
         // Rest sites: a heal on entering (Eternal Feather), energy next fight (the tea sets), rest-site options (TryModifyRestSiteOptions),
         // Miniature Tent (ShouldDisableRemainingRestSiteOptions).
-        new(nameof(EternalFeather), ChoiceEffect.None, Map: PathRoom.RestSite),
-        new(nameof(VenerableTeaSet), ChoiceEffect.None, Map: PathRoom.RestSite),
-        new(nameof(FakeVenerableTeaSet), ChoiceEffect.None, Map: PathRoom.RestSite),
-        new(nameof(Girya), ChoiceEffect.None, Map: PathRoom.RestSite),
-        new(nameof(Shovel), ChoiceEffect.None, Map: PathRoom.RestSite),
-        new(nameof(MeatCleaver), ChoiceEffect.None, Map: PathRoom.RestSite),
-        new(nameof(PaelsGrowth), ChoiceEffect.None, Map: PathRoom.RestSite),
-        new(nameof(PumpkinCandle), ChoiceEffect.None, Map: PathRoom.RestSite),
-        new(nameof(Wuppy), ChoiceEffect.None, Map: PathRoom.RestSite),
-        new(nameof(Byrdpip), ChoiceEffect.None, Map: PathRoom.RestSite),
-        new(nameof(MiniatureTent), ChoiceEffect.None, Map: PathRoom.RestSite),
-        new(nameof(ByrdonisEgg), ChoiceEffect.None, Map: PathRoom.RestSite),
+        [nameof(EternalFeather)] = (PathRoom.RestSite, PathRoom.None),
+        [nameof(VenerableTeaSet)] = (PathRoom.RestSite, PathRoom.None),
+        [nameof(FakeVenerableTeaSet)] = (PathRoom.RestSite, PathRoom.None),
+        [nameof(Girya)] = (PathRoom.RestSite, PathRoom.None),
+        [nameof(Shovel)] = (PathRoom.RestSite, PathRoom.None),
+        [nameof(MeatCleaver)] = (PathRoom.RestSite, PathRoom.None),
+        [nameof(PaelsGrowth)] = (PathRoom.RestSite, PathRoom.None),
+        [nameof(PumpkinCandle)] = (PathRoom.RestSite, PathRoom.None),
+        [nameof(Wuppy)] = (PathRoom.RestSite, PathRoom.None),
+        [nameof(Byrdpip)] = (PathRoom.RestSite, PathRoom.None),
+        [nameof(MiniatureTent)] = (PathRoom.RestSite, PathRoom.None),
+        [nameof(ByrdonisEgg)] = (PathRoom.RestSite, PathRoom.None),
         // ? rooms: a heal on entering one (Planisphere), Dowsing Rod's quest (4 of them), what a ? can be (ModifyUnknownMapPointRoomTypes:
         // shown only while it changes it, Golden Compass's act and Lantern Key's act 3).
-        new(nameof(Planisphere), ChoiceEffect.None, Map: PathRoom.Unknown),
-        new(nameof(Dowsing), ChoiceEffect.None, Map: PathRoom.Unknown),
-        new(nameof(JuzuBracelet), ChoiceEffect.None, Map: PathRoom.Unknown),
-        new(nameof(GoldenCompass), ChoiceEffect.None, Map: PathRoom.Unknown),
-        new(nameof(LanternKey), ChoiceEffect.None, Map: PathRoom.Unknown),
+        [nameof(Planisphere)] = (PathRoom.Unknown, PathRoom.None),
+        [nameof(Dowsing)] = (PathRoom.Unknown, PathRoom.None),
+        [nameof(JuzuBracelet)] = (PathRoom.Unknown, PathRoom.None),
+        [nameof(GoldenCompass)] = (PathRoom.Unknown, PathRoom.None),
+        [nameof(LanternKey)] = (PathRoom.Unknown, PathRoom.None),
         // Shops: a heal on entering (Meal Ticket), buys everything on entering (Lord's Parasol), cheaper prices (ModifyMerchantPrice:
         // Membership Card, The Courier, which also restocks what you buy).
-        new(nameof(MealTicket), ChoiceEffect.None, Map: PathRoom.Shop),
-        new(nameof(LordsParasol), ChoiceEffect.None, Map: PathRoom.Shop),
-        new(nameof(MembershipCard), ChoiceEffect.None, Map: PathRoom.Shop),
-        new(nameof(TheCourier), ChoiceEffect.None, Map: PathRoom.Shop),
+        [nameof(MealTicket)] = (PathRoom.Shop, PathRoom.None),
+        [nameof(LordsParasol)] = (PathRoom.Shop, PathRoom.None),
+        [nameof(MembershipCard)] = (PathRoom.Shop, PathRoom.None),
+        [nameof(TheCourier)] = (PathRoom.Shop, PathRoom.None),
     };
 
     /// <summary>
@@ -214,9 +184,29 @@ public static class ChoiceReminders
         ["ToxicEgg"] = "upgrades shop cards like every card you get", ["FresnelLens"] = "enchants shop cards like every card you get",
     };
 
-    private static readonly Dictionary<string, ReminderRule> ByRelic = Rules.ToDictionary(reminderRule => reminderRule.Relic);
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ReminderRule?> ByRelic = new();
 
-    public static ReminderRule? For(string relic) => ByRelic.GetValueOrDefault(relic);
+    /// <summary>A relic's rule: its reading's (decision #359) with its map rule; null when it changes no choice. Kept once the game's cards are known.</summary>
+    public static ReminderRule? For(string relic)
+    {
+        if (ByRelic.TryGetValue(relic, out var known)) return known;
+        var reading = RelicReadings.For(relic);
+        var hasMap = MapRules.TryGetValue(relic, out var map);
+        var rule = reading is not { Reacts: true } && !hasMap ? null : RuleOf(relic, reading, map.Rooms, map.Crossed);
+        if (RelicReadings.Kept(relic)) ByRelic.TryAdd(relic, rule);
+        return rule;
+    }
+
+    /// <summary>The rule a reading and a map rule make: where its icons show (a boost's card tab; the shop's own cards show a modifier's change).</summary>
+    public static ReminderRule RuleOf(string relic, RelicReading? reading, PathRoom map, PathRoom mapCrossed) => new(relic,
+        reading?.On ?? ChoiceEffect.None, reading?.CrossedOn ?? ChoiceEffect.None,
+        OnCardReward: reading != null && (reading.Joining & ChoiceEffect.CardToDeck) != 0,
+        Expect: reading?.Expect ?? ChoiceEffect.None,
+        ShopIcon: reading is not { ChangesShopCards: true } && reading?.Card is not { Kind: AffinityKind.Boosts },
+        CardTab: reading?.Card is { Kind: AffinityKind.Boosts }, Map: map, MapCrossed: mapCrossed);
+
+    /// <summary>Every relic of the loaded game that has a rule, and every card with a map rule (a quest card: Dowsing).</summary>
+    public static IReadOnlyList<ReminderRule> Rules => RelicReadings.LoadedRelics.Concat(MapRules.Keys).Distinct().Order(StringComparer.Ordinal).Select(For).OfType<ReminderRule>().ToList();
 
     /// <summary>The settings key for a relic's reminder at one place ("reminder-shop:MawBank").</summary>
     public static string Key(ReminderPlace place, string relic) => place switch

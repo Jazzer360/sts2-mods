@@ -33,7 +33,7 @@ Nothing here reads the RNG or the seed: candidate sets, rarity odds and the rari
 
 ### 1. Card predicates (one table, scan-checked)
 
-`Data/CardAffinity.cs`: relic → predicate on a card as you'd get it, and its kind:
+`Data/CardAffinity.cs`: relic → predicate on a card as you'd get it, and its kind. Since decision #359 the predicate is the test the relic's own hook makes on the card, read from its code (`Data/RelicReadings.cs`: `TryModifyCardBeingAddedToDeck` for a modifier, the damage and block hooks for a boost), not written per relic:
 
 - **Changes the card you get** (`Modifies`): the eggs, Fresnel Lens, and any relic overriding `TryModifyCardBeingAddedToDeck`, `TryModifyCardRewardOptions[Late]` or `ModifyMerchantCardCreationResults` per card.
 - **Boosts the card in fights** (`Boosts`): Strike Dummy, Fake Strike Dummy, Miniature Cannon, Mystic Lighter, Vitruvian Minion, Helical Dart, and the like.

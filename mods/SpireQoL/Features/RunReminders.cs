@@ -1002,6 +1002,8 @@ public sealed partial class RunReminders
     {
         var events = typeof(EventModel).Assembly.GetTypes().Where(type => !type.IsAbstract && !type.IsNested && typeof(EventModel).IsAssignableFrom(type)
             && type.Namespace?.EndsWith(".Mocks", StringComparison.Ordinal) != true).ToList();
+        // Your relics' rules first (decision #359): every screen of the reminders asks them.
+        RelicReadings.ReadAll();
         var count = OptionReader.Game.ReadAll(events);
         foreach (var eventType in events)
         {

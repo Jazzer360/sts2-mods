@@ -9,8 +9,12 @@ namespace SpireQoL.Catalog.Tests;
 /// and every row has something behind it. It reads the compiled mod and the installed game, so it runs here rather than
 /// in a player's game (decision #46).
 /// </summary>
+[Collection(GameFightCollection.Name)]
 public class SettingsCatalogTests
 {
+    /// <summary>The relics' rules are read from their code with the game's cards made (Data/RelicReadings).</summary>
+    public SettingsCatalogTests() => GameModels.EnsureLoaded();
+
     [Fact]
     public void EveryRuleHasASettingsRowAndEveryRowARule()
     {

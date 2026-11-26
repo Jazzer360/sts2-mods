@@ -8,7 +8,7 @@ beta relics: 316 classes, 310 with hooks; read from code 124, hand-written 7, ne
 main powers: 265 classes, 235 with hooks; read from code 158, hand-written 22, neither 57 (each by its first gap: Snapshots/hook-readings.txt)
 main relics: 299 classes, 293 with hooks; read from code 111, hand-written 7, neither 175 (each by its first gap: Snapshots/hook-readings.txt)
 
-## Enchantments: 23 classes (beta 23, main 23); handled: the game's own code, called live 8, read from its code 6, not modelled by name 5, a per-name rule 3, no hooks 1
+## Enchantments: 23 classes (beta 23, main 23); handled: the game's own code, called live 9, read from its code 6, not modelled by name 5, a per-name rule 2, no hooks 1
 
 Adroit (both; read from its code (ReadModel); not modelled by name; ledger: covered): OnPlay: read | RecalculateValues: read
 Clone (both; not modelled by name; ledger: no review): TryModifyRestSiteOptions: [the engine runs no read enchantment (its bodies read whole but for that)] gap: the engine runs no read EnchantmentModel's TryModifyRestSiteOptions
@@ -20,7 +20,7 @@ Imbued (both; not modelled by name; ledger: ignore): AfterAutoPrePlayPhaseEntere
 Inky (both; read from its code (ReadModel); not modelled by name; ledger: covered): OnPlay: read
 Instinct (both; not modelled by name; ledger: covered): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageMultiplicative: called live (the adapter runs the game's own code)
 Momentum (both; not modelled by name; ledger: covered): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageAdditive: called live (the adapter runs the game's own code) | OnPlay: read
-Nimble (both; named in Data/CardAffinity.cs; ledger: covered): CanEnchant: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantBlockAdditive: called live (the adapter runs the game's own code)
+Nimble (both; not modelled by name; ledger: covered): CanEnchant: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantBlockAdditive: called live (the adapter runs the game's own code)
 PerfectFit (both; read from its code (ReadModel); not modelled by name; ledger: covered): ModifyShuffleOrder: read
 RoyallyApproved (both; not modelled by name; ledger: no review): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | OnEnchant: not run (it changes its card as it's enchanted (EnchantmentModel.ModifyCard): the card the adapter reads already shows it; a card enchanted in a fight is its command's (CardCmd.Enchant))
 Sharp (both; not modelled by name; ledger: covered): CanEnchantCardType: not run (it decides which cards it can enchant, as a card is enchanted) | EnchantDamageAdditive: called live (the adapter runs the game's own code)

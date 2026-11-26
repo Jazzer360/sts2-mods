@@ -9,8 +9,12 @@ namespace SpireQoL.Catalog.Tests;
 /// hook, or code that reads a room's type) has a Map rule (Data/ChoiceReminders) or a reviewed reason (ChoiceReminders.MapReviewed).
 /// Read from the compiled code, so ones new in a game update fail here.
 /// </summary>
+[Collection(GameFightCollection.Name)]
 public class PathingTests
 {
+    /// <summary>The relics' rules are read from their code with the game's cards made (Data/RelicReadings).</summary>
+    public PathingTests() => GameModels.EnsureLoaded();
+
     private static List<Type> Models() => typeof(RelicModel).Assembly.GetTypes()
         .Where(type => !type.IsAbstract && (typeof(RelicModel).IsAssignableFrom(type) || typeof(CardModel).IsAssignableFrom(type))).ToList();
 

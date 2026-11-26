@@ -1,10 +1,7 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 using HarmonyLib;
-using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Models;
-using MegaCrit.Sts2.Core.Models.Enchantments;
-using MegaCrit.Sts2.Core.Models.Relics;
 
 namespace SpireQoL.Data;
 
@@ -28,41 +25,24 @@ public enum CardChange
 }
 
 /// <param name="Relic">The relic's class name.</param>
-/// <param name="Applies">Whether it applies to a card as you'd get it (a canonical card: not upgraded, no enchantment).</param>
-/// <param name="What">What it does to those cards, for the docs and the settings menu.</param>
+/// <param name="Applies">Whether it applies to a card (its hook's tests on the card: CardReading.Holds; one it can't tell applies).</param>
 /// <param name="Change">A modifier: the change it makes to the cards it applies to. A boost: the change it looks for, so it also
 /// applies to a card a held modifier would change that way (an egg's upgraded Attack for Miniature Cannon), and to options
 /// that make that change to your cards (an upgrade, an enchantment).</param>
 /// <param name="Base">A boost: what the card must be besides the change (Miniature Cannon: an Attack).</param>
 /// <param name="Shows">A modifier: whether a card shows its change (the check: an egg's card is upgraded, Fresnel Lens' has Nimble).</param>
-public sealed record CardAffinityRule(string Relic, AffinityKind Kind, Func<CardModel, bool> Applies, string What,
+public sealed record CardAffinityRule(string Relic, AffinityKind Kind, Func<CardModel, bool> Applies,
     CardChange Change = CardChange.None, Func<CardModel, bool>? Base = null, Func<CardModel, bool>? Shows = null);
 
 /// <summary>
-/// Relics that care about certain cards, each with the test its own hook makes (decompile v0.113.1), written from the hook
-/// bodies and using the game's own check where there is one. Modifiers run first: a boost sees the card after them.
-/// Every relic whose card-creation or damage/block hooks test a card has a rule here or a reviewed reason in
-/// <see cref="Reviewed"/>; the coverage check reports the rest.
+/// Relics that care about certain cards, each with the test its own hook makes, read from the hook's code (Data/RelicReadings, decision #359):
+/// a card being added to your deck (TryModifyCardBeingAddedToDeck: the eggs' type and upgradable test, Fresnel Lens' Nimble.CanEnchant), or the
+/// damage and block a card of yours deals in fights (Strike Dummy's Strike tag, Miniature Cannon's upgrade, Mystic Lighter's enchantment, Vitruvian
+/// Minion's Minion tag). Modifiers run first: a boost sees the card after them. Every relic whose card-creation or damage/block hooks test a card has
+/// a reading with a card rule or a reviewed reason in <see cref="Reviewed"/>; the coverage check reports the rest.
 /// </summary>
 public static class CardAffinity
 {
-    public static readonly IReadOnlyList<CardAffinityRule> Rules = new CardAffinityRule[]
-    {
-        // EggRelicHelper.UpgradeValidCards / TryModifyCardBeingAddedToDeck: the type, upgradable, not upgraded yet.
-        new(nameof(MoltenEgg), AffinityKind.Modifies, card => Upgrades(card, CardType.Attack), "upgrades Attacks you get", CardChange.Upgrade, Shows: card => card.IsUpgraded),
-        new(nameof(FrozenEgg), AffinityKind.Modifies, card => Upgrades(card, CardType.Power), "upgrades Powers you get", CardChange.Upgrade, Shows: card => card.IsUpgraded),
-        new(nameof(ToxicEgg), AffinityKind.Modifies, card => Upgrades(card, CardType.Skill), "upgrades Skills you get", CardChange.Upgrade, Shows: card => card.IsUpgraded),
-        // EnchantValidCards / TryModifyCardBeingAddedToDeck: Nimble.CanEnchant (a card that gains block, not a status or curse).
-        new(nameof(FresnelLens), AffinityKind.Modifies, card => ModelDb.Enchantment<Nimble>().CanEnchant(card), "enchants cards that gain block with Nimble", CardChange.Enchant, Shows: card => card.Enchantment is Nimble),
-        // ModifyDamageAdditive on the card's powered attacks (IsPoweredAttack: an Attack's damage; read here as the card being an Attack).
-        new(nameof(StrikeDummy), AffinityKind.Boosts, card => card.Tags.Contains(CardTag.Strike), "Strikes deal more damage"),
-        new(nameof(FakeStrikeDummy), AffinityKind.Boosts, card => card.Tags.Contains(CardTag.Strike), "Strikes deal more damage"),
-        new(nameof(MiniatureCannon), AffinityKind.Boosts, card => IsAttack(card) && card.IsUpgraded, "upgraded Attacks deal more damage", CardChange.Upgrade, IsAttack),
-        new(nameof(MysticLighter), AffinityKind.Boosts, card => IsAttack(card) && card.Enchantment != null, "enchanted Attacks deal more damage", CardChange.Enchant, IsAttack),
-        // ModifyDamageMultiplicative / ModifyBlockMultiplicative: double for Minion cards.
-        new(nameof(VitruvianMinion), AffinityKind.Boosts, card => card.Tags.Contains(CardTag.Minion), "Minion cards deal double damage and give double block"),
-    };
-
     /// <summary>
     /// Relics whose hooks test a card but get no rule: "none: why". Reacting to plays is a fight's business (Proc Indicators),
     /// not a choice of cards (owner, 2026-11-16: no synergy hints for now).
@@ -77,13 +57,29 @@ public static class CardAffinity
         ["WingCharm"] = "none: enchants an offered reward card (shown on the offered card)",
     };
 
-    private static readonly Dictionary<string, CardAffinityRule> ByRelic = Rules.ToDictionary(cardAffinityRule => cardAffinityRule.Relic);
+    private static readonly ConcurrentDictionary<string, CardAffinityRule?> ByRelic = new();
 
-    public static CardAffinityRule? For(string relic) => ByRelic.GetValueOrDefault(relic);
+    /// <summary>A relic's card rule, from its reading; null when it has none.</summary>
+    public static CardAffinityRule? For(string relic)
+    {
+        if (ByRelic.TryGetValue(relic, out var known)) return known;
+        var rule = RelicReadings.For(relic)?.Card is { } card ? RuleOf(relic, card) : null;
+        if (RelicReadings.Kept(relic)) ByRelic.TryAdd(relic, rule);
+        return rule;
+    }
 
-    private static bool Upgrades(CardModel card, CardType type) => card.Type == type && card.IsUpgradable && card.CurrentUpgradeLevel < 1;
+    /// <summary>The rule a card reading makes: its tests on a card, a boost's tests besides its change, the change a modifier's card shows.</summary>
+    public static CardAffinityRule RuleOf(string relic, CardReading card) => new(relic, card.Kind, candidate => card.Holds(candidate) ?? true, card.Change,
+        Base: card.Kind == AffinityKind.Boosts && card.Change != CardChange.None ? candidate => card.HoldsBesidesChange(candidate) ?? true : null,
+        Shows: card.Kind != AffinityKind.Modifies ? null : card.Change switch
+        {
+            CardChange.Upgrade => candidate => candidate.IsUpgraded,
+            CardChange.Enchant => candidate => candidate.Enchantment?.GetType().Name == card.Enchantment,
+            _ => null,
+        });
 
-    private static bool IsAttack(CardModel card) => card.Type == CardType.Attack;
+    /// <summary>Every relic of the loaded game that has a card rule.</summary>
+    public static IReadOnlyList<CardAffinityRule> Rules => RelicReadings.LoadedRelics.Order(StringComparer.Ordinal).Select(For).OfType<CardAffinityRule>().ToList();
 
     /// <summary>
     /// Whether a rule applies to a card as you'd get it with your relics: the card itself, or (a boost looking for a change)

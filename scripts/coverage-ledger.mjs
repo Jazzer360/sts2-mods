@@ -139,7 +139,9 @@ const unq = s => s == null ? null : s.replace(/\\"/g, '"');
 const dict = file => new Map([...fs.readFileSync(file, "utf8").matchAll(new RegExp(String.raw`^\s*\["(\w+)"\] = ${strRe}`, "gm"))].map(m => [m[1], unq(m[2])]));
 const fightReasons = dict(path.join(diag, "RelicTracking.cs"));
 const choiceReasons = dict(path.join(diag, "RelicChoiceTracking.cs"));
-const reminderRules = new Set([...fs.readFileSync(path.join(root, "mods", "SpireQoL", "Data", "ChoiceReminders.cs"), "utf8").matchAll(/^\s*new\(nameof\((\w+)\),/gm)].map(m => m[1]));
+// The relics with a rule: read from their own code (Data/RelicReadings, decision #359) and the map rules, as the catalog tests' snapshot holds them.
+const reminderRules = new Set(fs.readFileSync(path.join(root, "tests", "SpireQoL.Catalog.Tests", "Snapshots", "reminder-rules.txt"), "utf8")
+  .split(/\r?\n/).filter(line => /\| shows at \w/.test(line)).map(line => line.split(":")[0]));
 
 // Settings catalog rows for relics: tab (crossed ones are `Crossed + "..."`), tracker and reminder text.
 const rowsByRelic = new Map();
