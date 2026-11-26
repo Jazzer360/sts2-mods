@@ -101,6 +101,12 @@ public sealed record LoopStep(int Offset, string Over, IReadOnlyList<ProgramStep
 /// </summary>
 public sealed record StoreStep(int Offset, string Field, ProgramValue Value) : ProgramStep(Offset)
 {
+    /// <summary>
+    /// What a command of the play gave back that the store sets a property of (a ResultPrefix store: the power Imitation Learning's PowerCmd.Apply gave);
+    /// null for any other store.
+    /// </summary>
+    public ResultValue? Of { get; init; }
+
     public override string ToString() => "store " + Field + " = " + Value + When;
 }
 
@@ -457,10 +463,29 @@ public static class ProgramReader
     public const string GivenPrefix = "Given.";
 
     /// <summary>
+    /// The prefix of a property a card's play sets on what one of its commands gave back ("Result.PlayerTarget": the power Imitation Learning's
+    /// PowerCmd.Apply gave, aimed at the play's target's player: decision #322), never the card's own state.
+    /// </summary>
+    public const string ResultPrefix = "Result.";
+
+    /// <summary>
     /// The prefix of a property set on its owner's monster as its class ("Monster.CorpseSlug.IsRavenous": ((CorpseSlug)base.Owner.Monster).IsRavenous =
     /// true), the monster's own state, never the model's.
     /// </summary>
     public const string OwnersMonsterPrefix = "Monster.";
+
+    /// <summary>
+    /// What a command gave back that the value is where the code is (<paramref name="reached"/>: the tests on the way there), kept in a local or not
+    /// (a power PowerCmd.Apply gave); of a local stored on several ways (Imitation Learning's power: the one it found, else the one it applied), the
+    /// one way the code there can be on. Null for anything else.
+    /// </summary>
+    private static ResultValue? Received(ProgramValue value, ProgramCondition reached) => value switch
+    {
+        StoredValue kept => Received(kept.Value, reached),
+        ResultValue result => result,
+        WaysValue ways when ways.Ways.Where(way => !ConditionReader.Exclusive(way.When, reached)).ToList() is [var only] => Received(only.Value, reached),
+        _ => null,
+    };
 
     /// <summary>
     /// Its owner's monster (base.Owner.Monster), cast to its class ((CorpseSlug)base.Owner.Monster) or tested as it and kept (base.Owner.Monster is
@@ -664,7 +689,10 @@ public static class ProgramReader
                 || BodyOf(found) != found) return null;
             try
             {
-                var returned = Flow.Of(_read(found), found, LambdaOf, helperOf: _helperDepth is > 0 and < 3 ? new Reader(_card, _read, _helperDepth + 1).HelperValue : null, varKeyOf: VarKeyOf).ReturnedValue();
+                var flow = Flow.Of(_read(found), found, LambdaOf, helperOf: _helperDepth is > 0 and < 3 ? new Reader(_card, _read, _helperDepth + 1).HelperValue : null, varKeyOf: VarKeyOf);
+                // Two ways to a return that are a ?. chain (Frantic Escape's CombatState?.Enemies.FirstOrDefault(...): null where its CombatState isn't
+                // there): both, each on its condition (decision #322), where its value is read. Only that shape: any other helper's ways stay unread.
+                var returned = flow.ReturnedValue() ?? (flow.ReturnedWays() is { Ways.Count: 2 } ways && ConditionReader.Chained(ways) is { } chained && !chained.Parts().Any(part => part is UnknownValue) ? ways : null);
                 if (returned == null) return null;
                 var names = found.GetParameters();
                 // A parameter, or a lambda's capture of it (a closure's field named after it: Spite's creature in its Any).
@@ -791,6 +819,15 @@ public static class ProgramReader
                     && flow.ReceiverValue(i, arguments: 1) is NamedValue { Name: "this" })
                 {
                     into.Add(new StoreStep(instruction.Offset, property, flow.ArgumentValues(i, member)[0]) { Condition = condition });
+                    continue;
+                }
+                // A property a card's play sets on what one of its commands gave back (Imitation Learning's imitationLearningPower.PlayerTarget =
+                // cardPlay.Target.Player, the power its PowerCmd.Apply gave): a store, "Result.PlayerTarget", with that result, which the translation of
+                // that command reads (decision #322).
+                if (!IsPowerOrRelic && member is { Kind: CodeMemberKind.Method, HasThis: true, ParameterCount: 1 } && member.Name.StartsWith("set_", StringComparison.Ordinal)
+                    && Received(flow.ReceiverValue(i, arguments: 1), reached) is { } result)
+                {
+                    into.Add(new StoreStep(instruction.Offset, ResultPrefix + member.Name[4..], flow.ArgumentValues(i, member)[0]) { Condition = condition, Of = result });
                     continue;
                 }
                 // A property set on an object the hook is given (an arrow, a card: arrow.Status = ...): a store, "Given.arrow.Status",

@@ -87,6 +87,13 @@ public static partial class SimEngine
                 return null;
             case KnownCondition known:
                 return known.Holds;
+            case AimedCopyCondition aimed:
+            {
+                // FirstOrDefault(OfType<T>(holder.Powers), s => s.Target == player) != null (decision #322): no holder, no player, no copy.
+                var holder = AimHolderOf(state, aimed.Holder, aimed.HolderPower);
+                var player = AimedPlayerOf(state, aimed.Aim);
+                return holder != Who.None && player != Who.None && AimedAmount(state, holder, aimed.Power, player) != 0;
+            }
             case CountCondition counted:
                 return CountOf(state, counted, owner, monster) is { } count ? Compares(count, counted.Compare, counted.Than) : null;
             case NotCondition not:

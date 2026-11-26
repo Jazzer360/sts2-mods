@@ -61,6 +61,35 @@ public static partial class SimEngine
     }
 
     /// <summary>
+    /// The creature a play's aimed copies are on (decision #322): the play's owner, or the first enemy with the power (CombatState.Enemies'
+    /// FirstOrDefault of HasPower: a dead one has none); Who.None when there's none.
+    /// </summary>
+    internal static int AimHolderOf(SimState state, AimHolder holder, PowerId? holderPower)
+    {
+        if (holder == AimHolder.PlayOwner) return state.CurrentPlay?.Owner ?? Who.You;
+        if (holderPower is not { } power) return Who.None;
+        foreach (var enemy in state.Enemies)
+            if (enemy.Alive && enemy.Powers.Has(power)) return enemy.Id;
+        return Who.None;
+    }
+
+    /// <summary>The player a play names as the one a copy is aimed at (decision #322): its owner, or its target when that's a player; Who.None else.</summary>
+    internal static int AimedPlayerOf(SimState state, AimedPlayer aim)
+    {
+        if (aim == AimedPlayer.PlayOwner) return state.CurrentPlay?.Owner ?? Who.You;
+        return state.CurrentPlay?.Target is { } target && Who.IsPlayer(target) ? target : Who.None;
+    }
+
+    /// <summary>A ModifyAimedPowerAction: the holder's copy aimed at the player changed, its applier the holder or the play's owner (ModifyAimedCopy).</summary>
+    private static IEnumerable<SimState> RunModifyAimed(SimState state, ModifyAimedPowerAction modify)
+    {
+        var holder = AimHolderOf(state, modify.Holder, modify.HolderPower);
+        var player = AimedPlayerOf(state, modify.Aim);
+        if (holder == Who.None || player == Who.None) return new[] { state };
+        return ModifyAimedCopy(state, holder, modify.Power, player, modify.Amount, modify.AppliedByHolder ? holder : state.CurrentPlay?.Owner ?? Who.You);
+    }
+
+    /// <summary>
     /// PowerCmd.Remove of the holder's copy aimed at the player: off the holder (RemoveInternal: the entry loses its amount, gone with the last copy),
     /// then that copy's AfterRemoved told to it alone (SimModel.AfterAimedCopyRemoved), its amount as it had it.
     /// </summary>

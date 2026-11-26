@@ -187,6 +187,24 @@ public sealed record ApplyPowerAction(PowerId Power, int Amount) : SimAction
     public bool FromAttackDealt { get; init; }
     /// <summary>Applications (RandomEnemy: each to a random hittable enemy, a branch per target: Bouncing Flask).</summary>
     public int Times { get; init; } = 1;
+    /// <summary>
+    /// The new copy is aimed at this player once it lands (decision #322: Imitation Learning's PlayerTarget = cardPlay.Target.Player after its
+    /// PowerCmd.Apply): its amount kept under that player (SimEngine.AimNewCopy). Null: not aimed.
+    /// </summary>
+    public AimedPlayer? AimedAt { get; init; }
+}
+
+/// <summary>
+/// PowerCmd.ModifyAmount of the holder's copy of <paramref name="Power"/> aimed at a player (decision #322: Imitation Learning's power already
+/// aimed at its target, Frantic Escape's enemy Sandpit aimed at you), by <paramref name="Amount"/>: SimEngine.ModifyAimedCopy. Nothing without
+/// such a copy (the code's own test of it guards the step).
+/// </summary>
+public sealed record ModifyAimedPowerAction(PowerId Power, AimHolder Holder, AimedPlayer Aim, int Amount) : SimAction
+{
+    /// <summary>FirstEnemyWithPower: the power that enemy has.</summary>
+    public PowerId? HolderPower { get; init; }
+    /// <summary>Its applier is the holder (Frantic Escape's sandpitEnemy); else the play's owner.</summary>
+    public bool AppliedByHolder { get; init; }
 }
 
 /// <summary>

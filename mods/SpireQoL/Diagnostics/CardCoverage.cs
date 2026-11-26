@@ -345,9 +345,9 @@ internal static class CardCoverage
         ["a command's result"] = "what an earlier command of the play gave (a drawn card, a shot's arrow, a made card, damage results): the action that follows it asks it where the simulator has one (Escape Plan's draw, a shot's NeedsArrow, Rain Shot's splash, an attack's kill); else unknown where it runs (decision #311)",
         ["the fight"] = "the fight going on, the card being in it, its room a combat room, a test hook (IsOverOrEnding, CombatState, CurrentRoom, a mock): holds in every simulated play, nothing a play changes",
         ["a taken card"] = "a test of each card a loop or a pick takes (The Hermit's Curse): the take's own filter (TakeFromHandAction), followed through the play",
-        ["the target"] = "a test of the target the simulator doesn't ask yet (dead or alive, every power's own test, Imitation Learning's copy): the board's for a first play that reads it before any command, else unknown where it runs (decision #311); its powers (HasPower, GetPowerAmount), its intent to attack and whether its death sets off Fatal (decision #317) are asked as the step runs; Judgement's HP and Expose's Artifact are asked by their actions",
+        ["the target"] = "a test of the target the simulator doesn't ask yet (dead or alive, every power's own test): the board's for a first play that reads it before any command, else unknown where it runs (decision #311); its powers (HasPower, GetPowerAmount), its intent to attack and whether its death sets off Fatal (decision #317) are asked as the step runs; Judgement's HP and Expose's Artifact are asked by their actions",
         ["a count of the board"] = "a count the simulator doesn't keep or doesn't ask yet (your orbs, the enemies, your draw or discard pile): the board's for a first play that reads it before any command, else unknown where it runs (decision #311); your exhaust pile is asked as the step runs; a count the step's own action reads as it runs (your hand's room, the cards a take took) and an enemy to hit for an attack that finds its targets as it runs are the action's own (decision #316)",
-        ["your powers"] = "a power of yours or a teammate's the code tests that the simulator doesn't ask (Imitation Learning's power aimed at a player, Frantic Escape's enemy Sandpit aimed at you): the board's for a first play that reads it before any command, else unknown where it runs (decision #311); your HasPower and GetPowerAmount (Cho Ki's Stretch, Sovereign Blade's Parry) are asked as the step runs",
+        ["your powers"] = "a power of yours or a teammate's the code tests that the simulator doesn't ask (none known: Imitation Learning's power aimed at a player and Frantic Escape's enemy Sandpit aimed at you are asked as the step runs, decision #322): the board's for a first play that reads it before any command, else unknown where it runs (decision #311); your HasPower and GetPowerAmount (Cho Ki's Stretch, Sovereign Blade's Parry) are asked as the step runs",
         ["the reader"] = "a value the reader can't follow yet (a helper's local, an array's length): a play can change it as far as anyone can tell, so the board's for a first play that reads it before any command, else unknown where it runs (decision #311; docs/CARD_PROGRAMS.md A5)",
     };
 
@@ -362,7 +362,7 @@ internal static class CardCoverage
         if (Names("each")) return "a taken card";
         if (parts.Any(part => part is Procs.Programs.QueryValue { Name: "Target", Of: Procs.Programs.NamedValue { Name: "cardPlay" } })) return "the target";
         if (Names("Orbs", "HittableEnemies", "GetCards", "Take") || parts.Any(part => part is Procs.Programs.QueryValue { Name: "GetPile" })) return "a count of the board";
-        if (Names("Powers", "GetPowerAmount", "GetSandpitEnemy", "GetOwnerParryAmount")) return "your powers";
+        if (Names("Powers", "GetPowerAmount", "GetOwnerParryAmount")) return "your powers";
         if (parts.Any(part => part is Procs.Programs.UnknownValue) || Names("count", "creatures")) return "the reader";
         return null;
     }

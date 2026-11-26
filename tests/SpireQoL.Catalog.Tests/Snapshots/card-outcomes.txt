@@ -1573,7 +1573,7 @@ ForgottenRitual [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 [Exhausted1]
 FranticEscape [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
 FranticEscape [Upgraded] (no upgrade)
 FranticEscape [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 []
-FranticEscape [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [] ?PowerCmd.ModifyAmount: a power's amount changed in place: not followed
+FranticEscape [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
 FranticEscape [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 []
 FranticEscape [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 []
 Friendship [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 []
@@ -1957,7 +1957,7 @@ Ignition [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 [Exhausted1]
 ImitationLearning [Standard] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Exhausted1]
 ImitationLearning [Upgraded] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Exhausted1]
 ImitationLearning [Crowded] 1 you=80/0 e2 h9 d0/3 enemy0=200/0 enemy1=30/0 [Exhausted1]
-ImitationLearning [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Exhausted1] ?PowerCmd.ModifyAmount: a power's amount changed in place: not followed
+ImitationLearning [Replayed] 1 you=80/0 e2 h3 d6/3 enemy0=200/0 [Exhausted1]
 ImitationLearning [Teammate] 1 you=80/0 e2 h3 d6/3 mate0=70/0 e3 h2 enemy0=200/0 [Exhausted1]
 ImitationLearning [Alone] 1 you=80/0 e2 h0 d6/3 enemy0=200/0 [Exhausted1]
 Impatience [Standard] 1 you=80/0 e3 h3 d6/3 enemy0=200/0 []

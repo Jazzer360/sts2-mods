@@ -902,9 +902,18 @@ public static partial class SimEngine
     /// </summary>
     internal static IEnumerable<SimState> ApplyPowerOf(SimState branch, ApplyPowerAction applyPowerAction)
     {
-        IEnumerable<SimState> Apply(SimState state, int applier, int target) =>
-            ApplyPower(state, applier, target, applyPowerAction.Power, AmountOf(state, applyPowerAction, applier, target), applyPowerAction.Debuff, out var landed)
-                ? Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, copy) => model.AfterPowerApplied(copy, owner, applyPowerAction.Power, landed, applier, target, applyPowerAction.Debuff)) : new[] { state };
+        IEnumerable<SimState> Apply(SimState state, int applier, int target)
+        {
+            if (!ApplyPower(state, applier, target, applyPowerAction.Power, AmountOf(state, applyPowerAction, applier, target), applyPowerAction.Debuff, out var landed)) return new[] { state };
+            var told = Hook(state, nameof(SimModel.AfterPowerApplied), (model, owner, copy) => model.AfterPowerApplied(copy, owner, applyPowerAction.Power, landed, applier, target, applyPowerAction.Debuff));
+            // The new copy aimed at a player once it's there (decision #322: Imitation Learning's PlayerTarget, set after its PowerCmd.Apply).
+            if (applyPowerAction.AimedAt is not { } aim) return told;
+            return told.Select(copy =>
+            {
+                if (AimedPlayerOf(copy, aim) is var player && player != Who.None) AimNewCopy(copy, target, applyPowerAction.Power, player, landed);
+                return copy;
+            }).ToList();
+        }
         var applier = branch.CurrentPlay?.Owner ?? Who.You;
         var targets = applyPowerAction.To switch
         {

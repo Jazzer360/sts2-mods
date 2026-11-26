@@ -40,7 +40,8 @@ public static partial class SimAdapter
         ["CreatureCmd.SetCurrentHp"] = "ExecuteAction (the target, on its condition)",
         ["CreatureCmd.Stun"] = "StunTargetAction (the target: its next move the stunned move)",
         ["CreatureCmd.LoseBlock"] = "StripBlockAction (the target's block, and its Artifact when the play removes it)",
-        ["PowerCmd.Apply"] = "ApplyPowerAction (or FocusAction) to whom its second argument names, its amount its third",
+        ["PowerCmd.Apply"] = "ApplyPowerAction (or FocusAction) to whom its second argument names, its amount its third; a new copy aimed at a player as the code sets its aim on what it gave (decision #322)",
+        ["PowerCmd.ModifyAmount"] = "ModifyAimedPowerAction: the holder's copy of a power aimed at a player, found as its code finds it (decision #322), by its offset; any other instance unknown where it runs",
         ["PowerCmd.Remove"] = "the target's Artifact, folded into StripBlockAction; a power of the card's owner taken off them (RemoveOwnPowerAction)",
         ["CardPileCmd.Draw"] = "CardEventAction(Drawn), or a teammate's draws, its count its own argument",
         ["CardPileCmd.DrawWithoutBlockingOnOtherPlayers"] = "the same as Draw, for each player its loop goes over",
@@ -84,7 +85,6 @@ public static partial class SimAdapter
         ["CardCmd.ApplySingleTurnRetain"] = "Retain given to a card this turn: not followed",
         ["CardCmd.Enchant"] = "an enchantment given to a card: not followed",
         ["OrbCmd.Passive"] = "an orb's passive set off by a card: not followed",
-        ["PowerCmd.ModifyAmount"] = "a power's amount changed in place: not followed",
         ["CreatureCmd.GainMaxHp"] = "max HP gained: not followed",
         ["CreatureCmd.LoseMaxHp"] = "max HP lost: not followed",
         ["ArrowCmd.GainArrowSlot"] = "an arrow slot gained: not followed",
@@ -385,6 +385,8 @@ public static partial class SimAdapter
                 return (new List<SimAction> { new RemoveOwnPowerAction(PowerId.Of(command.Command.GenericArguments[0])) }, null);
             case ("PowerCmd", "Apply"):
                 return (PowersFrom(found, play), null);
+            case ("PowerCmd", "ModifyAmount"):
+                return (new List<SimAction> { AimedModifyFrom(found, play) }, null);
             // A power's own command the card calls on each enemy's instance of it (Outbreak: PoisonPower.Trigger), read from the power's code.
             // Its tests of the enemy its loop is at are the action's own: it goes over each enemy's instance of the power.
             case (var power, var method) when SimModels.Get(power) is ReadModel read && read.HasCommand(method):
@@ -979,9 +981,48 @@ public static partial class SimAdapter
         else if (Simulated(SimPowerName(type)) || SimReaders.IsDebuffType(type) || type == typeof(StrengthPower) || typeof(TemporaryStrengthPower).IsAssignableFrom(type) || FocusSignOf(type) != 0)
             return new List<SimAction> { new NotModelledAction($"{card.GetType().Name} applies {powerName} to a creature its translation doesn't name ({whom})") };
         var actions = new List<SimAction>();
+        var aimedAt = AimSetOn(command, play, type);
         foreach (var (to, creature) in targets)
-            if (PowerTo(found, play, type, powerName, amount, to, creature, times) is { } action) actions.Add(action);
+            if (PowerTo(found, play, type, powerName, amount, to, creature, times) is { } action)
+                actions.Add(aimedAt is { } aim && action is ApplyPowerAction applied ? applied with { AimedAt = aim } : action);
         return actions;
+    }
+
+    /// <summary>
+    /// The player the power a PowerCmd.Apply gave is aimed at, as the code sets its aim on it after (decision #322: Imitation Learning's
+    /// imitationLearningPower.PlayerTarget = cardPlay.Target.Player): a store on that command's result (ProgramReader.ResultPrefix) to the power's
+    /// Target or a Player its class keeps, of the play's owner or its target's player. Null when the code aims it at no one, or at someone else.
+    /// </summary>
+    private static AimedPlayer? AimSetOn(CommandStep command, StepPlay play, Type power)
+    {
+        foreach (var store in play.Program.All().OfType<StoreStep>())
+        {
+            if (store.Of is not { } result || result.Offset != command.Offset || !store.Field.StartsWith(ProgramReader.ResultPrefix, StringComparison.Ordinal)) continue;
+            var property = store.Field[ProgramReader.ResultPrefix.Length..];
+            if (property != "Target" && power.GetProperty(property)?.PropertyType != typeof(Player)) continue;
+            var aimed = Unstored(store.Value);
+            if (IsYou(aimed) || aimed is QueryValue { Name: "Owner", Of: NamedValue { Name: "this" } }) return AimedPlayer.PlayOwner;
+            if (IsTarget(aimed) || aimed is QueryValue { Name: "Player", IsProperty: true, Of: { } targeted } && IsTarget(Unstored(targeted))) return AimedPlayer.PlayTarget;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// PowerCmd.ModifyAmount of the holder's copy of a power aimed at a player (decision #322), found as the code finds it (the same reading as its test:
+    /// ConditionReader.AimedCopyOf), by its offset (Imitation Learning's card value, Frantic Escape's 1), applied by the play's owner or by the holder.
+    /// Any other instance (a power its code finds another way), an amount or an applier the translation can't read: unknown where it runs.
+    /// </summary>
+    private static SimAction AimedModifyFrom(CardEffects.Found found, StepPlay play)
+    {
+        var command = found.Command;
+        var notFollowed = new NotModelledAction($"{play.Name}: PowerCmd.ModifyAmount of a power its translation can't find ({ValueAt(command, 1)})");
+        if (ValueAt(command, 1) is not { } instance || ConditionReader.AimedCopyOf(instance) is not { } copy) return notFollowed;
+        if (ValueAt(command, 2) is not { } offset || ProgramEvaluator.Number(offset, play.Board with { Target = play.Aimed }, play.Program) is not { } amount)
+            return new NotModelledAction($"{PowerAmountUnread} ({copy.Power.Name}: {ValueAt(command, 2)})");
+        var applier = ValueAt(command, 3);
+        var byHolder = copy.Holder == AimHolder.FirstEnemyWithPower && applier != null && ConditionReader.FirstEnemyWith(applier) == copy.HolderPower?.Name;
+        if (!byHolder && !IsYou(applier)) return new NotModelledAction($"{play.Name}: PowerCmd.ModifyAmount by an applier its translation can't name ({applier})");
+        return new ModifyAimedPowerAction(copy.Power, copy.Holder, copy.Aim, (int)amount) { HolderPower = copy.HolderPower, AppliedByHolder = byHolder };
     }
 
     /// <summary>

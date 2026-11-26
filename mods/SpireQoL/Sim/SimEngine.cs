@@ -1286,6 +1286,7 @@ public static partial class SimEngine
             case AttackAction at: RunAttack(branches, at); break;
             case GainBlockAction gainBlockAction: RunBlock(branches, gainBlockAction); break;
             case ApplyPowerAction applyPowerAction: RunApplyPower(branches, applyPowerAction); break;
+            case ModifyAimedPowerAction modifyAimedPowerAction: branches.Each(branch => RunModifyAimed(branch, modifyAimedPowerAction)); break;
             case CardEventAction cardEventAction: RunCardEvent(branches, cardEventAction); break;
             case DrawnCardAction drawnCardAction: branches.Each(branch => RunDrawnCard(branch, drawnCardAction)); break;
             case AutoPlayFromDrawAction autoPlayFromDrawAction:

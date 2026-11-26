@@ -216,6 +216,11 @@ public static class ConditionReader
                 _ => inner,
             };
         }
+        // A ?. chain tested for being there (x?.y: null where x is): there where its value is, which reads x, so only where x is there.
+        if (test is WaysValue chain && Chained(chain) is { } chained && depth < 3) return Test(Unstored(chained), context, at, depth + 1);
+        // A copy of a power aimed at a player on its holder (decision #322): Imitation Learning's power aimed at the play's target, Frantic Escape's
+        // Sandpit enemy's copy aimed at its player.
+        if (AimedCopyOf(test) is { } aimedCopy) return Simulated(aimedCopy);
         // A count, or a test that there's any: of your hand, or of the plays finished this turn.
         if (CountedTest(test, context, at) is { } counted) return counted;
         // A question to the fight's log (decision #191: the history ledger): whether there's any, or its count compared with a number.
@@ -328,6 +333,55 @@ public static class ConditionReader
             return Simulated(new CountCondition(SimCounted.TargetHp, Compared(compare.Op), number ?? 0));
         return null;
     }
+
+    /// <summary>
+    /// The value of a ?. chain (x?.y: null on the way where x isn't there, y on the way where it is, each way's test x itself): y. Null for any
+    /// other value.
+    /// </summary>
+    internal static ProgramValue? Chained(ProgramValue value)
+    {
+        if (Unstored(value) is not WaysValue { Ways: [var first, var second] }) return null;
+        var (missing, there) = first.Value is NullValue ? (first, second) : second.Value is NullValue ? (second, first) : default;
+        if (missing.When == null || there.When == null || there.Value is NullValue) return null;
+        if (missing.When.Literals.ToList() is not [{ Holds: false } absent] || there.When.Literals.ToList() is not [{ Holds: true } present]) return null;
+        return absent.Test.ToString() == present.Test.ToString() ? there.Value : null;
+    }
+
+    /// <summary>
+    /// A copy of a power aimed at a player on its holder, as the code finds it (decision #322): FirstOrDefault (or Any) of OfType&lt;T&gt; of the holder's
+    /// Powers, by its aim (the copy's Target, or a Player its class keeps: s =&gt; s.PlayerTarget == cardPlay.Target.Player) compared with the play's owner
+    /// or its target. Its holder the play's owner, or the first enemy with a power (FirstEnemyWith); null for any other value.
+    /// </summary>
+    internal static AimedCopyCondition? AimedCopyOf(ProgramValue value)
+    {
+        var test = Unstored(Chained(value) ?? value);
+        if (test is not QueryValue { Type: "Enumerable", Name: "FirstOrDefault" or "Any", Arguments: [var source, LambdaValue aimedAt] }) return null;
+        if (Unstored(source) is not QueryValue { Name: "OfType", GenericArguments: [var power], Arguments: [var powers] }) return null;
+        if (Unstored(powers) is not QueryValue { Name: "Powers", IsProperty: true, Of: { } holderValue }) return null;
+        if (aimedAt.Body.Literals.ToList() is not [{ Holds: true, Test: CompareValue { Op: Comparison.Equal, Left: var left, Right: var right } }]) return null;
+        var aimValue = IsAimOf(left, aimedAt.Parameter) ? right : IsAimOf(right, aimedAt.Parameter) ? left : null;
+        if (aimValue == null) return null;
+        AimedPlayer? aim = IsOwner(aimValue) || IsYou(aimValue) ? AimedPlayer.PlayOwner
+            : IsTarget(aimValue) || Unstored(aimValue) is QueryValue { Name: "Player", IsProperty: true, Of: { } targeted } && IsTarget(targeted) ? AimedPlayer.PlayTarget : null;
+        if (aim is not { } aimed) return null;
+        if (IsYou(holderValue)) return new AimedCopyCondition(PowerId.Of(power), AimHolder.PlayOwner, aimed);
+        return FirstEnemyWith(holderValue) is { } holderPower
+            ? new AimedCopyCondition(PowerId.Of(power), AimHolder.FirstEnemyWithPower, aimed) { HolderPower = PowerId.Of(holderPower) } : null;
+    }
+
+    /// <summary>The value is a power's aim, asked of a lambda's parameter: its Target, or a property of the game's Player type its class keeps.</summary>
+    private static bool IsAimOf(ProgramValue value, string parameter) =>
+        Unstored(value) is QueryValue { IsProperty: true, Of: ParameterValue { Name: var asked } } aim && asked == parameter && (aim.Name == "Target" || aim.ValueType == "Player");
+
+    /// <summary>
+    /// The power the value's creature is the first enemy to have (CombatState.Enemies.FirstOrDefault(c =&gt; c.HasPower&lt;T&gt;()), on a ?. chain from the
+    /// card's CombatState or not: Frantic Escape's GetSandpitEnemy); null for any other value.
+    /// </summary>
+    internal static string? FirstEnemyWith(ProgramValue value) =>
+        Unstored(Chained(value) ?? value) is QueryValue { Type: "Enumerable", Name: "FirstOrDefault", Arguments: [var enemies, LambdaValue has] }
+        && Unstored(enemies) is QueryValue { Name: "Enemies", IsProperty: true, Of: QueryValue { Name: "CombatState" } }
+        && has.Body.Literals.ToList() is [{ Holds: true, Test: QueryValue { Name: "HasPower", GenericArguments: [var power], Of: ParameterValue { Name: var asked } } }]
+        && asked == has.Parameter ? power : null;
 
     /// <summary>
     /// The power whose amount on the target the value is: GetPowerAmount&lt;T&gt;() of the target, or that when it's alive and 0 when it isn't

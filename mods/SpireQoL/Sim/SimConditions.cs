@@ -33,6 +33,29 @@ public enum SimTest
     /// its powers' answer as the adapter read it (SimEnemy.DeathSetsOffFatal); unknown where one's couldn't be read.
     /// </summary>
     TargetDeathSetsOffFatal,
+    /// <summary>
+    /// A holder has a copy of a power aimed at a player (decision #322: Imitation Learning's power aimed at the play's target, Frantic Escape's enemy
+    /// Sandpit aimed at its player), each copy's own as the simulator keeps it (SimEngine.AimedAmount).
+    /// </summary>
+    AimedCopy,
+}
+
+/// <summary>Whose copies of a power a play asks about or changes (decision #322).</summary>
+public enum AimHolder
+{
+    /// <summary>The play's owner (base.Owner.Creature).</summary>
+    PlayOwner,
+    /// <summary>The first enemy that has a power (CombatState.Enemies.FirstOrDefault(c => c.HasPower&lt;T&gt;()): Frantic Escape's Sandpit enemy).</summary>
+    FirstEnemyWithPower,
+}
+
+/// <summary>The player a copy of a power is aimed at, as a play names them (decision #322).</summary>
+public enum AimedPlayer
+{
+    /// <summary>The play's owner (base.Owner, base.Owner.Creature).</summary>
+    PlayOwner,
+    /// <summary>The play's target, a player (cardPlay.Target.Player, cardPlay.Target).</summary>
+    PlayTarget,
 }
 
 /// <summary>How a counted condition compares its count with its number.</summary>
@@ -114,6 +137,16 @@ public sealed record TargetIntendsToAttackCondition() : SimCondition(SimTest.Tar
 /// unknown where its powers' code doesn't say (Reattach's), false for a target that isn't an enemy.
 /// </summary>
 public sealed record TargetDeathSetsOffFatalCondition() : SimCondition(SimTest.TargetDeathSetsOffFatal);
+
+/// <summary>
+/// The holder has a copy of <paramref name="Power"/> aimed at the player (decision #322: FirstOrDefault(OfType&lt;T&gt;(holder.Powers), s =&gt; s.Target ==
+/// player), or s.PlayerTarget): SimEngine.AimedAmount above 0. No holder (no enemy with the power): false.
+/// </summary>
+public sealed record AimedCopyCondition(PowerId Power, AimHolder Holder, AimedPlayer Aim) : SimCondition(SimTest.AimedCopy)
+{
+    /// <summary>FirstEnemyWithPower: the power that enemy has (the holder's own power, Sandpit's, unless the code asks for another).</summary>
+    public PowerId? HolderPower { get; init; }
+}
 
 /// <summary>The play's last shot had an arrow to shoot at a living target (ArrowCmd.ShootArrowAtTarget's result: Hobbling Shot's debuffs).</summary>
 public sealed record ShotHadArrowCondition() : SimCondition(SimTest.ShotHadArrow);

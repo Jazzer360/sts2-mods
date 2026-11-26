@@ -81,9 +81,9 @@ public class BoardDecidedConditionTests
     {
         var decisions = Decisions();
         SimAdapter.StepDecisionReading Of(string card, string command) => decisions.First(entry => entry.Card == card && entry.Step.Command.FullName == command).Decision;
-        // Imitation Learning's test of your power aimed at that player is read before any command: the board's for the first play.
-        Assert.Equal(SimAdapter.StepDecision.FirstPlayOnTheBoard, Of(nameof(ImitationLearning), "PowerCmd.Apply").Way);
-        Assert.Equal("Powers", Of(nameof(ImitationLearning), "PowerCmd.Apply").Input);
+        // Imitation Learning's test of your power aimed at its target's player and Frantic Escape's of its Sandpit enemy's copy aimed at you are
+        // asked as each step runs (decision #322): no step of theirs is decided on the board.
+        Assert.DoesNotContain(decisions, entry => entry.Card is nameof(ImitationLearning) or nameof(FranticEscape));
         // A test that a count the step's action reads as it runs is above none, or that there's an enemy to hit for an attack that finds its
         // targets as it runs, is the action's own (decision #316): what's left of these steps' tests is fixed for the play (Storm of Steel's fight
         // going on), never decided on the board for a test the play can change.
