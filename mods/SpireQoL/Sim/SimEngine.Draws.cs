@@ -73,11 +73,11 @@ public static partial class SimEngine
             // What its chance tab counts (decision #119).
             branch.DrawnTally = drawnCardAction.Block != null ? (drawn.Count > 0 && drawn[0].Card.Type == drawnCardAction.BlockIf ? 1 : 0)
                 : drawnCardAction.DrawAgainIf != SimCardType.None ? drawn.Count(draw => draw.Card.Type == drawnCardAction.DrawAgainIf)
-                : drawn.Count(draw => draw.Card.Free == true);
+                : drawn.Count(draw => FreeInHand(branch, player, draw.Card) == true);
             // Escape Plan: the card it drew (none into a full hand or from empty piles: no block).
             if (drawnCardAction.Block != null && drawn.Count > 0 && drawn[0].Card.Type == drawnCardAction.BlockIf) return BlockOnce(branch, drawnCardAction.Block);
             if (!drawnCardAction.DiscardUnlessFree) return new[] { branch };
-            var discard = drawn.Where(draw => draw.Card.Free == false).ToList();
+            var discard = drawn.Where(draw => FreeInHand(branch, player, draw.Card) == false).ToList();
             if (discard.Count == 0) return new[] { branch };
             // A Sly card plays itself when discarded (CardModel.OnDiscard): not simulated.
             if (discard.Any(draw => draw.Card.Sly)) branch.Unmodelled ??= "a Sly card discarded by Scrape plays itself";
@@ -93,6 +93,21 @@ public static partial class SimEngine
             }
             return ProcCardEvent(branch, CardEvent.Discarded, discard.Count, player);
         });
+    }
+
+    /// <summary>
+    /// A drawn card costs 0 in your hand (Scrape's GetWithModifiers(CostModifiers.All) != 0 || CostsX, asked once the draw is done: decision #385): its
+    /// cost before global modifiers through the listeners' passes as the state stands then (LiveCost), the card in your hand. A card read before the rule
+    /// (no LocalCost) is as the game showed it before the play; one whose cost isn't known (SimState.CostsUnknown) too, the branch unknown. Null where it
+    /// isn't asked of the card.
+    /// </summary>
+    private static bool? FreeInHand(SimState state, int player, SimDrawCard card)
+    {
+        if (card.Free is not { } shown) return null;
+        if (card.LocalCost is not { } local || card.Costed is not { } facts) return shown;
+        if (LiveCost(state, player, local, facts) is { } cost) return cost == 0;
+        state.Unmodelled ??= state.CostsUnknown;
+        return shown;
     }
 
     /// <summary>

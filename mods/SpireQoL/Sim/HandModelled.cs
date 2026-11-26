@@ -36,7 +36,7 @@ public static class HandModelled
             new[] { "SimEngine.EtherealInHand" },
             new[] { "CardCmd.ApplyKeyword", "CardModel.AddKeyword", "CombatManager.DoTurnEnd" }),
         new("A hand card's live energy cost (decision #334): its cost before global modifiers, then every listener's cost pass, then every Late pass, at least 0; Simpleton's cheapest by it",
-            new[] { "SimEngine.HandCost", "SimEngine.Cheapest" },
+            new[] { "SimEngine.HandCost", "SimEngine.LiveCost", "SimEngine.Cheapest" },
             new[] { "CardEnergyCost.GetWithModifiers", "CardEnergyCost.GetResolved", "Hook.ModifyEnergyCostInCombat", "SimpletonPower.AfterAutoPostPlayPhaseEntered" }),
         new("A card in a hand made free this turn: the game's random pick among the cards that cost, what a simulation reads of it (the cheapest card at the turn's end)",
             new[] { "SimEngine.FreeInHand" },

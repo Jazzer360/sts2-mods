@@ -608,12 +608,16 @@ public static partial class SimAdapter
                 var perfectFit = SimReaders.OnTopWhenShuffled(card);
                 var type = readsType ? SimReaders.TypeOf(card) : SimCardType.None;
                 bool? free = readsCost ? !card.EnergyCost.CostsX && card.EnergyCost.GetWithModifiers(CostModifiers.All) == 0 : null;
+                // What it costs once drawn, worked out in your hand as the state stands then (decision #385): its cost before global modifiers and the
+                // facts the cost passes test (its type, Ethereal, affliction: no pass reads a card's class, so cards that cost alike stay one profile).
+                var localCost = readsCost ? LocalCostOf(card) : null;
+                var costed = localCost != null ? SimReaders.CostedFacts(card) with { Name = "" } : null;
                 var sly = readsCost && card.Keywords.Contains(CardKeyword.Sly);
                 // It acts when it's exhausted (Drum of Battle): its type goes with it, for an exhaust of a kind.
                 var exhaustEnergy = CardEnergy.WhenExhausted(card);
                 var energyLost = CardEnergy.LostWhenDrawn(card);
                 var takenBy = takeFilters.Count == 0 ? null : takeFilters.Where(filter => filter.Takes(card, false) != false).Select(filter => filter.Key).ToList() is { Count: > 0 } keys ? keys : null;
-                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}|{invincible}|{perfectFit}|{type}|{free}{sly}|{exhaustEnergy}{(exhaustEnergy > 0 ? SimReaders.TypeOf(card) : SimCardType.None)}|{energyLost}|{(takenBy == null ? "" : string.Join(",", takenBy))}{(autoPlayedBy == null ? "" : "|" + string.Join(",", autoPlayedBy))}";
+                var key = $"{who}|{turnEnd}|{fading}{hexFading}{status}{ethereal}{strike}|{invincible}|{perfectFit}|{type}|{free}{sly}{localCost}{(costed == null ? "" : "/" + costed.Type + "/" + costed.Ethereal + "/" + costed.Affliction)}|{exhaustEnergy}{(exhaustEnergy > 0 ? SimReaders.TypeOf(card) : SimCardType.None)}|{energyLost}|{(takenBy == null ? "" : string.Join(",", takenBy))}{(autoPlayedBy == null ? "" : "|" + string.Join(",", autoPlayedBy))}";
                 SimHandCard? auto = null;
                 if ((pickable && !unplayable || hellraised) && !autoByKey.TryGetValue(key, out auto))
                 {
@@ -640,7 +644,7 @@ public static partial class SimAdapter
                     EnergyLostOnDraw = energyLost,
                     Exhausting = exhaustEnergy > 0 ? new ExhaustingCard(HandCard: 0, exhaustEnergy, SimReaders.TypeOf(card)) : null,
                     TurnEnd = turnEnd, Fading = fading, HexFading = hexFading, Status = status, Ethereal = ethereal, Strike = strike,
-                    Pickable = pickable, Auto = auto, InvincibleBlock = invincible, OnTopWhenShuffled = perfectFit, Type = type, Free = free, Sly = sly, TakenBy = takenBy, AutoPlayedBy = autoPlayedBy,
+                    Pickable = pickable, Auto = auto, InvincibleBlock = invincible, OnTopWhenShuffled = perfectFit, Type = type, Free = free, LocalCost = localCost, Costed = costed, Sly = sly, TakenBy = takenBy, AutoPlayedBy = autoPlayedBy,
                 };
                 // One an upgrade could change (something about it is followed): an upgrade of its pile or its hand makes what it does unknown, unless its upgraded
                 // profile is read (decision #363: a card of yours upgrades every card there).

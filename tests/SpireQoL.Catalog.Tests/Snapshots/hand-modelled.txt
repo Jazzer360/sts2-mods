@@ -21,7 +21,7 @@ A card in a hand you pick made Ethereal (decision #348): one there not Ethereal 
   simulator: SimEngine.EtherealInHand
 A hand card's live energy cost (decision #334): its cost before global modifiers, then every listener's cost pass, then every Late pass, at least 0; Simpleton's cheapest by it
   game: CardEnergyCost.GetWithModifiers, CardEnergyCost.GetResolved, Hook.ModifyEnergyCostInCombat, SimpletonPower.AfterAutoPostPlayPhaseEntered (beta only)
-  simulator: SimEngine.HandCost, SimEngine.Cheapest
+  simulator: SimEngine.HandCost, SimEngine.LiveCost, SimEngine.Cheapest
 A card in a hand made free this turn: the game's random pick among the cards that cost, what a simulation reads of it (the cheapest card at the turn's end)
   game: CardModel.SetToFreeThisTurn, CardModel.CostsEnergyOrStars
   simulator: SimEngine.FreeInHand

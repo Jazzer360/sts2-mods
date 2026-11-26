@@ -74,10 +74,16 @@ public class FreeCardTabParityTests
             var mutable = (PowerModel)ModelDb.AllPowers.First(canon => canon.GetType() == power).ToMutable();
             mutable.ApplyInternal(gameFight.Me.Creature, amount);
         }
+        // The board's start state, as the card tags have it (TurnEndModel.ForecastStart.State): the saving through the simulator's cost rule (decision #385).
+        var start = SpireQoL.Sim.SimAdapter.Build(gameFight.Me, gameFight.Combat, out _);
+        Assert.Null(start.CostsUnknown);
         foreach (var card in hand)
         {
             var text = new StringBuilder($"{board} | {change} | {(seen ? "seen" : "unseen")} | {card.GetType().Name}{(card.IsUpgraded ? "+" : "")}:");
-            var uses = FreeCards.Uses(card, gameFight.Me);
+            var uses = FreeCards.Uses(card, gameFight.Me, start);
+            // The game's own passes (no start state, or a pass the simulator doesn't run) give the same.
+            Assert.Equal(FreeCards.Uses(card, gameFight.Me).Select(use => (use.Power.GetType(), use.Saved, use.Hidden, use.Wasted)),
+                uses.Select(use => (use.Power.GetType(), use.Saved, use.Hidden, use.Wasted)));
             if (uses.Count == 0) text.Append(" none");
             foreach (var use in uses)
                 text.Append($" {FreeCards.Prefix}{use.Power.GetType().Name}={(use.Wasted ? "crossed" : use.Hidden ? "?" : use.Saved?.ToString() ?? "-")}");

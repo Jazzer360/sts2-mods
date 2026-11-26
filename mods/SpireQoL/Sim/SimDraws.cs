@@ -53,10 +53,16 @@ public sealed record SimDrawCard(string Key)
     /// <summary>Its type, while a card in your hand acts on the type of a card it draws (Escape Plan, Pillage: decision #118); else None.</summary>
     public SimCardType Type { get; init; }
     /// <summary>
-    /// It costs 0 now (CostModifiers.All, not X), while a card in your hand acts on that (Scrape discards the rest: decision #118);
-    /// null otherwise. <see cref="Sly"/>: it's Sly then (a Sly card plays itself when discarded: not simulated).
+    /// It costs 0 as the game showed it before the play (CostModifiers.All in its pile, not X), while a card in your hand acts on that (Scrape discards
+    /// the rest: decision #118); null otherwise. Where <see cref="LocalCost"/> and <see cref="Costed"/> are read, what it costs once drawn is worked
+    /// out in your hand as the state stands then (SimEngine.LiveCost, decision #385), and this stands only for a card read before that rule.
+    /// <see cref="Sly"/>: it's Sly then (a Sly card plays itself when discarded: not simulated).
     /// </summary>
     public bool? Free { get; init; }
+    /// <summary>Its cost before global modifiers (SimHandCard.LocalCost), while <see cref="Free"/> is asked of it; null for an X cost or otherwise.</summary>
+    public int? LocalCost { get; init; }
+    /// <summary>What the cost passes test of it (SimHandCard.Card), with <see cref="LocalCost"/>.</summary>
+    public SimCard? Costed { get; init; }
     public bool Sly { get; init; }
     /// <summary>
     /// The filtered takes from your hand that would take it once it's there (TakeFromHandAction.Filter: Second Wind's non-Attacks, The

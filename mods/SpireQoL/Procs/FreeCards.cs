@@ -37,8 +37,11 @@ internal static class FreeCards
         _ => false,
     };
 
-    /// <summary>The free powers playing <paramref name="card"/> from your hand uses up, in the game's hook order.</summary>
-    public static List<Use> Uses(CardModel card, Player me)
+    /// <summary>
+    /// The free powers playing <paramref name="card"/> from your hand uses up, in the game's hook order. <paramref name="start"/>: the board's start
+    /// state (TurnEndModel.ForecastStart.State), from which the energy saved is worked out by the simulator's cost rule; null for the game's own passes.
+    /// </summary>
+    public static List<Use> Uses(CardModel card, Player me, Sim.SimState? start = null)
     {
         var uses = new List<Use>();
         if (card.Pile?.Type != PileType.Hand || card.EnergyCost.Canonical < 0) return uses;
@@ -46,7 +49,7 @@ internal static class FreeCards
         if (powers.Count == 0) return uses;
         var costsX = card.EnergyCost.CostsX;
         var hidden = !costsX && CostHidden(card, me);
-        var saved = costsX || hidden ? 0 : CostWithoutFree(card);
+        var saved = costsX || hidden ? 0 : CostWithoutFree(card, start);
         // One play makes the card free once: the first of them saves the energy, the others are spent for nothing.
         var savedYet = false;
         foreach (var power in powers)
@@ -141,12 +144,18 @@ internal static class FreeCards
 
     /// <summary>
     /// What the card would cost without the free powers: its own cost modifiers, then every model's cost hooks
-    /// (Hook.ModifyEnergyCostInCombat, both passes) except the free powers'.
+    /// (Hook.ModifyEnergyCostInCombat, both passes) except the free powers'. Worked out through the simulator's cost rule (SimEngine.HandCost,
+    /// decision #385) on the board's start state; the game's own passes where that isn't known (a pass the simulator doesn't run:
+    /// SimState.CostsUnknown) or there's no start state.
     /// </summary>
-    public static int CostWithoutFree(CardModel card)
+    public static int CostWithoutFree(CardModel card, Sim.SimState? start = null)
     {
         try
         {
+            // A copy of the start state: working out a cost caches its listeners on the state, which the simulations share (decision #107).
+            if (start != null && Sim.SimAdapter.LocalCostOf(card) is { } local
+                && Sim.SimEngine.LiveCost(start.Clone(), Sim.Who.You, local, Sim.SimReaders.CostedFacts(card), without: Powers) is { } simulated)
+                return simulated;
             decimal cost = card.EnergyCost.GetWithModifiers(CostModifiers.Local);
             if (card.CombatState is not { } combat || cost < 0) return Math.Max(0, (int)cost);
             var listeners = combat.IterateHookListeners().Where(model => !Powers.Contains(model.GetType().Name)).ToList();

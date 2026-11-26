@@ -369,7 +369,7 @@ public sealed class CardPredictions
             list.Add(new TabSpec("return:" + back.Key, Icon: null, Card: back.First()));
         // Free Attack, Free Skill, Free Power: the energy this play saves (or "?" when you couldn't know the cost); crossed when
         // the card already costs 0 or is X-cost, so playing it throws the free card away.
-        foreach (var use in FreeCards.Uses(card, _me))
+        foreach (var use in FreeCards.Uses(card, _me, _start?.State))
         {
             var numbers = _ctx.Settings.ProcNumbers;
             list.Add(new TabSpec(FreeCards.Prefix + use.Power.GetType().Name, GameIcons.Power(use.Power), Crossed: use.Wasted,

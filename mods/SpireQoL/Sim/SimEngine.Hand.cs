@@ -87,18 +87,30 @@ public static partial class SimEngine
     /// below 0 stays (no cost: the hooks are skipped). An X cost is <see cref="XCost"/> (SimpletonPower orders it last). Null where it isn't known:
     /// a cost pass on the board the simulator doesn't run (SimState.CostsUnknown). A card read before the rule (no LocalCost: an old replay
     /// case) costs what the game showed then. <paramref name="pile"/>: the card's pile (your hand; the play pile while it's played).
+    /// <paramref name="without"/>: listeners left out by name (the free-card powers, for the energy one saves: Procs/FreeCards), or none.
     /// </summary>
-    internal static int? HandCost(SimState state, int player, SimHandCard card, SimCardPile pile = SimCardPile.Hand)
+    internal static int? HandCost(SimState state, int player, SimHandCard card, SimCardPile pile = SimCardPile.Hand, IReadOnlyCollection<string>? without = null)
     {
         if (card.Cost == XCost) return XCost;
         if (card.LocalCost is not { } cost || card.Card is not { } facts) return card.Cost;
+        return LiveCost(state, player, cost, facts, pile, without);
+    }
+
+    /// <summary>
+    /// <see cref="HandCost"/> of a card by its cost before global modifiers and its facts (a hand card's, or a drawn card's once in your hand:
+    /// SimDrawCard.LocalCost, Costed). Null where it isn't known (SimState.CostsUnknown).
+    /// </summary>
+    internal static int? LiveCost(SimState state, int player, int cost, SimCard facts, SimCardPile pile = SimCardPile.Hand, IReadOnlyCollection<string>? without = null)
+    {
         if (cost < 0) return cost;
         if (state.CostsUnknown != null) return null;
         var costed = new SimCostedCard(facts, player, pile);
         var listeners = Listeners(state);
         // The out value is the cost from here on, whatever the answer (the game's loop passes modifiedCost on).
-        foreach (var (model, owner) in listeners) model.TryModifyEnergyCostInCombat(state, owner, costed, cost, out cost);
-        foreach (var (model, owner) in listeners) model.TryModifyEnergyCostInCombatLate(state, owner, costed, cost, out cost);
+        foreach (var (model, owner) in listeners)
+            if (without == null || !without.Contains(model.Name)) model.TryModifyEnergyCostInCombat(state, owner, costed, cost, out cost);
+        foreach (var (model, owner) in listeners)
+            if (without == null || !without.Contains(model.Name)) model.TryModifyEnergyCostInCombatLate(state, owner, costed, cost, out cost);
         return Math.Max(0, cost);
     }
 

@@ -79,6 +79,25 @@ public class SimDrawnCardTests
     }
 
     [Fact]
+    public void ScrapeAsksWhatTheDrawnCardCostsInYourHand()
+    {
+        // Scrape asks GetWithModifiers(All) once the card is in your hand (decision #385): an Attack that cost 1 in your draw pile costs 0 there under
+        // Free Attack (its Late pass: the card in hand), so it's kept; without it, it's discarded.
+        var attack = new SimDrawCard("attack 1") { Free = false, LocalCost = 1, Costed = new SimCard("Strike", SimCardType.Attack) };
+        var freeAttack = You(Pile((attack, 1)));
+        freeAttack.You.Powers = freeAttack.You.Powers.With(PowerId.FreeAttack, 1);
+        var kept = Assert.Single(SimEngine.Run(freeAttack, Playing("Scrape", new DrawnCardAction(Count: 1) { DiscardUnlessFree = true })).Branches);
+        Assert.Equal(0, kept.PlayEvents[CardEvent.Discarded]);
+        var discarded = Assert.Single(SimEngine.Run(You(Pile((attack, 1))), Playing("Scrape", new DrawnCardAction(Count: 1) { DiscardUnlessFree = true })).Branches);
+        Assert.Equal(1, discarded.PlayEvents[CardEvent.Discarded]);
+        // A pass the simulator doesn't run: as the game showed it, the branch unknown.
+        var unknown = You(Pile((attack, 1)));
+        unknown.CostsUnknown = "a cost pass isn't run";
+        Assert.All(SimEngine.Run(unknown, Playing("Scrape", new DrawnCardAction(Count: 1) { DiscardUnlessFree = true })).Branches,
+            branch => Assert.Equal(unknown.CostsUnknown, branch.Unmodelled));
+    }
+
+    [Fact]
     public void ScrapeDiscardingASlyCardIsNotModelled()
     {
         var outcome = SimEngine.Run(You(Pile((SlyCard, 1), (FreeCard, 1))), Playing("Scrape", new DrawnCardAction(Count: 1) { DiscardUnlessFree = true }));
