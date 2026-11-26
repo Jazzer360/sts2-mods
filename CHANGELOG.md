@@ -97,6 +97,7 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Fixed
 - Opening the settings menu in the first seconds at the main menu, while the game was still preloading its assets, could leave the next run's start on a black screen: the menu now opens once the game's preload is done.
+- No garbage in a fight's quiet frames from the board check every display asks (it made a closure for each power it read, about 0.1 KB a frame).
 - Intent Forecast: a Waterfall Giant about to blow shows its Explode's damage, the Steam Eruption it has then, where it showed 0; a second Pressure Gun in the later turns hits 5 more than the first.
 - The forecast audit holds the Intent Forecast's later turns to the moves the game rolls for your new turn, not to the moves just made, when your turn's start takes more than a frame; and it doesn't hold them to a turn after a Waterfall Giant died and came back about to blow.
 - The Play audit holds Play Preview to the HP the play itself took from you (an enemy's Thorns as you hit, a card's HP cost) as well as the turn after it, as the preview counts it.

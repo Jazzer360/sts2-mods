@@ -72,14 +72,21 @@ public class BoardProbeTests
     }
 
     [Fact]
-    public void ReadingTheProbeAllocatesLittle()
+    public void ReadingTheProbeMakesNothing()
     {
+        // The probe runs every frame of a fight (the first feature to ask it pays: Keyword Tags). A dev review: each power it read made a closure
+        // (SimReaders.Read's Covered lambda capturing its id reader), about 0.1 KB a frame on a board with a few powers.
         var gameFight = new GameFight();
         for (var i = 0; i < 8; i++) gameFight.Add<StrikeIronclad>();
+        var toadpole = gameFight.Combat.CreateCreature(ModelDb.Monster<MegaCrit.Sts2.Core.Models.Monsters.Toadpole>().ToMutable(), MegaCrit.Sts2.Core.Combat.CombatSide.Enemy, slot: null);
+        gameFight.Combat.AddCreature(toadpole);
+        toadpole.Monster!.SetUpForCombat();
+        ModelDb.Power<ThornsPower>().ToMutable().ApplyInternal(toadpole, amount: 2);
+        ModelDb.Power<StrengthPower>().ToMutable().ApplyInternal(gameFight.Me.Creature, amount: 2);
         BoardProbe.Compute(gameFight.Me, gameFight.Combat);
         var start = GC.GetAllocatedBytesForCurrentThread();
         for (var i = 0; i < 100; i++) BoardProbe.Compute(gameFight.Me, gameFight.Combat);
         var perCall = (GC.GetAllocatedBytesForCurrentThread() - start) / 100;
-        Assert.True(perCall < 1024, $"{perCall} bytes per probe");
+        Assert.True(perCall == 0, $"{perCall} bytes per probe");
     }
 }

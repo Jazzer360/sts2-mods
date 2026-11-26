@@ -80,10 +80,12 @@ public static class SimReaders
                 break;
             case nameof(SkittishPower): data = Sts2State.Private(power, "HasGainedBlockThisTurn", fallback: false) ? Models.SkittishPower.UsedThisTurn : 0; break;
             case nameof(SurroundedPower): data = Sts2State.Private<object?>(power, "Facing", fallback: null)?.ToString() == "Left" ? Models.SurroundedPower.FacingLeft : Models.SurroundedPower.FacingRight; break;
-            // The players covering it, over every copy (one per Intercept played on it): a bit each.
+            // The players covering it, over every copy (one per Intercept played on it): a bit each. A loop: a lambda here capturing idOf made a
+            // closure on every read of every power (the board probe reads each power every frame: a dev review's steady garbage).
             case nameof(CoveredPower):
-                data = power.Owner.Powers.Where(copy => copy is CoveredPower && copy.Applier != null)
-                    .Aggregate(0, (bits, copy) => bits | (idOf(copy.Applier!) is { } coverer ? Models.CoveredPower.CovererBit(coverer) : 0));
+                var copies = power.Owner.Powers;
+                for (var i = 0; i < copies.Count; i++)
+                    if (copies[i] is CoveredPower copy && copy.Applier is { } coverApplier && idOf(coverApplier) is { } coverer) data |= Models.CoveredPower.CovererBit(coverer);
                 break;
             // Counters the proc models count down (the power's own number: DisplayAmount, or its CardsLeft value).
             // Feral: its zeroCostAttacksPlayed (its own count: the model compares it with its amount, which more Feral raises).
