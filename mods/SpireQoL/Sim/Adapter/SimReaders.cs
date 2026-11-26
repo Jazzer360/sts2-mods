@@ -414,6 +414,14 @@ public static class SimReaders
                 var aimedKey = SimKeys.Aimed(ModelName(model), aimId);
                 fields = fields.With(aimedKey, fields[aimedKey] + aimed.Amount);
             }
+            // A hand-written model's own data kept by creature (decision #326: Possess Strength's stolenStrength): each entry under its creature.
+            if (SimModels.Get(ModelName(model)) is { CreatureKeyedData.Count: > 0 } keyed
+                && Sts2State.Private<object?>(model, "_internalData", fallback: null) is { } ownData)
+                foreach (var data in keyed.CreatureKeyedData)
+                    if (Sts2State.Private<object?>(ownData, data, fallback: null) is System.Collections.IDictionary entries)
+                        foreach (System.Collections.DictionaryEntry entry in entries)
+                            if (entry.Key is Creature keyCreature && idOf?.Invoke(keyCreature) is { } keyId && entry.Value is decimal or int)
+                                fields = fields.With(SimKeys.PerCreature(keyed.Name, data, keyId), Convert.ToInt32(entry.Value, System.Globalization.CultureInfo.InvariantCulture));
             if (SimModels.Get(ModelName(model)) is not ReadModel read) continue;
             // A power kept in copies: each instance on the creature, in the game's order, is a copy of its own (its amount, its applier, its state).
             var copy = 0;

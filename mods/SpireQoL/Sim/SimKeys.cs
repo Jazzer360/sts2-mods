@@ -59,6 +59,15 @@ public static class SimKeys
     /// <summary>What every aimed copy's name (Aimed) starts with.</summary>
     public const string AimedPrefix = "Aim:";
 
+    private static readonly ConcurrentDictionary<(string Model, string Data, int Creature), string> PerCreatureNames = new();
+
+    /// <summary>
+    /// An entry of a hand-written model's own data kept by creature (SimModel.CreatureKeyedData, decision #326: Possess Strength's stolen Strength
+    /// from each player), in its holder's fields: "Name.data>id", its amount the entry's.
+    /// </summary>
+    public static string PerCreature(string model, string data, int creature) =>
+        PerCreatureNames.GetOrAdd((model, data, creature), key => key.Model + "." + key.Data + ">" + key.Creature);
+
     /// <summary>Every play of the turn at this stage: "Started", "Finished".</summary>
     public static string Plays(PlayStage stage) => stage == PlayStage.Started ? "Started" : "Finished";
 

@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 29 engine rules naming 185 game methods; 3 adapter rules; 31 hand-written models.
+# 29 engine rules naming 185 game methods; 3 adapter rules; 33 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -134,6 +134,10 @@ PhantomBladesPower: PhantomBladesPower.AfterApplied, PhantomBladesPower.AfterRem
   model: ModifyDamageAdditive
 Pocketwatch: Pocketwatch.AfterCardPlayed, Pocketwatch.AfterCombatEnd, Pocketwatch.AfterModifyingHandDraw, Pocketwatch.AfterSideTurnStart, Pocketwatch.BeforeSideTurnStart, Pocketwatch.ModifyHandDraw
   model: AfterCardPlayed
+PossessSpeedPower: PossessSpeedPower.AfterDeath, PossessSpeedPower.AfterPowerAmountChanged, PossessSpeedPower.InitInternalData
+  model: nothing it overrides
+PossessStrengthPower: PossessStrengthPower.AfterDeath, PossessStrengthPower.AfterPowerAmountChanged, PossessStrengthPower.InitInternalData
+  model: nothing it overrides
 RedSkull: RedSkull.AfterCombatEnd, RedSkull.AfterCurrentHpChanged, RedSkull.AfterRoomEntered
   model: AfterDamageReceived, OutcomeTab
 Regret: no game class by its name (the simulator's own)

@@ -6,6 +6,57 @@ namespace SpireQoL.Sim.Models;
 // Ravenous is read from its code (ReadModel, decision #251).
 
 /// <summary>
+/// PossessStrengthPower and PossessSpeedPower (The Lost's, decision #326): AfterPowerAmountChanged counts what its owner took of the power from each
+/// player (an application by its owner, on a player, of less than 0: stolen[player] += amount), and AfterDeath, as its owner dies, gives each player
+/// back what was taken (PowerCmd.Apply of -stolen, no applier). Hand-written: the reader doesn't read a dictionary of its own data keyed by creature,
+/// nor a loop over it; the adapter reads each player's entry into the fields (CreatureKeyedData).
+/// </summary>
+public abstract class PossessPowerModel : SimModel
+{
+    /// <summary>The power it takes and gives back (Strength, Dexterity).</summary>
+    protected abstract PowerId Taken { get; }
+
+    /// <summary>Its own data's dictionary of what it took from each player.</summary>
+    protected abstract string StolenData { get; }
+
+    public override IReadOnlyList<string> CreatureKeyedData => new[] { StolenData };
+
+    public override IEnumerable<SimState> AfterPowerApplied(SimState state, int owner, PowerId power, int amount, int applier, int target, bool debuff)
+    {
+        // applier == base.Owner, power.Owner.IsPlayer, power is the one it takes, amount < 0: StolenX[power.Owner] += amount.
+        if (applier != owner || !Who.IsPlayer(target) || power != Taken || amount >= 0) return One(state);
+        var key = SimKeys.PerCreature(Name, StolenData, target);
+        SimEngine.SetField(state, owner, key, SimEngine.FieldsOf(state, owner)[key] + amount);
+        return One(state);
+    }
+
+    public override void AfterDeath(SimState state, int owner, int dead)
+    {
+        // creature != base.Owner returns; then PowerCmd.Apply(item.Key, -item.Value, applier: null) for each player it took from, in the fight's order.
+        if (dead != owner) return;
+        foreach (var player in state.PlayerIds)
+        {
+            var stolen = SimEngine.FieldsOf(state, owner)[SimKeys.PerCreature(Name, StolenData, player)];
+            if (stolen != 0) SimEngine.ApplyInHit(state, Who.None, player, Taken, -stolen, debuff: -stolen < 0);
+        }
+    }
+}
+
+/// <summary>PossessStrengthPower: the Strength The Lost takes from each player, back as it dies.</summary>
+public sealed class PossessStrengthPower : PossessPowerModel
+{
+    protected override PowerId Taken => PowerId.Strength;
+    protected override string StolenData => "stolenStrength";
+}
+
+/// <summary>PossessSpeedPower: the Dexterity its owner takes from each player, back as it dies.</summary>
+public sealed class PossessSpeedPower : PossessPowerModel
+{
+    protected override PowerId Taken => PowerId.Dexterity;
+    protected override string StolenData => "stolenDexterity";
+}
+
+/// <summary>
 /// SandpitPower (The Insatiable's: one copy on it for each player, aimed at that player, each with its own countdown: decision #321). Its
 /// AfterSideTurnStartLate, as the enemies' side's turn starts: PowerCmd.Decrement of each copy. A copy at 0 goes (ShouldRemoveDueToAmount), and its
 /// AfterRemoved, unless its holder or the player it's aimed at is dead already, kills that player and their Osty (CreatureCmd.Kill with force: no
