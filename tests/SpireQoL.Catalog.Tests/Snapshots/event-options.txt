@@ -1,14 +1,9 @@
 # Event options read as programs on beta (OptionProgramTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #350).
-# Options: 270; read whole 230; whole once shown (a delegate the event holds) 2; with a gap 38.
+# Options: 270; read whole 231; whole once shown (what the option and the run hold then: decisions #74, #354, #355) 15; with a gap 24.
 #   14 obtains a relic its code picks as you choose
 #   10 obtains a reward's relic
-#   9 runs a delegate from property CardRewardAlternative.OnSelect
-#   6 obtains a relic the event holds
-#   1 commands in a callback
-# Relics' AfterObtained: 86; read whole 76; with a gap 10.
+# Relics' AfterObtained: 86; read whole 77; whole once shown 4; with a gap 5.
 #   4 obtains a reward's relic
-#   4 runs a delegate from property CardRewardAlternative.OnSelect
-#   1 commands in a callback
 #   1 obtains a relic its code picks as you choose
 AbyssalBaths.Immerse: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp); HpLoss CreatureCmd.Damage(this.DynamicVars.Damage)
 AbyssalBaths.Abstain: Heal CreatureCmd.Heal(Heal)
@@ -22,18 +17,18 @@ BattlewornDummy.Setting1: Fight EventModel.EnterCombatWithoutExitingEvent
 BattlewornDummy.Setting2: Fight EventModel.EnterCombatWithoutExitingEvent
 BattlewornDummy.Setting3: Fight EventModel.EnterCombatWithoutExitingEvent
 BrainLeech.ShareKnowledge: CardToDeck CardPileCmd.Add; other: CardSelectCmd.FromSimpleGridForRewards
-BrainLeech.Rip: HpLoss CreatureCmd.Damage(this.DynamicVars.Item("RipHpLoss")); CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: RewardsCmd.OfferCustom
+BrainLeech.Rip: HpLoss CreatureCmd.Damage(this.DynamicVars.Item("RipHpLoss")); CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs the delegates your relics give CardRewardAlternative (TryModifyCardRewardAlternatives) via reward CardReward; other: RewardsCmd.OfferCustom
 Bugslayer.Extermination: CardToDeck CardPileCmd.Add
 Bugslayer.Squash: CardToDeck CardPileCmd.Add
 ByrdonisNest.Eat: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
 ByrdonisNest.Take: CardToDeck CardPileCmd.Add
-ColorfulPhilosophers.GenerateInitialOptions lambda: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: RewardsCmd.OfferCustom
+ColorfulPhilosophers.GenerateInitialOptions lambda: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs the delegates your relics give CardRewardAlternative (TryModifyCardRewardAlternatives) via reward CardReward; other: RewardsCmd.OfferCustom
 ColossalFlower.ExtractCurrentPrize: GoldGain PlayerCmd.GainGold(?ldelem.i4)
 ColossalFlower.ReachDeeper: HpLoss CreatureCmd.Damage(?ldelem.i4)
 ColossalFlower.ExtractInstead: GoldGain PlayerCmd.GainGold(?ldelem.i4)
 ColossalFlower.ObtainPollinousCore: HpLoss CreatureCmd.Damage(?ldelem.i4); RelicGain RelicCmd.Obtain
-CrystalSphere.UncoverFuture: GoldLoss PlayerCmd.LoseGold(UncoverFutureCost); RelicGain RelicCmd.Obtain(-1) via part CrystalSphereRelic, reward RelicReward; Potion PotionCmd.TryToProcure(-1) via part CrystalSpherePotion, reward PotionReward; CardToDeck CardPileCmd.Add via part CrystalSphereCardReward, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; CurseToDeck CardPileCmd.AddCurseToDeck via part CrystalSphereCurse; GoldGain PlayerCmd.GainGold(this.Amount) via part CrystalSphereGold, reward GoldReward; ? obtains a reward's relic via part CrystalSphereRelic, reward RelicReward; ? runs a delegate from property CardRewardAlternative.OnSelect via part CrystalSphereCardReward, reward CardReward
-CrystalSphere.PaymentPlan: CurseToDeck CardPileCmd.AddCurseToDeck; RelicGain RelicCmd.Obtain(-1) via part CrystalSphereRelic, reward RelicReward; Potion PotionCmd.TryToProcure(-1) via part CrystalSpherePotion, reward PotionReward; CardToDeck CardPileCmd.Add via part CrystalSphereCardReward, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; CurseToDeck CardPileCmd.AddCurseToDeck via part CrystalSphereCurse; GoldGain PlayerCmd.GainGold(this.Amount) via part CrystalSphereGold, reward GoldReward; ? obtains a reward's relic via part CrystalSphereRelic, reward RelicReward; ? runs a delegate from property CardRewardAlternative.OnSelect via part CrystalSphereCardReward, reward CardReward
+CrystalSphere.UncoverFuture: GoldLoss PlayerCmd.LoseGold(UncoverFutureCost); RelicGain RelicCmd.Obtain(-1) via part CrystalSphereRelic, reward RelicReward; Potion PotionCmd.TryToProcure(-1) via part CrystalSpherePotion, reward PotionReward; CardToDeck CardPileCmd.Add via part CrystalSphereCardReward, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; CurseToDeck CardPileCmd.AddCurseToDeck via part CrystalSphereCurse; GoldGain PlayerCmd.GainGold(this.Amount) via part CrystalSphereGold, reward GoldReward; ? obtains a reward's relic via part CrystalSphereRelic, reward RelicReward; ? runs the delegates your relics give CardRewardAlternative (TryModifyCardRewardAlternatives) via part CrystalSphereCardReward, reward CardReward
+CrystalSphere.PaymentPlan: CurseToDeck CardPileCmd.AddCurseToDeck; RelicGain RelicCmd.Obtain(-1) via part CrystalSphereRelic, reward RelicReward; Potion PotionCmd.TryToProcure(-1) via part CrystalSpherePotion, reward PotionReward; CardToDeck CardPileCmd.Add via part CrystalSphereCardReward, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; CurseToDeck CardPileCmd.AddCurseToDeck via part CrystalSphereCurse; GoldGain PlayerCmd.GainGold(this.Amount) via part CrystalSphereGold, reward GoldReward; ? obtains a reward's relic via part CrystalSphereRelic, reward RelicReward; ? runs the delegates your relics give CardRewardAlternative (TryModifyCardRewardAlternatives) via part CrystalSphereCardReward, reward CardReward
 Darv.RelicOption.OnChosen [DustyTome]: RelicGain RelicCmd.Obtain(-1); UpgradeCard CardCmd.Upgrade via DustyTome if not op_Equality(this.AncientCard, null); CardToDeck CardPileCmd.Add via DustyTome if not op_Equality(this.AncientCard, null)
 Darv.RelicOption.OnChosen [Astrolabe]: RelicGain RelicCmd.Obtain(-1); UpgradeCard CardCmd.Upgrade via Astrolabe; CardToDeck, CardRemoval CardCmd.Transform via Astrolabe; other: CardSelectCmd.FromDeckForTransformation
 Darv.RelicOption.OnChosen [BlackStar]: RelicGain RelicCmd.Obtain(-1)
@@ -86,9 +81,9 @@ Neow.RelicOption.OnChosen [ArcaneScroll]: RelicGain RelicCmd.Obtain(-1); CardToD
 Neow.RelicOption.OnChosen [BoomingConch]: RelicGain RelicCmd.Obtain(-1)
 Neow.RelicOption.OnChosen [FishingRod]: RelicGain RelicCmd.Obtain(-1)
 Neow.RelicOption.OnChosen [GoldenPearl]: RelicGain RelicCmd.Obtain(-1); GoldGain PlayerCmd.GainGold(Gold) via GoldenPearl
-Neow.RelicOption.OnChosen [Kaleidoscope]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via Kaleidoscope, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via Kaleidoscope, reward CardReward; other: RewardsCmd.OfferCustom
+Neow.RelicOption.OnChosen [Kaleidoscope]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via Kaleidoscope, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs the delegates your relics give CardRewardAlternative (TryModifyCardRewardAlternatives) via Kaleidoscope, reward CardReward; other: RewardsCmd.OfferCustom
 Neow.RelicOption.OnChosen [LeadPaperweight]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via LeadPaperweight if chosenCard=result of CardSelectCmd.FromChooseACardScreen; other: CardSelectCmd.FromChooseACardScreen
-Neow.RelicOption.OnChosen [LostCoffer]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via LostCoffer, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; Potion PotionCmd.TryToProcure(-1) via LostCoffer, reward PotionReward; ? runs a delegate from property CardRewardAlternative.OnSelect via LostCoffer, reward CardReward; other: RewardsCmd.OfferCustom
+Neow.RelicOption.OnChosen [LostCoffer]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via LostCoffer, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; Potion PotionCmd.TryToProcure(-1) via LostCoffer, reward PotionReward; ? runs the delegates your relics give CardRewardAlternative (TryModifyCardRewardAlternatives) via LostCoffer, reward CardReward; other: RewardsCmd.OfferCustom
 Neow.RelicOption.OnChosen [MassiveScroll]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via MassiveScroll if chosenCard=result of CardSelectCmd.FromChooseACardScreen; other: CardSelectCmd.FromChooseACardScreen
 Neow.RelicOption.OnChosen [NeowsTorment]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via NeowsTorment
 Neow.RelicOption.OnChosen [NewLeaf]: RelicGain RelicCmd.Obtain(-1); CardToDeck, CardRemoval CardCmd.TransformToRandom via NewLeaf; other: CardSelectCmd.FromDeckForTransformation
@@ -123,7 +118,7 @@ Nonupeipe.RelicOption.OnChosen [LoomingFruit]: RelicGain RelicCmd.Obtain(-1); He
 Nonupeipe.RelicOption.OnChosen [SignetRing]: RelicGain RelicCmd.Obtain(-1); GoldGain PlayerCmd.GainGold(Gold) via SignetRing
 Nonupeipe.RelicOption.OnChosen [BeautifulBracelet]: RelicGain RelicCmd.Obtain(-1); EnchantCard CardCmd.Enchant(Swift) via BeautifulBracelet
 Orobas.RelicOption.OnChosen [ElectricShrymp]: RelicGain RelicCmd.Obtain(-1); EnchantCard CardSelectCmd.FromDeckForEnchantment via ElectricShrymp; EnchantCard CardCmd.Enchant(Decimal.One) via ElectricShrymp
-Orobas.RelicOption.OnChosen [GlassEye]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via GlassEye, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via GlassEye, reward CardReward; other: RewardsCmd.OfferCustom
+Orobas.RelicOption.OnChosen [GlassEye]: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add via GlassEye, reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs the delegates your relics give CardRewardAlternative (TryModifyCardRewardAlternatives) via GlassEye, reward CardReward; other: RewardsCmd.OfferCustom
 Orobas.RelicOption.OnChosen [AlchemicalCoffer]: RelicGain RelicCmd.Obtain(-1); Potion PotionCmd.TryToProcure((originalSlotCount=this.Owner.MaxPotionCount add i)) via AlchemicalCoffer; other: PlayerCmd.GainMaxPotionCount
 Orobas.RelicOption.OnChosen [Driftwood]: RelicGain RelicCmd.Obtain(-1)
 Orobas.RelicOption.OnChosen [RadiantPearl]: RelicGain RelicCmd.Obtain(-1)
@@ -187,7 +182,7 @@ Symbiote.KillWithFire: CardToDeck, CardRemoval CardCmd.TransformToRandom; other:
 TabletOfTruth.Decipher: MaxHpLoss CreatureCmd.LoseMaxHp(DecipherMaxHpLoss) if op_LessThan(DecipherMaxHpLoss, this.Owner.Creature.MaxHp); MaxHpLoss CreatureCmd.LoseMaxHp((this.Owner.Creature.MaxHp sub 1)) if not op_LessThan(DecipherMaxHpLoss, this.Owner.Creature.MaxHp); UpgradeCard CardCmd.Upgrade if op_LessThan(DecipherMaxHpLoss, this.Owner.Creature.MaxHp) and this._decipherCount() == 4; UpgradeCard CardCmd.Upgrade if op_LessThan(DecipherMaxHpLoss, this.Owner.Creature.MaxHp) and this._decipherCount() != 4 and ToList(Where(GetPile(6, ...; other: CreatureCmd.Kill
 TabletOfTruth.Smash: Heal CreatureCmd.Heal(SmashHPGain)
 TabletOfTruth.GiveUp: nothing
-Tanx.RelicOption.OnChosen [Claws]: RelicGain RelicCmd.Obtain(-1); CardToDeck, CardRemoval CardCmd.Transform via Claws; UpgradeCard CardCmd.Upgrade via Claws if original.IsUpgraded and {not 0: this.Owner.RunState.CreateCard<Maul>(this.Owner); 0: Card<Maul>().ToMutable()}.IsUpgr...; EnchantCard CardCmd.Enchant(original.Enchantment.MutableClone().Amount) via Claws if original.Enchantment and original.Enchantment.MutableClone().CanEnchant({not 0: this.Owner.RunState.CreateCard<Maul>(...; ? commands in a callback via Claws; other: CardSelectCmd.FromDeckForTransformation
+Tanx.RelicOption.OnChosen [Claws]: RelicGain RelicCmd.Obtain(-1); CardToDeck, CardRemoval CardCmd.Transform via Claws; UpgradeCard CardCmd.Upgrade via Claws if original.IsUpgraded and {not 0: this.Owner.RunState.CreateCard<Maul>(this.Owner); 0: Card<Maul>().ToMutable()}.IsUpgr...; EnchantCard CardCmd.Enchant(original.Enchantment.MutableClone().Amount) via Claws if original.Enchantment and original.Enchantment.MutableClone().CanEnchant({not 0: this.Owner.RunState.CreateCard<Maul>(...; other: CardSelectCmd.FromDeckForTransformation
 Tanx.RelicOption.OnChosen [Crossbow]: RelicGain RelicCmd.Obtain(-1)
 Tanx.RelicOption.OnChosen [IronClub]: RelicGain RelicCmd.Obtain(-1)
 Tanx.RelicOption.OnChosen [MeatCleaver]: RelicGain RelicCmd.Obtain(-1)
@@ -212,7 +207,7 @@ Tezcatara.RelicOption.OnChosen [ToyBox]: RelicGain RelicCmd.Obtain(-1); RelicGai
 Tezcatara.RelicOption.OnChosen [SealOfGold]: RelicGain RelicCmd.Obtain(-1)
 TheArchitect.AdvanceDialogue: nothing
 TheArchitect.WinRun: nothing
-TheFutureOfPotions.GenerateInitialOptions lambda: PotionLoss PotionCmd.Discard; CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; UpgradeCard CardCmd.Upgrade; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: RewardsCmd.OfferCustom
+TheFutureOfPotions.GenerateInitialOptions lambda: PotionLoss PotionCmd.Discard; CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; UpgradeCard CardCmd.Upgrade; ? runs the delegates your relics give CardRewardAlternative (TryModifyCardRewardAlternatives) via reward CardReward; other: RewardsCmd.OfferCustom
 TheLanternKey.ReturnTheKey: GoldGain PlayerCmd.GainGold(Gold)
 TheLanternKey.KeepTheKey: nothing
 TheLanternKey.Fight: CardToDeck CardPileCmd.Add via reward SpecialCardReward; Fight EventModel.EnterCombatWithoutExitingEvent
@@ -237,7 +232,7 @@ Trial.MerchantGuilty: CurseToDeck CardPileCmd.AddCurseToDeck; RelicGain RelicCmd
 Trial.MerchantInnocent: CurseToDeck CardPileCmd.AddCurseToDeck; UpgradeCard CardSelectCmd.FromDeckForUpgrade; UpgradeCard CardCmd.Upgrade
 Trial.NobleGuilty: Heal CreatureCmd.Heal(new Decimal(10))
 Trial.NobleInnocent: CurseToDeck CardPileCmd.AddCurseToDeck; GoldGain PlayerCmd.GainGold(new Decimal(300))
-Trial.NondescriptGuilty: CurseToDeck CardPileCmd.AddCurseToDeck; CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: RewardsCmd.OfferCustom
+Trial.NondescriptGuilty: CurseToDeck CardPileCmd.AddCurseToDeck; CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs the delegates your relics give CardRewardAlternative (TryModifyCardRewardAlternatives) via reward CardReward; other: RewardsCmd.OfferCustom
 Trial.NondescriptInnocent: CurseToDeck CardPileCmd.AddCurseToDeck; CardToDeck, CardRemoval CardCmd.TransformToRandom; other: CardSelectCmd.FromDeckForTransformation
 Trial.DoubleDown: nothing
 UnrestSite.Rest: Heal CreatureCmd.Heal(Heal); CurseToDeck CardPileCmd.AddCursesToDeck
@@ -293,7 +288,7 @@ relic Byrdine: UpgradeCard CardCmd.Upgrade if each.IsUpgraded; CardToDeck, CardR
 relic Byrdpip: CardToDeck, CardRemoval CardCmd.TransformTo; other: PlayerCmd.AddPet
 relic CallingBell: CurseToDeck CardPileCmd.AddCurseToDeck; RelicGain RelicCmd.Obtain(-1) via reward RelicReward if IsOn; ? obtains a reward's relic via reward RelicReward; other: RewardsCmd.OfferCustom
 relic Cauldron: Potion PotionCmd.TryToProcure(-1) via reward PotionReward if IsOn; other: RewardsCmd.OfferCustom
-relic Claws: CardToDeck, CardRemoval CardCmd.Transform; UpgradeCard CardCmd.Upgrade if original.IsUpgraded and {not 0: this.Owner.RunState.CreateCard<Maul>(this.Owner); 0: Card<Maul>().ToMutable()}.IsUpgr...; EnchantCard CardCmd.Enchant(original.Enchantment.MutableClone().Amount) if original.Enchantment and original.Enchantment.MutableClone().CanEnchant({not 0: this.Owner.RunState.CreateCard<Maul>(...; ? commands in a callback; other: CardSelectCmd.FromDeckForTransformation
+relic Claws: CardToDeck, CardRemoval CardCmd.Transform; UpgradeCard CardCmd.Upgrade if original.IsUpgraded and {not 0: this.Owner.RunState.CreateCard<Maul>(this.Owner); 0: Card<Maul>().ToMutable()}.IsUpgr...; EnchantCard CardCmd.Enchant(original.Enchantment.MutableClone().Amount) if original.Enchantment and original.Enchantment.MutableClone().CanEnchant({not 0: this.Owner.RunState.CreateCard<Maul>(...; other: CardSelectCmd.FromDeckForTransformation
 relic CursedPearl: CurseToDeck CardPileCmd.AddCurseToDeck; GoldGain PlayerCmd.GainGold(Gold)
 relic DistinguishedCape: CardToDeck CardPileCmd.Add; CurseToDeck CardPileCmd.Add
 relic DollysMirror: CardToDeck CardPileCmd.Add if FirstOrDefault(result of CardSelectCmd.FromDeckGeneric); other: CardSelectCmd.FromDeckGeneric
@@ -306,20 +301,20 @@ relic FakeMango: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
 relic FakeSneckoEye: other: PowerCmd.Apply
 relic FragrantMushroom: HpLoss CreatureCmd.Damage(HpLoss); UpgradeCard CardCmd.Upgrade
 relic FurCoat: nothing
-relic GlassEye: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: RewardsCmd.OfferCustom
+relic GlassEye: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs the delegates your relics give CardRewardAlternative (TryModifyCardRewardAlternatives) via reward CardReward; other: RewardsCmd.OfferCustom
 relic GnarledHammer: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(SharpAmount)
 relic GoldenCompass: nothing
 relic GoldenPearl: GoldGain PlayerCmd.GainGold(Gold)
 relic HeftyTablet: CurseToDeck create Injury; CardToDeck CardPileCmd.Add; CurseToDeck CardPileCmd.Add; other: CardSelectCmd.FromChooseACardScreen
 relic JewelryBox: CardToDeck CardPileCmd.Add
-relic Kaleidoscope: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: RewardsCmd.OfferCustom
+relic Kaleidoscope: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs the delegates your relics give CardRewardAlternative (TryModifyCardRewardAlternatives) via reward CardReward; other: RewardsCmd.OfferCustom
 relic Kifuda: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(new Decimal(3))
 relic LargeCapsule: RelicGain RelicCmd.Obtain(-1); CardToDeck CardPileCmd.Add; ? obtains a relic its code picks as you choose
 relic LeadPaperweight: CardToDeck CardPileCmd.Add if chosenCard=result of CardSelectCmd.FromChooseACardScreen; other: CardSelectCmd.FromChooseACardScreen
 relic LeafyPoultice: MaxHpLoss CreatureCmd.LoseMaxHp(MaxHp); CardToDeck, CardRemoval CardCmd.Transform
 relic LeesWaffle: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp); Heal CreatureCmd.Heal((creature=this.Owner.Creature.MaxHp sub creature=this.Owner.Creature.CurrentHp))
 relic LoomingFruit: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
-relic LostCoffer: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; Potion PotionCmd.TryToProcure(-1) via reward PotionReward; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: RewardsCmd.OfferCustom
+relic LostCoffer: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; Potion PotionCmd.TryToProcure(-1) via reward PotionReward; ? runs the delegates your relics give CardRewardAlternative (TryModifyCardRewardAlternatives) via reward CardReward; other: RewardsCmd.OfferCustom
 relic Mango: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
 relic MassiveScroll: CardToDeck CardPileCmd.Add if chosenCard=result of CardSelectCmd.FromChooseACardScreen; other: CardSelectCmd.FromChooseACardScreen
 relic NeowsBones: RelicGain RelicCmd.Obtain(-1) via reward RelicReward; CardToDeck CardPileCmd.Add; CurseToDeck CardPileCmd.Add; ? obtains a reward's relic via reward RelicReward; other: Enumerable.Select
@@ -330,7 +325,7 @@ relic NewLeaf: CardToDeck, CardRemoval CardCmd.TransformToRandom; other: CardSel
 relic NutritiousOyster: Heal, MaxHpGain CreatureCmd.GainMaxHp(MaxHp)
 relic NutritiousSoup: EnchantCard CardCmd.Enchant(Decimal.One) if each.Rarity == Basic and Contains(each.Tags, 1) and Enchantment<TezcatarasEmber>().CanEnchant(each)
 relic OldCoin: GoldGain PlayerCmd.GainGold(Gold)
-relic Orrery: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs a delegate from property CardRewardAlternative.OnSelect via reward CardReward; other: RewardsCmd.OfferCustom
+relic Orrery: CardToDeck CardPileCmd.Add via reward CardReward if (this._currentlyShownScreen() and ?and and ?or and obtainedCard) or (selection={IsMe(this.Player) and not this._curre...; ? runs the delegates your relics give CardRewardAlternative (TryModifyCardRewardAlternatives) via reward CardReward; other: RewardsCmd.OfferCustom
 relic PaelsClaw: EnchantCard CardCmd.Enchant(Decimal.One) if Enchantment<Goopy>().CanEnchant(each)
 relic PaelsEye: nothing
 relic PaelsGrowth: EnchantCard CardSelectCmd.FromDeckForEnchantment; EnchantCard CardCmd.Enchant(new Decimal(4))

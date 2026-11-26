@@ -249,6 +249,24 @@ public static class ModEntry
                 Log.Warn($"reading the card programs at load failed: {ex.GetType().Name}: {ex.Message}");
             }
         });
+        // Every event's options (decision #352), once the game has made its models (a curse is told by its card): an option shown later only looks its
+        // reading up; one shown before (or one whose reading needs what it shows) is read on a worker then.
+        Task.Run(() =>
+        {
+            try
+            {
+                var waited = System.Diagnostics.Stopwatch.StartNew();
+                while (!GameInitialized() && waited.ElapsedMilliseconds < 600_000) Thread.Sleep(200);
+                var optionsWatch = System.Diagnostics.Stopwatch.StartNew();
+                var options = SpireQoL.Features.RunReminders.ReadAllOptions();
+                Log.Detail($"[load] {options} event options read from the game's code in {optionsWatch.ElapsedMilliseconds} ms");
+            }
+            catch (Exception ex)
+            {
+                // Each option is read as it's shown instead.
+                Log.Warn($"reading the event options at load failed: {ex.GetType().Name}: {ex.Message}");
+            }
+        });
         // What a fight's first frames did on the game's thread the first time (decision #254): the code its first board read asks (monsters'
         // moves, powers' and monsters' hooks, the log's questions), how a state is written for its key, and the mod's own code compiled. A
         // thread below the game's, so the launch doesn't wait on it; a fight that comes first reads what it asks then, as before.
@@ -271,6 +289,16 @@ public static class ModEntry
                 Log.Warn($"getting the fight's code ready at load failed: {ex.GetType().Name}: {ex.Message}");
             }
         }) { IsBackground = true, Priority = ThreadPriority.BelowNormal, Name = "SpireQoL first use" }.Start();
+    }
+
+    /// <summary>OneTimeInitialization._state: Done once the game's deferred start-up (its models' Preload) has run (both branches).</summary>
+    private static readonly System.Reflection.FieldInfo? InitState = HarmonyLib.AccessTools.Field(typeof(MegaCrit.Sts2.Core.Helpers.OneTimeInitialization), "_state");
+
+    /// <summary>The game has made and preloaded its models (its OneTimeInitialization is Done); true when that can't be read (then the reading goes ahead).</summary>
+    private static bool GameInitialized()
+    {
+        try { return InitState?.GetValue(null) is not { } state || state.ToString() == "Done"; }
+        catch { return true; }
     }
 
     /// <summary>Resets saved positions whose defaults changed, so players get the new defaults.</summary>

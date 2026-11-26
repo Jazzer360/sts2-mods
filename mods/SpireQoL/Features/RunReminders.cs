@@ -76,8 +76,9 @@ public sealed partial class RunReminders
     private sealed class Window
     {
         public required EventOption Option;
-        public required OptionReading Reading;
-        public ChoiceEffect Effects => Reading.Kinds;
+        /// <summary>The option's reading: null while a worker still reads it (decision #352), looked up again as the check closes.</summary>
+        public OptionReading? Reading;
+        public ChoiceEffect Effects => Reading?.Kinds ?? ChoiceEffect.None;
         public required Player Me;
         public required Before Start;
         public readonly List<RelicModel> Flashed = new();
@@ -103,7 +104,7 @@ public sealed partial class RunReminders
         {
             Close();
             if (__instance.IsLocked || __instance.WasChosen || RunMe() is not { } me) return;
-            var window = new Window { Option = __instance, Reading = ReadingOf(__instance), Me = me, Start = Before.Of(me) };
+            var window = new Window { Option = __instance, Reading = ReadyReadingOf(__instance), Me = me, Start = Before.Of(me) };
             window.Shown = IconsFor(__instance, me).Select(relicCrossed => relicCrossed.Relic).ToHashSet();
             foreach (var relic in me.Relics)
             {
@@ -209,6 +210,14 @@ public sealed partial class RunReminders
             Telemetry.Audits.Skipped(Telemetry.Audits.Reminders, "event option: the run ended", window.Option.TextKey);
             return;
         }
+        // Chosen before a worker had read it (decision #352: nothing was shown for it yet); the check waits for nothing on the game's thread.
+        window.Reading ??= ReadyReadingOf(window.Option);
+        if (window.Reading == null)
+        {
+            ModEntry.Log.Detail($"[audit] [reminders] {window.Option.TextKey}: chosen before its reading was ready, not checked ({state})");
+            Telemetry.Audits.Skipped(Telemetry.Audits.Reminders, "event option: chosen before its reading was ready", window.Option.TextKey);
+            return;
+        }
         var rule = (RelicModel relic) => ChoiceReminders.For(relic.GetType().Name)!;
         var shown = window.Subscribed.Where(window.Shown.Contains).ToList();
         var missed = window.Flashed.Where(relic => !shown.Contains(relic)).Select(relic => relic.GetType().Name).ToList();
@@ -250,7 +259,7 @@ public sealed partial class RunReminders
                 new[] { "reminder-silent" }.Concat(silent).Append(evt), what);
         }
         var added = window.Me.Deck.Cards.Where(card => !window.Start.Deck.Contains(card)).ToList();
-        CheckCardRules(window.Me, added, CardsRead.TryGetValue(window.Option, out var read) && read.GivesUpgraded, window.Shown, window.Option.TextKey);
+        CheckCardRules(window.Me, added, ReadyCardsOf(window.Option) is { GivesUpgraded: true }, window.Shown, window.Option.TextKey);
         LogOdds(window, added);
     }
 
@@ -475,6 +484,8 @@ public sealed partial class RunReminders
         hashCode.Add(System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(screen));
         hashCode.Add(Godot.Input.IsAnythingPressed());
         hashCode.Add(QolSettings.Revision);
+        // An option's reading a worker finished since (decision #352): its icons show.
+        hashCode.Add(Volatile.Read(ref _readingsDone));
         if (me != null) AddRunState(ref hashCode, me);
         return hashCode.ToHashCode();
     }
@@ -512,7 +523,8 @@ public sealed partial class RunReminders
     private static List<(RelicModel Relic, bool Crossed, string? Odds)> IconsFor(EventOption option, Player me)
     {
         var icons = new List<(RelicModel, bool, string?)>();
-        var effects = EffectsOf(option);
+        // Read on a worker the first time it's shown (decision #352): no icons until its reading is ready.
+        var effects = ReadyReadingOf(option)?.Kinds ?? ChoiceEffect.None;
         if (effects == ChoiceEffect.None) return icons;
         foreach (var relic in me.Relics)
         {
@@ -855,38 +867,155 @@ public sealed partial class RunReminders
         }
     }
 
+
     private static readonly PropertyInfo? OnChosenProp = AccessTools.Property(typeof(EventOption), "OnChosen");
-    private static readonly ConditionalWeakTable<EventOption, OptionReading> Readings = new();
     private static readonly ConditionalWeakTable<EventOption, StrongBox<ChoiceEffect>> Scans = new();
 
-    /// <summary>What choosing the option does (cached per option): every kind of effect its program reading has (decision #350).</summary>
+    /// <summary>
+    /// One option's reading (decision #352) and what the card reading makes of it (decision #353), published by the worker that read it: the cards
+    /// first, then the reading, so a frame that sees the reading sees its cards.
+    /// </summary>
+    internal sealed class OptionRead
+    {
+        public volatile OptionReading? Reading;
+        public volatile OptionCards? Cards;
+    }
+
+    private static readonly ConditionalWeakTable<EventOption, OptionRead> Reads = new();
+
+    /// <summary>The card reading of each reading without the event (the load's), shared by every option that runs its handler.</summary>
+    private static readonly ConditionalWeakTable<OptionReading, OptionCards> CardReadings = new();
+
+    /// <summary>Readings a worker has finished: part of what the event's icons are worked out from (ScreenKey), so they show the frame after.</summary>
+    private static int _readingsDone;
+
+    /// <summary>What choosing the option does: every kind of effect its program reading has (decision #350), read now if it isn't yet (the tests).</summary>
     public static ChoiceEffect EffectsOf(EventOption option) => ReadingOf(option).Kinds;
 
     /// <summary>
-    /// The option's code read as a program (decision #350, cached per option): its handler, the delegates the event and the option hold as it's
-    /// shown (decision #74), and the relic it carries through its AfterObtained. Also reads which cards it can give (the card walk: CardsRead).
+    /// The option's code read as a program (decision #350): its handler, what's read off the option as it's shown (the delegates the event and the
+    /// option hold: decision #74; the relic it shows; your relics' card reward alternatives) and the relic it carries through its AfterObtained. Read
+    /// on this thread if no worker has read it yet: for the tests, never on a frame (ReadyReadingOf).
     /// </summary>
     internal static OptionReading ReadingOf(EventOption option)
     {
-        if (Readings.TryGetValue(option, out var known)) return known;
-        var reading = OptionReading.Empty;
+        var read = Reads.GetValue(option, _ => new OptionRead());
+        if (read.Reading is { } known) return known;
+        ReadNow(option, read, Shown(option, RunMe()));
+        return read.Reading ?? OptionReading.Empty;
+    }
+
+    /// <summary>
+    /// The option's reading if it's been read, else null (decision #352): the first time it's shown, its reading without the event (kept from the load)
+    /// when nothing in it is read once shown, else what's read off the option now, read on a worker. The frame never waits for it.
+    /// </summary>
+    internal static OptionRead ReadOf(EventOption option)
+    {
+        if (Reads.TryGetValue(option, out var known)) return known;
+        var read = new OptionRead();
+        Reads.AddOrUpdate(option, read);
         try
         {
-            ReadCards(option);
+            var handler = OnChosenProp?.GetValue(option) as Delegate;
             var relic = option.Relic?.GetType();
+            var kept = handler != null ? OptionReader.Game.Kept(handler.Method, relic) : null;
+            if (kept is { NeedsShown: false } && CardReadings.TryGetValue(kept, out var cards))
+            {
+                read.Cards = cards.For(handler?.Target, option.Relic, Array.Empty<object>());
+                read.Reading = kept;
+                return read;
+            }
+            var shown = Shown(option, RunMe());
+            Task.Run(() =>
+            {
+                ReadNow(option, read, shown);
+                Interlocked.Increment(ref _readingsDone);
+            });
+        }
+        catch (Exception ex)
+        {
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders:" + option.TextKey);
+            read.Reading = OptionReading.Empty;
+        }
+        return read;
+    }
+
+    /// <summary>The option's reading when it's ready (null while a worker reads it).</summary>
+    internal static OptionReading? ReadyReadingOf(EventOption option) => ReadOf(option).Reading;
+
+    /// <summary>The option's card reading when its reading is ready.</summary>
+    internal static OptionCards? ReadyCardsOf(EventOption option) => ReadOf(option).Reading != null ? ReadOf(option).Cards : null;
+
+    /// <summary>Reads the option and its cards, and publishes them (any thread: the game's objects are only those <paramref name="shown"/> took).</summary>
+    private static void ReadNow(EventOption option, OptionRead read, (OptionShown Shown, object? Target, RelicModel? Relic, object[] HeldTargets) shown)
+    {
+        var reading = OptionReading.Empty;
+        OptionCards? cards = null;
+        try
+        {
+            var relic = shown.Relic?.GetType();
             if (OnChosenProp?.GetValue(option) is Delegate handler)
             {
-                var target = handler.Target;
-                reading = OptionReader.Game.Read(handler.Method, relic, target == null ? null : source => HeldMethods(target, source));
+                var kept = OptionReader.Game.Read(handler.Method, relic);
+                reading = kept.NeedsShown ? OptionReader.Game.Read(handler.Method, relic, shown.Shown) : kept;
             }
-            else if (relic != null) reading = OptionReader.Game.ReadObtained(relic);
+            else if (relic != null) reading = OptionReader.Game.ReadObtained(relic, shown.Shown);
+            cards = CardReadings.GetValue(reading, CardsFrom).For(shown.Target, shown.Relic, shown.HeldTargets);
         }
         catch (Exception ex)
         {
             Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders:" + option.TextKey);
         }
-        Readings.AddOrUpdate(option, reading);
-        return reading;
+        read.Cards = cards;
+        read.Reading = reading;
+    }
+
+    /// <summary>
+    /// What's read off an option as it's shown, on the game's thread (decisions #74, #354, #355): the delegates its event or closure holds now (and their
+    /// models, for the card reading), the relics its hover tips show that you don't hold, and the types of the run's hook listeners. Once per option.
+    /// </summary>
+    private static (OptionShown Shown, object? Target, RelicModel? Relic, object[] HeldTargets) Shown(EventOption option, Player? me)
+    {
+        var target = (OnChosenProp?.GetValue(option) as Delegate)?.Target;
+        var held = target == null ? new List<(string Field, Delegate Delegate)>() : HeldDelegates(target);
+        var yours = me?.Relics.Select(relic => relic.GetType()).ToHashSet() ?? new HashSet<Type>();
+        var relics = new List<Type>();
+        try
+        {
+            foreach (var tip in option.HoverTips ?? Array.Empty<MegaCrit.Sts2.Core.HoverTips.IHoverTip>())
+                if (tip is MegaCrit.Sts2.Core.HoverTips.HoverTip { CanonicalModel: RelicModel relic } && !yours.Contains(relic.GetType()) && !relics.Contains(relic.GetType()))
+                    relics.Add(relic.GetType());
+        }
+        catch { /* hover tips that can't be read: no relic shown */ }
+        List<Type>? listeners = null;
+        try { listeners = me?.RunState.IterateHookListeners(null).Select(model => model.GetType()).Distinct().ToList(); }
+        catch { /* no run: the alternatives stay read once shown */ }
+        var shown = new OptionShown(target == null ? null : source => HeldMethods(held, source), relics, listeners);
+        return (shown, target, option.Relic, held.Select(entry => entry.Delegate.Target).OfType<object>().Distinct().ToArray());
+    }
+
+    /// <summary>
+    /// Every event's options read without the event, and their card readings (decision #352): at load, on a worker, once the game's models are made (a
+    /// curse is told by its card), so an option shown later only looks its reading up. Returns how many options were read.
+    /// </summary>
+    internal static int ReadAllOptions()
+    {
+        var events = typeof(EventModel).Assembly.GetTypes().Where(type => !type.IsAbstract && !type.IsNested && typeof(EventModel).IsAssignableFrom(type)
+            && type.Namespace?.EndsWith(".Mocks", StringComparison.Ordinal) != true).ToList();
+        var count = OptionReader.Game.ReadAll(events);
+        foreach (var eventType in events)
+        {
+            IReadOnlyList<(MethodBase Handler, Type? Relic)> options;
+            try { options = OptionReader.Game.Options(eventType); }
+            catch { continue; }
+            foreach (var (handler, relic) in options)
+                if (OptionReader.Game.Kept(handler, relic) is { } kept)
+                {
+                    try { CardReadings.GetValue(kept, CardsFrom); }
+                    catch { /* read again when it's shown */ }
+                }
+        }
+        return count;
     }
 
     /// <summary>
@@ -895,37 +1024,25 @@ public sealed partial class RunReminders
     /// </summary>
     internal static ChoiceEffect ScanOf(EventOption option)
     {
-        ReadCards(option);
-        return Scans.TryGetValue(option, out var box) ? box.Value : ChoiceEffect.None;
-    }
-
-    /// <summary>The card walk (which cards the option can give: CardsRead) and its scan of the calls, once per option.</summary>
-    private static void ReadCards(EventOption option)
-    {
-        if (CardsRead.TryGetValue(option, out _)) return;
+        if (Scans.TryGetValue(option, out var known)) return known.Value;
         var calls = new HashSet<string>();
-        var cards = new OptionCards();
         try
         {
             if (OnChosenProp?.GetValue(option) is Delegate handler)
-            {
-                cards.Target = handler.Target;
-                Walk(handler.Method, handler.Method.DeclaringType, calls, new HashSet<MethodBase>(), depth: 0, cards);
-            }
+                Walk(handler.Method, handler.Method.DeclaringType, calls, new HashSet<MethodBase>(), depth: 0, handler.Target);
             // An ancient's relic: what it does when you take it.
             if (option.Relic is { } relic && relic.GetType().GetMethod(nameof(RelicModel.AfterObtained)) is { } obtained && obtained.DeclaringType == relic.GetType())
-            {
-                cards.Relic = relic;
-                Walk(obtained, relic.GetType(), calls, new HashSet<MethodBase>(), depth: 0, cards);
-            }
+                Walk(obtained, relic.GetType(), calls, new HashSet<MethodBase>(), depth: 0, target: null);
         }
         catch (Exception ex)
         {
-            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-cards-walk:" + option.TextKey);
+            Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-scan:" + option.TextKey);
         }
-        Scans.AddOrUpdate(option, new StrongBox<ChoiceEffect>(ChoiceReminders.EffectsOf(calls)));
-        CardsRead.AddOrUpdate(option, cards);
+        var scan = ChoiceReminders.EffectsOf(calls);
+        Scans.AddOrUpdate(option, new StrongBox<ChoiceEffect>(scan));
+        return scan;
     }
+
 
     /// <summary>What a relic does as you obtain it (its own AfterObtained), read as a program like an option's code (decision #350).</summary>
     internal static ChoiceEffect ObtainEffects(RelicModel relic) => ObtainReading(relic).Kinds;
@@ -941,14 +1058,14 @@ public sealed partial class RunReminders
     }
 
     /// <summary>
-    /// The methods of the delegates <paramref name="target"/> (the event, or the closure an option's lambda runs in) holds that a delegate call can run,
-    /// by where the call gets it: "field Dish.action", only that field's (the Endless Conveyor's current dish); anything else, every one it holds (Neow's
-    /// modifier options: the modifier's own option). The game's models' code only (a C# event's listeners, the screens, aren't the option's).
+    /// The methods of the delegates the event or the closure an option's lambda runs in held as the option was shown (<paramref name="held"/>) that a
+    /// delegate call can run, by where the call gets it: "field Dish.action", only that field's (the Endless Conveyor's current dish); anything else, every
+    /// one it holds (Neow's modifier options: the modifier's own option). The game's models' code only (a C# event's listeners, the screens, aren't the option's).
     /// </summary>
-    private static IEnumerable<MethodBase> HeldMethods(object target, string source)
+    private static IEnumerable<MethodBase> HeldMethods(List<(string Field, Delegate Delegate)> held, string source)
     {
         var field = source.StartsWith("field ", StringComparison.Ordinal) ? source[(source.LastIndexOf('.') + 1)..] : null;
-        return HeldDelegates(target).Where(held => field == null || held.Field == field)
+        return held.Where(held => field == null || held.Field == field)
             .Select(held => held.Delegate.Method).Where(method => method.DeclaringType?.Namespace?.StartsWith("MegaCrit.Sts2.Core.Models", StringComparison.Ordinal) == true)
             .Cast<MethodBase>().Distinct();
     }
@@ -962,13 +1079,13 @@ public sealed partial class RunReminders
     private static bool IsGameMode(Type? type) => type != null && GameModeIs?.Invoke(type) == true;
 
     /// <summary>
-    /// The card walk: the calls a method makes, following calls (not delegates: those are the next page's options)
+    /// The call scan: the calls a method makes, following calls (not delegates: those are the next page's options)
     /// into its own class and the classes nested in it (lambdas, async state machines), and into a
-    /// game mode's static methods (Blitz's Neow rewards). It reads which cards an option can give (OptionCards),
-    /// and its calls are the flag-level scan the option reading is checked against (ScanOf); what an option does
-    /// is the option reading's (decision #350).
+    /// game mode's static methods (Blitz's Neow rewards). Its calls are the flag-level scan the option reading is
+    /// checked against (ScanOf); what an option does, and which cards it can give, are the option reading's
+    /// (decisions #350, #353).
     /// </summary>
-    private static void Walk(MethodBase method, Type? owner, HashSet<string> calls, HashSet<MethodBase> seen, int depth, OptionCards cards)
+    private static void Walk(MethodBase method, Type? owner, HashSet<string> calls, HashSet<MethodBase> seen, int depth, object? target)
     {
         if (depth > 6 || !seen.Add(method)) return;
         var body = method.GetCustomAttribute<AsyncStateMachineAttribute>()?.StateMachineType
@@ -982,7 +1099,6 @@ public sealed partial class RunReminders
         {
             return; // unreadable
         }
-        cards.Read(code);
         foreach (var ins in code)
         {
             if (ins.operand is not MethodBase otherMethod || otherMethod.DeclaringType == null) continue;
@@ -991,23 +1107,23 @@ public sealed partial class RunReminders
             // The card it makes is a curse (Wuppy's Injury: ModelDb.Card<Injury>; the Museum's pick from the curse pool): whatever
             // command adds it, a curse joins the deck.
             if (MakesCurse(otherMethod) || ins.opcode == OpCodes.Newobj && IsCurseCard(otherMethod.DeclaringType)) calls.Add(ChoiceReminders.CurseMade);
-            if (owner != null && IsWithin(otherMethod.DeclaringType, owner)) Walk(otherMethod, owner, calls, seen, depth + 1, cards);
+            if (owner != null && IsWithin(otherMethod.DeclaringType, owner)) Walk(otherMethod, owner, calls, seen, depth + 1, target);
             // A delegate the event keeps in its state, called by the option (the Endless Conveyor's dish:
             // GrabSomethingOffTheBelt runs CurrentDish.action): read the ones the event holds now.
-            else if (otherMethod.Name == nameof(Action.Invoke) && typeof(Delegate).IsAssignableFrom(otherMethod.DeclaringType) && owner != null && cards.Target != null)
+            else if (otherMethod.Name == nameof(Action.Invoke) && typeof(Delegate).IsAssignableFrom(otherMethod.DeclaringType) && owner != null && target != null)
             {
-                foreach (var (_, held) in HeldDelegates(cards.Target))
-                    if (held.Method.DeclaringType != null && IsWithin(held.Method.DeclaringType, owner)) Walk(held.Method, owner, calls, seen, depth + 1, cards);
+                foreach (var (_, held) in HeldDelegates(target))
+                    if (held.Method.DeclaringType != null && IsWithin(held.Method.DeclaringType, owner)) Walk(held.Method, owner, calls, seen, depth + 1, target);
             }
             // An event's own part it creates (the Crystal Sphere's minigame, and the items it hides: card rewards, a curse, gold,
             // potions): everything that class does is something the option can do.
             else if (ins.opcode == OpCodes.Newobj && otherMethod.DeclaringType.Namespace?.StartsWith("MegaCrit.Sts2.Core.Events.Custom", StringComparison.Ordinal) == true)
             {
                 foreach (var nextMethod in otherMethod.DeclaringType.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
-                    Walk(nextMethod, otherMethod.DeclaringType, calls, seen, depth + 1, cards);
+                    Walk(nextMethod, otherMethod.DeclaringType, calls, seen, depth + 1, target);
             }
             // A game mode's own rewards (Blitz's Neow option runs BlitzRunModel.GiveNeowRewards).
-            else if (otherMethod.IsStatic && IsGameMode(otherMethod.DeclaringType)) Walk(otherMethod, otherMethod.DeclaringType, calls, seen, depth + 1, cards);
+            else if (otherMethod.IsStatic && IsGameMode(otherMethod.DeclaringType)) Walk(otherMethod, otherMethod.DeclaringType, calls, seen, depth + 1, target);
         }
     }
 

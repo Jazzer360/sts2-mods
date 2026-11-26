@@ -32,26 +32,64 @@ namespace SpireQoL.Features;
 /// </summary>
 public sealed partial class RunReminders
 {
-    private static readonly ConditionalWeakTable<EventOption, OptionCards> CardsRead = new();
     private static readonly ConditionalWeakTable<EventOption, StrongBox<List<CardModel>?>> CardsCache = new();
 
     private static readonly MethodInfo? FilterForRun = AccessTools.Method(typeof(CardFactory), "FilterForRun");
+
+    /// <summary>
+    /// The card reading of an option's reading (decision #353): every body of the game's models' code the reading read (the event's, its parts', the
+    /// relics it gives, a modifier's, a game mode's: not the game's library helpers, CardCreationOptions' factories, whose calls the card reading
+    /// reads itself), in the order the reading read them, each with the calls it makes into its own model's code (a property that lists the cards it
+    /// picks from: the Trash Heap's Cards, Archaic Tooth's TranscendenceUpgrades), read for the cards it makes; the relics whose obtaining it read; the
+    /// cards its program makes by class; and the picks it names. Code only: no game state, any thread.
+    /// </summary>
+    internal static OptionCards CardsFrom(OptionReading reading)
+    {
+        var cards = new OptionCards { Picks = reading.Picks };
+        var seen = new HashSet<MethodBase>();
+        foreach (var code in reading.Code)
+            if (OuterType(code.Body)?.Namespace is { } space && (space.StartsWith("MegaCrit.Sts2.Core.Models", StringComparison.Ordinal) || space.StartsWith("MegaCrit.Sts2.Core.Events", StringComparison.Ordinal)))
+                ReadCardsIn(code.Body, OuterType(code.Body)!, cards, seen, depth: 0);
+        foreach (var code in reading.Code)
+            if (code.Relic != null) cards.Obtains(code.Relic);
+        foreach (var card in reading.Made) cards.Makes(card);
+        return cards;
+    }
+
+    private static Type? OuterType(MethodBase body)
+    {
+        var type = body.DeclaringType;
+        while (type?.DeclaringType != null) type = type.DeclaringType;
+        return type;
+    }
+
+    /// <summary>A body's cards, then those of the calls it makes into its own model's code, in the order it makes them.</summary>
+    private static void ReadCardsIn(MethodBase method, Type owner, OptionCards cards, HashSet<MethodBase> seen, int depth)
+    {
+        var body = method.GetCustomAttribute<AsyncStateMachineAttribute>()?.StateMachineType
+            .GetMethod("MoveNext", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public) ?? method;
+        if (depth > 6 || !seen.Add(body)) return;
+        List<HarmonyLib.CodeInstruction> code;
+        try { code = SpireQoL.Diagnostics.GameCode.Instructions(body); }
+        catch { return; } // unreadable
+        cards.Read(code);
+        foreach (var ins in code)
+            if (ins.operand is MethodBase { DeclaringType: { } declaring } called && (ins.opcode == OpCodes.Call || ins.opcode == OpCodes.Callvirt) && IsWithin(declaring, owner))
+                ReadCardsIn(called, owner, cards, seen, depth + 1);
+    }
 
     /// <summary>Whether a card the rule applies to can come from this option (true when its cards can't be read).</summary>
     private static bool CanGet(EventOption option, Player me, CardAffinityRule rule)
     {
         var cards = CardsOf(option, me);
         var held = Held(me);
-        var upgraded = CardsRead.TryGetValue(option, out var read) && read.GivesUpgraded;
+        var upgraded = ReadyCardsOf(option) is { GivesUpgraded: true };
         return cards == null || cards.Any(card => CardAffinity.AppliesWith(rule, card, held, upgraded));
     }
 
     /// <summary>Whether the change this option makes to your cards (an upgrade, an enchantment) can reach one the rule applies to.</summary>
-    private static bool ChangeReaches(EventOption option, Player me, CardAffinityRule rule)
-    {
-        EffectsOf(option);
-        return !CardsRead.TryGetValue(option, out var read) || read.ChangeReaches(me, rule);
-    }
+    private static bool ChangeReaches(EventOption option, Player me, CardAffinityRule rule) =>
+        ReadyCardsOf(option) is not { } read || read.ChangeReaches(me, rule);
 
     private static readonly ConditionalWeakTable<EventOption, Dictionary<string, (string? Text, bool Never)>> OddsCache = new();
 
@@ -72,7 +110,7 @@ public sealed partial class RunReminders
         never = false;
         try
         {
-            if (CardsRead.TryGetValue(option, out var read))
+            if (ReadyCardsOf(option) is { } read)
             {
                 var held = Held(me);
                 if (read.Chance(me, card => CardAffinity.AppliesWith(rule, card, held, read.GivesUpgraded)) is { } chance)
@@ -113,11 +151,12 @@ public sealed partial class RunReminders
     internal static List<CardModel>? CardsOf(EventOption option, Player me)
     {
         if (CardsCache.TryGetValue(option, out var box)) return box.Value;
-        EffectsOf(option);
-        List<CardModel>? list = null;
+        // Not read yet (a worker reads it): unknown, and not kept.
+        if (ReadyCardsOf(option) is not { } read) return null;
+        List<CardModel>? list;
         try
         {
-            if (CardsRead.TryGetValue(option, out var read)) list = read.Candidates(me);
+            list = read.Candidates(me);
         }
         catch (Exception ex)
         {
@@ -128,13 +167,46 @@ public sealed partial class RunReminders
         return list;
     }
 
-    /// <summary>What an option's code says about the cards it makes (filled while walking it).</summary>
+    /// <summary>
+    /// What an option's code says about the cards it makes (filled from the code its reading read: decision #353), and the objects that code runs on
+    /// for one option (For).
+    /// </summary>
     internal sealed class OptionCards
     {
         /// <summary>The option's delegate target (the event, or a closure over it): the filter lambdas' <c>this</c>.</summary>
         public object? Target;
         /// <summary>An ancient's relic the option gives (its AfterObtained is read too): Sea Glass's character, say.</summary>
         public object? Relic;
+        /// <summary>The models of the delegates the option's event held as it was shown (a Neow modifier's): their values and filters.</summary>
+        private object[] _heldTargets = Array.Empty<object>();
+        /// <summary>The relics whose obtaining the reading read (Fragrant Mushroom, Claws): their values, on the relic's own model.</summary>
+        private readonly List<Type> _relics = new();
+
+        /// <summary>The picks from your deck the reading names (decision #353): what an enchantment pick can reach (Self-Help Book's).</summary>
+        public IReadOnlyList<SpireQoL.Features.OptionPick> Picks { get; init; } = Array.Empty<SpireQoL.Features.OptionPick>();
+
+        /// <summary>A card the reading's program makes by class (CreateCard&lt;T&gt;, its T read where a generic helper is called: Bugslayer's).</summary>
+        public void Makes(string card)
+        {
+            if (typeof(CardModel).Assembly.GetTypes().FirstOrDefault(type => type.Name == card && typeof(CardModel).IsAssignableFrom(type) && !type.IsAbstract) is { } found)
+                _fixed.Add(found);
+        }
+
+        /// <summary>The reading read a relic's obtaining: its code runs on that relic.</summary>
+        public void Obtains(Type relic)
+        {
+            if (!_relics.Contains(relic)) _relics.Add(relic);
+        }
+
+        /// <summary>This card reading for one option: the objects its code runs on (the option's target, its relic, the delegates' models).</summary>
+        public OptionCards For(object? target, object? relic, object[] heldTargets)
+        {
+            var copy = (OptionCards)MemberwiseClone();
+            copy.Target = target;
+            copy.Relic = relic;
+            copy._heldTargets = heldTargets;
+            return copy;
+        }
 
         /// <summary>A card pool in the code, and the call that gave the character whose pool it is (null: not a character's).</summary>
         private sealed record PoolSource(MethodBase Method, MethodBase? Character);
@@ -253,10 +325,10 @@ public sealed partial class RunReminders
                 if (otherMethod.Name == "get_CardPool" && typeof(CharacterModel).IsAssignableFrom(type)) pools.Add(new PoolSource(otherMethod, character));
                 else if (type == typeof(ModelDb) && otherMethod is MethodInfo { IsGenericMethod: true } nextMethod && nextMethod.Name == nameof(ModelDb.CardPool)) pools.Add(new PoolSource(otherMethod, Character: null));
                 else if (otherMethod is MethodInfo { IsGenericMethod: true } gc && (gc.Name is "Card" or "CreateCard" or "TransformTo")
-                    && gc.GetGenericArguments()[0] is { } otherType && typeof(CardModel).IsAssignableFrom(otherType) && !otherType.IsAbstract)
+                    && gc.GetGenericArguments()[0] is { } otherType && typeof(CardModel).IsAssignableFrom(otherType) && !otherType.IsAbstract && !otherType.IsGenericParameter)
                     _fixed.Add(otherType);
                 else if (otherMethod is MethodInfo { IsGenericMethod: true } ge && (ge.Name is "Enchantment" or "Enchant")
-                    && ge.GetGenericArguments()[0] is { } nextType && typeof(EnchantmentModel).IsAssignableFrom(nextType) && !nextType.IsAbstract)
+                    && ge.GetGenericArguments()[0] is { } nextType && typeof(EnchantmentModel).IsAssignableFrom(nextType) && !nextType.IsAbstract && !nextType.IsGenericParameter)
                     _enchantments.Add(nextType);
                 else if (type == typeof(CardCreationOptions) && (otherMethod.IsConstructor || (otherMethod is MethodInfo f && f.IsStatic && f.ReturnType == typeof(CardCreationOptions))))
                 {
@@ -505,14 +577,40 @@ public sealed partial class RunReminders
         {
             var deck = me.Deck.Cards.ToList();
             bool Base(CardModel card) => rule.Base == null || rule.Base(card);
+            var enchantPicks = Picks.Where(pick => pick.Kind == ChoiceEffect.EnchantCard).ToList();
+            var named = enchantPicks.SelectMany(pick => pick.Enchantments).ToHashSet();
+            var others = _enchantments.Where(type => !named.Contains(type.Name)).ToList();
             return rule.Change switch
             {
                 CardChange.Upgrade => _upgradesDeck && deck.Any(card => Base(card) && card.IsUpgradable),
-                CardChange.Enchant => _enchantsDeck && deck.Any(card => Base(card) && (_enchantments.Count == 0
-                    || _enchantments.Any(type => EnchantmentOf(type)?.CanEnchant(card) ?? true))),
+                // A pick the reading names (Self-Help Book's: Sharp on an Attack you pick): a card of yours the rule applies to that the pick lets you
+                // choose and its enchantment can go on (decision #353); an enchantment the code names besides, as before.
+                CardChange.Enchant when enchantPicks.Count > 0 => deck.Any(card => Base(card) && (enchantPicks.Any(pick => Takes(pick, card)
+                    && (pick.Enchantments.Count == 0 ? CanTakeAny(card, _enchantments) : pick.Enchantments.Any(name => EnchantmentNamed(name)?.CanEnchant(card) ?? true)))
+                    || others.Any(type => EnchantmentOf(type)?.CanEnchant(card) ?? true))),
+                CardChange.Enchant => _enchantsDeck && deck.Any(card => Base(card) && CanTakeAny(card, _enchantments)),
                 _ => false,
             };
         }
+
+        /// <summary>An enchantment of <paramref name="enchantments"/> can go on the card (any, when there are none).</summary>
+        private static bool CanTakeAny(CardModel card, IReadOnlyCollection<Type> enchantments) =>
+            enchantments.Count == 0 || enchantments.Any(type => EnchantmentOf(type)?.CanEnchant(card) ?? true);
+
+        /// <summary>The pick lets you choose the card: its filter, on the card, as the game's code tests it (true when it has none or can't be told).</summary>
+        private bool Takes(SpireQoL.Features.OptionPick pick, CardModel card)
+        {
+            if (pick.Filter == null) return true;
+            try
+            {
+                var board = SpireQoL.Procs.Programs.ProgramBoard.Of(Holders().OfType<EventModel>().FirstOrDefault() ?? (object?)Target ?? card);
+                return SpireQoL.Procs.Programs.ProgramEvaluator.Passes(pick.Filter, card, board, SpireQoL.Procs.Programs.ModelProgram.Empty) != false;
+            }
+            catch { return true; }
+        }
+
+        private static EnchantmentModel? EnchantmentNamed(string name) =>
+            typeof(EnchantmentModel).Assembly.GetTypes().FirstOrDefault(type => type.Name == name && typeof(EnchantmentModel).IsAssignableFrom(type)) is { } type ? EnchantmentOf(type) : null;
 
         private static EnchantmentModel? EnchantmentOf(Type type)
         {
@@ -698,6 +796,10 @@ public sealed partial class RunReminders
                 if (ThisField(Target.GetType())?.GetValue(Target) is { } outer) yield return outer;
             }
             if (Relic != null) yield return Relic;
+            foreach (var held in _heldTargets) yield return held;
+            // A relic whose obtaining the reading read, by its class (Fragrant Mushroom): its canonical model's values.
+            foreach (var relic in _relics)
+                if (Relic?.GetType() != relic && ModelDb.AllRelics.FirstOrDefault(model => model.GetType() == relic) is { } canonical) yield return canonical;
         }
 
         private static FieldInfo? ThisField(Type type) =>

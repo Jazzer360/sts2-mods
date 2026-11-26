@@ -86,7 +86,7 @@ public class OptionProgramTests
         }
         var relics = new List<string>();
         var relicGaps = new Dictionary<string, int>();
-        int relicsWhole = 0, relicsTotal = 0;
+        int relicsWhole = 0, relicsWhenShown = 0, relicsTotal = 0;
         foreach (var relic in code.Assembly.GetTypes().Where(type => !type.IsAbstract && Derives(type, "RelicModel") && type.Namespace == "MegaCrit.Sts2.Core.Models.Relics").OrderBy(type => type.Name, StringComparer.Ordinal))
         {
             if (relic.GetMethod("AfterObtained", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly) == null) continue;
@@ -94,13 +94,14 @@ public class OptionProgramTests
             relics.Add("relic " + relic.Name + ": " + reading);
             relicsTotal++;
             if (reading.Whole) relicsWhole++;
-            foreach (var reason in reading.Gaps.Select(gap => gap.Reason).Distinct()) relicGaps[reason] = relicGaps.GetValueOrDefault(reason) + 1;
+            else if (reading.Gaps.All(gap => gap.WhenShown)) relicsWhenShown++;
+            foreach (var reason in reading.Gaps.Where(gap => !gap.WhenShown).Select(gap => gap.Reason).Distinct()) relicGaps[reason] = relicGaps.GetValueOrDefault(reason) + 1;
         }
         var text = new StringBuilder();
         text.Append($"# Event options read as programs on {branch} (OptionProgramTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #350).\n");
-        text.Append($"# Options: {total}; read whole {whole}; whole once shown (a delegate the event holds) {whenShown}; with a gap {total - whole - whenShown}.\n");
+        text.Append($"# Options: {total}; read whole {whole}; whole once shown (what the option and the run hold then: decisions #74, #354, #355) {whenShown}; with a gap {total - whole - whenShown}.\n");
         foreach (var (reason, count) in gaps.OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key, StringComparer.Ordinal)) text.Append($"#   {count} {reason}\n");
-        text.Append($"# Relics' AfterObtained: {relicsTotal}; read whole {relicsWhole}; with a gap {relicsTotal - relicsWhole}.\n");
+        text.Append($"# Relics' AfterObtained: {relicsTotal}; read whole {relicsWhole}; whole once shown {relicsWhenShown}; with a gap {relicsTotal - relicsWhole - relicsWhenShown}.\n");
         foreach (var (reason, count) in relicGaps.OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key, StringComparer.Ordinal)) text.Append($"#   {count} {reason}\n");
         foreach (var line in options.Concat(relics)) text.Append(line).Append('\n');
         var file = Path.Combine(CardPlaySnapshotTests.SourceFolder(), "Snapshots", branch == "main" ? "event-options-main.txt" : "event-options.txt");
@@ -281,15 +282,16 @@ public class OptionProgramTests
         typeof(EventOption).GetField("<OnChosen>k__BackingField", Instance)!.SetValue(option, Delegate.CreateDelegate(typeof(Func<Task>), closure, handler));
         var reading = RunReminders.ReadingOf(option);
         Assert.True(reading.Kinds.HasFlag(ChoiceEffect.CardToDeck), reading.ToString());
-        Assert.DoesNotContain(reading.Gaps, gap => gap.WhenShown);
+        Assert.DoesNotContain(reading.Gaps, gap => gap.Reason == "runs a delegate the event holds");
     }
 
     [Fact]
-    public void ACardRewardsAlternativesAreAGap()
+    public void ACardRewardsAlternativesAreReadOnceShown()
     {
-        // A card reward's alternatives (skip, a relic's sacrifice) run a delegate the reward is given: named, never dropped.
+        // A card reward's alternatives (skip, a relic's sacrifice) run a delegate the reward's alternative holds: read without the run, the ones your relics
+        // add are read once the option is shown (decision #355), never dropped.
         var reading = ReadOption("ColorfulPhilosophers", "<GenerateInitialOptions>b__0");
         Assert.True(reading.Kinds.HasFlag(ChoiceEffect.CardToDeck), reading.ToString());
-        Assert.Contains(reading.Gaps, gap => gap.Reason == "runs a delegate from property CardRewardAlternative.OnSelect");
+        Assert.Contains(reading.Gaps, gap => gap.WhenShown && gap.Reason == "runs the delegates your relics give CardRewardAlternative (TryModifyCardRewardAlternatives)");
     }
 }

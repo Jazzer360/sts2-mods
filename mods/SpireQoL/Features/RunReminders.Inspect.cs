@@ -22,9 +22,10 @@ public sealed partial class RunReminders
     private static List<DrawGroup>? GroupsOf(EventOption option, Player me)
     {
         if (GroupsCache.TryGetValue(option, out var box)) return box.Value;
-        EffectsOf(option);
+        // Not read yet (a worker reads it): no button yet, and nothing kept.
+        if (ReadyCardsOf(option) is not { } read) return null;
         List<DrawGroup>? groups = null;
-        try { if (CardsRead.TryGetValue(option, out var read)) groups = read.Groups(me); }
+        try { groups = read.Groups(me); }
         catch (Exception ex) { Sts2Mods.Core.Diagnostics.ErrorReporter.Instance?.Exception(ex, "reminders-inspect:" + option.TextKey); }
         GroupsCache.AddOrUpdate(option, new StrongBox<List<DrawGroup>?>(groups));
         return groups;

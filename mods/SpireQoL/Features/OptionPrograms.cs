@@ -27,12 +27,48 @@ public sealed record OptionGap(string Reason, string? Via, bool WhenShown = fals
 }
 
 /// <summary>
+/// A method's code the reading read (decision #353), and the relic whose obtaining it is (null: the option's own, the event's or one of its parts'): what
+/// the card reading (which cards an option can give: decision #58) reads, so the one reading decides both.
+/// </summary>
+public sealed record OptionCode(MethodBase Body, Type? Relic);
+
+/// <summary>
+/// A pick from your deck the option changes your cards with (decision #353): what it does to the card (an enchantment or an upgrade), the enchantments
+/// its code names (Self-Help Book's Sharp; none when it doesn't name one), and the test the pick puts on your cards (its filter: c.Type == Attack), read
+/// from the program's step; null when it has none.
+/// </summary>
+public sealed record OptionPick(ChoiceEffect Kind, IReadOnlyList<string> Enchantments, LambdaValue? Filter, string? Via);
+
+/// <summary>
+/// What the reading reads off an option once it's shown, on the game's thread (decisions #74, #354, #355): the delegates the event and the option hold
+/// then (by where a call gets one), the relics the option's hover tips show that you don't hold (the Museum's relic, the Relic Trader's new one), and the
+/// types of the run's hook listeners (your relics: the alternatives they add to a card reward). Nothing that isn't on screen or yours.
+/// </summary>
+public sealed record OptionShown(Func<string, IEnumerable<MethodBase>>? Held, IReadOnlyList<Type> Relics, IReadOnlyList<Type>? Listeners)
+{
+    public static readonly OptionShown Nothing = new(Held: null, Array.Empty<Type>(), Listeners: null);
+}
+
+/// <summary>
 /// An event option's code read as a program (decision #350): what it does (<see cref="Effects"/>), the game calls it makes that no reminder looks at
-/// (<see cref="Others"/>), and what can't be followed (<see cref="Gaps"/>). The reminders' icons and the event check both come from it.
+/// (<see cref="Others"/>), and what can't be followed (<see cref="Gaps"/>). The reminders' icons and the event check both come from it, and the card
+/// reading reads the code it read (<see cref="Code"/>) and its picks (<see cref="Picks"/>: decision #353).
 /// </summary>
 public sealed record OptionReading(IReadOnlyList<OptionEffect> Effects, IReadOnlyList<OptionGap> Gaps, IReadOnlyList<string> Others)
 {
     public static readonly OptionReading Empty = new(Array.Empty<OptionEffect>(), Array.Empty<OptionGap>(), Array.Empty<string>());
+
+    /// <summary>The code the reading read, in the order it read it (a reward's own code left out: how taking it works, not what it's made of).</summary>
+    public IReadOnlyList<OptionCode> Code { get; init; } = Array.Empty<OptionCode>();
+
+    /// <summary>The picks from your deck that enchant the card you pick.</summary>
+    public IReadOnlyList<OptionPick> Picks { get; init; } = Array.Empty<OptionPick>();
+
+    /// <summary>The cards its code makes by class (CreateCard&lt;T&gt;: Bugslayer's, read with the class its generic helper is called with).</summary>
+    public IReadOnlyList<string> Made { get; init; } = Array.Empty<string>();
+
+    /// <summary>Something in it is read only once the option is shown (a delegate the event holds, the relic it shows, your relics' card reward alternatives).</summary>
+    public bool NeedsShown => Gaps.Any(gap => gap.WhenShown);
 
     /// <summary>Every kind of effect the option can have, whatever decides it.</summary>
     public ChoiceEffect Kinds => Effects.Aggregate(ChoiceEffect.None, (kinds, effect) => kinds | effect.Kind);
@@ -74,6 +110,7 @@ public sealed class OptionReader
     private readonly Dictionary<string, List<Type>> _types;
     private readonly ConcurrentDictionary<MethodBase, (List<CodeOp> Ops, List<CodeMember> Pages)> _code = new();
     private readonly ConcurrentDictionary<Type, OptionReading> _obtained = new();
+    private readonly ConcurrentDictionary<(MethodBase Handler, Type? Relic), OptionReading> _options = new();
 
     /// <param name="game">The game's assembly (the loaded one, or a branch's file in the tests).</param>
     /// <param name="read">The instructions of a method of it.</param>
@@ -156,7 +193,17 @@ public sealed class OptionReader
     /// object for later is a null (it isn't run here); a reward or one of the event's own parts made, a delegate called and a method of the event's
     /// base class are command calls, so each is a step at its place with its condition and values.
     /// </summary>
-    public List<CodeOp> Code(MethodBase method) => Rewrite(method).Ops;
+    public List<CodeOp> Code(MethodBase method)
+    {
+        // The code a reading reads, for the card reading (decision #353): every body the program reader asks for while a reading records.
+        if (_recording is { } sink && !_quiet) sink.Read(method, _obtaining);
+        return Rewrite(method).Ops;
+    }
+
+    /// <summary>The reading this thread is making (its code is recorded into it), the relic whose obtaining it's reading, and a reward's code being read (not recorded).</summary>
+    [ThreadStatic] private static Sink? _recording;
+    [ThreadStatic] private static Type? _obtaining;
+    [ThreadStatic] private static bool _quiet;
 
     private (List<CodeOp> Ops, List<CodeMember> Pages) Rewrite(MethodBase method) => _code.GetOrAdd(method, RewriteNow);
 
@@ -190,6 +237,24 @@ public sealed class OptionReader
                 // A delegate that acts given to a query that runs it (Neow's Bones' Select(r => new RelicReward(r, ...))): the query is a step, which the
                 // program reader gives the delegate's steps to.
                 if (consumer.Member is { Namespace: var space } && space.StartsWith("System", StringComparison.Ordinal) && Acts(target)) runners.Add(at);
+                // A delegate that acts given to a card choice (Claws' preview of the Maul each card becomes): the choice runs it for each card it shows,
+                // so it's a step where it's made (decision #356), its code read there; the delegate the choice gets is that step's result.
+                if (IsChoice(consumer) && ActsWhenRead(target))
+                {
+                    var id = target.Namespace + "." + target.DeclaringType + "." + target.Name + "/" + target.ParameterCount;
+                    _given.TryAdd(id, target);
+                    shown.Add(instruction);
+                    shown.Add(new CodeOp(next.Offset, OpCodes.Call)
+                    {
+                        Member = new CodeMember(CodeMemberKind.Method, GivenToChoice, "Runs")
+                        {
+                            Namespace = CommandsNamespace, GenericArguments = new[] { id }, ParameterCount = made.ParameterCount, ParameterTypes = made.ParameterTypes,
+                            HasThis = false, ReturnsValue = true, ValueType = made.DeclaringType,
+                        },
+                    });
+                    i++;
+                    continue;
+                }
             }
             // A C# event raised (EventModel's StateChanged?.Invoke(this), a reward's): its listeners are the game's screens, not the option.
             if (instruction.IsCall && instruction.Member is { Name: nameof(Action.Invoke) } invoked && IsDelegate(invoked.DeclaringType))
@@ -240,6 +305,39 @@ public sealed class OptionReader
     }
 
     [ThreadStatic] private static HashSet<MethodBase>? _rewriting;
+
+    /// <summary>The step a delegate given to a card choice is read as (decision #356): "OptionReader.Runs", the delegate's method by its id.</summary>
+    private const string GivenToChoice = "OptionReader";
+
+    /// <summary>The delegates given to a card choice, by the id their step carries.</summary>
+    private readonly ConcurrentDictionary<string, CodeMember> _given = new();
+
+    /// <summary>A card choice (CardSelectCmd), which runs a delegate it's given as it shows its cards.</summary>
+    private static bool IsChoice(CodeOp consumer) => consumer.Member is { DeclaringType: "CardSelectCmd", Namespace: CommandsNamespace };
+
+    /// <summary>
+    /// The method a delegate points at runs a command as the program reader reads it (its own helpers followed: Claws' CreateMaulFromOriginal), on any
+    /// way, even one its arguments rule out: the reading leaves those out where it reads them.
+    /// </summary>
+    private bool ActsWhenRead(CodeMember target)
+    {
+        if (TypeOf(target) is not { } type || ProgramReader.Called(type.GetMethods(All), target) is not { } method) return false;
+        _rewriting ??= new HashSet<MethodBase>();
+        if (!_rewriting.Add(method)) return false;
+        var wasQuiet = _quiet;
+        _quiet = true;
+        try
+        {
+            return new ModelProgram("", ProgramReader.ReadMethod(Outermost(type), method, Code).Steps).All()
+                .Any(step => step is CommandStep { Command.Namespace: CommandsNamespace } or ChoiceStep);
+        }
+        catch { return false; }
+        finally
+        {
+            _quiet = wasQuiet;
+            _rewriting.Remove(method);
+        }
+    }
 
     /// <summary>The index of the call a delegate made at <paramref name="from"/> is given to: the first one after it that takes a delegate.</summary>
     private static int? Consumer(List<CodeOp> ops, int from)
@@ -306,15 +404,22 @@ public sealed class OptionReader
 
     /// <summary>What the reading knows when it reads one option.</summary>
     /// <param name="OptionRelic">The relic the option carries (an ancient's), for an Obtain of a relic its code doesn't name.</param>
-    /// <param name="Held">The delegates the event and the option hold as the option is shown (decision #74), by where the call gets one ("field Dish.action",
-    /// "a parameter or local"); null: read without the event.</param>
-    private sealed record Context(Type? OptionRelic, Func<string, IEnumerable<MethodBase>>? Held);
+    /// <param name="Shown">What's read off the option as it's shown (decisions #74, #354, #355); null: read without the event.</param>
+    private sealed record Context(Type? OptionRelic, OptionShown? Shown)
+    {
+        /// <summary>The delegates the event and the option hold as the option is shown, by where the call gets one ("field Dish.action").</summary>
+        public Func<string, IEnumerable<MethodBase>>? Held => Shown?.Held;
+    }
 
     private sealed class Sink
     {
         public readonly List<OptionEffect> Effects = new();
         public readonly List<OptionGap> Gaps = new();
         public readonly List<string> Others = new();
+        public readonly List<OptionPick> Picks = new();
+        public readonly List<string> Made = new();
+        public readonly List<OptionCode> Code = new();
+        private readonly HashSet<(MethodBase, Type?)> _code = new();
         public readonly HashSet<MethodBase> Seen = new();
         public bool RelicUsed;
 
@@ -333,54 +438,120 @@ public sealed class OptionReader
             if (!Others.Contains(step)) Others.Add(step);
         }
 
-        public OptionReading Reading() => new(Effects.ToList(), Gaps.ToList(), Others.ToList());
+        public void Pick(OptionPick pick)
+        {
+            if (!Picks.Any(known => known.Kind == pick.Kind && known.Via == pick.Via && known.Enchantments.SequenceEqual(pick.Enchantments) && Equals(known.Filter, pick.Filter))) Picks.Add(pick);
+        }
+
+        public void Read(MethodBase body, Type? relic)
+        {
+            if (_code.Add((body, relic))) Code.Add(new OptionCode(body, relic));
+        }
+
+        public OptionReading Reading() => new(Effects.ToList(), Gaps.ToList(), Others.ToList()) { Code = Code.ToList(), Picks = Picks.ToList(), Made = Made.ToList() };
     }
+
+    /// <summary>The loaded game's readings wait for its models (a curse is told by its card) before they're kept.</summary>
+    private bool CursesKnown => _isCurse != LoadedCurse || _loadedCurses != null;
 
     /// <summary>
     /// An option: its handler's program, with <paramref name="optionRelic"/> the relic the option carries (read through its AfterObtained where the
-    /// code obtains it, or as the option's own when it doesn't), and <paramref name="held"/> the delegates the event holds now (null without the event).
+    /// code obtains it, or as the option's own when it doesn't), and <paramref name="shown"/> what's read off the option as it's shown (null without the
+    /// event: then the reading is kept, once a launch, for every option that runs the handler).
     /// </summary>
-    public OptionReading Read(MethodBase handler, Type? optionRelic = null, Func<string, IEnumerable<MethodBase>>? held = null)
+    public OptionReading Read(MethodBase handler, Type? optionRelic = null, OptionShown? shown = null)
     {
+        if (shown == null && _options.TryGetValue((handler, optionRelic), out var known)) return known;
         var sink = new Sink();
-        var context = new Context(optionRelic, held);
-        if (handler.DeclaringType is { } declaring)
+        var context = new Context(optionRelic, shown);
+        var outer = (_recording, _obtaining, _quiet);
+        (_recording, _obtaining, _quiet) = (sink, null, false);
+        try
         {
-            var owner = Outermost(declaring);
-            sink.Seen.Add(handler);
-            Collect(ProgramReader.ReadMethod(owner, handler, Code).Steps, owner, null, null, depth: 0, sink, context);
+            if (handler.DeclaringType is { } declaring)
+            {
+                var owner = Outermost(declaring);
+                sink.Seen.Add(handler);
+                Collect(ProgramReader.ReadMethod(owner, handler, Code).Steps, owner, null, null, depth: 0, sink, context);
+            }
+            if (optionRelic != null && !sink.RelicUsed) Include(ReadObtained(optionRelic, shown), null, optionRelic.Name, sink);
         }
-        if (optionRelic != null && !sink.RelicUsed) Include(ReadObtained(optionRelic), null, optionRelic.Name, sink);
-        return sink.Reading();
+        finally { (_recording, _obtaining, _quiet) = outer; }
+        var reading = sink.Reading();
+        return shown == null && CursesKnown ? _options.GetOrAdd((handler, optionRelic), reading) : reading;
     }
+
+    /// <summary>
+    /// Every option of every event given (their handlers and relics: Options), read without the event and kept (decision #352: at load, on a worker),
+    /// so an option shown later finds its reading. Returns how many were read.
+    /// </summary>
+    public int ReadAll(IEnumerable<Type> events)
+    {
+        var count = 0;
+        foreach (var eventType in events)
+        {
+            IReadOnlyList<(MethodBase Handler, Type? Relic)> options;
+            try { options = Options(eventType); }
+            catch { continue; }
+            foreach (var (handler, relic) in options)
+            {
+                try
+                {
+                    Read(handler, relic);
+                    count++;
+                }
+                catch { /* read again when it's shown, where a failure is reported */ }
+            }
+        }
+        return count;
+    }
+
+    /// <summary>The kept reading of an option read without the event (ReadAll, or a reading before), or null when there's none yet.</summary>
+    public OptionReading? Kept(MethodBase handler, Type? optionRelic) => _options.TryGetValue((handler, optionRelic), out var known) ? known : null;
 
     [ThreadStatic] private static HashSet<Type>? _reading;
 
-    /// <summary>What a relic does as you obtain it: its own AfterObtained, read like an option's code (empty when it has none).</summary>
-    public OptionReading ReadObtained(Type relic)
+    /// <summary>
+    /// What a relic does as you obtain it: its own AfterObtained, read like an option's code (empty when it has none). Kept when read without the
+    /// event; with <paramref name="shown"/>, read again when something in it is read only once shown (a card reward's alternatives your relics add).
+    /// </summary>
+    public OptionReading ReadObtained(Type relic, OptionShown? shown = null)
     {
-        if (_obtained.TryGetValue(relic, out var known)) return known;
+        if (_obtained.TryGetValue(relic, out var known) && (shown == null || !known.NeedsShown)) return known;
         _reading ??= new HashSet<Type>();
         if (!_reading.Add(relic)) return OptionReading.Empty; // a relic whose obtaining obtains itself: read once
+        var outer = (_recording, _obtaining, _quiet);
         try
         {
             var sink = new Sink();
+            (_recording, _obtaining, _quiet) = (sink, relic, false);
             if (relic.GetMethod("AfterObtained", All) is { IsAbstract: false } obtained)
-                Collect(ProgramReader.ReadMethod(relic, obtained, Code).Steps, relic, null, null, depth: 0, sink, new Context(null, null));
+                Collect(ProgramReader.ReadMethod(relic, obtained, Code).Steps, relic, null, null, depth: 0, sink, new Context(null, shown));
             var reading = sink.Reading();
-            // The loaded game's reading waits for its models (a curse is told by its card) before it keeps one.
-            return _isCurse != LoadedCurse || _loadedCurses != null ? _obtained.GetOrAdd(relic, reading) : reading;
+            return shown == null && CursesKnown ? _obtained.GetOrAdd(relic, reading) : reading;
         }
-        finally { _reading.Remove(relic); }
+        finally
+        {
+            (_recording, _obtaining, _quiet) = outer;
+            _reading.Remove(relic);
+        }
     }
 
     private static ProgramCondition? And(ProgramCondition? outer, ProgramCondition? inner) => outer == null ? inner : inner == null ? outer : outer.And(inner);
+
+    /// <summary>
+    /// A condition no way through holds by the code's own constants (Claws' preview reads CreateMaulFromOriginal with forPreview true: its commands
+    /// are on the way where it's false): a step there never runs.
+    /// </summary>
+    private static bool CantHold(ProgramCondition? condition) =>
+        condition != null && (condition.IsNever || condition.Terms.All(term => term.Any(literal => literal.Test is ConstantValue constant && (constant.Value != 0) != literal.Holds)));
 
     private void Collect(IEnumerable<ProgramStep> steps, Type owner, ProgramCondition? outer, string? via, int depth, Sink sink, Context context)
     {
         foreach (var step in steps)
         {
             var condition = And(outer, step.Condition);
+            if (CantHold(condition)) continue;
             switch (step)
             {
                 case LoopStep loop:
@@ -391,10 +562,12 @@ public sealed class OptionReader
                     break;
                 case ChoiceStep choice:
                     Classify(choice.Command.FullName, condition, "", via, sink);
+                    Pick(choice.Command.FullName, choice.Values, via, sink);
                     break;
                 case CreateStep create:
                     // The card it makes is a curse (Hefty Tablet's RunState.CreateCard<Injury>): whatever command adds it, a curse joins the deck.
                     if (_isCurse(create.Card)) sink.Effect(new OptionEffect(ChoiceEffect.CurseToDeck, "create " + create.Card, condition, "", via));
+                    if (!sink.Made.Contains(create.Card)) sink.Made.Add(create.Card);
                     break;
                 case CommandStep command:
                     Command(command, owner, condition, via, depth, sink, context);
@@ -411,6 +584,18 @@ public sealed class OptionReader
         else sink.Effect(new OptionEffect(effect, step, condition, amount, via));
     }
 
+    /// <summary>
+    /// A pick from your deck that enchants your card (FromDeckForEnchantment): the enchantments its values name (ModelDb.Enchantment&lt;Sharp&gt;) and the
+    /// filter it's given (decision #353), for the card relics' check of what the change can reach (Mystic Lighter).
+    /// </summary>
+    private void Pick(string step, IReadOnlyList<ProgramValue> values, string? via, Sink sink)
+    {
+        if ((EffectOf(step) & ChoiceEffect.EnchantCard) == 0) return;
+        var enchantments = values.SelectMany(value => value.Parts()).OfType<QueryValue>().Where(query => query is { Name: "Enchantment" })
+            .SelectMany(query => query.GenericArguments).Where(name => TypeNamed(name) is { } type && Derives(type, "EnchantmentModel")).Distinct().ToList();
+        sink.Pick(new OptionPick(ChoiceEffect.EnchantCard, enchantments, values.OfType<LambdaValue>().FirstOrDefault(), via));
+    }
+
     private void Command(CommandStep command, Type owner, ProgramCondition? condition, string? via, int depth, Sink sink, Context context)
     {
         var member = command.Command;
@@ -420,12 +605,24 @@ public sealed class OptionReader
             sink.Gap(new OptionGap(name + ": followed too deep", via));
             return;
         }
+        // A delegate given to a card choice (Claws' preview): the choice runs it as it shows its cards (decision #356).
+        if (member.DeclaringType == GivenToChoice)
+        {
+            if (member.GenericArguments is [var id] && _given.TryGetValue(id, out var given)) RunDelegate(given, condition, via, depth, sink, context);
+            else sink.Gap(new OptionGap("runs a delegate given to a card choice: its code isn't there", via));
+            return;
+        }
         // A delegate called. One the event holds (the Endless Conveyor's dish: GrabSomethingOffTheBelt runs CurrentDish.action) or one its option was
-        // given (Neow's modifier options) is read as the event and the option hold it when the option is shown (decision #74); one from elsewhere (a card
-        // reward's alternatives) is a gap.
+        // given (Neow's modifier options) is read as the event and the option hold it when the option is shown (decision #74); one an object of the game's
+        // holds (a card reward's alternative's OnSelect) is read from the code that gives it its delegates (decision #355).
         if (member.Name == nameof(Action.Invoke) && IsDelegate(member.DeclaringType))
         {
             var source = member.GenericArguments.Count > 0 ? member.GenericArguments[0] : "a parameter or local";
+            if (source.StartsWith("property ", StringComparison.Ordinal) && TypeNamed(source["property ".Length..].Split('.')[0]) is { } propertyHolder && !IsConcreteEvent(Outermost(propertyHolder)))
+            {
+                FromProperty(propertyHolder, condition, via, depth, sink, context);
+                return;
+            }
             var fromEvent = source.StartsWith("field ", StringComparison.Ordinal)
                 ? TypeNamed(source["field ".Length..].Split('.')[0]) is { } fieldOwner && IsConcreteEvent(Outermost(fieldOwner))
                 : !source.StartsWith("property ", StringComparison.Ordinal) && IsConcreteEvent(owner);
@@ -474,7 +671,91 @@ public sealed class OptionReader
         if (name.StartsWith("RelicCmd.Obtain", StringComparison.Ordinal)) Obtain(command, owner, condition, via, sink, context);
     }
 
-    /// <summary>A reward the option makes: what taking it does, from its own OnSelect.</summary>
+    /// <summary>A delegate's method (a lambda, a model's own method), read where it runs, with its model as the owner of its code.</summary>
+    private void RunDelegate(CodeMember target, ProgramCondition? condition, string? via, int depth, Sink sink, Context context)
+    {
+        if (TypeOf(target) is not { } type || ProgramReader.Called(type.GetMethods(All), target) is not { } method)
+        {
+            sink.Gap(new OptionGap("runs " + target.FullName + ": its code isn't there", via));
+            return;
+        }
+        var holder = Outermost(type);
+        if (sink.Seen.Add(method)) Collect(ProgramReader.ReadMethod(holder, method, Code).Steps, holder, condition, via, depth + 1, sink, context);
+    }
+
+    /// <summary>
+    /// A delegate an object of the game's holds in a property, as its constructor was given it (a card reward's alternative's OnSelect: decision #355):
+    /// the delegates the game's code gives that constructor, in the object's own code (the skip, a reroll) and in the hooks its code tells, by the
+    /// listeners the run has once the option is shown (TryModifyCardRewardAlternatives: Pael's Wing's sacrifice). Each is read where it runs.
+    /// </summary>
+    private void FromProperty(Type holder, ProgramCondition? condition, string? via, int depth, Sink sink, Context context)
+    {
+        var own = new[] { holder }.Concat(SpireQoL.Procs.CardCode.NestedTypes(holder))
+            .SelectMany(type => type.GetMethods(All).Cast<MethodBase>().Concat(type.GetConstructors(All))).Where(method => !method.IsAbstract).ToList();
+        var alternative = (via == null ? "" : via + ", ") + holder.Name;
+        foreach (var target in GivenTo(holder, own)) RunDelegate(target, condition, alternative, depth, sink, context);
+        var hooks = HooksTold(own);
+        if (hooks.Count == 0) return;
+        if (context.Shown?.Listeners is not { } listeners)
+        {
+            sink.Gap(new OptionGap("runs the delegates your relics give " + holder.Name + " (" + string.Join(", ", hooks) + ")", via, WhenShown: true));
+            return;
+        }
+        foreach (var listener in listeners)
+            foreach (var hook in hooks)
+                for (var type = listener; type != null && type.Name != "AbstractModel"; type = type.BaseType)
+                    if (type.GetMethods(All).FirstOrDefault(method => method.Name == hook && !method.IsAbstract) is { } overriding)
+                    {
+                        foreach (var target in GivenTo(holder, new[] { (MethodBase)overriding }))
+                            RunDelegate(target, condition, (via == null ? "" : via + ", ") + listener.Name, depth, sink, context);
+                        break;
+                    }
+    }
+
+    /// <summary>The methods made into delegates and given to <paramref name="holder"/>'s constructor in <paramref name="methods"/>' code.</summary>
+    private IEnumerable<CodeMember> GivenTo(Type holder, IEnumerable<MethodBase> methods)
+    {
+        foreach (var method in methods)
+        {
+            List<CodeOp> ops;
+            try { ops = _read(ProgramReader.BodyOf(method)); }
+            catch { continue; }
+            for (var i = 0; i + 1 < ops.Count; i++)
+                if (ops[i].OpCode == OpCodes.Ldftn && ops[i].Member is { } target && ops[i + 1] is { OpCode: var made, Member: { } created } && made == OpCodes.Newobj
+                    && IsDelegate(created.DeclaringType) && Consumer(ops, i + 2) is { } at && ops[at] is { OpCode: var consumer, Member: { Name: ".ctor" } constructor }
+                    && consumer == OpCodes.Newobj && constructor.DeclaringType == holder.Name)
+                    yield return target;
+        }
+    }
+
+    /// <summary>
+    /// The hooks the code tells (a static method of the game's Hook class it calls: Hook.ModifyCardRewardAlternatives), each by the method of a model's
+    /// that the hook calls on every listener (TryModifyCardRewardAlternatives), read from the Hook method's own code.
+    /// </summary>
+    private List<string> HooksTold(IEnumerable<MethodBase> methods)
+    {
+        var hooks = new List<string>();
+        foreach (var method in methods)
+        {
+            List<CodeOp> ops;
+            try { ops = _read(ProgramReader.BodyOf(method)); }
+            catch { continue; }
+            foreach (var call in ops)
+            {
+                if (!call.IsCall || call.Member is not { DeclaringType: "Hook", HasThis: false } told || TypeOf(told) is not { } hookType
+                    || ProgramReader.Called(hookType.GetMethods(All), told) is not { } hook) continue;
+                List<CodeOp> hookOps;
+                try { hookOps = _read(ProgramReader.BodyOf(hook)); }
+                catch { continue; }
+                foreach (var asked in hookOps)
+                    if (asked.IsCall && asked.Member is { DeclaringType: "AbstractModel", HasThis: true, Name: var name } && !name.StartsWith("get_", StringComparison.Ordinal) && !hooks.Contains(name))
+                        hooks.Add(name);
+            }
+        }
+        return hooks;
+    }
+
+    /// <summary>A reward the option makes: what taking it does, from its own OnSelect (its code isn't the option's cards: not recorded).</summary>
     private void Reward(Type reward, ProgramCondition? condition, string? via, int depth, Sink sink, Context context)
     {
         MethodInfo? select = null;
@@ -486,7 +767,11 @@ public sealed class OptionReader
             sink.Gap(new OptionGap(name + ": no OnSelect to read", via));
             return;
         }
-        if (sink.Seen.Add(select)) Collect(ProgramReader.ReadMethod(select.DeclaringType!, select, Code).Steps, select.DeclaringType!, condition, via == null ? name : via + ", " + name, depth + 1, sink, context with { OptionRelic = null });
+        if (!sink.Seen.Add(select)) return;
+        var wasQuiet = _quiet;
+        _quiet = true;
+        try { Collect(ProgramReader.ReadMethod(select.DeclaringType!, select, Code).Steps, select.DeclaringType!, condition, via == null ? name : via + ", " + name, depth + 1, sink, context with { OptionRelic = null }); }
+        finally { _quiet = wasQuiet; }
     }
 
     /// <summary>One of the event's own parts it makes (the Crystal Sphere's minigame, and the items it hides): everything it does is something the option can do.</summary>
@@ -504,7 +789,10 @@ public sealed class OptionReader
         }
     }
 
-    /// <summary>A relic the option obtains: by its class in the code, else the relic the option carries; its AfterObtained read the same way.</summary>
+    /// <summary>
+    /// A relic the option obtains: by its class in the code, else the relic the option carries, else (one the event holds) the one relic the option shows
+    /// in its hover tips once it's shown (decision #354); its AfterObtained read the same way.
+    /// </summary>
     private void Obtain(CommandStep command, Type owner, ProgramCondition? condition, string? via, Sink sink, Context context)
     {
         var named = command.Command.GenericArguments.Concat(command.Values.SelectMany(value => value.Parts())
@@ -518,14 +806,27 @@ public sealed class OptionReader
         if (named == null)
         {
             // By where the relic comes from: a reward's (picked as the reward is made), one the event or the relic holds (a property or field of its
-            // own), one its code picks as you choose (a call's result).
+            // own: the option shows it), one its code picks as you choose (a call's result).
             var held = command.Values.Count > 0 && Held(command.Values[0]);
-            var reason = IsReward(owner) ? "obtains a reward's relic" : held ? "obtains a relic the event holds" : "obtains a relic its code picks as you choose";
-            sink.Gap(new OptionGap(reason, via));
-            return;
+            if (IsReward(owner) || !held)
+            {
+                sink.Gap(new OptionGap(IsReward(owner) ? "obtains a reward's relic" : "obtains a relic its code picks as you choose", via));
+                return;
+            }
+            if (context.Shown == null)
+            {
+                sink.Gap(new OptionGap("obtains a relic the event holds", via, WhenShown: true));
+                return;
+            }
+            if (context.Shown.Relics.Count != 1)
+            {
+                sink.Gap(new OptionGap("obtains a relic the event holds, not the one relic its option shows", via));
+                return;
+            }
+            named = context.Shown.Relics[0];
         }
         if (named == context.OptionRelic) sink.RelicUsed = true;
-        Include(ReadObtained(named), condition, via == null ? named.Name : via + ", " + named.Name, sink);
+        Include(ReadObtained(named, context.Shown), condition, via == null ? named.Name : via + ", " + named.Name, sink);
     }
 
     /// <summary>
@@ -541,12 +842,16 @@ public sealed class OptionReader
         _ => false,
     };
 
-    /// <summary>A relic's obtaining, as part of the option: its effects on the option's way to it, its gaps.</summary>
+    /// <summary>A relic's obtaining, as part of the option: its effects on the option's way to it, its gaps, the code it read and its picks.</summary>
     private static void Include(OptionReading obtained, ProgramCondition? condition, string via, Sink sink)
     {
         foreach (var effect in obtained.Effects) sink.Effect(effect with { Condition = And(condition, effect.Condition), Via = effect.Via == null ? via : via + ", " + effect.Via });
         foreach (var gap in obtained.Gaps) sink.Gap(gap with { Via = gap.Via == null ? via : via + ", " + gap.Via });
         foreach (var other in obtained.Others) sink.Other(other);
+        foreach (var code in obtained.Code) sink.Read(code.Body, code.Relic);
+        foreach (var pick in obtained.Picks) sink.Pick(pick with { Via = pick.Via == null ? via : via + ", " + pick.Via });
+        foreach (var card in obtained.Made)
+            if (!sink.Made.Contains(card)) sink.Made.Add(card);
     }
 
     /// <summary>The step's card is a curse: a curse card's class or the curse pool in its type arguments or values (ModelDb.Card&lt;Injury&gt;).</summary>

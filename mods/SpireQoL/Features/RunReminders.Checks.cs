@@ -78,7 +78,7 @@ public sealed partial class RunReminders
 
     private static void LogOdds(Window window, List<CardModel> added)
     {
-        if (!CardsRead.TryGetValue(window.Option, out var read)) return;
+        if (ReadyCardsOf(window.Option) is not { } read) return;
         var held = Held(window.Me);
         foreach (var relic in window.Shown)
         {
