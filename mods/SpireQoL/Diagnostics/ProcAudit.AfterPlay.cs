@@ -182,7 +182,12 @@ public sealed partial class ProcAudit
         var me = window.Card.Owner;
         int? drawn = startP.Draw == null ? null : entries.OfType<CardDrawnEntry>().Count(cardDrawnEntry => cardDrawnEntry.Actor == me.Creature && !cardDrawnEntry.FromHandDraw);
 
-        List<string> Diff(SimState pred) => StateDifferences(pred, after, sim.Ids, afterIds, startP, drawn, "after play");
+        // The play won the fight: the simulator stops each command there, and CreatureCmd.Kill has no guard of its own (Bone Shards' Osty dies
+        // after its winning hit), but nothing reads Osty's HP once the fight is over (as OstyCmd.Summon's: FightEndTests' reviewed list).
+        const string OstyHp = "after play Osty HP";
+        List<string> Diff(SimState pred) => StateDifferences(pred, after, sim.Ids, afterIds, startP, drawn, "after play")
+            .Where(difference => !(window.FightEnded && difference.StartsWith(OstyHp, StringComparison.Ordinal))).ToList();
+        if (window.FightEnded && branches.All(branch => branch.You.OstyHp != after.You.OstyHp)) model.Skip("Osty HP", FightEndedSkip, $"Osty at {after.You.OstyHp} as it ended");
 
         var best = branches.Select(Diff).OrderBy(differences => differences.Count).First();
         if (best.Count == 0) return;

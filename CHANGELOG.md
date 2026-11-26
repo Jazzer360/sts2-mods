@@ -12,7 +12,9 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 - A play that wins the fight no longer counts Right Hand Hand, Make It So or Whistling Arrows coming back to your hand: the game brings nothing back once the fight is over.
 - Playing Beckon no longer counts its 6 HP at the end of your turn: Incoming Damage and the Play Preview leave it out once it's played.
 - Intent Forecast: the Ceremonial Beast's next Plow counts the Strength its last Plow gave it.
-- The audits no longer report the Dazed an Entomancer's Personal Hive gives you as unexplained, a Play Preview after you pick a card to transform or exhaust that the preview kept in your hand (BEGONE! on an Infection), or an enemy stunned by its own Imbalanced as a move the forecast missed.
+- After you kill the Test Subject, the fight goes on while it waits to come back: your plays, Incoming Damage and the end of your turn are predicted again (they were predicted as if the fight had ended).
+- Droplet of Precognition and Liquid Memories drunk on yourself: the card you pick joins your hand in the predictions.
+- The audits no longer report the Dazed an Entomancer's Personal Hive gives you as unexplained, a Play Preview after you pick a card to transform or exhaust that the preview kept in your hand (BEGONE! on an Infection), or an enemy stunned by its own Imbalanced as a move the forecast missed; nor, after a play that wins the fight, Osty's HP (Bone Shards), the Hex and afflictions its caster's death takes off, or the cost of a card the game stops modifying as the fight ends (Spiked Gauntlets).
 - The settings check no longer logs a warning about Darkstone Periapt (or any relic whose reminders were read before the game's cards were known) as the game loads.
 
 ### Spire QoL 2.0.0

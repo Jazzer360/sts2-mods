@@ -394,7 +394,7 @@ public sealed partial class ProcAudit
             .Where(powerReceivedEntry => !(powerReceivedEntry.Actor.IsEnemy && powerReceivedEntry.Applier is { IsEnemy: true })) // enemies acting on each other (Heist)
             // An enemy that comes in as another dies, set up with its powers by no one (StockPower.AfterDeath spawns the
             // next Axebot and gives it Stock).
-            .Where(powerReceivedEntry => !(powerReceivedEntry.Actor.IsEnemy && powerReceivedEntry.Applier == null && DiedInPlay(entries)))
+            .Where(powerReceivedEntry => !(powerReceivedEntry.Actor.IsEnemy && powerReceivedEntry.Applier == null && DiedInPlay(window, entries)))
             // A death in the play giving back what a power on the dead creature took, applied by no one
             // (PossessStrengthPower.AfterDeath: the stolen Strength back to each player).
             .Where(powerReceivedEntry => !(powerReceivedEntry.Applier == null && DeathGivesPowers(window, entries)))

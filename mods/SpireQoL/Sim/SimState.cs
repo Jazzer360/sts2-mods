@@ -1144,6 +1144,12 @@ public sealed class SimState
     /// Beast's RitualAmount, as Plow stuns it: decision #275). A player knows it. Constant in a simulation.
     /// </summary>
     public bool Dread;
+    /// <summary>
+    /// A dead enemy still in the fight holds it open (read from the game: Hook.ShouldStopCombatFromEnding asked of the dead creatures' powers and
+    /// monsters, which IterateHookListeners still has: the Test Subject's Adaptable as it waits to respawn). The fight doesn't end while it's dead,
+    /// whoever else dies (CombatManager.IsCombatEnding). Constant in a simulation.
+    /// </summary>
+    public bool HeldOpenByTheDead;
 
     /// <summary>
     /// The history ledger's questions (decision #191): every query of the game's log of the fight that the cards, relics and powers on this

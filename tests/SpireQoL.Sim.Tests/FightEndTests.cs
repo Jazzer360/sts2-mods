@@ -72,6 +72,25 @@ public class FightEndTests
         Assert.Equal(5, HandAfter(Enemy(id: 0, hp: 19), Enemy(id: 1, hp: 30)));
     }
 
+    /// <summary>
+    /// The Test Subject dead and waiting to respawn: its Adaptable stays on it in the fight and answers ShouldStopCombatFromEnding, so the fight goes
+    /// on with no enemy alive and your plays do what they do (2.0.1's audit: Cleanse, Delay and Invoke after Squeeze killed it were predicted to do
+    /// nothing, as in a fight that had ended).
+    /// </summary>
+    [Fact]
+    public void ADeadEnemyHoldingTheFightOpenLetsYourPlaysRun()
+    {
+        static int BlockAfter(bool held)
+        {
+            var state = new SimState { Enemies = { Enemy(id: 0, hp: 0) }, HeldOpenByTheDead = held };
+            var after = Assert.Single(SimEngine.Run(state, Play(Card("Delay", SimCardType.Skill), target: Who.None, plays: 1,
+                new GainBlockAction(Times: 1, Base: 13, SimProps.Move) { Fixed = true })).Branches);
+            return after.BlockAtEnemyTurn;
+        }
+        Assert.Equal(13, BlockAfter(held: true));
+        Assert.Equal(0, BlockAfter(held: false));
+    }
+
     [Fact]
     public void AKillAtTheTurnsEndStopsWhatsLeftOfIt()
     {

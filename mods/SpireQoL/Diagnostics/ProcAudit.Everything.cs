@@ -50,7 +50,7 @@ public sealed partial class ProcAudit
             : present.Where(otherModel => CodeIndex.Does(otherModel.GetType(), Array.Empty<string>(), new[] { "AfterCardDrawn", "AfterCardDrawnEarly" }));
         // A death in the play runs death hooks, including those of powers gone by its end (Dampen comes
         // off you when its caster dies and upgrades your cards back).
-        var deathReactors = !DiedInPlay(entries) ? Enumerable.Empty<Type>()
+        var deathReactors = !DiedInPlay(window, entries) ? Enumerable.Empty<Type>()
             : present.Select(otherModel => otherModel.GetType())
                 .Concat(window.PowersBefore?.Keys.Select(key => PowerTypeNamed(key.Item2)).OfType<Type>() ?? Enumerable.Empty<Type>())
                 .Where(type => CodeIndex.Does(type, Array.Empty<string>(), DeathHooks));

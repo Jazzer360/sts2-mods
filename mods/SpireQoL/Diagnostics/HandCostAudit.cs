@@ -22,7 +22,10 @@ internal static class HandCostAudit
     {
         try
         {
-            if (start.CostsUnknown is { } why)
+            // The fight is ending: the game's cost hooks reach no one then (IterateCombatHookListeners: Spiked Gauntlets' +1 on Powers gone), while
+            // the start state was read for a fight that goes on.
+            var why = MegaCrit.Sts2.Core.Combat.CombatManager.Instance.IsOverOrEnding ? CheckSkip.FightEnded : start.CostsUnknown;
+            if (why != null)
             {
                 lock (Skipped)
                 {

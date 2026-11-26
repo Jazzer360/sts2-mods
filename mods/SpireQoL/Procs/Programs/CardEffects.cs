@@ -215,7 +215,8 @@ public static class CardEffects
     public static IReadOnlyList<CardsTaken> ExhaustsOfOthers(Type cardType) => Exhausts.GetOrAdd(cardType, type => ExhaustsOfOthers(CardPrograms.Of(type)));
     public static IReadOnlyList<CardsTaken> Discards(Type cardType) => DiscardTakes.GetOrAdd(cardType, type => Discards(CardPrograms.Of(type)));
     public static IReadOnlyList<CardsTaken> Transforms(Type cardType) => TransformTakes.GetOrAdd(cardType, type => Transforms(CardPrograms.Of(type)));
-    public static IReadOnlyList<CardsTaken> TakesIntoHandOf(Type cardType) => HandTakeSteps.GetOrAdd(cardType, type => TakesIntoHandOf(CardPrograms.Of(type)));
+    public static IReadOnlyList<CardsTaken> TakesIntoHandOf(Type cardType) => HandTakeSteps.GetOrAdd(cardType, type =>
+        TakesIntoHandOf(CardPrograms.Of(type), potion: typeof(MegaCrit.Sts2.Core.Models.PotionModel).IsAssignableFrom(type)));
 
     /// <summary>
     /// The play's exhausts of other cards, in order: CardCmd.Exhaust of a pick's card (Picked), of a roll's (Random), or of each card a
@@ -232,10 +233,14 @@ public static class CardEffects
     public static IReadOnlyList<CardsTaken> Transforms(ModelProgram program) =>
         Takes(program, command => command.Command.DeclaringType == "CardCmd" && command.Command.Name.StartsWith("Transform", StringComparison.Ordinal) ? 0 : null, collections: true);
 
-    /// <summary>The play's moves into your hand (CardPileCmd.Add to the hand, after no pick from another player's cards), in order.</summary>
-    public static IReadOnlyList<CardsTaken> TakesIntoHandOf(ModelProgram program) =>
+    /// <summary>
+    /// The play's moves into your hand (CardPileCmd.Add to the hand, after no pick from another player's cards), in order. A potion's pick from its
+    /// target's piles (Droplet of Precognition, Liquid Memories: cardPlay.Target.Player as its use reads) is yours: one thrown at a teammate acting on
+    /// their cards is turned away before (SimAdapter.Translate: not followed), and an enemy has no piles.
+    /// </summary>
+    public static IReadOnlyList<CardsTaken> TakesIntoHandOf(ModelProgram program, bool potion = false) =>
         Takes(program, command => Is(command, "CardPileCmd", "Add") && Argument(command, 1) == HandPile ? 0 : null, collections: true)
-            .Where(take => take.Pick == null || PicksYourCards(take.Pick)).ToList();
+            .Where(take => take.Pick == null || PicksYourCards(take.Pick) || potion && take.Pick.Arguments.Contains("cardPlay.Target.Player")).ToList();
 
     /// <summary>
     /// Each command <paramref name="cardsArgument"/> names (with the argument holding the cards it acts on), by how it takes them: a pick's

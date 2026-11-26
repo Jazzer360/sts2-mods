@@ -105,7 +105,7 @@ public class CardEffectsTests
         }
         Ways("discards", CardEffects.Discards, Tables.DiscardCards);
         Ways("transforms", CardEffects.Transforms, Tables.TransformCards);
-        Ways("takes into hand", CardEffects.TakesIntoHandOf, Tables.HandTakes);
+        Ways("takes into hand", program => CardEffects.TakesIntoHandOf(program), Tables.HandTakes);
         // Orbs (SimAdapter.Channels, RepeatChannels, SlotChange, the evoke cards in OrbsOf and EvokedOrbs; BoardCounts.ChannelCount):
         // each channel's orb, in order, "each round" inside a loop.
         Exactly(nameof(CardEffects.OrbChannels), program => CardEffects.OrbChannels(program).Count > 0, Tables.ChannelCards.Keys.ToArray());

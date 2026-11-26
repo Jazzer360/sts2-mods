@@ -131,11 +131,30 @@ public static partial class SimAdapter
             ?? (creature.PetOwner is { } petOwner && PetKindOf(petOwner, creature) is { } kind && PlayerIdOf(petOwner.Creature) is { } ownerId ? Who.PetOf(ownerId, kind) : null);
     }
 
+    /// <summary>
+    /// A dead enemy the game keeps in the fight holds it open (SimState.HeldOpenByTheDead): Hook.ShouldStopCombatFromEnding asks every creature's
+    /// powers and monster in the fight (IterateHookListeners), a dead one's too; here only the dead ones' are asked (a living Infested's or Stock's
+    /// answer is about what its own death brings, which the simulator follows).
+    /// </summary>
+    internal static bool HeldOpenByTheDead(ICombatState combat)
+    {
+        try
+        {
+            return combat.Enemies.Any(enemy => enemy != null && !enemy.IsAlive
+                && (enemy.Powers.Any(power => power.ShouldStopCombatFromEnding()) || enemy.Monster?.ShouldStopCombatFromEnding() == true));
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static SimState BuildFromGame(Player me, ICombatState combat, out Dictionary<Creature, int> ids, bool pileAutoPlays)
     {
         var idMap = new BoardIds();
         ids = idMap;
-        var state = new SimState { MainRules = BranchRules.MainRulesNow(), TurnNumber = me.PlayerCombatState?.TurnNumber ?? 0, RoundNumber = combat.RoundNumber, Dread = MoveBranches.DreadRun, EncounterScaling = EncounterScaling(combat) };
+        var state = new SimState { MainRules = BranchRules.MainRulesNow(), TurnNumber = me.PlayerCombatState?.TurnNumber ?? 0, RoundNumber = combat.RoundNumber, Dread = MoveBranches.DreadRun, EncounterScaling = EncounterScaling(combat),
+            HeldOpenByTheDead = HeldOpenByTheDead(combat) };
         var mates = Teammates(me, combat);
         // Any creature's simulator id: the enemies' as they're given below (the map read as each is asked).
         var creatureIds = CreatureIds(me, mates, idMap);

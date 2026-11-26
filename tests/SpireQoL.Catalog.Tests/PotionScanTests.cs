@@ -55,6 +55,28 @@ public class PotionScanTests
     /// What every potion you can drink is built into on the installed game, aimed where it can be (an enemy, you, a teammate), in a fight of the
     /// game's own objects: its actions, and each unknown with why. A change to what the translation makes of a potion shows here.
     /// </summary>
+    /// <summary>
+    /// Droplet of Precognition drunk on you: a card you pick from your draw pile joins your hand (CardSelectCmd.FromCombatPile of its target's draw
+    /// pile, then CardPileCmd.Add to the hand). Its pick names its target's player (cardPlay.Target.Player as the use reads), which the take reader
+    /// counted as a teammate's: it did nothing (2.0.1's audit: cards in hand predicted 5, actual 6). The snapshot's board has no draw pile to show it.
+    /// </summary>
+    [Fact]
+    public void DropletOfPrecognitionTakesACardFromYourDrawPile()
+    {
+        GameModels.EnsureLoaded();
+        var fight = new GameFight();
+        var enemy = fight.Combat.CreateCreature(ModelDb.Monster<Axebot>().ToMutable(), CombatSide.Enemy, slot: null);
+        fight.Combat.AddCreature(enemy);
+        for (var i = 0; i < 3; i++) fight.Add<MegaCrit.Sts2.Core.Models.Cards.StrikeIronclad>(PileType.Draw);
+        fight.Add<MegaCrit.Sts2.Core.Models.Cards.DefendIronclad>();
+        var potion = ModelDb.Potion<MegaCrit.Sts2.Core.Models.Potions.DropletOfPrecognition>().ToMutable();
+        fight.Me.AddPotionInternal(potion);
+        var start = SimAdapter.Build(fight.Me, fight.Combat, out var ids);
+        var play = SimAdapter.Potion(potion, fight.Me, fight.Combat, ids, Who.You);
+        SimEngine.ApplyPlayTo(start, play, out var branches, out _);
+        Assert.All(branches, branch => Assert.Equal(start.You.HandCount + 1, branch.You.HandCount));
+    }
+
     [Fact]
     public void EveryPotionsUseIsTheSnapshot()
     {

@@ -1658,6 +1658,7 @@ public static partial class SimEngine
     /// </summary>
     internal static bool FightEnding(SimState state, int? performer = null)
     {
+        if (state.HeldOpenByTheDead) return false;
         foreach (var enemy in state.Enemies)
             if (enemy.Alive && !PowersOf(state, enemy.Id).Has(PowerId.Minion)) return false;
         foreach (var (model, owner) in Listeners(state))

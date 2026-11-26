@@ -45,7 +45,7 @@ public sealed partial class ProcAudit
         var tabbed = window.Predicted.Select(tab => tab.Key.Contains(':') ? tab.Key[(tab.Key.IndexOf(':') + 1)..] : tab.Key).ToHashSet();
         // Artifact blocks any debuff, temporary ones included (Dark Shackles).
         var debuffs = own.Any(typeName => PowerTypeNamed(typeName) is { } type && SimReaders.IsDebuffType(type));
-        var died = DiedInPlay(entries);
+        var died = DiedInPlay(window, entries);
         foreach (var ((creature, type), before) in window.PowersBefore)
         {
             var after = window.PowersAfter.TryGetValue((creature, type), out var amountAfter) ? amountAfter : 0;
@@ -248,6 +248,12 @@ public sealed partial class ProcAudit
     private static readonly string[] DeathHooks = { "AfterDeath", "BeforeDeath" };
 
     private static bool DiedInPlay(List<CombatHistoryEntry> entries) => entries.OfType<DamageReceivedEntry>().Any(damage => damage.Result.WasTargetKilled);
+
+    /// <summary>
+    /// A death in the play: one the history shows, or the play won the fight, which takes a death the history can't show (the game logs nothing from
+    /// the killing hit on: decision #301). High Five on the last enemy, which had cast Hex: Hex and its afflictions came off with nothing logged.
+    /// </summary>
+    private static bool DiedInPlay(Window window, List<CombatHistoryEntry> entries) => window.FightEnded || DiedInPlay(entries);
 
     /// <summary>A creature killed in the play had a power (before it) whose death hook applies powers (Possess Strength).</summary>
     private static bool DeathGivesPowers(Window window, List<CombatHistoryEntry> entries)
