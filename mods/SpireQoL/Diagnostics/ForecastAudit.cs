@@ -88,7 +88,7 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
 
     private bool HasFrozen => _frozen != null || _frozenPending != null;
 
-    private void Unfreeze(bool cancel)
+    private void Unfreeze(bool cancel, bool keepProjection = false)
     {
         if (cancel)
         {
@@ -97,8 +97,15 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         }
         _frozen = null;
         _frozenPending = null;
-        _projectedJob?.Cancel(); // checked by now, or never will be: nobody reads it
-        (_projectedJob, _projectedIds) = (null, null);
+        if (keepProjection) return;
+        DropProjection();
+    }
+
+    /// <summary>The projection's search, checked by now or never to be: nobody reads it.</summary>
+    private void DropProjection()
+    {
+        _projectedJob?.Cancel();
+        (_projectedJob, _projectedIds, _projectionDue) = (null, null, false);
     }
 
     /// <summary>Checks the frozen turn, or counts it as not checked when its forecast never had a result.</summary>
@@ -110,9 +117,23 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             Skip("the forecast had no result by the enemy turn");
             _frozenPending?.Job.Cancel();
         }
-        if (!youDied) CheckProjection(history);
-        Unfreeze(cancel: false);
+        // The projection is held to the moves the game rolls for your new turn, which it does only once its side's BeforeSideTurnStart is over
+        // (CombatManager.StartTurn: the players' phase Start, then each enemy's PrepareForNextTurn); that hook can take frames, so it's checked
+        // on the first frame of your turn past it (MovesRolled), never against the moves the enemies just made.
+        var due = !youDied && _projectedJob != null;
+        Unfreeze(cancel: false, keepProjection: due);
+        _projectionDue = due;
     }
+
+    /// <summary>A projection frozen as your turn ended, waiting for the game to roll the enemies' moves for your new turn.</summary>
+    private bool _projectionDue;
+
+    /// <summary>
+    /// The game has rolled the enemies' moves for your new turn: CombatManager.StartTurn sets the players' phase to Start after its
+    /// Hook.BeforeSideTurnStart, and calls each enemy's PrepareForNextTurn right after, with no wait between (on both branches); until then the
+    /// phase is None.
+    /// </summary>
+    private static bool MovesRolled(Player me) => me.PlayerCombatState is { Phase: not PlayerTurnPhase.None };
 
     /// <summary>
     /// The Intent Forecast's projection of the enemies' next moves (decision #304), started from the board as your turn ended and searched on a
@@ -150,7 +171,9 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             return;
         }
         // An enemy died since (your Thorns, its poison): a projection works out no one's death (decision #308), so what a death sets off isn't in it.
-        if (projected.Ids.Keys.Count(creature => creature.IsAlive) < _aliveAtFreeze)
+        // So did one its death's code brought straight back (the Waterfall Giant, alive at 999999999 HP with its move set to About to Blow).
+        if (projected.Ids.Keys.Count(creature => creature.IsAlive) < _aliveAtFreeze
+            || history.Entries.Skip(_frozenAt).OfType<DamageReceivedEntry>().Any(hit => hit.Result.WasTargetKilled && projected.Ids.ContainsKey(hit.Receiver)))
         {
             Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "projection: an enemy died, which a projection doesn't work out");
             return;
@@ -324,6 +347,11 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
         {
             // A frozen forecast from the previous turn: the enemy turn is over, compare.
             if (HasFrozen && Sts2State.TurnNumber > _frozenTurn) CheckFrozen(history, me);
+            if (_projectionDue && MovesRolled(me))
+            {
+                CheckProjection(history);
+                DropProjection();
+            }
             _last = TurnEndModel.Compute();
             _lastHistoryCount = history.Entries.Count();
             _lastTurn = Sts2State.TurnNumber;
@@ -353,8 +381,8 @@ public sealed class ForecastAudit : IFeature, IFrameFeature
             _frozenTurn = _lastTurn;
             // The Intent Forecast's projection from the same board (decision #304), checked as your next turn starts.
             // Its start is read here, on the game's thread; the search runs on a worker through the enemy turn (decision #107).
-            _projectedJob?.Cancel();
-            (_projectedJob, _projectedIds) = (null, null);
+            if (_projectionDue) Telemetry.Audits.Skipped(Telemetry.Audits.Intent, "projection: the game never rolled the moves for the turn it was checked on");
+            DropProjection();
             if (Sts2State.Combat is { } combat && SimAdapter.ProjectionStart(me, combat, _last.FullState, _last.Ids) is { } input)
             {
                 _projectedJob = SimAdapter.StartProjection(input, "the forecast audit's projection");
