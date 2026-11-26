@@ -7634,6 +7634,232 @@
     "HelpsOwner": false
   },
   {
+    "Name": "CorruptionPower",
+    "Kind": "Power",
+    "Hooks": [
+      {
+        "Hook": "AfterModifyingCardPlayResultLocation",
+        "Steps": [
+          {
+            "$kind": "FlashStep"
+          }
+        ]
+      },
+      {
+        "Hook": "ModifyCardPlayResultLocation",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "CorruptionPower.ModifyCardPlayResultLocation:0011",
+                  "Test": {
+                    "$kind": "HookFactValue",
+                    "Fact": "PlayIsOwners"
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "ResultLocationSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookNot",
+                "Inner": {
+                  "$kind": "HookTest",
+                  "At": "CorruptionPower.ModifyCardPlayResultLocation:001D",
+                  "Test": {
+                    "$kind": "HookMath",
+                    "Operation": "Equal",
+                    "Left": {
+                      "$kind": "HookFactValue",
+                      "Fact": "CardType"
+                    },
+                    "Right": {
+                      "$kind": "HookConstant",
+                      "Value": 2
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "ResultLocationSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "CorruptionPower.ModifyCardPlayResultLocation:001D",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 2
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 3
+              }
+            }
+          ]
+        }
+      },
+      {
+        "Hook": "TryModifyEnergyCostInCombatLate",
+        "Steps": [],
+        "Returns": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "CorruptionPower.TryModifyEnergyCostInCombatLate:0011",
+                  "Test": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookFactValue",
+                      "Fact": "EventIsOwners"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "CorruptionPower.TryModifyEnergyCostInCombatLate:001A",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardType"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 2
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookFactValue",
+                "Fact": "CostSoFar"
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "CorruptionPower.TryModifyEnergyCostInCombatLate:001A",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 2
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            }
+          ]
+        },
+        "Modifies": {
+          "$kind": "HookWays",
+          "Ways": [
+            {
+              "When": {
+                "$kind": "HookMath",
+                "Operation": "Or",
+                "Left": {
+                  "$kind": "HookTest",
+                  "At": "CorruptionPower.TryModifyEnergyCostInCombatLate:0011",
+                  "Test": {
+                    "$kind": "HookNot",
+                    "Inner": {
+                      "$kind": "HookFactValue",
+                      "Fact": "EventIsOwners"
+                    }
+                  }
+                },
+                "Right": {
+                  "$kind": "HookNot",
+                  "Inner": {
+                    "$kind": "HookTest",
+                    "At": "CorruptionPower.TryModifyEnergyCostInCombatLate:001A",
+                    "Test": {
+                      "$kind": "HookMath",
+                      "Operation": "Equal",
+                      "Left": {
+                        "$kind": "HookFactValue",
+                        "Fact": "CardType"
+                      },
+                      "Right": {
+                        "$kind": "HookConstant",
+                        "Value": 2
+                      }
+                    }
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 0
+              }
+            },
+            {
+              "When": {
+                "$kind": "HookTest",
+                "At": "CorruptionPower.TryModifyEnergyCostInCombatLate:001A",
+                "Test": {
+                  "$kind": "HookMath",
+                  "Operation": "Equal",
+                  "Left": {
+                    "$kind": "HookFactValue",
+                    "Fact": "CardType"
+                  },
+                  "Right": {
+                    "$kind": "HookConstant",
+                    "Value": 2
+                  }
+                }
+              },
+              "Value": {
+                "$kind": "HookConstant",
+                "Value": 1
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "HelpsOwner": false
+  },
+  {
     "Name": "CoveringFirePower",
     "Kind": "Power",
     "Hooks": [

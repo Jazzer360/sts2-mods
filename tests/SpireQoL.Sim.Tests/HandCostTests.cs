@@ -5,7 +5,7 @@ namespace SpireQoL.Sim.Tests;
 /// <summary>
 /// A hand card's live energy cost (decision #334, CardEnergyCost.GetWithModifiers(CostModifiers.All)): its cost before global modifiers, then
 /// Hook.ModifyEnergyCostInCombat's two passes over every listener in the game's order (TryModifyEnergyCostInCombat, then every Late), at least 0:
-/// Curious and Borrowed Time read from their code, Corruption's Late pass in its hand-written model. Simpleton's pick and Mummified Hand's ask it as
+/// Curious, Borrowed Time and Corruption read from their code. Simpleton's pick and Mummified Hand's ask it as
 /// the state stands then, so a cost a play changes is the one picked by; a pass the simulator doesn't run makes what asks unknown.
 /// </summary>
 public class HandCostTests
@@ -58,6 +58,7 @@ public class HandCostTests
     public void TheLatePassRunsAfterEveryFirstPass()
     {
         // Borrowed Time's +1 in the first pass, then Corruption's Late pass sets its owner's Skill to 0: 0, whichever power came first.
+        Assert.IsType<ReadModel>(SimModels.Get(PowerId.Corruption.Name));
         Assert.Equal(0, Cost(WithPowers((PowerId.Corruption, 1), (PowerId.BorrowedTime, 1)), SimCardType.Skill, cost: 1));
         Assert.Equal(2, Cost(WithPowers((PowerId.Corruption, 1), (PowerId.BorrowedTime, 1)), SimCardType.Attack, cost: 1));
     }

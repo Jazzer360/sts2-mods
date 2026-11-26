@@ -72,6 +72,7 @@ public static partial class ReadModels
         PowerId.ConsumingShadow.Name,
         PowerId.CorrosiveWave.Name,
         nameof(MegaCrit.Sts2.Core.Models.Enchantments.Corrupted),
+        PowerId.Corruption.Name,
         PowerId.CoveringFire.Name,
         PowerId.CrabRage.Name,
         RelicId.CrackedCore.Name,

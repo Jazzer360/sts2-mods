@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 33 engine rules naming 192 game methods; 3 adapter rules; 34 hand-written models.
+# 33 engine rules naming 192 game methods; 3 adapter rules; 33 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -120,8 +120,6 @@ Fairy in a Bottle and Lizard Tail: a death held back, healed from 0
 
 ChemicalX: ChemicalX.BeforeCardPlayed, ChemicalX.ModifyXValue
   model: BeforeCardPlayed
-CorruptionPower: CorruptionPower.AfterModifyingCardPlayResultLocation, CorruptionPower.ModifyCardPlayResultLocation, CorruptionPower.TryModifyEnergyCostInCombatLate
-  model: ModifyCardPlayResultLocation, TryModifyEnergyCostInCombatLate
 CoveredPower: CoveredPower.AfterApplied, CoveredPower.AfterDeath, CoveredPower.AfterRemoved, CoveredPower.AfterSideTurnEnd, CoveredPower.ModifyDamageMultiplicative
   model: AfterApplied, AfterSideTurnEnd, ModifyDamageMultiplicative
 DampenPower: DampenPower.AfterApplied, DampenPower.AfterDeath, DampenPower.AfterRemoved, DampenPower.InitInternalData

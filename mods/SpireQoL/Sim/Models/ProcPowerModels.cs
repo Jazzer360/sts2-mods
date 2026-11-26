@@ -109,24 +109,8 @@ public sealed class TagTeamPower : SimModel
     }
 }
 
-/// <summary>
-/// CorruptionPower.ModifyCardPlayResultLocation, decided once before a card play's plays: its owner's Skill goes to the exhaust pile
-/// whatever its own pile was (its own exhaust then sets off what reacts to exhausts: SimEngine.RunCardPlay).
-/// </summary>
-public sealed class CorruptionPower : SimModel
-{
-    public override SimResultLocation ModifyCardPlayResultLocation(SimState state, int owner, SimCardPlay play, SimResultLocation location) =>
-        play.Owner == owner && play.Card.Type == SimCardType.Skill ? SimResultLocation.Exhaust : location;
-
-    /// <summary>CorruptionPower.TryModifyEnergyCostInCombatLate: its owner's Skills cost 0 (its body reads as a Try hook: decision #332).</summary>
-    public override bool TryModifyEnergyCostInCombatLate(SimState state, int owner, SimCostedCard costed, int cost, out int modified)
-    {
-        modified = cost;
-        if (costed.Owner != owner || costed.Card.Type != SimCardType.Skill) return false;
-        modified = 0;
-        return true;
-    }
-}
+// Corruption is read from its code (ReadModel, decision #383: ModifyCardPlayResultLocation, AfterModifyingCardPlayResultLocation and
+// TryModifyEnergyCostInCombatLate).
 
 // Rebound is read from its code (ReadModel: ModifyCardPlayResultLocation and AfterModifyingCardPlayResultLocation, decision #286).
 
