@@ -69,20 +69,9 @@ internal static class CatalogCheck
         foreach (var name in potionRows.Except(potionRules).Order()) problems.Add($"settings row (potion tag) without a rule: {name}");
 
         // Run reminders: every rule has a settings row, every row a rule.
-        var reminderRules = ChoiceReminders.Rules.Select(reminderRule => reminderRule.Relic).ToHashSet();
-        var reminderRows = sources.Where(sourceEntry => sourceEntry.OutsideFights).Select(sourceEntry => sourceEntry.Type).ToHashSet();
-        foreach (var name in reminderRules.Except(reminderRows).Order()) problems.Add($"reminder rule without a settings row: {name}");
-        foreach (var name in reminderRows.Except(reminderRules).Order()) problems.Add($"settings row (reminder) without a rule: {name}");
-        // Each place (card rewards, events, shops) has its text exactly where the rule shows there.
-        foreach (var reminderRule in ChoiceReminders.Rules)
-        {
-            if (sources.FirstOrDefault(sourceEntry => sourceEntry.Type == reminderRule.Relic && sourceEntry.OutsideFights) is not { } row) continue;
-            foreach (var place in Enum.GetValues<ReminderPlace>())
-            {
-                if (reminderRule.In(place) && row.Reminder(place) == null) problems.Add($"reminder shown at {place} without a settings switch there: {reminderRule.Relic}");
-                if (!reminderRule.In(place) && row.Reminder(place) != null) problems.Add($"settings switch at {place} where the reminder never shows: {reminderRule.Relic}");
-            }
-        }
+        // Only once the game's cards are known (RelicReadings.CardsKnown): in the game this check can run before ReadAll has them, when a card
+        // test (Darkstone Periapt's card.Type == Curse) holds on any card and a relic's early reading shows at places its kept one doesn't.
+        if (RelicReadings.CardsKnown) ReminderProblems(sources, problems);
 
         // Features: each one registered has an on/off switch in the menu, and each switch a feature.
         var registered = (featureIds ?? FeatureIds()).ToHashSet();
@@ -98,6 +87,25 @@ internal static class CatalogCheck
             if (names.TryGetValue(id, out var displayName) && !string.Equals(Telemetry.FeatureNames.Plain(displayName), name, StringComparison.OrdinalIgnoreCase))
                 problems.Add($"settings switch named apart from its feature: {id} is \"{name}\" in the menu, \"{displayName}\" as a feature");
         return problems;
+    }
+
+    /// <summary>Run reminders: every rule has a settings row, every row a rule, and each place its switch exactly where the rule shows.</summary>
+    private static void ReminderProblems(IReadOnlyList<SourceEntry> sources, List<string> problems)
+    {
+        var reminderRules = ChoiceReminders.Rules.Select(reminderRule => reminderRule.Relic).ToHashSet();
+        var reminderRows = sources.Where(sourceEntry => sourceEntry.OutsideFights).Select(sourceEntry => sourceEntry.Type).ToHashSet();
+        foreach (var name in reminderRules.Except(reminderRows).Order()) problems.Add($"reminder rule without a settings row: {name}");
+        foreach (var name in reminderRows.Except(reminderRules).Order()) problems.Add($"settings row (reminder) without a rule: {name}");
+        // Each place (card rewards, events, shops) has its text exactly where the rule shows there.
+        foreach (var reminderRule in ChoiceReminders.Rules)
+        {
+            if (sources.FirstOrDefault(sourceEntry => sourceEntry.Type == reminderRule.Relic && sourceEntry.OutsideFights) is not { } row) continue;
+            foreach (var place in Enum.GetValues<ReminderPlace>())
+            {
+                if (reminderRule.In(place) && row.Reminder(place) == null) problems.Add($"reminder shown at {place} without a settings switch there: {reminderRule.Relic}");
+                if (!reminderRule.In(place) && row.Reminder(place) != null) problems.Add($"settings switch at {place} where the reminder never shows: {reminderRule.Relic}");
+            }
+        }
     }
 
     /// <summary>The id of every feature class in the mod (Id is a constant on each: read from an instance made without its constructor).</summary>

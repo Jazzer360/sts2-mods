@@ -79,6 +79,47 @@ public class CardPlaySnapshotTests
 
     private const string OutcomesFileName = "card-outcomes.txt";
 
+    /// <summary>
+    /// A card with a damage value above 0 attacks for more than 0 on the standard board: each attack in its play hits the enemy for
+    /// something. The snapshots only say a play is unchanged; this says it's right. Osty's cards (OstyDamageVar, not a DamageVar)
+    /// were read as 0 damage and the snapshot was regenerated over it (2.0.0's audits: Bone Shards, Snap, Right Hand Hand).
+    /// </summary>
+    [Fact]
+    public void EveryAttackWithADamageValueDealsDamage()
+    {
+        GameModels.EnsureLoaded();
+        var zero = new List<string>();
+        foreach (var canon in ModelDb.AllCards.OrderBy(card => card.GetType().Name, StringComparer.Ordinal).ToList())
+        {
+            var text = Read(canon, Board.Standard).Play;
+            if (!text.StartsWith("play ", StringComparison.Ordinal)) continue;
+            using var json = JsonDocument.Parse(text["play ".Length..]);
+            if (!json.RootElement.TryGetProperty("Card", out var played) || !played.TryGetProperty("Card", out var model)
+                || !model.TryGetProperty("Vars", out var vars)) continue;
+            var damage = new[] { "Damage", "OstyDamage" }.Select(key => vars.TryGetProperty(key, out var value) ? value.GetDecimal() : 0m).Max();
+            if (damage <= 0) continue;
+            foreach (var attack in Descendants(json.RootElement).Where(element => element.ValueKind == JsonValueKind.Object && element.TryGetProperty("$action", out var kind) && kind.GetString() == "AttackAction"))
+                if (attack.TryGetProperty("Damage", out var spec) && spec.TryGetProperty("BaseOn", out var baseOn)
+                    && baseOn.EnumerateObject().Any() && baseOn.EnumerateObject().All(hit => hit.Value.GetDecimal() <= 0))
+                    zero.Add($"{canon.GetType().Name} (damage {damage})");
+        }
+        Assert.True(zero.Count == 0, "Attacks read as 0 damage from a card whose damage value isn't:\n" + string.Join("\n", zero.Distinct()));
+    }
+
+    private static IEnumerable<JsonElement> Descendants(JsonElement element)
+    {
+        yield return element;
+        var children = element.ValueKind switch
+        {
+            JsonValueKind.Object => element.EnumerateObject().Select(property => property.Value).ToList(),
+            JsonValueKind.Array => element.EnumerateArray().ToList(),
+            _ => new List<JsonElement>(),
+        };
+        foreach (var child in children)
+            foreach (var descendant in Descendants(child))
+                yield return descendant;
+    }
+
     private static void Compare(string fileName, List<string> actual)
     {
         var path = Path.Combine(SourceFolder(), "Snapshots", fileName);

@@ -6,6 +6,12 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 2.0.1
+#### Fixed
+- Osty's attacks from Bone Shards, Fetch, Flatten, High Five, Poke, Rattle, Right Hand Hand, Sic 'Em, Snap and Sweeping Gaze were predicted to deal no damage: the lethal tag, the Play Preview and what follows from the hit (Reaper Form's Doom) count their damage again.
+- A play that wins the fight no longer counts Right Hand Hand, Make It So or Whistling Arrows coming back to your hand: the game brings nothing back once the fight is over.
+- The settings check no longer logs a warning about Darkstone Periapt (or any relic whose reminders were read before the game's cards were known) as the game loads.
+
 ### Spire QoL 2.0.0
 Spire QoL now works out what cards, powers, relics, enemies and potions do by reading the game's own code, instead of hand-written copies of their rules. Predictions follow the game exactly, keep up with game updates on their own, and show `?` wherever something isn't followed yet, never a certainty the game doesn't keep.
 

@@ -1202,6 +1202,12 @@ public static partial class SimAdapter
                 baseDamage = damageVar.BaseValue;
                 props = damageVar.Props;
                 break;
+            // Osty's own damage value isn't a DamageVar (OstyDamageVar : DynamicVar): Bone Shards, Snap, Right Hand Hand and the rest
+            // attack with its BaseValue, which Osty's ModifyDamage hooks then scale.
+            case OstyDamageVar ostyDamage:
+                baseDamage = ostyDamage.BaseValue;
+                props = ostyDamage.Props;
+                break;
         }
         var fixedNumbers = byOsty || (calc == null && baseDamage == 0m);
         var me = play.Me;
@@ -1364,6 +1370,7 @@ public static partial class SimAdapter
     private static ValueProp PropsOf(DynamicVar dynamicVar) => dynamicVar switch
     {
         DamageVar damage => damage.Props,
+        OstyDamageVar ostyDamage => ostyDamage.Props,
         BlockVar block => block.Props,
         _ => ValueProp.Move,
     };

@@ -71,8 +71,13 @@ public sealed class SimPlay
     public bool AutoPlay;
     /// <summary>Times the card plays (Sneaky reacts to each).</summary>
     public int Plays = 1;
-    /// <summary>Your hand's size change (-1 for the card, plus the cards it draws, creates or brings back).</summary>
+    /// <summary>Your hand's size change (-1 for the card, plus the cards it draws or creates).</summary>
     public int HandDelta = -1;
+    /// <summary>
+    /// Cards your hooks bring back to your hand as it resolves (Procs.ReturnToHand: Right Hand Hand, Make It So, Whistling Arrows): only while
+    /// the fight goes on, since CardPileCmd.Add returns at its start once it's ending (a play that wins the fight brings nothing back).
+    /// </summary>
+    public int BroughtBack;
     /// <summary>Ethereal cards in hand it plays (one less to exhaust at the end of the turn).</summary>
     public int FadingDelta;
     /// <summary>Of those, Ethereal only through Hex (SimPlayer.HexFading).</summary>
@@ -171,6 +176,8 @@ public sealed record CardResolvedAction(int HandDelta, int HandCard, bool AutoPl
 {
     public int Owner { get; init; } = Who.You;
     public int HexFadingDelta { get; init; }
+    /// <summary>Cards brought back to their hand (SimPlay.BroughtBack): only while the fight goes on.</summary>
+    public int BroughtBack { get; init; }
 }
 
 /// <summary>A script: the actions a play (or an auto-play, or a lead-in play) runs.</summary>
@@ -207,7 +214,7 @@ public sealed class SimScript
         script.Actions.Add(new CardPlayAction(play, body) { FromHand = simPlay.HandCard != 0, HandCard = simPlay.HandCard, CountByModels = true, Upgraded = simPlay.Upgraded,
             FromPile = fromPile, ExhaustOnNextPlay = exhaustOnNextPlay, PileProfile = simPlay.PileProfile, ExhaustProfile = simPlay.ExhaustProfile });
         script.Actions.AddRange(simPlay.After);
-        script.Actions.Add(new CardResolvedAction(simPlay.HandDelta, simPlay.HandCard, simPlay.AutoPlay, simPlay.Draws, simPlay.FadingDelta, simPlay.IsAttack) { Owner = play.Owner, HexFadingDelta = simPlay.HexFadingDelta });
+        script.Actions.Add(new CardResolvedAction(simPlay.HandDelta, simPlay.HandCard, simPlay.AutoPlay, simPlay.Draws, simPlay.FadingDelta, simPlay.IsAttack) { Owner = play.Owner, HexFadingDelta = simPlay.HexFadingDelta, BroughtBack = simPlay.BroughtBack });
         if (simPlay.RandomPoison > 0 && simPlay.RandomPoisonTimes > 0)
             script.Actions.Add(new ApplyPowerAction(PowerId.Poison, simPlay.RandomPoison) { To = ApplyPowerAction.Where.RandomEnemy, Times = simPlay.RandomPoisonTimes, Debuff = true });
         foreach (var proc in simPlay.Procs) script.Actions.Add(new FixedHitsAction(proc.Spread, proc.TargetId, proc.Damage, proc.Times));

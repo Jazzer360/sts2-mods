@@ -18,6 +18,8 @@ public class SettingsCatalogTests
     [Fact]
     public void EveryRuleHasASettingsRowAndEveryRowARule()
     {
+        // The reminders' part is checked only with the game's cards known (in the game it can run before they are): here they always are.
+        Assert.True(SpireQoL.Data.RelicReadings.CardsKnown, "the game's cards weren't read: the reminder rules wouldn't be checked");
         var problems = CatalogCheck.Problems();
         Assert.True(problems.Count == 0, "Settings catalog problems:\n" + string.Join("\n", problems));
     }

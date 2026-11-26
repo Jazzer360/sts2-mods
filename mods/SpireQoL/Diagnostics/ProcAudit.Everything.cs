@@ -91,7 +91,12 @@ public sealed partial class ProcAudit
                 else issues.Add($"no tab: {name} came back to your hand");
             }
             foreach (var name in tabbedBack.Except(cameBack))
-                issues.Add($"didn't fire: {name} didn't come back to your hand");
+            {
+                // The play won the fight: CardPileCmd.Add returns at its start once it's ending, so nothing comes back (the tab can't know a
+                // kill ends it; the simulator's hand doesn't count it then: SimPlay.BroughtBack).
+                if (window.FightEnded) model.Skip("didn't fire", FightEndedSkip, $"{name} didn't come back to your hand");
+                else issues.Add($"didn't fire: {name} didn't come back to your hand");
+            }
         }
     }
 

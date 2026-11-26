@@ -225,9 +225,10 @@ public sealed partial class ProcAudit
         }
         var player = pred.You;
         var simPlayer = after.You;
-        void Cmp(string what, int predicted, int actual)
+        // "after play cards in hand": its own name after the check's (a parameter named what, as it once was, hid the check's).
+        void Cmp(string name, int predicted, int actual)
         {
-            if (predicted != actual) differences.Add($"{what} {what}: predicted {predicted}, actual {actual}");
+            if (predicted != actual) differences.Add($"{what} {name}: predicted {predicted}, actual {actual}");
         }
         Cmp("your block", player.Block, simPlayer.Block);
         // Max HP a play or a potion raises (CreatureCmd.GainMaxHp: Feed, Fruit Juice, decision #335).

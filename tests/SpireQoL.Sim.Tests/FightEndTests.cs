@@ -48,6 +48,30 @@ public class FightEndTests
         Assert.Equal(6, both.BlockAtEnemyTurn);
     }
 
+    /// <summary>
+    /// Right Hand Hand comes back to your hand after a play of 2 energy or more (its AfterCardPlayedLate: CardPileCmd.Add to your hand). Hook.
+    /// AfterCardPlayed still reaches it once the play has won the fight, but CardPileCmd.Add returns at its start then (IsOverOrEnding): the
+    /// card stays in your discard pile (2.0.0's audit: Squeeze killing the last Wriggler).
+    /// </summary>
+    [Fact]
+    public void ACardBroughtBackToYourHandStaysOutOnceThePlayWinsTheFight()
+    {
+        static int HandAfter(params SimEnemy[] enemies)
+        {
+            var state = new SimState();
+            state.Enemies.AddRange(enemies);
+            state.You.HandCount = 5;
+            var play = new SimPlay { Name = "Squeeze", IsAttack = true, HandCard = 7, HandDelta = -1, BroughtBack = 1, TargetId = 0,
+                Card = new SimCardPlay(new SimCard("Squeeze", SimCardType.Attack), Who.You, Target: 0, PlayIndex: 0, PlayCount: 1, AutoPlay: false) };
+            play.Body.Add(Attack(baseDamage: 30));
+            SimEngine.ApplyPlayTo(state, play, out var branches, out _);
+            return Assert.Single(branches).You.HandCount;
+        }
+        Assert.Equal(4, HandAfter(Enemy(id: 0, hp: 19)));
+        // With another enemy left, it comes back: the hand is as it was.
+        Assert.Equal(5, HandAfter(Enemy(id: 0, hp: 19), Enemy(id: 1, hp: 30)));
+    }
+
     [Fact]
     public void AKillAtTheTurnsEndStopsWhatsLeftOfIt()
     {

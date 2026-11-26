@@ -213,6 +213,9 @@ public static class RelicReadings
     /// <summary>Whether a relic's reading is kept (the game's cards were known when it was read).</summary>
     public static bool Kept(string relic) => Loaded.ContainsKey(relic);
 
+    /// <summary>The game's cards are known (ReadAll took them): every reading from now on is kept, its card tests judged on them.</summary>
+    public static bool CardsKnown => _cards != null;
+
     /// <summary>The game's cards (canonical), taken once by ReadAll: the game's card lists aren't safe to make on two threads at once.</summary>
     private static volatile IReadOnlyList<CardModel>? _cards;
 
