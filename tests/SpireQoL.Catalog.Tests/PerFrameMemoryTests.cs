@@ -17,7 +17,7 @@ public class PerFrameMemoryTests
     /// The fewest bytes a call over three rounds: garbage the call makes lands in every round, a one-off of the runtime's in one (a
     /// method compiled again at a higher tier while Harmony's patching hook is in the process: another test patches a game method).
     /// </summary>
-    private static long BytesPerCall(Action call, int calls = 200)
+    internal static long BytesPerCall(Action call, int calls = 200)
     {
         call();
         var fewest = long.MaxValue;

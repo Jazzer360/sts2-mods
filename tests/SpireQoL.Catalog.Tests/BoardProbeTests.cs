@@ -83,10 +83,8 @@ public class BoardProbeTests
         toadpole.Monster!.SetUpForCombat();
         ModelDb.Power<ThornsPower>().ToMutable().ApplyInternal(toadpole, amount: 2);
         ModelDb.Power<StrengthPower>().ToMutable().ApplyInternal(gameFight.Me.Creature, amount: 2);
-        BoardProbe.Compute(gameFight.Me, gameFight.Combat);
-        var start = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 0; i < 100; i++) BoardProbe.Compute(gameFight.Me, gameFight.Combat);
-        var perCall = (GC.GetAllocatedBytesForCurrentThread() - start) / 100;
+        // The fewest bytes a probe over three rounds, as the other per-frame checks measure (a one-off of the runtime's lands in one round only).
+        var perCall = PerFrameMemoryTests.BytesPerCall(() => BoardProbe.Compute(gameFight.Me, gameFight.Combat), calls: 100);
         Assert.True(perCall == 0, $"{perCall} bytes per probe");
     }
 }
