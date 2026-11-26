@@ -9,8 +9,9 @@ namespace SpireQoL.Catalog.Tests;
 /// that feature's apply fails, the host undoes its patches (`FeatureHost.TryApply`: `UnpatchAll` of the feature's own Harmony id),
 /// the draw pile's with them, and the next feature to apply patches it again: whether it's patched is read from the game method's
 /// patches, never a flag that outlives them. (The host itself isn't run here: its failure line goes to the game's log, which needs
-/// the engine.)
+/// the engine.) In the game fights' collection, which runs alone: nothing calls the game's method while it's patched.
 /// </summary>
+[Collection(GameFightCollection.Name)]
 public class DrawPileMemoryPatchTests
 {
     private const string Failing = "spireqol-test.fails";
