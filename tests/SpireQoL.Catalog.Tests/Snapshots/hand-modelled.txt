@@ -1,6 +1,6 @@
 # The game methods the simulator still follows by hand (HandModelledTests: SPIREQOL_UPDATE_SNAPSHOT=1 regenerates; decision #209).
 # A game update's diff of these methods (both branches) is what to review: each one's simulator code follows it by hand.
-# 30 engine rules naming 190 game methods; 3 adapter rules; 34 hand-written models.
+# 31 engine rules naming 190 game methods; 3 adapter rules; 34 hand-written models.
 
 ## The engine's rules (HandModelled.Engine)
 
@@ -79,6 +79,9 @@ The enemies' turn: its start's hooks, block cleared, each move in turn order, it
 The Intent Forecast's later turns (decisions #304, #308): your next turn's start (block cleared, your hand left out) and end with no plays, the enemies' turn start, each enemy's forecast move (a branch per move of a random pick; rolled from its rules on the projected state, decision #309), their turn's end; only what the forecast shows followed (no HP or death), each phase ending on what every outcome shares; each move's hits on you as they land and as its intent reads when your turn starts
   game: CombatManager.StartTurn, MonsterModel.PerformMove, AttackIntent.GetSingleDamage, Creature.PrepareForNextTurn, MonsterMoveStateMachine.RollMove, Creature.StunInternal
   simulator: SimEngine.Project, SimEngine.TheirTurn, SimEngine.TheirTurnIsOver, SimEngine.YourNextTurnStarts, SimEngine.Certainly, SimEngine.Certain, SimEngine.CertainSet, SimEngine.RollChangesItsHits, SimEngine.HitsOnYou, SimEngine.HitOnYou, SimEngine.GiveMoves, SimEngine.Give, SimEngine.LandsOnYou, SimEngine.Landed, SimEngine.Rolled, SimEngine.StunsSpent
+A move's store to the property of its own monster an attack intent's damage is (decision #337: About to Blow's SteamEruptionDamage, Pressure Gun's CurrentPressureGunDamage), followed in a projection; a later hit's base read from it
+  game: MonsterModel.PerformMove, AttackIntent.GetSingleDamage
+  simulator: SimEngine.MoveStore, SimEngine.BaseOf
 Your next turn's start in a projection (decision #306): its listeners' own code in the game's order (Hook.BeforeSideTurnStart, the block cleared, each player's SetupPlayerTurn hooks, Hook.AfterSideTurnStart, the orbs' turn-start passives), its participants the players and their pets; your hand and draws left out; a listener it doesn't follow there unknown
   game: CombatManager.StartTurn, CombatManager.SetupPlayerTurn, Creature.AfterTurnStart, Hook.BeforeSideTurnStart, Hook.AfterEnergyReset, Hook.BeforeHandDraw, Hook.AfterPlayerTurnStart, Hook.AfterSideTurnStart, OrbQueue.AfterTurnStart
   simulator: SimEngine.YourTurnStart, SimEngine.ClearPlayersBlock, SimEngine.YourTurnStartGaps

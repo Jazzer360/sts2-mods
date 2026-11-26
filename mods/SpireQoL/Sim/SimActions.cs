@@ -231,6 +231,16 @@ public sealed record MovePowerAction(PowerId Power, int Amount, IReadOnlyList<in
 public sealed record MoveBlockAction(int Amount, IReadOnlyList<int> To) : SimAction;
 
 /// <summary>
+/// An enemy's move setting a property of its own monster that one of its attack intents' damage reads (decision #337: Waterfall Giant's About to
+/// Blow storing its Steam Eruption as SteamEruptionDamage, Pressure Gun adding 5 to CurrentPressureGunDamage), kept in its fields under
+/// <paramref name="Field"/> (IntentHit.BaseFrom) for the projection's later turns: the amount of its own power <paramref name="OwnPower"/> as the
+/// step runs, else <paramref name="Amount"/> more than it was when <paramref name="Adds"/> (<paramref name="Now"/> as the adapter read it, until a
+/// move set it), else <paramref name="Amount"/>. <paramref name="Unknown"/>: a value that couldn't be read, so a later hit reading it isn't known.
+/// Only a projection runs it (SimState.Forecasting): no later turn's hit is simulated anywhere else.
+/// </summary>
+public sealed record MoveStoreAction(string Field, int Amount, bool Adds = false, int Now = 0, PowerId? OwnPower = null, string? Unknown = null) : SimAction;
+
+/// <summary>
 /// An enemy's move stunning itself (CreatureCmd.Stun of its own creature, decision #271: Bowlbug Rock's Headbutt when it's off balance, under a
 /// WhenAction asked of it as the step runs: its own state, SimCounted.MonsterState). Its move this turn is under way, so the
 /// stunned move is its next (SimEngine.Stun: it's stunned for the turn after).

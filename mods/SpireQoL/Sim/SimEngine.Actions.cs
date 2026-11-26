@@ -1121,6 +1121,30 @@ public static partial class SimEngine
     internal static int IntentDamage(SimState state, SimEnemy enemy, int hit, int player)
     {
         var otherHit = enemy.Intent![hit];
-        return CalcDamage(state, otherHit.Base, new DamageCtx(enemy.Id, player, SimProps.Move, Card: null, Play: null), otherHit.TermsOn(player));
+        return CalcDamage(state, BaseOf(enemy, otherHit), new DamageCtx(enemy.Id, player, SimProps.Move, Card: null, Play: null), otherHit.TermsOn(player));
+    }
+
+    /// <summary>
+    /// A hit's base: the property of its monster its damage is, once a move of its own set it (IntentHit.BaseFrom, MoveStoreAction: decision #337),
+    /// else as the adapter read it.
+    /// </summary>
+    internal static decimal BaseOf(SimEnemy? enemy, IntentHit hit) =>
+        hit.BaseFrom is { } field && enemy != null && enemy.Fields.Has(field) ? enemy.Fields[field] : hit.Base;
+
+    /// <summary>
+    /// A move's store to its monster's own property that a hit's damage reads (MoveStoreAction, decision #337), in a projection: its value as the step
+    /// runs (its own power's amount, more than it was, or a number), or the projection unknown from here when it couldn't be read.
+    /// </summary>
+    private static void MoveStore(SimState state, SimEnemy enemy, MoveStoreAction store)
+    {
+        if (store.Unknown != null)
+        {
+            state.Unmodelled ??= $"{enemy.Name}'s move sets what its attack's damage reads, to a value that isn't read ({store.Unknown})";
+            return;
+        }
+        var value = store.OwnPower is { } power ? PowersOf(state, enemy.Id)[power]
+            : store.Adds ? (enemy.Fields.Has(store.Field) ? enemy.Fields[store.Field] : store.Now) + store.Amount
+            : store.Amount;
+        enemy.Fields = enemy.Fields.With(store.Field, value);
     }
 }

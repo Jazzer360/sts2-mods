@@ -363,7 +363,7 @@ public static partial class SimEngine
 
     /// <summary>One hit of a move on you through the damage math now (a Move from the enemy: its Strength and Weak, your Vulnerable...), as IntentDamage.</summary>
     private static int HitOnYou(SimState state, int enemyId, IntentHit hit) =>
-        CalcDamage(state, hit.Base, new DamageCtx(enemyId, Who.You, SimProps.Move, Card: null, Play: null), hit.TermsOn(Who.You));
+        CalcDamage(state, BaseOf(state.Enemy(enemyId), hit), new DamageCtx(enemyId, Who.You, SimProps.Move, Card: null, Play: null), hit.TermsOn(Who.You));
 
     /// <summary>
     /// Each living enemy's move this projected turn: its one move, or a branch for each move of a random pick with its chance as the branch's share;

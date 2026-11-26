@@ -1520,5 +1520,13 @@ internal sealed class SimWork
 public sealed record IntentHit(decimal Base)
 {
     public IReadOnlyDictionary<int, CapturedTerms>? Captured { get; init; }
+
+    /// <summary>
+    /// The property of its monster its damage is (AttackIntent.DamageCalc returning it: Waterfall Giant's SteamEruptionDamage), under its key in
+    /// the enemy's fields (MoveStoreAction): once a move of its own set it in a projection, the hit's base is that value, else <see cref="Base"/>
+    /// (decision #337). Null for any other damage.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? BaseFrom { get; init; }
     public CapturedTerms TermsOn(int player) => Captured != null && Captured.TryGetValue(player, out var terms) ? terms : CapturedTerms.None;
 }

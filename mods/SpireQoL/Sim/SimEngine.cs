@@ -1865,6 +1865,8 @@ public static partial class SimEngine
                                 break;
                             // CreatureCmd.Stun of itself (Creature.StunInternal: nothing once it's dead): its next move is the stunned move.
                             case MoveStunAction when enemy.Alive: Stun(enemy); break;
+                            // A property of its own its attack's damage reads (decision #337): only a projection has a later turn to read it.
+                            case MoveStoreAction moveStoreAction when state.Forecasting: MoveStore(state, enemy, moveStoreAction); break;
                             // A step on its own state (Bowlbug Rock's IsOffBalance: decision #271), asked of it as the step runs.
                             case WhenAction whenAction:
                                 var holds = Holds(state, whenAction.Condition, enemy.Id);

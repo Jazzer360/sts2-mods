@@ -83,6 +83,71 @@ public class ProjectionTests
         Assert.Equal(new[] { 5, 5, 5 }, projection.Of(turn: 1, enemyId: 2, move: "JAB")!.Lands);
     }
 
+    private const string SteamEruptionDamage = "Monster.WaterfallGiant.SteamEruptionDamage";
+
+    /// <summary>
+    /// A Waterfall Giant brought back about to blow (a dev review): About to Blow stores its Steam Eruption as SteamEruptionDamage
+    /// (WaterfallGiant.AboutToBlowMove), which its Explode's Death Blow intent is (() => SteamEruptionDamage): 0 until then.
+    /// </summary>
+    private static SimState AboutToBlow(int steam)
+    {
+        var giant = new SimEnemy { Id = 0, Name = "Waterfall Giant", Monster = "WaterfallGiant", Hp = 999999999 };
+        giant.Powers = PowerSet.Empty.With(PowerId.SteamEruption, amount: steam);
+        giant.Move = new SimAction[] { new MoveStoreAction(SteamEruptionDamage, Amount: 0, OwnPower: PowerId.SteamEruption) };
+        return Fight(giant);
+    }
+
+    private static ProjectedMove Explode() => new("EXPLODE_MOVE")
+    {
+        Intent = new[] { new IntentHit(Base: 0) { BaseFrom = SteamEruptionDamage } },
+        Actions = new SimAction[] { new MoveAttackAction(FirstHit: 0, Hits: 1) },
+        OnlyAttacks = true,
+    };
+
+    [Fact]
+    public void AGiantAboutToBlowExplodesForItsSteamEruption()
+    {
+        // Decision #337: the move on screen stores the Steam Eruption it has then; the Explode after it reads it, where its intent read now says 0.
+        var projection = SimEngine.Project(AboutToBlow(steam: 41), Turns(new[] { Certain(enemyId: 0, Explode()) }));
+        var hits = projection.Of(turn: 0, enemyId: 0, move: "EXPLODE_MOVE")!;
+        Assert.Null(hits.Unknown);
+        Assert.Equal(new[] { 41 }, hits.AtYourTurnStart);
+        Assert.Equal(new[] { 41 }, hits.Lands);
+    }
+
+    [Fact]
+    public void AStoreThatAddsCountsEachTimeItsMoveIsMade()
+    {
+        // Pressure Gun's CurrentPressureGunDamage += 5 after its attack: each Pressure Gun hits 5 more than the last, from the value read now.
+        const string pressure = "Monster.WaterfallGiant.CurrentPressureGunDamage";
+        var gun = new ProjectedMove("PRESSURE_GUN_MOVE")
+        {
+            Intent = new[] { new IntentHit(Base: 17) { BaseFrom = pressure } },
+            Actions = new SimAction[] { new MoveAttackAction(FirstHit: 0, Hits: 1), new MoveStoreAction(pressure, Amount: 5, Adds: true, Now: 17) },
+            OnlyAttacks = true,
+        };
+        var projection = SimEngine.Project(Fight(Attacker(id: 0, hp: 200, hit: 0)), Turns(new[] { Certain(enemyId: 0, gun) }, new[] { Certain(enemyId: 0, gun) }));
+        Assert.Equal(new[] { 17 }, projection.Of(turn: 0, enemyId: 0, move: "PRESSURE_GUN_MOVE")!.Lands);
+        Assert.Equal(new[] { 22 }, projection.Of(turn: 1, enemyId: 0, move: "PRESSURE_GUN_MOVE")!.Lands);
+    }
+
+    [Fact]
+    public void AStoreItCantReadLeavesTheProjectionUnknown()
+    {
+        var state = AboutToBlow(steam: 41);
+        state.Enemies[0].Move = new SimAction[] { new MoveStoreAction(SteamEruptionDamage, Amount: 0, Unknown: "a value not read") };
+        var hits = SimEngine.Project(state, Turns(new[] { Certain(enemyId: 0, Explode()) })).Of(turn: 0, enemyId: 0, move: "EXPLODE_MOVE")!;
+        Assert.NotNull(hits.Unknown);
+    }
+
+    [Fact]
+    public void AStoreDoesNothingOutsideAProjection()
+    {
+        // Only a projection has a later turn whose hit reads it: the turn's own simulation leaves the enemy's fields as they were.
+        var branch = Assert.Single(SimEngine.Run(AboutToBlow(steam: 41)).Branches);
+        Assert.False(branch.Enemy(id: 0)!.Fields.Has(SteamEruptionDamage));
+    }
+
     [Fact]
     public void RandomHitsOnTheEnemiesDontSplitTheProjection()
     {

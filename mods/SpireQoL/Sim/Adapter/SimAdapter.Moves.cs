@@ -180,6 +180,10 @@ public static partial class SimAdapter
     /// <summary>One step's actions (a loop's body once for each creature it goes over); a step that can't be built adds its gap and none.</summary>
     private static IEnumerable<SimAction> MoveStep(ProgramStep step, MoveContext context, Creature? each)
     {
+        // A store to a property of its own monster that one of its attack intents' damage is (decision #337): kept for the projection's later turns.
+        if (step is StoreStep store && context.Board.Self is MonsterModel owner && DamageFieldKey(owner.GetType(), store.Field) is { } key
+            && DamageFields(owner).Contains(key))
+            return new SimAction[] { MoveStoreOf(store, key, context) };
         // CreatureCmd.Stun of its own creature (Bowlbug Rock's Headbutt when off balance), on its condition as the simulator asks it of the monster's own
         // state (MoveConditions.OfStep: decision #271); a condition it can't ask is a gap.
         if (step is CommandStep { Command.FullName: "CreatureCmd.Stun" } stun && stun.Values.Count > 0 && each == null
@@ -215,6 +219,70 @@ public static partial class SimAdapter
             _ => Array.Empty<SimAction>(),
         };
     }
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, IReadOnlySet<string>> DamageFieldsByMonster = new();
+
+    /// <summary>
+    /// The properties of its own that a monster's attack intents' damage is (each its DamageCalc returning one: Waterfall Giant's SteamEruptionDamage
+    /// and CurrentPressureGunDamage), by their keys in an enemy's fields (DamageField); read once per monster class.
+    /// </summary>
+    private static IReadOnlySet<string> DamageFields(MonsterModel monster) => DamageFieldsByMonster.GetOrAdd(monster.GetType(), _ =>
+    {
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var move in monster.MoveStateMachine?.States.Values.OfType<MoveState>() ?? Enumerable.Empty<MoveState>())
+            foreach (var attack in move.Intents.OfType<AttackIntent>())
+                if (DamageField(monster.GetType(), attack) is { } key) keys.Add(key);
+        return keys;
+    });
+
+    /// <summary>
+    /// The key in an enemy's fields of the monster's own property an attack intent's damage is (its DamageCalc a lambda on the monster returning
+    /// the property, with a setter: its own state, which its moves can set), or null for any other damage (decision #337).
+    /// </summary>
+    internal static string? DamageField(Type monster, AttackIntent attack)
+    {
+        if (attack.DamageCalc?.Method is not { } calc || calc.IsStatic || calc.DeclaringType is not { } declaring || !declaring.IsAssignableFrom(monster)) return null;
+        var ops = RuntimeCode.Read(calc).Where(instruction => instruction.OpCode != System.Reflection.Emit.OpCodes.Nop).ToList();
+        if (ops.Count is < 3 or > 4 || ops[0].OpCode != System.Reflection.Emit.OpCodes.Ldarg_0 || ops[^1].OpCode != System.Reflection.Emit.OpCodes.Ret) return null;
+        if (ops[1] is not { IsCall: true, Member: { Kind: CodeMemberKind.Method, Name: var getter } } || !getter.StartsWith("get_", StringComparison.Ordinal)) return null;
+        if (ops.Count == 4 && ops[2].Member?.Name != "op_Implicit") return null;
+        return DamageFieldKey(monster, getter[4..]);
+    }
+
+    /// <summary>
+    /// A monster's own property with a setter under its key in an enemy's fields ("Monster.WaterfallGiant.SteamEruptionDamage": the class declaring
+    /// it, as a power's store to its owner's monster names it), or null for one it doesn't have.
+    /// </summary>
+    private static string? DamageFieldKey(Type monster, string property)
+    {
+        var found = monster.GetProperty(property, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+        return found is { CanWrite: true, DeclaringType: { } declaring } ? ProgramReader.OwnersMonsterPrefix + declaring.Name + "." + property : null;
+    }
+
+    /// <summary>
+    /// A move's store to a property of its own its damage reads, as the projection runs it (MoveStoreAction): the amount of its own power
+    /// (this.Creature.GetPowerAmount&lt;T&gt;(): About to Blow's), more than it was (this.X add n: Pressure Gun's), or a number worked out now that
+    /// reads no power; anything else, or one on a condition, is unknown.
+    /// </summary>
+    private static MoveStoreAction MoveStoreOf(StoreStep store, string key, MoveContext context)
+    {
+        if (store.Condition != null) return new MoveStoreAction(key, Amount: 0, Unknown: "on a condition");
+        var value = StepValues.Unstored(store.Value)!;
+        if (value is QueryValue { Name: "GetPowerAmount", GenericArguments: [var powerName], Of: QueryValue { Name: "Creature", Of: NamedValue { Name: "this" } } }
+            && PowerType(powerName) is { } powerType)
+            return new MoveStoreAction(key, Amount: 0, OwnPower: PowerId.Of(SimPowerName(powerType)));
+        if (value is ArithmeticValue { Op: "add", Left: QueryValue { Name: var name, Of: NamedValue { Name: "this" } } itself, Right: var right } && name == store.Field
+            && !ReadsAPower(right) && Number(Value(right, context, each: null)) is { } more && Number(Value(itself, context, each: null)) is { } now)
+            return new MoveStoreAction(key, (int)more, Adds: true, Now: (int)now);
+        if (!ReadsAPower(value) && !value.Parts().Any(part => part is QueryValue { Name: var read, Of: NamedValue { Name: "this" } } && read == store.Field)
+            && Number(Value(value, context, each: null)) is { } amount)
+            return new MoveStoreAction(key, (int)amount);
+        return new MoveStoreAction(key, Amount: 0, Unknown: value.ToString());
+    }
+
+    /// <summary>A value that reads a creature's powers, which a projection changes: worked out now, it wouldn't be the value as the move runs.</summary>
+    private static bool ReadsAPower(ProgramValue value) =>
+        value.Parts().Any(part => part is QueryValue { Name: "GetPowerAmount" or "GetPower" or "HasPower" or "Powers" or "Amount" });
 
     /// <summary>PowerCmd.Apply&lt;T&gt;(choiceContext, target or targets, amount, applier, card): the power on each creature named.</summary>
     private static IEnumerable<SimAction> MovePower(CommandStep command, MoveContext context, Creature? each)

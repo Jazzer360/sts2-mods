@@ -108,7 +108,9 @@ public static partial class SimAdapter
                 terms[Who.Teammate(teammateIndex)] = SimReaders.Damage(me.RunState, combat, card: null, creature, mates[teammateIndex].Creature, damageCalc, MegaCrit.Sts2.Core.ValueProps.ValueProp.Move);
             var repeats = Math.Max(1, attack.Repeats);
             hitsPerAttack.Add(repeats);
-            for (var i = 0; i < repeats; i++) intent.Add(new IntentHit(damageCalc) { Captured = terms });
+            // Damage that's a property of its own a move of its sets (decision #337: About to Blow's SteamEruptionDamage) reads what that move set.
+            var baseFrom = DamageField(monster.GetType(), attack);
+            for (var i = 0; i < repeats; i++) intent.Add(new IntentHit(damageCalc) { Captured = terms, BaseFrom = baseFrom });
         }
         return new ProjectedMove(move.Id)
         {
