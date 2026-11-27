@@ -553,6 +553,13 @@ public sealed record CardEventAction(CardEvent Event, int Count) : SimAction
     /// </summary>
     public bool JoinsHand { get; init; }
     /// <summary>
+    /// The card is one you pick from cards offered, and you may skip the pick (CardSelectCmd.FromChooseACardScreen with canSkip: Colorless Potion,
+    /// Discovery): whether it joins your hand is your later decision (decision #408). It's counted in the hand (SimPlayer.MaybeSkipped), and what reads
+    /// the hand's size or room after it is unknown where taking it or not changes it.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool YouMaySkip { get; init; }
+    /// <summary>
     /// The player whose hand the cards join, when it isn't the player the event happens to: a card made by you for a teammate (Largesse's goes
     /// to their hand, its created-card event is yours: Hook.AfterCardGeneratedForCombat's creator). Null: the event's player.
     /// </summary>

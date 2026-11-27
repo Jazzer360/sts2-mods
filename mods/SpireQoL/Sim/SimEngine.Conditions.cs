@@ -130,7 +130,7 @@ public static partial class SimEngine
         switch (counted.Counted)
         {
             case SimCounted.HandCards:
-                return state.Player(owner) is { } player ? Math.Max(0, player.HandCount - player.PlayingFromHand) : 0;
+                return state.Player(owner) is { } player ? Math.Max(0, ReadsHandSize(state, player).HandCount - player.PlayingFromHand) : 0;
             case SimCounted.HandMatching:
                 if (counted.Filter == null) return null;
                 if (!state.TakeMatching.Has(counted.Filter)) return counted.Matching; // outside a card play: as the adapter counted it

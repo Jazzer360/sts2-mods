@@ -306,6 +306,19 @@ public static class MadeCards
     /// <summary>The game's canonical card of a made card's class (its type and tags: what the created-card hooks test of it); null when there's none.</summary>
     public static CardModel? CanonicalOf(string cardName) => Canonicals.GetOrAdd(cardName, name => ModelDb.AllCards.FirstOrDefault(other => other.GetType().Name == name));
 
+    /// <summary>The place of CardSelectCmd.FromChooseACardScreen's canSkip among its arguments, read from the game's method.</summary>
+    private static readonly int CanSkipAt = typeof(MegaCrit.Sts2.Core.Commands.CardSelectCmd).GetMethod(nameof(MegaCrit.Sts2.Core.Commands.CardSelectCmd.FromChooseACardScreen))!
+        .GetParameters().Select(parameter => parameter.Name).ToList().IndexOf("canSkip");
+
+    /// <summary>
+    /// The card the make makes is one you pick from cards offered by a pick you may skip (decision #408): CardSelectCmd.FromChooseACardScreen with canSkip
+    /// true (Colorless Potion, Discovery, Quasar, Splash). Skipped, it makes nothing: whether the card joins is your later decision.
+    /// </summary>
+    public static bool YouMaySkip(Make make) =>
+        CanSkipAt >= 0 && make.Found?.Command.Values is [var card, ..]
+        && card.Parts().OfType<ResultValue>().Any(result => result.Command == "CardSelectCmd." + nameof(MegaCrit.Sts2.Core.Commands.CardSelectCmd.FromChooseACardScreen)
+                                                             && result.Arguments.Count > CanSkipAt && result.Arguments[CanSkipAt] is ConstantValue { Value: not 0 });
+
     /// <summary>
     /// The make's cards go into a hand: its pile is the hand, or not written as a constant where every pile the card's code writes is the hand
     /// (CardCode.MadeInto: Shiv.CreateInHand's, a helper's), as a forge's blade does.

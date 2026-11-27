@@ -36,7 +36,7 @@ public sealed class RegretCard : CardListener
     public override IEnumerable<SimState> BeforeSideTurnEnd(SimState state, int owner)
     {
         if (!state.EndsTheirTurn(owner) || state.Player(owner) is not { } player || !player.TurnEndCards.Any(card => card.Card == Name)) return One(state);
-        var hand = Math.Max(0, player.HandCount);
+        var hand = Math.Max(0, SimEngine.ReadsHandSize(state, player).HandCount);
         state.MutablePlayer(owner).TurnEndCards = player.TurnEndCards.Select(card => card.Card == Name ? card with { Amount = hand } : card).ToList();
         return One(state);
     }

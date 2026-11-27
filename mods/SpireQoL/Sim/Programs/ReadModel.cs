@@ -2827,7 +2827,7 @@ public sealed class ReadModel : SimModel
             case HookFact.PlayCountSoFar: return (in HookArgs args) => args.PlayCount;
             case HookFact.ResultLocationSoFar: return (in HookArgs args) => (int)args.Location;
             case HookFact.OwnerBlock: return (in HookArgs args) => args.State.Player(args.Owner)?.Block ?? args.State.Enemy(args.Owner)?.Block ?? 0;
-            case HookFact.OwnerHandCount: return (in HookArgs args) => args.State.Player(args.Owner)?.HandCount ?? 0;
+            case HookFact.OwnerHandCount: return (in HookArgs args) => args.State.Player(args.Owner) is { } player ? SimEngine.ReadsHandSize(args.State, player).HandCount : 0;
             case HookFact.OwnerPotionCount: return (in HookArgs args) => args.State.Player(args.Owner)?.Potions ?? 0;
             case HookFact.OwnerOrbCount when named == null:
                 return (in HookArgs args) => args.State.Player(args.Owner)?.Orbs.Count ?? 0;

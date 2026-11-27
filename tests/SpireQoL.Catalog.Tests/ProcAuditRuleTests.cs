@@ -32,6 +32,21 @@ public class ProcAuditRuleTests
     }
 
     [Fact]
+    public void AnAttackAutoPlayedInTheSkillsPlaySpendsWhatAnAttackSpends()
+    {
+        // A dev review report: Hidden Daggers+ discarded the Ricochet and Memento Mori you picked, both Sly: they played themselves, and Ricochet's
+        // attack spent your 8 Vigor. The skill's play had an attack in it all the same.
+        GameModels.EnsureLoaded();
+        var hiddenDaggers = MegaCrit.Sts2.Core.Models.ModelDb.Card<MegaCrit.Sts2.Core.Models.Cards.HiddenDaggers>();
+        var ricochet = MegaCrit.Sts2.Core.Models.ModelDb.Card<MegaCrit.Sts2.Core.Models.Cards.Ricochet>();
+        var survivor = MegaCrit.Sts2.Core.Models.ModelDb.Card<MegaCrit.Sts2.Core.Models.Cards.Survivor>();
+        Assert.True(ProcAudit.AnAttackPlayed(hiddenDaggers, new[] { ricochet }));
+        Assert.False(ProcAudit.AnAttackPlayed(hiddenDaggers, Array.Empty<MegaCrit.Sts2.Core.Models.CardModel>()));
+        Assert.False(ProcAudit.AnAttackPlayed(hiddenDaggers, new[] { survivor }));
+        Assert.True(ProcAudit.AnAttackPlayed(ricochet, Array.Empty<MegaCrit.Sts2.Core.Models.CardModel>()));
+    }
+
+    [Fact]
     public void WhatASourceExplainsIsWhatItsCodeDoesBeyondItsSimulation()
     {
         // A modelled source's card events are its simulation's (Dark Embrace's draws, Juggling's copy): it explains only the powers it applies and the

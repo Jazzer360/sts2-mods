@@ -46,6 +46,7 @@ public sealed partial class ProcAudit
         // Artifact blocks any debuff, temporary ones included (Dark Shackles).
         var debuffs = own.Any(typeName => PowerTypeNamed(typeName) is { } type && SimReaders.IsDebuffType(type));
         var died = DiedInPlay(window, entries);
+        var attacked = AnAttackPlayed(window.Card, entries.OfType<CardPlayStartedEntry>().Where(entry => entry.CardPlay.IsAutoPlay).Select(entry => entry.CardPlay.Card));
         foreach (var ((creature, type), before) in window.PowersBefore)
         {
             var after = window.PowersAfter.TryGetValue((creature, type), out var amountAfter) ? amountAfter : 0;
@@ -56,7 +57,7 @@ public sealed partial class ProcAudit
             if (entries.OfType<DamageReceivedEntry>().Any(damage => damage.Result.WasTargetKilled && damage.Result.Receiver == creature)) continue;
             if (own.Contains(type) || acted.Contains(type) || tabbed.Contains(type) || SimComparedPowers.Contains(type)) continue;
             if (creature == me.Creature && SpentByAnyPlay.Contains(type)) continue;
-            if (creature == me.Creature && SpentByAttack(type) && window.Card.Type == CardType.Attack) continue;
+            if (creature == me.Creature && SpentByAttack(type) && attacked) continue;
             // A double-play source this play used (Burst, Duplication: ModifyCardPlayCount, then a stack goes) when the card
             // played more than once: its tag is Keyword Tags' (the game's own play-count query), not a proc rule.
             if (creature == me.Creature && PowerTypeNamed(type) is { } countSource
@@ -236,6 +237,13 @@ public sealed partial class ProcAudit
             .Where(cardPlayStartedEntry => cardPlayStartedEntry.CardPlay.IsAutoPlay && !ReferenceEquals(cardPlayStartedEntry.CardPlay.Card, window.Chosen)).ToList();
         return autoPlayed.Count > 0 && autoPlayed.All(cardPlayStartedEntry => discarded.Contains(cardPlayStartedEntry.CardPlay.Card)) ? PickPlayedItself : otherwise;
     }
+
+    /// <summary>
+    /// An attack was played in the play: the card, or a card it auto-played (Hidden Daggers discarding a Sly Ricochet you picked, which plays
+    /// itself and spends your Vigor), so a power an attack spends (SpentByAttack) may go.
+    /// </summary>
+    internal static bool AnAttackPlayed(CardModel card, IEnumerable<CardModel> autoPlayed)
+        => card.Type == CardType.Attack || autoPlayed.Any(played => played.Type == CardType.Attack);
 
     /// <summary>The skip reason for what a card you picked did itself (a Sly card you discarded playing itself).</summary>
     internal const string PickPlayedItself = "the card you picked played itself (Sly)";

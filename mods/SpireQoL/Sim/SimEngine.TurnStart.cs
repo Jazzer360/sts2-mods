@@ -79,7 +79,7 @@ public static partial class SimEngine
         foreach (var id in state.PlayerIds)
         {
             var player = state.MutablePlayer(id);
-            player.HandCount = 0;
+            player.HandCount = player.MaybeSkipped = 0;
             player.TurnEndCards = new();
             player.ExhaustingInHand = new();
             player.Fading = player.HexFading = player.UpgradableAtTurnEnd = 0;

@@ -71,7 +71,7 @@ public sealed class PaelsEye : RelicProc
     public override IEnumerable<SimState> BeforeSideTurnEndEarly(SimState state, int owner)
     {
         if (!state.EndsTheirTurn(owner) || state.Player(owner) is not { PaelsEyeExhaust: true, HandCount: > 0 } player) return One(state);
-        var cards = player.HandCount;
+        var cards = SimEngine.ReadsHandSize(state, player).HandCount;
         return SimEngine.ProcCardEvent(state, CardEvent.Exhausted, cards, owner, indirect: false).Select(branch =>
         {
             var simPlayer = branch.MutablePlayer(owner);

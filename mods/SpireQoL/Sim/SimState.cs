@@ -520,6 +520,11 @@ public sealed class SimPlayer
     /// (Hellraiser's Strike, drawn by a card being played).
     /// </summary>
     public int PlayingFromHand;
+    /// <summary>
+    /// Cards counted in HandCount that you may have skipped taking (a pick you may skip: CardEventAction.YouMaySkip, decision #408): the hand holds
+    /// HandCount less up to this many. What reads the hand's size or room where that changes it is unknown (SimEngine.ReadsHandSize, SimEngine.RoomFor).
+    /// </summary>
+    public int MaybeSkipped;
     /// <summary>Arrows they can shoot now (PlayerCombatState.AvailableArrowCount; the Fool).</summary>
     public int Arrows;
     /// <summary>Energy now (PlayerCombatState.Energy): Pael's Tears.</summary>
@@ -730,7 +735,7 @@ public sealed class SimPlayer
     {
         key.Add(Block); key.Add(Hp); key.Add(MaxHp); key.Add(Taken); key.Add(Through); key.Add(OstyTaken); key.Add(UnblockableTaken); key.Add(Incoming); key.Add(BlockGained);
         key.Add(WuppyHp); key.Add(WuppyTaken); key.Add(OstyHp); key.Add(OstyMaxHp); key.Add(OstyShields ? 1 : 0); key.Add(Died ? 1 : 0); key.Add(LizardTailUsed ? 1 : 0); key.Add(LizardTailHeal); key.Add(FairiesUsed); key.Add(Fairies); key.Add(Potions);
-        key.Add(BlockGains); key.Add(Energy); key.Add(HandCount); key.Add(PlayingFromHand); key.Add(Arrows); key.Add(Fading); key.Add(UpgradableAtTurnEnd); key.Add(PilesUpgraded ? 1 : 0); key.Add(HexFading); key.Add(HexFrom); key.Add(Drawn); key.Add(ExhaustPile); key.Add(TakenToHand);
+        key.Add(BlockGains); key.Add(Energy); key.Add(HandCount); key.Add(PlayingFromHand); key.Add(MaybeSkipped); key.Add(Arrows); key.Add(Fading); key.Add(UpgradableAtTurnEnd); key.Add(PilesUpgraded ? 1 : 0); key.Add(HexFading); key.Add(HexFrom); key.Add(Drawn); key.Add(ExhaustPile); key.Add(TakenToHand);
         key.Add(OrbCapacity); key.Add(BeaconGiving ? 1 : 0); key.Add(InvincibleBlock); key.Add(InvincibleDrawPile);
         if (ExtraTurnFrom != null) key.Add(ExtraTurnFrom.GetHashCode());
         Draw?.Hash(ref key);

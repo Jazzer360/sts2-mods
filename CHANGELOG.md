@@ -10,6 +10,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 #### Changed
 - Session summaries count the frames during fights where the mod took longer than a frame at 165 fps (6 ms): how many, the longest run of them, which part of the mod took the time, and the fights' frame rate.
 
+#### Fixed
+- Colorless, Attack, Skill and Power Potion, Discovery, Quasar and Splash: the card you pick counts as one you may skip taking, so a prediction that depends on your hand's size afterwards (Regret, a draw into a full hand) shows `?` instead of counting it as certain.
+- The play audit no longer reports your Vigor spent when a skill's discard sets off an attack you picked (Hidden Daggers discarding a Sly Ricochet, which plays itself).
+
 ### Spire QoL 2.0.1
 #### Changed
 - The settings menu opens right away at the first launch, without waiting for the game to finish loading its art in the background.

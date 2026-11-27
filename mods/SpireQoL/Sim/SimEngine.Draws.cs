@@ -12,6 +12,42 @@ public static partial class SimEngine
     /// </summary>
     internal static int RoomIn(SimPlayer player) => Math.Max(0, MaxHand - (player.HandCount - player.PlayingFromHand));
 
+    /// <summary>Why an outcome is unknown when it reads a hand holding a card you may have skipped (decision #408).</summary>
+    internal const string SkippedPickUnknown = "you choose whether to take the card it offers, and what follows reads your hand's size";
+
+    /// <summary>Cards in the hand you may have skipped taking (SimPlayer.MaybeSkipped), never more than the hand holds.</summary>
+    private static int MaybeSkippedIn(SimPlayer player) => Math.Min(player.MaybeSkipped, Math.Max(0, player.HandCount - player.PlayingFromHand));
+
+    /// <summary>
+    /// The room in a player's hand for <paramref name="wanted"/> cards (RoomIn), read where it decides something (decision #408): when a card you may
+    /// have skipped taking is in it and the room falls short of what's wanted, skipping it would have left more: unknown.
+    /// </summary>
+    internal static int RoomFor(SimState state, SimPlayer player, int wanted)
+    {
+        var room = RoomIn(player);
+        if (room < wanted && MaybeSkippedIn(player) > 0) state.Unmodelled ??= SkippedPickUnknown;
+        return room;
+    }
+
+    /// <summary>
+    /// The hand's size is read where its number decides something (decision #408: a count of the hand, Regret, Pael's Eye, a hook's count of its
+    /// owner's hand): unknown while a card you may have skipped taking is in it. Gives the player back, for the read.
+    /// </summary>
+    internal static SimPlayer ReadsHandSize(SimState state, SimPlayer player)
+    {
+        if (MaybeSkippedIn(player) > 0) state.Unmodelled ??= SkippedPickUnknown;
+        return player;
+    }
+
+    /// <summary>
+    /// A take from the hand of <paramref name="most"/> cards out of <paramref name="pool"/> (decision #408): with a card you may have skipped in the
+    /// hand, how many it takes is unknown when the pool without it would fall short (every card of the hand, or a pool no bigger than the take).
+    /// </summary>
+    internal static void TakeReadsHandSize(SimState state, SimPlayer player, int pool, int most, bool every)
+    {
+        if (pool > 0 && (every || pool <= most) && MaybeSkippedIn(player) > 0) state.Unmodelled ??= SkippedPickUnknown;
+    }
+
     /// <summary>A player's draws go through their draw pile (decision #90): only yours, when the adapter filled it.</summary>
     internal static bool DrawsFromPile(SimState state, int player) => state.Player(player)?.Draw != null;
 
@@ -59,7 +95,7 @@ public static partial class SimEngine
                 var next = new List<SimState>();
                 foreach (var copy in Then(going, branch => DrawOne(branch, player, drawnCardAction.Indirect, record: true)))
                     (copy.DrawRecord!.Count > drawn && copy.DrawRecord[^1].Card.Type == drawnCardAction.DrawAgainIf
-                        && RoomIn(copy.Player(player)!) > 0 ? next : done).Add(copy);
+                        && RoomFor(copy, copy.Player(player)!, wanted: 1) > 0 ? next : done).Add(copy);
                 going = next;
             }
             states = done;
@@ -140,7 +176,7 @@ public static partial class SimEngine
         if (DrawsStopped(state, player)) return DrawPrevented(state, player);
         var simPlayer = state.Player(player)!;
         // A full hand draws nothing (RoomIn: the cards being played have left it already; HandCount drops each at CardResolved).
-        if (RoomIn(simPlayer) == 0) return new[] { state };
+        if (RoomFor(state, simPlayer, wanted: 1) == 0) return new[] { state };
         var pile = simPlayer.Draw!;
         if (pile.Count == 0)
         {
@@ -228,7 +264,7 @@ public static partial class SimEngine
     {
         if (count <= 0 || state.Player(player) == null) return;
         var simPlayer = state.MutablePlayer(player);
-        var added = Math.Min(count, RoomIn(simPlayer));
+        var added = Math.Min(count, RoomFor(state, simPlayer, count));
         simPlayer.HandCount += added;
         if (ethereal) simPlayer.Fading += added;
         // A card of a class the board read the profile of (SimPlayer.MadeCards, decision #364: Withering Presence's Wither, the cards your hand's cards
@@ -372,7 +408,7 @@ public static partial class SimEngine
         if (joinsHand)
         {
             // Into a full hand it goes to the discard pile instead (CardPileCmd.Add).
-            if (RoomIn(simPlayer) == 0)
+            if (RoomFor(state, simPlayer, wanted: 1) == 0)
             {
                 simPlayer.Draw = simPlayer.Draw.WithDiscarded(card);
                 return;

@@ -290,7 +290,7 @@ public static partial class SimEngine
             case SimCount.CardsTaken: return state.PlayTaken;
             case SimCount.HandRoom:
                 var owner = state.CurrentPlay?.Owner ?? Who.You;
-                return state.Player(owner) is { } player ? Math.Min(given, RoomIn(player)) : given;
+                return state.Player(owner) is { } player ? Math.Min(given, RoomFor(state, player, given)) : given;
             default: return given;
         }
     }
@@ -335,6 +335,7 @@ public static partial class SimEngine
         }
         var pool = take.EventIfNot != null ? inHand : matching;
         if (ChosenCount(state, take, pool)) return new[] { state };
+        TakeReadsHandSize(state, player, pool, take.Most, every: take.Way == HandTakeWay.Each);
         count = take.Way == HandTakeWay.Each ? pool : Math.Min(take.Most, pool);
         if (take.EventIfNot != null)
         {
@@ -1170,16 +1171,17 @@ public static partial class SimEngine
             if (cardEvent == CardEvent.Drawn)
             {
                 if (DrawsStopped(state, player)) return DrawPrevented(state, player);
-                if (RoomIn(simPlayer) == 0) return new[] { state };
+                if (RoomFor(state, simPlayer, wanted: 1) == 0) return new[] { state };
                 // Drawing the whole pile shuffles the discard pile in: I Am Invincible's top isn't known any more.
                 var drawer = state.MutablePlayer(player);
                 if (drawer.InvincibleBlock > 0 && --drawer.InvincibleDrawPile <= 0) drawer.InvincibleBlock = 0;
             }
             var made = cardEvent != CardEvent.Drawn;
-            if (RoomIn(simPlayer) > 0)
+            if (RoomFor(state, simPlayer, wanted: 1) > 0)
             {
                 AddToHand(state, handOf, count: 1, takenBy: made ? cardEventAction.TakenBy : null, known: made && cardEventAction.TakenBy != null, made: made ? cardEventAction.MadeCard : null);
-                return FireCardEvent(state, cardEvent, player, cardEventAction.Indirect, cardEventAction.Card);
+                if (!made || !cardEventAction.YouMaySkip) return FireCardEvent(state, cardEvent, player, cardEventAction.Indirect, cardEventAction.Card);
+                return MadeYouMaySkip(state, handOf, cardEventAction, player);
             }
             // Made into a full hand: it goes to the discard pile instead (CardPileCmd.Add), for a shuffle later in the turn.
             if (made && cardEventAction.MadeCard is { } madeName && simPlayer.Draw != null && simPlayer.MadeCards?.TryGetValue(madeName, out var madeProfile) == true)
@@ -1189,6 +1191,21 @@ public static partial class SimEngine
         if (cardEvent == CardEvent.Generated)
             JoinsTakes(state, cardEventAction.TakenBy, known: cardEventAction.TakenBy != null, intoHand: false, made: true);
         return FireCardEvent(state, cardEvent, player, cardEventAction.Indirect, cardEventAction.Card);
+    }
+
+    /// <summary>
+    /// A card you pick from cards offered, with the pick one you may skip (decision #408), joined the hand: counted as one you may not have taken
+    /// (SimPlayer.MaybeSkipped). Skipped, the game makes no card, so its created-card hooks don't run: where one acts on it, unknown.
+    /// </summary>
+    private static IEnumerable<SimState> MadeYouMaySkip(SimState state, int handOf, CardEventAction cardEventAction, int player)
+    {
+        state.MutablePlayer(handOf).MaybeSkipped++;
+        var bare = state.Clone();
+        CountEvent(bare, cardEventAction.Event, player);
+        var fired = FireCardEvent(state, cardEventAction.Event, player, cardEventAction.Indirect, cardEventAction.Card);
+        if (fired.Count != 1 || fired[0].Key() != bare.Key())
+            foreach (var branch in fired) branch.Unmodelled ??= "you choose whether to take the card it offers, and something acts on a card made";
+        return fired;
     }
 
     /// <summary>A relic's or power's value (its DynamicVar) as the adapter read it (SimState.Vars), or the fallback.</summary>

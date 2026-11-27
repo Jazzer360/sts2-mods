@@ -2278,6 +2278,7 @@ public static partial class SimAdapter
             actions.Add(new CardEventAction(CardEvent.Generated, count)
             {
                 Card = MadeSimCard(make.Card), Indirect = true, CountFrom = from, Player = creator == play.Owner ? null : creator, JoinsHand = intoHand,
+                YouMaySkip = intoHand && MadeCards.YouMaySkip(make),
                 IntoHandOf = intoHand && player != creator ? player : null,
                 TakenBy = yours ? takenBy : Array.Empty<string>(), MadeCard = intoHand && yours ? madeCard : null,
             });

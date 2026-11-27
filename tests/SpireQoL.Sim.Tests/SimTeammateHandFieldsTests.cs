@@ -38,6 +38,7 @@ public class SimTeammateHandFieldsTests
         nameof(SimPlayer.TakenToHand),     // cards taken from their piles into their hand in the simulation: its own count
         nameof(SimPlayer.HandCount),       // the size is on screen (Cloak Clasp, Screaming Flagon, Obsidian Vice, Regret's amount)
         nameof(SimPlayer.PlayingFromHand), // their cards being played: on screen as they play (the simulation's own count)
+        nameof(SimPlayer.MaybeSkipped), // a card you may have skipped taking (decision #408): the simulation's own count of what a play of yours offered
         nameof(SimPlayer.Energy),          // on screen for every player (Pael's Tears, Orbit)
         nameof(SimPlayer.Arrows),          // on screen (the Fool's arrows)
         // Auto-plays from their piles: Howl from Beyond in their exhaust pile (you can view it), I Am Invincible when every card

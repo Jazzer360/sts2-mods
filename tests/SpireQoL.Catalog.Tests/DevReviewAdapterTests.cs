@@ -106,6 +106,28 @@ public class DevReviewAdapterTests
     }
 
     [Fact]
+    public void ColorlessPotionsPickIsOneYouMaySkip()
+    {
+        // The owner's Silent run: Colorless Potion offers three cards (CardSelectCmd.FromChooseACardScreen, canSkip: true) and adds the one you pick only
+        // `if (cardModel != null)`; skipped, your hand held 6 where 7 were predicted. The card it makes is one you may skip (decision #408); a card made
+        // without a pick (Blade Dance's Shivs) isn't.
+        GameModels.EnsureLoaded();
+        var fight = new GameFight();
+        fight.Add<DefendSilent>();
+        var discovery = fight.Add<Discovery>();
+        var bladeDance = fight.Add<BladeDance>();
+        var potion = ModelDb.Potion<MegaCrit.Sts2.Core.Models.Potions.ColorlessPotion>().ToMutable();
+        fight.Me.AddPotionInternal(potion);
+        SimAdapter.Build(fight.Me, fight.Combat, out var ids);
+        var use = SimAdapter.Potion(potion, fight.Me, fight.Combat, ids, Who.You);
+        Assert.Contains(use.Body.OfType<CardEventAction>(), made => made.Event == CardEvent.Generated && made.YouMaySkip);
+        var play = SimAdapter.Play(discovery, fight.Me, fight.Combat, ids, targetId: Who.None);
+        Assert.Contains(play.Body.OfType<CardEventAction>(), made => made.Event == CardEvent.Generated && made.YouMaySkip);
+        var shivs = SimAdapter.Play(bladeDance, fight.Me, fight.Combat, ids, targetId: Who.None);
+        Assert.DoesNotContain(shivs.Body.OfType<CardEventAction>(), made => made.YouMaySkip);
+    }
+
+    [Fact]
     public void HowlFromBeyondPlaysFromYourExhaustPile()
     {
         // True Grit+ exhausting Howl from Beyond: the play audit's pick check (decision #167) counts a card that plays from your exhaust pile as one the
