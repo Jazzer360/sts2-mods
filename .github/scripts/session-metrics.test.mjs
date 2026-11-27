@@ -102,3 +102,20 @@ test("a run counts new events and rewrites the issue", async () => {
   assert.equal(decodeState(issue.body).versions["1.20.14"].sessions, 2);
   assert.ok(calls.some(([m]) => m === "PATCH"));
 });
+
+test("adds the fights' frames against a 165 fps frame's budget, and keeps older totals that had none", () => {
+  const st = emptyState();
+  const fightFrames = (overBudget, longestRun, longestRunBy) => ({ frames: 6000, seconds: 100, overBudget, longestRun, longestRunBy, overBudgetBy: { "turn-forecast": overBudget } });
+  addEvents(st, [event("g", "2026-11-27T10:00:00Z", summary({ mod: "2.0.2", fightFrames: fightFrames(20, 3, "card-tabs") })),
+    event("h", "2026-11-27T11:00:00Z", summary({ mod: "2.0.2", fightFrames: fightFrames(10, 7, "turn-forecast") }))]);
+  const f = st.versions["2.0.2"].fightFrames;
+  assert.deepEqual([f.frames, f.seconds, f.overBudget, f.longestRun, f.longestRunBy, f.by["turn-forecast"]], [12000, 200, 30, 7, "turn-forecast", 30]);
+  const body = render(prune(st));
+  assert.ok(body.includes("| 60 fps |"));
+  assert.ok(body.includes("| 9.0 |"), "30 frames over in 200 seconds: 9 a minute");
+  const old = emptyState();
+  addEvents(old, [event("i", "2026-11-27T10:00:00Z", summary())]);
+  delete old.versions["1.20.14"].fightFrames; // kept by a sync from before the field
+  addEvents(old, [event("j", "2026-11-27T12:00:00Z", summary({ fightFrames: fightFrames(5, 2, "card-tabs") }))]);
+  assert.equal(old.versions["1.20.14"].fightFrames.overBudget, 5);
+});

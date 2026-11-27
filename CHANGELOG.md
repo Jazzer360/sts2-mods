@@ -6,6 +6,10 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 ## [Unreleased]
 
+### Spire QoL 2.0.2
+#### Changed
+- Session summaries count the frames during fights where the mod took longer than a frame at 165 fps (6 ms): how many, the longest run of them, which part of the mod took the time, and the fights' frame rate.
+
 ### Spire QoL 2.0.1
 #### Changed
 - The settings menu opens right away at the first launch, without waiting for the game to finish loading its art in the background.

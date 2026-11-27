@@ -63,7 +63,7 @@ public sealed class SessionWatch : IFeature, IFrameFeature
     {
         DevEvents.OnError = ex => ModEntry.Log.Warn($"[session] the event stream's counter threw (later events still count): {ex.Message}");
         DevEvents.Posted += devEvent => _current?.Post(devEvent);
-        host.FrameMeasured += (modMs, gapMs) => _current?.Frame(modMs, gapMs);
+        host.FrameMeasured += (modMs, gapMs) => _current?.Frame(modMs, gapMs, host.FeatureMs);
         if (ErrorReporter.Instance is { } reporter)
             reporter.Sent += (fingerprint, id) => DevEvents.Post(new ReportSent(fingerprint[0] == "mismatch" && fingerprint.Length > 1 ? fingerprint[1] : fingerprint[0], id));
         AppDomain.CurrentDomain.ProcessExit += (_, _) => End("quit", flush: true);
@@ -182,7 +182,15 @@ public sealed class SessionWatch : IFeature, IFrameFeature
         => $"{sessionSummary.Combats} fights, {sessionSummary.Turns} turns ({sessionSummary.Clean} clean, {sessionSummary.Unchecked} unchecked, {sessionSummary.Capped} capped, {sessionSummary.Mismatched} mismatched); " +
            $"forecasts {sessionSummary.Forecast.Matched}/{sessionSummary.Forecast.Checked} matched, {sessionSummary.Forecast.Skipped} skipped; plays {sessionSummary.Plays.Matched}/{sessionSummary.Plays.Checked} matched, " +
            $"{sessionSummary.Plays.Skipped} checks skipped; {sessionSummary.Searches.Count} searches ({sessionSummary.Searches.Background} in the background, {sessionSummary.Searches.Cancelled} cancelled, " +
-           $"slowest {sessionSummary.Searches.Ms.Max} ms); mod frame time p95 {sessionSummary.Frames.ModMs.P95} ms, {sessionSummary.Frames.Slow} slow frames";
+           $"slowest {sessionSummary.Searches.Ms.Max} ms); mod frame time p95 {sessionSummary.Frames.ModMs.P95} ms, {sessionSummary.Frames.Slow} slow frames; " +
+           FightFramesLine(sessionSummary.FightFrames);
+
+    /// <summary>The fights' frames against the 165 fps budget (decision #407), for the summary's line.</summary>
+    private static string FightFramesLine(FightFrameSummary fights)
+        => fights.Frames == 0 ? "no fight frames"
+            : $"in fights {fights.Fps} fps, {fights.OverBudget} frames over the 165 fps budget ({fights.OverBudgetPerMinute} a minute; longest run {fights.LongestRun}"
+              + (fights.LongestRun > 0 ? $", mostly {fights.LongestRunBy}" : "") + ")"
+              + (fights.OverBudgetBy.Count > 0 ? "; by " + string.Join(", ", fights.OverBudgetBy.Take(3).Select(entry => $"{entry.Key} {entry.Value}")) : "");
 
     private static SessionInfo Info()
     {

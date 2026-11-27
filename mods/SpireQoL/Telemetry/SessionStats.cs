@@ -27,6 +27,11 @@ public sealed class SessionStats
     public const double SlowModFrameMs = 30;
     /// <summary>A gap between frames longer than this, with the mod's share small, is the game's own stall.</summary>
     public const double GameStallMs = 50;
+    /// <summary>
+    /// A fight frame where the mod took longer than this is over the budget of a frame at 165 fps (decision #407): a frame a player at that rate
+    /// loses to the mod. Counted in fights only, where the mod's real work is.
+    /// </summary>
+    public const double BudgetModFrameMs = 6;
 
     private sealed class TurnRecord
     {
@@ -57,6 +62,11 @@ public sealed class SessionStats
     private string _slowestSearch = "";
     private readonly Histogram _searchMs = new(), _waitMs = new(), _unsettledMs = new(), _modFrameMs = new();
     private int _waitsMissed, _slowFrames, _gameStalls;
+    private bool _inFight;
+    private int _fightFrames, _overBudget, _run, _longestRun;
+    private double _fightMs;
+    private string _longestRunBy = "";
+    private readonly Dictionary<string, int> _overBudgetBy = new(), _runBy = new();
 
     public SessionStats(DateTime? startedUtc = null)
     {
@@ -80,10 +90,14 @@ public sealed class SessionStats
                     CloseTurns();
                     _combat++;
                     _combats++;
+                    _inFight = true;
+                    EndRun();
                     _players = Math.Max(_players, combatStarted.Players);
                     if (_characters.Length == 0) _characters = combatStarted.Characters;
                     break;
                 case CombatEnded:
+                    _inFight = false;
+                    EndRun();
                     break; // its turns close when the next fight starts: the last play's check may still come
                 case TurnStarted turnStarted:
                     Turn(turnStarted.Turn);
@@ -152,15 +166,54 @@ public sealed class SessionStats
         }
     }
 
-    /// <summary>One frame: the mod's own time in it, and the time since the frame before (OverlayHost).</summary>
-    public void Frame(double modMs, double gapMs)
+    /// <summary>
+    /// One frame: the mod's own time in it, the time since the frame before, and each feature's time in it (OverlayHost.FeatureMs: read only for a
+    /// fight frame over the budget, for the feature that took most of it; "hook:" entries are the game's hooks, outside the frame's time).
+    /// </summary>
+    public void Frame(double modMs, double gapMs, IReadOnlyList<(string Id, double Ms)>? features = null)
     {
         lock (_lock)
         {
             _modFrameMs.Add(modMs);
             if (modMs > SlowModFrameMs) _slowFrames++;
             else if (gapMs > GameStallMs) _gameStalls++;
+            if (!_inFight) return;
+            _fightFrames++;
+            _fightMs += gapMs;
+            if (modMs <= BudgetModFrameMs)
+            {
+                EndRun();
+                return;
+            }
+            _overBudget++;
+            var costliest = Costliest(features);
+            Count(_overBudgetBy, costliest);
+            Count(_runBy, costliest);
+            if (++_run <= _longestRun) return;
+            _longestRun = _run;
+            _longestRunBy = _runBy.OrderByDescending(entry => entry.Value).ThenBy(entry => entry.Key, StringComparer.Ordinal).First().Key;
         }
+    }
+
+    /// <summary>A run of fight frames over the budget ends.</summary>
+    private void EndRun()
+    {
+        if (_run == 0) return;
+        _run = 0;
+        _runBy.Clear();
+    }
+
+    /// <summary>The feature that took most of a frame ("?" when none was timed).</summary>
+    private static string Costliest(IReadOnlyList<(string Id, double Ms)>? features)
+    {
+        var (costliest, most) = ("?", 0.0);
+        // By index: a foreach through the interface boxes an enumerator.
+        for (var i = 0; features != null && i < features.Count; i++)
+        {
+            var (id, ms) = features[i];
+            if (ms > most && !id.StartsWith("hook:", StringComparison.Ordinal)) (costliest, most) = (id, ms);
+        }
+        return costliest;
     }
 
     private AuditCounts Audit(string name) => name switch
@@ -274,6 +327,7 @@ public sealed class SessionStats
                 Waits = new WaitSummary(_waitsMissed, _waitMs.Summary()),
                 Unsettled = _unsettledMs.Summary(),
                 Frames = new FrameSummary(_slowFrames, _gameStalls, _modFrameMs.Summary()),
+                FightFrames = new FightFrameSummary(_fightFrames, Math.Round(_fightMs / 1000, 2), _overBudget, _longestRun, _longestRunBy, Top(_overBudgetBy)),
                 Gc = gcSummary,
                 Reports = Top(_reports),
             };
@@ -317,6 +371,7 @@ public sealed record SessionSummary
     public WaitSummary Waits { get; init; } = new(Missed: 0, new(Count: 0, P50: 0, P95: 0, P99: 0, Max: 0));
     public TimingSummary Unsettled { get; init; } = new(Count: 0, P50: 0, P95: 0, P99: 0, Max: 0);
     public FrameSummary Frames { get; init; } = new(Slow: 0, GameStalls: 0, new(Count: 0, P50: 0, P95: 0, P99: 0, Max: 0));
+    public FightFrameSummary FightFrames { get; init; } = FightFrameSummary.Empty;
     public GcSummary Gc { get; init; } = new(Gen0: 0, Gen1: 0, Gen2: 0, PauseMs: 0, AllocatedMb: 0);
     public Dictionary<string, int> Reports { get; init; } = new();
 
@@ -353,6 +408,23 @@ public sealed record WaitSummary(int Missed, TimingSummary Ms);
 
 /// <summary>The mod's own time per frame; Slow: frames over 30 ms; GameStalls: gaps over 50 ms with the mod's share small.</summary>
 public sealed record FrameSummary(int Slow, int GameStalls, TimingSummary ModMs);
+
+/// <summary>
+/// The frames during fights against a 165 fps frame's budget (decision #407: the mod over SessionStats.BudgetModFrameMs): the fights' frames and
+/// seconds (their frame rate: a capped game shows it), the frames over, the longest run of them in a row and the feature that took most of its
+/// frames, and how many frames over each feature took most of. Over-budget frames spread thin are a cost on many boards; a long run is a heavy
+/// board; one feature's many is where to look.
+/// </summary>
+public sealed record FightFrameSummary(int Frames, double Seconds, int OverBudget, int LongestRun, string LongestRunBy, Dictionary<string, int> OverBudgetBy)
+{
+    public static FightFrameSummary Empty => new(Frames: 0, Seconds: 0, OverBudget: 0, LongestRun: 0, "", new());
+
+    /// <summary>The frame rate in fights (0 with no fight frames).</summary>
+    [JsonIgnore] public double Fps => Seconds <= 0 ? 0 : Math.Round(Frames / Seconds);
+
+    /// <summary>Frames over the budget per minute of fights.</summary>
+    [JsonIgnore] public double OverBudgetPerMinute => Seconds <= 0 ? 0 : Math.Round(OverBudget * 60 / Seconds, 1);
+}
 
 /// <summary>Garbage collections during the session (the whole process: the game's too), their pauses, and bytes allocated (MB).</summary>
 public sealed record GcSummary(int Gen0, int Gen1, int Gen2, double PauseMs, double AllocatedMb);

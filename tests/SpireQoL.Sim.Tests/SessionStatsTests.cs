@@ -157,6 +157,38 @@ public class SessionStatsTests
     }
 
     [Fact]
+    public void FightFramesAreCountedAgainstTheBudgetOfAFrameAt165Fps()
+    {
+        // Decision #407: a fight frame where the mod took over 6 ms is one a player at 165 fps loses. Counted with the feature that took most of it
+        // (the game's hooks aside: outside the frame's time), and the longest run of them in a row with the feature behind most of its frames.
+        var sessionStats = new SessionStats();
+        sessionStats.Frame(modMs: 20, gapMs: 16); // before any fight: not counted
+        sessionStats.Post(new CombatStarted("Jaw Worm", Players: 1, "Ironclad"));
+        var forecast = new[] { ("turn-forecast", 7.0), ("hook:AfterCardPlayed", 30.0) };
+        var tabs = new[] { ("card-tabs", 8.0), ("turn-forecast", 1.0) };
+        sessionStats.Frame(modMs: 7, gapMs: 15, forecast);
+        sessionStats.Frame(modMs: 2, gapMs: 15, forecast); // under the budget: the run ends
+        sessionStats.Frame(modMs: 9, gapMs: 15, tabs);
+        sessionStats.Frame(modMs: 7, gapMs: 15, forecast);
+        sessionStats.Frame(modMs: 10, gapMs: 15, tabs);
+        sessionStats.Frame(modMs: 6, gapMs: 15, tabs); // at the budget: not over
+        sessionStats.Post(new CombatEnded());
+        sessionStats.Frame(modMs: 20, gapMs: 16); // after it: not counted
+        var fights = sessionStats.Summary("menu", Info).FightFrames;
+        Assert.Equal(6, fights.Frames);
+        Assert.Equal(4, fights.OverBudget);
+        Assert.Equal(3, fights.LongestRun);
+        Assert.Equal("card-tabs", fights.LongestRunBy);
+        Assert.Equal(2, fights.OverBudgetBy["card-tabs"]);
+        Assert.Equal(2, fights.OverBudgetBy["turn-forecast"]);
+        Assert.False(fights.OverBudgetBy.ContainsKey("hook:AfterCardPlayed"));
+        Assert.Equal(67, fights.Fps); // 6 frames 15 ms apart
+        // Kept through the file the summary waits in.
+        var kept = SessionSummary.FromJson(sessionStats.Summary("menu", Info).ToJson())!.FightFrames;
+        Assert.Equal((4, 3, "card-tabs"), (kept.OverBudget, kept.LongestRun, kept.LongestRunBy));
+    }
+
+    [Fact]
     public void TakingTheSummaryChangesNothing()
     {
         var sessionStats = Fight(new TurnStarted(Turn: 1), new CheckDone("forecast", Turn: 1, Matched: true, Detail: null), new TurnStarted(Turn: 2));

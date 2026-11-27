@@ -41,6 +41,7 @@ export function emptyTotals() {
     waits: { missed: 0, ms: timing() },
     unsettled: timing(),
     frames: { slow: 0, gameStalls: 0, ms: timing() },
+    fightFrames: { frames: 0, seconds: 0, overBudget: 0, longestRun: 0, longestRunBy: "", by: {} },
     gc: { gen0: 0, gen1: 0, gen2: 0, pauseMs: 0, allocatedMb: 0 },
     reports: {},
   };
@@ -92,6 +93,13 @@ export function addSummary(t, s) {
   t.frames.slow += num(s.frames?.slow);
   t.frames.gameStalls += num(s.frames?.gameStalls);
   addTiming(t.frames.ms, s.frames?.modMs);
+  // The fights' frames against a 165 fps frame's budget (decision #407): kept before the field existed in a version's totals.
+  const f = (t.fightFrames ||= { frames: 0, seconds: 0, overBudget: 0, longestRun: 0, longestRunBy: "", by: {} });
+  f.frames += num(s.fightFrames?.frames);
+  f.seconds += num(s.fightFrames?.seconds);
+  f.overBudget += num(s.fightFrames?.overBudget);
+  if (num(s.fightFrames?.longestRun) > f.longestRun) { f.longestRun = num(s.fightFrames.longestRun); f.longestRunBy = String(s.fightFrames.longestRunBy || ""); }
+  addCounts(f.by, s.fightFrames?.overBudgetBy);
   for (const k of ["gen0", "gen1", "gen2", "pauseMs", "allocatedMb"]) t.gc[k] += num(s.gc?.[k]);
   addCounts(t.reports, s.reports);
 }
@@ -198,6 +206,10 @@ export function render(state, now = new Date()) {
     ["Board settling p95 (when not in its frame)", (t) => meanP95(t.unsettled)],
     ["Mod frame time p95", (t) => meanP95(t.frames.ms)],
     ["Slow mod frames (>30 ms) per hour", (t) => perHour(t.frames.slow, t.minutes)],
+    ["Fight frame rate", (t) => (t.fightFrames?.seconds ? `${Math.round(t.fightFrames.frames / t.fightFrames.seconds)} fps` : "–")],
+    ["Fight frames over the 165 fps budget (>6 ms) per minute", (t) => (t.fightFrames?.seconds ? (t.fightFrames.overBudget * 60 / t.fightFrames.seconds).toFixed(1) : "–")],
+    ["Longest run over the budget", (t) => (t.fightFrames?.longestRun ? `${t.fightFrames.longestRun} frames (${t.fightFrames.longestRunBy})` : "–")],
+    ["Over the budget, by feature", (t) => list(top(t.fightFrames?.by || {}, 3))],
     ["Game's own stalls per hour", (t) => perHour(t.frames.gameStalls, t.minutes)],
     ["Gen 2 collections per hour (process)", (t) => perHour(t.gc.gen2, t.minutes)],
     ["Reports sent per session", (t) => (t.sessions ? (Object.values(t.reports).reduce((a, n) => a + n, 0) / t.sessions).toFixed(2) : "–")],
