@@ -77,4 +77,39 @@ public class OrbCodeTests
         Assert.Equal(36, turnEnd.Enemy(id: 0)!.Hp);
         Assert.Equal((3, 6, 3), (turnEnd.You.Orbs[0].Passive, turnEnd.You.Orbs[0].Evoke, turnEnd.You.Orbs[0].Fields["_passiveVal"]));
     }
+    [Fact]
+    public void AnEvokeOnceTheFightIsOverDoesNothingAndKeepsTheOrb()
+    {
+        // OrbCmd.Evoke returns at its start once CombatManager.IsOverOrEnding, before its dequeue: Multi-Cast+'s third evoke after its second killed the
+        // last enemy does nothing, and its last (the one that removes the orb) never happens, so the Dark orb stays (the owner's Defect run).
+        var state = Board();
+        var dark = SimEngine.FreshOrb(state, OrbKind.Dark, Who.You);
+        dark.Evoke = 30;
+        state.You.Orbs.Add(dark);
+        var after = Assert.Single(After(state, Play(Card("MultiCast", SimCardType.Skill), target: Who.None, plays: 1,
+            new OrbAction(OrbAction.Op.EvokeFront) { Times = 3 })));
+        Assert.False(after.Enemy(id: 0)!.Alive);
+        Assert.Equal(new[] { (OrbKind.Dark, 30) }, after.You.Orbs.Select(orb => (orb.Kind, orb.Evoke)));
+    }
+
+    [Fact]
+    public void AStockedAxebotsNextBodyTakesTheEvokesAfterTheKill()
+    {
+        // Axebot's Stock brings the next Axebot in as it dies (holding the fight's end back), and Dark's evoke hits the weakest enemy you can hit then:
+        // Multi-Cast+'s second evoke of a 90 Dark orb lands on the new Axebot (the owner's run: 67 then 90).
+        var state = Board();
+        var axebot = state.Enemies[0];
+        axebot.Hp = 67;
+        axebot.Powers = PowerSet.Empty.With(PowerId.Stock, amount: 1);
+        axebot.Spawns = new List<SimSpawn> { new("Axebot", new[] { 90 }) { Source = PowerId.Stock, Monster = "Axebot", UniqueFromEarlier = true } };
+        var dark = SimEngine.FreshOrb(state, OrbKind.Dark, Who.You);
+        dark.Evoke = 90;
+        state.You.Orbs.Add(dark);
+        var after = Assert.Single(After(state, Play(Card("MultiCast", SimCardType.Skill), target: Who.None, plays: 1,
+            new OrbAction(OrbAction.Op.EvokeFront) { Times = 3 })));
+        Assert.Equal(90, after.Enemy(id: 1)!.Hp + 90);
+        Assert.False(after.Enemy(id: 1)!.Alive);
+        // Its death ends the fight: the third evoke does nothing and the Dark orb stays.
+        Assert.Single(after.You.Orbs);
+    }
 }

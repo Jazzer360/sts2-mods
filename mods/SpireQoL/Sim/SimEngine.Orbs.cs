@@ -97,7 +97,26 @@ public static partial class SimEngine
             if (state.Log && enemy.Alive) state.EndOfTurnDamage.Add((OrbLabel(orb.Kind, evoke, all: false), amount));
             Damage(state, enemy, amount, orb.Player, props);
         }
-        return new[] { state };
+        return DeathWaits(state) ? DeathsOfTheHit(state) : new[] { state };
+    }
+
+    /// <summary>
+    /// The deaths an orb's CreatureCmd.Damage caused run as it ends (CreatureCmd.Kill inside it: Hook.AfterDeath), then what they raised (Stock's
+    /// next Axebot joins), before the orb's next command: a later evoke of the same play hits the creature that came in (Multi-Cast).
+    /// </summary>
+    private static IEnumerable<SimState> DeathsOfTheHit(SimState state)
+    {
+        AllyDeaths(state);
+        return DrainPending(state);
+    }
+
+    /// <summary>A death not yet run, or something raised waiting (only then a step more: an orb's hit that kills no one costs nothing).</summary>
+    private static bool DeathWaits(SimState state)
+    {
+        if (state.HasPending) return true;
+        foreach (var enemy in state.Enemies)
+            if (enemy.StartedAlive && !enemy.Alive && !enemy.DeathHandled) return true;
+        return false;
     }
 
     /// <summary>
@@ -106,6 +125,16 @@ public static partial class SimEngine
     /// there at your end of turn and in the play audit's damage with no card during a play; an evoke's targets kept for AfterOrbEvoked.
     /// </summary>
     internal static IEnumerable<SimState> OrbDamage(SimState state, OrbCtx orb, bool evoke, HookTarget target, int amount, SimProps props)
+    {
+        var hit = OrbHits(state, orb, evoke, target, amount, props);
+        if (hit is SimState[] { Length: 1 } one && !DeathWaits(one[0])) return one;
+        var states = hit as IReadOnlyCollection<SimState> ?? hit.ToList();
+        foreach (var branch in states)
+            if (DeathWaits(branch)) return Then(states, DeathsOfTheHit);
+        return states;
+    }
+
+    private static IEnumerable<SimState> OrbHits(SimState state, OrbCtx orb, bool evoke, HookTarget target, int amount, SimProps props)
     {
         var player = orb.Player;
         var listed = evoke ? state.Log && state.EndOfTurnNow && player == Who.You : state.Log;
@@ -160,11 +189,12 @@ public static partial class SimEngine
 
     /// <summary>
     /// OrbCmd.Channel for a player: with no slots yet a character that gets one on its first channel does; full slots evoke the
-    /// front orb first (its owner's Thunder, its Frost block to them); then the orb goes in and AfterOrbChanneled runs.
+    /// front orb first (its owner's Thunder, its Frost block to them); then the orb goes in and AfterOrbChanneled runs. Nothing once the fight is
+    /// ending (its IsOverOrEnding guard).
     /// </summary>
     public static IEnumerable<SimState> ChannelOrb(SimState state, SimOrb orb, int player)
     {
-        if (!state.TakesPart(player)) return new[] { state };
+        if (!state.TakesPart(player) || FightOver(state)) return new[] { state };
         var simPlayer = state.MutablePlayer(player);
         if (simPlayer.OrbCapacity == 0 && simPlayer.SlotOnFirstChannel) simPlayer.OrbCapacity = 1;
         IEnumerable<SimState> states = new[] { state };
@@ -346,7 +376,8 @@ public static partial class SimEngine
                     var last = time == orbAction.Times - 1;
                     branches.Each(branch =>
                     {
-                        if (branch.You.Orbs.Count == 0) return new[] { branch };
+                        // OrbCmd.Evoke returns at its start once the fight is ending, before its dequeue: the orb stays (Multi-Cast's kill).
+                        if (branch.You.Orbs.Count == 0 || FightOver(branch)) return new[] { branch };
                         var orb = branch.You.Orbs[0];
                         if (last && !orbAction.Keeps) branch.You.OwnOrbs().RemoveAt(0);
                         return Evoke(branch, orb);
@@ -358,10 +389,10 @@ public static partial class SimEngine
                 // cap holds (one step for all of them was 4^16 copies with 4 enemies and 8 Lightning orbs).
                 for (var i = branches.States.Max(branch => branch.You.Orbs.Count); i > 0; i--)
                 {
-                    branches.Each(branch => branch.You.Orbs.Count == 0 ? new[] { branch } : Evoke(branch, branch.You.Orbs[0]));
+                    branches.Each(branch => branch.You.Orbs.Count == 0 || FightOver(branch) ? new[] { branch } : Evoke(branch, branch.You.Orbs[0]));
                     branches.Each(branch =>
                     {
-                        if (branch.You.Orbs.Count == 0) return new[] { branch };
+                        if (branch.You.Orbs.Count == 0 || FightOver(branch)) return new[] { branch };
                         var orb = branch.You.Orbs[0];
                         branch.You.OwnOrbs().RemoveAt(0);
                         return Evoke(branch, orb);

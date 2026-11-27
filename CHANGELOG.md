@@ -13,6 +13,8 @@ Every pull request or commit that changes behavior adds a line under **Unrelease
 
 #### Fixed
 - Colorless, Attack, Skill and Power Potion, Discovery, Quasar and Splash: the card you pick counts as one you may skip taking, so a prediction that depends on your hand's size afterwards (Regret, a draw into a full hand) shows `?` instead of counting it as certain.
+- Multi-Cast that kills the last enemy partway through no longer predicts its orb gone: the game stops evoking once the fight is over, so the orb stays.
+- Multi-Cast and other orb evokes on an Axebot with Stock: its next Axebot joins as the evoke kills it, so the evokes after it hit the new one (180 damage, not 90).
 - Withering Presence's Wither no longer gives Pillar of Creation's block: the game makes it with no creator, so it isn't a card you created.
 - Black Hole no longer hits for a star card another card auto-plays (Beat Down's), which spends no stars.
 - Cosmic Indifference and Photon Cut: a card you put on top of your draw pile could be I Am Invincible, which plays itself from there as your turn ends; the preview shows `?` when one is where the pick takes from, instead of leaving its block out.

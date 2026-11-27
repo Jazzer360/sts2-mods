@@ -87,7 +87,7 @@ public static class HandModelled
             "TriggerPassive's count and its loop, a random orb, and the orb hooks' pipelines; an orb's damage and block as its code's commands run them " +
             "(each orb's own Passive, Evoke and values are read from its code, and Focus, Infused Core, Thunder and Gold-Plated Cables from theirs: decision #214)",
             new[] { "SimEngine.FreshOrb", "SimEngine.ChannelOrb", "SimEngine.ChannelKind", "SimEngine.RunOrb", "SimEngine.Evoke", "SimEngine.EvokeLast", "SimEngine.OrbPassives", "SimEngine.RunOrbPassive", "SimEngine.ChangeFocus",
-                "SimEngine.OrbValue", "SimEngine.OrbValuesAgain", "SimEngine.OrbDamage", "SimEngine.OrbDamageAt", "SimEngine.OrbBlock" },
+                "SimEngine.OrbValue", "SimEngine.OrbValuesAgain", "SimEngine.OrbDamage", "SimEngine.OrbHits", "SimEngine.OrbDamageAt", "SimEngine.DeathsOfTheHit", "SimEngine.DeathWaits", "SimEngine.OrbBlock" },
             new[] { "OrbCmd.Channel", "OrbCmd.Evoke", "OrbCmd.EvokeLast", "OrbCmd.EvokeNext", "OrbCmd.Passive", "OrbCmd.AddSlots", "OrbCmd.RemoveSlots", "OrbQueue.BeforeTurnEnd", "OrbModel.GetRandomOrb",
                 "OrbModel.TriggerPassive", "OrbModel.ModifyOrbValue", "Hook.ModifyOrbValue", "Hook.AfterOrbChanneled", "Hook.AfterOrbEvoked", "Hook.ModifyOrbPassiveTriggerCount",
                 "Hook.AfterModifyingOrbPassiveTriggerCount" }),

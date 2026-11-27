@@ -73,7 +73,7 @@
 72 | checked | branches 1 | players -1 hp 41-41 orbs 0-0; at the enemies' turn 5-5 | enemies 0 hp 21-21; 1 hp 34-34; 
 73 | checked | branches 1 | players -1 hp 46-46 orbs 0-0; -2 hp 38-38 orbs 1-1; at the enemies' turn 0-0 | enemies 0 hp 30-30; 1 hp -11--11; 2 hp -12--12; 
 74 | checked | branches 1 | players -1 hp 45-45 orbs 1-1; at the enemies' turn 0-0 | enemies 0 hp -1--1; 1 hp 31-31; 
-75 | checked | branches 2 | players -1 hp 50-50 orbs 0-0; at the enemies' turn 0-0 | enemies 0 hp -9--6; 1 hp -5--2; 2 hp -8--8; 
+75 | checked | branches 2 | players -1 hp 50-50 orbs 1-1; at the enemies' turn 0-0 | enemies 0 hp -9--6; 1 hp -5--2; 2 hp -8--8; 
 76 | checked | branches 4 | players -1 hp 50-50 orbs 0-0; at the enemies' turn 12-12 | enemies 0 hp 16-27; 1 hp 17-28; 
 77 | checked | branches 1 | players -1 hp 26-26 orbs 0-0; at the enemies' turn 7-7 | enemies 0 hp 24-24; 1 hp 10-10; 2 hp 10-10; 
 78 | checked | branches 4 | players -1 hp 39-39 orbs 2-2; at the enemies' turn 7-7 | enemies 0 hp 2-13; 1 hp 14-25; 
@@ -148,7 +148,7 @@
 147 | checked | branches 1 | players -1 hp 49-49 orbs 1-1; -2 hp 40-40 orbs 0-0; at the enemies' turn 2-2 | enemies 0 hp 0-0; 1 hp 30-30; 
 148 | checked | branches 1 | players -1 hp 50-50 orbs 2-2; -2 hp 40-40 orbs 0-0; at the enemies' turn 10-10 | enemies 0 hp 5-5; 
 149 | checked | branches 6 | players -1 hp 42-50 orbs 0-0; -2 hp 25-35 orbs 1-1; at the enemies' turn 7-7 | enemies 0 hp -6-8; 1 hp -1-13; 
-150 | checked | branches 1 | players -1 hp 50-50 orbs 0-0; -2 hp 40-40 orbs 0-0; at the enemies' turn 2-2 | enemies 0 hp -7--7; 
+150 | checked | branches 1 | players -1 hp 50-50 orbs 2-2; -2 hp 40-40 orbs 1-1; at the enemies' turn 2-2 | enemies 0 hp -7--7; 
 151 | checked | branches 3 | players -1 hp 36-36 orbs 3-3; -2 hp 26-26 orbs 1-1; at the enemies' turn 2-2 | enemies 0 hp 21-27; 1 hp 3-9; 
 152 | checked | branches 1 | players -1 hp 46-46 orbs 1-1; at the enemies' turn 2-2 | enemies 0 hp 12-12; 
 153 | checked | branches 1 | players -1 hp 50-50 orbs 0-0; at the enemies' turn 22-22 | enemies 0 hp 13-13; 1 hp 20-20; 2 hp 14-14; 
@@ -165,7 +165,7 @@
 164 | checked | branches 2 | players -1 hp 29-29 orbs 2-2; at the enemies' turn 0-0 | enemies 0 hp 10-13; 1 hp 16-19; 
 165 | checked | branches 1 | players -1 hp 31-31 orbs 0-0; at the enemies' turn 7-7 | enemies 0 hp 30-30; 1 hp 34-34; 2 hp 15-15; 
 166 | checked | branches 1 | players -1 hp 42-42 orbs 3-3; at the enemies' turn 4-4 | enemies 0 hp 8-8; 1 hp 12-12; 
-167 | checked | branches 1 | players -1 hp 50-50 orbs 0-0; at the enemies' turn 0-0 | enemies 0 hp -3--3; 
+167 | checked | branches 1 | players -1 hp 50-50 orbs 1-1; at the enemies' turn 0-0 | enemies 0 hp -3--3; 
 168 | checked | branches 1 | players -1 hp 40-40 orbs 0-0; at the enemies' turn 4-4 | enemies 0 hp 26-26; 1 hp 13-13; 
 169 | checked | branches 1 | players -1 hp 50-50 orbs 1-1; at the enemies' turn 7-7 | enemies 0 hp 33-33; 
 170 | checked | branches 3 | players -1 hp 39-46 orbs 0-0; at the enemies' turn 0-0 | enemies 0 hp -6-2; 1 hp -1-7; 
@@ -179,7 +179,7 @@
 178 | checked | branches 9 | players -1 hp 33-33 orbs 0-0; at the enemies' turn 0-0 | enemies 0 hp 13-24; 1 hp 18-29; 2 hp 20-31; 
 179 | checked | branches 1 | players -1 hp 45-45 orbs 0-0; -2 hp 37-37 orbs 1-1; at the enemies' turn 0-0 | enemies 0 hp 30-30; 
 180 | checked | branches 3 | players -1 hp 39-39 orbs 1-1; at the enemies' turn 7-7 | enemies 0 hp -9--6; 1 hp 23-26; 2 hp 24-27; 
-181 | checked | branches 1 | players -1 hp 50-50 orbs 1-1; -2 hp 40-40 orbs 2-2; at the enemies' turn 5-5 | enemies 0 hp -3--3; 
+181 | checked | branches 1 | players -1 hp 50-50 orbs 2-2; -2 hp 40-40 orbs 3-3; at the enemies' turn 5-5 | enemies 0 hp -3--3; 
 182 | checked | branches 1 | players -1 hp 35-35 orbs 1-1; -2 hp 16-16 orbs 2-2; at the enemies' turn 9-9 | enemies 0 hp 30-30; 1 hp 23-23; 2 hp 32-32; 
 183 | checked | branches 10 | players -1 hp 40-40 orbs 3-3; -2 hp 37-37 orbs 1-1; at the enemies' turn 0-0 | enemies 0 hp 10-30; 1 hp 18-38; 
 184 | checked | branches 1 | players -1 hp 36-36 orbs 3-3; at the enemies' turn 4-4 | enemies 0 hp 3-3; 1 hp 20-20; 2 hp 32-32; 
@@ -188,7 +188,7 @@
 187 | checked | branches 1 | players -1 hp 47-47 orbs 1-1; -2 hp 27-27 orbs 0-0; at the enemies' turn 10-10 | enemies 0 hp 13-13; 1 hp 31-31; 
 188 | checked | branches 1 | players -1 hp 25-25 orbs 0-0; at the enemies' turn 0-0 | enemies 0 hp 15-15; 1 hp 14-14; 2 hp 32-32; 
 189 | checked | branches 4 | players -1 hp 47-47 orbs 0-0; -2 hp 26-26 orbs 0-0; at the enemies' turn 11-11 | enemies 0 hp 21-32; 1 hp 17-28; 
-190 | checked | branches 1 | players -1 hp 50-50 orbs 1-1; -2 hp 40-40 orbs 1-1; at the enemies' turn 6-6 | enemies 0 hp -17--17; 
+190 | checked | branches 1 | players -1 hp 50-50 orbs 1-1; -2 hp 40-40 orbs 2-2; at the enemies' turn 6-6 | enemies 0 hp -17--17; 
 191 | checked | branches 3 | players -1 hp 43-50 orbs 2-2; -2 hp 32-40 orbs 0-0; at the enemies' turn 8-8 | enemies 0 hp -5-3; 1 hp 14-22; 
 192 | checked | branches 1 | players -1 hp 50-50 orbs 0-0; -2 hp 34-34 orbs 0-0; at the enemies' turn 10-10 | enemies 0 hp 28-28; 
 193 | checked | branches 3 | players -1 hp 45-47 orbs 0-0; -2 hp 35-37 orbs 1-1; at the enemies' turn 0-0 | enemies 0 hp 0-17; 1 hp -3-14; 

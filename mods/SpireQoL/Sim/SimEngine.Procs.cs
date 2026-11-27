@@ -59,9 +59,10 @@ public static partial class SimEngine
     /// <summary>A relic's or power's name as the game shows it (SimState.Titles), or its class name.</summary>
     public static string Title(SimState state, int owner, string name) => state.Titles.TryGetValue($"{owner}:{name}", out var title) ? title : name;
 
-    /// <summary>A player's last orb is evoked and goes (OrbCmd.EvokeLast: Consuming Shadow).</summary>
+    /// <summary>A player's last orb is evoked and goes (OrbCmd.EvokeLast: Consuming Shadow); it stays once the fight is ending (OrbCmd.Evoke's guard).</summary>
     public static IEnumerable<SimState> EvokeLast(SimState state, int player)
     {
+        if (FightOver(state)) return new[] { state };
         var simPlayer = state.MutablePlayer(player);
         if (simPlayer.Orbs.Count == 0) return new[] { state };
         var orb = simPlayer.Orbs[^1];
